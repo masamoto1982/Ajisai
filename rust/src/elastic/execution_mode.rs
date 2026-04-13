@@ -4,6 +4,8 @@
 /// |---------------|-----------|
 /// | `Greedy`      | Sequential evaluation identical to all prior versions. Default. |
 /// | `ElasticSafe` | Pure sub-expressions may be cached; impure words always fall back to greedy. |
+/// | `HedgedSafe`  | Safe hedged race for allowlisted pure paths. |
+/// | `HedgedTrace` | Same as `HedgedSafe` plus verbose race tracing. |
 /// | `ElasticForce`| Debug only — bypasses some safety gates. **Never use in production.** |
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -11,6 +13,8 @@ pub enum ElasticMode {
     #[default]
     Greedy,
     ElasticSafe,
+    HedgedSafe,
+    HedgedTrace,
     ElasticForce,
 }
 
@@ -21,11 +25,15 @@ impl ElasticMode {
     pub fn from_str(s: &str) -> Self {
         let normalized = s.trim().to_ascii_lowercase();
         match normalized.as_str() {
-            "elastic-safe"  => ElasticMode::ElasticSafe,
-            "elastic_safe"  => ElasticMode::ElasticSafe,
+            "elastic-safe" => ElasticMode::ElasticSafe,
+            "elastic_safe" => ElasticMode::ElasticSafe,
             "elastic-force" => ElasticMode::ElasticForce,
             "elastic_force" => ElasticMode::ElasticForce,
-            "greedy"        => ElasticMode::Greedy,
+            "hedged-safe" => ElasticMode::HedgedSafe,
+            "hedged_safe" => ElasticMode::HedgedSafe,
+            "hedged-trace" => ElasticMode::HedgedTrace,
+            "hedged_trace" => ElasticMode::HedgedTrace,
+            "greedy" => ElasticMode::Greedy,
             _ => {
                 eprintln!(
                     "[warn] Unknown execution mode '{}'. Falling back to greedy.",
@@ -38,15 +46,23 @@ impl ElasticMode {
 
     pub fn as_str(self) -> &'static str {
         match self {
-            ElasticMode::Greedy       => "greedy",
-            ElasticMode::ElasticSafe  => "elastic-safe",
+            ElasticMode::Greedy => "greedy",
+            ElasticMode::ElasticSafe => "elastic-safe",
+            ElasticMode::HedgedSafe => "hedged-safe",
+            ElasticMode::HedgedTrace => "hedged-trace",
             ElasticMode::ElasticForce => "elastic-force",
         }
     }
 
     /// `true` for any elastic variant (safe or force).
     pub fn is_elastic(self) -> bool {
-        matches!(self, ElasticMode::ElasticSafe | ElasticMode::ElasticForce)
+        matches!(
+            self,
+            ElasticMode::ElasticSafe
+                | ElasticMode::HedgedSafe
+                | ElasticMode::HedgedTrace
+                | ElasticMode::ElasticForce
+        )
     }
 }
 

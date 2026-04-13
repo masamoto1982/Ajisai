@@ -20,7 +20,8 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
     createInterpreterSnapshot({
         stack: interpreter.collect_stack(),
         userWords: collectUserWords(interpreter),
-        importedModules: interpreter.collect_imported_modules()
+        importedModules: interpreter.collect_imported_modules(),
+        executionMode: interpreter.get_execution_mode()
     });
 
 export const syncInterpreterState = (

@@ -1,3 +1,4 @@
+use crate::types::Value;
 /// Pure-result cache for the Elastic Engine (M4).
 ///
 /// Only values produced by words with `purity == Purity::Pure` are stored.
@@ -9,9 +10,7 @@
 /// ```
 /// where `args_repr` is the `Debug` representation of the argument list and
 /// `mode` is the execution mode string (`"elastic-safe"` etc.).
-
 use std::collections::HashMap;
-use crate::types::Value;
 
 // ── Internal entry ────────────────────────────────────────────────────────────
 
@@ -25,8 +24,8 @@ struct CacheEntry {
 
 #[derive(Debug, Default)]
 pub struct CacheManager {
-    store:      HashMap<String, CacheEntry>,
-    hit_count:  u64,
+    store: HashMap<String, CacheEntry>,
+    hit_count: u64,
     miss_count: u64,
 }
 
@@ -42,7 +41,22 @@ impl CacheManager {
     /// `args_repr` should be a stable, deterministic string representation
     /// of the word's input arguments (e.g. `format!("{:?}", args)`).
     pub fn build_key(word_name: &str, args_repr: &str, mode: &str) -> String {
-        format!("{}|{}|{}", word_name, args_repr, mode)
+        Self::build_key_with_context(word_name, args_repr, mode, None, 0, 0)
+    }
+
+    pub fn build_key_with_context(
+        word_name: &str,
+        args_repr: &str,
+        mode: &str,
+        strategy_label: Option<&str>,
+        dictionary_epoch: u64,
+        module_epoch: u64,
+    ) -> String {
+        let strategy = strategy_label.unwrap_or("none");
+        format!(
+            "{}|{}|{}|{}|dict:{}|mod:{}",
+            word_name, args_repr, mode, strategy, dictionary_epoch, module_epoch
+        )
     }
 
     // ── Read ──────────────────────────────────────────────────────────────
@@ -54,7 +68,7 @@ impl CacheManager {
     pub fn fetch(&mut self, key: &str) -> (Option<Value>, bool) {
         if let Some(entry) = self.store.get_mut(key) {
             entry.hit_count += 1;
-            self.hit_count  += 1;
+            self.hit_count += 1;
             if crate::elastic::tracer::is_enabled() {
                 eprintln!("[cache]   HIT  key={}", key);
             }
@@ -79,7 +93,13 @@ impl CacheManager {
         if !pure {
             return;
         }
-        self.store.insert(key, CacheEntry { value, hit_count: 0 });
+        self.store.insert(
+            key,
+            CacheEntry {
+                value,
+                hit_count: 0,
+            },
+        );
     }
 
     // ── Invalidation ──────────────────────────────────────────────────────
@@ -114,6 +134,10 @@ impl CacheManager {
     /// Hit rate in [0.0, 1.0].  Returns `0.0` when no accesses have occurred.
     pub fn hit_rate(&self) -> f64 {
         let total = self.hit_count + self.miss_count;
-        if total == 0 { 0.0 } else { self.hit_count as f64 / total as f64 }
+        if total == 0 {
+            0.0
+        } else {
+            self.hit_count as f64 / total as f64
+        }
     }
 }
