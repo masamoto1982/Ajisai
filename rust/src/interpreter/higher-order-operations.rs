@@ -36,7 +36,7 @@ fn is_truthy_boolean(val: &Value) -> bool {
     false
 }
 
-fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
+pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
     if let Some(f) = condition_result.as_scalar() {
         return Ok(!f.is_zero());
     }
@@ -81,6 +81,50 @@ pub(crate) fn execute_quantized_map_kernel(interp: &mut Interpreter, qb: &Quanti
     interp.stack.clear();
     interp.stack.push(elem);
     let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| interp.stack.pop().ok_or(AjisaiError::from("MAP: expected return value, got empty stack")));
+    interp.stack = saved;
+    res
+}
+
+/// Execute a predicate quantized block with a single element.
+/// Saves/restores the outer stack, pushes `elem`, runs the block, and
+/// interprets the top-of-stack result as a boolean.
+pub(crate) fn execute_quantized_predicate_kernel(
+    interp: &mut Interpreter,
+    qb: &QuantizedBlock,
+    elem: Value,
+) -> Result<bool> {
+    let saved = interp.stack.clone();
+    interp.stack.clear();
+    interp.stack.push(elem);
+    let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| {
+        interp
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::from("predicate: expected boolean value from quantized block, got empty stack"))
+            .and_then(extract_predicate_boolean)
+    });
+    interp.stack = saved;
+    res
+}
+
+/// Execute a fold quantized block: pushes `(acc, elem)`, runs the block,
+/// and returns the new accumulator from top-of-stack.
+pub(crate) fn execute_quantized_fold_kernel(
+    interp: &mut Interpreter,
+    qb: &QuantizedBlock,
+    acc: Value,
+    elem: Value,
+) -> Result<Value> {
+    let saved = interp.stack.clone();
+    interp.stack.clear();
+    interp.stack.push(acc);
+    interp.stack.push(elem);
+    let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| {
+        interp
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::from("FOLD: expected return value from quantized block, got empty stack"))
+    });
     interp.stack = saved;
     res
 }
@@ -335,45 +379,62 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(elem.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result: Value = match interp.stack.pop() {
-                            Some(r) => r,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_predicate_kernel(interp, qb, elem.clone()) {
+                            Ok(is_true) => {
+                                if is_true {
+                                    results.push(elem);
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
                                 break;
                             }
-                        };
-
-                        let is_true: bool = if is_vector_value(&condition_result) {
-                            if condition_result.len() == 1 {
-                                is_truthy_boolean(condition_result.get_child(0).unwrap())
-                            } else {
-                                error = Some(AjisaiError::create_structure_error(
-                                    "boolean result from FILTER code",
-                                    "other format",
-                                ));
-                                break;
-                            }
-                        } else {
-                            error = Some(AjisaiError::create_structure_error(
-                                "boolean vector result from FILTER code",
-                                "other format",
-                            ));
-                            break;
-                        };
-
-                        if is_true {
-                            results.push(elem);
                         }
                     }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(elem.clone());
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => {
+                                let condition_result: Value = match interp.stack.pop() {
+                                    Some(r) => r,
+                                    None => {
+                                        error = Some(AjisaiError::from(
+                                            "FILTER: expected boolean value, got empty stack",
+                                        ));
+                                        break;
+                                    }
+                                };
+
+                                let is_true: bool = if is_vector_value(&condition_result) {
+                                    if condition_result.len() == 1 {
+                                        is_truthy_boolean(condition_result.get_child(0).unwrap())
+                                    } else {
+                                        error = Some(AjisaiError::create_structure_error(
+                                            "boolean result from FILTER code",
+                                            "other format",
+                                        ));
+                                        break;
+                                    }
+                                } else {
+                                    error = Some(AjisaiError::create_structure_error(
+                                        "boolean vector result from FILTER code",
+                                        "other format",
+                                    ));
+                                    break;
+                                };
+
+                                if is_true {
+                                    results.push(elem);
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -516,20 +577,9 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
                 let elem = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                                break;
-                            }
-                        };
-                        match extract_predicate_boolean(condition_result) {
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_predicate_kernel(interp, qb, elem) {
                             Ok(is_true) => {
                                 if is_true {
                                     result = true;
@@ -542,9 +592,38 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
                     }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => {
+                                let condition_result = match interp.stack.pop() {
+                                    Some(v) => v,
+                                    None => {
+                                        error = Some(AjisaiError::from(
+                                            "ANY: expected boolean value, got empty stack",
+                                        ));
+                                        break;
+                                    }
+                                };
+                                match extract_predicate_boolean(condition_result) {
+                                    Ok(is_true) => {
+                                        if is_true {
+                                            result = true;
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error = Some(e);
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -689,20 +768,9 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
                 let elem = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                                break;
-                            }
-                        };
-                        match extract_predicate_boolean(condition_result) {
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_predicate_kernel(interp, qb, elem) {
                             Ok(is_true) => {
                                 if !is_true {
                                     result = false;
@@ -715,9 +783,38 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
                     }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => {
+                                let condition_result = match interp.stack.pop() {
+                                    Some(v) => v,
+                                    None => {
+                                        error = Some(AjisaiError::from(
+                                            "ALL: expected boolean value, got empty stack",
+                                        ));
+                                        break;
+                                    }
+                                };
+                                match extract_predicate_boolean(condition_result) {
+                                    Ok(is_true) => {
+                                        if !is_true {
+                                            result = false;
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error = Some(e);
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -862,20 +959,9 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
                 let elem = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                                break;
-                            }
-                        };
-                        match extract_predicate_boolean(condition_result) {
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_predicate_kernel(interp, qb, elem) {
                             Ok(is_true) => {
                                 if is_true {
                                     count += 1;
@@ -887,9 +973,37 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
                     }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => {
+                                let condition_result = match interp.stack.pop() {
+                                    Some(v) => v,
+                                    None => {
+                                        error = Some(AjisaiError::from(
+                                            "COUNT: expected boolean value, got empty stack",
+                                        ));
+                                        break;
+                                    }
+                                };
+                                match extract_predicate_boolean(condition_result) {
+                                    Ok(is_true) => {
+                                        if is_true {
+                                            count += 1;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error = Some(e);
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        }
                     }
                 }
             }

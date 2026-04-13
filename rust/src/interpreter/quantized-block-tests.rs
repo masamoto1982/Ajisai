@@ -1,11 +1,382 @@
-use crate::interpreter::quantized_block::{is_quantizable_block, quantize_code_block};
+use crate::interpreter::quantized_block::{
+    is_quantizable_block, quantize_code_block, QuantizedArity, QuantizedPurity,
+};
 use crate::interpreter::Interpreter;
-use crate::types::Token;
+use crate::types::{Token, Value};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+fn make_interp() -> Interpreter {
+    Interpreter::new()
+}
+
+fn num(s: &str) -> Token {
+    Token::Number(s.into())
+}
+
+fn sym(s: &str) -> Token {
+    Token::Symbol(s.into())
+}
+
+fn run_code(code: &str) -> Interpreter {
+    let mut interp = Interpreter::new();
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+    rt.block_on(async {
+        interp.execute(code).await.expect("code should execute");
+    });
+    interp
+}
+
+fn stack_top(interp: &Interpreter) -> &Value {
+    interp.get_stack().last().expect("stack should not be empty")
+}
+
+/// Extract i64 from top of stack, handling both raw scalars and
+/// single-element vectors (which Ajisai often produces for numeric results).
+fn stack_top_i64(interp: &Interpreter) -> i64 {
+    let top = stack_top(interp);
+    if let Some(f) = top.as_scalar() {
+        return f.to_i64().expect("scalar should be representable as i64");
+    }
+    if top.len() == 1 {
+        if let Some(child) = top.get_child(0) {
+            if let Some(f) = child.as_scalar() {
+                return f.to_i64().expect("inner scalar should be representable as i64");
+            }
+        }
+    }
+    panic!(
+        "stack top should be integer scalar or single-element vector, got len={}",
+        top.len()
+    );
+}
+
+/// Extract bool from top of stack, handling both scalars and single-element vectors.
+fn stack_top_bool(interp: &Interpreter) -> bool {
+    let top = stack_top(interp);
+    if let Some(f) = top.as_scalar() {
+        return !f.is_zero();
+    }
+    if top.len() == 1 {
+        if let Some(child) = top.get_child(0) {
+            if let Some(f) = child.as_scalar() {
+                return !f.is_zero();
+            }
+        }
+    }
+    panic!("stack top should be boolean scalar or single-element vector");
+}
+
+// ---------------------------------------------------------------------------
+// is_quantizable_block
+// ---------------------------------------------------------------------------
 
 #[test]
 fn quantizes_simple_block() {
-    let mut interp = Interpreter::new();
-    let tokens = vec![Token::Number("1".into()), Token::Symbol("+".into())];
+    let mut interp = make_interp();
+    let tokens = vec![num("1"), sym("+")];
     assert!(is_quantizable_block(&tokens));
     assert!(quantize_code_block(&tokens, &mut interp).is_some());
+}
+
+#[test]
+fn empty_block_is_not_quantizable() {
+    assert!(!is_quantizable_block(&[]));
+}
+
+#[test]
+fn linebreak_makes_block_non_quantizable() {
+    let tokens = vec![num("1"), Token::LineBreak, sym("+")];
+    assert!(!is_quantizable_block(&tokens));
+}
+
+#[test]
+fn safemode_token_makes_block_non_quantizable() {
+    // Token::SafeMode is the safe-mode sentinel
+    let tokens = vec![Token::SafeMode, sym("+")];
+    assert!(!is_quantizable_block(&tokens));
+}
+
+// ---------------------------------------------------------------------------
+// Arity inference — pure-builtin blocks only
+// ---------------------------------------------------------------------------
+
+/// `{ + }` consumes 2 from external stack, produces 1.
+#[test]
+fn arity_binary_add() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(2));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+/// `{ - }` — binary: 2 in, 1 out.
+#[test]
+fn arity_binary_sub() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("-")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(2));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+/// `{ < }` — binary comparison: 2 in, 1 out.
+#[test]
+fn arity_binary_compare() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("<")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(2));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+/// `{ NOT }` — unary: 1 in, 1 out.
+#[test]
+fn arity_unary_not() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("NOT")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(1));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+/// Words not in BUILTIN_SPECS compile to FallbackToken → arity is Variable.
+/// DROP/DUP/SWAP are not Ajisai builtins, so arity inference gives Variable.
+#[test]
+fn arity_non_builtin_word_is_variable() {
+    let mut interp = make_interp();
+    // "ABS" is in BUILTIN_SPECS, "NOT" is too, but "REORDER" may not be.
+    // We use a word that is definitely not in BUILTIN_SPECS.
+    let tokens = vec![sym("DROP")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    // DROP is not in BUILTIN_SPECS → FallbackToken → Variable arity
+    assert_eq!(qb.input_arity, QuantizedArity::Variable);
+    assert_eq!(qb.output_arity, QuantizedArity::Variable);
+}
+
+/// `{ NOT < }` — two builtins: NOT is 1→1, then < is 2→1.
+/// Combined arity is determined by simulation: start depth=0,
+/// NOT needs 1 → min=-1, depth=0; then < needs 2 → depth=-2 (min=-2), depth=-1.
+/// input_arity = 2, output_arity = 1.
+#[test]
+fn arity_chain_not_then_compare() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("NOT"), sym("<")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    // NOT: 1→1, then <: 2→1.  Net: 2 from external, 1 result.
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(2));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+/// A block calling an unknown builtin (e.g. MAP) should fall back to Variable.
+#[test]
+fn arity_unknown_builtin_falls_back_to_variable() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("MAP")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Variable);
+    assert_eq!(qb.output_arity, QuantizedArity::Variable);
+}
+
+/// A block calling a user-defined word should have Variable arity.
+#[test]
+fn arity_user_word_is_variable() {
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ + } 'ADD' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("ADD")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Variable);
+    assert_eq!(qb.output_arity, QuantizedArity::Variable);
+}
+
+/// A block with literal push (Number token) contributes +1 to depth.
+/// `{ 1 + }` — push literal 1 (depth +1), then + (needs 2, gets 1 from literal and
+/// 1 from external, depth -1 after consuming + producing 1 → net 0).
+/// input_arity = 1, output_arity = 1.
+#[test]
+fn arity_literal_then_add() {
+    let mut interp = make_interp();
+    // Simulate { 1 + } by constructing tokens directly
+    let tokens = vec![num("1"), sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(1));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+// ---------------------------------------------------------------------------
+// Purity inference
+// ---------------------------------------------------------------------------
+
+/// Pure arithmetic block should be marked Pure.
+#[test]
+fn purity_arithmetic_is_pure() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::Pure);
+}
+
+/// `can_fuse` and `can_short_circuit` should reflect purity.
+#[test]
+fn can_fuse_reflects_purity() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert!(qb.can_fuse);
+    assert!(qb.can_short_circuit);
+}
+
+// ---------------------------------------------------------------------------
+// Dependency word collection
+// ---------------------------------------------------------------------------
+
+/// A block that calls a user-defined word records it in `dependency_words`.
+/// The resolved name may be namespace-qualified (e.g. "NS@MY_ADD"), so we check
+/// that at least one entry contains the word name.
+#[test]
+fn dependency_words_collected() {
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ + } 'MY_ADD' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("MY_ADD")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert!(
+        qb.dependency_words.iter().any(|w| w.contains("MY_ADD")),
+        "expected 'MY_ADD' (possibly namespace-qualified) in dependency_words: {:?}",
+        qb.dependency_words
+    );
+}
+
+// ---------------------------------------------------------------------------
+// End-to-end: verify quantized path is used for each HOF
+// ---------------------------------------------------------------------------
+
+#[test]
+fn quantized_path_used_for_map() {
+    // { [ 1 ] + } increments each element
+    let interp = run_code("[ 1 2 3 ] { [ 1 ] + } MAP");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 3);
+}
+
+#[test]
+fn quantized_path_used_for_filter() {
+    // { [ 0 ] <= NOT } = elem > 0
+    let interp = run_code("[ -2 -1 0 1 2 3 ] { [ 0 ] <= NOT } FILTER");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+#[test]
+fn quantized_path_used_for_any() {
+    let interp = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+#[test]
+fn quantized_path_used_for_all() {
+    // { [ 0 ] <= NOT } = elem > 0
+    let interp = run_code("[ 1 2 3 ] { [ 0 ] <= NOT } ALL");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+#[test]
+fn quantized_path_used_for_count() {
+    // { [ 3 ] <= NOT } = elem > 3
+    let interp = run_code("[ 1 2 3 4 5 ] { [ 3 ] <= NOT } COUNT");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+#[test]
+fn quantized_path_used_for_fold() {
+    let interp = run_code("[ 1 2 3 4 5 ] [ 0 ] { + } FOLD");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+#[test]
+fn quantized_path_used_for_scan() {
+    let interp = run_code("[ 1 2 3 ] [ 0 ] { + } SCAN");
+    assert!(interp.runtime_metrics().quantized_block_use_count >= 1);
+}
+
+// ---------------------------------------------------------------------------
+// Result correctness: quantized path must produce the same semantics
+// ---------------------------------------------------------------------------
+
+#[test]
+fn filter_keeps_elements_above_zero() {
+    // { [ 0 ] <= NOT } = elem > 0
+    let interp = run_code("[ -2 -1 0 1 2 3 ] { [ 0 ] <= NOT } FILTER");
+    let top = stack_top(&interp);
+    assert_eq!(top.len(), 3, "expected [1, 2, 3], got len={}", top.len());
+}
+
+#[test]
+fn any_true_when_element_matches() {
+    let interp = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
+    assert!(stack_top_bool(&interp));
+}
+
+#[test]
+fn any_false_when_no_match() {
+    let interp = run_code("[ 1 2 3 ] { [ 5 ] = } ANY");
+    assert!(!stack_top_bool(&interp));
+}
+
+#[test]
+fn all_true_when_all_above_zero() {
+    // { [ 0 ] <= NOT } = elem > 0
+    let interp = run_code("[ 1 2 3 ] { [ 0 ] <= NOT } ALL");
+    assert!(stack_top_bool(&interp));
+}
+
+#[test]
+fn all_false_when_one_fails() {
+    // -1 > 0 is false, so ALL should be false
+    let interp = run_code("[ -1 2 3 ] { [ 0 ] <= NOT } ALL");
+    assert!(!stack_top_bool(&interp));
+}
+
+#[test]
+fn count_counts_matching_elements() {
+    // { [ 3 ] <= NOT } = elem > 3, so 4 and 5 match
+    let interp = run_code("[ 1 2 3 4 5 ] { [ 3 ] <= NOT } COUNT");
+    assert_eq!(stack_top_i64(&interp), 2);
+}
+
+#[test]
+fn fold_sum_is_correct() {
+    let interp = run_code("[ 1 2 3 4 5 ] [ 0 ] { + } FOLD");
+    assert_eq!(stack_top_i64(&interp), 15);
+}
+
+#[test]
+fn scan_produces_prefix_sums() {
+    let interp = run_code("[ 1 2 3 ] [ 0 ] { + } SCAN");
+    let top = stack_top(&interp);
+    assert_eq!(top.len(), 3, "SCAN result should have 3 elements");
+    // Each child may be a scalar or a single-element vector — extract i64 from either.
+    let extract = |v: &Value| -> i64 {
+        if let Some(f) = v.as_scalar() {
+            return f.to_i64().expect("scalar should be i64");
+        }
+        if v.len() == 1 {
+            if let Some(child) = v.get_child(0) {
+                if let Some(f) = child.as_scalar() {
+                    return f.to_i64().expect("inner scalar should be i64");
+                }
+            }
+        }
+        panic!("SCAN element is not a numeric scalar or single-element vector");
+    };
+    let vals: Vec<i64> = (0..3)
+        .map(|i| extract(top.get_child(i).unwrap()))
+        .collect();
+    assert_eq!(vals, vec![1, 3, 6]);
 }
