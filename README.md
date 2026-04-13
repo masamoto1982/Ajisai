@@ -8,80 +8,65 @@
 
 # Ajisai
 
-Ajisai is an **AI-first, vector-oriented, fractional-dataflow language**.  
-Runtime stack: Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell.
+紫陽花の学名は *Hydrangea* ——  
+ギリシャ語で **「水の器」** を意味する。
 
-- Playground: https://masamoto1982.github.io/Ajisai/
-- Canonical specification: `SPECIFICATION.md`
+この言語は、その名をそのまま設計の原理として引き受けている。
 
----
-
-## The Water Model
-
-In Ajisai, computation is **flow**.
-
-Values stream through a single stack like water through a channel. Each word draws from the surface and deposits its result — the current always moves forward.
-
-**Two planes, not one.**  
-Below the surface lies the *data plane*: exact rational arithmetic, pure and lossless, untouched by display concerns.  
-On the surface sits the *semantic plane*: the reflection — display hints consulted only at render time.  
-What you see does not affect what computes.
-
-**Flow is conserved.**  
-Numbers are exact fractions; division never rounds, precision never leaks.  
-The `,,` bifurcation modifier splits a stream without loss: both branches retain the source, like a river dividing around an island and rejoining intact.
-
-**Errors are absorbed, not propagated.**  
-Prefix any word with `~` to open a safe channel.  
-If that operation fails, NIL settles in place of the missing value — a still pool where turbulence would otherwise flood upstream.
-
-**Tributaries run in isolation.**  
-`SPAWN` forks a child runtime from a code block, a separate stream carrying a snapshot of the parent's knowledge.  
-`AWAIT` collects the tributary's final state when it rejoins.  
-Parent and child never share a current.
+Playground: https://masamoto1982.github.io/Ajisai/
 
 ---
 
-## Modifiers
+## 水のメタファー
 
-Modifiers precede a word and shape how flow passes through it.
+### 水としての分数
 
-| Modifier | Name | Behavior |
-|----------|------|----------|
-| `.` | StackTop (default) | Operate on the top value(s) |
-| `..` | Stack | Operate on the entire stack |
-| `,` | Consume (default) | Remove operands after the operation |
-| `,,` | Bifurcation | Retain operands; also push result |
-| `~` | Safe | Absorb errors; push NIL on failure |
-| `==` | Pipeline | Visual separator; no runtime effect |
-| `=>` | NIL coalescing | Replace NIL at top with the next stack value |
+Ajisai の数はすべて分数である。近似しない。丸めない。  
+水がどの器を通っても体積を失わないように、値は計算を通過しても変質しない。
+
+→ 技術的な詳細: `SPECIFICATION.md` §4.2
+
+### 器としての Vector
+
+Vector は器だ。値を順序をもって収める、形ある入れ物。  
+器は入れ子にできる。器の中に器を置ける。  
+それでも本質は変わらない——値を受け取り、保持し、渡す。
+
+→ 技術的な詳細: `SPECIFICATION.md` §4.3
+
+### 器に対する水の注ぎ方としてのコードブロック
+
+器があれば、注ぎ方がある。  
+コードブロックは「どのように水を注ぐか」を記述する——順序、変換、操作の連鎖。  
+注ぎ方そのものも器に収められる。渡せる。別の注ぎ方に渡せる。
+
+→ 技術的な詳細: `SPECIFICATION.md` §4.6, §8
+
+### 水の流れを制御するモード
+
+すべての操作は二つの軸で制御される。
+
+**操作対象モード** —— 水路のどこに作用するか。水面の一点か、水路全体か。  
+**消費モード** —— 流れは飲み込まれるか、それとも分流するか。  
+分流（`,,`）は流れを失わない。源が残りながら、新たな流れも生まれる。
+
+→ 技術的な詳細: `SPECIFICATION.md` §6
+
+### 泡としての NIL
+
+泡は水ではない。しかし水のある場所に現れる。  
+NIL は値の不在——何かがあるべき場所に何もないときの形。  
+`~` をつけた操作は乱流を泡に変える。氾濫は起きない。上流は守られる。
+
+→ 技術的な詳細: `SPECIFICATION.md` §4.5, §6.3
 
 ---
 
-## Syntax at a Glance
+## Runtime
 
-```
-# Define a word
-{ 2 * } 'DOUBLE' DEF
+Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 
-# Map over a vector
-[ 1 2 3 4 ] { DOUBLE } MAP     # → [ 2 4 6 8 ]
-
-# Exact fractions — no rounding
-1 3 /                          # → 1/3
-
-# Bifurcation: retain source, also push result
-3 ,,DOUBLE                     # stack: 3  6
-
-# Safe channel: absorb the error, push NIL
-[ 1 2 3 ] 9 ~GET               # → NIL
-
-# NIL coalescing: replace NIL with a fallback
-[ 1 2 3 ] 9 ~GET => 0          # → 0
-
-# Spawn a child runtime
-{ 100 RANGE { * } FOLD } SPAWN AWAIT
-```
+仕様の完全な定義: `SPECIFICATION.md`
 
 ---
 
