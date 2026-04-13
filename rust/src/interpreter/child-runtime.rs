@@ -51,6 +51,8 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::from("SPAWN requires a code block"))?
             .clone();
 
+        self.bump_execution_epoch();
+        let spawn_epoch = self.current_epoch_snapshot();
         let id = self.next_child_id;
         self.next_child_id += 1;
         self.child_runtimes.insert(
@@ -62,6 +64,7 @@ impl Interpreter {
                 exit_reason: None,
                 result_snapshot: None,
                 monitored: false,
+                spawn_epoch,
             },
         );
         self.stack.push(Value::from_process_handle(id));
@@ -207,7 +210,9 @@ impl Interpreter {
 
         let mut attempt = 0usize;
         loop {
-            let id = self.next_child_id;
+            self.bump_execution_epoch();
+        let spawn_epoch = self.current_epoch_snapshot();
+        let id = self.next_child_id;
             self.next_child_id += 1;
             let mut child = ChildRuntime {
                 code_block: code_block.clone(),
@@ -216,6 +221,7 @@ impl Interpreter {
                 exit_reason: None,
                 result_snapshot: None,
                 monitored: false,
+                spawn_epoch,
             };
             self.run_child_to_completion(&mut child);
             let ok = matches!(child.state, ChildState::Completed);
@@ -236,6 +242,7 @@ impl Interpreter {
                 self.semantic_registry.push_hint(DisplayHint::Auto);
                 return Ok(());
             }
+            self.bump_execution_epoch();
             attempt += 1;
         }
     }
