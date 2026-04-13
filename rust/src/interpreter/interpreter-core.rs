@@ -147,6 +147,10 @@ pub struct Interpreter {
     pub(crate) next_supervisor_id: u64,
 
     pub(crate) runtime_metrics: RuntimeMetrics,
+
+    // ── Elastic Engine (MVP) ──────────────────────────────────────────────
+    pub(crate) elastic_mode:  crate::elastic::ElasticMode,
+    pub(crate) elastic_cache: crate::elastic::CacheManager,
 }
 
 impl Interpreter {
@@ -191,9 +195,40 @@ impl Interpreter {
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
+
+            // Elastic Engine
+            elastic_mode:  crate::elastic::ElasticMode::Greedy,
+            elastic_cache: crate::elastic::CacheManager::new(),
         };
+        crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
+    }
+
+    // ── Elastic Engine public API ─────────────────────────────────────────
+
+    /// Set the execution mode (greedy / elastic-safe / elastic-force).
+    pub fn set_elastic_mode(&mut self, mode: crate::elastic::ElasticMode) {
+        self.elastic_mode = mode;
+    }
+
+    /// Read the current execution mode.
+    pub fn elastic_mode(&self) -> crate::elastic::ElasticMode {
+        self.elastic_mode
+    }
+
+    /// Enable or disable word-level tracing (`AJISAI_TRACE=1` equivalent).
+    pub fn set_trace_enabled(&mut self, enabled: bool) {
+        crate::elastic::tracer::set_enabled(enabled);
+    }
+
+    /// Returns `(hit_count, miss_count, hit_rate)` for the pure-result cache.
+    pub fn elastic_cache_stats(&self) -> (u64, u64, f64) {
+        (
+            self.elastic_cache.hit_count(),
+            self.elastic_cache.miss_count(),
+            self.elastic_cache.hit_rate(),
+        )
     }
 
 
