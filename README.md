@@ -24,7 +24,7 @@ Playground: https://masamoto1982.github.io/Ajisai/
 Ajisai の数はすべて分数である。近似しない。丸めない。  
 水がどの器を通っても体積を失わないように、値は計算を通過しても変質しない。
 
-→ 技術的な詳細: `SPECIFICATION.md` §4.2
+→ 技術的な詳細: [SPECIFICATION.md §4.2](SPECIFICATION.md#42-scalar-exact-rational-arithmetic)
 
 ### 器としての Vector
 
@@ -32,7 +32,7 @@ Vector は器だ。値を順序をもって収める、形ある入れ物。
 器は入れ子にできる。器の中に器を置ける。  
 それでも本質は変わらない——値を受け取り、保持し、渡す。
 
-→ 技術的な詳細: `SPECIFICATION.md` §4.3
+→ 技術的な詳細: [SPECIFICATION.md §4.3](SPECIFICATION.md#43-vector)
 
 ### 器に対する水の注ぎ方としてのコードブロック
 
@@ -40,7 +40,7 @@ Vector は器だ。値を順序をもって収める、形ある入れ物。
 コードブロックは「どのように水を注ぐか」を記述する——順序、変換、操作の連鎖。  
 注ぎ方そのものも器に収められる。渡せる。別の注ぎ方に渡せる。
 
-→ 技術的な詳細: `SPECIFICATION.md` §4.6, §8
+→ 技術的な詳細: [SPECIFICATION.md §4.6](SPECIFICATION.md#46-codeblock), [§8](SPECIFICATION.md#8-user-words)
 
 ### 水の流れを制御するモード
 
@@ -50,7 +50,7 @@ Vector は器だ。値を順序をもって収める、形ある入れ物。
 **消費モード** —— 流れは飲み込まれるか、それとも分流するか。  
 分流（`,,`）は流れを失わない。源が残りながら、新たな流れも生まれる。
 
-→ 技術的な詳細: `SPECIFICATION.md` §6
+→ 技術的な詳細: [SPECIFICATION.md §6](SPECIFICATION.md#6-modifiers)
 
 ### 泡としての NIL
 
@@ -58,7 +58,7 @@ Vector は器だ。値を順序をもって収める、形ある入れ物。
 NIL は値の不在——何かがあるべき場所に何もないときの形。  
 `~` をつけた操作は乱流を泡に変える。氾濫は起きない。上流は守られる。
 
-→ 技術的な詳細: `SPECIFICATION.md` §4.5, §6.3
+→ 技術的な詳細: [SPECIFICATION.md §4.5](SPECIFICATION.md#45-nil), [§6.3](SPECIFICATION.md#63-safe-mode-modifier)
 
 ---
 
