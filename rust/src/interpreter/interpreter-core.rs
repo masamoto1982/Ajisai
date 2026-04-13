@@ -91,6 +91,16 @@ pub(crate) struct ChildRuntime {
     pub spawn_epoch: EpochSnapshot,
 }
 
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RuntimeMetrics {
+    pub compiled_plan_build_count: u64,
+    pub compiled_plan_cache_hit_count: u64,
+    pub compiled_plan_cache_miss_count: u64,
+    pub quantized_block_build_count: u64,
+    pub quantized_block_use_count: u64,
+}
+
 pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
@@ -135,6 +145,8 @@ pub struct Interpreter {
     pub(crate) next_child_id: u64,
     pub(crate) monitor_notifications: Vec<Vec<Value>>,
     pub(crate) next_supervisor_id: u64,
+
+    pub(crate) runtime_metrics: RuntimeMetrics,
 }
 
 impl Interpreter {
@@ -178,6 +190,7 @@ impl Interpreter {
             next_child_id: 1,
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
+            runtime_metrics: RuntimeMetrics::default(),
         };
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
@@ -202,14 +215,24 @@ impl Interpreter {
 
     pub(crate) fn bump_dictionary_epoch(&mut self) {
         self.dictionary_epoch = self.next_epoch();
+        #[cfg(feature = "trace-epoch")]
+        eprintln!("[trace-epoch] dictionary_epoch={} global_epoch={}", self.dictionary_epoch, self.global_epoch);
     }
 
     pub(crate) fn bump_module_epoch(&mut self) {
         self.module_epoch = self.next_epoch();
+        #[cfg(feature = "trace-epoch")]
+        eprintln!("[trace-epoch] module_epoch={} global_epoch={}", self.module_epoch, self.global_epoch);
     }
 
     pub(crate) fn bump_execution_epoch(&mut self) {
         self.execution_epoch = self.next_epoch();
+        #[cfg(feature = "trace-epoch")]
+        eprintln!("[trace-epoch] execution_epoch={} global_epoch={}", self.execution_epoch, self.global_epoch);
+    }
+
+    pub fn runtime_metrics(&self) -> RuntimeMetrics {
+        self.runtime_metrics
     }
 
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {

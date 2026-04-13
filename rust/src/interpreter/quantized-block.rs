@@ -33,7 +33,7 @@ pub fn is_quantizable_block(tokens: &[Token]) -> bool {
     !tokens.is_empty() && !tokens.iter().any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
 }
 
-pub fn quantize_code_block(tokens: &[Token], interp: &Interpreter) -> Option<QuantizedBlock> {
+pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option<QuantizedBlock> {
     if !is_quantizable_block(tokens) {
         return None;
     }
@@ -51,6 +51,10 @@ pub fn quantize_code_block(tokens: &[Token], interp: &Interpreter) -> Option<Qua
         compiled_plan: None,
     };
     let plan = Arc::new(compile_word_definition(&def, interp));
+    interp.bump_execution_epoch();
+    interp.runtime_metrics.quantized_block_build_count += 1;
+    #[cfg(feature = "trace-quant")]
+    eprintln!("[trace-quant] quantized block generated");
     Some(QuantizedBlock {
         compiled_plan: plan,
         captured_epoch: interp.current_epoch_snapshot(),

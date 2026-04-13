@@ -41,14 +41,24 @@ impl Interpreter {
         let mut plan_to_run = None;
         if let Some(existing) = def.compiled_plan.as_ref() {
             if is_plan_valid(existing, self) {
+                self.runtime_metrics.compiled_plan_cache_hit_count += 1;
+                #[cfg(feature = "trace-compile")]
+                eprintln!("[trace-compile] cache hit for {}", resolved_name);
                 plan_to_run = Some(existing.clone());
+            } else {
+                self.runtime_metrics.compiled_plan_cache_miss_count += 1;
             }
+        } else {
+            self.runtime_metrics.compiled_plan_cache_miss_count += 1;
         }
 
         if plan_to_run.is_none() {
             let plan = compile_word_definition(&def, self);
             if !plan_is_all_fallback(&plan) {
                 self.bump_execution_epoch();
+                self.runtime_metrics.compiled_plan_build_count += 1;
+                #[cfg(feature = "trace-compile")]
+                eprintln!("[trace-compile] compiled plan for {}", resolved_name);
                 let plan_arc = arc_plan(plan);
                 self.store_compiled_plan_for_word(&resolved_name, plan_arc.clone());
                 plan_to_run = Some(plan_arc);

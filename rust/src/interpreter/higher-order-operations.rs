@@ -12,7 +12,7 @@ pub(crate) enum ExecutableCode {
     QuantizedBlock(std::sync::Arc<QuantizedBlock>),
 }
 
-pub(crate) fn extract_executable_code(interp: &Interpreter, val: &Value) -> Result<ExecutableCode> {
+pub(crate) fn extract_executable_code(interp: &mut Interpreter, val: &Value) -> Result<ExecutableCode> {
     if let Some(tokens) = val.as_code_block() {
         if let Some(qb) = quantize_code_block(tokens, interp) {
             return Ok(ExecutableCode::QuantizedBlock(std::sync::Arc::new(qb)));
@@ -70,6 +70,9 @@ pub(crate) fn execute_executable_code(interp: &mut Interpreter, exec: &Executabl
 }
 
 fn execute_quantized_block_stack_top(interp: &mut Interpreter, qb: &QuantizedBlock) -> Result<()> {
+    interp.runtime_metrics.quantized_block_use_count += 1;
+    #[cfg(feature = "trace-quant")]
+    eprintln!("[trace-quant] execute quantized block");
     crate::interpreter::compiled_plan::execute_compiled_plan(interp, &qb.compiled_plan)
 }
 
