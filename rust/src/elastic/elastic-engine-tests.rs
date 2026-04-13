@@ -13,16 +13,25 @@ mod tests {
     // M1 — Purity table
     // ────────────────────────────────────────────────────────────────────────
 
-    use crate::elastic::purity_table::{purity_by_name, infer_purity, Purity, EvalCost};
+    use crate::elastic::purity_table::{infer_purity, purity_by_name, EvalCost, Purity};
 
     #[test]
     fn purity_table_arithmetic_is_pure_trivial() {
         for word in &["+", "-", "*", "/", "=", "<", "<="] {
             let info = purity_by_name(word)
                 .unwrap_or_else(|| panic!("missing purity entry for '{}'", word));
-            assert_eq!(info.purity, Purity::Pure,   "{}: expected Pure",           word);
-            assert_eq!(info.cost,   EvalCost::Trivial, "{}: expected Trivial cost", word);
-            assert!(!info.order_sensitive, "{}: should not be order_sensitive", word);
+            assert_eq!(info.purity, Purity::Pure, "{}: expected Pure", word);
+            assert_eq!(
+                info.cost,
+                EvalCost::Trivial,
+                "{}: expected Trivial cost",
+                word
+            );
+            assert!(
+                !info.order_sensitive,
+                "{}: should not be order_sensitive",
+                word
+            );
         }
     }
 
@@ -51,7 +60,7 @@ mod tests {
             let info = purity_by_name(word)
                 .unwrap_or_else(|| panic!("missing purity entry for '{}'", word));
             assert_eq!(info.purity, Purity::Pure, "{}: expected Pure", word);
-            assert_eq!(info.cost,   EvalCost::Light, "{}: expected Light cost", word);
+            assert_eq!(info.cost, EvalCost::Light, "{}: expected Light cost", word);
         }
     }
 
@@ -67,12 +76,18 @@ mod tests {
 
     #[test]
     fn infer_purity_one_unknown() {
-        assert_eq!(infer_purity(&[Purity::Pure, Purity::Unknown, Purity::Pure]), Purity::Unknown);
+        assert_eq!(
+            infer_purity(&[Purity::Pure, Purity::Unknown, Purity::Pure]),
+            Purity::Unknown
+        );
     }
 
     #[test]
     fn infer_purity_one_impure_dominates() {
-        assert_eq!(infer_purity(&[Purity::Pure, Purity::Unknown, Purity::Impure]), Purity::Impure);
+        assert_eq!(
+            infer_purity(&[Purity::Pure, Purity::Unknown, Purity::Impure]),
+            Purity::Impure
+        );
     }
 
     #[test]
@@ -138,8 +153,8 @@ mod tests {
     #[test]
     fn evaluation_unit_priority_score() {
         let mut u = EvaluationUnit::new("FOO");
-        u.estimated_cost  = 4.0;
-        u.pruning_bonus   = 1.5;
+        u.estimated_cost = 4.0;
+        u.pruning_bonus = 1.5;
         // priority_score = cost - bonus = 2.5
         let score = u.priority_score();
         assert!((score - 2.5).abs() < f64::EPSILON);
@@ -157,11 +172,13 @@ mod tests {
     // ────────────────────────────────────────────────────────────────────────
 
     use crate::elastic::cache_manager::CacheManager;
-    use crate::types::{Value, ValueData};
     use crate::types::fraction::Fraction;
+    use crate::types::{Value, ValueData};
 
     fn scalar_value(n: i64) -> Value {
-        Value { data: ValueData::Scalar(Fraction::from(n)) }
+        Value {
+            data: ValueData::Scalar(Fraction::from(n)),
+        }
     }
 
     #[test]
@@ -180,7 +197,8 @@ mod tests {
     #[test]
     fn cache_miss_on_absent_key() {
         let mut cm = CacheManager::new();
-        let (val, hit) = cm.fetch("nonexistent|[]|greedy");
+        let missing_key = CacheManager::build_key("nonexistent", "[]", "greedy");
+        let (val, hit) = cm.fetch(&missing_key);
         assert!(!hit, "expected cache miss");
         assert!(val.is_none());
         assert_eq!(cm.miss_count(), 1);
@@ -214,9 +232,21 @@ mod tests {
     #[test]
     fn cache_invalidate_prefix() {
         let mut cm = CacheManager::new();
-        cm.store(CacheManager::build_key("+", "[1,2]", "es"), scalar_value(3), true);
-        cm.store(CacheManager::build_key("-", "[5,2]", "es"), scalar_value(3), true);
-        cm.store(CacheManager::build_key("MAP", "[]", "es"),  scalar_value(0), true);
+        cm.store(
+            CacheManager::build_key("+", "[1,2]", "es"),
+            scalar_value(3),
+            true,
+        );
+        cm.store(
+            CacheManager::build_key("-", "[5,2]", "es"),
+            scalar_value(3),
+            true,
+        );
+        cm.store(
+            CacheManager::build_key("MAP", "[]", "es"),
+            scalar_value(0),
+            true,
+        );
 
         assert_eq!(cm.cached_key_count(), 3);
         cm.invalidate_prefix("+");
@@ -231,12 +261,35 @@ mod tests {
 
     #[test]
     fn elastic_mode_from_str_known() {
-        assert_eq!(ElasticMode::from_str("greedy"),        ElasticMode::Greedy);
-        assert_eq!(ElasticMode::from_str("elastic-safe"),  ElasticMode::ElasticSafe);
-        assert_eq!(ElasticMode::from_str("elastic-force"), ElasticMode::ElasticForce);
-        assert_eq!(ElasticMode::from_str("elastic_safe"),  ElasticMode::ElasticSafe);
-        assert_eq!(ElasticMode::from_str("elastic_force"), ElasticMode::ElasticForce);
-        assert_eq!(ElasticMode::from_str(" Elastic-Safe "), ElasticMode::ElasticSafe);
+        assert_eq!(ElasticMode::from_str("greedy"), ElasticMode::Greedy);
+        assert_eq!(
+            ElasticMode::from_str("elastic-safe"),
+            ElasticMode::ElasticSafe
+        );
+        assert_eq!(
+            ElasticMode::from_str("elastic-force"),
+            ElasticMode::ElasticForce
+        );
+        assert_eq!(
+            ElasticMode::from_str("hedged-safe"),
+            ElasticMode::HedgedSafe
+        );
+        assert_eq!(
+            ElasticMode::from_str("hedged-trace"),
+            ElasticMode::HedgedTrace
+        );
+        assert_eq!(
+            ElasticMode::from_str("elastic_safe"),
+            ElasticMode::ElasticSafe
+        );
+        assert_eq!(
+            ElasticMode::from_str("elastic_force"),
+            ElasticMode::ElasticForce
+        );
+        assert_eq!(
+            ElasticMode::from_str(" Elastic-Safe "),
+            ElasticMode::ElasticSafe
+        );
     }
 
     #[test]
@@ -248,12 +301,20 @@ mod tests {
     fn elastic_mode_is_elastic() {
         assert!(!ElasticMode::Greedy.is_elastic());
         assert!(ElasticMode::ElasticSafe.is_elastic());
+        assert!(ElasticMode::HedgedSafe.is_elastic());
+        assert!(ElasticMode::HedgedTrace.is_elastic());
         assert!(ElasticMode::ElasticForce.is_elastic());
     }
 
     #[test]
     fn elastic_mode_as_str_round_trip() {
-        for mode in &[ElasticMode::Greedy, ElasticMode::ElasticSafe, ElasticMode::ElasticForce] {
+        for mode in &[
+            ElasticMode::Greedy,
+            ElasticMode::ElasticSafe,
+            ElasticMode::HedgedSafe,
+            ElasticMode::HedgedTrace,
+            ElasticMode::ElasticForce,
+        ] {
             assert_eq!(ElasticMode::from_str(mode.as_str()), *mode);
         }
     }
@@ -266,9 +327,9 @@ mod tests {
 
     fn make_unit(pure: bool, order_sensitive: bool, eager: bool) -> EvaluationUnit {
         let mut u = EvaluationUnit::new("TEST");
-        u.pure            = pure;
+        u.pure = pure;
         u.order_sensitive = order_sensitive;
-        u.eager_required  = eager;
+        u.eager_required = eager;
         u
     }
 
@@ -313,7 +374,10 @@ mod tests {
         let u = make_unit(false, true, true);
         let reason = bridge.should_fallback(&u, ElasticMode::ElasticForce);
         assert_eq!(reason, None);
-        assert!(bridge.fallback_log.is_empty(), "ElasticForce must not log fallbacks");
+        assert!(
+            bridge.fallback_log.is_empty(),
+            "ElasticForce must not log fallbacks"
+        );
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -334,13 +398,16 @@ mod tests {
     async fn run_elastic(code: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::ElasticSafe);
-        interp.execute(code).await.expect("elastic-safe execution failed");
+        interp
+            .execute(code)
+            .await
+            .expect("elastic-safe execution failed");
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
     macro_rules! assert_semantics_match {
         ($code:expr) => {{
-            let greedy  = run_greedy($code).await;
+            let greedy = run_greedy($code).await;
             let elastic = run_elastic($code).await;
             assert_eq!(
                 greedy, elastic,
@@ -465,6 +532,9 @@ mod tests {
     async fn interpreter_elastic_safe_runs_without_error() {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::ElasticSafe);
-        interp.execute("[10] [20] + [5] - LENGTH").await.expect("elastic-safe mode failed");
+        interp
+            .execute("[10] [20] + [5] - LENGTH")
+            .await
+            .expect("elastic-safe mode failed");
     }
 }

@@ -91,7 +91,6 @@ pub(crate) struct ChildRuntime {
     pub spawn_epoch: EpochSnapshot,
 }
 
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
@@ -99,6 +98,13 @@ pub struct RuntimeMetrics {
     pub compiled_plan_cache_miss_count: u64,
     pub quantized_block_build_count: u64,
     pub quantized_block_use_count: u64,
+    pub hedged_race_started_count: u64,
+    pub hedged_race_winner_quantized_count: u64,
+    pub hedged_race_winner_plain_count: u64,
+    pub hedged_race_fallback_count: u64,
+    pub hedged_race_cancel_count: u64,
+    pub hedged_race_validation_reject_count: u64,
+    pub cond_guard_prefetch_count: u64,
 }
 
 pub struct Interpreter {
@@ -149,7 +155,7 @@ pub struct Interpreter {
     pub(crate) runtime_metrics: RuntimeMetrics,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
-    pub(crate) elastic_mode:  crate::elastic::ElasticMode,
+    pub(crate) elastic_mode: crate::elastic::ElasticMode,
     pub(crate) elastic_cache: crate::elastic::CacheManager,
 }
 
@@ -197,7 +203,7 @@ impl Interpreter {
             runtime_metrics: RuntimeMetrics::default(),
 
             // Elastic Engine
-            elastic_mode:  crate::elastic::ElasticMode::Greedy,
+            elastic_mode: crate::elastic::ElasticMode::Greedy,
             elastic_cache: crate::elastic::CacheManager::new(),
         };
         crate::elastic::tracer::init_from_env();
@@ -231,8 +237,6 @@ impl Interpreter {
         )
     }
 
-
-
     pub(crate) fn next_epoch(&mut self) -> u64 {
         self.global_epoch += 1;
         self.global_epoch
@@ -251,19 +255,28 @@ impl Interpreter {
     pub(crate) fn bump_dictionary_epoch(&mut self) {
         self.dictionary_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] dictionary_epoch={} global_epoch={}", self.dictionary_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] dictionary_epoch={} global_epoch={}",
+            self.dictionary_epoch, self.global_epoch
+        );
     }
 
     pub(crate) fn bump_module_epoch(&mut self) {
         self.module_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] module_epoch={} global_epoch={}", self.module_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] module_epoch={} global_epoch={}",
+            self.module_epoch, self.global_epoch
+        );
     }
 
     pub(crate) fn bump_execution_epoch(&mut self) {
         self.execution_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] execution_epoch={} global_epoch={}", self.execution_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] execution_epoch={} global_epoch={}",
+            self.execution_epoch, self.global_epoch
+        );
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
@@ -310,7 +323,6 @@ impl Interpreter {
         Ok(new_flow)
     }
 
-
     pub fn verify_all_flows(&self) -> Result<()> {
         for flow in &self.active_flows {
             let consumed_for_flow: Vec<Fraction> = self
@@ -323,7 +335,6 @@ impl Interpreter {
         }
         Ok(())
     }
-
 
     pub fn assert_all_flows_complete(&self) -> Result<()> {
         for flow in &self.active_flows {
@@ -344,7 +355,6 @@ impl Interpreter {
         }
         Ok(children)
     }
-
 
     pub(crate) fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
@@ -379,7 +389,6 @@ impl Interpreter {
         self.next_registration_order += 1;
         order
     }
-
 
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();

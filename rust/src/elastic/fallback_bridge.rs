@@ -6,7 +6,6 @@
 ///
 /// Every fallback decision is logged (when tracing is enabled) and
 /// appended to `fallback_log` for post-run analysis.
-
 use crate::elastic::evaluation_unit::EvaluationUnit;
 use crate::elastic::execution_mode::ElasticMode;
 use crate::elastic::tracer;
@@ -26,16 +25,28 @@ pub enum FallbackReason {
     UnexpectedSideEffect,
     /// `ElasticForce` is not active and a safety rule would be violated.
     ElasticForceDisabled,
+    HedgeDisabled,
+    HedgePolicyRejected,
+    HedgeValidationFailed,
+    EpochChangedDuringRace,
+    LoserDiscarded,
+    WorkerUnavailable,
 }
 
 impl FallbackReason {
     pub fn as_str(self) -> &'static str {
         match self {
-            FallbackReason::UnknownPurity            => "unknown_purity",
-            FallbackReason::OrderSensitive           => "order_sensitive",
-            FallbackReason::DependencyUnresolvable   => "dependency_unresolvable",
-            FallbackReason::UnexpectedSideEffect     => "unexpected_side_effect",
-            FallbackReason::ElasticForceDisabled     => "elastic_force_disabled",
+            FallbackReason::UnknownPurity => "unknown_purity",
+            FallbackReason::OrderSensitive => "order_sensitive",
+            FallbackReason::DependencyUnresolvable => "dependency_unresolvable",
+            FallbackReason::UnexpectedSideEffect => "unexpected_side_effect",
+            FallbackReason::ElasticForceDisabled => "elastic_force_disabled",
+            FallbackReason::HedgeDisabled => "hedge_disabled",
+            FallbackReason::HedgePolicyRejected => "hedge_policy_rejected",
+            FallbackReason::HedgeValidationFailed => "hedge_validation_failed",
+            FallbackReason::EpochChangedDuringRace => "epoch_changed_during_race",
+            FallbackReason::LoserDiscarded => "loser_discarded",
+            FallbackReason::WorkerUnavailable => "worker_unavailable",
         }
     }
 }
@@ -50,9 +61,9 @@ impl std::fmt::Display for FallbackReason {
 
 #[derive(Debug, Clone)]
 pub struct FallbackLogEntry {
-    pub unit_id:   u32,
+    pub unit_id: u32,
     pub word_name: String,
-    pub reason:    FallbackReason,
+    pub reason: FallbackReason,
 }
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
@@ -79,8 +90,8 @@ impl FallbackBridge {
     /// 4. `eager_required`     → `OrderSensitive` (I/O must be immediate)
     pub fn should_fallback(
         &mut self,
-        unit:  &EvaluationUnit,
-        mode:  ElasticMode,
+        unit: &EvaluationUnit,
+        mode: ElasticMode,
     ) -> Option<FallbackReason> {
         // ElasticForce skips all safety gates (debug / benchmarking only).
         if mode == ElasticMode::ElasticForce {
@@ -113,7 +124,7 @@ impl FallbackBridge {
             );
         }
         self.fallback_log.push(FallbackLogEntry {
-            unit_id:   unit.id,
+            unit_id: unit.id,
             word_name: unit.word_name.clone(),
             reason,
         });

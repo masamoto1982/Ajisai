@@ -8,6 +8,7 @@ interface WorkerTask {
     id: string;
     code: string;
     state: InterpreterSnapshot;
+    hedgedRequestId: string;
     resolve: (result: any) => void;
     reject: (error: any) => void;
 }
@@ -126,7 +127,9 @@ export class WorkerManager {
             type: 'execute',
             id: task.id,
             code: task.code,
-            state: task.state
+            state: task.state,
+            executionMode: task.state.executionMode,
+            hedgedRequestId: task.hedgedRequestId
         });
     }
 
@@ -139,6 +142,10 @@ export class WorkerManager {
         return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     }
 
+    private createHedgedRequestId(): string {
+        return `hedged-${this.createTaskId()}`;
+    }
+
     execute(code: string, state: InterpreterSnapshot): Promise<ExecuteResult> {
         this.ensureWorkers();
         return new Promise((resolve, reject) => {
@@ -146,6 +153,7 @@ export class WorkerManager {
                 id: this.createTaskId(),
                 code,
                 state,
+                hedgedRequestId: this.createHedgedRequestId(),
                 resolve,
                 reject
             };
