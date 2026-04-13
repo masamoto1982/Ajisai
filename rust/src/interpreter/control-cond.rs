@@ -273,8 +273,7 @@ fn evaluate_guard_hedged_prefetch<'a>(
         }
     }
     if has_impure_guard {
-        interp.runtime_metrics.hedged_race_fallback_count += 1;
-        interp.push_hedged_trace("cond:fallback-impure-guard-mixed");
+        interp.push_hedged_trace("cond:partial-prefetch-impure-guard-present");
     }
 
     for (idx, (guard_tokens, body_tokens)) in pairs.iter().enumerate() {

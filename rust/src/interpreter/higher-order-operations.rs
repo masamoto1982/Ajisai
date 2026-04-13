@@ -215,21 +215,32 @@ fn trace_hedged(interp: &Interpreter, msg: &str) {
     }
 }
 
+/// Execute a map kernel as a hedged race between the compiled (quantized) path
+/// and the plain token-interpretation path.
+///
+/// `plain_tokens` must be the original code-block tokens so the two paths are
+/// genuinely different execution strategies.  When `plain_tokens` is `None`
+/// (e.g. the kernel is a word-name, not a code block) the race is skipped and
+/// the quantized path is used directly.
 pub(crate) fn execute_hedged_map_kernel(
     interp: &mut Interpreter,
     op_name: &str,
     qb: &QuantizedBlock,
-    exec: &ExecutableCode,
+    plain_tokens: Option<&[Token]>,
     elem: Value,
 ) -> Result<Value> {
+    let Some(tokens) = plain_tokens else {
+        return execute_quantized_map_kernel(interp, qb, elem);
+    };
     if !hedged_mode(interp.elastic_mode()) || !can_hedge_hof_kernel(op_name) {
         return execute_quantized_map_kernel(interp, qb, elem);
     }
     interp.runtime_metrics.hedged_race_started_count += 1;
     interp.push_hedged_trace(format!("hof-race:start op={}", op_name));
-    let epoch = interp.current_epoch_snapshot().global_epoch;
+    let epoch_at_spawn = interp.current_epoch_snapshot();
     let quantized = execute_quantized_map_kernel(interp, qb, elem.clone());
-    let plain = execute_plain_map_kernel(interp, exec, elem);
+    let plain_exec = ExecutableCode::CodeBlock(tokens.to_vec());
+    let plain = execute_plain_map_kernel(interp, &plain_exec, elem);
 
     match (quantized, plain) {
         (Ok(q), Ok(p)) => {
@@ -247,16 +258,11 @@ pub(crate) fn execute_hedged_map_kernel(
             let candidate = HedgedCandidateResult {
                 path: HedgedPath::Quantized,
                 stack: vec![q.clone()],
-                epoch_at_spawn: epoch,
+                epoch_at_spawn,
             };
-            match validate_hedged_winner(
-                &candidate,
-                interp.current_epoch_snapshot().global_epoch,
-                1,
-            ) {
+            match validate_hedged_winner(&candidate, &interp.current_epoch_snapshot(), 1) {
                 Ok(_) => {
                     interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
-                    interp.runtime_metrics.hedged_race_cancel_count += 1;
                     interp.push_hedged_trace(format!(
                         "hof-race:winner op={} path=quantized",
                         op_name
@@ -280,28 +286,38 @@ pub(crate) fn execute_hedged_map_kernel(
             interp.push_hedged_trace(format!("hof-race:winner op={} path=plain", op_name));
             Ok(p)
         }
-        (Ok(_), Err(e_plain)) => {
-            interp.runtime_metrics.hedged_race_validation_reject_count += 1;
-            Err(e_plain)
+        (Ok(q), Err(_)) => {
+            interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
+            interp.push_hedged_trace(format!(
+                "hof-race:winner op={} path=quantized reason=plain-error",
+                op_name
+            ));
+            Ok(q)
         }
         (Err(eq), Err(_)) => Err(eq),
     }
 }
 
+/// Predicate kernel race (FILTER / ANY / ALL / COUNT).
+/// See `execute_hedged_map_kernel` for the racing contract.
 pub(crate) fn execute_hedged_predicate_kernel(
     interp: &mut Interpreter,
     op_name: &str,
     qb: &QuantizedBlock,
-    exec: &ExecutableCode,
+    plain_tokens: Option<&[Token]>,
     elem: Value,
 ) -> Result<bool> {
+    let Some(tokens) = plain_tokens else {
+        return execute_quantized_predicate_kernel(interp, qb, elem);
+    };
     if !hedged_mode(interp.elastic_mode()) || !can_hedge_hof_kernel(op_name) {
         return execute_quantized_predicate_kernel(interp, qb, elem);
     }
     interp.runtime_metrics.hedged_race_started_count += 1;
     interp.push_hedged_trace(format!("hof-race:start op={}", op_name));
     let quantized = execute_quantized_predicate_kernel(interp, qb, elem.clone());
-    let plain = execute_plain_predicate_kernel(interp, exec, elem);
+    let plain_exec = ExecutableCode::CodeBlock(tokens.to_vec());
+    let plain = execute_plain_predicate_kernel(interp, &plain_exec, elem);
     match (quantized, plain) {
         (Ok(q), Ok(p)) => {
             if q != p {
@@ -312,7 +328,6 @@ pub(crate) fn execute_hedged_predicate_kernel(
                 return Ok(p);
             }
             interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
-            interp.runtime_metrics.hedged_race_cancel_count += 1;
             interp.push_hedged_trace(format!("hof-race:winner op={} path=quantized", op_name));
             Ok(q)
         }
@@ -322,29 +337,39 @@ pub(crate) fn execute_hedged_predicate_kernel(
             interp.push_hedged_trace(format!("hof-race:winner op={} path=plain", op_name));
             Ok(p)
         }
-        (Ok(_), Err(e_plain)) => {
-            interp.runtime_metrics.hedged_race_validation_reject_count += 1;
-            Err(e_plain)
+        (Ok(q), Err(_)) => {
+            interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
+            interp.push_hedged_trace(format!(
+                "hof-race:winner op={} path=quantized reason=plain-error",
+                op_name
+            ));
+            Ok(q)
         }
         (Err(eq), Err(_)) => Err(eq),
     }
 }
 
+/// Fold kernel race (FOLD / SCAN step).
+/// See `execute_hedged_map_kernel` for the racing contract.
 pub(crate) fn execute_hedged_fold_kernel(
     interp: &mut Interpreter,
     op_name: &str,
     qb: &QuantizedBlock,
-    exec: &ExecutableCode,
+    plain_tokens: Option<&[Token]>,
     acc: Value,
     elem: Value,
 ) -> Result<Value> {
+    let Some(tokens) = plain_tokens else {
+        return execute_quantized_fold_kernel(interp, qb, acc, elem);
+    };
     if !hedged_mode(interp.elastic_mode()) || !can_hedge_hof_kernel(op_name) {
         return execute_quantized_fold_kernel(interp, qb, acc, elem);
     }
     interp.runtime_metrics.hedged_race_started_count += 1;
     interp.push_hedged_trace(format!("hof-race:start op={}", op_name));
     let quantized = execute_quantized_fold_kernel(interp, qb, acc.clone(), elem.clone());
-    let plain = execute_plain_fold_kernel(interp, exec, acc, elem);
+    let plain_exec = ExecutableCode::CodeBlock(tokens.to_vec());
+    let plain = execute_plain_fold_kernel(interp, &plain_exec, acc, elem);
     match (quantized, plain) {
         (Ok(q), Ok(p)) => {
             if q != p {
@@ -355,7 +380,6 @@ pub(crate) fn execute_hedged_fold_kernel(
                 return Ok(p);
             }
             interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
-            interp.runtime_metrics.hedged_race_cancel_count += 1;
             interp.push_hedged_trace(format!("hof-race:winner op={} path=quantized", op_name));
             Ok(q)
         }
@@ -365,9 +389,13 @@ pub(crate) fn execute_hedged_fold_kernel(
             interp.push_hedged_trace(format!("hof-race:winner op={} path=plain", op_name));
             Ok(p)
         }
-        (Ok(_), Err(e_plain)) => {
-            interp.runtime_metrics.hedged_race_validation_reject_count += 1;
-            Err(e_plain)
+        (Ok(q), Err(_)) => {
+            interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
+            interp.push_hedged_trace(format!(
+                "hof-race:winner op={} path=quantized reason=plain-error",
+                op_name
+            ));
+            Ok(q)
         }
         (Err(eq), Err(_)) => Err(eq),
     }
@@ -375,6 +403,7 @@ pub(crate) fn execute_hedged_fold_kernel(
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -443,7 +472,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         interp,
                         "MAP",
                         qb,
-                        &executable,
+                        plain_tokens.as_deref(),
                         elem.clone(),
                     ) {
                         Ok(result_val) => {
@@ -570,6 +599,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -639,7 +669,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             interp,
                             "FILTER",
                             qb,
-                            &executable,
+                            plain_tokens.as_deref(),
                             elem.clone(),
                         ) {
                             Ok(is_true) => {
@@ -794,6 +824,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_any(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -842,8 +873,13 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                 let elem = target_val.get_child(i).unwrap().clone();
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_hedged_predicate_kernel(interp, "ANY", qb, &executable, elem)
-                        {
+                        match execute_hedged_predicate_kernel(
+                            interp,
+                            "ANY",
+                            qb,
+                            plain_tokens.as_deref(),
+                            elem,
+                        ) {
                             Ok(is_true) => {
                                 if is_true {
                                     result = true;
@@ -989,6 +1025,7 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_all(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -1037,8 +1074,13 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
                 let elem = target_val.get_child(i).unwrap().clone();
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_hedged_predicate_kernel(interp, "ALL", qb, &executable, elem)
-                        {
+                        match execute_hedged_predicate_kernel(
+                            interp,
+                            "ALL",
+                            qb,
+                            plain_tokens.as_deref(),
+                            elem,
+                        ) {
                             Ok(is_true) => {
                                 if !is_true {
                                     result = false;
@@ -1184,6 +1226,7 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -1236,7 +1279,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                             interp,
                             "COUNT",
                             qb,
-                            &executable,
+                            plain_tokens.as_deref(),
                             elem,
                         ) {
                             Ok(is_true) => {

@@ -1,3 +1,4 @@
+use crate::interpreter::epoch::EpochSnapshot;
 use crate::types::Value;
 
 use super::hedged_trace::HedgedPath;
@@ -13,7 +14,9 @@ pub enum HedgedRejectReason {
 pub struct HedgedCandidateResult {
     pub path: HedgedPath,
     pub stack: Vec<Value>,
-    pub epoch_at_spawn: u64,
+    /// Full epoch snapshot captured at race spawn time.
+    /// Validation compares only dictionary_epoch and module_epoch.
+    pub epoch_at_spawn: EpochSnapshot,
 }
 
 #[derive(Debug, Clone)]
