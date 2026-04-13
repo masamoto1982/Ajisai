@@ -2,6 +2,11 @@ pub mod arithmetic;
 pub mod audio;
 pub mod cast;
 pub mod comparison;
+#[path = "compiled-plan.rs"]
+pub mod compiled_plan;
+pub mod epoch;
+#[path = "quantized-block.rs"]
+pub mod quantized_block;
 pub mod control;
 #[path = "child-runtime.rs"]
 pub mod child_runtime;
@@ -96,3 +101,17 @@ pub use interpreter_core::*;
 
 
 pub use crate::types::WordDefinition;
+
+pub use compiled_plan::{compile_word_definition, execute_compiled_plan, is_plan_valid, CompiledLine, CompiledOp, CompiledPlan};
+pub use epoch::EpochSnapshot;
+pub use quantized_block::{is_quantizable_block, quantize_code_block, QuantizedArity, QuantizedBlock, QuantizedPurity};
+
+#[cfg(test)]
+#[path = "compiled-plan-tests.rs"]
+mod compiled_plan_tests;
+#[cfg(test)]
+#[path = "quantized-block-tests.rs"]
+mod quantized_block_tests;
+#[cfg(test)]
+#[path = "perf-regression-tests.rs"]
+mod perf_regression_tests;
