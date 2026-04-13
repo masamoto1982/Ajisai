@@ -1,9 +1,9 @@
 # Ajisai Canonical Specification
 
-Status: **Canonical**  
-Version: **2026-04-10 canonical reset**
+Status: **Canonical**
+Version: **2026-04-13**
 
-This document is the single design authority for Ajisai. If any other file conflicts with this document, this document wins.
+This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states.
 
 ---
 
@@ -26,7 +26,7 @@ Ajisai is designed for mechanical reasoning, automated refactoring, and structur
 3. WASM/TS observable contracts derived from this file
 
 ### 2.2 Non-canonical
-Any roadmap, handover note, TODO note, or historical design memo is non-canonical unless explicitly promoted here.
+Any roadmap, handover note, TODO note, or design memo is non-canonical unless explicitly promoted here.
 
 ---
 
@@ -90,7 +90,7 @@ The runtime must preserve internal consistency where enabled by implementation.
 Canonical boundary: FlowToken fields (ID, remaining mass, parent/child links, ratios) are internal runtime state and must not be treated as default user-visible output.
 
 ### 5.3 Bifurcation semantics
-- `,,` (bifurcation / keep-mode) is user-visible as: “retain source context while emitting result according to modifier rules.”
+- `,,` (bifurcation / keep-mode) is user-visible as: "retain source context while emitting result according to modifier rules."
 - Mass ratio / branch conservation details are internal by default.
 - Optional diagnostics may expose flow-token information, but diagnostic visibility is non-default and must not redefine user-level language meaning.
 
@@ -119,12 +119,10 @@ Mode composition must be explicit and mechanically testable.
 
 ---
 
-## 7. Error Model (Canonical decisions)
+## 7. Error Model
 
-### 7.1 NoChange policy
-**`NoChange` is not a canonical runtime error.**
-
-Operations that produce a value equal to their input are successful unless another canonical error condition applies.
+### 7.1 Equal-value output policy
+Operations that produce a value equal to their input are successful. Equal-value output is not an error category.
 
 ### 7.2 Canonical error categories
 Runtime errors are reserved for conditions such as:
@@ -140,11 +138,9 @@ Error wording should be stable enough for tests, but exact phrasing is secondary
 
 ## 8. Call Depth and Recursion Policy
 
-Legacy fixed custom-word call-depth limits are **non-canonical**.
+Ajisai has no hard-coded call-depth limit as a language semantic rule.
 
-Canonical rule:
-- No hard-coded shallow call-depth limit as a language semantic rule.
-- Implementations may apply execution resource guards (step budget, timeout, memory guard) as runtime safety controls.
+Implementations may apply execution resource guards (step budget, timeout, memory guard) as runtime safety controls.
 
 Resource guard behavior must be documented by implementation and tested as implementation policy, not as core language semantics.
 
@@ -169,7 +165,7 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited except for 
 - Keep Rust files under 500 lines.
 - Keep control flow shallow and phase-separated.
 - Separate semantic changes from structural cleanup in change management.
-- Remove legacy coexistence patterns instead of dual-mode drift.
+- Maintain single canonical implementations; do not allow dual-mode drift.
 - Source code files must contain no inline comments or block comments. All explanatory text must reside in external specification and documentation files.
 
 ### 10.2 Advisory rules
@@ -183,19 +179,15 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited except for 
 
 - Canonical: this file.
 - Secondary docs (`README.md`, `docs/dev/*.md`, handover notes) must not define competing semantics.
-- If historical context is needed, it must be explicitly marked archival and non-canonical.
+- Secondary docs must not be treated as specification.
 
 ---
 
 ## 12. Compatibility Policy
 
-Ajisai does not guarantee backward compatibility with obsolete semantics.
+Ajisai does not guarantee stability of semantics that conflict with this specification.
 
-When behavior changes are made to converge with this spec, each meaningful change must be classified as one of:
-- canonicalization
-- legacy removal
-- AI-first strengthening
-- bug fix
+When behavior changes are made, each meaningful change must be documented with its rationale.
 
 ---
 
@@ -203,21 +195,8 @@ When behavior changes are made to converge with this spec, each meaningful chang
 
 A change is conformant only if all are true:
 1. It does not introduce a second design authority.
-2. It does not reintroduce `NoChange` runtime-error semantics.
-3. It does not rely on fixed shallow call-depth legacy semantics.
+2. It does not treat equal-value output as a runtime error.
+3. It does not impose hard-coded call-depth limits as language semantics.
 4. It preserves data-plane/semantic-plane separation.
 5. It keeps vector/tensor staged pipeline boundaries explicit.
 6. It improves or preserves AI-first structural clarity.
-
----
-
-## 14. Phase-1 Frozen Canonical Decisions
-
-This canonical reset freezes the following:
-1. Single authority = `SPECIFICATION.md`.
-2. `NoChange` runtime error model is removed from canonical semantics.
-3. Legacy fixed call-depth limit is removed from canonical semantics.
-4. Bifurcation mass/conservation is internal invariant by default.
-5. Observable behavior boundary is explicitly defined.
-6. AI-first rules are split into mandatory vs advisory.
-7. Secondary docs are explicitly non-canonical unless promoted.
