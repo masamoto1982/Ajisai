@@ -1,26 +1,5 @@
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
@@ -31,10 +10,6 @@ use num_traits::{One, ToPrimitive};
 
 
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
-
-
-
-
 
 
 fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {

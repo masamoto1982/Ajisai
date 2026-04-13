@@ -327,7 +327,6 @@ export const createVocabularyManager = (
         });
 
 
-
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
             container.classList.add('is-empty');
             container.appendChild(createNoResultsElement());

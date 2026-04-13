@@ -1,12 +1,7 @@
 
 
-
-
-
 pub(crate) fn lookup_detail_modifier(name: &str) -> Option<String> {
     let result = match name {
-
-
 
 
         "." => r#"# . - スタックトップ指定
@@ -53,9 +48,6 @@ CONCAT, REVERSE, LEVEL, +, -, *, /, MAP など
 
 ## 注意
 - ワード実行後、自動的にスタックトップモード(.)にリセットされます"#,
-
-
-
 
 
         "," => r#"# , - 消費モード指定

@@ -1,7 +1,5 @@
 
 
-
-
 use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, Result};
@@ -36,17 +34,13 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 }
 
 
-
-
-
-
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            // StackTop always preserves the source vector (query semantics).
+
             let result_elem =
                 with_stacktop_vector_target_with_arg(interp, &index_val, true, |target_val| {
                     let len = target_val.len();
@@ -92,10 +86,6 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
-
-
-
-
 
 
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
@@ -149,10 +139,6 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
-
-
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -201,9 +187,6 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
                 interp.stack[actual_index] = new_element;
 
 
-
-
-
                 let _ = original_stack;
             } else {
                 interp.stack[actual_index] = new_element;
@@ -212,10 +195,6 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
-
-
-
-
 
 
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {

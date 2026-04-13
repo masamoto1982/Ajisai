@@ -5,9 +5,6 @@ import { TEST_CASES, type TestCase } from './gui-interpreter-test-cases';
 import { formatStack, formatValueSimple, compareStack, compareValue } from './value-formatter';
 
 
-
-
-
 export interface TestResult {
     readonly passed: boolean;
     readonly actualStack?: Value[];
@@ -35,12 +32,6 @@ export interface TestRunner {
 type InfoType = 'success' | 'error' | 'info';
 
 
-
-
-
-
-
-
 const groupByCategory = (testCases: TestCase[]): Map<string, TestCase[]> => {
     const groups = new Map<string, TestCase[]>();
 
@@ -54,11 +45,7 @@ const groupByCategory = (testCases: TestCase[]): Map<string, TestCase[]> => {
 };
 
 
-
-
 const checkIsTestPassed = (result: TestResult): boolean => result.passed;
-
-
 
 
 const calculateStackDifference = (
@@ -84,9 +71,6 @@ const calculateStackDifference = (
 
     return differences;
 };
-
-
-
 
 
 export const createTestRunner = (_callbacks: TestRunnerCallbacks): TestRunner => {

@@ -1,9 +1,5 @@
 
 
-
-
-
-
 export function pipe<A>(value: A): A;
 export function pipe<A, B>(value: A, fn1: (a: A) => B): B;
 export function pipe<A, B, C>(value: A, fn1: (a: A) => B, fn2: (b: B) => C): C;
@@ -12,8 +8,6 @@ export function pipe<A, B, C, D, E>(value: A, fn1: (a: A) => B, fn2: (b: B) => C
 export function pipe(value: unknown, ...fns: Array<(arg: unknown) => unknown>): unknown {
     return fns.reduce((acc, fn) => fn(acc), value);
 }
-
-
 
 
 export type Result<T, E = Error> =

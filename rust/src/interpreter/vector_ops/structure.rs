@@ -1,7 +1,5 @@
 
 
-
-
 use super::extract_vector_elements;
 use super::targeting::{with_stacktop_vector_target_no_arg, with_stacktop_vector_target_with_arg};
 use crate::error::{AjisaiError, Result};
@@ -150,10 +148,6 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
-
-
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -226,10 +220,6 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
 
     Ok(())
 }
-
-
-
-
 
 
 pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {

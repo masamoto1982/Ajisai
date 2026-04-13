@@ -1,46 +1,5 @@
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
@@ -51,7 +10,6 @@ use num_traits::{One, ToPrimitive, Zero};
 
 
 const DEFAULT_HASH_BITS: u32 = 256;
-
 
 
 const PRIME_BITS: u32 = 127;
@@ -77,8 +35,6 @@ lazy_static::lazy_static! {
 }
 
 
-
-
 fn serialize_value_for_hash(value: &Value) -> Vec<u8> {
     let mut bytes = Vec::new();
     serialize_value_inner_for_hash(value, &mut bytes);
@@ -91,7 +47,6 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
         bytes.push(0x06);
         return;
     }
-
 
 
     if val.is_scalar() {
@@ -130,9 +85,6 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
 }
 
 
-
-
-
 fn compute_polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
     let mut hash = BigInt::zero();
     let mut power = BigInt::one();
@@ -148,9 +100,6 @@ fn compute_polynomial_hash(bytes: &[u8], prime: &BigInt) -> BigInt {
 }
 
 
-
-
-
 fn compute_multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
     let h1 = compute_polynomial_hash(bytes, &PRIME1);
     let h2 = compute_polynomial_hash(bytes, &PRIME2);
@@ -161,7 +110,6 @@ fn compute_multi_prime_hash(bytes: &[u8], output_bits: u32) -> BigInt {
 
 
     let output_modulus = BigInt::one() << output_bits as usize;
-
 
 
     let mut result = combined.clone();
@@ -204,32 +152,6 @@ fn parse_hash_args_in_keep_mode(interp: &Interpreter) -> Result<(u32, Value)> {
 
     Ok((DEFAULT_HASH_BITS, target))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 pub fn op_hash(interp: &mut Interpreter) -> Result<()> {

@@ -229,8 +229,6 @@ mod tests {
     async fn test_sample_words_in_vector_literal_play() {
 
 
-
-
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -292,7 +290,6 @@ mod tests {
         let mut interp = Interpreter::new();
 
 
-
         let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
             result.is_ok(),
@@ -322,8 +319,6 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
-
-
 
 
         let result = interp

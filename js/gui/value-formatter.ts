@@ -7,8 +7,6 @@ const SCIENTIFIC_THRESHOLD = 10;
 const MANTISSA_PRECISION = 6;
 
 
-
-
 function formatIntegerScientific(numStr: string): string {
     const isNegative = numStr.startsWith('-');
     const absNumStr = isNegative ? numStr.substring(1) : numStr;
@@ -34,8 +32,6 @@ function formatIntegerScientific(numStr: string): string {
 
     return `${mantissa}e${exponent}`;
 }
-
-
 
 
 export function formatFractionScientific(numerStr: string, denomStr: string): string {
@@ -77,15 +73,11 @@ export function formatFractionScientific(numerStr: string, denomStr: string): st
 }
 
 
-
-
 export function formatFraction(frac: Fraction): string {
     const denomStr = String(frac.denominator);
     const numerStr = String(frac.numerator);
     return formatFractionScientific(numerStr, denomStr);
 }
-
-
 
 
 export function formatValueSimple(value: Value): string {
@@ -119,8 +111,6 @@ export function formatValueSimple(value: Value): string {
 }
 
 
-
-
 export function formatStack(stack: Value[]): string {
     if (stack.length === 0) {
         return '[]';
@@ -128,8 +118,6 @@ export function formatStack(stack: Value[]): string {
     const formatted = stack.map(v => formatValueSimple(v)).join(', ');
     return `[${formatted}]`;
 }
-
-
 
 
 export function compareValue(actual: Value, expected: Value): boolean {
@@ -158,8 +146,6 @@ export function compareValue(actual: Value, expected: Value): boolean {
             return JSON.stringify(actual.value) === JSON.stringify(expected.value);
     }
 }
-
-
 
 
 export function compareStack(actual: Value[], expected: Value[]): boolean {

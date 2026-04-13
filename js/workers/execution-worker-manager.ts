@@ -35,14 +35,11 @@ export class WorkerManager {
         this.workers = [];
 
 
-
         this.compiledModule = extractCompiledWasmModule();
 
         if (!this.compiledModule) {
             console.warn('[WorkerManager] Compiled WASM module not available; workers will init independently');
         }
-
-
 
 
         for (let i = 0; i < this.maxWorkers; i++) {
@@ -56,8 +53,6 @@ export class WorkerManager {
 
         worker.onmessage = (event) => this.resolveWorkerMessage(instance, event.data);
         worker.onerror = (error) => this.resolveWorkerError(instance, error);
-
-
 
 
         if (this.compiledModule) {

@@ -1,8 +1,5 @@
 
 
-
-
-
 use super::audio_types::{
     update_play_mode, AudioStructure, Envelope, PlayCommand, PlayMode, WaveformType,
 };
@@ -11,10 +8,6 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{is_string_value, is_vector_value, value_as_string};
 use crate::types::Value;
 use num_traits::ToPrimitive;
-
-
-
-
 
 
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
@@ -65,10 +58,6 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
 
     Ok(())
 }
-
-
-
-
 
 
 pub(crate) fn build_audio_structure(
@@ -175,10 +164,6 @@ pub(crate) fn build_audio_structure(
         waveform: WaveformType::Sine,
     })
 }
-
-
-
-
 
 
 fn check_audible_range(freq: f64, output: &mut String) {

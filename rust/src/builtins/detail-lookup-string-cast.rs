@@ -1,12 +1,7 @@
 
 
-
-
-
 pub(crate) fn lookup_detail_string_cast(name: &str) -> Option<String> {
     let result = match name {
-
-
 
 
         "CHARS" => r#"# CHARS - 文字列を文字ベクタに分解
@@ -96,9 +91,6 @@ vec1 vec2 ... .. JOIN
 - 全要素がString型である必要があります
 - 空ベクタはエラー
 - 数値や他の型を含むとエラー"#,
-
-
-
 
 
         "NUM" => r#"# NUM - 文字列を数値にパース
@@ -235,9 +227,6 @@ NIL BOOL               # エラー: NILは対象外
 - 有効なUnicodeコードポイント: 0〜0x10FFFF
 - サロゲートペア範囲（0xD800〜0xDFFF）は無効
 - 整数のみ受け付け（分数はエラー）"#,
-
-
-
 
 
         "NOW" => r#"# NOW - 現在時刻取得

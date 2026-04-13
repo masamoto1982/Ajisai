@@ -4,7 +4,6 @@ mod tests {
     use crate::types::ValueData;
 
 
-
     #[tokio::test]
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
@@ -86,7 +85,6 @@ mod tests {
         assert!(result.is_err(), "Empty brackets should be an error");
         assert!(result.unwrap_err().to_string().contains("Empty vector"));
     }
-
 
 
     #[tokio::test]
@@ -177,7 +175,6 @@ mod tests {
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
     }
-
 
 
     #[tokio::test]
@@ -313,7 +310,6 @@ mod tests {
         assert!(!val.is_nil(), "TRUE OR NIL should return TRUE, not NIL");
         assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
-
 
 
     #[tokio::test]

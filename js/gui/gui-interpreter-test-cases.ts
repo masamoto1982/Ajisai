@@ -36,7 +36,6 @@ export function createNil(): Value {
 export const TEST_CASES: TestCase[] = [
 
 
-
     {
         name: "Number - integer",
         code: "[ 42 ]",
@@ -91,8 +90,6 @@ export const TEST_CASES: TestCase[] = [
         expectedStack: [createVector([createNil()])],
         category: "Basic Types"
     },
-
-
 
 
     {
@@ -157,9 +154,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
-
     {
         name: "Less than - true",
         code: "[ 3 ] [ 5 ] <",
@@ -204,8 +198,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
     {
         name: "AND - true && true",
         code: "[ TRUE ] [ TRUE ] AND",
@@ -238,8 +230,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
     {
         name: "COND - basic branch",
         code: "[ -1 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND",
@@ -258,8 +248,6 @@ export const TEST_CASES: TestCase[] = [
         expectError: true,
         category: "Conditional"
     },
-
-
 
 
     {
@@ -335,8 +323,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
     {
 
         name: "SHAPE - 1D",
@@ -396,8 +382,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
     {
         name: "Broadcast - scalar + vector",
         code: "[ 10 ] [ 1 2 3 ] +",
@@ -416,9 +400,6 @@ export const TEST_CASES: TestCase[] = [
         expectedStack: [createVector([createNumber('11'), createNumber('22'), createNumber('33')])],
         category: "Broadcasting"
     },
-
-
-
 
 
     {
@@ -472,9 +453,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
-
     {
         name: "STR - number to string",
         code: "[ 42 ] STR",
@@ -511,9 +489,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
-
     {
         name: "CHARS - split string",
         code: "'hello' CHARS",
@@ -533,8 +508,6 @@ export const TEST_CASES: TestCase[] = [
         expectedStack: [createString('hello')],
         category: "String Operations"
     },
-
-
 
 
     {
@@ -571,9 +544,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
-
     {
         name: "DEF and call",
         code: "{ [ 2 ] * } 'DOUBLE' DEF\n[ 5 ] DOUBLE",
@@ -586,8 +556,6 @@ export const TEST_CASES: TestCase[] = [
         expectError: true,
         category: "User Words"
     },
-
-
 
 
     {
@@ -603,8 +571,6 @@ export const TEST_CASES: TestCase[] = [
     },
 
 
-
-
     {
 
         name: "Nil Coalescing - NIL case",
@@ -618,8 +584,6 @@ export const TEST_CASES: TestCase[] = [
         expectedStack: [createVector([createNumber('42')])],
         category: "NIL Safety"
     },
-
-
 
 
     {

@@ -43,7 +43,7 @@ export interface ExecuteResult {
     stack?: Value[];
     userWords?: UserWord[];
     importedModules?: string[];
-    // Flow-token diagnostics are internal runtime invariants and are intentionally not part of default WASM result shape.
+
 }
 
 export interface Fraction {

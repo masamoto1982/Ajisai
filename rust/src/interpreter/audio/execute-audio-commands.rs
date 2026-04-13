@@ -1,8 +1,5 @@
 
 
-
-
-
 use super::audio_types::{update_play_mode, PlayMode, WaveformType};
 use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
@@ -11,28 +8,16 @@ use crate::types::{Value, ValueData};
 use num_traits::ToPrimitive;
 
 
-
-
-
-
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Sequential);
     Ok(())
 }
 
 
-
-
-
-
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Simultaneous);
     Ok(())
 }
-
-
-
-
 
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
@@ -42,8 +27,6 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         _ => None,
     }
 }
-
-
 
 
 pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
@@ -86,12 +69,6 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
-
-
-
-
 pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -124,12 +101,6 @@ pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
     interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
     Ok(())
 }
-
-
-
-
-
-
 
 
 pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
@@ -174,10 +145,6 @@ pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
-
-
 pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
@@ -187,16 +154,9 @@ pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
     }
 
 
-
     interp.stack.push(val);
     Ok(())
 }
-
-
-
-
-
-
 
 
 pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
@@ -269,14 +229,9 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
     }
 
 
-
     interp.stack.push(target);
     Ok(())
 }
-
-
-
-
 
 
 pub fn op_sine(interp: &mut Interpreter) -> Result<()> {
@@ -306,7 +261,6 @@ fn apply_waveform(interp: &mut Interpreter, _waveform: WaveformType) -> Result<(
     if !val.is_vector() {
         return Err(AjisaiError::from("Waveform word requires a vector"));
     }
-
 
 
     interp.stack.push(val);

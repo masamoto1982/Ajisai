@@ -186,9 +186,6 @@ const formatVector = (value: unknown, depth: number): string => {
 };
 
 
-
-
-
 const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     const node = document.createElement('span');
     node.className = 'stack-node';

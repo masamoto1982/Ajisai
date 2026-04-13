@@ -123,8 +123,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
 fn find_word_owner(
     interp: &Interpreter,
     target_dict: Option<&str>,

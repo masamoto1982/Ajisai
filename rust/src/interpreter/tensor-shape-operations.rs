@@ -205,10 +205,6 @@ where
     };
 
 
-
-
-
-
     if tensor_a.shape == tensor_b.shape {
         let mut out_data = Vec::with_capacity(out_size);
         for i in 0..out_size {
@@ -244,10 +240,7 @@ where
     let tensor = FlatTensor::from_value(val)?;
 
 
-
-
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
     Ok(result_tensor.to_value())
 }
-

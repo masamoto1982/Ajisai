@@ -233,8 +233,6 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
 
-
-
                     const savedWordNames = new Set(wordsToRestore.map((w: UserWord) => w.name.toUpperCase()));
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
                     for (const [name] of currentWords) {

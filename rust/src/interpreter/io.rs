@@ -1,9 +1,5 @@
 
 
-
-
-
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Value;
@@ -19,23 +15,6 @@ fn extract_value_for_print(interp: &mut Interpreter, keep_mode: bool) -> Result<
     }
     interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {

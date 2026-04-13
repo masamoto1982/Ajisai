@@ -34,8 +34,6 @@ pub(crate) fn create_bigint_from_i128(n: i128) -> BigInt {
 }
 
 
-
-
 #[derive(Debug, Clone)]
 pub(crate) enum FractionRepr {
     Small(i64, i64),
@@ -92,11 +90,6 @@ impl Fraction {
             FractionRepr::Big { denominator, .. } => denominator.is_zero(),
         }
     }
-
-
-
-
-
 
 
     #[inline]

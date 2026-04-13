@@ -313,7 +313,6 @@ mod tests {
     fn test_roundtrip_array() {
 
 
-
         let json = serde_json::json!([-1, -2, -3]);
         let val = deserialize_json_to_value(json.clone(), 1).unwrap();
         let back = serialize_value_to_json(&val);

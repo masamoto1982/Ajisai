@@ -1,12 +1,7 @@
 
 
-
-
-
 pub(crate) fn lookup_detail_arithmetic_logic(name: &str) -> Option<String> {
     let result = match name {
-
-
 
 
         "+" => r#"# + - 加算
@@ -132,9 +127,6 @@ pub(crate) fn lookup_detail_arithmetic_logic(name: &str) -> Option<String> {
 - 演算結果が入力と同じ場合（例：[1]での除算）はエラー"#,
 
 
-
-
-
         "=" => r#"# = - 等価比較
 
 ## 機能（StackTopモード）
@@ -241,9 +233,6 @@ N個の要素を順に比較し、全て等しいかを判定します。
 ## 理由
 「< と <= のみ使用する」方針により、数直線との対応が明確になり
 コードの読みやすさが向上します。"#,
-
-
-
 
 
         "AND" => r#"# AND - 論理積

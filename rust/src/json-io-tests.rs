@@ -3,9 +3,6 @@ mod json_io_tests {
     use crate::interpreter::Interpreter;
 
 
-
-
-
     #[tokio::test]
     async fn test_parse_integer() {
         let mut interp = Interpreter::new();
@@ -104,9 +101,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_stringify_integer() {
         let mut interp = Interpreter::new();
@@ -163,9 +157,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_input_empty() {
         let mut interp = Interpreter::new();
@@ -210,9 +201,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_json_get_existing_key() {
         let mut interp = Interpreter::new();
@@ -255,9 +243,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_json_keys() {
         let mut interp = Interpreter::new();
@@ -281,9 +266,6 @@ mod json_io_tests {
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
     }
-
-
-
 
 
     #[tokio::test]
@@ -326,9 +308,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_parse_stringify_roundtrip_number() {
         let mut interp = Interpreter::new();
@@ -358,9 +337,6 @@ mod json_io_tests {
     }
 
 
-
-
-
     #[tokio::test]
     async fn test_input_parse_process_stringify_output() {
         let mut interp = Interpreter::new();
@@ -374,9 +350,6 @@ mod json_io_tests {
         assert_eq!(stack.len(), 0);
         assert_eq!(interp.io_output_buffer, "'[2,4,6]'");
     }
-
-
-
 
 
     #[tokio::test]

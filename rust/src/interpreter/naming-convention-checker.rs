@@ -1,7 +1,5 @@
 
 
-
-
 const AMBIGUOUS_PREFIXES: &[&str] = &["DO-", "HANDLE-", "PROCESS-", "MANAGE-", "UTIL-", "HELPER-"];
 
 const AMBIGUOUS_NAMES: &[&str] = &[
@@ -9,9 +7,7 @@ const AMBIGUOUS_NAMES: &[&str] = &[
 ];
 
 
-
 const SHORT_NAME_MAX_LENGTH: usize = 6;
-
 
 
 pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
@@ -54,7 +50,6 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
     if upper.contains('-') {
         return None;
     }
-
 
 
     None
