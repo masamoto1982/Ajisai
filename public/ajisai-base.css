@@ -104,7 +104,7 @@ header {
 .app-brand-block {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.4rem;
     text-decoration: none;
     color: inherit;
 }
@@ -141,16 +141,17 @@ header {
 
 .logo-qr {
     opacity: 0;
-    filter: brightness(0) invert(1);
 }
 
 .logo-swap:hover .logo-default,
+.logo-swap.qr-active .logo-default,
 .app-brand-block:focus-visible .logo-default,
 .app-brand-block:focus-within .logo-default {
     opacity: 0;
 }
 
 .logo-swap:hover .logo-qr,
+.logo-swap.qr-active .logo-qr,
 .app-brand-block:focus-visible .logo-qr,
 .app-brand-block:focus-within .logo-qr {
     opacity: 1;
