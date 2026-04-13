@@ -40,6 +40,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             interp
                 .output_buffer
                 .push_str(&format!("Deleted dictionary: {}\n", word_name));
+            interp.bump_dictionary_epoch();
             interp.force_flag = false;
             return Ok(());
         }
@@ -52,6 +53,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             interp
                 .output_buffer
                 .push_str(&format!("Deleted dictionary: {}\n", word_name));
+            interp.bump_dictionary_epoch();
             interp.force_flag = false;
             return Ok(());
         }
@@ -118,6 +120,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         .output_buffer
         .push_str(&format!("Deleted word: {}\n", fq_name));
 
+    interp.bump_dictionary_epoch();
     interp.force_flag = false;
     Ok(())
 }

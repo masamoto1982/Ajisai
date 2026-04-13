@@ -261,6 +261,7 @@ fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &str) -> Resu
                 original_source: None,
                 namespace: Some(module.name.to_string()),
                 registration_order: 0,
+                compiled_plan: None,
             }),
         );
     }
@@ -273,6 +274,7 @@ fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &str) -> Resu
             sample_words,
         },
     );
+    interp.bump_module_epoch();
     Ok(())
 }
 
@@ -299,6 +301,7 @@ fn build_sample_words(
                 original_source: None,
                 namespace: Some(module_name.to_string()),
                 registration_order: 0,
+                compiled_plan: None,
             }),
         );
     }
@@ -384,6 +387,7 @@ pub fn op_import(interp: &mut Interpreter) -> Result<()> {
         .to_uppercase();
 
     import_all_public(interp, &module_name)?;
+    interp.bump_module_epoch();
     interp.rebuild_dependencies()?;
     Ok(())
 }
@@ -442,6 +446,7 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
     }
 
     emit_import_conflict_warnings(interp, &module_name);
+    interp.bump_module_epoch();
     interp.rebuild_dependencies()?;
     Ok(())
 }

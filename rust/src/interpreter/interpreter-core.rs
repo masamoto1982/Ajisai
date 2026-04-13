@@ -5,6 +5,8 @@ use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use super::epoch::EpochSnapshot;
+
 pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -86,6 +88,7 @@ pub(crate) struct ChildRuntime {
     pub exit_reason: Option<ExitReason>,
     pub result_snapshot: Option<Vec<Value>>,
     pub monitored: bool,
+    pub spawn_epoch: EpochSnapshot,
 }
 
 pub struct Interpreter {
@@ -119,6 +122,12 @@ pub struct Interpreter {
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
     pub(crate) active_user_dictionary: String,
+
+    pub(crate) global_epoch: u64,
+    pub(crate) epoch_stack: SmallVec<[u64; 8]>,
+    pub(crate) dictionary_epoch: u64,
+    pub(crate) module_epoch: u64,
+    pub(crate) execution_epoch: u64,
 
     pub(crate) semantic_registry: SemanticRegistry,
 
@@ -159,6 +168,11 @@ impl Interpreter {
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
             active_user_dictionary: "DEMO".to_string(),
+            global_epoch: 0,
+            epoch_stack: SmallVec::new(),
+            dictionary_epoch: 0,
+            module_epoch: 0,
+            execution_epoch: 0,
             semantic_registry: SemanticRegistry::new(),
             child_runtimes: HashMap::new(),
             next_child_id: 1,
@@ -169,6 +183,43 @@ impl Interpreter {
         interpreter
     }
 
+
+
+    pub(crate) fn next_epoch(&mut self) -> u64 {
+        self.global_epoch += 1;
+        self.global_epoch
+    }
+
+    pub(crate) fn push_epoch_frame(&mut self) -> u64 {
+        let e = self.next_epoch();
+        self.epoch_stack.push(e);
+        e
+    }
+
+    pub(crate) fn pop_epoch_frame(&mut self) {
+        self.epoch_stack.pop();
+    }
+
+    pub(crate) fn bump_dictionary_epoch(&mut self) {
+        self.dictionary_epoch = self.next_epoch();
+    }
+
+    pub(crate) fn bump_module_epoch(&mut self) {
+        self.module_epoch = self.next_epoch();
+    }
+
+    pub(crate) fn bump_execution_epoch(&mut self) {
+        self.execution_epoch = self.next_epoch();
+    }
+
+    pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
+        EpochSnapshot {
+            global_epoch: self.global_epoch,
+            dictionary_epoch: self.dictionary_epoch,
+            module_epoch: self.module_epoch,
+            execution_epoch: self.execution_epoch,
+        }
+    }
 
     pub fn update_flow_tracking(&mut self, enabled: bool) {
         self.flow_tracking = enabled;
