@@ -8,6 +8,7 @@ use crate::types::Value;
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<crate::types::Token>> = code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -84,7 +85,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                             interp,
                             "FOLD",
                             qb,
-                            &executable,
+                            plain_tokens.as_deref(),
                             accumulator.clone(),
                             elem,
                         ) {
@@ -390,6 +391,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let plain_tokens: Option<Vec<crate::types::Token>> = code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -461,7 +463,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                             interp,
                             "SCAN",
                             qb,
-                            &executable,
+                            plain_tokens.as_deref(),
                             accumulator.clone(),
                             elem,
                         ) {

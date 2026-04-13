@@ -142,7 +142,10 @@ impl Interpreter {
                 let (plain_result, plain_stack, plain_hints) =
                     self.run_user_word_plain_isolated(&def);
 
-                if self.current_epoch_snapshot() != epoch_before {
+                let after = self.current_epoch_snapshot();
+                if after.dictionary_epoch != epoch_before.dictionary_epoch
+                    || after.module_epoch != epoch_before.module_epoch
+                {
                     self.runtime_metrics.hedged_race_validation_reject_count += 1;
                     self.runtime_metrics.hedged_race_fallback_count += 1;
                     self.push_hedged_trace(format!(
@@ -157,7 +160,6 @@ impl Interpreter {
                         (Ok(()), Ok(())) => {
                             if compiled_stack == plain_stack {
                                 self.runtime_metrics.hedged_race_winner_quantized_count += 1;
-                                self.runtime_metrics.hedged_race_cancel_count += 1;
                                 self.push_hedged_trace(format!(
                                     "race:winner compiled word={} loser=plain",
                                     resolved_name
@@ -188,15 +190,15 @@ impl Interpreter {
                             self.semantic_registry.stack_hints = plain_hints;
                             Ok(())
                         }
-                        (Ok(_), Err(e_plain)) => {
-                            self.runtime_metrics.hedged_race_validation_reject_count += 1;
+                        (Ok(()), Err(_)) => {
+                            self.runtime_metrics.hedged_race_winner_quantized_count += 1;
                             self.push_hedged_trace(format!(
-                                "race:reject word={} reason=plain-error",
+                                "race:winner compiled word={} reason=plain-error",
                                 resolved_name
                             ));
-                            self.stack = plain_stack;
-                            self.semantic_registry.stack_hints = plain_hints;
-                            Err(e_plain)
+                            self.stack = compiled_stack;
+                            self.semantic_registry.stack_hints = compiled_hints;
+                            Ok(())
                         }
                         (Err(e_compiled), Err(_)) => {
                             self.push_hedged_trace(format!(
