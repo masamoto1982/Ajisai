@@ -9,8 +9,15 @@ interface WorkerTask {
     code: string;
     state: InterpreterSnapshot;
     hedgedRequestId: string;
+    strategyLabel: string;
     resolve: (result: any) => void;
     reject: (error: any) => void;
+}
+
+interface HedgedGroup {
+    winnerTaskId: string | null;
+    taskIds: Set<string>;
+    cancelledStrategies: string[];
 }
 
 interface WorkerInstance {
@@ -26,6 +33,7 @@ export class WorkerManager {
     private workers: WorkerInstance[] = [];
     private taskQueue: WorkerTask[] = [];
     private activeTasks = new Map<string, WorkerTask>();
+    private hedgedGroups = new Map<string, HedgedGroup>();
     private compiledModule: WebAssembly.Module | null = null;
     private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
@@ -76,17 +84,100 @@ export class WorkerManager {
         if (!task) return;
 
         switch (message.type) {
-            case 'result':
-                task.resolve(message.data);
+            case 'result': {
+                const handled = this.resolveHedgedWinner(task, message.data);
+                if (!handled) {
+                    task.resolve(message.data);
+                }
                 break;
+            }
             case 'error':
-                task.reject(new Error(message.data));
+                if (!this.resolveHedgedError(task, message.data)) {
+                    task.reject(new Error(message.data));
+                }
                 break;
             case 'aborted':
-                task.reject(new Error('Execution aborted'));
+                if (!this.isLoserTask(task)) {
+                    task.reject(new Error('Execution aborted'));
+                }
                 break;
         }
         this.completeTask(instance);
+    }
+
+    private getOrCreateHedgedGroup(hedgedRequestId: string): HedgedGroup {
+        let group = this.hedgedGroups.get(hedgedRequestId);
+        if (!group) {
+            group = {
+                winnerTaskId: null,
+                taskIds: new Set<string>(),
+                cancelledStrategies: []
+            };
+            this.hedgedGroups.set(hedgedRequestId, group);
+        }
+        return group;
+    }
+
+    private isLoserTask(task: WorkerTask): boolean {
+        const group = this.hedgedGroups.get(task.hedgedRequestId);
+        return !!group && !!group.winnerTaskId && group.winnerTaskId !== task.id;
+    }
+
+    private resolveHedgedWinner(task: WorkerTask, data: ExecuteResult): boolean {
+        const group = this.hedgedGroups.get(task.hedgedRequestId);
+        if (!group || group.taskIds.size <= 1) return false;
+
+        if (!group.winnerTaskId) {
+            group.winnerTaskId = task.id;
+            const cancelled = this.abortLosers(task);
+            const enriched: ExecuteResult = {
+                ...data,
+                hedgedWinner: task.strategyLabel,
+                hedgedCancelled: cancelled,
+                hedgedFallbackReason: cancelled.length > 0 ? 'LoserDiscarded' : undefined
+            };
+            task.resolve(enriched);
+            return true;
+        }
+        return true;
+    }
+
+    private resolveHedgedError(task: WorkerTask, errorText: string): boolean {
+        const group = this.hedgedGroups.get(task.hedgedRequestId);
+        if (!group || group.taskIds.size <= 1) return false;
+        group.taskIds.delete(task.id);
+        if (group.taskIds.size === 0) {
+            this.hedgedGroups.delete(task.hedgedRequestId);
+            task.reject(new Error(errorText));
+        }
+        return true;
+    }
+
+    private abortLosers(winnerTask: WorkerTask): string[] {
+        const group = this.hedgedGroups.get(winnerTask.hedgedRequestId);
+        if (!group) return [];
+        const cancelled: string[] = [];
+
+        for (const [taskId, task] of this.activeTasks.entries()) {
+            if (task.hedgedRequestId === winnerTask.hedgedRequestId && taskId !== winnerTask.id) {
+                const worker = this.workers.find(w => w.currentTaskId === taskId)?.worker;
+                if (worker) {
+                    worker.postMessage({ type: 'abort', id: taskId });
+                    cancelled.push(task.strategyLabel);
+                }
+            }
+        }
+
+        this.taskQueue = this.taskQueue.filter(task => {
+            if (task.hedgedRequestId === winnerTask.hedgedRequestId && task.id !== winnerTask.id) {
+                cancelled.push(task.strategyLabel);
+                return false;
+            }
+            return true;
+        });
+
+        group.cancelledStrategies = cancelled;
+        return cancelled;
     }
 
     private resolveWorkerError(instance: WorkerInstance, error: ErrorEvent): void {
@@ -103,6 +194,16 @@ export class WorkerManager {
 
     private completeTask(instance: WorkerInstance): void {
         if (instance.currentTaskId) {
+            const task = this.activeTasks.get(instance.currentTaskId);
+            if (task) {
+                const group = this.hedgedGroups.get(task.hedgedRequestId);
+                if (group) {
+                    group.taskIds.delete(task.id);
+                    if (group.taskIds.size === 0) {
+                        this.hedgedGroups.delete(task.hedgedRequestId);
+                    }
+                }
+            }
             this.activeTasks.delete(instance.currentTaskId);
         }
         instance.busy = false;
@@ -122,6 +223,7 @@ export class WorkerManager {
         instance.busy = true;
         instance.currentTaskId = task.id;
         this.activeTasks.set(task.id, task);
+        this.getOrCreateHedgedGroup(task.hedgedRequestId).taskIds.add(task.id);
 
         instance.worker.postMessage({
             type: 'execute',
@@ -149,15 +251,51 @@ export class WorkerManager {
     execute(code: string, state: InterpreterSnapshot): Promise<ExecuteResult> {
         this.ensureWorkers();
         return new Promise((resolve, reject) => {
-            const task: WorkerTask = {
-                id: this.createTaskId(),
-                code,
-                state,
-                hedgedRequestId: this.createHedgedRequestId(),
-                resolve,
-                reject
+            const shared = { settled: false };
+            const wrapResolve = (result: ExecuteResult): void => {
+                if (shared.settled) return;
+                shared.settled = true;
+                resolve(result);
             };
-            this.taskQueue.push(task);
+            const wrapReject = (error: Error): void => {
+                if (shared.settled) return;
+                shared.settled = true;
+                reject(error);
+            };
+
+            const hedgedRequestId = this.createHedgedRequestId();
+            if (state.executionMode === 'hedged-trace' && this.maxWorkers >= 2) {
+                const hedgedSafeState: InterpreterSnapshot = { ...state, executionMode: 'hedged-safe' };
+                const greedyState: InterpreterSnapshot = { ...state, executionMode: 'greedy' };
+                this.taskQueue.push({
+                    id: this.createTaskId(),
+                    code,
+                    state: hedgedSafeState,
+                    hedgedRequestId,
+                    strategyLabel: 'hedged-safe',
+                    resolve: wrapResolve,
+                    reject: wrapReject
+                });
+                this.taskQueue.push({
+                    id: this.createTaskId(),
+                    code,
+                    state: greedyState,
+                    hedgedRequestId,
+                    strategyLabel: 'plain-greedy',
+                    resolve: wrapResolve,
+                    reject: wrapReject
+                });
+            } else {
+                this.taskQueue.push({
+                    id: this.createTaskId(),
+                    code,
+                    state,
+                    hedgedRequestId,
+                    strategyLabel: state.executionMode,
+                    resolve: wrapResolve,
+                    reject: wrapReject
+                });
+            }
             this.processQueue();
         });
     }

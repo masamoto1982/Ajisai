@@ -153,6 +153,7 @@ pub struct Interpreter {
     pub(crate) next_supervisor_id: u64,
 
     pub(crate) runtime_metrics: RuntimeMetrics,
+    pub(crate) hedged_trace_log: Vec<String>,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
     pub(crate) elastic_mode: crate::elastic::ElasticMode,
@@ -201,6 +202,7 @@ impl Interpreter {
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
+            hedged_trace_log: Vec::new(),
 
             // Elastic Engine
             elastic_mode: crate::elastic::ElasticMode::Greedy,
@@ -281,6 +283,14 @@ impl Interpreter {
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
         self.runtime_metrics
+    }
+
+    pub fn push_hedged_trace(&mut self, message: impl Into<String>) {
+        self.hedged_trace_log.push(message.into());
+    }
+
+    pub fn drain_hedged_trace(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.hedged_trace_log)
     }
 
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
@@ -414,6 +424,8 @@ impl Interpreter {
         self.next_child_id = 1;
         self.monitor_notifications.clear();
         self.next_supervisor_id = 1;
+        self.runtime_metrics = RuntimeMetrics::default();
+        self.hedged_trace_log.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }

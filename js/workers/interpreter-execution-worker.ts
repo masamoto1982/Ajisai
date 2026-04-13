@@ -74,6 +74,9 @@ self.onmessage = async (event: MessageEvent) => {
     try {
 
         applyInterpreterSnapshot(interpreter!, event.data.state);
+        if (event.data.executionMode) {
+            interpreter!.set_execution_mode(event.data.executionMode);
+        }
 
         if (isAborted) throw new Error('aborted');
 

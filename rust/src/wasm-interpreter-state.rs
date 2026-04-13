@@ -3,9 +3,9 @@ use super::wasm_value_conversion::{
 };
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
+use crate::elastic::ElasticMode;
 use crate::interpreter;
 use crate::tokenizer;
-use crate::elastic::ElasticMode;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -91,7 +91,6 @@ impl AjisaiInterpreter {
         to_value(&builtins::collect_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
-
     #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
@@ -100,7 +99,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
     #[wasm_bindgen]
     pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
@@ -121,7 +119,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
     #[wasm_bindgen]
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
@@ -165,7 +162,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
     #[wasm_bindgen]
     pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
@@ -256,6 +252,15 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn collect_hedged_trace(&mut self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for item in self.interpreter.drain_hedged_trace() {
+            arr.push(&JsValue::from_str(&item));
+        }
+        arr.into()
+    }
+
+    #[wasm_bindgen]
     pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
         use crate::types::json::deserialize_json_to_value;
 
@@ -315,7 +320,6 @@ impl AjisaiInterpreter {
         self.interpreter
             .rebuild_dependencies()
             .map_err(|e| e.to_string())?;
-
 
         let _ = self.interpreter.collect_output();
 

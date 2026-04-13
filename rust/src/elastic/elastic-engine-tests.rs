@@ -405,6 +405,16 @@ mod tests {
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
+    async fn run_hedged_safe(code: &str) -> Vec<String> {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::HedgedSafe);
+        interp
+            .execute(code)
+            .await
+            .expect("hedged-safe execution failed");
+        interp.stack.iter().map(|v| format!("{:?}", v)).collect()
+    }
+
     macro_rules! assert_semantics_match {
         ($code:expr) => {{
             let greedy = run_greedy($code).await;
@@ -445,6 +455,68 @@ mod tests {
     #[tokio::test]
     async fn semantics_filter() {
         assert_semantics_match!("[1 2 3 4 5 6] { [2] MOD [0] = } FILTER");
+    }
+
+    macro_rules! assert_greedy_hedged_match {
+        ($code:expr) => {{
+            let greedy = run_greedy($code).await;
+            let hedged = run_hedged_safe($code).await;
+            assert_eq!(
+                greedy, hedged,
+                "Semantic divergence for `{}`:\n  greedy = {:?}\n  hedged = {:?}",
+                $code, greedy, hedged
+            );
+        }};
+    }
+
+    #[tokio::test]
+    async fn semantics_hedged_hof_kernels() {
+        assert_greedy_hedged_match!("[1 2 3] { [2] * } MAP");
+        assert_greedy_hedged_match!("[1 2 3 4 5 6] { [2] MOD [0] = } FILTER");
+        assert_greedy_hedged_match!("[1 2 3 4] [0] { + } FOLD");
+        assert_greedy_hedged_match!("[1 2 3 4] [0] { + } SCAN");
+    }
+
+    #[tokio::test]
+    async fn hedged_metrics_increment_for_hof_kernels() {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::HedgedSafe);
+        interp
+            .execute(
+                "[1 2 3 4] { [1] + } MAP [1 2 3 4] { [2] MOD [0] = } FILTER [1 2 3 4] [0] { + } FOLD",
+            )
+            .await
+            .expect("hedged-safe execution failed");
+        let m = interp.runtime_metrics();
+        assert!(m.hedged_race_started_count >= 1);
+        assert!(m.hedged_race_winner_quantized_count >= 1 || m.hedged_race_winner_plain_count >= 1);
+    }
+
+    #[tokio::test]
+    async fn compiled_plan_plain_race_runs_in_hedged_mode() {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::HedgedSafe);
+        interp
+            .execute("{ [2] * } 'DOUBLE' DEF [5] DOUBLE [7] DOUBLE")
+            .await
+            .expect("hedged compiled/plain race should succeed");
+        let m = interp.runtime_metrics();
+        assert!(
+            m.hedged_race_started_count >= 1,
+            "compiled/plain race should increment started count"
+        );
+    }
+
+    #[tokio::test]
+    async fn hedged_trace_collects_events() {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::HedgedTrace);
+        interp
+            .execute("[1 2 3] { [2] * } MAP")
+            .await
+            .expect("hedged trace execution should succeed");
+        let trace = interp.drain_hedged_trace();
+        assert!(!trace.is_empty(), "hedged trace should record events");
     }
 
     #[tokio::test]
