@@ -1,120 +1,99 @@
-const CACHE_NAME = 'ajisai-v202604111200';
+const CACHE_NAME = 'ajisai-v202604111200'; // CI が自動更新
+
 const urlsToCache = [
-  './',
-  './index.html',
-  './app-interface.css',
-  './manifest.json'
+    './',
+    './index.html',
+    './manifest.json'
 ];
 
+// ── ストア戦略の判定 ────────────────────────────────────────────
+//
+// [Network-first]  → HTML。常に最新を取り、オフライン時にキャッシュを返す
+// [Cache-first]    → Vite がコンテンツハッシュを付けた /assets/ とWASM。
+//                    URL が変わる = 常に新鮮なので永続キャッシュで問題なし
+// [Stale-while-revalidate] → public/ の静的ファイル(CSS, 画像など)。
+//                    キャッシュから即返しつつ、裏でフェッチして次回に反映
 
-const networkFirstPatterns = [
-  'config.js',
-  'app-interface.css',
-  'index.html'
-];
+const isNavigation  = req => req.mode === 'navigate';
+const isHashedAsset = url => url.includes('/assets/');
+const isWasm        = url => url.endsWith('.wasm');
 
-function shouldUseNetworkFirst(url) {
-  return networkFirstPatterns.some(pattern => url.includes(pattern));
+// ── ライフサイクル ─────────────────────────────────────────────
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => cache.addAll(urlsToCache))
+            .then(() => self.skipWaiting())
+            .catch(err => console.error('[SW] Install failed:', err))
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys()
+            .then(names => Promise.all(
+                names.map(name => name !== CACHE_NAME ? caches.delete(name) : null)
+            ))
+            .then(() => self.clients.claim())
+    );
+});
+
+// ── フェッチハンドラ ───────────────────────────────────────────
+
+self.addEventListener('fetch', event => {
+    if (!event.request.url.startsWith('http')) return;
+
+    const url = event.request.url;
+
+    if (isNavigation(event.request) || url.includes('index.html')) {
+        event.respondWith(networkFirst(event.request));
+    } else if (isHashedAsset(url) || isWasm(url)) {
+        event.respondWith(cacheFirst(event.request));
+    } else {
+        event.respondWith(staleWhileRevalidate(event.request));
+    }
+});
+
+// ── 戦略実装 ──────────────────────────────────────────────────
+
+async function networkFirst(request) {
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        const cached = await caches.match(request);
+        return cached ?? new Response('Offline', { status: 503 });
+    }
 }
 
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('[SW] Skip waiting');
-        return self.skipWaiting();
-      })
-      .catch(err => {
-        console.error('[SW] Cache installation failed:', err);
-      })
-  );
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('[SW] Claiming clients');
-      return self.clients.claim();
-    })
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-
-  if (!event.request.url.startsWith('http')) {
-    return;
-  }
-
-
-  if (shouldUseNetworkFirst(event.request.url)) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(event.request, responseToCache))
-              .catch(err => console.warn('[SW] Failed to cache response:', err));
-          }
-          return response;
-        })
-        .catch(() => {
-
-          console.log('[SW] Network failed, serving from cache:', event.request.url);
-          return caches.match(event.request);
-        })
-    );
-    return;
-  }
-
-
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          console.log('[SW] Serving from cache:', event.request.url);
-          return response;
+async function cacheFirst(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
         }
+        return response;
+    } catch {
+        return new Response('Network error', { status: 503 });
+    }
+}
 
-        console.log('[SW] Fetching:', event.request.url);
-        return fetch(event.request).then(response => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
+async function staleWhileRevalidate(request) {
+    const cache  = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
 
-          if (event.request.url.includes('.wasm') ||
-              event.request.url.includes('.js') ||
-              event.request.url.includes('.css')) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(event.request, responseToCache))
-              .catch(err => console.warn('[SW] Failed to cache response:', err));
-          }
+    const fetchPromise = fetch(request).then(response => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+    }).catch(() => null);
 
-          return response;
-        });
-      })
-      .catch(err => {
-        console.error('[SW] Fetch failed:', err);
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      })
-  );
-});
+    return cached ?? await fetchPromise;
+}
