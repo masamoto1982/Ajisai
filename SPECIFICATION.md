@@ -64,7 +64,18 @@ All numeric literals are parsed as exact rational numbers.
 
 ### 3.3 String literals
 
-Text enclosed in single quotes: `'hello'`. Consecutive string tokens are merged automatically: `'hel''lo'` is equivalent to `'hello'`.
+A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `(`, `)`, `#`, `=`, `~`, `$`).
+
+Any `'` that appears before a non-boundary character is a literal quote character in the string content.
+
+Examples:
+
+| Source | String value |
+|--------|-------------|
+| `'hello'` | `hello` |
+| `'it's'` | `it's` |
+| `'hel''lo'` | `hel''lo` |
+| `'これは'テスト'です'` | `これは'テスト'です` |
 
 ### 3.4 Code blocks
 
