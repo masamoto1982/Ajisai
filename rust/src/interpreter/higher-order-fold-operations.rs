@@ -4,7 +4,7 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
-use super::higher_order::{extract_executable_code, execute_executable_code, ExecutableCode};
+use super::higher_order::{extract_executable_code, execute_executable_code, execute_quantized_fold_kernel, ExecutableCode};
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -75,25 +75,39 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(accumulator.clone());
-                interp.stack.push(elem);
-
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => match interp.stack.pop() {
-                        Some(result) => {
-                            accumulator = result;
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_fold_kernel(interp, qb, accumulator.clone(), elem) {
+                            Ok(result) => {
+                                accumulator = result;
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
-                        None => {
-                            error = Some(AjisaiError::from(
-                                "FOLD: expected return value, got empty stack",
-                            ));
-                            break;
+                    }
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(accumulator.clone());
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => match interp.stack.pop() {
+                                Some(result) => {
+                                    accumulator = result;
+                                }
+                                None => {
+                                    error = Some(AjisaiError::from(
+                                        "FOLD: expected return value, got empty stack",
+                                    ));
+                                    break;
+                                }
+                            },
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
-                    },
-                    Err(e) => {
-                        error = Some(e);
-                        break;
                     }
                 }
             }
@@ -428,26 +442,41 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(accumulator.clone());
-                interp.stack.push(elem);
-
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => match interp.stack.pop() {
-                        Some(result) => {
-                            accumulator = result;
-                            results.push(accumulator.clone());
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        match execute_quantized_fold_kernel(interp, qb, accumulator.clone(), elem) {
+                            Ok(result) => {
+                                accumulator = result;
+                                results.push(accumulator.clone());
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
-                        None => {
-                            error = Some(AjisaiError::from(
-                                "SCAN: expected return value, got empty stack",
-                            ));
-                            break;
+                    }
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(accumulator.clone());
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
+                            Ok(_) => match interp.stack.pop() {
+                                Some(result) => {
+                                    accumulator = result;
+                                    results.push(accumulator.clone());
+                                }
+                                None => {
+                                    error = Some(AjisaiError::from(
+                                        "SCAN: expected return value, got empty stack",
+                                    ));
+                                    break;
+                                }
+                            },
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
-                    },
-                    Err(e) => {
-                        error = Some(e);
-                        break;
                     }
                 }
             }
