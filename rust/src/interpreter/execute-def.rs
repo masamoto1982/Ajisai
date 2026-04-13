@@ -289,15 +289,6 @@ pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLin
     let mut i = 0;
     while i < tokens.len() {
         match &tokens[i] {
-            Token::String(s) if s.starts_with('\'') && s.ends_with('\'') => {
-                let inner = &s[1..s.len() - 1];
-
-                let inner_tokens = crate::tokenizer::tokenize(inner)
-                    .map_err(|e| AjisaiError::from(format!("Error tokenizing quotation: {}", e)))?;
-                processed_tokens.push(Token::VectorStart);
-                processed_tokens.extend(inner_tokens);
-                processed_tokens.push(Token::VectorEnd);
-            }
             Token::LineBreak => {
                 if !processed_tokens.is_empty() {
                     let execution_line = ExecutionLine {

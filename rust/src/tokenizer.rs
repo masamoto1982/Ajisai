@@ -200,7 +200,7 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
         if c == '\'' {
             if in_string {
 
-                if i + 1 >= chars.len() || chars[i + 1].is_whitespace() || is_special_char(chars[i + 1]) {
+                if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
                     in_string = false;
                 }
             } else {
@@ -378,7 +378,7 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     while i < chars.len() {
         if chars[i] == '\'' {
 
-            if i + 1 >= chars.len() || is_delimiter(chars[i + 1]) {
+            if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
                 return QuoteParseResult::StringSuccess(Token::String(string.into()), i + 1);
             } else {
 
@@ -398,6 +398,10 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
 
 fn is_delimiter(c: char) -> bool {
     c.is_whitespace() || is_special_char(c)
+}
+
+fn is_string_close_delimiter(c: char) -> bool {
+    c.is_whitespace() || (is_special_char(c) && c != '\'')
 }
 
 

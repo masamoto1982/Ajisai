@@ -77,6 +77,30 @@ mod tokenizer_regression_tests {
     }
 
     #[test]
+    fn test_adjacent_quotes_are_literal() {
+        let result = tokenize("'hel''lo'").unwrap();
+        assert_eq!(result, vec![Token::String("hel''lo".into()),]);
+    }
+
+    #[test]
+    fn test_multiple_inner_quotes() {
+        let result = tokenize("'a'b'c'").unwrap();
+        assert_eq!(result, vec![Token::String("a'b'c".into()),]);
+    }
+
+    #[test]
+    fn test_adjacent_quotes_followed_by_space() {
+        let result = tokenize("'hel''lo' 'world'").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::String("hel''lo".into()),
+                Token::String("world".into()),
+            ]
+        );
+    }
+
+    #[test]
     fn test_flexible_quotes_single_with_double_inside() {
         let result = tokenize("'He\"llo'").unwrap();
         assert_eq!(result, vec![Token::String("He\"llo".into()),]);
