@@ -1,7 +1,5 @@
 
 
-
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuiltinDetailGroup {
     Modifier,
@@ -843,8 +841,6 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
 pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
     BUILTIN_SPECS.iter().find(|spec| spec.name == name)
 }
-
-
 
 
 pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)>

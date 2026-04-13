@@ -7,9 +7,6 @@ use ajisai_core::types::fraction::Fraction;
 use ajisai_core::interpreter::Interpreter;
 
 
-
-
-
 fn build_ajisai_dictionary() -> HashMap<String, String> {
     let words = vec![
         "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "SPLIT",
@@ -64,9 +61,6 @@ fn bench_hashmap_lookup_miss(c: &mut Criterion) {
 }
 
 
-
-
-
 fn bench_fraction_new_small_integers(c: &mut Criterion) {
     c.bench_function("fraction_new_small_integers", |b| {
         b.iter(|| {
@@ -92,9 +86,6 @@ fn bench_fraction_new_large_gcd(c: &mut Criterion) {
         })
     });
 }
-
-
-
 
 
 fn bench_fraction_add_i64_path(c: &mut Criterion) {
@@ -208,9 +199,6 @@ fn bench_fraction_eq_fraction(c: &mut Criterion) {
         })
     });
 }
-
-
-
 
 
 fn bench_interpreter_simple_arithmetic(c: &mut Criterion) {
@@ -337,9 +325,6 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
 }
 
 
-
-
-
 const TRIE_ALPHABET_SIZE: usize = 40;
 
 struct TrieNode {
@@ -456,9 +441,6 @@ fn bench_trie_lookup_miss(c: &mut Criterion) {
         })
     });
 }
-
-
-
 
 
 criterion_group!(

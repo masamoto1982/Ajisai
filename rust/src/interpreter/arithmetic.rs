@@ -37,8 +37,6 @@ where
             let b_val = &operands[1];
 
 
-
-
             let _in_place_candidates = flow_tokens.as_ref().map(|tokens| [
                 optimization_hooks::check_in_place_candidate(a_val, tokens.get(0)),
                 optimization_hooks::check_in_place_candidate(b_val, tokens.get(1)),
@@ -94,9 +92,6 @@ where
             }
 
 
-
-
-
             let _in_place_candidates = items.iter()
                 .map(|item| optimization_hooks::check_in_place_candidate(item, None))
                 .collect::<Vec<_>>();
@@ -123,7 +118,6 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_add(a, b) {
-
 
 
             let _in_place_candidates = [

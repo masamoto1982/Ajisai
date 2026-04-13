@@ -6,7 +6,6 @@ mod tokenizer_regression_tests_2 {
     use crate::types::Token;
 
 
-
     #[test]
     fn test_whitespace_handling() {
 
@@ -21,7 +20,6 @@ mod tokenizer_regression_tests_2 {
             ]
         );
     }
-
 
 
     #[test]
@@ -45,7 +43,6 @@ mod tokenizer_regression_tests_2 {
             vec![Token::Symbol("PRINT?".into()), Token::Symbol("SET!".into()),]
         );
     }
-
 
 
     #[test]
@@ -96,14 +93,12 @@ mod tokenizer_regression_tests_2 {
     }
 
 
-
     #[test]
     fn test_unclosed_string_error() {
         let result = tokenize("'unclosed string");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unclosed literal"));
     }
-
 
 
     #[test]
@@ -160,7 +155,6 @@ mod tokenizer_regression_tests_2 {
             ]
         );
     }
-
 
 
     #[test]
@@ -224,7 +218,6 @@ mod tokenizer_regression_tests_2 {
     }
 
 
-
     #[test]
     fn test_string_with_double_quote() {
 
@@ -238,7 +231,6 @@ mod tokenizer_regression_tests_2 {
         let result = tokenize("'It's fine'").unwrap();
         assert_eq!(result, vec![Token::String("It's fine".into()),]);
     }
-
 
 
     #[test]
@@ -266,7 +258,6 @@ mod tokenizer_regression_tests_2 {
     }
 
 
-
     #[test]
     fn test_chevron_branch_token_removed() {
 
@@ -282,7 +273,6 @@ mod tokenizer_regression_tests_2 {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("removed"));
     }
-
 
 
     #[test]
@@ -311,7 +301,6 @@ mod tokenizer_regression_tests_2 {
         assert!(semicolon_result.is_err());
         assert!(semicolon_result.unwrap_err().contains("removed"));
     }
-
 
 
     #[test]
@@ -346,7 +335,6 @@ mod tokenizer_regression_tests_2 {
             .unwrap_err()
             .contains("COND: $ clauses must be written one clause per line"));
     }
-
 
 
     #[test]

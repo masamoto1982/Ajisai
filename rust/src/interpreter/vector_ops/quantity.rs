@@ -1,7 +1,5 @@
 
 
-
-
 use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, Result};
@@ -36,16 +34,12 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
 }
 
 
-
-
-
-
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     let len = match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            // StackTop always preserves the source vector (query semantics).
+
             let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
             if target_val.is_nil() {
@@ -60,7 +54,7 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
             }
         }
         OperationTargetMode::Stack => {
-            // Stack mode respects keep_mode for clearing behavior.
+
             if is_keep_mode {
                 interp.stack.len()
             } else {
@@ -74,10 +68,6 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     interp.stack.push(create_number_value(len_frac));
     Ok(())
 }
-
-
-
-
 
 
 pub fn op_take(interp: &mut Interpreter) -> Result<()> {
@@ -136,10 +126,6 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
-
-
-
-
 
 
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {

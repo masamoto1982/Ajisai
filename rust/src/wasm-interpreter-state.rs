@@ -91,7 +91,6 @@ impl AjisaiInterpreter {
     }
 
 
-
     #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
@@ -100,7 +99,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
 
     #[wasm_bindgen]
@@ -122,7 +120,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
 
     #[wasm_bindgen]
@@ -167,7 +164,6 @@ impl AjisaiInterpreter {
         }
         arr.into()
     }
-
 
 
     #[wasm_bindgen]

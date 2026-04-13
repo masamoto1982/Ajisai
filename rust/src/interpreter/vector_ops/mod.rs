@@ -1,13 +1,5 @@
 
 
-
-
-
-
-
-
-
-
 pub mod position;
 pub mod quantity;
 pub mod structure;

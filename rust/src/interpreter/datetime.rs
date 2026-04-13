@@ -1,45 +1,5 @@
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     is_string_value, is_vector_value, value_as_string, create_datetime_value,
@@ -487,4 +447,3 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
 
     Ok(())
 }
-

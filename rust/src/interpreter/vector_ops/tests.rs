@@ -108,9 +108,6 @@ async fn test_range_error_infinite_restores_stack() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_reorder_basic_stacktop() {
     let mut interp = Interpreter::new();

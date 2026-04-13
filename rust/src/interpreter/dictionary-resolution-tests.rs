@@ -264,7 +264,6 @@ mod tests {
         let mut interp = Interpreter::new();
 
 
-
         let result = interp.execute("[ 10 20 30 ] [ 0 ] GET").await;
         assert!(
             result.is_ok(),

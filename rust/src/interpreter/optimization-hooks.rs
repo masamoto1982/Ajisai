@@ -1,14 +1,8 @@
 use crate::types::{FlowToken, Value};
 
 
-
-
-
-
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum InPlaceJudgment {
-
 
 
     Safe,
@@ -17,28 +11,11 @@ pub(crate) enum InPlaceJudgment {
     Aliased,
 
 
-
     PartiallyConsumed,
 
 
     NoFlowContext,
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #[inline]
@@ -74,7 +51,6 @@ mod tests {
     }
 
 
-
     #[test]
     fn test_no_flow_context_when_token_absent() {
         let v = scalar(42);
@@ -86,7 +62,6 @@ mod tests {
         let v = Value::nil();
         assert_eq!(check_in_place_candidate(&v, None), InPlaceJudgment::NoFlowContext);
     }
-
 
 
     #[test]
@@ -110,7 +85,6 @@ mod tests {
 
         assert_eq!(check_in_place_candidate(&v, Some(&flow)), InPlaceJudgment::Safe);
     }
-
 
 
     #[test]
@@ -152,7 +126,6 @@ mod tests {
     }
 
 
-
     #[test]
     fn test_aliased_when_rc_shared() {
 
@@ -173,7 +146,6 @@ mod tests {
         let flow = fresh_flow(&v1);
         assert_eq!(check_in_place_candidate(&v1, Some(&flow)), InPlaceJudgment::Safe);
     }
-
 
 
     #[test]

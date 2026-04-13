@@ -9,7 +9,6 @@ export async function initWasm(): Promise<WasmModule | null> {
     try {
 
 
-
         if (!compiledModule) {
             const wasmUrl = new URL('./pkg/ajisai_core_bg.wasm', import.meta.url);
             try {
@@ -25,7 +24,6 @@ export async function initWasm(): Promise<WasmModule | null> {
         const module = await import('./pkg/ajisai_core.js') as unknown as WasmModule;
 
 
-
         if (module.default) {
             await (module.default as (input?: unknown) => Promise<unknown>)({ module_or_path: compiledModule });
         } else if (module.init) {
@@ -39,10 +37,6 @@ export async function initWasm(): Promise<WasmModule | null> {
         return null;
     }
 }
-
-
-
-
 
 
 export function extractCompiledWasmModule(): WebAssembly.Module | null {

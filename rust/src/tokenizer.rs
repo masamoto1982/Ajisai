@@ -149,7 +149,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 }
 
 
-
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
@@ -402,8 +401,6 @@ fn is_delimiter(c: char) -> bool {
 }
 
 
-
-
 fn parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".into())),
@@ -451,7 +448,6 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     if i < chars.len() && chars[i] == '/' {
         let _slash_pos = i;
         i += 1;
-
 
 
         if i >= chars.len() || !chars[i].is_ascii_digit() {

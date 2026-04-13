@@ -1,10 +1,6 @@
 
 
-
 use crate::interpreter::Interpreter;
-
-
-
 
 
 #[tokio::test]
@@ -82,9 +78,6 @@ async fn test_collect_error_negative_count() {
     let result = interp.execute("1 2 3 -2 COLLECT").await;
     assert!(result.is_err(), "COLLECT with negative count should fail");
 }
-
-
-
 
 
 #[tokio::test]
@@ -180,9 +173,6 @@ async fn test_take_keep_mode() {
         "TAKE in keep mode should preserve target, args, and add result"
     );
 }
-
-
-
 
 
 #[tokio::test]

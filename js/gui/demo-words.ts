@@ -1,7 +1,6 @@
 import type { UserWord } from '../wasm-interpreter-types';
 
 
-
 export const DEMO_WORDS_VERSION = 8;
 
 export const DEMO_USER_WORDS: UserWord[] = [

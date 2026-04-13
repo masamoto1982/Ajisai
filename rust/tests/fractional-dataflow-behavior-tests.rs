@@ -1,21 +1,9 @@
 
 
-
-
-
-
-
-
-
-
-
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::fraction::Fraction;
 use ajisai_core::types::{FlowToken, Value};
 use num_bigint::BigInt;
-
-
-
 
 
 async fn run(code: &str) -> Result<Vec<Value>, String> {
@@ -58,9 +46,6 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
         panic!("Expected scalar, got {:?}", val);
     }
 }
-
-
-
 
 
 #[tokio::test]
@@ -169,9 +154,6 @@ async fn test_conservation_with_interpreter_tracking() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_over_consumption_error() {
     let val = Value::from_fraction(frac(5, 1));
@@ -223,9 +205,6 @@ async fn test_over_consumption_after_partial() {
     let msg = format!("{}", err);
     assert!(msg.contains("Over-consumption"), "Got: {}", msg);
 }
-
-
-
 
 
 #[tokio::test]
@@ -304,9 +283,6 @@ async fn test_flow_id_uniqueness() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_complete_consumption_success() {
     let val = Value::from_fraction(frac(7, 1));
@@ -361,9 +337,6 @@ async fn test_complete_consumption_via_chain() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_interpreter_flow_tracking_simple_addition() {
     let (stack, interp) = run_with_flow_tracking("[ 10 ] [ 20 ] ! +").await.unwrap();
@@ -416,9 +389,6 @@ async fn test_flow_token_shape_tracking() {
 
     assert_eq!(token.total, frac(21, 1));
 }
-
-
-
 
 
 #[tokio::test]
@@ -582,9 +552,6 @@ async fn test_bifurcation_interpreter_arithmetic() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_can_update_in_place_uniquely_owned_scalar() {
     let val = Value::from_fraction(frac(42, 1));
@@ -657,9 +624,6 @@ async fn test_is_uniquely_owned_code_block() {
     let val = Value::from_code_block(vec![]);
     assert!(!val.is_uniquely_owned());
 }
-
-
-
 
 
 #[tokio::test]
@@ -758,9 +722,6 @@ async fn test_fraction_svo_modulo() {
     let b = Fraction::from(5i64);
     assert_eq!(a.modulo(&b).to_i64(), Some(2));
 }
-
-
-
 
 
 #[tokio::test]

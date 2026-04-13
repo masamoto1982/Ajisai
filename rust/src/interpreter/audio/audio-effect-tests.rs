@@ -1,12 +1,6 @@
 
 
-
-
-
 use crate::interpreter::Interpreter;
-
-
-
 
 
 #[tokio::test]
@@ -142,9 +136,6 @@ async fn test_chord_can_be_defined_and_reused() {
         "Should contain AUDIO command"
     );
 }
-
-
-
 
 
 #[tokio::test]
@@ -284,14 +275,10 @@ async fn test_combined_gain_pan_play() {
 }
 
 
-
-
-
 #[tokio::test]
 async fn test_play_with_lyrics() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-
 
 
     let result = interp

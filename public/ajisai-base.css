@@ -12,8 +12,6 @@ body {
 }
 
 
-
-
 body {
     font-family: var(--font-stack-primary);
     background: var(--gradient-background);
@@ -30,8 +28,6 @@ a {
 a:hover {
     color: var(--color-secondary);
 }
-
-
 
 
 .skip-link {
@@ -53,8 +49,6 @@ a:hover {
     outline: 2px solid var(--color-secondary);
     outline-offset: 2px;
 }
-
-
 
 
 :focus {
@@ -82,15 +76,11 @@ select:focus-visible {
 }
 
 
-
-
 .container {
     min-height: 100%;
     display: flex;
     flex-direction: column;
 }
-
-
 
 
 header {
@@ -183,8 +173,6 @@ header h1 a {
 }
 
 
-
-
 footer {
     background: var(--gradient-header);
     padding: 0.75rem 2rem;
@@ -206,8 +194,6 @@ footer a {
 footer a:hover {
     color: var(--header-text);
 }
-
-
 
 
 #run-btn,
@@ -294,8 +280,6 @@ footer a:hover {
 }
 
 
-
-
 .display-area,
 .state-display,
 .words-display {
@@ -334,8 +318,6 @@ footer a:hover {
 }
 
 
-
-
 .offline-indicator {
     font-size: 0.875rem;
     color: var(--color-primary);
@@ -344,8 +326,6 @@ footer a:hover {
     border: var(--border-main);
     border-radius: var(--radius-main);
 }
-
-
 
 
 @media (max-width: 768px) {

@@ -166,10 +166,11 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited except for 
 
 ### 10.1 Mandatory rules
 - Prefer explicit, structurally searchable function/module names.
-- Keep Rust files under 500 lines (including comments/blanks).
+- Keep Rust files under 500 lines.
 - Keep control flow shallow and phase-separated.
 - Separate semantic changes from structural cleanup in change management.
 - Remove legacy coexistence patterns instead of dual-mode drift.
+- Source code files must contain no inline comments or block comments. All explanatory text must reside in external specification and documentation files.
 
 ### 10.2 Advisory rules
 - Prefer small helper extraction for duplicated control scaffolding.

@@ -1,7 +1,7 @@
 {
   "name": "Ajisai Programming Language",
   "short_name": "Ajisai",
-  "description": "A stack-based programming language inspired by FORTH",
+  "description": "AI-first, vector-oriented, fractional-dataflow language",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

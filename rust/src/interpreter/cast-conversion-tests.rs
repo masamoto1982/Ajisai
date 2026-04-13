@@ -190,16 +190,11 @@ mod tests {
         }
 
 
-
-
         interp.stack.clear();
         interp.stack.push(Value::from_bool(true));
         let result = op_bool(&mut interp);
         assert!(result.is_ok());
     }
-
-
-
 
 
     #[test]
@@ -254,8 +249,6 @@ mod tests {
         }
 
 
-
-
     }
 
     #[test]
@@ -305,9 +298,6 @@ mod tests {
             assert_eq!(s, "A");
         }
     }
-
-
-
 
 
     #[tokio::test]

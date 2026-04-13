@@ -1,14 +1,5 @@
 
 
-
-
-
-
-
-
-
-
-
 type WaveformType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 interface Envelope {
@@ -163,7 +154,6 @@ class AudioEngine {
         if (decay > 0) {
             gainNode.gain.linearRampToValueAtTime(sustainLevel, startTime + attack + decay);
         }
-
 
 
         const releaseStart = startTime + effectiveDuration;

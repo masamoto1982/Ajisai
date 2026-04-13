@@ -1,7 +1,7 @@
 {
   "name": "ajisai",
   "version": "1.0.0",
-  "description": "Ajisai - A stack-based programming language",
+  "description": "Ajisai - AI-first, vector-oriented, fractional-dataflow language",
   "type": "module",
   "scripts": {
     "build": "tsc",

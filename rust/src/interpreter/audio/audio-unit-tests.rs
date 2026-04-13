@@ -1,8 +1,5 @@
 
 
-
-
-
 use super::build_audio_structure::build_audio_structure;
 use super::audio_types::{AudioStructure, PlayMode};
 use crate::types::fraction::Fraction;
@@ -155,7 +152,6 @@ fn test_nil_becomes_rest() {
 fn test_seq_structure() {
 
 
-
     let elements = vec![create_number(440), create_number(550)];
     let val = create_vector(elements);
     let mut output = String::new();
@@ -177,7 +173,6 @@ fn test_sim_structure() {
     let val = create_vector(elements);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
-
 
 
     match structure {

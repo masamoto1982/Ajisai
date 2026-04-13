@@ -1,12 +1,7 @@
 
 
-
-
-
 pub(crate) fn lookup_detail_control_higher_order(name: &str) -> Option<String> {
     let result = match name {
-
-
 
 
         ":" => r#"# - コードブロック開始
@@ -100,9 +95,6 @@ value => fallback1 => fallback2
 ## 注意
 - NILのみを置換します（FALSEは置換しません）
 - 左結合です（左から順に評価）"#,
-
-
-
 
 
         "MAP" => r#"# MAP - 各要素に関数を適用

@@ -139,21 +139,6 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {

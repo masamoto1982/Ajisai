@@ -6,10 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 static FLOW_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, Clone, PartialEq)]
-/// Internal runtime invariant token.
-///
-/// FlowToken is not a canonical user-facing value type. It exists for
-/// diagnostic tracking, conservation verification, and optimization safety checks.
+
+
 pub struct FlowToken {
     pub id: u64,
     pub total: Fraction,

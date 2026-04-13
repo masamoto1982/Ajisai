@@ -6,7 +6,6 @@ mod tokenizer_regression_tests {
     use crate::types::Token;
 
 
-
     #[test]
     fn test_comment_basic() {
         let result = tokenize("1 2 # this is a comment").unwrap();
@@ -71,7 +70,6 @@ mod tokenizer_regression_tests {
     }
 
 
-
     #[test]
     fn test_flexible_quotes_single_with_single_inside() {
         let result = tokenize("'He'llo'").unwrap();
@@ -105,7 +103,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
 
     #[test]
@@ -181,7 +178,6 @@ mod tokenizer_regression_tests {
     }
 
 
-
     #[test]
     fn test_number_parsing() {
         let result = tokenize("123").unwrap();
@@ -243,7 +239,6 @@ mod tokenizer_regression_tests {
     }
 
 
-
     #[test]
     fn test_keywords() {
         let result = tokenize("TRUE FALSE NIL").unwrap();
@@ -266,7 +261,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
 
     #[test]
@@ -361,7 +355,6 @@ mod tokenizer_regression_tests {
     }
 
 
-
     #[test]
     fn test_complex_expression() {
         let result = tokenize("[ 1 2 3 ] LENGTH '結果' PRINT").unwrap();
@@ -396,7 +389,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
 
     #[test]
