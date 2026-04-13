@@ -3,15 +3,20 @@ use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, extract_word_name_from_value, is_vector_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::quantized_block::{quantize_code_block, QuantizedBlock};
 use crate::types::{DisplayHint, Token, Value, ValueData};
 
 pub(crate) enum ExecutableCode {
     WordName(String),
     CodeBlock(Vec<Token>),
+    QuantizedBlock(std::sync::Arc<QuantizedBlock>),
 }
 
-pub(crate) fn extract_executable_code(val: &Value) -> Result<ExecutableCode> {
+pub(crate) fn extract_executable_code(interp: &Interpreter, val: &Value) -> Result<ExecutableCode> {
     if let Some(tokens) = val.as_code_block() {
+        if let Some(qb) = quantize_code_block(tokens, interp) {
+            return Ok(ExecutableCode::QuantizedBlock(std::sync::Arc::new(qb)));
+        }
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
@@ -55,17 +60,32 @@ fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
 pub(crate) fn execute_executable_code(interp: &mut Interpreter, exec: &ExecutableCode) -> Result<()> {
     match exec {
         ExecutableCode::CodeBlock(tokens) => {
+            interp.bump_execution_epoch();
             interp.execute_section_core(tokens, 0)?;
             Ok(())
         }
         ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
+        ExecutableCode::QuantizedBlock(qb) => execute_quantized_block_stack_top(interp, qb),
     }
+}
+
+fn execute_quantized_block_stack_top(interp: &mut Interpreter, qb: &QuantizedBlock) -> Result<()> {
+    crate::interpreter::compiled_plan::execute_compiled_plan(interp, &qb.compiled_plan)
+}
+
+pub(crate) fn execute_quantized_map_kernel(interp: &mut Interpreter, qb: &QuantizedBlock, elem: Value) -> Result<Value> {
+    let saved = interp.stack.clone();
+    interp.stack.clear();
+    interp.stack.push(elem);
+    let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| interp.stack.pop().ok_or(AjisaiError::from("MAP: expected return value, got empty stack")));
+    interp.stack = saved;
+    res
 }
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -124,9 +144,21 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
-                interp.stack.clear();
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
+                match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => match execute_quantized_map_kernel(interp, qb, elem.clone()) {
+                        Ok(result_val) => {
+                            results.push(result_val);
+                            continue;
+                        }
+                        Err(e) => {
+                            error = Some(e);
+                            break;
+                        }
+                    },
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(elem);
+                        match execute_executable_code(interp, &executable) {
                     Ok(_) => match interp.stack.pop() {
                         Some(result_val) => {
                             let result_hint: DisplayHint =
@@ -150,6 +182,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     Err(e) => {
                         error = Some(e);
                         break;
+                    }
+                }
                     }
                 }
             }
@@ -239,7 +273,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -436,7 +470,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_any(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -609,7 +643,7 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_all(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);
@@ -782,7 +816,7 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let executable: ExecutableCode = match extract_executable_code(&code_val) {
+    let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
             interp.stack.push(code_val);

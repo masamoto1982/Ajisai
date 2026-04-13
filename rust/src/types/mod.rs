@@ -171,6 +171,7 @@ pub struct WordDefinition {
     pub original_source: Option<String>,
     pub namespace: Option<String>,
     pub registration_order: u64,
+    pub compiled_plan: Option<Arc<crate::interpreter::compiled_plan::CompiledPlan>>,
 }
 
 pub type Stack = Vec<Value>;

@@ -240,6 +240,7 @@ pub(crate) fn op_def_inner(
         original_source: None,
         namespace: Some(dict_name.clone()),
         registration_order: interp.next_registration_order(),
+        compiled_plan: None,
     };
 
     let dict_order = interp
@@ -278,6 +279,7 @@ pub(crate) fn op_def_inner(
             all_paths.join(" and ")
         ));
     }
+    interp.bump_dictionary_epoch();
     interp.force_flag = false;
     Ok(())
 }

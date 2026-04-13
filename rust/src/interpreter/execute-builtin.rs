@@ -3,6 +3,8 @@ use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, FlowToken, Token, Value};
 
+use super::compiled_plan::{arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback};
+
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
     execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort,
@@ -36,8 +38,29 @@ impl Interpreter {
             return self.execute_builtin(&resolved_name);
         }
 
+        let mut plan_to_run = None;
+        if let Some(existing) = def.compiled_plan.as_ref() {
+            if is_plan_valid(existing, self) {
+                plan_to_run = Some(existing.clone());
+            }
+        }
+
+        if plan_to_run.is_none() {
+            let plan = compile_word_definition(&def, self);
+            if !plan_is_all_fallback(&plan) {
+                self.bump_execution_epoch();
+                let plan_arc = arc_plan(plan);
+                self.store_compiled_plan_for_word(&resolved_name, plan_arc.clone());
+                plan_to_run = Some(plan_arc);
+            }
+        }
+
         self.call_stack.push(resolved_name.clone());
-        let result = self.execute_guard_structure(&def.lines);
+        let result = if let Some(plan) = plan_to_run {
+            execute_compiled_plan(self, &plan)
+        } else {
+            self.execute_guard_structure(&def.lines)
+        };
         self.call_stack.pop();
         result
     }
@@ -173,6 +196,27 @@ impl Interpreter {
             BuiltinExecutorKey::Kill => self.op_kill(),
             BuiltinExecutorKey::Monitor => self.op_monitor(),
             BuiltinExecutorKey::Supervise => self.op_supervise(),
+        }
+    }
+
+    fn store_compiled_plan_for_word(&mut self, resolved_name: &str, plan: std::sync::Arc<super::compiled_plan::CompiledPlan>) {
+        if let Some((ns, word)) = resolved_name.split_once('@') {
+            if let Some(dict) = self.user_dictionaries.get_mut(ns) {
+                if let Some(old_def) = dict.words.get(word).cloned() {
+                    let mut updated = (*old_def).clone();
+                    updated.compiled_plan = Some(plan.clone());
+                    dict.words.insert(word.to_string(), std::sync::Arc::new(updated));
+                    self.sync_user_words_cache();
+                    return;
+                }
+            }
+            if let Some(module) = self.module_vocabulary.get_mut(ns) {
+                if let Some(old_def) = module.sample_words.get(word).cloned() {
+                    let mut updated = (*old_def).clone();
+                    updated.compiled_plan = Some(plan);
+                    module.sample_words.insert(word.to_string(), std::sync::Arc::new(updated));
+                }
+            }
         }
     }
 
