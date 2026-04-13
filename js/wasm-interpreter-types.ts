@@ -1,4 +1,11 @@
 
+export type ExecutionMode =
+    | 'greedy'
+    | 'elastic-safe'
+    | 'elastic-force'
+    | 'hedged-safe'
+    | 'hedged-trace';
+
 
 export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
@@ -28,6 +35,9 @@ export interface AjisaiInterpreter {
     collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
     collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;
+    set_execution_mode(mode: ExecutionMode): void;
+    get_execution_mode(): ExecutionMode;
+    collect_hedged_trace(): string[];
 }
 
 export interface ExecuteResult {
@@ -43,6 +53,10 @@ export interface ExecuteResult {
     stack?: Value[];
     userWords?: UserWord[];
     importedModules?: string[];
+    hedgedTrace?: string[];
+    hedgedWinner?: string;
+    hedgedFallbackReason?: string;
+    hedgedCancelled?: string[];
 
 }
 

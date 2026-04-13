@@ -1,9 +1,12 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
+use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, FlowToken, Token, Value};
 
-use super::compiled_plan::{arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback};
+use super::compiled_plan::{
+    arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback,
+};
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
@@ -12,6 +15,36 @@ use super::{
 };
 
 impl Interpreter {
+    fn is_hedged_mode(&self) -> bool {
+        matches!(
+            self.elastic_mode(),
+            ElasticMode::HedgedSafe | ElasticMode::HedgedTrace
+        )
+    }
+
+    fn run_user_word_plain_isolated(
+        &mut self,
+        def: &std::sync::Arc<crate::types::WordDefinition>,
+    ) -> (Result<()>, Vec<Value>, Vec<DisplayHint>) {
+        let saved_stack = self.stack.clone();
+        let saved_hints = self.semantic_registry.stack_hints.clone();
+        let saved_target = self.operation_target_mode;
+        let saved_consumption = self.consumption_mode;
+        let saved_safe_mode = self.safe_mode;
+
+        let plain_result = self.execute_guard_structure(&def.lines);
+        let plain_stack = self.stack.clone();
+        let plain_hints = self.semantic_registry.stack_hints.clone();
+
+        self.stack = saved_stack;
+        self.semantic_registry.stack_hints = saved_hints;
+        self.operation_target_mode = saved_target;
+        self.consumption_mode = saved_consumption;
+        self.safe_mode = saved_safe_mode;
+
+        (plain_result, plain_stack, plain_hints)
+    }
+
     /// Public entry point for word execution.
     ///
     /// When `AJISAI_TRACE=1` (or `set_trace_enabled(true)`) is active this
@@ -95,7 +128,88 @@ impl Interpreter {
 
         self.call_stack.push(resolved_name.clone());
         let result = if let Some(plan) = plan_to_run {
-            execute_compiled_plan(self, &plan)
+            if self.is_hedged_mode() {
+                self.runtime_metrics.hedged_race_started_count += 1;
+                self.push_hedged_trace(format!(
+                    "race:start compiled-vs-plain word={}",
+                    resolved_name
+                ));
+                let epoch_before = self.current_epoch_snapshot();
+                let compiled_result = execute_compiled_plan(self, &plan);
+                let compiled_stack = self.stack.clone();
+                let compiled_hints = self.semantic_registry.stack_hints.clone();
+
+                let (plain_result, plain_stack, plain_hints) =
+                    self.run_user_word_plain_isolated(&def);
+
+                if self.current_epoch_snapshot() != epoch_before {
+                    self.runtime_metrics.hedged_race_validation_reject_count += 1;
+                    self.runtime_metrics.hedged_race_fallback_count += 1;
+                    self.push_hedged_trace(format!(
+                        "race:reject epoch-changed word={}",
+                        resolved_name
+                    ));
+                    self.stack = plain_stack;
+                    self.semantic_registry.stack_hints = plain_hints;
+                    plain_result
+                } else {
+                    match (compiled_result, plain_result) {
+                        (Ok(()), Ok(())) => {
+                            if compiled_stack == plain_stack {
+                                self.runtime_metrics.hedged_race_winner_quantized_count += 1;
+                                self.runtime_metrics.hedged_race_cancel_count += 1;
+                                self.push_hedged_trace(format!(
+                                    "race:winner compiled word={} loser=plain",
+                                    resolved_name
+                                ));
+                                self.stack = compiled_stack;
+                                self.semantic_registry.stack_hints = compiled_hints;
+                                Ok(())
+                            } else {
+                                self.runtime_metrics.hedged_race_validation_reject_count += 1;
+                                self.runtime_metrics.hedged_race_fallback_count += 1;
+                                self.push_hedged_trace(format!(
+                                    "race:fallback mismatch word={} -> plain",
+                                    resolved_name
+                                ));
+                                self.stack = plain_stack;
+                                self.semantic_registry.stack_hints = plain_hints;
+                                Ok(())
+                            }
+                        }
+                        (Err(_), Ok(())) => {
+                            self.runtime_metrics.hedged_race_winner_plain_count += 1;
+                            self.runtime_metrics.hedged_race_fallback_count += 1;
+                            self.push_hedged_trace(format!(
+                                "race:winner plain word={} reason=compiled-error",
+                                resolved_name
+                            ));
+                            self.stack = plain_stack;
+                            self.semantic_registry.stack_hints = plain_hints;
+                            Ok(())
+                        }
+                        (Ok(_), Err(e_plain)) => {
+                            self.runtime_metrics.hedged_race_validation_reject_count += 1;
+                            self.push_hedged_trace(format!(
+                                "race:reject word={} reason=plain-error",
+                                resolved_name
+                            ));
+                            self.stack = plain_stack;
+                            self.semantic_registry.stack_hints = plain_hints;
+                            Err(e_plain)
+                        }
+                        (Err(e_compiled), Err(_)) => {
+                            self.push_hedged_trace(format!(
+                                "race:failed word={} reason=both-error",
+                                resolved_name
+                            ));
+                            Err(e_compiled)
+                        }
+                    }
+                }
+            } else {
+                execute_compiled_plan(self, &plan)
+            }
         } else {
             self.execute_guard_structure(&def.lines)
         };
@@ -237,13 +351,18 @@ impl Interpreter {
         }
     }
 
-    fn store_compiled_plan_for_word(&mut self, resolved_name: &str, plan: std::sync::Arc<super::compiled_plan::CompiledPlan>) {
+    fn store_compiled_plan_for_word(
+        &mut self,
+        resolved_name: &str,
+        plan: std::sync::Arc<super::compiled_plan::CompiledPlan>,
+    ) {
         if let Some((ns, word)) = resolved_name.split_once('@') {
             if let Some(dict) = self.user_dictionaries.get_mut(ns) {
                 if let Some(old_def) = dict.words.get(word).cloned() {
                     let mut updated = (*old_def).clone();
                     updated.compiled_plan = Some(plan.clone());
-                    dict.words.insert(word.to_string(), std::sync::Arc::new(updated));
+                    dict.words
+                        .insert(word.to_string(), std::sync::Arc::new(updated));
                     self.sync_user_words_cache();
                     return;
                 }
@@ -252,7 +371,9 @@ impl Interpreter {
                 if let Some(old_def) = module.sample_words.get(word).cloned() {
                     let mut updated = (*old_def).clone();
                     updated.compiled_plan = Some(plan);
-                    module.sample_words.insert(word.to_string(), std::sync::Arc::new(updated));
+                    module
+                        .sample_words
+                        .insert(word.to_string(), std::sync::Arc::new(updated));
                 }
             }
         }

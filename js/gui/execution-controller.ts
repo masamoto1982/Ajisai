@@ -61,6 +61,18 @@ export const createExecutionController = (
     });
 
     const applyExecutionResult = (result: ExecuteResult, code: string): void => {
+        if (result.hedgedTrace && result.hedgedTrace.length > 0) {
+            showInfo(`[HEDGED] ${result.hedgedTrace.join(' | ')}`, true);
+        }
+        if (result.hedgedWinner) {
+            showInfo(`[HEDGED-WINNER] ${result.hedgedWinner}`, true);
+        }
+        if (result.hedgedFallbackReason) {
+            showInfo(`[HEDGED-FALLBACK] ${result.hedgedFallbackReason}`, true);
+        }
+        if (result.hedgedCancelled && result.hedgedCancelled.length > 0) {
+            showInfo(`[HEDGED-CANCEL] ${result.hedgedCancelled.join(', ')}`, true);
+        }
         if (result.inputHelper) {
             clearEditor(false);
             insertEditorText(result.inputHelper);

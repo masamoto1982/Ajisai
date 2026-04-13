@@ -1,19 +1,22 @@
-import type { AjisaiInterpreter, UserWord, Value } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, ExecutionMode, UserWord, Value } from '../wasm-interpreter-types';
 
 export interface InterpreterSnapshot {
     readonly stack: Value[];
     readonly userWords: UserWord[];
     readonly importedModules: string[];
+    readonly executionMode: ExecutionMode;
 }
 
 export const createInterpreterSnapshot = (snapshot: {
     readonly stack: Value[];
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
+    readonly executionMode?: ExecutionMode;
 }): InterpreterSnapshot => ({
     stack: snapshot.stack,
     userWords: snapshot.userWords,
-    importedModules: snapshot.importedModules ?? []
+    importedModules: snapshot.importedModules ?? [],
+    executionMode: snapshot.executionMode ?? "greedy"
 });
 
 export const applyInterpreterSnapshot = (
@@ -31,5 +34,8 @@ export const applyInterpreterSnapshot = (
     }
     if (snapshot.userWords) {
         interpreter.restore_user_words(snapshot.userWords);
+    }
+    if (snapshot.executionMode) {
+        interpreter.set_execution_mode(snapshot.executionMode);
     }
 };

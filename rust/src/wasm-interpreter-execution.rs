@@ -111,12 +111,14 @@ impl AjisaiInterpreter {
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     set_js_prop(&obj, "definition_to_load", &(def_str.into()));
                 }
+                set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
             }
             Err(e) => {
                 let error_msg = e.to_string();
                 set_js_prop(&obj, "status", &("ERROR".into()));
                 set_js_prop(&obj, "message", &(error_msg.into()));
                 set_js_prop(&obj, "error", &(true.into()));
+                set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
             }
         }
         Ok(obj.into())

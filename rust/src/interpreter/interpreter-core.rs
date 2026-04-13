@@ -91,7 +91,6 @@ pub(crate) struct ChildRuntime {
     pub spawn_epoch: EpochSnapshot,
 }
 
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
@@ -99,6 +98,13 @@ pub struct RuntimeMetrics {
     pub compiled_plan_cache_miss_count: u64,
     pub quantized_block_build_count: u64,
     pub quantized_block_use_count: u64,
+    pub hedged_race_started_count: u64,
+    pub hedged_race_winner_quantized_count: u64,
+    pub hedged_race_winner_plain_count: u64,
+    pub hedged_race_fallback_count: u64,
+    pub hedged_race_cancel_count: u64,
+    pub hedged_race_validation_reject_count: u64,
+    pub cond_guard_prefetch_count: u64,
 }
 
 pub struct Interpreter {
@@ -147,9 +153,10 @@ pub struct Interpreter {
     pub(crate) next_supervisor_id: u64,
 
     pub(crate) runtime_metrics: RuntimeMetrics,
+    pub(crate) hedged_trace_log: Vec<String>,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
-    pub(crate) elastic_mode:  crate::elastic::ElasticMode,
+    pub(crate) elastic_mode: crate::elastic::ElasticMode,
     pub(crate) elastic_cache: crate::elastic::CacheManager,
 }
 
@@ -195,9 +202,10 @@ impl Interpreter {
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
+            hedged_trace_log: Vec::new(),
 
             // Elastic Engine
-            elastic_mode:  crate::elastic::ElasticMode::Greedy,
+            elastic_mode: crate::elastic::ElasticMode::Greedy,
             elastic_cache: crate::elastic::CacheManager::new(),
         };
         crate::elastic::tracer::init_from_env();
@@ -231,8 +239,6 @@ impl Interpreter {
         )
     }
 
-
-
     pub(crate) fn next_epoch(&mut self) -> u64 {
         self.global_epoch += 1;
         self.global_epoch
@@ -251,23 +257,40 @@ impl Interpreter {
     pub(crate) fn bump_dictionary_epoch(&mut self) {
         self.dictionary_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] dictionary_epoch={} global_epoch={}", self.dictionary_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] dictionary_epoch={} global_epoch={}",
+            self.dictionary_epoch, self.global_epoch
+        );
     }
 
     pub(crate) fn bump_module_epoch(&mut self) {
         self.module_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] module_epoch={} global_epoch={}", self.module_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] module_epoch={} global_epoch={}",
+            self.module_epoch, self.global_epoch
+        );
     }
 
     pub(crate) fn bump_execution_epoch(&mut self) {
         self.execution_epoch = self.next_epoch();
         #[cfg(feature = "trace-epoch")]
-        eprintln!("[trace-epoch] execution_epoch={} global_epoch={}", self.execution_epoch, self.global_epoch);
+        eprintln!(
+            "[trace-epoch] execution_epoch={} global_epoch={}",
+            self.execution_epoch, self.global_epoch
+        );
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
         self.runtime_metrics
+    }
+
+    pub fn push_hedged_trace(&mut self, message: impl Into<String>) {
+        self.hedged_trace_log.push(message.into());
+    }
+
+    pub fn drain_hedged_trace(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.hedged_trace_log)
     }
 
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
@@ -310,7 +333,6 @@ impl Interpreter {
         Ok(new_flow)
     }
 
-
     pub fn verify_all_flows(&self) -> Result<()> {
         for flow in &self.active_flows {
             let consumed_for_flow: Vec<Fraction> = self
@@ -323,7 +345,6 @@ impl Interpreter {
         }
         Ok(())
     }
-
 
     pub fn assert_all_flows_complete(&self) -> Result<()> {
         for flow in &self.active_flows {
@@ -344,7 +365,6 @@ impl Interpreter {
         }
         Ok(children)
     }
-
 
     pub(crate) fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
         self.operation_target_mode = mode;
@@ -380,7 +400,6 @@ impl Interpreter {
         order
     }
 
-
     pub fn execute_reset(&mut self) -> Result<()> {
         self.stack.clear();
         self.core_vocabulary.clear();
@@ -405,6 +424,8 @@ impl Interpreter {
         self.next_child_id = 1;
         self.monitor_notifications.clear();
         self.next_supervisor_id = 1;
+        self.runtime_metrics = RuntimeMetrics::default();
+        self.hedged_trace_log.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }

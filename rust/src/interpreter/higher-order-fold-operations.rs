@@ -1,10 +1,10 @@
-use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, is_vector_value,
+use super::higher_order::{
+    execute_executable_code, execute_hedged_fold_kernel, extract_executable_code, ExecutableCode,
 };
+use crate::error::{AjisaiError, Result};
+use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
-use super::higher_order::{extract_executable_code, execute_executable_code, execute_quantized_fold_kernel, ExecutableCode};
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -54,7 +54,10 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 }
                 interp.stack.push(init_val);
                 interp.stack.push(code_val);
-                return Err(AjisaiError::create_structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error(
+                    "vector",
+                    "other format",
+                ));
             }
 
             let n_elements: usize = target_val.len();
@@ -77,7 +80,14 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_quantized_fold_kernel(interp, qb, accumulator.clone(), elem) {
+                        match execute_hedged_fold_kernel(
+                            interp,
+                            "FOLD",
+                            qb,
+                            &executable,
+                            accumulator.clone(),
+                            elem,
+                        ) {
                             Ok(result) => {
                                 accumulator = result;
                             }
@@ -426,7 +436,10 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                 }
                 interp.stack.push(init_val);
                 interp.stack.push(code_val);
-                return Err(AjisaiError::create_structure_error("vector", "other format"));
+                return Err(AjisaiError::create_structure_error(
+                    "vector",
+                    "other format",
+                ));
             }
 
             let mut accumulator: Value = init_val;
@@ -444,7 +457,14 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                 let elem: Value = target_val.get_child(i).unwrap().clone();
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_quantized_fold_kernel(interp, qb, accumulator.clone(), elem) {
+                        match execute_hedged_fold_kernel(
+                            interp,
+                            "SCAN",
+                            qb,
+                            &executable,
+                            accumulator.clone(),
+                            elem,
+                        ) {
                             Ok(result) => {
                                 accumulator = result;
                                 results.push(accumulator.clone());
