@@ -4,7 +4,8 @@
 [![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
 
 ![Ajisai Logo](public/images/ajisai-logo.png "Ajisai Programming Language Logo")
-![Ajisai QR Code](public/images/ajisai-qr.png "Ajisai QR Code")
+![Ajisai QR Code](public/images/ajisai-qr.svg "Ajisai QR Code")
+QRコードの遷移先: https://masamoto1982.github.io/Ajisai/
 
 # Ajisai
 
