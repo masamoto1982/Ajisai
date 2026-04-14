@@ -109,6 +109,7 @@ cargo test -q
 cargo test -q compiled_plan_tests
 cargo test -q quantized_block_tests
 cargo test -q perf_regression_tests
+cargo test perf_regression_tests -- --nocapture
 ```
 
 trace確認例:
@@ -118,6 +119,7 @@ cd rust
 cargo test -q --features trace-compile
 cargo test -q --features trace-epoch
 cargo test -q --features trace-quant
+cargo test -q --features "trace-compile trace-epoch trace-quant"
 ```
 
 ---
@@ -140,4 +142,3 @@ cargo test -q --features trace-quant
 - 計測の本格化
 
 が必要です。
-

@@ -73,14 +73,21 @@ fn is_side_effecting_builtin(name: &str) -> bool {
 ///
 /// If any op has unknown arity (user words, qualified words, fallback tokens),
 /// both arities are `Variable`.
-fn analyze_compiled_plan(plan: &CompiledPlan) -> (QuantizedArity, QuantizedArity, QuantizedPurity, Vec<String>) {
+fn analyze_compiled_plan(
+    plan: &CompiledPlan,
+) -> (
+    QuantizedArity,
+    QuantizedArity,
+    QuantizedPurity,
+    Vec<String>,
+) {
     let mut depth: i32 = 0;
     let mut min_depth: i32 = 0;
     let mut all_known = true;
     let mut is_pure = true;
     let mut dep_words: Vec<String> = Vec::new();
 
-    'outer: for line in &plan.lines {
+    for line in &plan.lines {
         for op in &line.ops {
             match op {
                 CompiledOp::PushLiteral(_) | CompiledOp::PushCodeBlock(_) => {
@@ -107,25 +114,23 @@ fn analyze_compiled_plan(plan: &CompiledPlan) -> (QuantizedArity, QuantizedArity
                     } else {
                         // Unknown arity; cannot determine statically
                         all_known = false;
-                        break 'outer;
                     }
                 }
 
                 CompiledOp::CallUserWord(name) => {
                     dep_words.push(name.clone());
+                    is_pure = false;
                     all_known = false;
-                    break 'outer;
                 }
 
                 CompiledOp::CallQualifiedWord { namespace, word } => {
                     dep_words.push(format!("{}@{}", namespace, word));
+                    is_pure = false;
                     all_known = false;
-                    break 'outer;
                 }
 
                 CompiledOp::FallbackToken(_) => {
                     all_known = false;
-                    break 'outer;
                 }
             }
         }
