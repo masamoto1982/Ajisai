@@ -29,6 +29,16 @@ fn run_code(code: &str) -> Interpreter {
     interp
 }
 
+fn run_code_result(code: &str) -> std::result::Result<Interpreter, crate::error::AjisaiError> {
+    let mut interp = Interpreter::new();
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+    let result = rt.block_on(async { interp.execute(code).await });
+    match result {
+        Ok(()) => Ok(interp),
+        Err(e) => Err(e),
+    }
+}
+
 fn stack_top(interp: &Interpreter) -> &Value {
     interp.get_stack().last().expect("stack should not be empty")
 }
@@ -379,4 +389,74 @@ fn scan_produces_prefix_sums() {
         .map(|i| extract(top.get_child(i).unwrap()))
         .collect();
     assert_eq!(vals, vec![1, 3, 6]);
+}
+
+// ---------------------------------------------------------------------------
+// Parity tests: quantized code block vs plain word-name path
+// ---------------------------------------------------------------------------
+
+#[test]
+fn filter_quantized_vs_plain_parity() {
+    let q = run_code("[ -2 -1 0 1 2 3 ] { [ 0 ] <= NOT } FILTER");
+    let p = run_code("{ [ 0 ] <= NOT } 'GT0' DEF [ -2 -1 0 1 2 3 ] 'GT0' FILTER");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn any_quantized_vs_plain_parity() {
+    let q = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
+    let p = run_code("{ [ 2 ] = } 'EQ2' DEF [ 1 2 3 ] 'EQ2' ANY");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn all_quantized_vs_plain_parity() {
+    let q = run_code("[ 1 2 3 ] { [ 0 ] <= NOT } ALL");
+    let p = run_code("{ [ 0 ] <= NOT } 'GT0' DEF [ 1 2 3 ] 'GT0' ALL");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn count_quantized_vs_plain_parity() {
+    let q = run_code("[ 1 2 3 4 5 ] { [ 3 ] <= NOT } COUNT");
+    let p = run_code("{ [ 3 ] <= NOT } 'GT3' DEF [ 1 2 3 4 5 ] 'GT3' COUNT");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn fold_quantized_vs_plain_parity() {
+    let q = run_code("[ 1 2 3 4 5 ] [ 0 ] { + } FOLD");
+    let p = run_code("{ + } 'ADD' DEF [ 1 2 3 4 5 ] [ 0 ] 'ADD' FOLD");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn scan_quantized_vs_plain_parity() {
+    let q = run_code("[ 1 2 3 ] [ 0 ] { + } SCAN");
+    let p = run_code("{ + } 'ADD' DEF [ 1 2 3 ] [ 0 ] 'ADD' SCAN");
+    assert_eq!(q.get_stack(), p.get_stack());
+}
+
+#[test]
+fn predicate_error_stack_shape_matches_between_quantized_and_plain() {
+    let q = run_code_result("[ 1 2 ] { [ 1 2 ] } FILTER")
+        .err()
+        .expect("quantized should error");
+    let p = run_code_result("{ [ 1 2 ] } 'PAIR' DEF [ 1 2 ] 'PAIR' FILTER")
+        .err()
+        .expect("plain should error");
+    assert!(q.to_string().contains("boolean result"));
+    assert!(p.to_string().contains("boolean result"));
+}
+
+#[test]
+fn fold_error_stack_shape_matches_between_quantized_and_plain() {
+    let q = run_code_result("[ 1 2 3 ] [ 0 ] { + + } FOLD")
+        .err()
+        .expect("quantized should error");
+    let p = run_code_result("{ + + } 'BAD' DEF [ 1 2 3 ] [ 0 ] 'BAD' FOLD")
+        .err()
+        .expect("plain should error");
+    assert!(q.to_string().contains("Stack underflow"));
+    assert!(p.to_string().contains("Stack underflow"));
 }

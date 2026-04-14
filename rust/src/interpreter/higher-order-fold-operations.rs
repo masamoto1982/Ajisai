@@ -163,15 +163,31 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for item in targets {
-                interp.stack.clear();
-                interp.stack.push(accumulator);
-                interp.stack.push(item);
+                let fold_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_hedged_fold_kernel(
+                            interp,
+                            "FOLD",
+                            qb,
+                            plain_tokens.as_deref(),
+                            accumulator,
+                            item,
+                        )
+                    }
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(accumulator);
+                        interp.stack.push(item);
+                        execute_executable_code(interp, &executable).and_then(|_| {
+                            interp.stack.pop().ok_or_else(|| {
+                                AjisaiError::from("FOLD: expected return value, got empty stack")
+                            })
+                        })
+                    }
+                };
 
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let result: Value = interp.stack.pop().ok_or_else(|| {
-                            AjisaiError::from("FOLD: expected return value, got empty stack")
-                        })?;
+                match fold_res {
+                    Ok(result) => {
                         accumulator = result;
                     }
                     Err(e) => {
@@ -548,15 +564,31 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             interp.disable_no_change_check = true;
 
             for item in targets {
-                interp.stack.clear();
-                interp.stack.push(accumulator);
-                interp.stack.push(item);
+                let fold_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_hedged_fold_kernel(
+                            interp,
+                            "SCAN",
+                            qb,
+                            plain_tokens.as_deref(),
+                            accumulator,
+                            item,
+                        )
+                    }
+                    _ => {
+                        interp.stack.clear();
+                        interp.stack.push(accumulator);
+                        interp.stack.push(item);
+                        execute_executable_code(interp, &executable).and_then(|_| {
+                            interp.stack.pop().ok_or_else(|| {
+                                AjisaiError::from("SCAN: expected return value, got empty stack")
+                            })
+                        })
+                    }
+                };
 
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let result: Value = interp.stack.pop().ok_or_else(|| {
-                            AjisaiError::from("SCAN: expected return value, got empty stack")
-                        })?;
+                match fold_res {
+                    Ok(result) => {
                         accumulator = result;
                         results.push(accumulator.clone());
                     }

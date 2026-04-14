@@ -775,29 +775,15 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             let mut results: Vec<Value> = Vec::with_capacity(targets.len());
             for item in &targets {
-                interp.stack.clear();
-                interp.stack.push(item.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result: Value = match interp.stack.pop() {
-                            Some(result) => result,
-                            None => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                            }
-                        };
-
-                        if is_vector_value(&condition_result)
-                            && condition_result.len() == 1
-                            && is_truthy_boolean(condition_result.get_child(0).unwrap())
-                        {
+                let pred_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_quantized_predicate_kernel(interp, qb, item.clone())
+                    }
+                    _ => execute_plain_predicate_kernel(interp, &executable, item.clone()),
+                };
+                match pred_res {
+                    Ok(is_true) => {
+                        if is_true {
                             results.push(item.clone());
                         }
                     }
@@ -967,36 +953,14 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
 
             let mut result = false;
             for item in &targets {
-                interp.stack.clear();
-                interp.stack.push(item.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                            }
-                        };
-                        let is_true = match extract_predicate_boolean(condition_result) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(e);
-                            }
-                        };
+                let pred_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_quantized_predicate_kernel(interp, qb, item.clone())
+                    }
+                    _ => execute_plain_predicate_kernel(interp, &executable, item.clone()),
+                };
+                match pred_res {
+                    Ok(is_true) => {
                         if is_true {
                             result = true;
                             break;
@@ -1168,36 +1132,14 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
 
             let mut result = true;
             for item in &targets {
-                interp.stack.clear();
-                interp.stack.push(item.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                            }
-                        };
-                        let is_true = match extract_predicate_boolean(condition_result) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(e);
-                            }
-                        };
+                let pred_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_quantized_predicate_kernel(interp, qb, item.clone())
+                    }
+                    _ => execute_plain_predicate_kernel(interp, &executable, item.clone()),
+                };
+                match pred_res {
+                    Ok(is_true) => {
                         if !is_true {
                             result = false;
                             break;
@@ -1367,36 +1309,14 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 
             let mut matched_count: i64 = 0;
             for item in &targets {
-                interp.stack.clear();
-                interp.stack.push(item.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                            }
-                        };
-                        let is_true = match extract_predicate_boolean(condition_result) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                interp.operation_target_mode = saved_target;
-                                interp.disable_no_change_check = saved_no_change_check;
-                                interp.stack = saved_stack;
-                                interp.stack.extend(targets);
-                                interp.stack.push(count_val);
-                                interp.stack.push(code_val);
-                                return Err(e);
-                            }
-                        };
+                let pred_res = match &executable {
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        execute_quantized_predicate_kernel(interp, qb, item.clone())
+                    }
+                    _ => execute_plain_predicate_kernel(interp, &executable, item.clone()),
+                };
+                match pred_res {
+                    Ok(is_true) => {
                         if is_true {
                             matched_count += 1;
                         }

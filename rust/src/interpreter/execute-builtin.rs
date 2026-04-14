@@ -14,6 +14,19 @@ use super::{
     tensor_cmds, vector_ops, Interpreter,
 };
 
+#[cfg(feature = "trace-compile")]
+fn trace_compile_metrics(interp: &Interpreter) {
+    let m = interp.runtime_metrics();
+    eprintln!(
+        "[metrics] plan_build={} plan_hit={} plan_miss={}",
+        m.compiled_plan_build_count, m.compiled_plan_cache_hit_count, m.compiled_plan_cache_miss_count
+    );
+    eprintln!(
+        "[metrics] quant_build={} quant_use={}",
+        m.quantized_block_build_count, m.quantized_block_use_count
+    );
+}
+
 impl Interpreter {
     fn is_hedged_mode(&self) -> bool {
         matches!(
@@ -104,13 +117,20 @@ impl Interpreter {
             if is_plan_valid(existing, self) {
                 self.runtime_metrics.compiled_plan_cache_hit_count += 1;
                 #[cfg(feature = "trace-compile")]
-                eprintln!("[trace-compile] cache hit for {}", resolved_name);
+                {
+                    eprintln!("[trace-compile] cache hit for {}", resolved_name);
+                    trace_compile_metrics(self);
+                }
                 plan_to_run = Some(existing.clone());
             } else {
                 self.runtime_metrics.compiled_plan_cache_miss_count += 1;
+                #[cfg(feature = "trace-compile")]
+                trace_compile_metrics(self);
             }
         } else {
             self.runtime_metrics.compiled_plan_cache_miss_count += 1;
+            #[cfg(feature = "trace-compile")]
+            trace_compile_metrics(self);
         }
 
         if plan_to_run.is_none() {
@@ -119,7 +139,10 @@ impl Interpreter {
                 self.bump_execution_epoch();
                 self.runtime_metrics.compiled_plan_build_count += 1;
                 #[cfg(feature = "trace-compile")]
-                eprintln!("[trace-compile] compiled plan for {}", resolved_name);
+                {
+                    eprintln!("[trace-compile] compiled plan for {}", resolved_name);
+                    trace_compile_metrics(self);
+                }
                 let plan_arc = arc_plan(plan);
                 self.store_compiled_plan_for_word(&resolved_name, plan_arc.clone());
                 plan_to_run = Some(plan_arc);

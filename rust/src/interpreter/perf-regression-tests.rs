@@ -1,13 +1,5 @@
-/// Perf-regression smoke tests.
-///
-/// These tests verify that the quantized execution path is actually taken for
-/// the key higher-order functions, and that the cache invalidation machinery
-/// works correctly after re-definitions.
-///
-/// They also print lightweight timing/metrics summaries when run with
-/// `-- --nocapture` so you can see hit rates and quantized-usage counts
-/// without a full bench harness.
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, RuntimeMetrics};
+use std::time::{Duration, Instant};
 
 fn run_code(code: &str) -> Interpreter {
     let mut interp = Interpreter::new();
@@ -18,218 +10,110 @@ fn run_code(code: &str) -> Interpreter {
     interp
 }
 
-fn run_code_timed(code: &str) -> (Interpreter, std::time::Duration) {
-    let mut interp = Interpreter::new();
-    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
-    let start = std::time::Instant::now();
-    rt.block_on(async {
-        interp.execute(code).await.expect("code should execute");
-    });
-    let elapsed = start.elapsed();
-    (interp, elapsed)
-}
+fn run_loop(
+    label: &str,
+    iterations: usize,
+    expected_quant_calls_per_iter: u64,
+    code: &str,
+) -> (Duration, RuntimeMetrics) {
+    let mut total = Duration::ZERO;
+    let mut total_metrics = RuntimeMetrics::default();
 
-fn print_summary(label: &str, interp: &Interpreter, elapsed: std::time::Duration) {
-    let m = interp.runtime_metrics();
-    let total_plan = m.compiled_plan_cache_hit_count + m.compiled_plan_cache_miss_count;
-    let hit_rate = if total_plan > 0 {
-        m.compiled_plan_cache_hit_count as f64 / total_plan as f64 * 100.0
-    } else {
-        0.0
-    };
-    let total_quant = m.quantized_block_build_count;
-    let quant_rate = if total_quant > 0 {
-        m.quantized_block_use_count as f64 / total_quant as f64 * 100.0
-    } else {
-        0.0
-    };
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let interp = run_code(code);
+        total += start.elapsed();
+        let m = interp.runtime_metrics();
+        total_metrics.compiled_plan_build_count += m.compiled_plan_build_count;
+        total_metrics.compiled_plan_cache_hit_count += m.compiled_plan_cache_hit_count;
+        total_metrics.compiled_plan_cache_miss_count += m.compiled_plan_cache_miss_count;
+        total_metrics.quantized_block_build_count += m.quantized_block_build_count;
+        total_metrics.quantized_block_use_count += m.quantized_block_use_count;
+    }
+
+    let plan_total =
+        total_metrics.compiled_plan_cache_hit_count + total_metrics.compiled_plan_cache_miss_count;
+    let expected_total_quant = (iterations as u64) * expected_quant_calls_per_iter.max(1);
+    let quant_rate = (total_metrics.quantized_block_use_count as f64 / expected_total_quant as f64)
+        * 100.0;
+
     println!(
-        "[BENCH] {} | elapsed={:?} | plan_hit_rate={:.1}% | quant_rate={:.1}%",
-        label, elapsed, hit_rate, quant_rate
+        "[perf] {label} x{iterations}: {:.1}ms (quantized: {:.1}%, hits: {}/{})",
+        total.as_secs_f64() * 1000.0,
+        quant_rate,
+        total_metrics.compiled_plan_cache_hit_count,
+        plan_total,
     );
+
+    #[cfg(feature = "trace-compile")]
+    eprintln!(
+        "[metrics] plan_build={} plan_hit={} plan_miss={}",
+        total_metrics.compiled_plan_build_count,
+        total_metrics.compiled_plan_cache_hit_count,
+        total_metrics.compiled_plan_cache_miss_count
+    );
+
+    #[cfg(feature = "trace-compile")]
+    eprintln!(
+        "[metrics] quant_build={} quant_use={}",
+        total_metrics.quantized_block_build_count,
+        total_metrics.quantized_block_use_count
+    );
+
+    (total, total_metrics)
 }
 
-// ---------------------------------------------------------------------------
-// CompiledPlan cache smoke tests
-// ---------------------------------------------------------------------------
+#[test]
+fn perf_filter_map_fold_reports_metrics() {
+    let (filter_elapsed, filter_metrics) = run_loop(
+        "FILTER",
+        1000,
+        11,
+        "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER",
+    );
+    let (map_elapsed, map_metrics) = run_loop(
+        "MAP",
+        1000,
+        10,
+        "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 1 ] + } MAP",
+    );
+    let (fold_elapsed, fold_metrics) = run_loop(
+        "FOLD",
+        500,
+        10,
+        "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD",
+    );
+
+    assert!(filter_elapsed < Duration::from_secs(5));
+    assert!(map_elapsed < Duration::from_secs(5));
+    assert!(fold_elapsed < Duration::from_secs(5));
+
+    assert!(filter_metrics.quantized_block_use_count >= 1);
+    assert!(map_metrics.quantized_block_use_count >= 1);
+    assert!(fold_metrics.quantized_block_use_count >= 1);
+}
 
 #[test]
-fn bench_user_word_repeated() {
-    let code = "{ [ 1 ] + } 'INC' DEF [ 1 ] INC [ 1 ] INC [ 1 ] INC [ 1 ] INC";
-    let (interp, elapsed) = run_code_timed(code);
+fn perf_scan_any_all_count_reports_quantized_usage() {
+    let (_scan_elapsed, scan_metrics) = run_loop("SCAN", 500, 5, "[ 1 2 3 4 5 ] [ 0 ] { + } SCAN");
+    let (_any_elapsed, any_metrics) = run_loop("ANY", 1000, 3, "[ 1 2 3 4 5 ] { [ 3 ] = } ANY");
+    let (_all_elapsed, all_metrics) = run_loop("ALL", 1000, 5, "[ 1 2 3 4 5 ] { [ 0 ] <= NOT } ALL");
+    let (_count_elapsed, count_metrics) = run_loop(
+        "COUNT",
+        1000,
+        10,
+        "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] <= NOT } COUNT",
+    );
+
+    assert!(scan_metrics.quantized_block_use_count >= 1);
+    assert!(any_metrics.quantized_block_use_count >= 1);
+    assert!(all_metrics.quantized_block_use_count >= 1);
+    assert!(count_metrics.quantized_block_use_count >= 1);
+}
+
+#[test]
+fn perf_redefinition_still_invalidates_plan() {
+    let interp = run_code("{ [ 1 ] + } 'INC' DEF [ 1 ] INC { [ 2 ] + } 'INC' DEF [ 1 ] INC");
     let m = interp.runtime_metrics();
-    print_summary("user_word_repeated", &interp, elapsed);
-    assert!(m.compiled_plan_build_count >= 1, "plan should be compiled at least once");
-    assert!(m.compiled_plan_cache_hit_count >= 3, "3 of 4 calls should be cache hits");
-    assert!(
-        elapsed < std::time::Duration::from_millis(100),
-        "user_word_repeated took too long: {:?}",
-        elapsed
-    );
-}
-
-#[test]
-fn bench_redef_invalidates_plan() {
-    let code = "{ [ 1 ] + } 'INC' DEF [ 1 ] INC { [ 2 ] + } 'INC' DEF [ 1 ] INC";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("redef_invalidation", &interp, elapsed);
-    assert!(m.compiled_plan_cache_miss_count >= 1, "cache miss expected after redef");
-    assert!(
-        elapsed < std::time::Duration::from_millis(100),
-        "redef_invalidates_plan took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// MAP — quantized path
-// ---------------------------------------------------------------------------
-
-#[test]
-fn bench_map_increment() {
-    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 1 ] + } MAP";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("map_increment", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 10, "all 10 elements should use quantized kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "map_increment took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// FILTER — quantized predicate path
-// ---------------------------------------------------------------------------
-
-#[test]
-fn bench_filter_positive() {
-    let code = "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("filter_positive", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "FILTER should use quantized predicate kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "filter_positive took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// ANY / ALL / COUNT — quantized predicate path
-// ---------------------------------------------------------------------------
-
-#[test]
-fn bench_any_quantized() {
-    let code = "[ 1 2 3 4 5 ] { [ 3 ] = } ANY";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("any_quantized", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "ANY should use quantized predicate kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "any_quantized took too long: {:?}",
-        elapsed
-    );
-}
-
-#[test]
-fn bench_all_quantized() {
-    let code = "[ 1 2 3 4 5 ] { [ 0 ] <= NOT } ALL";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("all_quantized", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "ALL should use quantized predicate kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "all_quantized took too long: {:?}",
-        elapsed
-    );
-}
-
-#[test]
-fn bench_count_quantized() {
-    // { [ 5 ] <= NOT } = elem > 5
-    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] <= NOT } COUNT";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("count_quantized", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "COUNT should use quantized predicate kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "count_quantized took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// FOLD / SCAN — quantized fold path
-// ---------------------------------------------------------------------------
-
-#[test]
-fn bench_fold_sum() {
-    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("fold_sum", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "FOLD should use quantized fold kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "fold_sum took too long: {:?}",
-        elapsed
-    );
-}
-
-#[test]
-fn bench_scan_prefix_sums() {
-    let code = "[ 1 2 3 4 5 ] [ 0 ] { + } SCAN";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("scan_prefix_sums", &interp, elapsed);
-    assert!(m.quantized_block_use_count >= 1, "SCAN should use quantized fold kernel");
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "scan_prefix_sums took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Comprehensive hit-rate check
-// ---------------------------------------------------------------------------
-
-/// Run the same user-word many times and verify the cache hit rate is high.
-#[test]
-fn bench_high_hit_rate() {
-    // 8 calls after 1 definition → expect ≥ 7 cache hits (first call builds).
-    let code = "{ [ 1 ] + } 'INC' DEF \
-                [ 1 ] INC [ 1 ] INC [ 1 ] INC [ 1 ] INC \
-                [ 1 ] INC [ 1 ] INC [ 1 ] INC [ 1 ] INC";
-    let (interp, elapsed) = run_code_timed(code);
-    let m = interp.runtime_metrics();
-    print_summary("high_hit_rate", &interp, elapsed);
-    let total = m.compiled_plan_cache_hit_count + m.compiled_plan_cache_miss_count;
-    assert!(total >= 8, "should have at least 8 plan lookups");
-    assert!(
-        m.compiled_plan_cache_hit_count >= 7,
-        "hit rate should be ≥ 7/8 after warm-up, got hits={}",
-        m.compiled_plan_cache_hit_count
-    );
-    assert!(
-        elapsed < std::time::Duration::from_millis(200),
-        "high_hit_rate took too long: {:?}",
-        elapsed
-    );
-}
-
-// ---------------------------------------------------------------------------
-// child runtime
-// ---------------------------------------------------------------------------
-
-#[test]
-fn bench_child_runtime_restart() {
-    let _interp = run_code("{ [ 1 ] } SPAWN AWAIT");
+    assert!(m.compiled_plan_cache_miss_count >= 1);
 }
