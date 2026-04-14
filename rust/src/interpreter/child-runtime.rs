@@ -22,15 +22,16 @@ impl Interpreter {
     }
 
     fn build_exit_result(reason: ExitReason, stack: Option<Vec<Value>>) -> Vec<Value> {
-        match reason {
-            ExitReason::Normal => vec![
-                Value::from_string("ok"),
-                Value::from_vector(stack.unwrap_or_default()),
-            ],
-            ExitReason::Killed => vec![Value::from_string("killed")],
-            ExitReason::Timeout => vec![Value::from_string("timeout")],
-            ExitReason::Error(reason) => vec![Value::from_string("exit"), Value::from_string(&reason)],
-        }
+        let status = match reason {
+            ExitReason::Normal => "completed",
+            ExitReason::Killed => "killed",
+            ExitReason::Timeout => "timeout",
+            ExitReason::Error(_) => "failed",
+        };
+        vec![
+            Value::from_string(status),
+            Value::from_vector(stack.unwrap_or_default()),
+        ]
     }
 
     fn map_error_to_exit_reason(error: AjisaiError) -> ExitReason {
@@ -84,8 +85,8 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::from("Unknown process handle"))?;
         let status = match child.state {
             ChildState::Running => "running",
-            ChildState::Completed => "ok",
-            ChildState::Failed => "exit",
+            ChildState::Completed => "completed",
+            ChildState::Failed => "failed",
             ChildState::Killed => "killed",
             ChildState::Timeout => "timeout",
         };
@@ -147,7 +148,8 @@ impl Interpreter {
                     _ => ChildState::Failed,
                 };
                 child.exit_reason = Some(exit_reason.clone());
-                child.result_snapshot = Some(Self::build_exit_result(exit_reason, None));
+                let stack = child_interpreter.stack.clone();
+                child.result_snapshot = Some(Self::build_exit_result(exit_reason, Some(stack)));
             }
         }
     }
@@ -167,7 +169,7 @@ impl Interpreter {
         let result = child
             .result_snapshot
             .clone()
-            .unwrap_or_else(|| vec![Value::from_string("exit"), Value::from_string("Unknown")]);
+            .unwrap_or_else(|| vec![Value::from_string("failed"), Value::from_vector(vec![])]);
 
         if child.monitored {
             self.monitor_notifications.push(result.clone());
@@ -205,7 +207,6 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::from("SUPERVISE requires a code block"))?
             .clone();
 
-        let supervisor_id = self.next_supervisor_id;
         self.next_supervisor_id += 1;
 
         let mut attempt = 0usize;
@@ -235,9 +236,8 @@ impl Interpreter {
             }
             if attempt >= max_restarts {
                 self.stack.push(Value::from_vector(vec![
-                    Value::from_string("exit"),
-                    Value::from_string("SupervisorRestartLimitExceeded"),
-                    Value::from_supervisor_handle(supervisor_id),
+                    Value::from_string("failed"),
+                    Value::from_vector(vec![]),
                 ]));
                 self.semantic_registry.push_hint(DisplayHint::Auto);
                 return Ok(());

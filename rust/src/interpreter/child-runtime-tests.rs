@@ -12,7 +12,7 @@ mod tests {
         let ValueData::Vector(values) = &top.data else {
             panic!("await result should be vector");
         };
-        assert_eq!(values[0].to_string(), "'ok'");
+        assert_eq!(values[0].to_string(), "'completed'");
     }
 
     #[tokio::test]

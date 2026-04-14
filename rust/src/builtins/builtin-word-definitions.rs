@@ -791,7 +791,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "AWAIT",
         "control",
         "Run/wait a child runtime and return exit tuple.",
-        "{ ... } SPAWN AWAIT → [ 'ok' [ ... ] ] / [ 'exit' 'Reason' ]",
+        "{ ... } SPAWN AWAIT → [ 'completed' [ ... ] ] / [ 'failed' [ ... ] ]",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Await)
@@ -800,7 +800,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "STATUS",
         "control",
         "Read child status. ProcessHandle -> String",
-        "{ ... } SPAWN STATUS → 'running'|'ok'|'exit'|'killed'|'timeout'",
+        "{ ... } SPAWN STATUS → 'running'|'completed'|'failed'|'killed'|'timeout'",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Status)
