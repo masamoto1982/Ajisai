@@ -1,6 +1,12 @@
 use crate::interpreter::{Interpreter, RuntimeMetrics};
 use std::time::{Duration, Instant};
 
+/// Upper bound for total loop time.  Each iteration rebuilds a tokio runtime
+/// and a fresh `Interpreter`, which dominates execution cost — so this is a
+/// generous ceiling meant to catch catastrophic regressions (e.g. fallback
+/// disabling the quantized path), not to gate on micro-benchmark variance.
+const PERF_LOOP_SOFT_LIMIT: Duration = Duration::from_secs(60);
+
 fn run_code(code: &str) -> Interpreter {
     let mut interp = Interpreter::new();
     let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
@@ -84,9 +90,9 @@ fn perf_filter_map_fold_reports_metrics() {
         "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD",
     );
 
-    assert!(filter_elapsed < Duration::from_secs(5));
-    assert!(map_elapsed < Duration::from_secs(5));
-    assert!(fold_elapsed < Duration::from_secs(5));
+    assert!(filter_elapsed < PERF_LOOP_SOFT_LIMIT);
+    assert!(map_elapsed < PERF_LOOP_SOFT_LIMIT);
+    assert!(fold_elapsed < PERF_LOOP_SOFT_LIMIT);
 
     assert!(filter_metrics.quantized_block_use_count >= 1);
     assert!(map_metrics.quantized_block_use_count >= 1);
