@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Verify bench compilation
+        run: cd rust && cargo bench --no-run
+
       - name: Build WASM artifacts
         run: |
           cd rust

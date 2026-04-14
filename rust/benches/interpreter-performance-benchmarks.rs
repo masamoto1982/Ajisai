@@ -215,24 +215,56 @@ fn bench_interpreter_simple_arithmetic(c: &mut Criterion) {
 
 fn bench_interpreter_map(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
+    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] : [ 2 ] * ; MAP";
 
     c.bench_function("interp_map", |b| {
-        b.iter(|| {
-            let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("[ 1 2 3 4 5 6 7 8 9 10 ] : [ 2 ] * ; MAP")).unwrap();
-            black_box(&interp);
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            let mut last_interp = None;
+            for _ in 0..iters {
+                let mut interp = Interpreter::new();
+                rt.block_on(interp.execute(code)).unwrap();
+                black_box(interp.get_stack().clone());
+                last_interp = Some(interp);
+            }
+            if let Some(interp) = last_interp {
+                let m = interp.runtime_metrics();
+                eprintln!(
+                    "[bench metrics] plan_hit={} miss={} quant_use={}",
+                    m.compiled_plan_cache_hit_count,
+                    m.compiled_plan_cache_miss_count,
+                    m.quantized_block_use_count
+                );
+            }
+            start.elapsed()
         })
     });
 }
 
 fn bench_interpreter_fold(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
+    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] : + ; FOLD";
 
     c.bench_function("interp_fold", |b| {
-        b.iter(|| {
-            let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] : + ; FOLD")).unwrap();
-            black_box(&interp);
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            let mut last_interp = None;
+            for _ in 0..iters {
+                let mut interp = Interpreter::new();
+                rt.block_on(interp.execute(code)).unwrap();
+                black_box(interp.get_stack().clone());
+                last_interp = Some(interp);
+            }
+            if let Some(interp) = last_interp {
+                let m = interp.runtime_metrics();
+                eprintln!(
+                    "[bench metrics] plan_hit={} miss={} quant_use={}",
+                    m.compiled_plan_cache_hit_count,
+                    m.compiled_plan_cache_miss_count,
+                    m.quantized_block_use_count
+                );
+            }
+            start.elapsed()
         })
     });
 }
@@ -265,14 +297,28 @@ fn bench_interpreter_word_lookup_overhead(c: &mut Criterion) {
 
 fn bench_interpreter_custom_word(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
+    let code = ": [ 2 ] * ; 'DOUBLE' DEF [ 1 2 3 4 5 ] : DOUBLE ; MAP";
 
     c.bench_function("interp_custom_word", |b| {
-        b.iter(|| {
-            let mut interp = Interpreter::new();
-            rt.block_on(interp.execute(
-                ": [ 2 ] * ; 'DOUBLE' DEF [ 1 2 3 4 5 ] : DOUBLE ; MAP"
-            )).unwrap();
-            black_box(&interp);
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            let mut last_interp = None;
+            for _ in 0..iters {
+                let mut interp = Interpreter::new();
+                rt.block_on(interp.execute(code)).unwrap();
+                black_box(interp.get_stack().clone());
+                last_interp = Some(interp);
+            }
+            if let Some(interp) = last_interp {
+                let m = interp.runtime_metrics();
+                eprintln!(
+                    "[bench metrics] plan_hit={} miss={} quant_use={}",
+                    m.compiled_plan_cache_hit_count,
+                    m.compiled_plan_cache_miss_count,
+                    m.quantized_block_use_count
+                );
+            }
+            start.elapsed()
         })
     });
 }
@@ -317,7 +363,7 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
 
     c.bench_function("interp_reuse_add", |b| {
         b.iter(|| {
-            interp.set_stack(Vec::new());
+            interp.update_stack(Vec::new());
             rt.block_on(interp.execute("[ 1 2 3 ] [ 4 5 6 ] +")).unwrap();
             black_box(&interp);
         })
