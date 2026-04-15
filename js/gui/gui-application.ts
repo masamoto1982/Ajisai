@@ -267,6 +267,33 @@ export const createGUI = (): GUI => {
             }
         });
 
+        {
+            const TRIPLE_TAP_INTERVAL_MS = 500;
+            let tapCount = 0;
+            let lastTapAt = 0;
+
+            elements.codeInput.addEventListener('touchend', (e: TouchEvent) => {
+                if (!mobile.isMobile()) return;
+                if (e.changedTouches.length === 0) return;
+
+                const now = Date.now();
+                if (now - lastTapAt <= TRIPLE_TAP_INTERVAL_MS) {
+                    tapCount += 1;
+                } else {
+                    tapCount = 1;
+                }
+
+                if (tapCount >= 3) {
+                    executionController.executeCode(editor.extractValue());
+                    tapCount = 0;
+                    lastTapAt = 0;
+                    return;
+                }
+
+                lastTapAt = now;
+            }, { passive: true });
+        }
+
         window.addEventListener('resize', () => {
             applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
             updateEditorPlaceholder(elements, mobile);
