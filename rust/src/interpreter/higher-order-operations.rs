@@ -449,6 +449,17 @@ fn trace_hedged(interp: &Interpreter, msg: &str) {
     }
 }
 
+fn normalize_map_kernel_result(value: Value) -> Value {
+    if value.len() == 1 {
+        if let Some(child) = value.get_child(0) {
+            if child.as_scalar().is_some() {
+                return child.clone();
+            }
+        }
+    }
+    value
+}
+
 /// Execute a map kernel as a hedged race between the compiled (quantized) path
 /// and the plain token-interpretation path.
 ///
@@ -490,6 +501,8 @@ pub(crate) fn execute_hedged_map_kernel(
 
     match (quantized, plain) {
         (Ok(q), Ok(p)) => {
+            let q = normalize_map_kernel_result(q);
+            let p = normalize_map_kernel_result(p);
             if q != p {
                 interp.runtime_metrics.hedged_race_validation_reject_count += 1;
                 interp.runtime_metrics.hedged_race_fallback_count += 1;
@@ -527,12 +540,14 @@ pub(crate) fn execute_hedged_map_kernel(
             }
         }
         (Err(_), Ok(p)) => {
+            let p = normalize_map_kernel_result(p);
             interp.runtime_metrics.hedged_race_winner_plain_count += 1;
             interp.runtime_metrics.hedged_race_fallback_count += 1;
             interp.push_hedged_trace(format!("hof-race:winner op={} path=plain", op_name));
             Ok(p)
         }
         (Ok(q), Err(_)) => {
+            let q = normalize_map_kernel_result(q);
             interp.runtime_metrics.hedged_race_winner_quantized_count += 1;
             interp.push_hedged_trace(format!(
                 "hof-race:winner op={} path=quantized reason=plain-error",
