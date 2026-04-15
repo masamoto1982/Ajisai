@@ -279,6 +279,10 @@ mod tests {
             ElasticMode::HedgedTrace
         );
         assert_eq!(
+            ElasticMode::from_str("fast-guarded"),
+            ElasticMode::FastGuarded
+        );
+        assert_eq!(
             ElasticMode::from_str("elastic_safe"),
             ElasticMode::ElasticSafe
         );
@@ -303,6 +307,7 @@ mod tests {
         assert!(ElasticMode::ElasticSafe.is_elastic());
         assert!(ElasticMode::HedgedSafe.is_elastic());
         assert!(ElasticMode::HedgedTrace.is_elastic());
+        assert!(ElasticMode::FastGuarded.is_elastic());
         assert!(ElasticMode::ElasticForce.is_elastic());
     }
 
@@ -313,6 +318,7 @@ mod tests {
             ElasticMode::ElasticSafe,
             ElasticMode::HedgedSafe,
             ElasticMode::HedgedTrace,
+            ElasticMode::FastGuarded,
             ElasticMode::ElasticForce,
         ] {
             assert_eq!(ElasticMode::from_str(mode.as_str()), *mode);
@@ -415,6 +421,16 @@ mod tests {
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
+    async fn run_fast_guarded(code: &str) -> Vec<String> {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::FastGuarded);
+        interp
+            .execute(code)
+            .await
+            .expect("fast-guarded execution failed");
+        interp.stack.iter().map(|v| format!("{:?}", v)).collect()
+    }
+
     macro_rules! assert_semantics_match {
         ($code:expr) => {{
             let greedy = run_greedy($code).await;
@@ -475,6 +491,34 @@ mod tests {
         assert_greedy_hedged_match!("[1 2 3 4 5 6] { [2] MOD [0] = } FILTER");
         assert_greedy_hedged_match!("[1 2 3 4] [0] { + } FOLD");
         assert_greedy_hedged_match!("[1 2 3 4] [0] { + } SCAN");
+    }
+
+    #[tokio::test]
+    async fn semantics_fast_guarded_hof_kernels() {
+        let code = "[1 2 3 4] { [1] + } MAP [1 2 3 4] { [2] MOD [0] = } FILTER [1 2 3 4] [0] { + } FOLD";
+        let greedy = run_greedy(code).await;
+        let fast_guarded = run_fast_guarded(code).await;
+        assert_eq!(
+            greedy, fast_guarded,
+            "Semantic divergence for fast-guarded mode:\n  greedy = {:?}\n  fast_guarded = {:?}",
+            greedy, fast_guarded
+        );
+    }
+
+    #[tokio::test]
+    async fn fast_guarded_avoids_hedged_race_start() {
+        let mut interp = Interpreter::new();
+        interp.set_elastic_mode(ElasticMode::FastGuarded);
+        interp
+            .execute("[1 2 3 4] { [1] + } MAP [1 2 3 4] [0] { + } FOLD")
+            .await
+            .expect("fast-guarded execution failed");
+        let m = interp.runtime_metrics();
+        assert_eq!(m.hedged_race_started_count, 0);
+        assert!(
+            m.quantized_block_use_count >= 1,
+            "fast-guarded should still use quantized kernels when guards pass"
+        );
     }
 
     #[tokio::test]

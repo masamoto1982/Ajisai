@@ -6,6 +6,7 @@
 /// | `ElasticSafe` | Pure sub-expressions may be cached; impure words always fall back to greedy. |
 /// | `HedgedSafe`  | Safe hedged race for allowlisted pure paths. |
 /// | `HedgedTrace` | Same as `HedgedSafe` plus verbose race tracing. |
+/// | `FastGuarded` | Guarded fast path (no plain race); guard miss falls back safely. |
 /// | `ElasticForce`| Debug only — bypasses some safety gates. **Never use in production.** |
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -15,6 +16,7 @@ pub enum ElasticMode {
     ElasticSafe,
     HedgedSafe,
     HedgedTrace,
+    FastGuarded,
     ElasticForce,
 }
 
@@ -33,6 +35,8 @@ impl ElasticMode {
             "hedged_safe" => ElasticMode::HedgedSafe,
             "hedged-trace" => ElasticMode::HedgedTrace,
             "hedged_trace" => ElasticMode::HedgedTrace,
+            "fast-guarded" => ElasticMode::FastGuarded,
+            "fast_guarded" => ElasticMode::FastGuarded,
             "greedy" => ElasticMode::Greedy,
             _ => {
                 eprintln!(
@@ -50,6 +54,7 @@ impl ElasticMode {
             ElasticMode::ElasticSafe => "elastic-safe",
             ElasticMode::HedgedSafe => "hedged-safe",
             ElasticMode::HedgedTrace => "hedged-trace",
+            ElasticMode::FastGuarded => "fast-guarded",
             ElasticMode::ElasticForce => "elastic-force",
         }
     }
@@ -61,6 +66,7 @@ impl ElasticMode {
             ElasticMode::ElasticSafe
                 | ElasticMode::HedgedSafe
                 | ElasticMode::HedgedTrace
+                | ElasticMode::FastGuarded
                 | ElasticMode::ElasticForce
         )
     }

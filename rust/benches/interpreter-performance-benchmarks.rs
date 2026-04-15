@@ -4,6 +4,7 @@ use num_bigint::BigInt;
 use num_traits::One;
 
 use ajisai_core::types::fraction::Fraction;
+use ajisai_core::elastic::ElasticMode;
 use ajisai_core::interpreter::Interpreter;
 
 
@@ -370,6 +371,53 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
     });
 }
 
+fn bench_interpreter_hof_mode_matrix(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let scenarios: [(&str, &str, ElasticMode); 13] = [
+        ("map_arith_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::Greedy),
+        ("map_arith_hedged", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::HedgedSafe),
+        ("map_arith_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::FastGuarded),
+        ("map_predicate_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP", ElasticMode::Greedy),
+        ("map_predicate_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP", ElasticMode::FastGuarded),
+        ("filter_greedy", "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER", ElasticMode::Greedy),
+        ("filter_fast_guarded", "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER", ElasticMode::FastGuarded),
+        ("fold_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD", ElasticMode::Greedy),
+        ("fold_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD", ElasticMode::FastGuarded),
+        ("scan_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN", ElasticMode::Greedy),
+        ("scan_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN", ElasticMode::FastGuarded),
+        ("epoch_change_hedged", "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP", ElasticMode::HedgedSafe),
+        ("epoch_change_fast_guarded", "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP", ElasticMode::FastGuarded),
+    ];
+
+    c.bench_function("interp_hof_mode_matrix", |b| {
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            let mut last_metrics = None;
+            for _ in 0..iters {
+                for (_name, code, mode) in &scenarios {
+                    let mut interp = Interpreter::new();
+                    interp.set_elastic_mode(*mode);
+                    rt.block_on(interp.execute(code)).unwrap();
+                    black_box(interp.get_stack().clone());
+                    last_metrics = Some(interp.runtime_metrics());
+                }
+            }
+            if let Some(m) = last_metrics {
+                eprintln!(
+                    "[bench metrics] quant_use={} hedged_started={} winner_q={} winner_plain={} fallback={} reject={}",
+                    m.quantized_block_use_count,
+                    m.hedged_race_started_count,
+                    m.hedged_race_winner_quantized_count,
+                    m.hedged_race_winner_plain_count,
+                    m.hedged_race_fallback_count,
+                    m.hedged_race_validation_reject_count
+                );
+            }
+            start.elapsed()
+        })
+    });
+}
+
 
 const TRIE_ALPHABET_SIZE: usize = 40;
 
@@ -526,6 +574,7 @@ criterion_group!(
     bench_interpreter_custom_word,
     bench_interpreter_vector_construction,
     bench_interpreter_fraction_heavy,
+    bench_interpreter_hof_mode_matrix,
 );
 
 criterion_main!(dictionary_benches, fraction_benches, interpreter_benches);

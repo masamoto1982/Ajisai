@@ -1,5 +1,5 @@
 use crate::interpreter::quantized_block::{
-    is_quantizable_block, quantize_code_block, QuantizedArity, QuantizedPurity,
+    is_quantizable_block, quantize_code_block, KernelKind, QuantizedArity, QuantizedPurity,
 };
 use crate::interpreter::Interpreter;
 use crate::types::{Token, Value};
@@ -242,6 +242,46 @@ fn can_fuse_reflects_purity() {
     assert!(qb.can_short_circuit);
 }
 
+#[test]
+fn impure_builtin_is_not_classified_as_fast_kernel() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("PRINT")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+    assert_eq!(qb.kernel_kind, KernelKind::GenericCompiled);
+    assert!(qb.fast_path_id.is_none());
+}
+
+#[test]
+fn kernel_kind_detects_map_unary_const_plus() {
+    let mut interp = make_interp();
+    let tokens = vec![Token::VectorStart, num("2"), Token::VectorEnd, sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::MapUnaryPure);
+    assert!(qb.fast_path_id.is_some());
+    assert!(qb.eligible_for_cache);
+    assert!(qb.eligible_for_fusion);
+}
+
+#[test]
+fn kernel_kind_detects_predicate_not() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("NOT")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::PredicateUnaryPure);
+    assert!(qb.fast_path_id.is_some());
+}
+
+#[test]
+fn kernel_kind_defaults_to_generic_for_unknown_pattern() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("MAP")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::GenericCompiled);
+    assert!(qb.fast_path_id.is_none());
+    assert!(!qb.lowered_kernel_ir.is_empty());
+}
+
 // ---------------------------------------------------------------------------
 // Dependency word collection
 // ---------------------------------------------------------------------------
@@ -328,7 +368,20 @@ fn filter_keeps_elements_above_zero() {
 }
 
 #[test]
+fn filter_with_simple_fast_predicate_pattern() {
+    let interp = run_code("[ -2 -1 0 1 2 3 ] { [ 2 ] < } FILTER");
+    let top = stack_top(&interp);
+    assert_eq!(top.len(), 4, "expected [-2, -1, 0, 1], got len={}", top.len());
+}
+
+#[test]
 fn any_true_when_element_matches() {
+    let interp = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
+    assert!(stack_top_bool(&interp));
+}
+
+#[test]
+fn any_with_simple_fast_predicate_pattern() {
     let interp = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
     assert!(stack_top_bool(&interp));
 }
@@ -364,6 +417,12 @@ fn count_counts_matching_elements() {
 fn fold_sum_is_correct() {
     let interp = run_code("[ 1 2 3 4 5 ] [ 0 ] { + } FOLD");
     assert_eq!(stack_top_i64(&interp), 15);
+}
+
+#[test]
+fn fold_product_is_correct() {
+    let interp = run_code("[ 1 2 3 4 ] [ 1 ] { * } FOLD");
+    assert_eq!(stack_top_i64(&interp), 24);
 }
 
 #[test]
