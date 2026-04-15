@@ -84,7 +84,7 @@ select:focus-visible {
 
 
 header {
-    background: linear-gradient(to right, var(--gradient-header) 75%, var(--gradient-header-right) 100%);
+    background: linear-gradient(in oklch to right, var(--gradient-header) 70%, var(--gradient-header-right) 100%);
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
@@ -175,7 +175,7 @@ header h1 a {
 
 
 footer {
-    background: linear-gradient(to right, var(--gradient-header) 75%, var(--gradient-header-right) 100%);
+    background: linear-gradient(in oklch to right, var(--gradient-header) 70%, var(--gradient-header-right) 100%);
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
