@@ -205,7 +205,11 @@ export const createGUI = (): GUI => {
         {
             const TAP_MOVEMENT_LIMIT = 10;
 
-            const setupTapToReturn = (target: HTMLElement, activeMode: ViewMode): void => {
+            const setupTapToTransition = (
+                target: HTMLElement,
+                activeMode: ViewMode,
+                nextMode: ViewMode
+            ): void => {
                 let tapStartX = 0;
                 let tapStartY = 0;
 
@@ -229,13 +233,13 @@ export const createGUI = (): GUI => {
 
                     if (deltaX < TAP_MOVEMENT_LIMIT && deltaY < TAP_MOVEMENT_LIMIT) {
                         if ((e.target as HTMLElement).closest('button, a')) return;
-                        switchArea('input');
+                        switchArea(nextMode);
                     }
                 }, { passive: true });
             };
 
-            setupTapToReturn(elements.outputDisplay, 'output');
-            setupTapToReturn(elements.stackDisplay, 'stack');
+            setupTapToTransition(elements.outputDisplay, 'output', 'stack');
+            setupTapToTransition(elements.stackDisplay, 'stack', 'input');
         }
 
         elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
