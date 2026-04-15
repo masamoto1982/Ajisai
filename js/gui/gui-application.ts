@@ -203,39 +203,21 @@ export const createGUI = (): GUI => {
         });
 
         {
-            const TAP_MOVEMENT_LIMIT = 10;
-
-            const setupTapToReturn = (target: HTMLElement, activeMode: ViewMode): void => {
-                let tapStartX = 0;
-                let tapStartY = 0;
-
-                target.addEventListener('touchstart', (e: TouchEvent) => {
-                    const touch = e.changedTouches[0];
-                    if (touch) {
-                        tapStartX = touch.screenX;
-                        tapStartY = touch.screenY;
-                    }
-                }, { passive: true });
-
-                target.addEventListener('touchend', (e: TouchEvent) => {
+            const setupTapToTransition = (
+                target: HTMLElement,
+                activeMode: ViewMode,
+                nextMode: ViewMode
+            ): void => {
+                target.addEventListener('dblclick', (e: MouseEvent) => {
                     if (!mobile.isMobile()) return;
                     if (layoutState.currentMode !== activeMode) return;
-
-                    const touch = e.changedTouches[0];
-                    if (!touch) return;
-
-                    const deltaX = Math.abs(touch.screenX - tapStartX);
-                    const deltaY = Math.abs(touch.screenY - tapStartY);
-
-                    if (deltaX < TAP_MOVEMENT_LIMIT && deltaY < TAP_MOVEMENT_LIMIT) {
-                        if ((e.target as HTMLElement).closest('button, a')) return;
-                        switchArea('input');
-                    }
-                }, { passive: true });
+                    if ((e.target as HTMLElement).closest('button, a')) return;
+                    switchArea(nextMode);
+                });
             };
 
-            setupTapToReturn(elements.outputDisplay, 'output');
-            setupTapToReturn(elements.stackDisplay, 'stack');
+            setupTapToTransition(elements.outputDisplay, 'output', 'stack');
+            setupTapToTransition(elements.stackDisplay, 'stack', 'input');
         }
 
         elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
