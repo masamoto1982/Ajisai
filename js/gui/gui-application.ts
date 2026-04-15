@@ -268,35 +268,28 @@ export const createGUI = (): GUI => {
         });
 
         {
-            const DOUBLE_TAP_INTERVAL_MS = 300;
-            const TAP_MOVEMENT_LIMIT = 10;
+            const TRIPLE_TAP_INTERVAL_MS = 500;
+            let tapCount = 0;
             let lastTapAt = 0;
-            let tapStartX = 0;
-            let tapStartY = 0;
-
-            elements.codeInput.addEventListener('touchstart', (e: TouchEvent) => {
-                const touch = e.changedTouches[0];
-                if (!touch) return;
-                tapStartX = touch.screenX;
-                tapStartY = touch.screenY;
-            }, { passive: true });
 
             elements.codeInput.addEventListener('touchend', (e: TouchEvent) => {
                 if (!mobile.isMobile()) return;
-
-                const touch = e.changedTouches[0];
-                if (!touch) return;
-
-                const deltaX = Math.abs(touch.screenX - tapStartX);
-                const deltaY = Math.abs(touch.screenY - tapStartY);
-                if (deltaX >= TAP_MOVEMENT_LIMIT || deltaY >= TAP_MOVEMENT_LIMIT) return;
+                if (e.changedTouches.length === 0) return;
 
                 const now = Date.now();
-                if (now - lastTapAt <= DOUBLE_TAP_INTERVAL_MS) {
+                if (now - lastTapAt <= TRIPLE_TAP_INTERVAL_MS) {
+                    tapCount += 1;
+                } else {
+                    tapCount = 1;
+                }
+
+                if (tapCount >= 3) {
                     executionController.executeCode(editor.extractValue());
+                    tapCount = 0;
                     lastTapAt = 0;
                     return;
                 }
+
                 lastTapAt = now;
             }, { passive: true });
         }
