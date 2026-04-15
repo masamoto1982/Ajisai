@@ -267,6 +267,40 @@ export const createGUI = (): GUI => {
             }
         });
 
+        {
+            const DOUBLE_TAP_INTERVAL_MS = 300;
+            const TAP_MOVEMENT_LIMIT = 10;
+            let lastTapAt = 0;
+            let tapStartX = 0;
+            let tapStartY = 0;
+
+            elements.codeInput.addEventListener('touchstart', (e: TouchEvent) => {
+                const touch = e.changedTouches[0];
+                if (!touch) return;
+                tapStartX = touch.screenX;
+                tapStartY = touch.screenY;
+            }, { passive: true });
+
+            elements.codeInput.addEventListener('touchend', (e: TouchEvent) => {
+                if (!mobile.isMobile()) return;
+
+                const touch = e.changedTouches[0];
+                if (!touch) return;
+
+                const deltaX = Math.abs(touch.screenX - tapStartX);
+                const deltaY = Math.abs(touch.screenY - tapStartY);
+                if (deltaX >= TAP_MOVEMENT_LIMIT || deltaY >= TAP_MOVEMENT_LIMIT) return;
+
+                const now = Date.now();
+                if (now - lastTapAt <= DOUBLE_TAP_INTERVAL_MS) {
+                    executionController.executeCode(editor.extractValue());
+                    lastTapAt = 0;
+                    return;
+                }
+                lastTapAt = now;
+            }, { passive: true });
+        }
+
         window.addEventListener('resize', () => {
             applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
             updateEditorPlaceholder(elements, mobile);
