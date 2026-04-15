@@ -17,6 +17,24 @@ pub enum QuantizedPurity {
     Unknown,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KernelKind {
+    MapUnaryPure,
+    PredicateUnaryPure,
+    FoldBinaryPure,
+    ScanBinaryPure,
+    GenericCompiled,
+    NonQuantizable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GuardSignature {
+    pub dictionary_epoch: u64,
+    pub module_epoch: u64,
+    pub kernel_kind: KernelKind,
+    pub purity: QuantizedPurity,
+}
+
 #[derive(Debug, Clone)]
 pub struct QuantizedBlock {
     pub compiled_plan: Arc<CompiledPlan>,
@@ -24,6 +42,12 @@ pub struct QuantizedBlock {
     pub input_arity: QuantizedArity,
     pub output_arity: QuantizedArity,
     pub purity: QuantizedPurity,
+    pub kernel_kind: KernelKind,
+    pub fast_path_id: Option<String>,
+    pub guard_signature: GuardSignature,
+    pub lowered_kernel_ir: Vec<CompiledOp>,
+    pub eligible_for_cache: bool,
+    pub eligible_for_fusion: bool,
     pub can_fuse: bool,
     pub can_short_circuit: bool,
     pub dependency_words: Vec<String>,
@@ -162,6 +186,53 @@ pub fn is_quantizable_block(tokens: &[Token]) -> bool {
     !tokens.is_empty() && !tokens.iter().any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
 }
 
+fn is_const_vector_token(token: &Token) -> bool {
+    matches!(token, Token::Number(_) | Token::String(_))
+        || matches!(token, Token::Symbol(sym) if sym.as_ref() == "TRUE" || sym.as_ref() == "FALSE")
+}
+
+fn is_const_vector_pattern(tokens: &[Token], op: &str) -> bool {
+    if tokens.len() != 4 {
+        return false;
+    }
+    matches!(
+        (&tokens[0], &tokens[1], &tokens[2], &tokens[3]),
+        (Token::VectorStart, constant, Token::VectorEnd, Token::Symbol(sym))
+            if is_const_vector_token(constant) && sym.as_ref() == op
+    )
+}
+
+fn detect_kernel_kind(tokens: &[Token], purity: QuantizedPurity, _input_arity: QuantizedArity) -> KernelKind {
+    if purity != QuantizedPurity::Pure {
+        return KernelKind::GenericCompiled;
+    }
+
+    // Initial pattern recognition (Phase B-2)
+    if is_const_vector_pattern(tokens, "+")
+        || is_const_vector_pattern(tokens, "-")
+        || is_const_vector_pattern(tokens, "*")
+        || is_const_vector_pattern(tokens, "/")
+        || is_const_vector_pattern(tokens, "MOD")
+        || is_const_vector_pattern(tokens, "=")
+        || is_const_vector_pattern(tokens, "<")
+    {
+        return KernelKind::MapUnaryPure;
+    }
+
+    if tokens.len() == 1 {
+        if let Token::Symbol(sym) = &tokens[0] {
+            return match sym.as_ref() {
+                "NOT" => KernelKind::PredicateUnaryPure,
+                "ABS" | "NEG" => KernelKind::MapUnaryPure,
+                "+" | "-" | "*" | "/" | "MOD" => KernelKind::FoldBinaryPure,
+                _ => KernelKind::GenericCompiled,
+            };
+        }
+    }
+
+    KernelKind::GenericCompiled
+}
+
 pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option<QuantizedBlock> {
     if !is_quantizable_block(tokens) {
         return None;
@@ -184,9 +255,30 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
     interp.runtime_metrics.quantized_block_build_count += 1;
 
     let (input_arity, output_arity, purity, dependency_words) = analyze_compiled_plan(&plan);
+    let kernel_kind = detect_kernel_kind(tokens, purity, input_arity);
 
     let can_fuse = purity == QuantizedPurity::Pure;
     let can_short_circuit = purity == QuantizedPurity::Pure;
+    let captured_epoch = interp.current_epoch_snapshot();
+    let fast_path_id = match kernel_kind {
+        KernelKind::GenericCompiled | KernelKind::NonQuantizable => None,
+        _ => Some(format!(
+            "kernel::{kernel_kind:?}::in={input_arity:?}::out={output_arity:?}"
+        )),
+    };
+    let guard_signature = GuardSignature {
+        dictionary_epoch: captured_epoch.dictionary_epoch,
+        module_epoch: captured_epoch.module_epoch,
+        kernel_kind,
+        purity,
+    };
+    let lowered_kernel_ir = plan
+        .lines
+        .iter()
+        .flat_map(|line| line.ops.iter().cloned())
+        .collect::<Vec<_>>();
+    let eligible_for_cache = purity == QuantizedPurity::Pure;
+    let eligible_for_fusion = matches!(kernel_kind, KernelKind::MapUnaryPure | KernelKind::PredicateUnaryPure);
 
     #[cfg(feature = "trace-quant")]
     eprintln!(
@@ -196,10 +288,16 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
 
     Some(QuantizedBlock {
         compiled_plan: plan,
-        captured_epoch: interp.current_epoch_snapshot(),
+        captured_epoch,
         input_arity,
         output_arity,
         purity,
+        kernel_kind,
+        fast_path_id,
+        guard_signature,
+        lowered_kernel_ir,
+        eligible_for_cache,
+        eligible_for_fusion,
         can_fuse,
         can_short_circuit,
         dependency_words,

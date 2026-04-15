@@ -115,3 +115,6 @@ mod quantized_block_tests;
 #[cfg(test)]
 #[path = "perf-regression-tests.rs"]
 mod perf_regression_tests;
+#[cfg(test)]
+#[path = "fast-guarded-tests.rs"]
+mod fast_guarded_tests;
