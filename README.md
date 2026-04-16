@@ -81,6 +81,28 @@ npm run check
 
 ---
 
+## Version / Branch Automation
+
+- ヘッダーの `ver.` 表示はビルド時に自動生成されます（`YYYYMMDDHHmm`）。
+- ブランチ命名規則は `YYYYMMDD(変更内容)` です。
+
+### 手動で開始する場合
+
+```sh
+npm run branch:new -- "変更内容"
+```
+
+### 自動で作成したい場合（pre-commit hook）
+
+```sh
+npm run hooks:install
+```
+
+- hook導入後は、命名規則外のブランチで変更をコミットしようとした際に、`YYYYMMDD(変更内容)` 形式の新規ブランチを自動作成してからコミット処理を続行します。
+- `変更内容` は `AJISAI_BRANCH_DESC` 環境変数があればそれを使い、未指定時は変更ファイル名から自動推定します。
+
+---
+
 ## License
 
 MIT (`LICENSE`)

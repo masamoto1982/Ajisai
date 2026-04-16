@@ -5,11 +5,20 @@ import { initWasm } from './wasm-module-loader';
 import './indexeddb-user-word-store';
 import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
 
+declare const __AJISAI_BUILD_VERSION__: string;
+
 declare global {
     interface Window {
         AjisaiWasm: WasmModule;
         ajisaiInterpreter: AjisaiInterpreter;
     }
+}
+
+function setBuildVersionLabel(): void {
+    const versionElement = document.querySelector<HTMLElement>('.version');
+    if (!versionElement) return;
+
+    versionElement.textContent = `ver.${__AJISAI_BUILD_VERSION__}`;
 }
 
 async function main(): Promise<void> {
@@ -143,6 +152,7 @@ function setupLogoTouchQR(): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    setBuildVersionLabel();
     setupLogoTouchQR();
     main();
 });
