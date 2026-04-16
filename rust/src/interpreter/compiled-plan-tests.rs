@@ -14,7 +14,7 @@ fn test_word(tokens: Vec<Token>) -> WordDefinition {
         original_source: None,
         namespace: None,
         registration_order: 0,
-        compiled_plan: None,
+        execution_plans: None,
     }
 }
 

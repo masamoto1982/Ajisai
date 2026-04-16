@@ -91,6 +91,31 @@ pub(crate) struct ChildRuntime {
     pub spawn_epoch: EpochSnapshot,
 }
 
+#[derive(Debug, Clone)]
+pub struct ResolveCacheEntry {
+    pub resolved_name: String,
+    pub dictionary_epoch: u64,
+    pub module_epoch: u64,
+    pub registration_order: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ValidationPolicy {
+    pub enable_shadow_validation: bool,
+    pub max_validation_input_len: usize,
+    pub warmup_runs: u64,
+}
+
+impl Default for ValidationPolicy {
+    fn default() -> Self {
+        Self {
+            enable_shadow_validation: true,
+            max_validation_input_len: 16,
+            warmup_runs: 3,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
@@ -105,6 +130,12 @@ pub struct RuntimeMetrics {
     pub hedged_race_cancel_count: u64,
     pub hedged_race_validation_reject_count: u64,
     pub cond_guard_prefetch_count: u64,
+    pub shadow_validation_started_count: u64,
+    pub shadow_validation_success_count: u64,
+    pub shadow_validation_fallback_count: u64,
+    pub resolve_cache_hit_count: u64,
+    pub resolve_cache_miss_count: u64,
+    pub resolve_cache_invalidation_count: u64,
 }
 
 pub struct Interpreter {
@@ -158,6 +189,8 @@ pub struct Interpreter {
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
     pub(crate) elastic_mode: crate::elastic::ElasticMode,
     pub(crate) elastic_cache: crate::elastic::CacheManager,
+    pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
+    pub(crate) validation_policy: ValidationPolicy,
 }
 
 impl Interpreter {
@@ -207,6 +240,8 @@ impl Interpreter {
             // Elastic Engine
             elastic_mode: crate::elastic::ElasticMode::Greedy,
             elastic_cache: crate::elastic::CacheManager::new(),
+            resolve_cache: HashMap::new(),
+            validation_policy: ValidationPolicy::default(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -254,8 +289,19 @@ impl Interpreter {
         self.epoch_stack.pop();
     }
 
+    pub(crate) fn clear_resolve_cache(&mut self) {
+        self.resolve_cache.clear();
+        self.runtime_metrics.resolve_cache_invalidation_count += 1;
+    }
+
+    pub(crate) fn invalidate_execution_artifacts(&mut self) {
+        self.clear_resolve_cache();
+        self.elastic_cache.clear();
+    }
+
     pub(crate) fn bump_dictionary_epoch(&mut self) {
         self.dictionary_epoch = self.next_epoch();
+        self.invalidate_execution_artifacts();
         #[cfg(feature = "trace-epoch")]
         eprintln!(
             "[trace-epoch] dictionary_epoch={} global_epoch={}",
@@ -265,6 +311,7 @@ impl Interpreter {
 
     pub(crate) fn bump_module_epoch(&mut self) {
         self.module_epoch = self.next_epoch();
+        self.invalidate_execution_artifacts();
         #[cfg(feature = "trace-epoch")]
         eprintln!(
             "[trace-epoch] module_epoch={} global_epoch={}",
