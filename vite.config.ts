@@ -11,40 +11,40 @@ function runGitCommand(command: string): string {
   }
 }
 
-function formatDatePart(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-function formatBuildStamp(date: Date): string {
-  const datePart = formatDatePart(date);
-  const hours = `${date.getHours()}`.padStart(2, '0');
-  const minutes = `${date.getMinutes()}`.padStart(2, '0');
-  return `${datePart}${hours}${minutes}`;
-}
-
 function normalizeChangeNote(note: string): string {
   const cleaned = note
-    .replace(/[()]/g, ' ')
+    .replace(/[()（）]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
   return cleaned.length > 0 ? cleaned : 'update';
 }
 
-const buildStamp = formatBuildStamp(new Date());
+function extractChangeFromBranchName(branchName: string): string {
+  const matched = branchName.match(/^\d{8}[（(](.+)[）)]$/);
+  if (!matched) return '';
+  return matched[1].trim();
+}
+
+function extractChangeFromCommitSubject(subject: string): string {
+  if (subject.startsWith('Merge pull request')) {
+    return '';
+  }
+  return subject;
+}
+
 const envChangeNote = process.env.AJISAI_CHANGE_NOTE ?? '';
+const gitBranchName = runGitCommand('git rev-parse --abbrev-ref HEAD');
+const branchChangeNote = extractChangeFromBranchName(gitBranchName);
 const gitSubject = runGitCommand('git log -1 --pretty=%s');
-const changeNote = normalizeChangeNote(envChangeNote || gitSubject || 'update');
-const buildVersion = `${buildStamp}(${changeNote})`;
+const commitChangeNote = extractChangeFromCommitSubject(gitSubject);
+const changeNote = normalizeChangeNote(envChangeNote || branchChangeNote || commitChangeNote || 'update');
 
 export default defineConfig({
   root: '.',
   base: './',
   define: {
-    __AJISAI_BUILD_VERSION__: JSON.stringify(buildVersion)
+    __AJISAI_CHANGE_NOTE__: JSON.stringify(changeNote)
   },
   server: {
     port: 3000,

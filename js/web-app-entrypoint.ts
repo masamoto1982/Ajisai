@@ -5,7 +5,7 @@ import { initWasm } from './wasm-module-loader';
 import './indexeddb-user-word-store';
 import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
 
-declare const __AJISAI_BUILD_VERSION__: string;
+declare const __AJISAI_CHANGE_NOTE__: string;
 
 declare global {
     interface Window {
@@ -14,11 +14,21 @@ declare global {
     }
 }
 
+function formatTimestamp(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}${month}${day}${hours}${minutes}`;
+}
+
 function setBuildVersionLabel(): void {
     const versionElement = document.querySelector<HTMLElement>('.version');
     if (!versionElement) return;
 
-    versionElement.textContent = `ver.${__AJISAI_BUILD_VERSION__}`;
+    const timestamp = formatTimestamp(new Date());
+    versionElement.textContent = `ver.${timestamp}（${__AJISAI_CHANGE_NOTE__}）`;
 }
 
 async function main(): Promise<void> {

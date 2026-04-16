@@ -83,19 +83,20 @@ npm run check
 
 ## Version / Branch Automation
 
-- ヘッダーの `ver.` 表示はビルド時に自動生成されます。
-- 表示形式は `YYYYMMDDHHmm(変更内容)` です。
+- ヘッダーの `ver.` 表示はアプリ起動時に自動生成されます（現在時刻ベース）。
+- 表示形式は `YYYYMMDDHHmm（変更内容）` です（括弧は全角）。
 - `変更内容` は次の優先順で決定されます。
   1. `AJISAI_CHANGE_NOTE`
-  2. 直近コミットメッセージ
-  3. `update`
+  2. ブランチ名 `YYYYMMDD(変更内容)` / `YYYYMMDD（変更内容）` の `変更内容`
+  3. 直近コミットメッセージ（ただし `Merge pull request ...` は除外）
+  4. `update`
 
 ```sh
 npm run build:web
 AJISAI_CHANGE_NOTE="UI tweak" npm run build:web
 ```
 
-- `AJISAI_CHANGE_NOTE` を指定すると、ヘッダーの `ver.` に `YYYYMMDDHHmm(UI tweak)` のように表示されます。
+- `AJISAI_CHANGE_NOTE` を指定すると、ヘッダーの `ver.` に `YYYYMMDDHHmm（UI tweak）` のように表示されます。年月日時分は起動タイミングで毎回更新されます。
 
 ---
 
