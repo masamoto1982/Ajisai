@@ -199,6 +199,7 @@ export const createGUI = (): GUI => {
             if ((e.target as HTMLElement).closest('button, a')) return;
             if (!mobile.isMobile() && layoutState.currentLeftMode === 'output') {
                 switchArea('input');
+                editor.focus();
             }
         });
 
