@@ -1,15 +1,6 @@
-import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 
 const isTauri = !!process.env.TAURI_ENV_TARGET_TRIPLE;
-
-function runGitCommand(command: string): string {
-  try {
-    return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-  } catch {
-    return '';
-  }
-}
 
 function formatDatePart(date: Date): string {
   const year = date.getFullYear();
@@ -25,31 +16,7 @@ function formatBuildStamp(date: Date): string {
   return `${datePart}${hours}${minutes}`;
 }
 
-function normalizeBranchName(rawBranchName: string, datePart: string): string {
-  if (/^\d{8}\(.+\)$/.test(rawBranchName)) {
-    return rawBranchName;
-  }
-
-  const cleaned = rawBranchName
-    .replace(/^\/*/, '')
-    .replace(/\/+$/, '')
-    .replace(/\//g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/\(+/g, '-')
-    .replace(/\)+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  const detail = cleaned.length > 0 ? cleaned : 'update';
-  return `${datePart}(${detail})`;
-}
-
-const now = new Date();
-const datePart = formatDatePart(now);
-const buildStamp = formatBuildStamp(now);
-const gitBranchName = runGitCommand('git rev-parse --abbrev-ref HEAD') || 'detached-head';
-const branchLabel = normalizeBranchName(gitBranchName, datePart);
-const buildVersion = `${buildStamp} (${branchLabel})`;
+const buildVersion = formatBuildStamp(new Date());
 
 export default defineConfig({
   root: '.',
