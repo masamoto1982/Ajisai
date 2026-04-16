@@ -9,7 +9,7 @@ This note captures the current Ajisai GUI behavior so the interface can be rebui
 - Mobile mode switches to a one-panel-at-a-time selector (`input/output/stack/dictionary`).
 
 ## Header/footer and app chrome
-- Header includes Ajisai logo, version text, offline indicator, and Test button.
+- Header includes Ajisai logo, version text, and Test button.
 - Footer includes copyright + GitHub link.
 - Skip link exists for accessibility (`Skip to main content`).
 
@@ -43,7 +43,7 @@ This note captures the current Ajisai GUI behavior so the interface can be rebui
 - Entry point (`js/web-app-entrypoint.ts`) initialized WASM interpreter then GUI.
 - Worker manager used for parallel execution and abort handling.
 - Persistence module handled user dictionary import/export/state retention.
-- Service Worker registration and online/offline status messaging integrated with GUI display.
+- No service worker / offline-mode integration in the web app entrypoint.
 
 ## Styling profile
 - App-specific styling lived in `app-interface.css`.

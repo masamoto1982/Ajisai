@@ -42,10 +42,9 @@ jobs:
           cd rust
           wasm-pack build --target web --out-dir ../js/pkg
 
-      - name: Update cache version stamps
+      - name: Update asset version stamps
         run: |
           VERSION=$(date -u +%Y%m%d%H%M)
-          sed -i "s/const CACHE_NAME = 'ajisai-v[0-9]*/const CACHE_NAME = 'ajisai-v${VERSION}/" public/service-worker.js
           sed -i "s/?v=[0-9]*/?v=${VERSION}/g" index.html
 
       - name: Build TypeScript
