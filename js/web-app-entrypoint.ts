@@ -5,11 +5,30 @@ import { initWasm } from './wasm-module-loader';
 import './indexeddb-user-word-store';
 import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
 
+declare const __AJISAI_CHANGE_NOTE__: string;
+
 declare global {
     interface Window {
         AjisaiWasm: WasmModule;
         ajisaiInterpreter: AjisaiInterpreter;
     }
+}
+
+function formatTimestamp(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}${month}${day}${hours}${minutes}`;
+}
+
+function setBuildVersionLabel(): void {
+    const versionElement = document.querySelector<HTMLElement>('.version');
+    if (!versionElement) return;
+
+    const timestamp = formatTimestamp(new Date());
+    versionElement.textContent = `ver.${timestamp} (${__AJISAI_CHANGE_NOTE__})`;
 }
 
 async function main(): Promise<void> {
@@ -143,6 +162,7 @@ function setupLogoTouchQR(): void {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    setBuildVersionLabel();
     setupLogoTouchQR();
     main();
 });
