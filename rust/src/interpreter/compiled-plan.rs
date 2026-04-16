@@ -44,7 +44,7 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
         && plan.compiled_at.module_epoch == interp.module_epoch
 }
 
-fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
+fn compile_symbol(token: &Token, symbol: &str, _interp: &Interpreter) -> CompiledOp {
     match symbol {
         "." => CompiledOp::SetTargetModeStackTop,
         ".." => CompiledOp::SetTargetModeStack,
@@ -56,15 +56,6 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(symbol.to_string())
-            } else if let Some((resolved, _)) = interp.resolve_word_entry(symbol) {
-                if let Some((namespace, word)) = resolved.split_once('@') {
-                    CompiledOp::CallQualifiedWord {
-                        namespace: namespace.to_string(),
-                        word: word.to_string(),
-                    }
-                } else {
-                    CompiledOp::CallUserWord(resolved)
-                }
             } else {
                 CompiledOp::FallbackToken(token.clone())
             }
@@ -150,7 +141,9 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
 }
 
 fn post_call_cleanup(interp: &mut Interpreter, name: &str) {
-    interp.semantic_registry.normalize_to_stack_len(interp.stack.len());
+    interp
+        .semantic_registry
+        .normalize_to_stack_len(interp.stack.len());
     if !modules::is_mode_preserving_word(name) {
         interp.reset_execution_modes();
     }
@@ -177,11 +170,15 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
         match op {
             CompiledOp::PushLiteral(v) => {
                 interp.stack.push(v.clone());
-                interp.semantic_registry.normalize_to_stack_len(interp.stack.len());
+                interp
+                    .semantic_registry
+                    .normalize_to_stack_len(interp.stack.len());
             }
             CompiledOp::PushCodeBlock(tokens) => {
                 interp.stack.push(Value::from_code_block(tokens.clone()));
-                interp.semantic_registry.normalize_to_stack_len(interp.stack.len());
+                interp
+                    .semantic_registry
+                    .normalize_to_stack_len(interp.stack.len());
             }
             CompiledOp::SetTargetModeStackTop => {
                 interp.update_operation_target_mode(OperationTargetMode::StackTop)
@@ -189,7 +186,9 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
             CompiledOp::SetTargetModeStack => {
                 interp.update_operation_target_mode(OperationTargetMode::Stack)
             }
-            CompiledOp::SetConsumptionConsume => interp.update_consumption_mode(ConsumptionMode::Consume),
+            CompiledOp::SetConsumptionConsume => {
+                interp.update_consumption_mode(ConsumptionMode::Consume)
+            }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(name) => {
                 interp.execute_builtin(name)?;
@@ -204,7 +203,9 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
                 interp.execute_word_core(&full_name)?;
                 post_call_cleanup(interp, &full_name);
             }
-            CompiledOp::BeginGuardedBlock | CompiledOp::LineBreak | CompiledOp::FallbackToken(_) => {}
+            CompiledOp::BeginGuardedBlock
+            | CompiledOp::LineBreak
+            | CompiledOp::FallbackToken(_) => {}
         }
     }
     Ok(())
