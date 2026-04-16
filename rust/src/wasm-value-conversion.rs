@@ -316,7 +316,7 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
             let js_array = js_sys::Array::new();
             if let ValueData::Vector(children) = &value.data {
                 for child in children.iter() {
-                    js_array.push(&value_to_js_value_with_hint(child, hint));
+                    js_array.push(&value_to_js_value_with_hint(child, vector_child_hint(child)));
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
@@ -337,6 +337,11 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
     obj.into()
 }
 
+#[inline]
+fn vector_child_hint(child: &Value) -> DisplayHint {
+    child.resolve_default_hint()
+}
+
 pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
     let obj = js_sys::Object::from(js_val.clone());
     let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
@@ -352,7 +357,8 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::build_bracket_structure_from_shape;
+    use super::{build_bracket_structure_from_shape, vector_child_hint};
+    use crate::types::{DisplayHint, Value};
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -396,5 +402,12 @@ mod test_input_helper {
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"
         );
+    }
+
+    #[test]
+    fn nested_vector_children_use_default_hints() {
+        let nested = Value::from_vector(vec![Value::from_number(42_i64.into())]);
+        assert_eq!(vector_child_hint(&Value::from_number(7_i64.into())), DisplayHint::Number);
+        assert_eq!(vector_child_hint(&nested), DisplayHint::Auto);
     }
 }
