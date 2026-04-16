@@ -1,4 +1,4 @@
-use crate::types::arena::{value_to_arena, NodeId, NodeKind, ValueArena};
+use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value};
 use num_bigint::BigInt;
@@ -152,14 +152,6 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     }
 }
 
-pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> JsValue {
-    let (mut arena, root_id) = value_to_arena(value);
-    if let Some(slot) = arena.hints.get_mut(root_id as usize) {
-        *slot = hint;
-    }
-    arena_node_to_js(&arena, root_id, Some(hint))
-}
-
 pub(crate) fn arena_node_to_js(
     arena: &ValueArena,
     root_id: NodeId,
@@ -284,10 +276,6 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 #[cfg(test)]
 mod test_input_helper {
     use super::build_bracket_structure_from_shape;
-    #[cfg(target_arch = "wasm32")]
-    use super::value_to_js_value_with_hint;
-    #[cfg(target_arch = "wasm32")]
-    use crate::types::{DisplayHint, Value};
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -327,18 +315,5 @@ mod test_input_helper {
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"
         );
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    #[test]
-    fn value_to_js_value_with_hint_respects_explicit_hint() {
-        let value = Value::from_vector(vec![Value::from_number(65_i64.into())]);
-        let js_val = value_to_js_value_with_hint(&value, DisplayHint::String);
-        let obj = js_sys::Object::from(js_val);
-        let display_hint = js_sys::Reflect::get(&obj, &"displayHint".into())
-            .unwrap()
-            .as_string()
-            .unwrap();
-        assert_eq!(display_hint, "string");
     }
 }
