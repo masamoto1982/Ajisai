@@ -1,5 +1,7 @@
 use super::fraction::Fraction;
 use super::{DisplayHint, Token, Value, ValueData};
+use num_traits::ToPrimitive;
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -162,6 +164,118 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
     rebuild_recursive(arena, root)
 }
 
+pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<NodeId, String> {
+    match json {
+        JsonValue::Null => Ok(arena.alloc_nil(DisplayHint::Nil)),
+        JsonValue::Bool(v) => Ok(arena.alloc_scalar(
+            Fraction::from(if v { 1_i64 } else { 0_i64 }),
+            DisplayHint::Boolean,
+        )),
+        JsonValue::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(arena.alloc_scalar(Fraction::from(i), DisplayHint::Number))
+            } else if let Some(f) = n.as_f64() {
+                let frac = Fraction::from_str(&f.to_string()).map_err(|e| e.to_string())?;
+                Ok(arena.alloc_scalar(frac, DisplayHint::Number))
+            } else {
+                Err("unsupported json number".to_string())
+            }
+        }
+        JsonValue::String(s) => Ok(arena.alloc_string(&s)),
+        JsonValue::Array(items) => {
+            if items.is_empty() {
+                return Ok(arena.alloc_nil(DisplayHint::Auto));
+            }
+            let children = items
+                .into_iter()
+                .map(|item| json_to_arena_node(arena, item))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(arena.alloc_vector(children, DisplayHint::Auto))
+        }
+        JsonValue::Object(map) => {
+            if map.is_empty() {
+                return Ok(arena.alloc_nil(DisplayHint::Auto));
+            }
+            let mut pairs = Vec::with_capacity(map.len());
+            let mut index = HashMap::with_capacity(map.len());
+            for (key, value) in map {
+                index.insert(key.clone(), pairs.len());
+                let key_id = arena.alloc_string(&key);
+                let value_id = json_to_arena_node(arena, value)?;
+                let pair_id = arena.alloc_vector(vec![key_id, value_id], DisplayHint::Auto);
+                pairs.push(pair_id);
+            }
+            Ok(arena.alloc_record(pairs, index, DisplayHint::Auto))
+        }
+    }
+}
+
+pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
+    match arena.kind(root) {
+        NodeKind::Nil => JsonValue::Null,
+        NodeKind::Scalar(frac) => {
+            if arena.hint(root) == DisplayHint::Boolean {
+                return JsonValue::Bool(!frac.is_zero());
+            }
+            if frac.is_integer() {
+                if let Some(int_val) = frac.to_i64() {
+                    return JsonValue::Number(serde_json::Number::from(int_val));
+                }
+            }
+
+            let as_f64 = frac.numerator().to_f64().zip(frac.denominator().to_f64());
+            if let Some((n, d)) = as_f64 {
+                if let Some(num) = serde_json::Number::from_f64(n / d) {
+                    return JsonValue::Number(num);
+                }
+            }
+            JsonValue::Null
+        }
+        NodeKind::Vector { children } => {
+            if arena.hint(root) == DisplayHint::String {
+                let mut buf = String::new();
+                for child in children {
+                    if let NodeKind::Scalar(codepoint) = arena.kind(*child) {
+                        if let Some(n) = codepoint.to_i64() {
+                            if let Some(ch) = char::from_u32(n as u32) {
+                                buf.push(ch);
+                            }
+                        }
+                    }
+                }
+                return JsonValue::String(buf);
+            }
+
+            let arr = children
+                .iter()
+                .map(|child| arena_node_to_json(arena, *child))
+                .collect();
+            JsonValue::Array(arr)
+        }
+        NodeKind::Record { pairs, .. } => {
+            let mut map = serde_json::Map::new();
+            for pair_id in pairs {
+                let NodeKind::Vector { children } = arena.kind(*pair_id) else {
+                    continue;
+                };
+                if children.len() != 2 {
+                    continue;
+                }
+
+                let key = match arena_node_to_json(arena, children[0]) {
+                    JsonValue::String(s) => s,
+                    other => other.to_string(),
+                };
+                map.insert(key, arena_node_to_json(arena, children[1]));
+            }
+            JsonValue::Object(map)
+        }
+        NodeKind::CodeBlock(_) | NodeKind::ProcessHandle(_) | NodeKind::SupervisorHandle(_) => {
+            JsonValue::Null
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +304,42 @@ mod tests {
 
         let rebuilt = arena_to_value(&arena, root);
         assert_eq!(rebuilt, value);
+    }
+
+    #[test]
+    fn json_roundtrip_through_arena_node_keeps_primitives_and_objects() {
+        let json = serde_json::json!({
+            "name": "Ajisai",
+            "values": [1, 2, 3],
+            "flag": true
+        });
+        let mut arena = ValueArena::new();
+        let root = json_to_arena_node(&mut arena, json.clone()).expect("json to arena");
+        let restored = arena_node_to_json(&arena, root);
+        assert_eq!(restored, json);
+    }
+
+    #[test]
+    fn nested_numeric_vectors_are_not_stringified_in_json() {
+        let value = Value::from_children(vec![
+            Value::from_children(vec![
+                Value::from_children(vec![Value::from_int(88)]),
+                Value::from_children(vec![Value::from_int(99)]),
+                Value::from_children(vec![Value::from_int(100)]),
+            ]),
+            Value::from_children(vec![
+                Value::from_children(vec![Value::from_int(50)]),
+                Value::from_children(vec![Value::from_int(32)]),
+                Value::from_children(vec![Value::from_int(44)]),
+                Value::from_int(22),
+            ]),
+        ]);
+
+        let (arena, root) = value_to_arena(&value);
+        let json = arena_node_to_json(&arena, root);
+
+        assert!(json.is_array(), "root should be array, got {json}");
+        let first = json.as_array().expect("root array")[0].clone();
+        assert!(first.is_array(), "nested numeric vector must stay array");
     }
 }
