@@ -25,7 +25,9 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_chars(c)).collect(),
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec![],
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => vec![],
         }
     }
 
@@ -50,7 +52,9 @@ fn is_string_like(val: &Value) -> bool {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().all(|c| check_codepoints(c)),
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => false,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => false,
         }
     }
 
@@ -166,7 +170,6 @@ pub(crate) fn op_def_inner(
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
-
     let mut collision_modules = Vec::new();
     for (module_name, module_dict) in &interp.module_vocabulary {
         if module_dict.sample_words.contains_key(&upper_name) {
@@ -240,7 +243,7 @@ pub(crate) fn op_def_inner(
         original_source: None,
         namespace: Some(dict_name.clone()),
         registration_order: interp.next_registration_order(),
-        compiled_plan: None,
+        execution_plans: None,
     };
 
     let dict_order = interp

@@ -261,7 +261,7 @@ fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &str) -> Resu
                 original_source: None,
                 namespace: Some(module.name.to_string()),
                 registration_order: 0,
-                compiled_plan: None,
+                execution_plans: None,
             }),
         );
     }
@@ -301,7 +301,7 @@ fn build_sample_words(
                 original_source: None,
                 namespace: Some(module_name.to_string()),
                 registration_order: 0,
-                compiled_plan: None,
+                execution_plans: None,
             }),
         );
     }
@@ -450,7 +450,6 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
     interp.rebuild_dependencies()?;
     Ok(())
 }
-
 
 pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     let upper = module_name.to_uppercase();

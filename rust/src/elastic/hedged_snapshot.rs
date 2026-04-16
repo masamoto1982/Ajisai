@@ -24,3 +24,16 @@ impl HedgedSnapshot {
         }
     }
 }
+
+impl Interpreter {
+    pub(crate) fn restore_hedged_snapshot(
+        &mut self,
+        snapshot: &crate::elastic::hedged_snapshot::HedgedSnapshot,
+    ) {
+        self.stack = snapshot.stack.clone();
+        self.semantic_registry.stack_hints = snapshot.display_hints.clone();
+        self.operation_target_mode = snapshot.operation_target_mode;
+        self.consumption_mode = snapshot.consumption_mode;
+        self.safe_mode = snapshot.safe_mode;
+    }
+}
