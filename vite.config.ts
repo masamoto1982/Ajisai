@@ -1,6 +1,15 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 
 const isTauri = !!process.env.TAURI_ENV_TARGET_TRIPLE;
+
+function runGitCommand(command: string): string {
+  try {
+    return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+}
 
 function formatDatePart(date: Date): string {
   const year = date.getFullYear();
@@ -16,7 +25,20 @@ function formatBuildStamp(date: Date): string {
   return `${datePart}${hours}${minutes}`;
 }
 
-const buildVersion = formatBuildStamp(new Date());
+function normalizeChangeNote(note: string): string {
+  const cleaned = note
+    .replace(/[()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned.length > 0 ? cleaned : 'update';
+}
+
+const buildStamp = formatBuildStamp(new Date());
+const envChangeNote = process.env.AJISAI_CHANGE_NOTE ?? '';
+const gitSubject = runGitCommand('git log -1 --pretty=%s');
+const changeNote = normalizeChangeNote(envChangeNote || gitSubject || 'update');
+const buildVersion = `${buildStamp}(${changeNote})`;
 
 export default defineConfig({
   root: '.',
