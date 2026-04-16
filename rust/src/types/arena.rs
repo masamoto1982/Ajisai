@@ -1,3 +1,4 @@
+use super::display::is_string_like;
 use super::fraction::Fraction;
 use super::{DisplayHint, Token, Value, ValueData};
 use num_traits::ToPrimitive;
@@ -105,7 +106,12 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
                     .iter()
                     .map(|child| alloc_recursive(child, arena))
                     .collect();
-                arena.alloc_vector(child_ids, DisplayHint::Auto)
+                let hint = if children.len() > 1 && is_string_like(children) {
+                    DisplayHint::String
+                } else {
+                    DisplayHint::Auto
+                };
+                arena.alloc_vector(child_ids, hint)
             }
             ValueData::Record { pairs, index } => {
                 let pair_ids = pairs

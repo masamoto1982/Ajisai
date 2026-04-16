@@ -1,11 +1,17 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::json::{deserialize_json_to_value, serialize_value_to_json};
+use crate::types::arena::{
+    arena_node_to_json, arena_to_value, json_to_arena_node, value_to_arena, ValueArena,
+};
 use crate::types::{Value, ValueData};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-fn extract_stack_value(interp: &mut Interpreter, keep_mode: bool, from_top: usize) -> Result<Value> {
+fn extract_stack_value(
+    interp: &mut Interpreter,
+    keep_mode: bool,
+    from_top: usize,
+) -> Result<Value> {
     if keep_mode {
         if interp.stack.len() <= from_top {
             return Err(AjisaiError::StackUnderflow);
@@ -27,19 +33,22 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
     let json_str = extract_string_content_from_value(&val);
 
     match serde_json::from_str::<serde_json::Value>(&json_str) {
-        Ok(json_val) => match deserialize_json_to_value(json_val, 1) {
-            Ok(parsed) => {
-                interp.stack.push(parsed);
-                Ok(())
+        Ok(json_val) => {
+            let mut arena = ValueArena::new();
+            match json_to_arena_node(&mut arena, json_val) {
+                Ok(parsed) => {
+                    interp.stack.push(arena_to_value(&arena, parsed));
+                    Ok(())
+                }
+                Err(e) => {
+                    interp
+                        .output_buffer
+                        .push_str(&format!("PARSE error: {}\n", e));
+                    interp.stack.push(Value::nil());
+                    Ok(())
+                }
             }
-            Err(e) => {
-                interp
-                    .output_buffer
-                    .push_str(&format!("PARSE error: {}\n", e));
-                interp.stack.push(Value::nil());
-                Ok(())
-            }
-        },
+        }
         Err(e) => {
             interp
                 .output_buffer
@@ -55,7 +64,8 @@ pub fn op_stringify(interp: &mut Interpreter) -> Result<()> {
 
     let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let json_val = serialize_value_to_json(&val);
+    let (arena, root_id) = value_to_arena(&val);
+    let json_val = arena_node_to_json(&arena, root_id);
     let json_str = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
     interp.stack.push(Value::from_string(&json_str));
     Ok(())
@@ -103,7 +113,6 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
     };
 
     if let Some(index) = index {
-
         if let Some(&idx) = index.get(&key_str) {
             if let Some(pair) = pairs.get(idx) {
                 if let ValueData::Vector(kv) = &pair.data {
@@ -115,7 +124,6 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
             }
         }
     } else {
-
         for pair in pairs {
             if let ValueData::Vector(kv) = &pair.data {
                 if kv.len() == 2 {
@@ -199,7 +207,6 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         let found_idx = if let Some(idx) = old_index {
             idx.get(&key_str).copied()
         } else {
-
             old_pairs.iter().position(|pair| {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
@@ -233,7 +240,6 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
             });
         }
-
 
         if old_index.is_none() {
             new_index.clear();
@@ -272,7 +278,8 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
 
     let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let json_val = serialize_value_to_json(&val);
+    let (arena, root_id) = value_to_arena(&val);
+    let json_val = arena_node_to_json(&arena, root_id);
     let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
     interp
         .output_buffer
