@@ -7,6 +7,7 @@ impl Value {
     pub fn nil() -> Self {
         Self {
             data: ValueData::Nil,
+            hint: DisplayHint::Nil,
         }
     }
 
@@ -14,6 +15,7 @@ impl Value {
     pub fn from_fraction(f: Fraction) -> Self {
         Self {
             data: ValueData::Scalar(f),
+            hint: DisplayHint::Number,
         }
     }
 
@@ -21,6 +23,7 @@ impl Value {
     pub fn from_int(n: i64) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
+            hint: DisplayHint::Number,
         }
     }
 
@@ -28,6 +31,7 @@ impl Value {
     pub fn from_bool(b: bool) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
+            hint: DisplayHint::Boolean,
         }
     }
 
@@ -41,6 +45,7 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(children)),
+            hint: DisplayHint::String,
         }
     }
 
@@ -52,6 +57,7 @@ impl Value {
     pub fn from_children(children: Vec<Value>) -> Self {
         Self {
             data: ValueData::Vector(Rc::new(children)),
+            hint: DisplayHint::Auto,
         }
     }
 
@@ -61,6 +67,7 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
+            hint: DisplayHint::Auto,
         }
     }
 
@@ -166,10 +173,12 @@ impl Value {
             }
             ValueData::Nil => {
                 self.data = ValueData::Vector(Rc::new(vec![child]));
+                self.hint = DisplayHint::Auto;
             }
             ValueData::Scalar(f) => {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(Rc::new(vec![old, child]));
+                self.hint = DisplayHint::Auto;
             }
             ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
         }
@@ -327,12 +336,14 @@ impl Value {
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
         Self {
             data: ValueData::CodeBlock(tokens),
+            hint: DisplayHint::Auto,
         }
     }
 
     pub fn from_process_handle(id: u64) -> Self {
         Self {
             data: ValueData::ProcessHandle(id),
+            hint: DisplayHint::Auto,
         }
     }
 
@@ -346,10 +357,14 @@ impl Value {
     pub fn from_supervisor_handle(id: u64) -> Self {
         Self {
             data: ValueData::SupervisorHandle(id),
+            hint: DisplayHint::Auto,
         }
     }
 
     pub fn resolve_default_hint(&self) -> DisplayHint {
+        if self.hint != DisplayHint::Auto {
+            return self.hint;
+        }
         match &self.data {
             ValueData::Nil => DisplayHint::Nil,
             ValueData::Scalar(_) => DisplayHint::Number,

@@ -213,65 +213,14 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
         return obj.into();
     }
 
-    let type_str: &str = match hint {
-        DisplayHint::String => {
-            if value.is_scalar() || is_string_value(value) {
-                "string"
-            } else if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Boolean => {
-            if value.is_scalar() {
-                "boolean"
-            } else if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::DateTime => {
-            if value.is_scalar() {
-                "datetime"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Number => {
-            if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Nil => "nil",
-        DisplayHint::Auto => {
-
-            if is_datetime_value(value) {
-                "datetime"
-            } else if is_boolean_value(value) {
-                "boolean"
-            } else if is_string_value(value) {
-                "string"
-            } else if is_number_value(value) {
-                "number"
-            } else if is_vector_value(value) {
-                "vector"
-            } else if value.is_scalar() {
-                "number"
-            } else if matches!(value.data, ValueData::ProcessHandle(_)) {
-                "process_handle"
-            } else if matches!(value.data, ValueData::SupervisorHandle(_)) {
-                "supervisor_handle"
-            } else {
-                "nil"
-            }
-        }
+    let effective_hint = if hint == DisplayHint::Auto {
+        value.resolve_default_hint()
+    } else {
+        hint
     };
+    let type_str = resolve_js_type(value, effective_hint);
 
-    let hint_str: &str = match hint {
+    let hint_str: &str = match effective_hint {
         DisplayHint::Auto => "auto",
         DisplayHint::Number => "number",
         DisplayHint::String => "string",
@@ -316,7 +265,7 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
             let js_array = js_sys::Array::new();
             if let ValueData::Vector(children) = &value.data {
                 for child in children.iter() {
-                    js_array.push(&value_to_js_value_with_hint(child, hint));
+                    js_array.push(&value_to_js_value_with_hint(child, vector_child_hint(child)));
                 }
             }
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
@@ -337,6 +286,71 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
     obj.into()
 }
 
+#[inline]
+fn resolve_js_type(value: &Value, hint: DisplayHint) -> &'static str {
+    match hint {
+        DisplayHint::String => {
+            if value.is_scalar() || is_string_value(value) {
+                "string"
+            } else if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::Boolean => {
+            if value.is_scalar() {
+                "boolean"
+            } else if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::DateTime => {
+            if value.is_scalar() {
+                "datetime"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::Number => {
+            if is_vector_value(value) {
+                "vector"
+            } else {
+                "number"
+            }
+        }
+        DisplayHint::Nil => "nil",
+        DisplayHint::Auto => {
+            if is_datetime_value(value) {
+                "datetime"
+            } else if is_boolean_value(value) {
+                "boolean"
+            } else if is_vector_value(value) {
+                "vector"
+            } else if is_string_value(value) {
+                "string"
+            } else if is_number_value(value) {
+                "number"
+            } else if value.is_scalar() {
+                "number"
+            } else if matches!(value.data, ValueData::ProcessHandle(_)) {
+                "process_handle"
+            } else if matches!(value.data, ValueData::SupervisorHandle(_)) {
+                "supervisor_handle"
+            } else {
+                "nil"
+            }
+        }
+    }
+}
+
+#[inline]
+fn vector_child_hint(child: &Value) -> DisplayHint {
+    child.resolve_default_hint()
+}
+
 pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
     let obj = js_sys::Object::from(js_val.clone());
     let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
@@ -352,7 +366,8 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::build_bracket_structure_from_shape;
+    use super::{build_bracket_structure_from_shape, resolve_js_type, vector_child_hint};
+    use crate::types::{DisplayHint, Value};
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -396,5 +411,27 @@ mod test_input_helper {
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"
         );
+    }
+
+    #[test]
+    fn nested_vector_children_use_default_hints() {
+        let nested = Value::from_vector(vec![Value::from_number(42_i64.into())]);
+        assert_eq!(vector_child_hint(&Value::from_number(7_i64.into())), DisplayHint::Number);
+        assert_eq!(vector_child_hint(&nested), DisplayHint::Auto);
+    }
+
+    #[test]
+    fn auto_hint_vector_is_not_serialized_as_string() {
+        let char_code_vector = Value::from_vector(vec![Value::from_number(88_i64.into())]);
+        assert_eq!(resolve_js_type(&char_code_vector, DisplayHint::Auto), "vector");
+        assert_eq!(resolve_js_type(&char_code_vector, DisplayHint::String), "string");
+    }
+
+    #[test]
+    fn embedded_string_hint_survives_auto_path() {
+        let s = Value::from_string("A");
+        let effective_hint = s.resolve_default_hint();
+        assert_eq!(effective_hint, DisplayHint::String);
+        assert_eq!(resolve_js_type(&s, effective_hint), "string");
     }
 }

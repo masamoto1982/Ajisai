@@ -1,7 +1,7 @@
 use serde_json;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 use crate::types::fraction::Fraction;
 use crate::error::Result;
 use num_traits::ToPrimitive;
@@ -38,6 +38,7 @@ pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> R
             }
             Ok(Value {
                 data: ValueData::Vector(Rc::new(values)),
+                hint: DisplayHint::Auto,
             })
         }
 
@@ -53,10 +54,12 @@ pub fn deserialize_json_to_value(json_val: serde_json::Value, depth: usize) -> R
                 let val_val = deserialize_json_to_value(val, depth + 1)?;
                 pairs.push(Value {
                     data: ValueData::Vector(Rc::new(vec![key_val, val_val])),
+                    hint: DisplayHint::Auto,
                 });
             }
             Ok(Value {
                 data: ValueData::Record { pairs: Rc::new(pairs), index },
+                hint: DisplayHint::Auto,
             })
         }
     }
@@ -305,6 +308,7 @@ mod tests {
                 Value::from_int(-2),
                 Value::from_int(-3),
             ])),
+            hint: DisplayHint::Auto,
         };
         assert_eq!(serialize_value_to_json(&val), serde_json::json!([-1, -2, -3]));
     }

@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::json::{deserialize_json_to_value, serialize_value_to_json};
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -160,6 +160,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.push(Value {
             data: ValueData::Vector(Rc::new(keys)),
+            hint: DisplayHint::Auto,
         });
     }
 
@@ -219,6 +220,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                                 kv[0].clone(),
                                 new_value.clone(),
                             ])),
+                            hint: DisplayHint::Auto,
                         });
                         continue;
                     }
@@ -231,6 +233,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
                 data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
+                hint: DisplayHint::Auto,
             });
         }
 
@@ -252,15 +255,18 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 pairs: Rc::new(new_pairs),
                 index: new_index,
             },
+            hint: DisplayHint::Auto,
         });
     } else {
         let mut index = HashMap::new();
         index.insert(key_str.clone(), 0);
         let pairs = Rc::new(vec![Value {
             data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
+            hint: DisplayHint::Auto,
         }]);
         interp.stack.push(Value {
             data: ValueData::Record { pairs, index },
+            hint: DisplayHint::Auto,
         });
     }
 

@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -150,6 +150,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
+                hint: DisplayHint::Number,
             };
         }
         let children: Vec<Value> = data
@@ -166,6 +167,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .collect();
         return Value {
             data: ValueData::Vector(Rc::new(children)),
+            hint: DisplayHint::Auto,
         };
     }
 
@@ -183,6 +185,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 
     Value {
         data: ValueData::Vector(Rc::new(children)),
+        hint: DisplayHint::Auto,
     }
 }
 
