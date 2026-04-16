@@ -98,6 +98,7 @@ impl Interpreter {
                 if qb.guard_signature.dictionary_epoch == self.dictionary_epoch
                     && qb.guard_signature.module_epoch == self.module_epoch
                     && qb.purity == super::quantized_block::QuantizedPurity::Pure
+                    && !self.is_hedged_mode()
                 {
                     self.runtime_metrics.quantized_block_use_count += 1;
                     if let Some(compiled) = plan_set.compiled.as_ref() {

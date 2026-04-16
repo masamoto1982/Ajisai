@@ -44,7 +44,7 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
         && plan.compiled_at.module_epoch == interp.module_epoch
 }
 
-fn compile_symbol(token: &Token, symbol: &str, _interp: &Interpreter) -> CompiledOp {
+fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
         "." => CompiledOp::SetTargetModeStackTop,
         ".." => CompiledOp::SetTargetModeStack,
@@ -56,6 +56,15 @@ fn compile_symbol(token: &Token, symbol: &str, _interp: &Interpreter) -> Compile
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
                 CompiledOp::CallBuiltin(symbol.to_string())
+            } else if let Some((resolved, _)) = interp.resolve_word_entry_readonly(symbol) {
+                if let Some((namespace, word)) = resolved.split_once('@') {
+                    CompiledOp::CallQualifiedWord {
+                        namespace: namespace.to_string(),
+                        word: word.to_string(),
+                    }
+                } else {
+                    CompiledOp::CallUserWord(resolved)
+                }
             } else {
                 CompiledOp::FallbackToken(token.clone())
             }

@@ -34,6 +34,10 @@ impl Interpreter {
         let compiled = plan_set.compiled.as_ref().expect("compiled plan required");
 
         self.runtime_metrics.shadow_validation_started_count += 1;
+        if self.is_hedged_mode() {
+            self.runtime_metrics.hedged_race_started_count += 1;
+            self.push_hedged_trace(format!("race:start compiled-vs-plain word={}", resolved_name));
+        }
 
         let saved_stack = self.stack.clone();
         let saved_hints = self.semantic_registry.stack_hints.clone();
