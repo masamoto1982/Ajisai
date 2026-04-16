@@ -1,10 +1,10 @@
 pub mod display;
+#[path = "flow-token.rs"]
+pub mod flow_token;
 pub mod fraction;
 #[path = "fraction-arithmetic.rs"]
 mod fraction_arithmetic;
 pub mod json;
-#[path = "flow-token.rs"]
-pub mod flow_token;
 #[path = "value-operations.rs"]
 mod value_operations;
 
@@ -138,7 +138,6 @@ impl SemanticRegistry {
     pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = DisplayHint>) {
         self.stack_hints.extend(hints);
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,7 +170,7 @@ pub struct WordDefinition {
     pub original_source: Option<String>,
     pub namespace: Option<String>,
     pub registration_order: u64,
-    pub compiled_plan: Option<Arc<crate::interpreter::compiled_plan::CompiledPlan>>,
+    pub execution_plans: Option<Arc<crate::interpreter::execution_plan_set::ExecutionPlanSet>>,
 }
 
 pub type Stack = Vec<Value>;

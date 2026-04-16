@@ -161,7 +161,10 @@ impl Interpreter {
         }
     }
 
-    pub(crate) fn resolve_word_entry(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
+    pub(crate) fn resolve_word_entry_readonly(
+        &self,
+        name: &str,
+    ) -> Option<(String, Arc<WordDefinition>)> {
         let (layers, word) = Self::split_path(name);
 
         match layers.len() {
@@ -246,8 +249,44 @@ impl Interpreter {
         }
     }
 
+    pub(crate) fn resolve_word_entry(
+        &mut self,
+        name: &str,
+    ) -> Option<(String, Arc<WordDefinition>)> {
+        if let Some(cached_name) = self.lookup_resolve_cache(name) {
+            let (layers, word) = Self::split_path(&cached_name);
+            if layers.is_empty() {
+                if let Some(def) = self.core_vocabulary.get(&word).cloned() {
+                    return Some((word, def));
+                }
+            } else if layers.len() == 1 {
+                let ns = &layers[0];
+                if let Some(dict) = self.user_dictionaries.get(ns.as_str()) {
+                    if let Some(def) = dict.words.get(&word).cloned() {
+                        return Some((format!("{}@{}", ns, word), def));
+                    }
+                }
+                if let Some(module) = self.module_vocabulary.get(ns.as_str()) {
+                    let qualified = format!("{}@{}", ns, word);
+                    if let Some(def) = module.words.get(&qualified).cloned() {
+                        return Some((qualified, def));
+                    }
+                    if let Some(def) = module.sample_words.get(&word).cloned() {
+                        return Some((format!("{}@{}", ns, word), def));
+                    }
+                }
+            }
+        }
+
+        let resolved = self.resolve_word_entry_readonly(name);
+        if let Some((resolved_name, def)) = resolved.clone() {
+            self.store_resolve_cache(name, &resolved_name, def.registration_order);
+        }
+        resolved
+    }
+
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        self.resolve_word_entry(name).map(|(_, def)| def)
+        self.resolve_word_entry_readonly(name).map(|(_, def)| def)
     }
 
     pub(crate) fn word_exists(&self, name: &str) -> bool {
