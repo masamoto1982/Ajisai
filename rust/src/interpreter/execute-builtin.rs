@@ -19,7 +19,9 @@ fn trace_compile_metrics(interp: &Interpreter) {
     let m = interp.runtime_metrics();
     eprintln!(
         "[metrics] plan_build={} plan_hit={} plan_miss={}",
-        m.compiled_plan_build_count, m.compiled_plan_cache_hit_count, m.compiled_plan_cache_miss_count
+        m.compiled_plan_build_count,
+        m.compiled_plan_cache_hit_count,
+        m.compiled_plan_cache_miss_count
     );
     eprintln!(
         "[metrics] quant_build={} quant_use={}",
@@ -28,34 +30,11 @@ fn trace_compile_metrics(interp: &Interpreter) {
 }
 
 impl Interpreter {
-    fn is_hedged_mode(&self) -> bool {
+    pub(crate) fn is_hedged_mode(&self) -> bool {
         matches!(
             self.elastic_mode(),
             ElasticMode::HedgedSafe | ElasticMode::HedgedTrace
         )
-    }
-
-    fn run_user_word_plain_isolated(
-        &mut self,
-        def: &std::sync::Arc<crate::types::WordDefinition>,
-    ) -> (Result<()>, Vec<Value>, Vec<DisplayHint>) {
-        let saved_stack = self.stack.clone();
-        let saved_hints = self.semantic_registry.stack_hints.clone();
-        let saved_target = self.operation_target_mode;
-        let saved_consumption = self.consumption_mode;
-        let saved_safe_mode = self.safe_mode;
-
-        let plain_result = self.execute_guard_structure(&def.lines);
-        let plain_stack = self.stack.clone();
-        let plain_hints = self.semantic_registry.stack_hints.clone();
-
-        self.stack = saved_stack;
-        self.semantic_registry.stack_hints = saved_hints;
-        self.operation_target_mode = saved_target;
-        self.consumption_mode = saved_consumption;
-        self.safe_mode = saved_safe_mode;
-
-        (plain_result, plain_stack, plain_hints)
     }
 
     /// Public entry point for word execution.
@@ -87,19 +66,18 @@ impl Interpreter {
     ///
     /// Never call directly — use `execute_word_core` so tracing applies.
     fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
-        let (resolved_name, def) = self
-            .resolve_word_entry(name)
-            .ok_or_else(|| {
-                let ambiguous = self.check_ambiguity(name);
-                if !ambiguous.is_empty() {
-                    AjisaiError::from(format!(
-                        "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
-                        name.to_uppercase(), ambiguous.join(", ")
-                    ))
-                } else {
-                    AjisaiError::UnknownWord(name.to_string())
-                }
-            })?;
+        let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
+            let ambiguous = self.check_ambiguity(name);
+            if !ambiguous.is_empty() {
+                AjisaiError::from(format!(
+                    "Ambiguous word '{}': found in {}. Use a qualified path to specify which one you mean.",
+                    name.to_uppercase(),
+                    ambiguous.join(", ")
+                ))
+            } else {
+                AjisaiError::UnknownWord(name.to_string())
+            }
+        })?;
 
         self.execution_step_count += 1;
         if self.execution_step_count > self.max_execution_steps {
@@ -112,128 +90,52 @@ impl Interpreter {
             return self.execute_builtin(&resolved_name);
         }
 
-        let mut plan_to_run = None;
-        if let Some(existing) = def.compiled_plan.as_ref() {
-            if is_plan_valid(existing, self) {
-                self.runtime_metrics.compiled_plan_cache_hit_count += 1;
-                #[cfg(feature = "trace-compile")]
-                {
-                    eprintln!("[trace-compile] cache hit for {}", resolved_name);
-                    trace_compile_metrics(self);
-                }
-                plan_to_run = Some(existing.clone());
-            } else {
-                self.runtime_metrics.compiled_plan_cache_miss_count += 1;
-                #[cfg(feature = "trace-compile")]
-                trace_compile_metrics(self);
-            }
-        } else {
-            self.runtime_metrics.compiled_plan_cache_miss_count += 1;
-            #[cfg(feature = "trace-compile")]
-            trace_compile_metrics(self);
-        }
-
-        if plan_to_run.is_none() {
-            let plan = compile_word_definition(&def, self);
-            if !plan_is_all_fallback(&plan) {
-                self.bump_execution_epoch();
-                self.runtime_metrics.compiled_plan_build_count += 1;
-                #[cfg(feature = "trace-compile")]
-                {
-                    eprintln!("[trace-compile] compiled plan for {}", resolved_name);
-                    trace_compile_metrics(self);
-                }
-                let plan_arc = arc_plan(plan);
-                self.store_compiled_plan_for_word(&resolved_name, plan_arc.clone());
-                plan_to_run = Some(plan_arc);
-            }
-        }
+        let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
         self.call_stack.push(resolved_name.clone());
-        let result = if let Some(plan) = plan_to_run {
-            if self.is_hedged_mode() {
-                self.runtime_metrics.hedged_race_started_count += 1;
-                self.push_hedged_trace(format!(
-                    "race:start compiled-vs-plain word={}",
-                    resolved_name
-                ));
-                let epoch_before = self.current_epoch_snapshot();
-                let compiled_result = execute_compiled_plan(self, &plan);
-                let compiled_stack = self.stack.clone();
-                let compiled_hints = self.semantic_registry.stack_hints.clone();
-
-                let (plain_result, plain_stack, plain_hints) =
-                    self.run_user_word_plain_isolated(&def);
-
-                let after = self.current_epoch_snapshot();
-                if after.dictionary_epoch != epoch_before.dictionary_epoch
-                    || after.module_epoch != epoch_before.module_epoch
+        let result = if let Some(plan_set) = plan_set {
+            if let Some(qb) = plan_set.quantized.as_ref() {
+                if qb.guard_signature.dictionary_epoch == self.dictionary_epoch
+                    && qb.guard_signature.module_epoch == self.module_epoch
+                    && qb.purity == super::quantized_block::QuantizedPurity::Pure
+                    && !self.is_hedged_mode()
                 {
-                    self.runtime_metrics.hedged_race_validation_reject_count += 1;
-                    self.runtime_metrics.hedged_race_fallback_count += 1;
-                    self.push_hedged_trace(format!(
-                        "race:reject epoch-changed word={}",
-                        resolved_name
-                    ));
-                    self.stack = plain_stack;
-                    self.semantic_registry.stack_hints = plain_hints;
-                    plain_result
-                } else {
-                    match (compiled_result, plain_result) {
-                        (Ok(()), Ok(())) => {
-                            if compiled_stack == plain_stack {
-                                self.runtime_metrics.hedged_race_winner_quantized_count += 1;
-                                self.push_hedged_trace(format!(
-                                    "race:winner compiled word={} loser=plain",
-                                    resolved_name
-                                ));
-                                self.stack = compiled_stack;
-                                self.semantic_registry.stack_hints = compiled_hints;
-                                Ok(())
-                            } else {
-                                self.runtime_metrics.hedged_race_validation_reject_count += 1;
-                                self.runtime_metrics.hedged_race_fallback_count += 1;
-                                self.push_hedged_trace(format!(
-                                    "race:fallback mismatch word={} -> plain",
-                                    resolved_name
-                                ));
-                                self.stack = plain_stack;
-                                self.semantic_registry.stack_hints = plain_hints;
-                                Ok(())
-                            }
-                        }
-                        (Err(_), Ok(())) => {
-                            self.runtime_metrics.hedged_race_winner_plain_count += 1;
-                            self.runtime_metrics.hedged_race_fallback_count += 1;
-                            self.push_hedged_trace(format!(
-                                "race:winner plain word={} reason=compiled-error",
-                                resolved_name
-                            ));
-                            self.stack = plain_stack;
-                            self.semantic_registry.stack_hints = plain_hints;
-                            Ok(())
-                        }
-                        (Ok(()), Err(_)) => {
-                            self.runtime_metrics.hedged_race_winner_quantized_count += 1;
-                            self.push_hedged_trace(format!(
-                                "race:winner compiled word={} reason=plain-error",
-                                resolved_name
-                            ));
-                            self.stack = compiled_stack;
-                            self.semantic_registry.stack_hints = compiled_hints;
-                            Ok(())
-                        }
-                        (Err(e_compiled), Err(_)) => {
-                            self.push_hedged_trace(format!(
-                                "race:failed word={} reason=both-error",
-                                resolved_name
-                            ));
-                            Err(e_compiled)
-                        }
+                    self.runtime_metrics.quantized_block_use_count += 1;
+                    if let Some(compiled) = plan_set.compiled.as_ref() {
+                        execute_compiled_plan(self, compiled)
+                    } else {
+                        self.execute_guard_structure(&def.lines)
                     }
+                } else if let Some(compiled) = plan_set.compiled.as_ref() {
+                    if self.should_shadow_validate(&plan_set, self.stack.len()) {
+                        let outcome = self.run_compiled_with_shadow_validation(
+                            &resolved_name,
+                            &def,
+                            &plan_set,
+                        );
+                        if outcome.used_plain_fallback {
+                            self.runtime_metrics.hedged_race_fallback_count += 1;
+                        }
+                        outcome.result
+                    } else {
+                        execute_compiled_plan(self, compiled)
+                    }
+                } else {
+                    self.execute_guard_structure(&def.lines)
+                }
+            } else if let Some(compiled) = plan_set.compiled.as_ref() {
+                if self.should_shadow_validate(&plan_set, self.stack.len()) {
+                    let outcome =
+                        self.run_compiled_with_shadow_validation(&resolved_name, &def, &plan_set);
+                    if outcome.used_plain_fallback {
+                        self.runtime_metrics.hedged_race_fallback_count += 1;
+                    }
+                    outcome.result
+                } else {
+                    execute_compiled_plan(self, compiled)
                 }
             } else {
-                execute_compiled_plan(self, &plan)
+                self.execute_guard_structure(&def.lines)
             }
         } else {
             self.execute_guard_structure(&def.lines)
@@ -376,16 +278,71 @@ impl Interpreter {
         }
     }
 
-    fn store_compiled_plan_for_word(
+    fn get_execution_plan_set(
         &mut self,
         resolved_name: &str,
-        plan: std::sync::Arc<super::compiled_plan::CompiledPlan>,
+        def: &std::sync::Arc<crate::types::WordDefinition>,
+    ) -> Option<std::sync::Arc<super::execution_plan_set::ExecutionPlanSet>> {
+        if def.lines.is_empty() {
+            return None;
+        }
+
+        if let Some(existing) = def.execution_plans.as_ref() {
+            let compiled_valid = existing
+                .compiled
+                .as_ref()
+                .map(|p| is_plan_valid(p, self))
+                .unwrap_or(false);
+
+            let quant_valid = existing
+                .quantized
+                .as_ref()
+                .map(|q| {
+                    q.guard_signature.dictionary_epoch == self.dictionary_epoch
+                        && q.guard_signature.module_epoch == self.module_epoch
+                })
+                .unwrap_or(false);
+
+            if compiled_valid || quant_valid {
+                self.runtime_metrics.compiled_plan_cache_hit_count += 1;
+                return Some(existing.clone());
+            }
+        }
+
+        self.runtime_metrics.compiled_plan_cache_miss_count += 1;
+
+        let mut set =
+            super::execution_plan_set::ExecutionPlanSet::new(self.current_epoch_snapshot());
+
+        let compiled = compile_word_definition(def, self);
+        if !plan_is_all_fallback(&compiled) {
+            self.bump_execution_epoch();
+            self.runtime_metrics.compiled_plan_build_count += 1;
+            set.compiled = Some(arc_plan(compiled));
+        }
+
+        if def.lines.len() == 1 {
+            let tokens: Vec<_> = def.lines[0].body_tokens.iter().cloned().collect();
+            if let Some(qb) = super::quantized_block::quantize_code_block(&tokens, self) {
+                set.quantized = Some(std::sync::Arc::new(qb));
+            }
+        }
+
+        let set_arc = std::sync::Arc::new(set);
+        self.store_execution_plan_set_for_word(resolved_name, set_arc.clone());
+        Some(set_arc)
+    }
+
+    fn store_execution_plan_set_for_word(
+        &mut self,
+        resolved_name: &str,
+        plan_set: std::sync::Arc<super::execution_plan_set::ExecutionPlanSet>,
     ) {
         if let Some((ns, word)) = resolved_name.split_once('@') {
             if let Some(dict) = self.user_dictionaries.get_mut(ns) {
                 if let Some(old_def) = dict.words.get(word).cloned() {
                     let mut updated = (*old_def).clone();
-                    updated.compiled_plan = Some(plan.clone());
+                    updated.execution_plans = Some(plan_set.clone());
                     dict.words
                         .insert(word.to_string(), std::sync::Arc::new(updated));
                     self.sync_user_words_cache();
@@ -395,10 +352,17 @@ impl Interpreter {
             if let Some(module) = self.module_vocabulary.get_mut(ns) {
                 if let Some(old_def) = module.sample_words.get(word).cloned() {
                     let mut updated = (*old_def).clone();
-                    updated.compiled_plan = Some(plan);
+                    updated.execution_plans = Some(plan_set.clone());
                     module
                         .sample_words
                         .insert(word.to_string(), std::sync::Arc::new(updated));
+                    return;
+                }
+                let qualified = format!("{}@{}", ns, word);
+                if let Some(old_def) = module.words.get(&qualified).cloned() {
+                    let mut updated = (*old_def).clone();
+                    updated.execution_plans = Some(plan_set);
+                    module.words.insert(qualified, std::sync::Arc::new(updated));
                 }
             }
         }
@@ -422,7 +386,7 @@ impl Interpreter {
     }
 
     pub fn lookup_word_definition_tokens(&self, name: &str) -> Option<String> {
-        let (_, def) = self.resolve_word_entry(name)?;
+        let (_, def) = self.resolve_word_entry_readonly(name)?;
         if def.is_builtin || def.lines.is_empty() {
             return None;
         }
