@@ -1,11 +1,12 @@
 use super::wasm_value_conversion::{
-    extract_display_hint_from_js, js_value_to_value, value_to_js_value_with_hint, UserWordData,
+    arena_node_to_js, extract_display_hint_from_js, js_value_to_value, UserWordData,
 };
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::elastic::ElasticMode;
 use crate::interpreter;
 use crate::tokenizer;
+use crate::types::arena::{arena_to_value, json_to_arena_node, value_to_arena, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -20,7 +21,8 @@ impl AjisaiInterpreter {
                 .get(i)
                 .copied()
                 .unwrap_or(crate::types::DisplayHint::Auto);
-            js_array.push(&value_to_js_value_with_hint(value, hint));
+            let (arena, root) = value_to_arena(value);
+            js_array.push(&arena_node_to_js(&arena, root, Some(hint)));
         }
         js_array.into()
     }
@@ -262,21 +264,22 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
-        use crate::types::json::deserialize_json_to_value;
-
         let obj = js_sys::Object::new();
 
         match serde_json::from_str::<serde_json::Value>(json_string) {
-            Ok(json_val) => match deserialize_json_to_value(json_val, 1) {
-                Ok(parsed) => {
-                    self.interpreter.stack.push(parsed);
-                    set_js_prop(&obj, "status", &("OK".into()));
+            Ok(json_val) => {
+                let mut arena = ValueArena::new();
+                match json_to_arena_node(&mut arena, json_val) {
+                    Ok(root) => {
+                        self.interpreter.stack.push(arena_to_value(&arena, root));
+                        set_js_prop(&obj, "status", &("OK".into()));
+                    }
+                    Err(e) => {
+                        set_js_prop(&obj, "status", &("ERROR".into()));
+                        set_js_prop(&obj, "message", &(format!("{}", e).into()));
+                    }
                 }
-                Err(e) => {
-                    set_js_prop(&obj, "status", &("ERROR".into()));
-                    set_js_prop(&obj, "message", &(format!("{}", e).into()));
-                }
-            },
+            }
             Err(e) => {
                 set_js_prop(&obj, "status", &("ERROR".into()));
                 set_js_prop(
