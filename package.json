@@ -14,7 +14,9 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "branch:new": "bash ./scripts/create-dated-branch.sh"
+    "branch:new": "bash ./scripts/create-dated-branch.sh",
+    "branch:auto": "bash ./scripts/auto-create-dated-branch.sh",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
