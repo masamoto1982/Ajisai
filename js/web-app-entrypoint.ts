@@ -28,7 +28,7 @@ function setBuildVersionLabel(): void {
     if (!versionElement) return;
 
     const timestamp = formatTimestamp(new Date());
-    versionElement.textContent = `ver.${timestamp}（${__AJISAI_CHANGE_NOTE__}）`;
+    versionElement.textContent = `ver.${timestamp} (${__AJISAI_CHANGE_NOTE__})`;
 }
 
 async function main(): Promise<void> {
