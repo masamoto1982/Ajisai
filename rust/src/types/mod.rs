@@ -1,3 +1,4 @@
+pub mod arena;
 pub mod display;
 #[path = "flow-token.rs"]
 pub mod flow_token;
