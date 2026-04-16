@@ -51,8 +51,6 @@ async function main(): Promise<void> {
         GUI_INSTANCE.updateAllDisplays();
 
 
-        setupOnlineStatusMonitoring();
-
         console.log('[Main] Application initialization completed successfully');
 
     } catch (error) {
@@ -69,74 +67,6 @@ async function main(): Promise<void> {
 }
 
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-            .then(registration => {
-                console.log('[Main] Service Worker registered:', registration.scope);
-
-
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    console.log('[Main] New service worker found');
-
-                    newWorker?.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-
-                            console.log('[Main] New version available');
-                            try {
-                                const display = GUI_INSTANCE.extractDisplay();
-                                display.renderInfo('New version available. Please reload.', true);
-                            } catch {
-
-                            }
-                        }
-                    });
-                });
-            })
-            .catch(error => {
-                console.error('[Main] Service Worker registration failed:', error);
-            });
-    });
-}
-
-
-function setupOnlineStatusMonitoring(): void {
-    const offlineIndicator = document.getElementById('offline-indicator');
-    let isInitialCheck = true;
-
-    function updateOnlineStatus() {
-        if (navigator.onLine) {
-            console.log('[Main] Online');
-            if (offlineIndicator) offlineIndicator.style.display = 'none';
-
-            if (!isInitialCheck) {
-                try {
-                    const display = GUI_INSTANCE.extractDisplay();
-                    display.renderInfo('Online mode', true);
-                } catch {
-
-                }
-            }
-        } else {
-            console.log('[Main] Offline');
-            if (offlineIndicator) offlineIndicator.style.display = 'inline';
-            try {
-                const display = GUI_INSTANCE.extractDisplay();
-                display.renderInfo('Offline mode', true);
-            } catch {
-
-            }
-        }
-        isInitialCheck = false;
-    }
-
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
-
-    updateOnlineStatus();
-}
 
 function setupLogoTouchQR(): void {
     const logoSwap = document.querySelector<HTMLElement>('.logo-swap');
