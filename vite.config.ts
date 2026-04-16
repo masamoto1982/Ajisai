@@ -11,26 +11,37 @@ function runGitCommand(command: string): string {
   }
 }
 
-function normalizeChangeNote(note: string): string {
-  const cleaned = note
+function toKebabCase(text: string): string {
+  const normalized = text
     .replace(/[()（）]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[_\s]+/g, '-')
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
 
-  return cleaned.length > 0 ? cleaned : 'update';
+  return normalized.length > 0 ? normalized : 'update';
+}
+
+function simplifyBranchLikeToken(token: string): string {
+  const lastSegment = token.split('/').pop() ?? token;
+  const withoutAjisaiTail = lastSegment.replace(/-in-ajisai.*$/i, '');
+  const withoutRandomSuffix = withoutAjisaiTail.replace(/-[a-z0-9]{5,}$/i, '');
+  return toKebabCase(withoutRandomSuffix);
 }
 
 function extractChangeFromBranchName(branchName: string): string {
-  const matched = branchName.match(/^\d{8}[（(](.+)[）)]$/);
-  if (!matched) return '';
-  return matched[1].trim();
+  const dated = branchName.match(/^\d{8}[（(](.+)[）)]$/);
+  if (dated) return toKebabCase(dated[1]);
+  return simplifyBranchLikeToken(branchName);
 }
 
 function extractChangeFromCommitSubject(subject: string): string {
-  if (subject.startsWith('Merge pull request')) {
-    return '';
+  const merge = subject.match(/^Merge pull request #\d+ from .+\/(.+)$/);
+  if (merge) {
+    return simplifyBranchLikeToken(merge[1]);
   }
-  return subject;
+  return toKebabCase(subject);
 }
 
 const envChangeNote = process.env.AJISAI_CHANGE_NOTE ?? '';
@@ -38,7 +49,7 @@ const gitBranchName = runGitCommand('git rev-parse --abbrev-ref HEAD');
 const branchChangeNote = extractChangeFromBranchName(gitBranchName);
 const gitSubject = runGitCommand('git log -1 --pretty=%s');
 const commitChangeNote = extractChangeFromCommitSubject(gitSubject);
-const changeNote = normalizeChangeNote(envChangeNote || branchChangeNote || commitChangeNote || 'update');
+const changeNote = toKebabCase(envChangeNote || branchChangeNote || commitChangeNote || 'update');
 
 export default defineConfig({
   root: '.',
