@@ -81,6 +81,19 @@ npm run check
 
 ---
 
+## Version / Branch Automation
+
+- ヘッダーの `ver.` 表示はビルド時に自動生成されます（`YYYYMMDDHHmm`）。
+- **改修のたびに新しいブランチを作る運用**として、以下のコマンドを使ってください。
+
+```sh
+npm run branch:new -- "変更内容"
+```
+
+このコマンドは、その日の `YYYYMMDD(変更内容)` 形式でブランチを新規作成し、`git switch` まで実行します。
+
+---
+
 ## License
 
 MIT (`LICENSE`)
