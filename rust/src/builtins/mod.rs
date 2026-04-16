@@ -26,7 +26,6 @@ use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for spec in builtin_specs() {
         let name = spec.name;
@@ -41,7 +40,7 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
                 original_source: None,
                 namespace: None,
                 registration_order: 0,
-                compiled_plan: None,
+                execution_plans: None,
             }),
         );
     }

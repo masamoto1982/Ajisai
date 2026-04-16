@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use crate::types::Token;
 
-use super::{compile_word_definition, compiled_plan::CompiledOp, CompiledPlan, EpochSnapshot, Interpreter, WordDefinition};
+use super::{
+    compile_word_definition, compiled_plan::CompiledOp, CompiledPlan, EpochSnapshot, Interpreter,
+    WordDefinition,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum QuantizedArity {
@@ -64,9 +67,10 @@ fn builtin_arity(name: &str) -> Option<(i32, i32)> {
         // Binary logical
         "AND" | "OR" | "XOR" => Some((2, 1)),
         // Unary arithmetic / math
-        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND"
-        | "SIGN" | "SUCC" | "PRED" | "EXP" | "LOG" | "LOG2" | "LOG10"
-        | "SIN" | "COS" | "TAN" | "ASIN" | "ACOS" | "ATAN" => Some((1, 1)),
+        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" | "SIGN" | "SUCC" | "PRED"
+        | "EXP" | "LOG" | "LOG2" | "LOG10" | "SIN" | "COS" | "TAN" | "ASIN" | "ACOS" | "ATAN" => {
+            Some((1, 1))
+        }
         // Type cast / unary
         "INT" | "FLOAT" | "STR" | "BOOL" | "CHAR" => Some((1, 1)),
         // Unknown arity (vector ops, HOF, stack words not in BUILTIN_SPECS, etc.) → None
@@ -78,10 +82,20 @@ fn builtin_arity(name: &str) -> Option<(i32, i32)> {
 fn is_side_effecting_builtin(name: &str) -> bool {
     matches!(
         name,
-        "PRINT" | "EMIT" | "READ" | "WRITE" | "READLINE"
-            | "SPAWN" | "AWAIT" | "SEND" | "RECV"
-            | "DEF" | "DEL" | "IMPORT"
-            | "RAND" | "SEED"
+        "PRINT"
+            | "EMIT"
+            | "READ"
+            | "WRITE"
+            | "READLINE"
+            | "SPAWN"
+            | "AWAIT"
+            | "SEND"
+            | "RECV"
+            | "DEF"
+            | "DEL"
+            | "IMPORT"
+            | "RAND"
+            | "SEED"
     )
 }
 
@@ -99,12 +113,7 @@ fn is_side_effecting_builtin(name: &str) -> bool {
 /// both arities are `Variable`.
 fn analyze_compiled_plan(
     plan: &CompiledPlan,
-) -> (
-    QuantizedArity,
-    QuantizedArity,
-    QuantizedPurity,
-    Vec<String>,
-) {
+) -> (QuantizedArity, QuantizedArity, QuantizedPurity, Vec<String>) {
     let mut depth: i32 = 0;
     let mut min_depth: i32 = 0;
     let mut all_known = true;
@@ -183,7 +192,10 @@ fn analyze_compiled_plan(
 }
 
 pub fn is_quantizable_block(tokens: &[Token]) -> bool {
-    !tokens.is_empty() && !tokens.iter().any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
+    !tokens.is_empty()
+        && !tokens
+            .iter()
+            .any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
 }
 
 fn is_const_vector_token(token: &Token) -> bool {
@@ -202,7 +214,11 @@ fn is_const_vector_pattern(tokens: &[Token], op: &str) -> bool {
     )
 }
 
-fn detect_kernel_kind(tokens: &[Token], purity: QuantizedPurity, _input_arity: QuantizedArity) -> KernelKind {
+fn detect_kernel_kind(
+    tokens: &[Token],
+    purity: QuantizedPurity,
+    _input_arity: QuantizedArity,
+) -> KernelKind {
     if purity != QuantizedPurity::Pure {
         return KernelKind::GenericCompiled;
     }
@@ -248,7 +264,7 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
         original_source: None,
         namespace: None,
         registration_order: 0,
-        compiled_plan: None,
+        execution_plans: None,
     };
     let plan = Arc::new(compile_word_definition(&def, interp));
     interp.bump_execution_epoch();
@@ -278,7 +294,10 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
         .flat_map(|line| line.ops.iter().cloned())
         .collect::<Vec<_>>();
     let eligible_for_cache = purity == QuantizedPurity::Pure;
-    let eligible_for_fusion = matches!(kernel_kind, KernelKind::MapUnaryPure | KernelKind::PredicateUnaryPure);
+    let eligible_for_fusion = matches!(
+        kernel_kind,
+        KernelKind::MapUnaryPure | KernelKind::PredicateUnaryPure
+    );
 
     #[cfg(feature = "trace-quant")]
     eprintln!(
