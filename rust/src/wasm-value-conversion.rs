@@ -1,6 +1,6 @@
-use crate::types::display::is_string_like;
+use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{DisplayHint, Value};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -12,63 +12,6 @@ pub(crate) struct UserWordData {
     pub(crate) name: String,
     pub(crate) definition: Option<String>,
     pub(crate) description: Option<String>,
-}
-
-pub(crate) fn is_string_value(val: &Value) -> bool {
-    match &val.data {
-        ValueData::Vector(children) => !children.is_empty() && is_string_like(children),
-        _ => false,
-    }
-}
-
-pub(crate) fn is_boolean_value(_val: &Value) -> bool {
-    false
-}
-
-pub(crate) fn is_number_value(val: &Value) -> bool {
-    val.is_scalar()
-}
-
-pub(crate) fn is_datetime_value(_val: &Value) -> bool {
-    false
-}
-
-pub(crate) fn is_vector_value(val: &Value) -> bool {
-    val.is_vector()
-}
-
-pub(crate) fn value_as_string(val: &Value) -> String {
-    match &val.data {
-        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
-            children
-                .iter()
-                .filter_map(|child| {
-                    if let ValueData::Scalar(f) = &child.data {
-                        f.to_i64().and_then(|n| {
-                            if n >= 0 && n <= 0x10FFFF {
-                                char::from_u32(n as u32)
-                            } else {
-                                None
-                            }
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        }
-        ValueData::Scalar(f) => {
-            if let Some(n) = f.to_i64() {
-                if n >= 0 && n <= 0x10FFFF {
-                    if let Some(c) = char::from_u32(n as u32) {
-                        return c.to_string();
-                    }
-                }
-            }
-            String::new()
-        }
-        _ => String::new(),
-    }
 }
 
 pub(crate) fn bracket_chars_for_depth(depth: usize) -> (char, char) {
@@ -98,6 +41,10 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
         return "[ ]".to_string();
     }
     build_level(shape, 0)
+}
+
+pub(crate) fn is_vector_value(val: &Value) -> bool {
+    val.is_vector()
 }
 
 pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
@@ -196,82 +143,24 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             Ok(Value::from_process_handle(id))
         }
         "supervisor_handle" => {
-            let id = value_js.as_f64().ok_or("Supervisor handle id is not number")? as u64;
+            let id = value_js
+                .as_f64()
+                .ok_or("Supervisor handle id is not number")? as u64;
             Ok(Value::from_supervisor_handle(id))
         }
         _ => Err(format!("Unknown type: {}", type_str)),
     }
 }
 
-pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> JsValue {
+pub(crate) fn arena_node_to_js(
+    arena: &ValueArena,
+    root_id: NodeId,
+    external_hint_opt: Option<DisplayHint>,
+) -> JsValue {
     let obj = js_sys::Object::new();
+    let effective_hint = external_hint_opt.unwrap_or_else(|| arena.hint(root_id));
 
-    if value.is_nil() {
-        js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
-        js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
-        js_sys::Reflect::set(&obj, &"displayHint".into(), &"nil".into()).unwrap();
-        return obj.into();
-    }
-
-    let type_str: &str = match hint {
-        DisplayHint::String => {
-            if value.is_scalar() || is_string_value(value) {
-                "string"
-            } else if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Boolean => {
-            if value.is_scalar() {
-                "boolean"
-            } else if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::DateTime => {
-            if value.is_scalar() {
-                "datetime"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Number => {
-            if is_vector_value(value) {
-                "vector"
-            } else {
-                "number"
-            }
-        }
-        DisplayHint::Nil => "nil",
-        DisplayHint::Auto => {
-
-            if is_datetime_value(value) {
-                "datetime"
-            } else if is_boolean_value(value) {
-                "boolean"
-            } else if is_string_value(value) {
-                "string"
-            } else if is_number_value(value) {
-                "number"
-            } else if is_vector_value(value) {
-                "vector"
-            } else if value.is_scalar() {
-                "number"
-            } else if matches!(value.data, ValueData::ProcessHandle(_)) {
-                "process_handle"
-            } else if matches!(value.data, ValueData::SupervisorHandle(_)) {
-                "supervisor_handle"
-            } else {
-                "nil"
-            }
-        }
-    };
-
-    let hint_str: &str = match hint {
+    let hint_str: &str = match effective_hint {
         DisplayHint::Auto => "auto",
         DisplayHint::Number => "number",
         DisplayHint::String => "string",
@@ -279,67 +168,96 @@ pub(crate) fn value_to_js_value_with_hint(value: &Value, hint: DisplayHint) -> J
         DisplayHint::DateTime => "datetime",
         DisplayHint::Nil => "nil",
     };
-
-    js_sys::Reflect::set(&obj, &"type".into(), &type_str.into()).unwrap();
     js_sys::Reflect::set(&obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
-    match type_str {
-        "number" | "datetime" => {
-            if let Some(f) = value.as_scalar() {
-                let num_obj = js_sys::Object::new();
-                js_sys::Reflect::set(
-                    &num_obj,
-                    &"numerator".into(),
-                    &f.numerator().to_string().into(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(
-                    &num_obj,
-                    &"denominator".into(),
-                    &f.denominator().to_string().into(),
-                )
-                .unwrap();
-                js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
-            }
+    match arena.kind(root_id) {
+        NodeKind::Nil => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         }
-        "string" => {
-            let s = value_as_string(value);
-            js_sys::Reflect::set(&obj, &"value".into(), &s.into()).unwrap();
-        }
-        "boolean" => {
-            if let Some(f) = value.as_scalar() {
-                let b = !f.is_zero();
-                js_sys::Reflect::set(&obj, &"value".into(), &b.into()).unwrap();
-            }
-        }
-        "vector" => {
-            let js_array = js_sys::Array::new();
-            if let ValueData::Vector(children) = &value.data {
-                for child in children.iter() {
-                    js_array.push(&value_to_js_value_with_hint(child, vector_child_hint(child)));
+        NodeKind::Scalar(f) => {
+            let scalar_type = match effective_hint {
+                DisplayHint::Boolean => "boolean",
+                DisplayHint::DateTime => "datetime",
+                DisplayHint::String => "string",
+                _ => "number",
+            };
+            js_sys::Reflect::set(&obj, &"type".into(), &scalar_type.into()).unwrap();
+            match scalar_type {
+                "boolean" => {
+                    js_sys::Reflect::set(&obj, &"value".into(), &(!f.is_zero()).into()).unwrap();
+                }
+                "string" => {
+                    let as_char = f
+                        .to_i64()
+                        .and_then(|n| char::from_u32(n as u32))
+                        .map(|c| c.to_string())
+                        .unwrap_or_default();
+                    js_sys::Reflect::set(&obj, &"value".into(), &as_char.into()).unwrap();
+                }
+                _ => {
+                    let num_obj = js_sys::Object::new();
+                    js_sys::Reflect::set(
+                        &num_obj,
+                        &"numerator".into(),
+                        &f.numerator().to_string().into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(
+                        &num_obj,
+                        &"denominator".into(),
+                        &f.denominator().to_string().into(),
+                    )
+                    .unwrap();
+                    js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
                 }
             }
+        }
+        NodeKind::Vector { children } => {
+            if effective_hint == DisplayHint::String {
+                let text = children
+                    .iter()
+                    .filter_map(|child| match arena.kind(*child) {
+                        NodeKind::Scalar(codepoint) => {
+                            codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
+                        }
+                        _ => None,
+                    })
+                    .collect::<String>();
+                js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
+            } else {
+                let js_array = js_sys::Array::new();
+                for child in children {
+                    js_array.push(&arena_node_to_js(arena, *child, None));
+                }
+                js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+            }
+        }
+        NodeKind::Record { pairs, .. } => {
+            let js_array = js_sys::Array::new();
+            for pair_id in pairs {
+                js_array.push(&arena_node_to_js(arena, *pair_id, None));
+            }
+            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }
-        "process_handle" => {
-            if let ValueData::ProcessHandle(id) = value.data {
-                js_sys::Reflect::set(&obj, &"value".into(), &(id as f64).into()).unwrap();
-            }
+        NodeKind::CodeBlock(_) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         }
-        "supervisor_handle" => {
-            if let ValueData::SupervisorHandle(id) = value.data {
-                js_sys::Reflect::set(&obj, &"value".into(), &(id as f64).into()).unwrap();
-            }
+        NodeKind::ProcessHandle(id) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"process_handle".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(*id as f64).into()).unwrap();
         }
-        _ => {}
-    };
+        NodeKind::SupervisorHandle(id) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"supervisor_handle".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(*id as f64).into()).unwrap();
+        }
+    }
 
     obj.into()
-}
-
-#[inline]
-fn vector_child_hint(child: &Value) -> DisplayHint {
-    child.resolve_default_hint()
 }
 
 pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
@@ -357,8 +275,7 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::{build_bracket_structure_from_shape, vector_child_hint};
-    use crate::types::{DisplayHint, Value};
+    use super::build_bracket_structure_from_shape;
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -367,10 +284,7 @@ mod test_input_helper {
         assert_eq!(build_bracket_structure_from_shape(&[3]), "[ ] [ ] [ ]");
 
         assert_eq!(build_bracket_structure_from_shape(&[1, 1]), "[ [ ] ]");
-        assert_eq!(
-            build_bracket_structure_from_shape(&[1, 2]),
-            "[ [ ] [ ] ]"
-        );
+        assert_eq!(build_bracket_structure_from_shape(&[1, 2]), "[ [ ] [ ] ]");
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 3]),
             "[ [ ] [ ] [ ] ]"
@@ -397,17 +311,9 @@ mod test_input_helper {
             "[ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ] [ [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ] ]"
         );
 
-
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"
         );
-    }
-
-    #[test]
-    fn nested_vector_children_use_default_hints() {
-        let nested = Value::from_vector(vec![Value::from_number(42_i64.into())]);
-        assert_eq!(vector_child_hint(&Value::from_number(7_i64.into())), DisplayHint::Number);
-        assert_eq!(vector_child_hint(&nested), DisplayHint::Auto);
     }
 }
