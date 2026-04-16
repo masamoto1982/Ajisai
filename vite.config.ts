@@ -3,6 +3,16 @@ import { defineConfig } from 'vite';
 
 const isTauri = !!process.env.TAURI_ENV_TARGET_TRIPLE;
 
+const GENERIC_BRANCH_NAMES = new Set([
+  'main',
+  'master',
+  'develop',
+  'development',
+  'dev',
+  'work',
+  'trunk'
+]);
+
 function runGitCommand(command: string): string {
   try {
     return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
@@ -33,7 +43,13 @@ function simplifyBranchLikeToken(token: string): string {
 function extractChangeFromBranchName(branchName: string): string {
   const dated = branchName.match(/^\d{8}[（(](.+)[）)]$/);
   if (dated) return toKebabCase(dated[1]);
-  return simplifyBranchLikeToken(branchName);
+
+  const simplified = simplifyBranchLikeToken(branchName);
+  if (GENERIC_BRANCH_NAMES.has(simplified)) {
+    return '';
+  }
+
+  return simplified;
 }
 
 function extractChangeFromCommitSubject(subject: string): string {
