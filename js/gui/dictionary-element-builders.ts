@@ -32,7 +32,11 @@ export const registerBackgroundClickListeners = (
     onBackgroundClick?: () => void,
     onBackgroundDoubleClick?: () => void
 ): void => {
+    const shouldIgnoreBackgroundInteraction = (): boolean =>
+        container.classList.contains('is-empty');
+
     const isBackgroundClick = (e: MouseEvent): boolean => {
+        if (shouldIgnoreBackgroundInteraction()) return false;
         const target = e.target as HTMLElement;
         return !target.closest('.word-button');
     };
