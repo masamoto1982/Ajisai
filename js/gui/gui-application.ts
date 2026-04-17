@@ -305,6 +305,10 @@ export const createGUI = (): GUI => {
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
 
+        document.querySelector('#dictionary-sheet-user #dictionary-search')
+            ?.closest('.search-wrapper')
+            ?.remove();
+
         elements = cacheElements();
         layoutState = createLayoutState();
         mobile = createMobileHandler(extractMobileElements(elements), {
