@@ -120,17 +120,21 @@
 }
 
 .area-selector-right {
+    --right-selector-flex: 3;
+    --right-search-flex: 2;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.5rem;
 }
 
 .area-selector-right .right-mode-selector {
-    flex: 1.618 1 0%;
+    flex: var(--right-selector-flex) 1 0%;
+    min-width: 0;
 }
 
 .area-selector-right #right-panel-dictionary-search {
-    flex: 1 1 0%;
+    flex: var(--right-search-flex) 1 0%;
     min-width: 0;
 }
 
@@ -780,6 +784,21 @@ body[data-active-area] #state-panel {
     .area-selector-left,
     .area-selector-right {
         display: none;
+    }
+
+    body[data-active-area="dictionary"] .area-selector-right {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 0.75rem 0.75rem 0;
+    }
+
+    body[data-active-area="dictionary"] .area-selector-right .right-mode-selector {
+        display: block;
+    }
+
+    body[data-active-area="dictionary"] .area-selector-right #right-panel-dictionary-search {
+        width: auto;
     }
 
     .area-selector-mobile {

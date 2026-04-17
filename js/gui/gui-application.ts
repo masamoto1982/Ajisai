@@ -93,7 +93,9 @@ export const createGUI = (): GUI => {
     };
 
     const syncDictionarySearchVisibility = (): void => {
-        const shouldShowSearch = !mobile.isMobile() && layoutState.currentRightMode === 'dictionary';
+        const shouldShowSearch = mobile.isMobile()
+            ? layoutState.currentMode === 'dictionary'
+            : layoutState.currentRightMode === 'dictionary';
         elements.rightPanelDictionarySearch.hidden = !shouldShowSearch;
     };
 
