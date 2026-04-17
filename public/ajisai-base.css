@@ -197,11 +197,8 @@ footer a:hover {
 }
 
 
-#run-btn,
-.header-btn,
 .btn-primary,
-.btn-secondary,
-.test-btn {
+.btn-secondary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -214,19 +211,6 @@ footer a:hover {
     cursor: pointer;
     text-decoration: none;
 }
-
-#run-btn {
-    font-weight: 500;
-    background: var(--color-primary);
-    color: #fff;
-    border: var(--border-main);
-    transition: background-color 0.2s ease;
-}
-
-#run-btn:hover {
-    background: var(--color-secondary);
-}
-
 
 .btn-primary {
     font-weight: 500;
@@ -252,23 +236,7 @@ footer a:hover {
     background: var(--color-medium);
 }
 
-
-.header-btn,
-.test-btn {
-    background-color: var(--gradient-menu);
-    color: var(--menu-text);
-    border: none;
-    font-weight: 400;
-    transition: all 0.2s ease;
-}
-
-.header-btn:hover,
-.test-btn:hover {
-    background-color: var(--gradient-menu-hover);
-    color: var(--menu-text-hover);
-}
-
-.test-btn svg {
+#test-btn svg {
     width: 16px;
     height: 16px;
 }
@@ -341,13 +309,8 @@ footer a:hover {
         z-index: 100;
     }
 
-    .test-btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-    }
-
-    #run-btn,
-    .header-btn {
+    .btn-primary,
+    .btn-secondary {
         padding: 0.75rem 1rem;
         font-size: 1rem;
     }
