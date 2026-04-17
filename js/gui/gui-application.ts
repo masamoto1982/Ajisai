@@ -92,9 +92,15 @@ export const createGUI = (): GUI => {
         switchDictionarySheet(elements.dictionaryArea, sheetId);
     };
 
+    const syncDictionarySearchVisibility = (): void => {
+        const shouldShowSearch = !mobile.isMobile() && layoutState.currentRightMode === 'dictionary';
+        elements.rightPanelDictionarySearch.hidden = !shouldShowSearch;
+    };
+
     const switchArea = (mode: ViewMode): void => {
         layoutState.currentMode = mode;
         applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, mode);
+        syncDictionarySearchVisibility();
     };
 
     const updateAllDisplays = (): void => {
@@ -275,6 +281,7 @@ export const createGUI = (): GUI => {
 
         window.addEventListener('resize', () => {
             applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
+            syncDictionarySearchVisibility();
             updateEditorPlaceholder(elements, mobile);
         });
 
@@ -297,6 +304,10 @@ export const createGUI = (): GUI => {
 
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
+
+        document.querySelector('#dictionary-sheet-user #dictionary-search')
+            ?.closest('.search-wrapper')
+            ?.remove();
 
         elements = cacheElements();
         layoutState = createLayoutState();

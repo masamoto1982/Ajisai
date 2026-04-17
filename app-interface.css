@@ -119,6 +119,26 @@
     display: none;
 }
 
+.area-selector-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.area-selector-right .right-mode-selector {
+    flex: 1.618 1 0%;
+}
+
+.area-selector-right #right-panel-dictionary-search {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+.area-selector-right .vocabulary-search-input {
+    width: 100%;
+    max-width: none;
+}
+
 
 .visually-hidden {
     position: absolute;
@@ -566,7 +586,6 @@ body[data-active-area] #state-panel {
     padding: 0 0 0.5rem 0;
 }
 
-
 .words-area .dictionary-sheet-selector select:focus-visible {
     outline-offset: -2px;
     box-shadow: none;
@@ -582,16 +601,6 @@ body[data-active-area] #state-panel {
     color: var(--color-text);
     width: 100%;
     cursor: pointer;
-}
-
-.dictionary-toolbar .search-wrapper {
-    flex: 1 1 0%;
-    min-width: 0;
-}
-
-.dictionary-toolbar .vocabulary-search-input {
-    width: 100%;
-    max-width: none;
 }
 
 .dictionary-sheet {
