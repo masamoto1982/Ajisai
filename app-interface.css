@@ -782,6 +782,25 @@ body[data-active-area] #state-panel {
         display: none;
     }
 
+    body[data-active-area="dictionary"] .area-selector-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 0.75rem 0;
+    }
+
+    body[data-active-area="dictionary"] .area-selector-right .right-mode-selector {
+        display: block;
+        flex: 7 1 0%;
+        min-width: 0;
+    }
+
+    body[data-active-area="dictionary"] .area-selector-right #right-panel-dictionary-search {
+        flex: 3 1 0%;
+        min-width: 0;
+        width: auto;
+    }
+
     .area-selector-mobile {
         display: block;
         padding: 0.75rem 0.75rem 0;
