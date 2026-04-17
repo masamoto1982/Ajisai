@@ -27,6 +27,7 @@ export interface GUIElements {
     readonly statePanel: HTMLElement;
     readonly leftPanelSelect: HTMLSelectElement;
     readonly rightPanelSelect: HTMLSelectElement;
+    readonly rightPanelDictionarySearch: HTMLElement;
     readonly mobilePanelSelect: HTMLSelectElement;
     readonly copyOutputBtn: HTMLButtonElement;
 }
@@ -56,6 +57,7 @@ export const cacheElements = (): GUIElements => ({
     statePanel: document.getElementById('state-panel')!,
     leftPanelSelect: document.getElementById('left-panel-select') as HTMLSelectElement,
     rightPanelSelect: document.getElementById('right-panel-select') as HTMLSelectElement,
+    rightPanelDictionarySearch: document.getElementById('right-panel-dictionary-search')!,
     mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement,
     copyOutputBtn: document.getElementById('copy-output-btn') as HTMLButtonElement
 });
