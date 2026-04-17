@@ -566,6 +566,22 @@ body[data-active-area] #state-panel {
     padding: 0 0 0.5rem 0;
 }
 
+.user-dictionary-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-dictionary-controls .dictionary-sheet-selector {
+    flex: 0 0 45%;
+}
+
+.user-dictionary-controls .search-wrapper {
+    flex: 1 1 0%;
+    min-width: 0;
+    padding: 0 0 0.5rem 0;
+}
+
 
 .words-area .dictionary-sheet-selector select:focus-visible {
     outline-offset: -2px;
@@ -584,12 +600,7 @@ body[data-active-area] #state-panel {
     cursor: pointer;
 }
 
-.dictionary-toolbar .search-wrapper {
-    flex: 1 1 0%;
-    min-width: 0;
-}
-
-.dictionary-toolbar .vocabulary-search-input {
+.user-dictionary-controls .vocabulary-search-input {
     width: 100%;
     max-width: none;
 }
