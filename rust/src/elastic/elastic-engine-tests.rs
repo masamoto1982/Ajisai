@@ -592,35 +592,39 @@ mod tests {
 
     // ────────────────────────────────────────────────────────────────────────
     // Tracer — basic record / reset
+    //
+    // tracer uses process-wide global state; serialize these tests with a
+    // dedicated Mutex so parallel test threads don't race on reset/enable.
     // ────────────────────────────────────────────────────────────────────────
 
     use crate::elastic::tracer;
+    use std::sync::Mutex;
+
+    static TRACER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn tracer_disabled_by_default() {
-        // Reset so prior tests don't bleed state
-        tracer::reset();
-        // Tracer is off unless env var is set; in tests we don't set it.
-        // At minimum, call_count must be consistent after reset.
+        let _guard = TRACER_TEST_LOCK.lock().unwrap();
         tracer::reset();
         assert_eq!(tracer::call_count("ANYTHING"), 0);
     }
 
     #[test]
     fn tracer_record_increments_count() {
+        let _guard = TRACER_TEST_LOCK.lock().unwrap();
         tracer::reset();
         tracer::set_enabled(true);
         tracer::record("TEST_WORD", 1_000_000);
         tracer::record("TEST_WORD", 2_000_000);
         assert_eq!(tracer::call_count("TEST_WORD"), 2);
         assert_eq!(tracer::total_nanos("TEST_WORD"), 3_000_000);
-        // Restore default
         tracer::set_enabled(false);
         tracer::reset();
     }
 
     #[test]
     fn tracer_disabled_no_record() {
+        let _guard = TRACER_TEST_LOCK.lock().unwrap();
         tracer::reset();
         tracer::set_enabled(false);
         tracer::record("SILENT", 999);
