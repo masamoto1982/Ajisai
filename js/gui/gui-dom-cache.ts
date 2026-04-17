@@ -29,6 +29,9 @@ export interface GUIElements {
     readonly rightPanelSelect: HTMLSelectElement;
     readonly rightPanelDictionarySearch: HTMLElement;
     readonly mobilePanelSelect: HTMLSelectElement;
+    readonly mobilePanelDictionarySearch: HTMLElement;
+    readonly mobileDictionarySearch: HTMLInputElement;
+    readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
 }
 
@@ -59,6 +62,9 @@ export const cacheElements = (): GUIElements => ({
     rightPanelSelect: document.getElementById('right-panel-select') as HTMLSelectElement,
     rightPanelDictionarySearch: document.getElementById('right-panel-dictionary-search')!,
     mobilePanelSelect: document.getElementById('mobile-panel-select') as HTMLSelectElement,
+    mobilePanelDictionarySearch: document.getElementById('mobile-panel-dictionary-search')!,
+    mobileDictionarySearch: document.getElementById('mobile-dictionary-search') as HTMLInputElement,
+    mobileDictionarySearchClearBtn: document.getElementById('mobile-dictionary-search-clear-btn') as HTMLButtonElement,
     copyOutputBtn: document.getElementById('copy-output-btn') as HTMLButtonElement
 });
 

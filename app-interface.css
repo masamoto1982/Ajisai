@@ -783,8 +783,24 @@ body[data-active-area] #state-panel {
     }
 
     .area-selector-mobile {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         padding: 0.75rem 0.75rem 0;
+    }
+
+    .area-selector-mobile select {
+        flex: 1.618 1 0%;
+    }
+
+    .area-selector-mobile #mobile-panel-dictionary-search {
+        flex: 1 1 0%;
+        min-width: 0;
+    }
+
+    .area-selector-mobile .vocabulary-search-input {
+        width: 100%;
+        max-width: none;
     }
 
     .main-layout {

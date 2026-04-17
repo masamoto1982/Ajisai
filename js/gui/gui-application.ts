@@ -93,8 +93,10 @@ export const createGUI = (): GUI => {
     };
 
     const syncDictionarySearchVisibility = (): void => {
-        const shouldShowSearch = !mobile.isMobile() && layoutState.currentRightMode === 'dictionary';
-        elements.rightPanelDictionarySearch.hidden = !shouldShowSearch;
+        const isDesktopDictionary = !mobile.isMobile() && layoutState.currentRightMode === 'dictionary';
+        const isMobileDictionary = mobile.isMobile() && layoutState.currentMode === 'dictionary';
+        elements.rightPanelDictionarySearch.hidden = !isDesktopDictionary;
+        elements.mobilePanelDictionarySearch.hidden = !isMobileDictionary;
     };
 
     const switchArea = (mode: ViewMode): void => {
@@ -157,6 +159,7 @@ export const createGUI = (): GUI => {
 
         const applySearchFilter = (filter: string): void => {
             elements.dictionarySearch.value = filter;
+            elements.mobileDictionarySearch.value = filter;
             vocabulary.updateSearchFilter(filter);
             moduleTabManager.updateSearchFilter(filter);
         };
@@ -165,9 +168,18 @@ export const createGUI = (): GUI => {
             applySearchFilter(elements.dictionarySearch.value);
         }, 150);
 
+        const applyMobileSearchInput = debounce(() => {
+            applySearchFilter(elements.mobileDictionarySearch.value);
+        }, 150);
+
         elements.dictionarySearch.addEventListener('input', applySearchInput);
+        elements.mobileDictionarySearch.addEventListener('input', applyMobileSearchInput);
 
         elements.dictionarySearchClearBtn.addEventListener('click', () => {
+            applySearchFilter('');
+        });
+
+        elements.mobileDictionarySearchClearBtn.addEventListener('click', () => {
             applySearchFilter('');
         });
 
