@@ -1,5 +1,7 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::elastic::purity_table::{purity_by_name, Purity};
 use crate::types::Token;
 
 use super::{
@@ -25,6 +27,10 @@ pub enum KernelKind {
     MapUnaryPure,
     PredicateUnaryPure,
     FoldBinaryPure,
+    /// Reserved for a future SCAN-specific kernel (accumulator-preserving).
+    /// Currently SCAN uses `FoldBinaryPure` because the per-step binary op is
+    /// identical; this variant is retained only for forward compatibility.
+    #[allow(dead_code)]
     ScanBinaryPure,
     GenericCompiled,
     NonQuantizable,
@@ -78,44 +84,38 @@ fn builtin_arity(name: &str) -> Option<(i32, i32)> {
     }
 }
 
-/// Words that have observable side effects (I/O, state mutation, concurrency).
+/// Returns true if the given builtin name has observable side effects
+/// (I/O, time, randomness, dictionary mutation, concurrency).
+///
+/// Authoritative source: `crate::elastic::purity_table`.
+/// - `Purity::Pure`    → not side-effecting
+/// - `Purity::Impure`  → side-effecting
+/// - `Purity::Unknown` → conservatively treated as side-effecting
+///                       (higher-order / control-flow words whose behavior
+///                       depends on runtime arguments)
+/// - Unrecognized name (user-defined or non-spec) → false
+///   (handled separately via the `CallUserWord` / fallback paths in
+///   `analyze_compiled_plan_with_context`)
 fn is_side_effecting_builtin(name: &str) -> bool {
-    matches!(
-        name,
-        "PRINT"
-            | "EMIT"
-            | "READ"
-            | "WRITE"
-            | "READLINE"
-            | "SPAWN"
-            | "AWAIT"
-            | "SEND"
-            | "RECV"
-            | "DEF"
-            | "DEL"
-            | "IMPORT"
-            | "RAND"
-            | "SEED"
-    )
+    match purity_by_name(name) {
+        Some(info) => info.purity != Purity::Pure,
+        None => false,
+    }
 }
 
-/// Statically analyse a compiled plan and return
-/// `(input_arity, output_arity, purity, dependency_words)`.
-///
-/// Arity analysis uses a symbolic stack-depth simulation:
-/// - Start at depth 0.
-/// - Each push op adds 1; each builtin with known arity adjusts depth.
-/// - If depth would go below the running minimum, update `min_depth`.
-/// - `input_arity  = -min_depth`  (values consumed from the external stack)
-/// - `output_arity = final_depth - min_depth` (values left on stack after execution)
-///
-/// If any op has unknown arity (user words, qualified words, fallback tokens),
-/// both arities are `Variable`.
-fn analyze_compiled_plan(
+const MAX_PURITY_ANALYSIS_DEPTH: usize = 4;
+
+/// Context-aware variant used both at the top level and for recursive
+/// user-word purity propagation.
+fn analyze_compiled_plan_with_context(
     plan: &CompiledPlan,
+    interp: Option<&Interpreter>,
+    visited: &mut HashSet<String>,
+    depth: usize,
 ) -> (QuantizedArity, QuantizedArity, QuantizedPurity, Vec<String>) {
-    let mut depth: i32 = 0;
+    let mut cur_depth: i32 = 0;
     let mut min_depth: i32 = 0;
+    let mut min_depth_at_first_unknown: Option<i32> = None;
     let mut all_known = true;
     let mut is_pure = true;
     let mut dep_words: Vec<String> = Vec::new();
@@ -124,7 +124,7 @@ fn analyze_compiled_plan(
         for op in &line.ops {
             match op {
                 CompiledOp::PushLiteral(_) | CompiledOp::PushCodeBlock(_) => {
-                    depth += 1;
+                    cur_depth += 1;
                 }
                 // Meta-ops with no stack effect
                 CompiledOp::SetTargetModeStackTop
@@ -135,34 +135,56 @@ fn analyze_compiled_plan(
                 | CompiledOp::LineBreak => {}
 
                 CompiledOp::CallBuiltin(name) => {
-                    if is_side_effecting_builtin(name) {
+                    let normalized = Interpreter::normalize_symbol(name);
+                    let key: &str = normalized.as_ref();
+                    if is_side_effecting_builtin(key) {
                         is_pure = false;
                     }
-                    if let Some((inputs, outputs)) = builtin_arity(name) {
-                        depth -= inputs;
-                        if depth < min_depth {
-                            min_depth = depth;
+                    if let Some((inputs, outputs)) = builtin_arity(key) {
+                        cur_depth -= inputs;
+                        if cur_depth < min_depth {
+                            min_depth = cur_depth;
                         }
-                        depth += outputs;
+                        cur_depth += outputs;
                     } else {
-                        // Unknown arity; cannot determine statically
+                        if min_depth_at_first_unknown.is_none() {
+                            min_depth_at_first_unknown = Some(min_depth);
+                        }
                         all_known = false;
                     }
                 }
 
                 CompiledOp::CallUserWord(name) => {
                     dep_words.push(name.clone());
-                    is_pure = false;
+                    if min_depth_at_first_unknown.is_none() {
+                        min_depth_at_first_unknown = Some(min_depth);
+                    }
+                    let propagated_pure =
+                        try_user_word_is_pure(name, interp, visited, depth);
+                    if !propagated_pure {
+                        is_pure = false;
+                    }
                     all_known = false;
                 }
 
                 CompiledOp::CallQualifiedWord { namespace, word } => {
-                    dep_words.push(format!("{}@{}", namespace, word));
-                    is_pure = false;
+                    let qualified = format!("{}@{}", namespace, word);
+                    dep_words.push(qualified.clone());
+                    if min_depth_at_first_unknown.is_none() {
+                        min_depth_at_first_unknown = Some(min_depth);
+                    }
+                    let propagated_pure =
+                        try_user_word_is_pure(&qualified, interp, visited, depth);
+                    if !propagated_pure {
+                        is_pure = false;
+                    }
                     all_known = false;
                 }
 
                 CompiledOp::FallbackToken(_) => {
+                    if min_depth_at_first_unknown.is_none() {
+                        min_depth_at_first_unknown = Some(min_depth);
+                    }
                     all_known = false;
                 }
             }
@@ -176,10 +198,18 @@ fn analyze_compiled_plan(
             QuantizedArity::Fixed(0)
         };
         // Values remaining on the mini-stack = final_depth - min_depth
-        let output = QuantizedArity::Fixed((depth - min_depth) as usize);
+        let output = QuantizedArity::Fixed((cur_depth - min_depth) as usize);
         (input, output)
     } else {
-        (QuantizedArity::Variable, QuantizedArity::Variable)
+        // Partial info: keep input arity only when the stack went negative
+        // before the first unknown op (i.e., we have proven the block consumes
+        // external inputs).  A min_depth of 0 at the unknown point means we
+        // haven't proven anything about inputs → Variable.
+        let input = match min_depth_at_first_unknown {
+            Some(m) if m < 0 => QuantizedArity::Fixed((-m) as usize),
+            _ => QuantizedArity::Variable,
+        };
+        (input, QuantizedArity::Variable)
     };
 
     let purity = if is_pure {
@@ -189,6 +219,42 @@ fn analyze_compiled_plan(
     };
 
     (input_arity, output_arity, purity, dep_words)
+}
+
+/// Attempt to determine whether a user-defined word is pure by recursively
+/// analysing its compiled plan. Conservative on failure.
+///
+/// Returns `true` only when we can prove the word is pure within the depth
+/// budget; otherwise returns `false`.
+fn try_user_word_is_pure(
+    name: &str,
+    interp: Option<&Interpreter>,
+    visited: &mut HashSet<String>,
+    depth: usize,
+) -> bool {
+    let Some(interp) = interp else {
+        return false;
+    };
+    if depth >= MAX_PURITY_ANALYSIS_DEPTH {
+        return false;
+    }
+    if visited.contains(name) {
+        // Recursive cycle → conservative
+        return false;
+    }
+
+    let Some((_, def)) = interp.resolve_word_entry_readonly(name) else {
+        return false;
+    };
+
+    let plan = compile_word_definition(&def, interp);
+
+    visited.insert(name.to_string());
+    let (_ia, _oa, purity, _deps) =
+        analyze_compiled_plan_with_context(&plan, Some(interp), visited, depth + 1);
+    visited.remove(name);
+
+    purity == QuantizedPurity::Pure
 }
 
 pub fn is_quantizable_block(tokens: &[Token]) -> bool {
@@ -270,7 +336,8 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
     interp.bump_execution_epoch();
     interp.runtime_metrics.quantized_block_build_count += 1;
 
-    let (input_arity, output_arity, purity, dependency_words) = analyze_compiled_plan(&plan);
+    let (input_arity, output_arity, purity, dependency_words) =
+        analyze_compiled_plan_with_context(&plan, Some(interp), &mut HashSet::new(), 0);
     let kernel_kind = detect_kernel_kind(tokens, purity, input_arity);
 
     let can_fuse = purity == QuantizedPurity::Pure;

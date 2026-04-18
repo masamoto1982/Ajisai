@@ -437,10 +437,24 @@ fn fast_guarded_mode(mode: ElasticMode) -> bool {
 }
 
 fn is_quantized_block_guard_valid(interp: &Interpreter, qb: &QuantizedBlock) -> bool {
-    qb.guard_signature.dictionary_epoch == interp.dictionary_epoch
+    let epoch_ok = qb.guard_signature.dictionary_epoch == interp.dictionary_epoch
         && qb.guard_signature.module_epoch == interp.module_epoch
         && qb.guard_signature.kernel_kind == qb.kernel_kind
-        && qb.guard_signature.purity == qb.purity
+        && qb.guard_signature.purity == qb.purity;
+    if !epoch_ok {
+        return false;
+    }
+
+    // Dependency words must still be resolvable.
+    // Belt-and-suspenders: if epoch is valid these should exist, but a
+    // mismatch indicates a registry inconsistency and is treated as guard failure.
+    for dep in &qb.dependency_words {
+        if interp.resolve_word_entry_readonly(dep).is_none() {
+            return false;
+        }
+    }
+
+    true
 }
 
 fn trace_hedged(interp: &Interpreter, msg: &str) {

@@ -22,51 +22,84 @@ fn run_loop(
     expected_quant_calls_per_iter: u64,
     code: &str,
 ) -> (Duration, RuntimeMetrics) {
-    let mut total = Duration::ZERO;
-    let mut total_metrics = RuntimeMetrics::default();
+    // Warm up a single interpreter so plan/quantized caches can be reused
+    // across iterations — this is what JIT-style caches are designed for,
+    // and running a fresh interpreter per iteration would make hit rates
+    // meaningless.
+    let mut interp = Interpreter::new();
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
 
+    // One warm-up run to populate caches; not timed.
+    rt.block_on(async {
+        interp.execute(code).await.expect("warm-up execution");
+    });
+    let baseline = interp.runtime_metrics();
+
+    let start = Instant::now();
     for _ in 0..iterations {
-        let start = Instant::now();
-        let interp = run_code(code);
-        total += start.elapsed();
-        let m = interp.runtime_metrics();
-        total_metrics.compiled_plan_build_count += m.compiled_plan_build_count;
-        total_metrics.compiled_plan_cache_hit_count += m.compiled_plan_cache_hit_count;
-        total_metrics.compiled_plan_cache_miss_count += m.compiled_plan_cache_miss_count;
-        total_metrics.quantized_block_build_count += m.quantized_block_build_count;
-        total_metrics.quantized_block_use_count += m.quantized_block_use_count;
+        rt.block_on(async {
+            interp.execute(code).await.expect("code should execute");
+        });
     }
+    let elapsed = start.elapsed();
+
+    // Delta metrics from after-warmup to end-of-loop.
+    let final_m = interp.runtime_metrics();
+    let delta = RuntimeMetrics {
+        compiled_plan_build_count: final_m
+            .compiled_plan_build_count
+            .saturating_sub(baseline.compiled_plan_build_count),
+        compiled_plan_cache_hit_count: final_m
+            .compiled_plan_cache_hit_count
+            .saturating_sub(baseline.compiled_plan_cache_hit_count),
+        compiled_plan_cache_miss_count: final_m
+            .compiled_plan_cache_miss_count
+            .saturating_sub(baseline.compiled_plan_cache_miss_count),
+        quantized_block_build_count: final_m
+            .quantized_block_build_count
+            .saturating_sub(baseline.quantized_block_build_count),
+        quantized_block_use_count: final_m
+            .quantized_block_use_count
+            .saturating_sub(baseline.quantized_block_use_count),
+        ..Default::default()
+    };
 
     let plan_total =
-        total_metrics.compiled_plan_cache_hit_count + total_metrics.compiled_plan_cache_miss_count;
+        delta.compiled_plan_cache_hit_count + delta.compiled_plan_cache_miss_count;
+    let hit_rate = if plan_total > 0 {
+        (delta.compiled_plan_cache_hit_count as f64 / plan_total as f64) * 100.0
+    } else {
+        0.0
+    };
     let expected_total_quant = (iterations as u64) * expected_quant_calls_per_iter.max(1);
-    let quant_rate = (total_metrics.quantized_block_use_count as f64 / expected_total_quant as f64)
+    let quant_rate = (delta.quantized_block_use_count as f64 / expected_total_quant as f64)
         * 100.0;
 
     println!(
-        "[perf] {label} x{iterations}: {:.1}ms (quantized: {:.1}%, hits: {}/{})",
-        total.as_secs_f64() * 1000.0,
+        "[perf] {label} x{iterations}: {:.1}ms (quantized: {:.1}%, plan hit rate: {:.1}%, hits: {}/{})",
+        elapsed.as_secs_f64() * 1000.0,
         quant_rate,
-        total_metrics.compiled_plan_cache_hit_count,
+        hit_rate,
+        delta.compiled_plan_cache_hit_count,
         plan_total,
     );
 
     #[cfg(feature = "trace-compile")]
     eprintln!(
         "[metrics] plan_build={} plan_hit={} plan_miss={}",
-        total_metrics.compiled_plan_build_count,
-        total_metrics.compiled_plan_cache_hit_count,
-        total_metrics.compiled_plan_cache_miss_count
+        delta.compiled_plan_build_count,
+        delta.compiled_plan_cache_hit_count,
+        delta.compiled_plan_cache_miss_count
     );
 
     #[cfg(feature = "trace-compile")]
     eprintln!(
         "[metrics] quant_build={} quant_use={}",
-        total_metrics.quantized_block_build_count,
-        total_metrics.quantized_block_use_count
+        delta.quantized_block_build_count,
+        delta.quantized_block_use_count
     );
 
-    (total, total_metrics)
+    (elapsed, delta)
 }
 
 #[test]
@@ -97,6 +130,13 @@ fn perf_filter_map_fold_reports_metrics() {
     assert!(filter_metrics.quantized_block_use_count >= 1);
     assert!(map_metrics.quantized_block_use_count >= 1);
     assert!(fold_metrics.quantized_block_use_count >= 1);
+
+    // With a reused interpreter, quantized kernel must be reused across iterations.
+    assert!(
+        filter_metrics.quantized_block_use_count >= 1000,
+        "expected quantized kernel reuse across iterations, got {}",
+        filter_metrics.quantized_block_use_count
+    );
 }
 
 #[test]
