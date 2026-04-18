@@ -9,5 +9,6 @@ It does not define Ajisai semantics.
 ## Recommended Verification Commands
 - `cd rust && cargo test --lib`
 - `cd rust && cargo test --tests`
-- `cd rust && cargo test --test gui-interpreter-test-cases`
 - `npm run check`
+
+GUI behavior cases live in `js/gui/gui-interpreter-test-cases.ts` and are executed from the in-app `Test` button.
