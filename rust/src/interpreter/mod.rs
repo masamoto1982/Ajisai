@@ -34,6 +34,10 @@ pub(crate) mod naming_convention_checker;
 pub(crate) mod optimization_hooks;
 #[path = "quantized-block.rs"]
 pub mod quantized_block;
+#[path = "redundancy-budget.rs"]
+pub mod redundancy_budget;
+#[path = "redundancy-layer.rs"]
+pub mod redundancy_layer;
 pub mod random;
 #[path = "resolve-cache.rs"]
 mod resolve_cache;
@@ -110,6 +114,8 @@ pub use epoch::EpochSnapshot;
 pub use quantized_block::{
     is_quantizable_block, quantize_code_block, QuantizedArity, QuantizedBlock, QuantizedPurity,
 };
+pub use redundancy_budget::{DegradationPolicy, FailureHistory, RedundancyBudget};
+pub use redundancy_layer::{select_degradation_policy, RedundancyCheckpoint};
 
 #[cfg(test)]
 #[path = "compiled-plan-tests.rs"]
