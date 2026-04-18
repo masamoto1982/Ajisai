@@ -238,6 +238,7 @@ export const createVocabularyManager = (
         coreWords: unknown[][]
     ): void => {
         clearElement(container);
+        container.classList.remove('is-empty');
 
 
         const filtered = coreWords.filter(
@@ -276,6 +277,7 @@ export const createVocabularyManager = (
         });
 
         if (searchFilter && matched.length === 0) {
+            container.classList.add('is-empty');
             container.appendChild(createNoResultsElement());
         }
     };
