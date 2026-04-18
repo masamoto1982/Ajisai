@@ -75,9 +75,10 @@ Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 ```sh
 cd rust && cargo test --lib
 cd rust && cargo test --tests
-cd rust && cargo test --test gui-interpreter-test-cases
 npm run check
 ```
+
+GUI 動作テストはアプリ上の `Test` ボタンから `js/gui/gui-interpreter-test-cases.ts` のケースを実行して確認します。
 
 ---
 

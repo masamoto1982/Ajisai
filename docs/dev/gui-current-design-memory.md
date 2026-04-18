@@ -1,6 +1,6 @@
-# Current GUI design/useability memory (before reset)
+# Current GUI Design Memory
 
-This note captures the current Ajisai GUI behavior so the interface can be rebuilt from a blank slate.
+This note captures the current Ajisai web-playground GUI behavior for reference. The web deployment at https://masamoto1982.github.io/Ajisai/ is a playground; installable/desktop usage is provided via the Tauri wrapper (`src-tauri/`). The web entrypoint is not a PWA and has no service worker.
 
 ## Overall structure
 - Single-page web GUI (`index.html`) with a two-column main layout.
@@ -38,21 +38,15 @@ This note captures the current Ajisai GUI behavior so the interface can be rebui
 - GUI tracks layout state (`currentMode`, `currentLeftMode`, `currentRightMode`).
 - Desktop and mobile layouts sync via selectors and `body[data-active-area]`.
 
-## Technical composition of old GUI
+## Technical composition
 - GUI implemented as modular TS components under `js/gui/`.
-- Entry point (`js/web-app-entrypoint.ts`) initialized WASM interpreter then GUI.
+- Entry point (`js/web-app-entrypoint.ts`) initializes WASM interpreter then GUI.
 - Worker manager used for parallel execution and abort handling.
-- Persistence module handled user dictionary import/export/state retention.
+- Persistence module handles user dictionary import/export/state retention via IndexedDB (`js/indexeddb-user-word-store.ts`).
 - No service worker / offline-mode integration in the web app entrypoint.
+- GUI behavior test cases are authored in `js/gui/gui-interpreter-test-cases.ts` and run through the in-app `Test` button (no separate cargo target).
 
 ## Styling profile
-- App-specific styling lived in `app-interface.css`.
-- Theme variables came from `ajisai-theme.js` and were injected into `:root` at boot.
-- Layout relied on flex containers with explicit panel visibility toggles.
-
-
-## Reset operation scope (this commit)
-- Removed legacy GUI entry HTML/CSS (`index.html`, `app-interface.css`).
-- Removed GUI boot entry (`js/web-app-entrypoint.ts`).
-- Removed legacy GUI module tree (`js/gui/*`).
-- Removed GUI-related Rust test file (`rust/tests/gui-interpreter-test-cases.rs`).
+- App-specific styling lives in `app-interface.css`.
+- Base styling lives in `public/ajisai-base.css`.
+- Layout relies on flex containers with explicit panel visibility toggles.
