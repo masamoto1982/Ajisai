@@ -136,6 +136,18 @@ pub struct RuntimeMetrics {
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
+
+    // ── Redundancy Layer ──────────────────────────────────────────────────
+    /// Number of pre-execution checkpoints captured.
+    pub redundancy_checkpoint_count: u64,
+    /// Number of times a checkpoint was activated to restore the stack.
+    pub redundancy_restore_count: u64,
+    /// Quantized-path failures that triggered a stage downgrade.
+    pub redundancy_degrade_quantized: u64,
+    /// Compiled-path failures that triggered a stage downgrade.
+    pub redundancy_degrade_compiled: u64,
+    /// Times the auto-degrade threshold was crossed (demotion to PlainOnly).
+    pub redundancy_auto_degrade_count: u64,
 }
 
 pub struct Interpreter {
