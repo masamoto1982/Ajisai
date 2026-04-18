@@ -519,3 +519,134 @@ fn fold_error_stack_shape_matches_between_quantized_and_plain() {
     assert!(q.to_string().contains("Stack underflow"));
     assert!(p.to_string().contains("Stack underflow"));
 }
+
+// ---------------------------------------------------------------------------
+// Purity: purity_table-based classification (Problem 1)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn purity_now_is_side_effecting() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("NOW")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+    assert!(!qb.can_fuse);
+    assert!(!qb.eligible_for_cache);
+}
+
+#[test]
+fn purity_csprng_is_side_effecting() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("CSPRNG")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+}
+
+#[test]
+fn purity_spawn_is_side_effecting() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("SPAWN")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+}
+
+#[test]
+fn purity_higher_order_inner_is_side_effecting() {
+    // MAP itself is Purity::Unknown in purity_table; a block containing
+    // MAP must not be classified as Pure.
+    let mut interp = make_interp();
+    let tokens = vec![sym("MAP")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+}
+
+// ---------------------------------------------------------------------------
+// Purity: CallUserWord propagation (Problem 2)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn purity_pure_user_word_is_pure() {
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ + } 'MY_ADD' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("MY_ADD")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(
+        qb.purity,
+        QuantizedPurity::Pure,
+        "pure user word should propagate Pure"
+    );
+    assert!(qb.can_fuse);
+}
+
+#[test]
+fn purity_impure_user_word_is_side_effecting() {
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ PRINT } 'SHOUT' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("SHOUT")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+}
+
+#[test]
+fn purity_nested_pure_user_word_is_pure() {
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ + } 'ADD' DEF").await.unwrap();
+        interp.execute("{ ADD ADD } 'ADD_TWICE' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("ADD_TWICE")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::Pure);
+}
+
+#[test]
+fn purity_recursive_user_word_is_conservative() {
+    // A self-recursive word should not infinite-loop; fall back to SideEffecting.
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ REC } 'REC' DEF").await.unwrap();
+    });
+    let tokens = vec![sym("REC")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+}
+
+// ---------------------------------------------------------------------------
+// Arity: partial info preservation before first unknown op (Problem 3)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn arity_partial_info_preserved_before_unknown() {
+    // `{ + UNKNOWN }` — `+` fixes input arity as 2, rest is unknown.
+    let mut interp = make_interp();
+    let tokens = vec![sym("+"), sym("SOME_UNKNOWN_WORD")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(
+        qb.input_arity,
+        QuantizedArity::Fixed(2),
+        "input arity should be preserved from prefix analysis"
+    );
+    assert_eq!(
+        qb.output_arity,
+        QuantizedArity::Variable,
+        "output arity is indeterminate after unknown op"
+    );
+}
+
+#[test]
+fn arity_fully_known_still_fixed() {
+    // Regression check: fully-known plan still returns Fixed on both sides.
+    let mut interp = make_interp();
+    let tokens = vec![num("1"), sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.input_arity, QuantizedArity::Fixed(1));
+    assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
