@@ -158,7 +158,9 @@ pub(crate) fn arena_node_to_js(
     external_hint_opt: Option<DisplayHint>,
 ) -> JsValue {
     let obj = js_sys::Object::new();
-    let effective_hint = external_hint_opt.unwrap_or_else(|| arena.hint(root_id));
+    // external_hint_opt が無い場合は必ず Arena 側の hint を参照する。
+    // 子ノード再帰では None を渡し、各 NodeId の明示 hint を尊重する。
+    let effective_hint = resolve_effective_hint(arena, root_id, external_hint_opt);
 
     let hint_str: &str = match effective_hint {
         DisplayHint::Auto => "auto",
@@ -260,6 +262,14 @@ pub(crate) fn arena_node_to_js(
     obj.into()
 }
 
+fn resolve_effective_hint(
+    arena: &ValueArena,
+    root_id: NodeId,
+    external_hint_opt: Option<DisplayHint>,
+) -> DisplayHint {
+    external_hint_opt.unwrap_or_else(|| arena.hint(root_id))
+}
+
 pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
     let obj = js_sys::Object::from(js_val.clone());
     let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
@@ -275,7 +285,9 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 
 #[cfg(test)]
 mod test_input_helper {
-    use super::build_bracket_structure_from_shape;
+    use super::{build_bracket_structure_from_shape, resolve_effective_hint};
+    use crate::types::arena::ValueArena;
+    use crate::types::DisplayHint;
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -314,6 +326,20 @@ mod test_input_helper {
         assert_eq!(
             build_bracket_structure_from_shape(&[1, 1, 1, 1]),
             "[ [ [ [ ] ] ] ]"
+        );
+    }
+
+    #[test]
+    fn effective_hint_prefers_external_otherwise_uses_arena() {
+        let mut arena = ValueArena::new();
+        let id = arena.alloc_string("AB");
+        assert_eq!(
+            resolve_effective_hint(&arena, id, None),
+            DisplayHint::String
+        );
+        assert_eq!(
+            resolve_effective_hint(&arena, id, Some(DisplayHint::Number)),
+            DisplayHint::Number
         );
     }
 }

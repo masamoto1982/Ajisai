@@ -587,11 +587,14 @@ async fn test_can_update_in_place_after_partial_consumption() {
 #[tokio::test]
 async fn test_can_update_in_place_with_aliased_vector() {
     use std::rc::Rc;
-    use ajisai_core::types::ValueData;
+    use ajisai_core::types::{DisplayHint, ValueData};
 
     let children = Rc::new(vec![Value::from_int(1), Value::from_int(2)]);
     let _alias = children.clone();
-    let val = Value { data: ValueData::Vector(children) };
+    let val = Value {
+        data: ValueData::Vector(children),
+        hint: DisplayHint::Auto,
+    };
     let token = FlowToken::from_value(&val);
 
 

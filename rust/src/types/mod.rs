@@ -56,6 +56,7 @@ pub enum ValueData {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub data: ValueData,
+    pub hint: DisplayHint,
 }
 
 pub struct SemanticRegistry {

@@ -4,7 +4,7 @@ use std::fmt;
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format_value_auto(&self.data))
+        write!(f, "{}", format_with_hint(self, self.hint))
     }
 }
 
@@ -18,7 +18,7 @@ pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
                 format_value_recursive(&value.data, 0)
             }
         }
-        DisplayHint::Auto => format_value_auto(&value.data),
+        DisplayHint::Auto => format_value_auto(value),
         DisplayHint::Number => format_value_recursive(&value.data, 0),
         DisplayHint::String => format_as_string(&value.data),
         DisplayHint::Boolean => format_as_boolean(&value.data),
@@ -26,15 +26,16 @@ pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
     }
 }
 
-fn format_value_auto(data: &ValueData) -> String {
-    match data {
+fn format_value_auto(value: &Value) -> String {
+    match &value.data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+            // NOTE: string-like 推論は Auto hint の表示 fallback でのみ使用すること。
             if !v.is_empty() && is_string_like(v) {
-                return format_as_string(data);
+                return format_as_string(&value.data);
             }
-            format_value_recursive(data, 0)
+            format_value_recursive(&value.data, 0)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
@@ -42,6 +43,8 @@ fn format_value_auto(data: &ValueData) -> String {
     }
 }
 
+/// Returns whether every element can be interpreted as a printable Unicode code point.
+/// This heuristic must be used only for DisplayHint::Auto fallback formatting.
 pub fn is_string_like(values: &[Value]) -> bool {
     values.iter().all(|v| {
         if let ValueData::Scalar(f) = &v.data {
