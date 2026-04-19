@@ -30,16 +30,12 @@ const detectSwipeDirection = (
     startY: number,
     endX: number,
     endY: number
-): 'left' | 'right' | 'up' | 'down' | null => {
+): 'left' | 'right' | null => {
     const deltaX = endX - startX;
     const deltaY = endY - startY;
 
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
         return deltaX > 0 ? 'right' : 'left';
-    }
-
-    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
-        return deltaY > 0 ? 'down' : 'up';
     }
 
     return null;
@@ -89,11 +85,10 @@ export const createMobileHandler = (
     const resolveSwipeGesture = (endX: number, endY: number): void => {
         const direction = detectSwipeDirection(touchStartX, touchStartY, endX, endY);
 
-        if (direction === 'left' || direction === 'right') {
-            const newMode = resolveNextViewMode(currentMode, direction);
-            updateView(newMode);
-            options.onModeChange?.(newMode);
-        }
+        if (direction === null) return;
+        const newMode = resolveNextViewMode(currentMode, direction);
+        updateView(newMode);
+        options.onModeChange?.(newMode);
     };
 
     const setupSwipeGestures = (): void => {
