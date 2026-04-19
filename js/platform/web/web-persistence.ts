@@ -1,26 +1,26 @@
-
+import type {
+    ExportData,
+    InterpreterStateSnapshot,
+    Persistence,
+    TablePayload
+} from '../platform-adapter';
 
 interface TableData {
     name: string;
-    schema: any;
-    records: any;
+    schema: unknown;
+    records: unknown;
     updatedAt: string;
 }
 
 interface InterpreterState {
     key: string;
-    stack: any;
-    userWords: any;
+    stack: unknown;
+    userWords: unknown;
     demoWordsVersion?: number;
     updatedAt: string;
 
-    customWords?: any;
+    customWords?: unknown;
     sampleWordsVersion?: number;
-}
-
-interface ExportData {
-    tables: TableData[];
-    interpreterState: InterpreterState | null;
 }
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
@@ -40,7 +40,7 @@ const withObjectStore = <T>(
     return action(store, transaction);
 };
 
-class AjisaiDB {
+class WebPersistence implements Persistence {
     private dbName = 'AjisaiDB';
     private version = 4;
     private storeName = 'tables';
@@ -48,15 +48,14 @@ class AjisaiDB {
     private db: IDBDatabase | null = null;
     private openPromise: Promise<IDBDatabase> | null = null;
 
-    async open(): Promise<IDBDatabase> {
-
+    async open(): Promise<void> {
         if (this.db) {
-            return this.db;
+            return;
         }
 
-
         if (this.openPromise) {
-            return this.openPromise;
+            await this.openPromise;
+            return;
         }
 
         if (!window.indexedDB) {
@@ -90,10 +89,10 @@ class AjisaiDB {
             };
         });
 
-        return this.openPromise;
+        await this.openPromise;
     }
 
-    async saveTable(name: string, schema: any, records: any): Promise<void> {
+    async saveTable(name: string, schema: unknown, records: unknown): Promise<void> {
         if (!this.db) await this.open();
 
         return withObjectStore(this.db!, this.storeName, 'readwrite', async store => {
@@ -107,7 +106,7 @@ class AjisaiDB {
         });
     }
 
-    async loadTable(name: string): Promise<{ schema: any; records: any } | null> {
+    async loadTable(name: string): Promise<TablePayload | null> {
         if (!this.db) await this.open();
 
         return withObjectStore(this.db!, this.storeName, 'readonly', async store => {
@@ -132,7 +131,7 @@ class AjisaiDB {
         });
     }
 
-    async saveInterpreterState(state: Omit<InterpreterState, 'key' | 'updatedAt'>): Promise<void> {
+    async saveInterpreterState(state: InterpreterStateSnapshot): Promise<void> {
         if (!this.db) await this.open();
 
         return withObjectStore(this.db!, this.stateStoreName, 'readwrite', async store => {
@@ -145,7 +144,7 @@ class AjisaiDB {
         });
     }
 
-    async loadInterpreterState(): Promise<Omit<InterpreterState, 'key' | 'updatedAt'> | null> {
+    async loadInterpreterState(): Promise<InterpreterStateSnapshot | null> {
         if (!this.db) await this.open();
 
         return withObjectStore(this.db!, this.stateStoreName, 'readonly', async store => {
@@ -154,8 +153,8 @@ class AjisaiDB {
                 return null;
             }
             return {
-                stack: result.stack,
-                userWords: result.userWords ?? result.customWords,
+                stack: result.stack as InterpreterStateSnapshot['stack'],
+                userWords: (result.userWords ?? result.customWords) as InterpreterStateSnapshot['userWords'],
                 demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
             };
         });
@@ -193,13 +192,13 @@ class AjisaiDB {
             const tableRequest = tableStore.getAll();
 
             tableRequest.onsuccess = () => {
-                result.tables = tableRequest.result;
+                result.tables = tableRequest.result as ExportData['tables'];
 
                 const stateStore = transaction.objectStore(this.stateStoreName);
                 const stateRequest = stateStore.get('interpreter_state');
 
                 stateRequest.onsuccess = () => {
-                    result.interpreterState = stateRequest.result;
+                    result.interpreterState = stateRequest.result as ExportData['interpreterState'];
                     resolve(result);
                 };
             };
@@ -234,36 +233,9 @@ class AjisaiDB {
             transaction.onerror = () => reject(transaction.error);
         });
     }
-
-    async test(): Promise<boolean> {
-        try {
-            await this.open();
-
-            await this.saveTable('test_table', ['id', 'name'], [
-                [1, 'Test Record 1'],
-                [2, 'Test Record 2']
-            ]);
-
-            await this.loadTable('test_table');
-            await this.collectTableNames();
-            await this.deleteTable('test_table');
-
-            return true;
-        } catch (error) {
-            console.error('IndexedDB test failed:', error);
-            return false;
-        }
-    }
 }
 
-const DB = new AjisaiDB();
+const DB = new WebPersistence();
 
-declare global {
-    interface Window {
-        AjisaiDB: AjisaiDB;
-    }
-}
-
-window.AjisaiDB = DB;
-
+export { WebPersistence };
 export default DB;

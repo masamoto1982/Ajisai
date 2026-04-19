@@ -155,6 +155,8 @@
         <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
     </div>
 
-    <script type="module" src="js/web-app-entrypoint.ts"></script>
+    <script type="module">
+        import('./js/entry/entry-bootstrap.ts');
+    </script>
 </body>
 </html>

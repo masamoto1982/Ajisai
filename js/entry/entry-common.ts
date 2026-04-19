@@ -1,11 +1,9 @@
-
-
-import { GUI_INSTANCE } from './gui/gui-application';
-import { initWasm } from './wasm-module-loader';
-import './indexeddb-user-word-store';
-import type { WasmModule, AjisaiInterpreter } from './wasm-interpreter-types';
+import { GUI_INSTANCE } from '../gui/gui-application';
+import { initWasm } from '../wasm-module-loader';
+import type { WasmModule, AjisaiInterpreter } from '../wasm-interpreter-types';
 
 declare const __AJISAI_CHANGE_NOTE__: string;
+declare const __AJISAI_BUILD_TIMESTAMP__: string;
 
 declare global {
     interface Window {
@@ -23,15 +21,15 @@ function formatTimestamp(date: Date): string {
     return `${year}${month}${day}${hours}${minutes}`;
 }
 
-function setBuildVersionLabel(): void {
+export function setBuildVersionLabel(): void {
     const versionElement = document.querySelector<HTMLElement>('.version');
     if (!versionElement) return;
 
-    const timestamp = formatTimestamp(new Date());
+    const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
     versionElement.textContent = `ver.${timestamp} (${__AJISAI_CHANGE_NOTE__})`;
 }
 
-async function main(): Promise<void> {
+export async function initializeApplication(): Promise<void> {
     console.log('[Main] Starting Ajisai application...');
 
     try {
@@ -47,12 +45,9 @@ async function main(): Promise<void> {
 
         console.log('[Main] Initializing GUI...');
         await GUI_INSTANCE.init();
-
         GUI_INSTANCE.updateAllDisplays();
 
-
         console.log('[Main] Application initialization completed successfully');
-
     } catch (error) {
         console.error('[Main] Application startup failed:', error);
         const outputDisplay = document.getElementById('output-display');
@@ -66,9 +61,7 @@ async function main(): Promise<void> {
     }
 }
 
-
-
-function setupLogoTouchQR(): void {
+export function setupLogoTouchQR(): void {
     const logoSwap = document.querySelector<HTMLElement>('.logo-swap');
     if (!logoSwap) return;
 
@@ -90,9 +83,3 @@ function setupLogoTouchQR(): void {
         }, 3000);
     }, { passive: false });
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    setBuildVersionLabel();
-    setupLogoTouchQR();
-    main();
-});
