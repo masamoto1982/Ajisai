@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 
 const isTauri = !!process.env.TAURI_ENV_TARGET_TRIPLE;
+const target = process.env.AJISAI_BUILD_TARGET === 'tauri' ? 'tauri' : 'web';
 
 const GENERIC_BRANCH_NAMES = new Set([
   'main',
@@ -60,6 +61,16 @@ function extractChangeFromCommitSubject(subject: string): string {
   return toKebabCase(subject);
 }
 
+function buildTimestampLabel(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const day = `${now.getDate()}`.padStart(2, '0');
+  const hours = `${now.getHours()}`.padStart(2, '0');
+  const minutes = `${now.getMinutes()}`.padStart(2, '0');
+  return `${year}${month}${day}${hours}${minutes}`;
+}
+
 const envChangeNote = process.env.AJISAI_CHANGE_NOTE ?? '';
 const gitBranchName = runGitCommand('git rev-parse --abbrev-ref HEAD');
 const branchChangeNote = extractChangeFromBranchName(gitBranchName);
@@ -69,9 +80,11 @@ const changeNote = toKebabCase(envChangeNote || branchChangeNote || commitChange
 
 export default defineConfig({
   root: '.',
-  base: './',
+  base: target === 'tauri' ? '/' : './',
   define: {
-    __AJISAI_CHANGE_NOTE__: JSON.stringify(changeNote)
+    __AJISAI_CHANGE_NOTE__: JSON.stringify(changeNote),
+    __AJISAI_TARGET__: JSON.stringify(target),
+    __AJISAI_BUILD_TIMESTAMP__: JSON.stringify(buildTimestampLabel())
   },
   server: {
     port: 3000,

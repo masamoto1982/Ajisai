@@ -1,6 +1,6 @@
 # Current GUI Design Memory
 
-This note captures the current Ajisai web-playground GUI behavior for reference. The web deployment at https://masamoto1982.github.io/Ajisai/ is a playground; installable/desktop usage is provided via the Tauri wrapper (`src-tauri/`). The web entrypoint is not a PWA and has no service worker.
+This note captures the current Ajisai web-playground GUI behavior for reference. The web deployment at https://masamoto1982.github.io/Ajisai/ is a playground; installable/desktop usage is provided via the Tauri wrapper (`src-tauri/`). The runtime boot is split by `js/entry/entry-bootstrap.ts` and platform-specific behaviors are abstracted in `js/platform/`. The web entrypoint is not a PWA and has no service worker.
 
 ## Overall structure
 - Single-page web GUI (`index.html`) with a two-column main layout.
@@ -40,9 +40,11 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Technical composition
 - GUI implemented as modular TS components under `js/gui/`.
-- Entry point (`js/web-app-entrypoint.ts`) initializes WASM interpreter then GUI.
+- Entry bootstrap (`js/entry/entry-bootstrap.ts`) detects runtime and loads `entry-web.ts` / `entry-tauri.ts`; common startup is in `entry-common.ts`.
 - Worker manager used for parallel execution and abort handling.
-- Persistence module handles user dictionary import/export/state retention via IndexedDB (`js/indexeddb-user-word-store.ts`).
+- Persistence/file I/O go through `js/platform/` adapters:
+  - Web: IndexedDB + browser file APIs (`js/platform/web/*`)
+  - Tauri: app-data JSON persistence + native dialogs/fs (`js/platform/tauri/*`)
 - No service worker / offline-mode integration in the web app entrypoint.
 - GUI behavior test cases are authored in `js/gui/gui-interpreter-test-cases.ts` and run through the in-app `Test` button (no separate cargo target).
 
