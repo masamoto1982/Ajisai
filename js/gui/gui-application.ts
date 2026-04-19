@@ -156,7 +156,46 @@ export const createGUI = (): GUI => {
         };
     };
 
-    const setupEventListeners = (): void => {
+    const setupLayoutEventListeners = (): void => {
+        elements.leftPanelSelect.addEventListener('change', () => {
+            switchArea(elements.leftPanelSelect.value as ViewMode);
+        });
+        elements.rightPanelSelect.addEventListener('change', () => {
+            switchArea(elements.rightPanelSelect.value as ViewMode);
+        });
+        elements.mobilePanelSelect.addEventListener('change', () => {
+            switchArea(elements.mobilePanelSelect.value as ViewMode);
+        });
+
+        elements.dictionarySheetSelect.addEventListener('change', () => {
+            const selectedValue = elements.dictionarySheetSelect.value;
+            doSwitchDictionarySheet(selectedValue);
+        });
+
+        const setupTapToTransition = (
+            target: HTMLElement,
+            activeMode: ViewMode,
+            nextMode: ViewMode
+        ): void => {
+            target.addEventListener('dblclick', (e: MouseEvent) => {
+                if (!mobile.isMobile()) return;
+                if (layoutState.currentMode !== activeMode) return;
+                if ((e.target as HTMLElement).closest('button, a')) return;
+                switchArea(nextMode);
+            });
+        };
+
+        setupTapToTransition(elements.outputDisplay, 'output', 'stack');
+        setupTapToTransition(elements.stackDisplay, 'stack', 'input');
+
+        window.addEventListener('resize', () => {
+            applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
+            syncDictionarySearchVisibility();
+            updateEditorPlaceholder(elements, mobile);
+        });
+    };
+
+    const setupInteractionEventListeners = (): void => {
         elements.runBtn.addEventListener('click', () => {
             executionController.executeCode(editor.extractValue());
         });
@@ -191,21 +230,6 @@ export const createGUI = (): GUI => {
             editor.clear();
         });
 
-        elements.leftPanelSelect.addEventListener('change', () => {
-            switchArea(elements.leftPanelSelect.value as ViewMode);
-        });
-        elements.rightPanelSelect.addEventListener('change', () => {
-            switchArea(elements.rightPanelSelect.value as ViewMode);
-        });
-        elements.mobilePanelSelect.addEventListener('change', () => {
-            switchArea(elements.mobilePanelSelect.value as ViewMode);
-        });
-
-        elements.dictionarySheetSelect.addEventListener('change', () => {
-            const selectedValue = elements.dictionarySheetSelect.value;
-            doSwitchDictionarySheet(selectedValue);
-        });
-
         elements.testBtn?.addEventListener('click', async () => {
             switchArea('output');
             const { createTestRunner } = await import('./gui-test-runner');
@@ -224,24 +248,6 @@ export const createGUI = (): GUI => {
                 editor.focus();
             }
         });
-
-        {
-            const setupTapToTransition = (
-                target: HTMLElement,
-                activeMode: ViewMode,
-                nextMode: ViewMode
-            ): void => {
-                target.addEventListener('dblclick', (e: MouseEvent) => {
-                    if (!mobile.isMobile()) return;
-                    if (layoutState.currentMode !== activeMode) return;
-                    if ((e.target as HTMLElement).closest('button, a')) return;
-                    switchArea(nextMode);
-                });
-            };
-
-            setupTapToTransition(elements.outputDisplay, 'output', 'stack');
-            setupTapToTransition(elements.stackDisplay, 'stack', 'input');
-        }
 
         elements.copyOutputBtn.addEventListener('click', (e: MouseEvent) => {
             e.stopPropagation();
@@ -294,12 +300,6 @@ export const createGUI = (): GUI => {
                 lastTapAt = now;
             }, { passive: true });
         }
-
-        window.addEventListener('resize', () => {
-            applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
-            syncDictionarySearchVisibility();
-            updateEditorPlaceholder(elements, mobile);
-        });
 
         window.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -367,6 +367,12 @@ export const createGUI = (): GUI => {
             },
         });
 
+        // Bind layout-only listeners now so panel selectors, swipe, tap, and
+        // resize remain responsive while the heavier persistence/worker init
+        // continues below. These listeners only depend on `elements`,
+        // `layoutState`, `mobile`, `moduleTabManager`, and `display` — all ready.
+        setupLayoutEventListeners();
+
         persistence = createPersistence({
             showError: (error) => display.renderError(error),
             updateDisplays: updateAllDisplays,
@@ -415,10 +421,9 @@ export const createGUI = (): GUI => {
             updateView: (mode) => switchArea(mode)
         });
 
-        setupEventListeners();
+        setupInteractionEventListeners();
         vocabulary.renderBuiltInWords();
         updateAllDisplays();
-        switchArea('input');
 
         await persistence.loadDatabaseData();
         updateAllDisplays();
