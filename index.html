@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="app-interface.css?v=20260408">
     <link rel="stylesheet" href="debug-borders.css">
 </head>
-<body>
+<body data-active-area="input">
     <a href="#code-input" class="skip-link">Skip to main content</a>
     <div class="container">
         <header role="banner">
@@ -77,7 +77,7 @@
                         <option value="output">Output</option>
                     </select>
                 </div>
-                <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0">
+                <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0" hidden>
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                     <div class="vocabulary-actions">
