@@ -27,8 +27,11 @@ const MOBILE_EDITOR_PLACEHOLDER = [
 ].join('\n');
 
 export interface LayoutState {
+    /** Last mode passed to `switchArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
     currentMode: ViewMode;
+    /** Desktop left column state. Always 'input' or 'output'. Mobile does not read this. */
     currentLeftMode: ViewMode;
+    /** Desktop right column state. Always 'stack' or 'dictionary'. Mobile does not read this. */
     currentRightMode: ViewMode;
 }
 
@@ -48,8 +51,6 @@ const syncMobileSelectorState = (elements: GUIElements, mode: ViewMode): void =>
 };
 
 const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
-    elements.editorPanel.hidden = false;
-    elements.statePanel.hidden = false;
     elements.inputArea.hidden = state.currentLeftMode !== 'input';
     elements.outputArea.hidden = state.currentLeftMode !== 'output';
     elements.stackArea.hidden = state.currentRightMode !== 'stack';
@@ -63,6 +64,7 @@ const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (RIGHT_TAB_MODES.includes(mode)) {
         state.currentRightMode = mode;
         if (mode === 'dictionary') {
+            // Opening the dictionary returns the left column to Input so that clicked words can be inserted.
             state.currentLeftMode = 'input';
         }
     }

@@ -45,6 +45,16 @@
         </header>
 
         <main class="main-layout">
+            <!--
+              Area selectors: desktop uses .area-selector-left / .area-selector-right,
+              mobile uses .area-selector-mobile. Both variants are present in the DOM
+              and CSS @media queries reveal the appropriate one based on viewport width.
+              This avoids re-rendering on window resize.
+
+              The search input is only attached to selectors that can host the
+              Dictionary mode (right / mobile); .area-selector-left has no search
+              input because the left column never shows the dictionary.
+            -->
             <div class="area-selector area-selector-mobile">
                 <label for="mobile-panel-select" class="visually-hidden">Select panel</label>
                 <select id="mobile-panel-select">
@@ -59,7 +69,7 @@
                 </div>
             </div>
 
-            <div id="editor-panel" class="panel">
+            <div id="editor-panel">
                 <div class="area-selector area-selector-left">
                     <label for="left-panel-select" class="visually-hidden">Select left panel</label>
                     <select id="left-panel-select">
@@ -86,7 +96,7 @@
                 </section>
             </div>
 
-            <div id="state-panel" class="panel">
+            <div id="state-panel">
                 <div class="area-selector area-selector-right">
                     <div class="right-mode-selector">
                         <label for="right-panel-select" class="visually-hidden">Select right panel</label>
@@ -103,6 +113,7 @@
                 <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                    <!-- Empty slot for future stack-related buttons. Preserved for structural symmetry with other panels; do not remove. -->
                     <div class="vocabulary-actions"></div>
                 </section>
 
