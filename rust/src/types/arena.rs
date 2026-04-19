@@ -1,4 +1,3 @@
-use super::display::is_string_like;
 use super::fraction::Fraction;
 use super::{DisplayHint, Token, Value, ValueData};
 use num_traits::ToPrimitive;
@@ -99,35 +98,30 @@ impl ValueArena {
 pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
     fn alloc_recursive(value: &Value, arena: &mut ValueArena) -> NodeId {
         match &value.data {
-            ValueData::Nil => arena.alloc_nil(DisplayHint::Auto),
-            ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), DisplayHint::Auto),
+            ValueData::Nil => arena.alloc_nil(value.hint),
+            ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::Vector(children) => {
                 let child_ids = children
                     .iter()
                     .map(|child| alloc_recursive(child, arena))
                     .collect();
-                let hint = if children.len() > 1 && is_string_like(children) {
-                    DisplayHint::String
-                } else {
-                    DisplayHint::Auto
-                };
-                arena.alloc_vector(child_ids, hint)
+                arena.alloc_vector(child_ids, value.hint)
             }
             ValueData::Record { pairs, index } => {
                 let pair_ids = pairs
                     .iter()
                     .map(|pair| alloc_recursive(pair, arena))
                     .collect();
-                arena.alloc_record(pair_ids, index.clone(), DisplayHint::Auto)
+                arena.alloc_record(pair_ids, index.clone(), value.hint)
             }
             ValueData::CodeBlock(tokens) => {
-                arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), DisplayHint::Auto)
+                arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), value.hint)
             }
             ValueData::ProcessHandle(id) => {
-                arena.alloc_node(NodeKind::ProcessHandle(*id), DisplayHint::Auto)
+                arena.alloc_node(NodeKind::ProcessHandle(*id), value.hint)
             }
             ValueData::SupervisorHandle(id) => {
-                arena.alloc_node(NodeKind::SupervisorHandle(*id), DisplayHint::Auto)
+                arena.alloc_node(NodeKind::SupervisorHandle(*id), value.hint)
             }
         }
     }
@@ -140,14 +134,26 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
 pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
     fn rebuild_recursive(arena: &ValueArena, id: NodeId) -> Value {
         match arena.kind(id) {
-            NodeKind::Nil => Value::nil(),
-            NodeKind::Scalar(f) => Value::from_fraction(f.clone()),
+            NodeKind::Nil => Value {
+                data: ValueData::Nil,
+                hint: arena.hint(id),
+            },
+            NodeKind::Scalar(f) => Value {
+                data: ValueData::Scalar(f.clone()),
+                hint: match arena.hint(id) {
+                    DisplayHint::DateTime => DisplayHint::DateTime,
+                    _ => DisplayHint::Number,
+                },
+            },
             NodeKind::Vector { children } => {
                 let values = children
                     .iter()
                     .map(|child_id| rebuild_recursive(arena, *child_id))
                     .collect();
-                Value::from_children(values)
+                Value {
+                    data: ValueData::Vector(Rc::new(values)),
+                    hint: arena.hint(id),
+                }
             }
             NodeKind::Record { pairs, index } => {
                 let values = pairs
@@ -159,11 +165,21 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                         pairs: Rc::new(values),
                         index: index.clone(),
                     },
+                    hint: arena.hint(id),
                 }
             }
-            NodeKind::CodeBlock(tokens) => Value::from_code_block(tokens.clone()),
-            NodeKind::ProcessHandle(id) => Value::from_process_handle(*id),
-            NodeKind::SupervisorHandle(id) => Value::from_supervisor_handle(*id),
+            NodeKind::CodeBlock(tokens) => Value {
+                data: ValueData::CodeBlock(tokens.clone()),
+                hint: arena.hint(id),
+            },
+            NodeKind::ProcessHandle(handle_id) => Value {
+                data: ValueData::ProcessHandle(*handle_id),
+                hint: arena.hint(id),
+            },
+            NodeKind::SupervisorHandle(handle_id) => Value {
+                data: ValueData::SupervisorHandle(*handle_id),
+                hint: arena.hint(id),
+            },
         }
     }
 
@@ -347,5 +363,69 @@ mod tests {
         assert!(json.is_array(), "root should be array, got {json}");
         let first = json.as_array().expect("root array")[0].clone();
         assert!(first.is_array(), "nested numeric vector must stay array");
+    }
+
+    #[test]
+    fn two_element_numeric_vector_stays_number_hint() {
+        let value = Value::from_children(vec![Value::from_int(65), Value::from_int(66)]);
+        let (arena, root) = value_to_arena(&value);
+        assert_ne!(arena.hint(root), DisplayHint::String);
+    }
+
+    #[test]
+    fn deeply_nested_numeric_vector_preserves_number_hint() {
+        let mut inner = Value::from_children(vec![Value::from_int(65), Value::from_int(66)]);
+        for _ in 0..14 {
+            inner = Value::from_children(vec![inner]);
+        }
+
+        let (arena, root) = value_to_arena(&inner);
+        let mut current = root;
+        for depth in 0..15 {
+            let children = arena.children(current);
+            if depth < 14 {
+                assert_eq!(children.len(), 1, "depth {depth}: expected one child");
+                assert_ne!(arena.hint(current), DisplayHint::String);
+                current = children[0];
+            } else {
+                assert_ne!(arena.hint(current), DisplayHint::String);
+            }
+        }
+    }
+
+    #[test]
+    fn nested_mixed_numeric_vectors_stay_numeric() {
+        let value = Value::from_children(vec![
+            Value::from_children(vec![
+                Value::from_children(vec![Value::from_int(88)]),
+                Value::from_children(vec![Value::from_int(99)]),
+                Value::from_children(vec![Value::from_int(100)]),
+            ]),
+            Value::from_children(vec![
+                Value::from_children(vec![Value::from_int(50)]),
+                Value::from_children(vec![Value::from_int(32)]),
+                Value::from_children(vec![Value::from_int(44)]),
+                Value::from_int(22),
+            ]),
+        ]);
+
+        let (arena, _root) = value_to_arena(&value);
+        for id in 0..arena.nodes.len() as u32 {
+            if let NodeKind::Vector { children } = arena.kind(id) {
+                let all_plain_ints = children.iter().all(|c| {
+                    matches!(arena.kind(*c), NodeKind::Scalar(f) if f.is_integer())
+                });
+                if all_plain_ints && !children.is_empty() {
+                    assert_ne!(arena.hint(id), DisplayHint::String, "node {id} incorrectly string");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn explicit_string_literal_retains_string_hint() {
+        let mut arena = ValueArena::new();
+        let root = arena.alloc_string("AB");
+        assert_eq!(arena.hint(root), DisplayHint::String);
     }
 }

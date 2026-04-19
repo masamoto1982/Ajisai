@@ -7,6 +7,7 @@ impl Value {
     pub fn nil() -> Self {
         Self {
             data: ValueData::Nil,
+            hint: DisplayHint::Nil,
         }
     }
 
@@ -14,6 +15,7 @@ impl Value {
     pub fn from_fraction(f: Fraction) -> Self {
         Self {
             data: ValueData::Scalar(f),
+            hint: DisplayHint::Number,
         }
     }
 
@@ -21,6 +23,7 @@ impl Value {
     pub fn from_int(n: i64) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
+            hint: DisplayHint::Number,
         }
     }
 
@@ -28,6 +31,7 @@ impl Value {
     pub fn from_bool(b: bool) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
+            hint: DisplayHint::Number,
         }
     }
 
@@ -41,6 +45,7 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(children)),
+            hint: DisplayHint::String,
         }
     }
 
@@ -52,6 +57,15 @@ impl Value {
     pub fn from_children(children: Vec<Value>) -> Self {
         Self {
             data: ValueData::Vector(Rc::new(children)),
+            hint: DisplayHint::Auto,
+        }
+    }
+
+    #[inline]
+    pub fn from_children_with_hint(children: Vec<Value>, hint: DisplayHint) -> Self {
+        Self {
+            data: ValueData::Vector(Rc::new(children)),
+            hint,
         }
     }
 
@@ -61,6 +75,17 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
+            hint: DisplayHint::Auto,
+        }
+    }
+
+    pub fn from_vector_with_hint(values: Vec<Value>, hint: DisplayHint) -> Self {
+        if values.is_empty() {
+            return Self::nil();
+        }
+        Self {
+            data: ValueData::Vector(Rc::new(values)),
+            hint,
         }
     }
 
@@ -71,7 +96,10 @@ impl Value {
 
     #[inline]
     pub fn from_datetime(f: Fraction) -> Self {
-        Self::from_fraction(f)
+        Self {
+            data: ValueData::Scalar(f),
+            hint: DisplayHint::DateTime,
+        }
     }
 
     #[inline]
@@ -327,12 +355,14 @@ impl Value {
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
         Self {
             data: ValueData::CodeBlock(tokens),
+            hint: DisplayHint::Auto,
         }
     }
 
     pub fn from_process_handle(id: u64) -> Self {
         Self {
             data: ValueData::ProcessHandle(id),
+            hint: DisplayHint::Auto,
         }
     }
 
@@ -346,6 +376,7 @@ impl Value {
     pub fn from_supervisor_handle(id: u64) -> Self {
         Self {
             data: ValueData::SupervisorHandle(id),
+            hint: DisplayHint::Auto,
         }
     }
 

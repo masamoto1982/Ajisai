@@ -51,14 +51,19 @@ impl Interpreter {
         while i < tokens.len() {
             match &tokens[i] {
                 Token::VectorStart => {
-                    let (nested_values, consumed, _nested_hint) =
+                    // Hint 伝播フロー:
+                    // collect_vector_with_depth(inner) -> nested_hint
+                    //   -> Value::from_vector_with_hint(nested_values, nested_hint)
+                    //   -> value_to_arena が Value.hint をそのまま Node hint として採用
+                    // これにより、ネスト深度に依存せず明示 hint を維持する。
+                    let (nested_values, consumed, nested_hint) =
                         self.collect_vector_with_depth(tokens, i, depth + 1)?;
                     if nested_values.is_empty() {
                         return Err(AjisaiError::from(
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
-                    values.push(Value::from_vector(nested_values));
+                    values.push(Value::from_vector_with_hint(nested_values, nested_hint));
                     has_other = true;
                     i += consumed;
                 }

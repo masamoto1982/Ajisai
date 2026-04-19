@@ -124,6 +124,10 @@ pub struct ValueArena {
    - 明示文字列のみ string hint として表示される。
 3. **深いネスト**
    - 既存次元制限撤廃前提で 10+ 深度でも hint が崩れない。
+4. **2要素数値ベクター回帰**
+   - `[65 66]` のような codepoint 範囲内整数列でも、明示 string hint が無い限り string 判定しない。
+5. **WASM 境界 hint 回帰**
+   - `arena_node_to_js` で子再帰時に `None` を渡しても、NodeId ごとの hint が維持される。
 
 ### 5.2 互換性テスト
 
@@ -176,3 +180,18 @@ pub struct ValueArena {
 - [ ] 再現ケースの回帰テストが追加・成功
 - [ ] 既存主要テストが成功
 - [ ] ドキュメント（本書）と実装が同期
+
+---
+
+## 9. 無制限ネスト対応メモ（DisplayHint 伝播）
+
+- 旧 10 次元制限は撤廃済みであり、現在はメモリ許容範囲でネスト可能。
+- `collect_vector_with_depth` は再帰結果の `nested_hint` を破棄せず、内側 Value に保持すること。
+- `value_to_arena` は `is_string_like` 推論で hint を再決定せず、`Value.hint` をそのまま SoA (`hints[NodeId]`) へ転写すること。
+- `is_string_like` は `DisplayHint::Auto` 表示時の fallback 専用とし、変換経路（Value -> Arena / JSON / WASM）の判定には使わない。
+
+### 9.1 GUI 手動確認手順（回帰確認）
+
+1. GUI を起動し、`examples/nested-vector-brackets-sample-test.ajisai` を読み込む。
+2. テキストエディタでネストした数値ベクター（例: `[[[[[65 66]]]]]`）を評価する。
+3. Stack 表示で `'...'` 形式へ変換されず、数値ベクター表示 (`[ 65 66 ]` など) が維持されることを確認する。

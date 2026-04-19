@@ -29,7 +29,7 @@ pub(crate) fn check_in_place_candidate(value: &Value, flow: Option<&FlowToken>) 
 mod tests {
     use super::*;
     use crate::types::fraction::Fraction;
-    use crate::types::ValueData;
+    use crate::types::{DisplayHint, ValueData};
     use std::rc::Rc;
 
     fn scalar(n: i64) -> Value {
@@ -141,9 +141,11 @@ mod tests {
         let children = Rc::new(vec![scalar(1), scalar(2)]);
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
+            hint: DisplayHint::Auto,
         };
         let _v2 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
+            hint: DisplayHint::Auto,
         };
 
         let flow = fresh_flow(&v1);
@@ -158,6 +160,7 @@ mod tests {
         let children = Rc::new(vec![scalar(1), scalar(2)]);
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
+            hint: DisplayHint::Auto,
         };
 
         drop(children);
