@@ -19,7 +19,8 @@ import {
     applyAreaState,
     updateHighlights,
     updateEditorPlaceholder,
-    LayoutState
+    LayoutState,
+    ApplyAreaStateDeps
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
 
@@ -103,9 +104,17 @@ export const createGUI = (): GUI => {
         elements.mobilePanelDictionarySearch.hidden = !isMobileDictionary;
     };
 
+    const buildApplyAreaStateDeps = (): ApplyAreaStateDeps => ({
+        elements,
+        state: layoutState,
+        mobile,
+        moduleTabManager,
+        switchDictionarySheet: doSwitchDictionarySheet,
+    });
+
     const switchArea = (mode: ViewMode): void => {
         layoutState.currentMode = mode;
-        applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, mode);
+        applyAreaState(buildApplyAreaStateDeps(), mode);
         syncDictionarySearchVisibility();
     };
 
@@ -189,7 +198,7 @@ export const createGUI = (): GUI => {
         setupTapToTransition(elements.stackDisplay, 'stack', 'input');
 
         window.addEventListener('resize', () => {
-            applyAreaState(elements, layoutState, mobile, moduleTabManager, doSwitchDictionarySheet, layoutState.currentMode);
+            applyAreaState(buildApplyAreaStateDeps(), layoutState.currentMode);
             syncDictionarySearchVisibility();
             updateEditorPlaceholder(elements, mobile);
         });

@@ -70,32 +70,40 @@ const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     }
 };
 
-export const applyAreaState = (
-    elements: GUIElements,
-    state: LayoutState,
-    mobile: MobileHandler,
-    moduleTabManager: ModuleTabManager,
-    switchDictionarySheet: (sheetId: string) => void,
-    mode: ViewMode
-): void => {
-    if (mobile.isMobile()) {
-        mobile.updateView(mode);
-        document.body.dataset.activeArea = mode;
-        syncMobileSelectorState(elements, mode);
-        return;
+export interface ApplyAreaStateDeps {
+    readonly elements: GUIElements;
+    readonly state: LayoutState;
+    readonly mobile: MobileHandler;
+    readonly moduleTabManager: ModuleTabManager;
+    readonly switchDictionarySheet: (sheetId: string) => void;
+}
+
+const applyMobileAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
+    deps.mobile.updateView(mode);
+    document.body.dataset.activeArea = mode;
+    syncMobileSelectorState(deps.elements, mode);
+};
+
+const applyDesktopAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
+    updateDesktopModes(deps.state, mode);
+
+    const currentSheet = deps.elements.dictionarySheetSelect?.value;
+    if (currentSheet?.startsWith('module-') && !deps.moduleTabManager.lookupModuleArea(currentSheet)) {
+        deps.elements.dictionarySheetSelect.value = 'core';
+        deps.switchDictionarySheet('core');
     }
 
-    updateDesktopModes(state, mode);
+    syncDesktopLayout(deps.elements, deps.state);
+    document.body.dataset.activeArea = deps.state.currentRightMode;
+    syncSelectorState(deps.elements, deps.state.currentLeftMode, deps.state.currentRightMode);
+};
 
-    const currentSheet = elements.dictionarySheetSelect?.value;
-    if (currentSheet?.startsWith('module-') && !moduleTabManager.lookupModuleArea(currentSheet)) {
-        elements.dictionarySheetSelect.value = 'core';
-        switchDictionarySheet('core');
+export const applyAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
+    if (deps.mobile.isMobile()) {
+        applyMobileAreaState(deps, mode);
+    } else {
+        applyDesktopAreaState(deps, mode);
     }
-
-    syncDesktopLayout(elements, state);
-    document.body.dataset.activeArea = state.currentRightMode;
-    syncSelectorState(elements, state.currentLeftMode, state.currentRightMode);
 };
 
 export const updateHighlights = (elements: GUIElements, content: string): void => {
