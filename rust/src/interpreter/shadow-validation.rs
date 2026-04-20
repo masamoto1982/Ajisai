@@ -44,10 +44,14 @@ impl Interpreter {
         let saved_target = self.operation_target_mode;
         let saved_consumption = self.consumption_mode;
         let saved_safe_mode = self.safe_mode;
+        let saved_output = std::mem::take(&mut self.output_buffer);
+        let saved_io_output = std::mem::take(&mut self.io_output_buffer);
 
         let fast_result = execute_compiled_plan(self, compiled);
         let fast_stack = self.stack.clone();
         let fast_hints = self.semantic_registry.stack_hints.clone();
+        let fast_output = std::mem::take(&mut self.output_buffer);
+        let fast_io_output = std::mem::take(&mut self.io_output_buffer);
 
         self.stack = saved_stack;
         self.semantic_registry.stack_hints = saved_hints;
@@ -58,12 +62,19 @@ impl Interpreter {
         let plain_result = self.execute_guard_structure(&def.lines);
         let plain_stack = self.stack.clone();
         let plain_hints = self.semantic_registry.stack_hints.clone();
+        let plain_output = std::mem::take(&mut self.output_buffer);
+        let plain_io_output = std::mem::take(&mut self.io_output_buffer);
+
+        self.output_buffer = saved_output;
+        self.io_output_buffer = saved_io_output;
 
         match (&fast_result, &plain_result) {
             (Ok(()), Ok(())) if fast_stack == plain_stack => {
                 self.runtime_metrics.shadow_validation_success_count += 1;
                 self.stack = fast_stack;
                 self.semantic_registry.stack_hints = fast_hints;
+                self.output_buffer.push_str(&fast_output);
+                self.io_output_buffer.push_str(&fast_io_output);
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: false,
@@ -74,6 +85,8 @@ impl Interpreter {
                 self.push_hedged_trace(format!("shadow:fallback word={} -> plain", resolved_name));
                 self.stack = plain_stack;
                 self.semantic_registry.stack_hints = plain_hints;
+                self.output_buffer.push_str(&plain_output);
+                self.io_output_buffer.push_str(&plain_io_output);
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: true,
@@ -86,6 +99,8 @@ impl Interpreter {
             (Ok(()), Err(_)) => {
                 self.stack = fast_stack;
                 self.semantic_registry.stack_hints = fast_hints;
+                self.output_buffer.push_str(&fast_output);
+                self.io_output_buffer.push_str(&fast_io_output);
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: false,
