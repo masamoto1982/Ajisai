@@ -29,14 +29,14 @@ Desktop (Tauri) build channel is available in the same repository (`src-tauri/`)
 
 ### 水としての分数
 
-Ajisai の数はすべて分数である。近似しない。丸めない。  
+Ajisaiの数はすべて分数である。近似しない。丸めない。  
 水がどの器を通っても体積を失わないように、値は計算を通過しても変質しない。
 
 → 技術的な詳細: [SPECIFICATION.md §4.2](SPECIFICATION.md#42-scalar-exact-rational-arithmetic)
 
 ### 器としての Vector
 
-Vector は器だ。値を順序をもって収める、形ある入れ物。  
+Vectorは器だ。値を順序をもって収める、形ある入れ物。  
 器は入れ子にできる。器の中に器を置ける。  
 それでも本質は変わらない——値を受け取り、保持し、渡す。
 
@@ -56,14 +56,14 @@ Vector は器だ。値を順序をもって収める、形ある入れ物。
 
 **操作対象モード** —— 水路のどこに作用するか。水面の一点か、水路全体か。  
 **消費モード** —— 流れは飲み込まれるか、それとも分流するか。  
-分流（`,,`）は流れを失わない。源が残りながら、新たな流れも生まれる。
+分流（`,,`）は流れを失わない。源を残しつつ、新たな流れを生み出す。
 
 → 技術的な詳細: [SPECIFICATION.md §6](SPECIFICATION.md#6-modifiers)
 
 ### 泡としての NIL
 
 泡は水ではない。しかし水のある場所に現れる。  
-NIL は値の不在——何かがあるべき場所に何もないときの形。  
+NILは値の不在——何かがあるべき場所に何もないときの形。  
 `~` をつけた操作は乱流を泡に変える。氾濫は起きない。上流は守られる。
 
 → 技術的な詳細: [SPECIFICATION.md §4.5](SPECIFICATION.md#45-nil), [§6.3](SPECIFICATION.md#63-safe-mode-modifier)
