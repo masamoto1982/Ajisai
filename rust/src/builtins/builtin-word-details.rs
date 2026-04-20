@@ -12,7 +12,7 @@ use super::detail_lookup_vector_ops::lookup_detail_vector_ops;
 
 pub fn lookup_builtin_detail(name: &str) -> String {
     let Some(spec) = lookup_builtin_spec(name) else {
-        return format!("'{}' の詳細情報はありません。", name);
+        return format!("# {} - 詳細情報なし\n\n## 機能\n'{}' は組み込みワードではないか、詳細情報が登録されていません。", name, name);
     };
 
     let detail = match spec.detail_group {
@@ -30,7 +30,11 @@ pub fn lookup_builtin_detail(name: &str) -> String {
     }
 
     format!(
-        "# {} - {}\n\n## カテゴリ\n{}\n\n## シグネチャタイプ\n{}\n\n## 構文\n{}\n",
-        spec.name, spec.short_description, spec.category, spec.signature_type, spec.syntax
+        "# {name} - {description}\n\n## 機能\n{description}（カテゴリ: {category}, シグネチャ: {signature}）\n\n## 使用例\n{syntax}\n",
+        name = spec.name,
+        description = spec.short_description,
+        category = spec.category,
+        signature = spec.signature_type,
+        syntax = spec.syntax,
     )
 }
