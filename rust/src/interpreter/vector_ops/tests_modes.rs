@@ -298,6 +298,101 @@ async fn test_modifier_order_independence() {
 }
 
 #[tokio::test]
+async fn test_insert_stack_consume_modifies_in_place() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] .. INSERT").await;
+    assert!(result.is_ok(), "Stack+Consume INSERT should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        4,
+        "Stack+Consume INSERT should insert one element in-place"
+    );
+    let first = interp.stack[0]
+        .as_scalar()
+        .expect("inserted element should be scalar");
+    assert_eq!(first.to_i64(), Some(99), "inserted element should be at index 0");
+}
+
+#[tokio::test]
+async fn test_insert_stack_keep_preserves_original_and_appends_modified() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] ,, .. INSERT").await;
+    assert!(result.is_ok(), "Stack+Keep INSERT should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        7,
+        "Stack+Keep INSERT should preserve 3 originals and append 4 modified elements"
+    );
+    let original_first = &interp.stack[0];
+    assert!(original_first.is_vector(), "original stack head preserved");
+    let inserted = interp.stack[3]
+        .as_scalar()
+        .expect("inserted element should be scalar");
+    assert_eq!(inserted.to_i64(), Some(99), "modified copy head should be the inserted element");
+}
+
+#[tokio::test]
+async fn test_remove_stack_consume_modifies_in_place() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 ] .. REMOVE").await;
+    assert!(result.is_ok(), "Stack+Consume REMOVE should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        2,
+        "Stack+Consume REMOVE should drop one element in-place"
+    );
+}
+
+#[tokio::test]
+async fn test_remove_stack_keep_preserves_original_and_appends_modified() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 ] ,, .. REMOVE").await;
+    assert!(result.is_ok(), "Stack+Keep REMOVE should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        5,
+        "Stack+Keep REMOVE should preserve 3 originals and append 2 modified elements"
+    );
+}
+
+#[tokio::test]
+async fn test_replace_stack_consume_modifies_in_place() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] .. REPLACE").await;
+    assert!(result.is_ok(), "Stack+Consume REPLACE should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        3,
+        "Stack+Consume REPLACE should keep stack size, modifying one slot"
+    );
+    let replaced = interp.stack[1]
+        .as_scalar()
+        .expect("replaced slot should be scalar");
+    assert_eq!(replaced.to_i64(), Some(99));
+}
+
+#[tokio::test]
+async fn test_replace_stack_keep_preserves_original_and_appends_modified() {
+    let mut interp = Interpreter::new();
+    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] ,, .. REPLACE").await;
+    assert!(result.is_ok(), "Stack+Keep REPLACE should succeed: {:?}", result);
+    assert_eq!(
+        interp.stack.len(),
+        6,
+        "Stack+Keep REPLACE should preserve 3 originals and append 3 modified elements"
+    );
+    let original_middle = &interp.stack[1];
+    assert!(
+        original_middle.is_vector(),
+        "original [ 20 ] at index 1 must be preserved"
+    );
+    let modified_middle = interp.stack[4]
+        .as_scalar()
+        .expect("modified copy middle should be scalar");
+    assert_eq!(modified_middle.to_i64(), Some(99));
+}
+
+#[tokio::test]
 async fn test_modes_auto_reset_after_execution() {
     let mut interp = Interpreter::new();
 
