@@ -67,7 +67,7 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 
 const MOBILE_BREAKPOINT = 768;
 const MAX_SUGGESTIONS = 10;
-const MIN_SUGGESTION_TRIGGER_LENGTH = 4;
+const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
 const extractToken = (
