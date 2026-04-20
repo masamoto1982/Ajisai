@@ -165,6 +165,7 @@ pub(crate) fn arena_node_to_js(
     let hint_str: &str = match effective_hint {
         DisplayHint::Auto => "auto",
         DisplayHint::Number => "number",
+        DisplayHint::Interval => "interval",
         DisplayHint::String => "string",
         DisplayHint::Boolean => "boolean",
         DisplayHint::DateTime => "datetime",
@@ -275,6 +276,7 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
     let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
     match hint_js.as_string().as_deref() {
         Some("number") => DisplayHint::Number,
+        Some("interval") => DisplayHint::Interval,
         Some("string") => DisplayHint::String,
         Some("boolean") => DisplayHint::Boolean,
         Some("datetime") => DisplayHint::DateTime,

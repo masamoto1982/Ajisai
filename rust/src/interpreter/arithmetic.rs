@@ -1,11 +1,14 @@
-use crate::interpreter::{Interpreter, OperationTargetMode, ConsumptionMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, extract_operands_with_flow, push_result, push_flow_result};
+use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::optimization_hooks;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
-use crate::types::{FlowToken, Value, ValueData};
+use crate::interpreter::value_extraction_helpers::{
+    extract_integer_from_value, extract_operands_with_flow, push_flow_result, push_result,
+};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::{FlowToken, Value, ValueData};
 
 fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
     match &val.data {
@@ -16,7 +19,9 @@ fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
         ValueData::Vector(_) => None,
         ValueData::Nil => None,
         ValueData::Record { .. } => None,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            None
+        }
     }
 }
 
@@ -32,15 +37,17 @@ where
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let (operands, flow_tokens): (Vec<Value>, Option<Vec<FlowToken>>) = extract_operands_with_flow(interp, 2)?;
+            let (operands, flow_tokens): (Vec<Value>, Option<Vec<FlowToken>>) =
+                extract_operands_with_flow(interp, 2)?;
             let a_val = &operands[0];
             let b_val = &operands[1];
 
-
-            let _in_place_candidates = flow_tokens.as_ref().map(|tokens| [
-                optimization_hooks::check_in_place_candidate(a_val, tokens.get(0)),
-                optimization_hooks::check_in_place_candidate(b_val, tokens.get(1)),
-            ]);
+            let _in_place_candidates = flow_tokens.as_ref().map(|tokens| {
+                [
+                    optimization_hooks::check_in_place_candidate(a_val, tokens.get(0)),
+                    optimization_hooks::check_in_place_candidate(b_val, tokens.get(1)),
+                ]
+            });
 
             let result = match apply_binary_broadcast(a_val, b_val, op) {
                 Ok(r) => r,
@@ -60,7 +67,7 @@ where
             } else {
                 push_result(interp, result);
             }
-        },
+        }
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -78,9 +85,15 @@ where
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect::<Vec<Value>>()
+                interp.stack[stack_len - count..]
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<Value>>()
             } else {
-                interp.stack.drain(interp.stack.len() - count..).collect::<Vec<Value>>()
+                interp
+                    .stack
+                    .drain(interp.stack.len() - count..)
+                    .collect::<Vec<Value>>()
             };
 
             if items.iter().any(|v| !is_scalar_value(v)) {
@@ -91,8 +104,8 @@ where
                 return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
             }
 
-
-            let _in_place_candidates = items.iter()
+            let _in_place_candidates = items
+                .iter()
                 .map(|item| optimization_hooks::check_in_place_candidate(item, None))
                 .collect::<Vec<_>>();
 
@@ -114,12 +127,23 @@ where
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
+        let a = interp.stack[stack_len - 2].clone();
+        let b = interp.stack[stack_len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(interval_to_value(ai.add(&bi)));
+            return Ok(());
+        }
+    }
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_add(a, b) {
-
-
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -132,10 +156,9 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if let Some(result) = simd_ops::apply_simd_scalar_add(a, b)
-            .or_else(|| simd_ops::apply_simd_scalar_add(b, a))
+        if let Some(result) =
+            simd_ops::apply_simd_scalar_add(a, b).or_else(|| simd_ops::apply_simd_scalar_add(b, a))
         {
-
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -154,12 +177,23 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
+        let a = interp.stack[stack_len - 2].clone();
+        let b = interp.stack[stack_len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(interval_to_value(ai.sub(&bi)));
+            return Ok(());
+        }
+    }
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_sub(a, b) {
-
-
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -178,12 +212,23 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
+        let a = interp.stack[stack_len - 2].clone();
+        let b = interp.stack[stack_len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(interval_to_value(ai.mul(&bi)));
+            return Ok(());
+        }
+    }
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
         let a = &interp.stack[stack_len - 2];
         let b = &interp.stack[stack_len - 1];
 
         if let Some(result) = simd_ops::apply_simd_mul(a, b) {
-
-
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -196,10 +241,9 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if let Some(result) = simd_ops::apply_simd_scalar_mul(a, b)
-            .or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
+        if let Some(result) =
+            simd_ops::apply_simd_scalar_mul(a, b).or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
         {
-
             let _in_place_candidates = [
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
@@ -216,6 +260,20 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = interp.stack[stack_len - 2].clone();
+        let b = interp.stack[stack_len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            let result = ai.div(&bi)?;
+            interp.stack.push(interval_to_value(result));
+            return Ok(());
+        }
+    }
     apply_binary_arithmetic(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)

@@ -10,8 +10,8 @@ use super::compiled_plan::{
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
-    execute_lookup, hash, higher_order, higher_order_fold, io, logic, modules, random, sort,
-    tensor_cmds, vector_ops, Interpreter,
+    execute_lookup, hash, higher_order, higher_order_fold, interval_ops, io, logic, modules,
+    random, sort, tensor_cmds, vector_ops, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -257,6 +257,13 @@ impl Interpreter {
             BuiltinExecutorKey::Floor => tensor_cmds::op_floor(self),
             BuiltinExecutorKey::Ceil => tensor_cmds::op_ceil(self),
             BuiltinExecutorKey::Round => tensor_cmds::op_round(self),
+            BuiltinExecutorKey::Sqrt => interval_ops::op_sqrt(self),
+            BuiltinExecutorKey::SqrtEps => interval_ops::op_sqrt_eps(self),
+            BuiltinExecutorKey::Interval => interval_ops::op_interval(self),
+            BuiltinExecutorKey::Lower => interval_ops::op_lower(self),
+            BuiltinExecutorKey::Upper => interval_ops::op_upper(self),
+            BuiltinExecutorKey::Width => interval_ops::op_width(self),
+            BuiltinExecutorKey::IsExact => interval_ops::op_is_exact(self),
             BuiltinExecutorKey::Mod => tensor_cmds::op_mod(self),
             BuiltinExecutorKey::Str => cast::op_str(self),
             BuiltinExecutorKey::Num => cast::op_num(self),

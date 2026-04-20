@@ -8,7 +8,6 @@ impl fmt::Display for Value {
     }
 }
 
-
 pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
     match hint {
         DisplayHint::Nil => {
@@ -20,9 +19,27 @@ pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
         }
         DisplayHint::Auto => format_value_auto(value),
         DisplayHint::Number => format_value_recursive(&value.data, 0),
+        DisplayHint::Interval => format_as_interval(value),
         DisplayHint::String => format_as_string(&value.data),
         DisplayHint::Boolean => format_as_boolean(&value.data),
         DisplayHint::DateTime => format_as_datetime(&value.data),
+    }
+}
+
+fn format_as_interval(value: &Value) -> String {
+    match &value.data {
+        ValueData::Vector(v) if v.len() == 2 => {
+            let lo = match &v[0].data {
+                ValueData::Scalar(f) => format_fraction(f),
+                _ => format_value_recursive(&v[0].data, 0),
+            };
+            let hi = match &v[1].data {
+                ValueData::Scalar(f) => format_fraction(f),
+                _ => format_value_recursive(&v[1].data, 0),
+            };
+            format!("[{}, {}]", lo, hi)
+        }
+        _ => format_value_recursive(&value.data, 0),
     }
 }
 
@@ -228,7 +245,6 @@ fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
         ValueData::Scalar(f) => {
-
             if f.is_integer() {
                 format!("@{}", f.numerator())
             } else {

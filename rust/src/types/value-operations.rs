@@ -1,4 +1,5 @@
 use super::fraction::Fraction;
+use super::interval::Interval;
 use super::{DisplayHint, Token, Value, ValueData};
 use std::rc::Rc;
 
@@ -95,6 +96,17 @@ impl Value {
     }
 
     #[inline]
+    pub fn from_interval(interval: Interval) -> Self {
+        Self {
+            data: ValueData::Vector(Rc::new(vec![
+                Value::from_fraction(interval.lo),
+                Value::from_fraction(interval.hi),
+            ])),
+            hint: DisplayHint::Interval,
+        }
+    }
+
+    #[inline]
     pub fn from_datetime(f: Fraction) -> Self {
         Self {
             data: ValueData::Scalar(f),
@@ -123,7 +135,9 @@ impl Value {
             ValueData::Scalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
             ValueData::Record { pairs, .. } => Rc::strong_count(pairs) == 1,
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => false,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => false,
         }
     }
 
@@ -135,7 +149,9 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => true,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => true,
         }
     }
 
@@ -159,7 +175,11 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
             ValueData::Scalar(_) if index == 0 => Some(self),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -168,7 +188,11 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).get_mut(index)
             }
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -183,7 +207,9 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
             ValueData::Scalar(_) => Some(self),
             ValueData::Nil => None,
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -199,21 +225,31 @@ impl Value {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(Rc::new(vec![old, child]));
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => {}
         }
     }
 
     pub fn pop_child(&mut self) -> Option<Value> {
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
     pub fn insert_child(&mut self, index: usize, child: Value) {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => return,
         };
         if index <= v.len() {
             v.insert(index, child);
@@ -223,7 +259,11 @@ impl Value {
     pub fn remove_child(&mut self, index: usize) -> Option<Value> {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => return None,
         };
         if index < v.len() {
             Some(v.remove(index))
@@ -235,7 +275,11 @@ impl Value {
     pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => return None,
         };
         if index < v.len() {
             Some(std::mem::replace(&mut v[index], child))
@@ -248,7 +292,12 @@ impl Value {
     pub fn as_scalar(&self) -> Option<&Fraction> {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::Vector(_) | ValueData::Record { .. } | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Vector(_)
+            | ValueData::Record { .. }
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -256,7 +305,12 @@ impl Value {
     pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::Vector(_) | ValueData::Record { .. } | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Vector(_)
+            | ValueData::Record { .. }
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -274,7 +328,11 @@ impl Value {
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -282,7 +340,11 @@ impl Value {
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
-            ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
         }
     }
 
@@ -301,7 +363,9 @@ impl Value {
                     child.collect_fractions_flat_into(buf);
                 }
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => {}
         }
     }
 
@@ -312,7 +376,9 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().map(|c| c.count_fractions()).sum()
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => 0,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => 0,
         }
     }
 
@@ -335,7 +401,9 @@ impl Value {
                     }
                 }
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec![],
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => vec![],
         }
     }
 
@@ -385,7 +453,9 @@ impl Value {
             ValueData::Nil => DisplayHint::Nil,
             ValueData::Scalar(_) => DisplayHint::Number,
             ValueData::Vector(_) | ValueData::Record { .. } => DisplayHint::Auto,
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => DisplayHint::Auto,
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => DisplayHint::Auto,
         }
     }
 }

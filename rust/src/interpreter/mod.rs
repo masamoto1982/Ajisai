@@ -24,6 +24,7 @@ pub mod hash;
 pub mod higher_order;
 #[path = "higher-order-fold-operations.rs"]
 pub mod higher_order_fold;
+pub mod interval_ops;
 pub mod io;
 pub mod json;
 pub mod logic;
@@ -34,11 +35,11 @@ pub(crate) mod naming_convention_checker;
 pub(crate) mod optimization_hooks;
 #[path = "quantized-block.rs"]
 pub mod quantized_block;
+pub mod random;
 #[path = "redundancy-budget.rs"]
 pub mod redundancy_budget;
 #[path = "redundancy-layer.rs"]
 pub mod redundancy_layer;
-pub mod random;
 #[path = "resolve-cache.rs"]
 mod resolve_cache;
 #[path = "shadow-validation.rs"]

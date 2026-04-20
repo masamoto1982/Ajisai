@@ -9,10 +9,12 @@ use crate::types::SemanticRegistry;
 fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
     let hint: Option<DisplayHint> = match word {
         "STR" | "CHR" | "CHARS" | "JOIN" => Some(DisplayHint::String),
-        "NUM" | "+" | "-" | "*" | "/" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD"
-            => Some(DisplayHint::Number),
-        "BOOL" | "<" | "<=" | "=" | "AND" | "OR" | "NOT"
-            => Some(DisplayHint::Boolean),
+        "NUM" | "+" | "-" | "*" | "/" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
+            Some(DisplayHint::Number)
+        }
+        "SQRT" | "SQRT_EPS" | "INTERVAL" => Some(DisplayHint::Interval),
+        "LOWER" | "UPPER" | "WIDTH" => Some(DisplayHint::Number),
+        "BOOL" | "<" | "<=" | "=" | "AND" | "OR" | "NOT" => Some(DisplayHint::Boolean),
         "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
         _ => None,
     };
@@ -181,7 +183,8 @@ impl Interpreter {
                     self.semantic_registry.push_hint(DisplayHint::String);
                 }
                 Token::VectorStart => {
-                    let (values, consumed, element_hint) = self.collect_vector(execute_tokens, i)?;
+                    let (values, consumed, element_hint) =
+                        self.collect_vector(execute_tokens, i)?;
                     if values.is_empty() {
                         return Err(AjisaiError::from(
                             "Empty vector is not allowed. Use NIL for empty values.",
@@ -223,53 +226,55 @@ impl Interpreter {
                     i = j;
                     continue;
                 }
-                Token::Symbol(s) => {
-                    match s.as_ref() {
-                        ".." => {
-                            self.update_operation_target_mode(OperationTargetMode::Stack);
-                        }
-                        "." => {
-                            self.update_operation_target_mode(OperationTargetMode::StackTop);
-                        }
-                        ",," => {
-                            self.update_consumption_mode(ConsumptionMode::Keep);
-                        }
-                        "," => {
-                            self.update_consumption_mode(ConsumptionMode::Consume);
-                        }
-                        _ => {
-                            let upper = Self::normalize_symbol(s);
-                            if self.safe_mode {
-                                let stack_snapshot = self.stack.clone();
-                                self.safe_mode = false;
-                                match self.execute_word_core(upper.as_ref()) {
-                                    Ok(()) => {
-                                        self.semantic_registry.normalize_to_stack_len(self.stack.len());
-                                        apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
-                                    }
-                                    Err(_) => {
-                                        self.stack = stack_snapshot;
-                                        self.stack.push(Value::nil());
-                                        self.semantic_registry.normalize_to_stack_len(self.stack.len());
-                                    }
+                Token::Symbol(s) => match s.as_ref() {
+                    ".." => {
+                        self.update_operation_target_mode(OperationTargetMode::Stack);
+                    }
+                    "." => {
+                        self.update_operation_target_mode(OperationTargetMode::StackTop);
+                    }
+                    ",," => {
+                        self.update_consumption_mode(ConsumptionMode::Keep);
+                    }
+                    "," => {
+                        self.update_consumption_mode(ConsumptionMode::Consume);
+                    }
+                    _ => {
+                        let upper = Self::normalize_symbol(s);
+                        if self.safe_mode {
+                            let stack_snapshot = self.stack.clone();
+                            self.safe_mode = false;
+                            match self.execute_word_core(upper.as_ref()) {
+                                Ok(()) => {
+                                    self.semantic_registry
+                                        .normalize_to_stack_len(self.stack.len());
+                                    apply_word_hint_override(
+                                        &mut self.semantic_registry,
+                                        upper.as_ref(),
+                                    );
                                 }
-                            } else {
-                                self.execute_word_core(upper.as_ref())?;
-                                self.semantic_registry.normalize_to_stack_len(self.stack.len());
-                                apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
+                                Err(_) => {
+                                    self.stack = stack_snapshot;
+                                    self.stack.push(Value::nil());
+                                    self.semantic_registry
+                                        .normalize_to_stack_len(self.stack.len());
+                                }
                             }
-                            if !modules::is_mode_preserving_word(upper.as_ref()) {
-                                self.reset_execution_modes();
-                            }
+                        } else {
+                            self.execute_word_core(upper.as_ref())?;
+                            self.semantic_registry
+                                .normalize_to_stack_len(self.stack.len());
+                            apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
+                        }
+                        if !modules::is_mode_preserving_word(upper.as_ref()) {
+                            self.reset_execution_modes();
                         }
                     }
-                }
+                },
                 Token::BlockEnd => {
                     return Err(AjisaiError::from("Unexpected code block end"));
                 }
-                Token::Pipeline => {
-
-                }
+                Token::Pipeline => {}
                 Token::NilCoalesce => {
                     let value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
                     let hint = self.semantic_registry.pop_hint();
@@ -334,10 +339,7 @@ impl Interpreter {
         Ok(start_index + i)
     }
 
-    pub(crate) fn execute_guard_structure(
-        &mut self,
-        lines: &[ExecutionLine],
-    ) -> Result<()> {
+    pub(crate) fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         for line in lines {
             self.execute_section_core(&line.body_tokens, 0)?;
         }
