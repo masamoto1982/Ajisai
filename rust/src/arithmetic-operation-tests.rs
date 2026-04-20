@@ -231,3 +231,121 @@ mod num_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod interval_tests {
+    use crate::interpreter::interval_ops::value_to_interval;
+    use crate::interpreter::Interpreter;
+    use crate::types::fraction::Fraction;
+
+    #[tokio::test]
+    async fn test_interval_creation_success_and_failure() {
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 INTERVAL").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(format!("{}", stack[0]), "[1, 2]");
+
+        let mut interp_fail = Interpreter::new();
+        let result = interp_fail.execute("2 1 INTERVAL").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_interval_basic_arithmetic() {
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 INTERVAL 3 4 INTERVAL +").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[4, 6]");
+
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 INTERVAL 3 4 INTERVAL -").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[-3, -1]");
+
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 INTERVAL 3 4 INTERVAL *").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 8]");
+
+        let mut interp = Interpreter::new();
+        interp
+            .execute("-1 2 INTERVAL 3 4 INTERVAL *")
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[-4, 8]");
+
+        let mut interp = Interpreter::new();
+        interp.execute("2 4 INTERVAL 1 2 INTERVAL /").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 4]");
+    }
+
+    #[tokio::test]
+    async fn test_interval_division_by_zero_interval_fails() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("1 2 INTERVAL -1 1 INTERVAL /").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_sqrt_exact_cases() {
+        let mut interp = Interpreter::new();
+        interp.execute("4 SQRT").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "2");
+
+        let mut interp = Interpreter::new();
+        interp.execute("9/16 SQRT").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "3/4");
+    }
+
+    #[tokio::test]
+    async fn test_sqrt_interval_soundness_and_eps() {
+        let mut interp = Interpreter::new();
+        interp.execute("2 SQRT").await.unwrap();
+        let iv = value_to_interval(&interp.get_stack()[0]).expect("sqrt(2) must be interval");
+        let two = Fraction::from(2);
+        assert!(iv.lo.mul(&iv.lo).le(&two));
+        assert!(iv.hi.mul(&iv.hi).ge(&two));
+        assert!(iv.lo.le(&iv.hi));
+
+        let mut interp_eps = Interpreter::new();
+        interp_eps.execute("2 1/100 SQRT_EPS").await.unwrap();
+        let iv_eps =
+            value_to_interval(&interp_eps.get_stack()[0]).expect("sqrt_eps(2) must be interval");
+        assert!(iv_eps.width().le(&Fraction::new(1.into(), 100.into())));
+    }
+
+    #[tokio::test]
+    async fn test_sqrt_interval_monotonicity() {
+        let mut interp = Interpreter::new();
+        interp.execute("1 4 INTERVAL SQRT").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 2]");
+    }
+
+    #[tokio::test]
+    async fn test_interval_comparison_policy() {
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 INTERVAL 3 4 INTERVAL <").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[ 1 ]");
+
+        let mut interp_undetermined = Interpreter::new();
+        let result = interp_undetermined
+            .execute("2 3 INTERVAL 3 4 INTERVAL <")
+            .await;
+        assert!(result.is_err());
+
+        let mut interp_eq = Interpreter::new();
+        interp_eq
+            .execute("1 5 INTERVAL 2 4 INTERVAL =")
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "[ 0 ]");
+    }
+
+    #[tokio::test]
+    async fn test_mixed_arithmetic() {
+        let mut interp = Interpreter::new();
+        interp.execute("1 2 3 INTERVAL +").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 4]");
+
+        let mut interp = Interpreter::new();
+        interp.execute("2 3 5 INTERVAL *").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[6, 10]");
+    }
+}

@@ -1,15 +1,20 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
+use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
-    interp.stack.push(Value::from_vector(vec![Value::from_bool(result)]));
+    interp
+        .stack
+        .push(Value::from_vector(vec![Value::from_bool(result)]));
     let stack_len = interp.stack.len();
     interp.semantic_registry.normalize_to_stack_len(stack_len);
-    interp.semantic_registry.update_hint_at(stack_len - 1, DisplayHint::Boolean);
+    interp
+        .semantic_registry
+        .update_hint_at(stack_len - 1, DisplayHint::Boolean);
 }
 
 fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
@@ -29,10 +34,12 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             "scalar value",
             "non-scalar value",
         )),
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
-            "scalar value",
-            "non-scalar value",
-        )),
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            Err(AjisaiError::create_structure_error(
+                "scalar value",
+                "non-scalar value",
+            ))
+        }
     }
 }
 
@@ -142,10 +149,68 @@ where
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let len = interp.stack.len();
+        let a = interp.stack[len - 2].clone();
+        let b = interp.stack[len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            let result = if ai.hi.lt(&bi.lo) {
+                Some(true)
+            } else if ai.lo.ge(&bi.hi) {
+                Some(false)
+            } else {
+                None
+            };
+            match result {
+                Some(v) => {
+                    if interp.consumption_mode != ConsumptionMode::Keep {
+                        interp.stack.pop();
+                        interp.stack.pop();
+                    }
+                    push_boolean_result(interp, v);
+                    return Ok(());
+                }
+                None => {
+                    return Err(AjisaiError::from(
+                        "interval comparison is undecidable with current precision",
+                    ));
+                }
+            }
+        }
+    }
     apply_binary_comparison(interp, |a, b| a.lt(b), "<")
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let len = interp.stack.len();
+        let a = interp.stack[len - 2].clone();
+        let b = interp.stack[len - 1].clone();
+        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
+            let result = if ai.hi.le(&bi.lo) {
+                Some(true)
+            } else if ai.lo.gt(&bi.hi) {
+                Some(false)
+            } else {
+                None
+            };
+            match result {
+                Some(v) => {
+                    if interp.consumption_mode != ConsumptionMode::Keep {
+                        interp.stack.pop();
+                        interp.stack.pop();
+                    }
+                    push_boolean_result(interp, v);
+                    return Ok(());
+                }
+                None => {
+                    return Err(AjisaiError::from(
+                        "interval comparison is undecidable with current precision",
+                    ));
+                }
+            }
+        }
+    }
     apply_binary_comparison(interp, |a, b| a.le(b), "<=")
 }
 
@@ -172,19 +237,27 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             let result: bool = if a_val.data == b_val.data {
                 true
             } else {
-
-                match (&a_val.data, &b_val.data) {
-                    (ValueData::Scalar(_), ValueData::Vector(children))
-                        if children.len() == 1 =>
-                    {
-                        a_val.data == children[0].data
+                if let (Some(ai), Some(bi)) = (value_to_interval(&a_val), value_to_interval(&b_val))
+                {
+                    if ai.is_exact() && bi.is_exact() {
+                        ai.lo == bi.lo
+                    } else {
+                        false
                     }
-                    (ValueData::Vector(children), ValueData::Scalar(_))
-                        if children.len() == 1 =>
-                    {
-                        children[0].data == b_val.data
+                } else {
+                    match (&a_val.data, &b_val.data) {
+                        (ValueData::Scalar(_), ValueData::Vector(children))
+                            if children.len() == 1 =>
+                        {
+                            a_val.data == children[0].data
+                        }
+                        (ValueData::Vector(children), ValueData::Scalar(_))
+                            if children.len() == 1 =>
+                        {
+                            children[0].data == b_val.data
+                        }
+                        _ => false,
                     }
-                    _ => false,
                 }
             };
             push_boolean_result(interp, result);

@@ -5,6 +5,7 @@ pub mod flow_token;
 pub mod fraction;
 #[path = "fraction-arithmetic.rs"]
 mod fraction_arithmetic;
+pub mod interval;
 #[path = "value-operations.rs"]
 mod value_operations;
 
@@ -33,6 +34,7 @@ pub enum DisplayHint {
     #[default]
     Auto,
     Number,
+    Interval,
     String,
     Boolean,
     DateTime,

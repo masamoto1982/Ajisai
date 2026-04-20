@@ -8,7 +8,6 @@
 ///
 /// For user-defined words, use `infer_purity` to propagate conservatively from
 /// component words.
-
 use crate::builtins::BuiltinExecutorKey;
 
 // ── Public types ─────────────────────────────────────────────────────────────
@@ -49,17 +48,46 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
     use EvalCost::*;
     use Purity::*;
 
-    let pure_trivial = PurityInfo { purity: Pure, cost: Trivial, order_sensitive: false };
-    let pure_light   = PurityInfo { purity: Pure, cost: Light,   order_sensitive: false };
-    let unk_medium   = PurityInfo { purity: Unknown, cost: Medium, order_sensitive: false };
-    let unk_med_ord  = PurityInfo { purity: Unknown, cost: Medium, order_sensitive: true };
-    let unk_heavy    = PurityInfo { purity: Unknown, cost: Heavy,  order_sensitive: true };
-    let imp_light    = PurityInfo { purity: Impure,  cost: Light,  order_sensitive: true };
-    let imp_heavy    = PurityInfo { purity: Impure,  cost: Heavy,  order_sensitive: true };
+    let pure_trivial = PurityInfo {
+        purity: Pure,
+        cost: Trivial,
+        order_sensitive: false,
+    };
+    let pure_light = PurityInfo {
+        purity: Pure,
+        cost: Light,
+        order_sensitive: false,
+    };
+    let unk_medium = PurityInfo {
+        purity: Unknown,
+        cost: Medium,
+        order_sensitive: false,
+    };
+    let unk_med_ord = PurityInfo {
+        purity: Unknown,
+        cost: Medium,
+        order_sensitive: true,
+    };
+    let unk_heavy = PurityInfo {
+        purity: Unknown,
+        cost: Heavy,
+        order_sensitive: true,
+    };
+    let imp_light = PurityInfo {
+        purity: Impure,
+        cost: Light,
+        order_sensitive: true,
+    };
+    let imp_heavy = PurityInfo {
+        purity: Impure,
+        cost: Heavy,
+        order_sensitive: true,
+    };
 
     match key {
         // ── Pure arithmetic ───────────────────────────────────────────────
-        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round => pure_trivial,
+        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round | Sqrt | SqrtEps => pure_trivial,
+        Interval | Lower | Upper | Width | IsExact => pure_light,
 
         // ── Pure comparison ───────────────────────────────────────────────
         Eq | Lt | Le => pure_trivial,
@@ -75,7 +103,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 
         // ── Pure vector ops ───────────────────────────────────────────────
         Get | Length | Concat | Reverse | Range | Reorder | Sort => pure_light,
-        Take | Split | Insert | Replace | Remove | Collect      => pure_light,
+        Take | Split | Insert | Replace | Remove | Collect => pure_light,
 
         // ── Pure tensor ops ───────────────────────────────────────────────
         Shape | Rank | Reshape | Transpose | Fill => pure_light,

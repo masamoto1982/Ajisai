@@ -9,7 +9,11 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
 
 pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool {
     match hint {
-        DisplayHint::Number | DisplayHint::Boolean | DisplayHint::DateTime | DisplayHint::Nil => {
+        DisplayHint::Number
+        | DisplayHint::Interval
+        | DisplayHint::Boolean
+        | DisplayHint::DateTime
+        | DisplayHint::Nil => {
             return false;
         }
         DisplayHint::String | DisplayHint::Auto => {}
@@ -20,7 +24,9 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool 
         ValueData::Scalar(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return false,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            return false
+        }
     };
     children.iter().all(|child| check_char_scalar(child))
 }
@@ -31,7 +37,9 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::Vector(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return false,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            return false
+        }
     };
     let n: i64 = match f.to_i64() {
         Some(n) if n >= 0 && n <= 0x10FFFF => n,
@@ -56,7 +64,10 @@ pub(crate) fn is_datetime_value(_val: &Value) -> bool {
     false
 }
 
-pub(crate) fn apply_unary_cast(interp: &mut Interpreter, convert: fn(&Value, DisplayHint) -> Result<Value>) -> Result<()> {
+pub(crate) fn apply_unary_cast(
+    interp: &mut Interpreter,
+    convert: fn(&Value, DisplayHint) -> Result<Value>,
+) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -136,10 +147,11 @@ pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {
 pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
     let f: &Fraction = val.as_scalar()?;
     let code: i64 = f.to_i64()?;
-    if code < 0 || code > 0x10FFFF { return None; }
+    if code < 0 || code > 0x10FFFF {
+        return None;
+    }
     char::from_u32(code as u32)
 }
-
 
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
     if value.is_nil() {
@@ -173,7 +185,6 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
         }
     }
 
-
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
@@ -182,7 +193,9 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],
         }
     }
 
