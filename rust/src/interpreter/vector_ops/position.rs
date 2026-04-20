@@ -132,7 +132,14 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
             } else {
                 (index as usize).min(interp.stack.len())
             };
-            interp.stack.insert(insert_index, element);
+
+            if is_keep_mode {
+                let mut modified = interp.stack.clone();
+                modified.insert(insert_index, element);
+                interp.stack.extend(modified);
+            } else {
+                interp.stack.insert(insert_index, element);
+            }
             Ok(())
         }
     }
@@ -183,11 +190,9 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
             };
 
             if is_keep_mode {
-                let original_stack = interp.stack.clone();
-                interp.stack[actual_index] = new_element;
-
-
-                let _ = original_stack;
+                let mut modified = interp.stack.clone();
+                modified[actual_index] = new_element;
+                interp.stack.extend(modified);
             } else {
                 interp.stack[actual_index] = new_element;
             }
@@ -233,7 +238,13 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 }
             };
 
-            interp.stack.remove(actual_index);
+            if is_keep_mode {
+                let mut modified = interp.stack.clone();
+                modified.remove(actual_index);
+                interp.stack.extend(modified);
+            } else {
+                interp.stack.remove(actual_index);
+            }
             Ok(())
         }
     }
