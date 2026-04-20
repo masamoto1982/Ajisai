@@ -60,6 +60,10 @@ const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
 const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (LEFT_TAB_MODES.includes(mode)) {
         state.currentLeftMode = mode;
+        if (mode === 'output') {
+            // Running code surfaces Output on the left, so pull the right column to Stack so execution results are immediately visible.
+            state.currentRightMode = 'stack';
+        }
     }
     if (RIGHT_TAB_MODES.includes(mode)) {
         state.currentRightMode = mode;
