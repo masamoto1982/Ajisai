@@ -84,12 +84,6 @@ const clearElement = (element: HTMLElement): void => {
 
 const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
 
-const resolveDisplayDescription = (wordInfo: WordInfo): string | null => {
-    const desc = wordInfo.description;
-    if (!desc || desc === wordInfo.name) return null;
-    return desc;
-};
-
 const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
     element.textContent = text;
     element.classList.toggle('is-placeholder', isPlaceholder);
@@ -310,15 +304,11 @@ export const createVocabularyManager = (
                 () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
                     const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
-                    const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName);
-                    const desc = resolveDisplayDescription(wordInfo);
-                    const displayText = desc
-                        ? `${desc}\n\n${definition ?? ''}`.trim()
-                        : (definition ?? '');
+                    const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName) ?? '';
                     renderWordInfo(
                         elements.userWordInfo,
-                        displayText || DEFAULT_WORD_INFO_MESSAGE,
-                        !displayText
+                        definition || DEFAULT_WORD_INFO_MESSAGE,
+                        !definition
                     );
                 },
                 () => { resetWordInfoDisplay(elements.userWordInfo); },
