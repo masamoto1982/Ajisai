@@ -76,16 +76,6 @@
 }
 
 
-.main-layout .display-area,
-.main-layout .state-display,
-.main-layout .words-display,
-.main-layout .area-content-flow {
-    align-content: flex-start;
-    align-items: flex-start;
-    justify-content: flex-start;
-}
-
-
 .main-layout {
     display: flex;
     flex: 1;
@@ -154,15 +144,6 @@
 
 [hidden] {
     display: none !important;
-}
-
-
-.main-layout section {
-    margin-bottom: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    padding: 0;
 }
 
 
