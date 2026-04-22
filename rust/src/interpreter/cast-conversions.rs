@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::cast::cast_value_helpers::{
-    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr,
+    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr_with_hint,
     is_boolean_value, is_number_value, is_string_value_with_hint,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
@@ -24,7 +24,7 @@ fn convert_value_to_string(val: &Value, hint: DisplayHint) -> Result<Value> {
         }
     }
 
-    let string_repr = format_value_to_string_repr(val);
+    let string_repr = format_value_to_string_repr_with_hint(val, hint);
     Ok(Value::from_string(&string_repr))
 }
 

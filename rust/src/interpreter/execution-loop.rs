@@ -6,9 +6,9 @@ use super::value_extraction_helpers::create_number_value;
 use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::SemanticRegistry;
 
-fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
+fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     let hint: Option<DisplayHint> = match word {
-        "STR" | "CHR" | "CHARS" | "JOIN" => Some(DisplayHint::String),
+        "STR" | "CHR" | "JOIN" => Some(DisplayHint::String),
         "NUM" | "+" | "-" | "*" | "/" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
             Some(DisplayHint::Number)
         }
@@ -16,9 +16,13 @@ fn apply_word_hint_override(registry: &mut SemanticRegistry, word: &str) {
         "LOWER" | "UPPER" | "WIDTH" => Some(DisplayHint::Number),
         "BOOL" | "<" | "<=" | "=" | "AND" | "OR" | "NOT" => Some(DisplayHint::Boolean),
         "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
+        "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT"
+        | "TAKE" | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL"
+        | "FRAME" => Some(DisplayHint::Auto),
         _ => None,
     };
     if let Some(h) = hint {
+        let registry: &mut SemanticRegistry = &mut interp.semantic_registry;
         let len: usize = registry.len();
         if len > 0 {
             registry.update_hint_at(len - 1, h);
@@ -248,10 +252,7 @@ impl Interpreter {
                                 Ok(()) => {
                                     self.semantic_registry
                                         .normalize_to_stack_len(self.stack.len());
-                                    apply_word_hint_override(
-                                        &mut self.semantic_registry,
-                                        upper.as_ref(),
-                                    );
+                                    apply_word_hint_override(self, upper.as_ref());
                                 }
                                 Err(_) => {
                                     self.stack = stack_snapshot;
@@ -264,7 +265,7 @@ impl Interpreter {
                             self.execute_word_core(upper.as_ref())?;
                             self.semantic_registry
                                 .normalize_to_stack_len(self.stack.len());
-                            apply_word_hint_override(&mut self.semantic_registry, upper.as_ref());
+                            apply_word_hint_override(self, upper.as_ref());
                         }
                         if !modules::is_mode_preserving_word(upper.as_ref()) {
                             self.reset_execution_modes();

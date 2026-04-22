@@ -154,6 +154,13 @@ pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
 }
 
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
+    format_value_to_string_repr_with_hint(value, DisplayHint::Auto)
+}
+
+pub(crate) fn format_value_to_string_repr_with_hint(
+    value: &Value,
+    hint: DisplayHint,
+) -> String {
     if value.is_nil() {
         return "NIL".to_string();
     }
@@ -168,7 +175,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
         }
     }
 
-    if is_string_value(value) {
+    if is_string_value_with_hint(value, hint) {
         return crate::interpreter::value_extraction_helpers::value_as_string(value)
             .unwrap_or_default();
     }

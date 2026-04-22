@@ -230,9 +230,13 @@ pub(crate) fn arena_node_to_js(
                 js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
             } else {
+                let child_external: Option<DisplayHint> = match effective_hint {
+                    DisplayHint::Boolean => Some(DisplayHint::Boolean),
+                    _ => None,
+                };
                 let js_array = js_sys::Array::new();
                 for child in children {
-                    js_array.push(&arena_node_to_js(arena, *child, None));
+                    js_array.push(&arena_node_to_js(arena, *child, child_external));
                 }
                 js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();

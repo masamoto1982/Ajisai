@@ -535,7 +535,17 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             if results.is_empty() {
                 interp.stack.push(Value::nil());
             } else {
-                interp.stack.push(Value::from_vector(results));
+                let flattened: Vec<Value> = results
+                    .into_iter()
+                    .map(|v| {
+                        if is_vector_value(&v) && v.len() == 1 {
+                            v.get_child(0).unwrap().clone()
+                        } else {
+                            v
+                        }
+                    })
+                    .collect();
+                interp.stack.push(Value::from_vector(flattened));
             }
             Ok(())
         }
@@ -607,7 +617,17 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             if results.is_empty() {
                 interp.stack.push(Value::nil());
             } else {
-                interp.stack.push(Value::from_vector(results));
+                let flattened: Vec<Value> = results
+                    .into_iter()
+                    .map(|v| {
+                        if is_vector_value(&v) && v.len() == 1 {
+                            v.get_child(0).unwrap().clone()
+                        } else {
+                            v
+                        }
+                    })
+                    .collect();
+                interp.stack.push(Value::from_vector(flattened));
             }
             Ok(())
         }

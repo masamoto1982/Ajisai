@@ -1505,6 +1505,8 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
+            let saved_hints: Vec<DisplayHint> =
+                std::mem::take(&mut interp.semantic_registry.stack_hints);
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target_mode = OperationTargetMode::StackTop;
@@ -1572,6 +1574,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = saved_stack;
+            interp.semantic_registry.stack_hints = saved_hints;
 
             if let Some(e) = error {
                 interp.stack.push(target_val);
@@ -1579,7 +1582,8 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 return Err(e);
             }
 
-            interp.stack.push(Value::from_int(count));
+            interp.stack
+                .push(Value::from_vector(vec![Value::from_int(count)]));
             Ok(())
         }
         OperationTargetMode::Stack => {
@@ -1635,7 +1639,8 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = saved_stack;
-            interp.stack.push(Value::from_int(matched_count));
+            interp.stack
+                .push(Value::from_vector(vec![Value::from_int(matched_count)]));
             Ok(())
         }
     }
