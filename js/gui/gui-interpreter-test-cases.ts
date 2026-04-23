@@ -424,7 +424,7 @@ export const TEST_CASES: TestCase[] = [
     {
         name: "UNFOLD - basic",
         code: "[ 1 ] { { [ 1 ] = } { [ 1 2 ] } { [ 2 ] = } { [ 2 3 ] } { [ 3 ] = } { [ 3 NIL ] } { IDLE } { NIL } COND } UNFOLD",
-        expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3'), createNumber('4')])],
+        expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3')])],
         category: "Higher-Order Functions"
     },
     {
@@ -512,7 +512,7 @@ export const TEST_CASES: TestCase[] = [
 
     {
         name: "Stack mode - LENGTH",
-        code: "[ 1 ] [ 2 ] [ 3 ] .. LENGTH",
+        code: "[ 1 ] [ 2 ] [ 3 ] ..,, LENGTH",
         expectedStack: [
             createVector([createNumber('1')]),
             createVector([createNumber('2')]),
@@ -523,7 +523,7 @@ export const TEST_CASES: TestCase[] = [
     },
     {
         name: "Stack mode - GET",
-        code: "[ 'a' ] [ 'b' ] [ 'c' ] [ 1 ] .. GET",
+        code: "[ 'a' ] [ 'b' ] [ 'c' ] [ 1 ] ..,, GET",
         expectedStack: [
             createVector([createString('a')]),
             createVector([createString('b')]),
