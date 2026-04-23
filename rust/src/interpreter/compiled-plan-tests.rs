@@ -1,5 +1,5 @@
 use crate::interpreter::{compile_word_definition, is_plan_valid, CompiledOp, Interpreter};
-use crate::types::{ExecutionLine, Token, WordDefinition};
+use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, WordDefinition};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -9,6 +9,9 @@ fn test_word(tokens: Vec<Token>) -> WordDefinition {
             body_tokens: Arc::from(tokens),
         }]),
         is_builtin: false,
+        tier: Tier::Contrib,
+        stability: Stability::Stable,
+        capabilities: Capabilities::PURE,
         description: None,
         dependencies: HashSet::new(),
         original_source: None,

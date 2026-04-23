@@ -140,9 +140,33 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 /// Returns `None` for user-defined or unknown words; use `infer_purity`
 /// to handle those.
 pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
-    crate::builtins::lookup_builtin_spec(name)
+    if let Some(info) = crate::builtins::lookup_builtin_spec(name)
         .and_then(|spec| spec.executor_key)
         .map(builtin_purity)
+    {
+        return Some(info);
+    }
+
+    match name.to_uppercase().as_str() {
+        "NOW" | "DATETIME" | "TIMESTAMP" | "TIME@NOW" | "TIME@DATETIME" | "TIME@TIMESTAMP" => {
+            Some(PurityInfo {
+                purity: Purity::Impure,
+                cost: EvalCost::Light,
+                order_sensitive: true,
+            })
+        }
+        "CSPRNG" | "CRYPTO@CSPRNG" => Some(PurityInfo {
+            purity: Purity::Impure,
+            cost: EvalCost::Light,
+            order_sensitive: true,
+        }),
+        "HASH" | "CRYPTO@HASH" | "SORT" | "ALGO@SORT" => Some(PurityInfo {
+            purity: Purity::Pure,
+            cost: EvalCost::Light,
+            order_sensitive: false,
+        }),
+        _ => None,
+    }
 }
 
 // ── Inference for user-defined words ─────────────────────────────────────────

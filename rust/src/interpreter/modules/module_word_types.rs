@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::interpreter::Interpreter;
+use crate::types::{Capabilities, Stability};
 
 pub(super) type ModuleExecutor = fn(&mut Interpreter) -> Result<()>;
 
@@ -9,6 +10,8 @@ pub(super) struct ModuleWord {
     pub description: &'static str,
     pub executor: ModuleExecutor,
     pub preserves_modes: bool,
+    pub stability: Stability,
+    pub capabilities: Capabilities,
 }
 
 #[derive(Clone)]

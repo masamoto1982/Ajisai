@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::elastic::purity_table::{purity_by_name, Purity};
-use crate::types::Token;
+use crate::types::{Capabilities, Stability, Tier, Token};
 
 use super::{
     compile_word_definition, compiled_plan::CompiledOp, CompiledPlan, EpochSnapshot, Interpreter,
@@ -181,7 +181,13 @@ fn analyze_compiled_plan_with_context(
                     all_known = false;
                 }
 
-                CompiledOp::FallbackToken(_) => {
+                CompiledOp::FallbackToken(token) => {
+                    if let Token::Symbol(sym) = token {
+                        let normalized = Interpreter::normalize_symbol(sym);
+                        if is_side_effecting_builtin(normalized.as_ref()) {
+                            is_pure = false;
+                        }
+                    }
                     if min_depth_at_first_unknown.is_none() {
                         min_depth_at_first_unknown = Some(min_depth);
                     }
@@ -325,6 +331,9 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
     let def = WordDefinition {
         lines: lines.into(),
         is_builtin: false,
+        tier: Tier::Contrib,
+        stability: Stability::Stable,
+        capabilities: Capabilities::PURE,
         description: None,
         dependencies: Default::default(),
         original_source: None,

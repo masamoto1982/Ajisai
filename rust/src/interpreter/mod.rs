@@ -68,6 +68,8 @@ mod execution_loop;
 
 #[path = "execute-builtin.rs"]
 mod execute_builtin;
+#[path = "deprecated-core-aliases.rs"]
+mod deprecated_core_aliases;
 
 #[cfg(test)]
 #[path = "child-runtime-tests.rs"]
@@ -87,6 +89,9 @@ mod dictionary_operation_tests;
 #[cfg(test)]
 #[path = "dictionary-resolution-tests.rs"]
 mod dictionary_resolution_tests;
+#[cfg(test)]
+#[path = "dictionary-tier-tests.rs"]
+mod dictionary_tier_tests;
 #[cfg(test)]
 #[path = "hash-tests.rs"]
 mod hash_tests;

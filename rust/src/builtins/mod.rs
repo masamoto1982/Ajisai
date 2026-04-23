@@ -22,7 +22,7 @@ pub use builtin_word_definitions::{
 };
 pub use builtin_word_details::lookup_builtin_detail;
 
-use crate::types::WordDefinition;
+use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -30,11 +30,15 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
     for spec in builtin_specs() {
         let name = spec.name;
         let description = spec.short_description;
+        let capabilities = core_builtin_capabilities(spec.executor_key, name);
         dictionary.insert(
             name.to_string(),
             Arc::new(WordDefinition {
                 lines: std::sync::Arc::from([]),
                 is_builtin: true,
+                tier: Tier::Core,
+                stability: Stability::Stable,
+                capabilities,
                 description: Some(description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,
@@ -43,5 +47,28 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
                 execution_plans: None,
             }),
         );
+    }
+}
+
+fn core_builtin_capabilities(
+    key: Option<BuiltinExecutorKey>,
+    name: &str,
+) -> Capabilities {
+    match (key, name) {
+        (Some(BuiltinExecutorKey::Def), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::Del), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::Import), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::ImportOnly), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::Eval), _) => Capabilities::EVAL,
+        (Some(BuiltinExecutorKey::Spawn), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Await), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Status), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Kill), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Monitor), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Supervise), _) => Capabilities::SPAWN,
+        (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
+        (None, "'") => Capabilities::IO,
+        (None, "!") => Capabilities::MUTATES_DICT,
+        _ => Capabilities::PURE,
     }
 }
