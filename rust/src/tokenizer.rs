@@ -127,6 +127,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
+        if let Some(expanded) = split_compound_modifier(&token_str) {
+            for symbol in expanded {
+                tokens.push(Token::Symbol(symbol.into()));
+            }
+            continue;
+        }
+
 
         if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
@@ -409,7 +416,37 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
         "." => Some(Token::Symbol(".".into())),
         ".." => Some(Token::Symbol("..".into())),
+        "," => Some(Token::Symbol(",".into())),
+        ",," => Some(Token::Symbol(",,".into())),
         _ => None,
+    }
+}
+
+fn split_compound_modifier(s: &str) -> Option<Vec<String>> {
+    let mut remaining = s;
+    let mut parts: Vec<String> = Vec::new();
+    while !remaining.is_empty() {
+        let matched = if let Some(rest) = remaining.strip_prefix("..") {
+            parts.push("..".to_string());
+            rest
+        } else if let Some(rest) = remaining.strip_prefix(",,") {
+            parts.push(",,".to_string());
+            rest
+        } else if let Some(rest) = remaining.strip_prefix('.') {
+            parts.push(".".to_string());
+            rest
+        } else if let Some(rest) = remaining.strip_prefix(',') {
+            parts.push(",".to_string());
+            rest
+        } else {
+            return None;
+        };
+        remaining = matched;
+    }
+    if parts.len() >= 2 {
+        Some(parts)
+    } else {
+        None
     }
 }
 
