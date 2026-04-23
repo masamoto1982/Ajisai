@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_string};
 use crate::interpreter::{Interpreter, ModuleDictionary};
-use crate::types::{Value, ValueData, WordDefinition};
+use crate::types::{Tier, Value, ValueData, WordDefinition};
 
 use super::module_builtins::MODULE_SPECS;
 use super::module_samples::build_sample_words;
@@ -26,6 +26,9 @@ pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &s
             Arc::new(WordDefinition {
                 lines: Arc::from([]),
                 is_builtin: true,
+                tier: Tier::Standard,
+                stability: word.stability,
+                capabilities: word.capabilities,
                 description: Some(word.description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,

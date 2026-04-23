@@ -66,6 +66,25 @@ impl Interpreter {
     ///
     /// Never call directly — use `execute_word_core` so tracing applies.
     fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
+        if self.resolve_word_entry(name).is_none() {
+            if let Some(alias) = super::deprecated_core_aliases::lookup_deprecated_core_alias(name) {
+                self.execution_step_count += 1;
+                if self.execution_step_count > self.max_execution_steps {
+                    return Err(AjisaiError::ExecutionLimitExceeded {
+                        limit: self.max_execution_steps,
+                    });
+                }
+                self.call_stack.push(alias.replacement_qualified.to_string());
+                self.output_buffer.push_str(&format!(
+                    "Warning: '{}' is deprecated. Use {} instead.\n",
+                    alias.old_name, alias.import_hint
+                ));
+                let alias_result = self.execute_builtin(alias.replacement_qualified);
+                self.call_stack.pop();
+                return alias_result;
+            }
+        }
+
         let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
             let ambiguous = self.check_ambiguity(name);
             if !ambiguous.is_empty() {
