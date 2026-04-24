@@ -53,7 +53,7 @@
               Dictionary mode (right / mobile); .area-selector-left has no search
               input because the left column never shows the dictionary.
             -->
-            <div class="area-selector area-selector-mobile">
+            <section class="area-selector area-selector-mobile">
                 <label for="mobile-panel-select" class="visually-hidden">Select panel</label>
                 <select id="mobile-panel-select">
                     <option value="input">Input</option>
@@ -68,13 +68,13 @@
             </div>
 
             <div id="editor-panel">
-                <div class="area-selector area-selector-left">
+                <section class="area-selector area-selector-left">
                     <label for="left-panel-select" class="visually-hidden">Select left panel</label>
                     <select id="left-panel-select">
                         <option value="input">Input</option>
                         <option value="output">Output</option>
                     </select>
-                </div>
+                </section>
                 <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0" hidden>
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
