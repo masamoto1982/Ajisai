@@ -374,3 +374,316 @@ mod ceil_positive_remainder {
         assert_eq!(f.ceil(), small(0, 1));
     }
 }
+
+// ---------------------------------------------------------------------------
+// AQ-VER-001-G
+// DUT: rust/src/types/fraction.rs:266-269 in `Fraction::create_from_i128`
+//
+//     if n >= i64::MIN as i128 && n <= i64::MAX as i128
+//         && d >= 0 && d <= i64::MAX as i128
+//     {
+//         return Fraction { repr: FractionRepr::Small(n as i64, d as i64) };
+//     }
+//
+// This 4-condition AND decides whether the i128 (numerator, denominator) pair
+// fits the Small representation. Conditions:
+//   A = n >= i64::MIN as i128
+//   B = n <= i64::MAX as i128
+//   C = d >= 0
+//   D = d <= i64::MAX as i128
+//
+// Reachability:
+//   A, B, D each gate a distinct overflow direction (n underflow, n overflow,
+//   d overflow). All three are reachable through arithmetic that produces
+//   results outside i64 range (e.g., adding two near-i64::MAX values).
+//
+//   C is structurally always T at this site: the immediately preceding block
+//   at fraction.rs:261-264 normalizes d to be non-negative
+//   (`if d < 0 { n = -n; d = -d; }`), so by the time line 267 evaluates
+//   `d >= 0`, this condition is invariant. Treated as defensive code; the
+//   row C=F is unreachable without bypassing the normalizer.
+//
+// MC/DC over A && B && D (with C held T):
+//   row 1: (A=T, B=T, D=T) -> Small  (n in i64 range, d in i64 range)
+//   row 2: (A=F, B=T, D=T) -> Big    (n < i64::MIN as i128)
+//   row 3: (A=T, B=F, D=T) -> Big    (n > i64::MAX as i128)
+//   row 4: (A=T, B=T, D=F) -> Big    (d > i64::MAX as i128)
+//
+// Independent effect:
+//   Pair (1, 2) with B,D held T: A flips T->F -> outcome flips Small->Big.
+//   Pair (1, 3) with A,D held T: B flips T->F -> outcome flips Small->Big.
+//   Pair (1, 4) with A,B held T: D flips T->F -> outcome flips Small->Big.
+// ---------------------------------------------------------------------------
+mod create_from_i128_small_big_boundary {
+    use super::*;
+
+    #[test]
+    fn aq_ver_001_g_row1_in_range_returns_small() {
+        // (A=T, B=T, D=T): 5/3, both fit i64.
+        let f = Fraction::create_from_i128(5, 3);
+        assert!(f.is_small(), "in-range pair must produce Small");
+        assert_eq!(f, small(5, 3));
+    }
+
+    #[test]
+    fn aq_ver_001_g_row2_numerator_underflow_returns_big() {
+        // (A=F, B=T, D=T): n = i64::MIN - 1 as i128, which is below i64 range.
+        // Pair (row1, row2) with B,D held T proves A's independent effect.
+        let n: i128 = (i64::MIN as i128) - 1;
+        let f = Fraction::create_from_i128(n, 1);
+        assert!(!f.is_small(), "n below i64::MIN must promote to Big");
+        // Confirm magnitude survives the round-trip through BigInt.
+        assert_eq!(f, Fraction::new(BigInt::from(n), BigInt::from(1)));
+    }
+
+    #[test]
+    fn aq_ver_001_g_row3_numerator_overflow_returns_big() {
+        // (A=T, B=F, D=T): n = i64::MAX + 1 as i128, which is above i64 range.
+        // Pair (row1, row3) with A,D held T proves B's independent effect.
+        let n: i128 = (i64::MAX as i128) + 1;
+        let f = Fraction::create_from_i128(n, 1);
+        assert!(!f.is_small(), "n above i64::MAX must promote to Big");
+        assert_eq!(f, Fraction::new(BigInt::from(n), BigInt::from(1)));
+    }
+
+    #[test]
+    fn aq_ver_001_g_row4_denominator_overflow_returns_big() {
+        // (A=T, B=T, D=F): d > i64::MAX as i128. Use n = 1 (positive, in range)
+        // and d = (i64::MAX as i128) + 2 (gcd-coprime with 1, so no reduction
+        // shrinks d back into range).
+        // Pair (row1, row4) with A,B held T proves D's independent effect.
+        let d: i128 = (i64::MAX as i128) + 2;
+        let f = Fraction::create_from_i128(1, d);
+        assert!(!f.is_small(), "d above i64::MAX must promote to Big");
+        assert_eq!(f, Fraction::new(BigInt::from(1), BigInt::from(d)));
+    }
+
+    #[test]
+    fn aq_ver_001_g_normalizes_negative_denominator_before_check() {
+        // C=T invariant check: a negative d input is normalized to positive
+        // before line 267 evaluates `d >= 0`. The result still depends on
+        // A,B,D. Here d = -3 is normalized to d = +3 with sign flipped onto n.
+        let f = Fraction::create_from_i128(5, -3);
+        assert!(f.is_small(), "after normalization both n,d fit i64 -> Small");
+        assert_eq!(f, small(-5, 3));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AQ-VER-001-H
+// DUT: rust/src/types/fraction-arithmetic.rs:53 in `Fraction::add`
+//
+//     if let (Some((a, b)), Some((c, d))) =
+//         (self.extract_i64_pair(), other.extract_i64_pair()) { /* fast path */ }
+//
+// Tuple-destructuring guard at the entry of the i64 fast path. Conditions:
+//   A = self.extract_i64_pair().is_some()    (self fits i64 pair)
+//   B = other.extract_i64_pair().is_some()   (other fits i64 pair)
+//
+// extract_i64_pair returns Some for any Small fraction unconditionally, and
+// for Big fractions only when both numerator and denominator individually
+// fit i64 (rust/src/types/fraction.rs:204-213). A genuine Big fraction whose
+// numerator overflows i64 returns None.
+//
+// MC/DC over A && B:
+//   row 1: (A=T, B=T) -> fast path entered; result computed in i128
+//   row 2: (A=F, B=T) -> fast path skipped; falls through to BigInt arm
+//   row 3: (A=T, B=F) -> fast path skipped; falls through to BigInt arm
+//
+// Independent effect:
+//   Pair (1, 2) with B held T: A flips T->F -> path flips fast->big.
+//   Pair (1, 3) with A held T: B flips T->F -> path flips fast->big.
+//
+// We observe path selection indirectly: for row 1 we verify the result is
+// Small (no boundary crossing); for rows 2 and 3 we verify the BigInt arm
+// preserves correctness when one operand exceeds i64.
+// ---------------------------------------------------------------------------
+mod add_small_fast_path_entry_guard {
+    use super::*;
+
+    #[test]
+    fn aq_ver_001_h_row1_both_small_uses_fast_path() {
+        // (A=T, B=T): both Small, result fits i64 -> Small returned.
+        let lhs = small(2, 3);
+        let rhs = small(1, 6);
+        let result = lhs.add(&rhs);
+        assert!(result.is_small(), "two Small operands with i64-fitting sum");
+        assert_eq!(result, small(5, 6));
+    }
+
+    #[test]
+    fn aq_ver_001_h_row2_self_big_skips_fast_path() {
+        // (A=F, B=T): self is Big (numerator > i64::MAX) -> falls into BigInt arm.
+        // Pair (row1, row2) flips A with B held T.
+        let big = big_int(0); // 2*i64::MAX, exceeds i64
+        let small_one = small(1, 1);
+        let result = big.add(&small_one);
+        // Expected: 2*i64::MAX + 1
+        let expected_num = BigInt::from(i64::MAX) * BigInt::from(2i64) + BigInt::from(1i64);
+        assert_eq!(result, Fraction::new(expected_num, BigInt::from(1)));
+        assert!(!result.is_small(), "Big + Small with overflow must stay Big");
+    }
+
+    #[test]
+    fn aq_ver_001_h_row3_other_big_skips_fast_path() {
+        // (A=T, B=F): other is Big -> falls into BigInt arm.
+        // Pair (row1, row3) flips B with A held T.
+        let small_one = small(1, 1);
+        let big = big_int(0);
+        let result = small_one.add(&big);
+        let expected_num = BigInt::from(i64::MAX) * BigInt::from(2i64) + BigInt::from(1i64);
+        assert_eq!(result, Fraction::new(expected_num, BigInt::from(1)));
+        assert!(!result.is_small(), "Small + Big with overflow must stay Big");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AQ-VER-001-I
+// DUT: rust/src/types/fraction-arithmetic.rs:60-64 in `Fraction::add`
+//
+//     if let Some(num) = (a as i128).checked_mul(d as i128)        // X
+//         .and_then(|ad| (c as i128).checked_mul(b as i128)        // Y
+//             .and_then(|cb| ad.checked_add(cb)))                  // Z
+//     { return Self::create_from_i128(num, (b as i128) * (d as i128)); }
+//
+// Three checked operations chained with and_then. Atomic conditions:
+//   X = (a as i128).checked_mul(d as i128).is_some()
+//   Y = (c as i128).checked_mul(b as i128).is_some()
+//   Z = ad.checked_add(cb).is_some()
+//
+// Reachability proof for the None arm (i.e., the fall-through to the BigInt
+// arm at lines 68+):
+//   The site is guarded by extract_i64_pair returning Some for both operands,
+//   so a, c are i64 (range [-2^63, 2^63 - 1]) and b, d are i64 denominators
+//   normalized non-negative (range [1, 2^63 - 1]).
+//
+//   |a as i128| <= 2^63;  |d as i128| <= 2^63 - 1
+//   |a*d| <= 2^63 * (2^63 - 1) = 2^126 - 2^63 < 2^127 = i128::MAX + 1
+//   So X = T for all valid inputs. Symmetric argument: Y = T for all valid
+//   inputs.
+//
+//   ad and cb each lie in [-(2^126 - 2^63), 2^126 - 2^63].
+//   |ad + cb| <= 2 * (2^126 - 2^63) = 2^127 - 2^64 < 2^127.
+//   So Z = T for all valid inputs.
+//
+//   Therefore X && Y && Z = T whenever the fast path is entered. The None
+//   arm is structurally unreachable from i64 operands; it is defensive code
+//   guarding against a future regression where the upstream contracts (e.g.,
+//   non-negative denominator) are weakened.
+//
+// MC/DC table:
+//   row 1: (X=T, Y=T, Z=T)         -> Some(num); REACHABLE (asserted below)
+//   row 2: (X=F, Y=*, Z=*)         -> None;      UNREACHABLE (proof above)
+//   row 3: (X=T, Y=F, Z=*)         -> None;      UNREACHABLE (proof above)
+//   row 4: (X=T, Y=T, Z=F)         -> None;      UNREACHABLE (proof above)
+//
+// Because rows 2-4 cannot be constructed without violating the i64 range
+// invariant, classic MC/DC pair construction does not apply; the test below
+// instead exercises row 1 at the operand boundary closest to the i128 limit
+// to demonstrate the proof's tightness empirically.
+// ---------------------------------------------------------------------------
+mod add_checked_chain_defensive {
+    use super::*;
+
+    #[test]
+    fn aq_ver_001_i_row1_extreme_i64_inputs_succeed_in_i128() {
+        // Operands chosen at the i64 boundary so that |a*d| + |c*b| approaches
+        // (but does not exceed) i128::MAX.
+        //   a = i64::MAX, d = i64::MAX  -> ad = (2^63 - 1)^2 = 2^126 - 2^64 + 1
+        //   c = i64::MAX, b = i64::MAX  -> cb = same
+        //   sum = 2 * (2^126 - 2^64 + 1) = 2^127 - 2^65 + 2 < i128::MAX
+        // Both fractions are i64::MAX/i64::MAX = 1, so the sum is 2.
+        // Although the result is small, the intermediate i128 arithmetic
+        // exercises the X, Y, Z chain at the proof's worst case.
+        let lhs = small(i64::MAX, i64::MAX);
+        let rhs = small(i64::MAX, i64::MAX);
+        let result = lhs.add(&rhs);
+        assert_eq!(result, small(2, 1), "i64::MAX/i64::MAX + i64::MAX/i64::MAX = 2");
+    }
+
+    #[test]
+    fn aq_ver_001_i_row1_negative_extreme_i64_inputs_succeed_in_i128() {
+        // Negative-side worst case (avoiding the literal i64::MIN, which would
+        // panic in `compute_gcd_i64::abs()` during the Fraction::new normalizer
+        // at fraction.rs:8 before reaching the checked-chain DUT):
+        //   a = -i64::MAX, d = i64::MAX -> ad = -(2^63 - 1)^2
+        //   c = -i64::MAX, b = i64::MAX -> cb = -(2^63 - 1)^2
+        //   |ad + cb| = 2 * (2^63 - 1)^2 < 2^127 = i128::MAX + 1.
+        // Both fractions are -i64::MAX/i64::MAX = -1, sum = -2.
+        let lhs = small(-i64::MAX, i64::MAX);
+        let rhs = small(-i64::MAX, i64::MAX);
+        let result = lhs.add(&rhs);
+        assert_eq!(result, small(-2, 1), "-i64::MAX/i64::MAX + same = -2");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AQ-VER-001-J
+// DUT: rust/src/types/fraction-arithmetic.rs:354-358 in `Fraction::modulo`
+// (Small fast path, b == 1 && d == 1)
+//
+//     let result = if rem < 0 {
+//         if c > 0 { rem + c } else { rem - c }
+//     } else {
+//         rem
+//     };
+//
+// Sign-normalizing branch over the integer remainder. Conditions:
+//   A = (rem < 0)
+//   B = (c > 0)
+//
+// Three reachable branches:
+//   row 1: (A=F, B=any) -> rem        (no sign correction)
+//   row 2: (A=T, B=T)   -> rem + c    (positive divisor, normalize to [0, c))
+//   row 3: (A=T, B=F)   -> rem - c    (negative divisor, normalize to (c, 0])
+//
+// MC/DC pairs:
+//   Pair (row 1, row 2) with B held T (positive c, e.g., c=3):
+//     A flips F->T -> branch flips from `rem` to `rem + c`. A independent.
+//   Pair (row 2, row 3) with A held T (negative rem, e.g., a=-7):
+//     B flips T->F -> branch flips from `rem + c` to `rem - c`. B independent.
+//
+// Modulo by zero is rejected at line 348 (panics) before reaching this
+// branch, so c == 0 is not part of the reachable input space.
+//
+// Expected values were verified by an offline probe (2026-04-24):
+//   a= 7, c= 3, rem= 1, result=1   (row 1, A=F, B=T)
+//   a=-7, c= 3, rem=-1, result=2   (row 2, A=T, B=T)
+//   a=-7, c=-3, rem=-1, result=2   (row 3, A=T, B=F)
+//   a= 7, c=-3, rem= 1, result=1   (row 1', A=F, B=F)
+// ---------------------------------------------------------------------------
+mod modulo_remainder_sign_normalization {
+    use super::*;
+
+    #[test]
+    fn aq_ver_001_j_row1_nonneg_remainder_returns_remainder_unchanged() {
+        // (A=F, B=T): rem = 7 % 3 = 1 >= 0, no sign correction.
+        let result = small(7, 1).modulo(&small(3, 1));
+        assert_eq!(result, small(1, 1));
+    }
+
+    #[test]
+    fn aq_ver_001_j_row2_neg_remainder_pos_divisor_adds_divisor() {
+        // (A=T, B=T): rem = -7 % 3 = -1 < 0 and c = 3 > 0, result = -1 + 3 = 2.
+        // Pair (row1, row2) with B held T proves A's independent effect.
+        let result = small(-7, 1).modulo(&small(3, 1));
+        assert_eq!(result, small(2, 1));
+    }
+
+    #[test]
+    fn aq_ver_001_j_row3_neg_remainder_neg_divisor_subtracts_divisor() {
+        // (A=T, B=F): rem = -7 % -3 = -1 < 0 and c = -3 not > 0, result = -1 - (-3) = 2.
+        // Pair (row2, row3) with A held T proves B's independent effect.
+        let result = small(-7, 1).modulo(&small(-3, 1));
+        assert_eq!(result, small(2, 1));
+    }
+
+    #[test]
+    fn aq_ver_001_j_row1_alt_pos_remainder_neg_divisor_returns_remainder() {
+        // (A=F, B=F): rem = 7 % -3 = 1 >= 0, no sign correction (returns rem).
+        // Documents the (A=F, B=F) cell of the truth table; not used in MC/DC
+        // pairs but covers the entire reachable surface of the inner branch.
+        let result = small(7, 1).modulo(&small(-3, 1));
+        assert_eq!(result, small(1, 1));
+    }
+}

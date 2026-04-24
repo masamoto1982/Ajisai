@@ -2,7 +2,7 @@
 
 | Requirement ID | Objective | Implementation Reference | Verification Reference |
 |---|---|---|---|
-| AQ-REQ-001 | Core arithmetic remains exact and deterministic. | `rust/src/types/fraction.rs`, `rust/src/types/fraction-arithmetic.rs` | `cargo test --all-targets --verbose`; AQ-VER-001-A through AQ-VER-001-F |
+| AQ-REQ-001 | Core arithmetic remains exact and deterministic. | `rust/src/types/fraction.rs`, `rust/src/types/fraction-arithmetic.rs` | `cargo test --all-targets --verbose`; AQ-VER-001-A through AQ-VER-001-J |
 | AQ-REQ-002 | Parsing/tokenization behavior is stable across regressions. | `rust/src/tokenizer.rs` | `rust/src/tokenizer-regression-tests.rs`, `rust/src/tokenizer-regression-tests-2.rs`; AQ-VER-002-A through AQ-VER-002-F |
 | AQ-REQ-003 | WASM target build integrity is preserved. | `rust/src/wasm-interpreter-bindings.rs`, `rust/src/wasm-value-conversion.rs` | CI rust wasm check in `.github/workflows/test.yml`; AQ-VER-003-A, AQ-VER-003-B (native pure-helper coverage) |
 | AQ-REQ-004 | TypeScript runtime typing remains sound. | `js/` runtime modules | `npm run check` |
@@ -19,6 +19,10 @@
 | AQ-VER-001-D | AQ-REQ-001 | `Fraction::add` Small fast paths (`b == 1 && d == 1`, `b == d`) | `rust/src/types/fraction-mcdc-tests.rs::add_small_fast_paths` |
 | AQ-VER-001-E | AQ-REQ-001 | `Fraction::floor` (`n < 0 && r != 0`) | `rust/src/types/fraction-mcdc-tests.rs::floor_negative_remainder` |
 | AQ-VER-001-F | AQ-REQ-001 | `Fraction::ceil` (`n > 0 && r != 0`) | `rust/src/types/fraction-mcdc-tests.rs::ceil_positive_remainder` |
+| AQ-VER-001-G | AQ-REQ-001 | `Fraction::create_from_i128` Small-vs-Big boundary (`n >= i64::MIN as i128 && n <= i64::MAX as i128 && d >= 0 && d <= i64::MAX as i128`) | `rust/src/types/fraction-mcdc-tests.rs::create_from_i128_small_big_boundary` |
+| AQ-VER-001-H | AQ-REQ-001 | `Fraction::add` Small fast-path entry guard (tuple destructuring of `extract_i64_pair` Some/Some) | `rust/src/types/fraction-mcdc-tests.rs::add_small_fast_path_entry_guard` |
+| AQ-VER-001-I | AQ-REQ-001 | `Fraction::add` checked-mul/checked-add chain (defensive; None-arm structurally unreachable for i64 operands, with arithmetic proof) | `rust/src/types/fraction-mcdc-tests.rs::add_checked_chain_defensive` |
+| AQ-VER-001-J | AQ-REQ-001 | `Fraction::modulo` Small fast-path remainder sign normalization (`rem < 0 && c > 0`) | `rust/src/types/fraction-mcdc-tests.rs::modulo_remainder_sign_normalization` |
 | AQ-VER-002-A | AQ-REQ-002 | `tokenize` `\n` linebreak deduplication (`tokens.last() != Some(LineBreak)`) | `rust/src/tokenizer-mcdc-tests.rs::linebreak_dedup` |
 | AQ-VER-002-B | AQ-REQ-002 | `tokenize` comment `had_token_before` (`!is_empty() && last != LineBreak`) | `rust/src/tokenizer-mcdc-tests.rs::comment_had_token_before` |
 | AQ-VER-002-C | AQ-REQ-002 | `tokenize` comment newline absorption (`!had_token_before && i < len && c == '\n'`) | `rust/src/tokenizer-mcdc-tests.rs::comment_newline_absorption` |
