@@ -545,22 +545,21 @@
 }
 
 
-.dictionary-sheet-selector {
+.dictionary-toolbar > .dictionary-sheet-select {
     flex: 1.618 1 0%;
 }
 
-
-.words-area .dictionary-sheet-selector {
+.words-area > .dictionary-sheet-select {
     flex: 0 0 auto;
-    padding: 0 0 0.5rem 0;
+    margin: 0 0 0.5rem 0;
 }
 
-.words-area .dictionary-sheet-selector select:focus-visible {
+.dictionary-sheet-select:focus-visible {
     outline-offset: -2px;
     box-shadow: none;
 }
 
-.dictionary-sheet-selector select {
+.dictionary-sheet-select {
     font-family: var(--font-stack-mono);
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;

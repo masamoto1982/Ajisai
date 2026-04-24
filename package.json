@@ -10,6 +10,8 @@
     "dev": "vite",
     "preview": "vite preview",
     "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf dist node_modules",
     "tauri": "tauri",
     "tauri:dev": "AJISAI_BUILD_TARGET=tauri tauri dev",
@@ -22,7 +24,8 @@
     "@tauri-apps/cli": "^2",
     "@types/node": "^20.11.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "@tauri-apps/plugin-dialog": "^2",

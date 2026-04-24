@@ -55,6 +55,9 @@ jobs:
       - name: TypeScript check
         run: npm run check
 
+      - name: TypeScript MC/DC tests (Vitest)
+        run: npm test
+
       - name: Quality gate mode summary
         run: |
           if [ "${AJISAI_STRICT_QUALITY}" = "true" ]; then
@@ -110,3 +113,6 @@ jobs:
 
       - name: Run TypeScript type check
         run: npm run check
+
+      - name: Run Vitest MC/DC tests
+        run: npm test
