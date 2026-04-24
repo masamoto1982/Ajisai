@@ -216,7 +216,7 @@ fn bench_interpreter_simple_arithmetic(c: &mut Criterion) {
 
 fn bench_interpreter_map(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] : [ 2 ] * ; MAP";
+    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP";
 
     c.bench_function("interp_map", |b| {
         b.iter_custom(|iters| {
@@ -244,7 +244,7 @@ fn bench_interpreter_map(c: &mut Criterion) {
 
 fn bench_interpreter_fold(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] : + ; FOLD";
+    let code = "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD";
 
     c.bench_function("interp_fold", |b| {
         b.iter_custom(|iters| {
@@ -298,7 +298,7 @@ fn bench_interpreter_word_lookup_overhead(c: &mut Criterion) {
 
 fn bench_interpreter_custom_word(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let code = ": [ 2 ] * ; 'DOUBLE' DEF [ 1 2 3 4 5 ] : DOUBLE ; MAP";
+    let code = "{ [ 2 ] * } 'DOUBLE' DEF [ 1 2 3 4 5 ] { DOUBLE } MAP";
 
     c.bench_function("interp_custom_word", |b| {
         b.iter_custom(|iters| {

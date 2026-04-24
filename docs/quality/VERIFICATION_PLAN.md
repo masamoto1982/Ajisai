@@ -9,6 +9,9 @@ Define minimum verification evidence required for Ajisai changes.
 - `cargo test --all-targets --verbose` (run in `rust/`)
 - `npm run check` (run at repository root, if JS/TS affected)
 
+> Note: CI currently supports a staged rollout mode for legacy debt.
+> Advisory checks become blocking when repository variable `AJISAI_STRICT_QUALITY=true`.
+
 ## Enhanced Checks
 - `cargo llvm-cov --branch --workspace` when coverage instrumentation is available and relevant to changed Rust behavior.
 
