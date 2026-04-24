@@ -289,15 +289,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         Some(BuiltinExecutorKey::Collect)
     ),
     builtin_spec!(
-        "SORT",
-        "vector",
-        "Form: Sort elements ascending. Vector -> Vector",
-        "[ 3 1 2 ] SORT → [ 1 2 3 ]",
-        "form",
-        BuiltinDetailGroup::VectorOps,
-        Some(BuiltinExecutorKey::Sort)
-    ),
-    builtin_spec!(
         "TRUE",
         "constant",
         "Push TRUE to stack",
@@ -377,33 +368,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Chr)
-    ),
-    builtin_spec!(
-        "NOW",
-        "datetime",
-        "Get current UNIX timestamp. -> Scalar",
-        "NOW → [ 1732531200 ]",
-        "none",
-        BuiltinDetailGroup::IoModule,
-        Some(BuiltinExecutorKey::Now)
-    ),
-    builtin_spec!(
-        "DATETIME",
-        "datetime",
-        "Convert timestamp to datetime string. Scalar -> String",
-        "[ 1732531200 ] 'LOCAL' DATETIME → [ 2024 11 25 23 0 0 ]",
-        "none",
-        BuiltinDetailGroup::IoModule,
-        Some(BuiltinExecutorKey::Datetime)
-    ),
-    builtin_spec!(
-        "TIMESTAMP",
-        "datetime",
-        "Convert datetime string to timestamp. String -> Scalar",
-        "[ 2024 11 25 23 0 0 ] 'LOCAL' TIMESTAMP → [ 1732531200 ]",
-        "none",
-        BuiltinDetailGroup::IoModule,
-        Some(BuiltinExecutorKey::Timestamp)
     ),
     builtin_spec!(
         "+",
@@ -791,24 +755,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "map",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Round)
-    ),
-    builtin_spec!(
-        "CSPRNG",
-        "random",
-        "Generate cryptographic pseudorandom number. -> Scalar",
-        "[ 6 ] [ 1 ] CSPRNG → [ 0 ] to [ 5/6 ], [ 5 ] CSPRNG → 5 randoms",
-        "none",
-        BuiltinDetailGroup::IoModule,
-        Some(BuiltinExecutorKey::Csprng)
-    ),
-    builtin_spec!(
-        "HASH",
-        "hash",
-        "Compute hash value. Any -> Numeric",
-        "'hello' HASH → [ 0.xxx ], [ 128 ] 'hello' HASH → 128-bit",
-        "none",
-        BuiltinDetailGroup::IoModule,
-        Some(BuiltinExecutorKey::Hash)
     ),
     builtin_spec!(
         "EXEC",

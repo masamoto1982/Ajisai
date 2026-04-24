@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::error::{AjisaiError, Result};
-use crate::types::{ExecutionLine, Token, WordDefinition};
+use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, WordDefinition};
 
 use super::module_word_types::SampleWord;
 
@@ -24,6 +24,9 @@ pub(super) fn build_sample_words(
             Arc::new(WordDefinition {
                 lines: lines.into(),
                 is_builtin: false,
+                tier: Tier::Standard,
+                stability: Stability::Stable,
+                capabilities: Capabilities::PURE,
                 description: Some(sample.description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,

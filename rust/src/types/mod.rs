@@ -164,10 +164,84 @@ pub struct ExecutionLine {
     pub body_tokens: Arc<[Token]>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Tier {
+    Core,
+    Standard,
+    #[default]
+    Contrib,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Stability {
+    #[default]
+    Stable,
+    Experimental,
+    Deprecated,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Capabilities {
+    bits: u32,
+}
+
+impl Capabilities {
+    pub const PURE: Self = Self { bits: 0b0000_0001 };
+    pub const IO: Self = Self { bits: 0b0000_0010 };
+    pub const TIME: Self = Self { bits: 0b0000_0100 };
+    pub const RANDOM: Self = Self { bits: 0b0000_1000 };
+    pub const CRYPTO: Self = Self { bits: 0b0001_0000 };
+    pub const SPAWN: Self = Self { bits: 0b0010_0000 };
+    pub const EVAL: Self = Self { bits: 0b0100_0000 };
+    pub const MUTATES_DICT: Self = Self { bits: 0b1000_0000 };
+    pub const INPUT_HELPER: Self = Self { bits: 0b0001_0000_0000 };
+
+    pub const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    pub const fn contains(self, other: Self) -> bool {
+        (self.bits & other.bits) == other.bits
+    }
+
+    pub const fn union(self, other: Self) -> Self {
+        Self {
+            bits: self.bits | other.bits,
+        }
+    }
+}
+
+impl Default for Capabilities {
+    fn default() -> Self {
+        Self::PURE
+    }
+}
+
+impl std::ops::BitOr for Capabilities {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self {
+            bits: self.bits | rhs.bits,
+        }
+    }
+}
+
+impl std::ops::BitAnd for Capabilities {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self {
+            bits: self.bits & rhs.bits,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WordDefinition {
     pub lines: Arc<[ExecutionLine]>,
     pub is_builtin: bool,
+    pub tier: Tier,
+    pub stability: Stability,
+    pub capabilities: Capabilities,
     pub description: Option<String>,
     pub dependencies: HashSet<String>,
     pub original_source: Option<String>,

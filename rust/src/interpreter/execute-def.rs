@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::vector_exec::format_vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
-use crate::types::{ExecutionLine, Token, Value, ValueData};
+use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, Value, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -238,6 +238,9 @@ pub(crate) fn op_def_inner(
     let new_def = WordDefinition {
         lines: lines.into(),
         is_builtin: false,
+        tier: Tier::Contrib,
+        stability: Stability::Stable,
+        capabilities: Capabilities::PURE,
         description,
         dependencies: new_dependencies,
         original_source: None,
