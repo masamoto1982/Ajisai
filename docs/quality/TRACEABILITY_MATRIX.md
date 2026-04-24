@@ -5,7 +5,7 @@
 | AQ-REQ-001 | Core arithmetic remains exact and deterministic. | `rust/src/types/fraction.rs`, `rust/src/types/fraction-arithmetic.rs` | `cargo test --all-targets --verbose`; AQ-VER-001-A through AQ-VER-001-J |
 | AQ-REQ-002 | Parsing/tokenization behavior is stable across regressions. | `rust/src/tokenizer.rs` | `rust/src/tokenizer-regression-tests.rs`, `rust/src/tokenizer-regression-tests-2.rs`; AQ-VER-002-A through AQ-VER-002-F |
 | AQ-REQ-003 | WASM target build integrity is preserved. | `rust/src/wasm-interpreter-bindings.rs`, `rust/src/wasm-value-conversion.rs` | CI rust wasm check in `.github/workflows/test.yml`; AQ-VER-003-A, AQ-VER-003-B (native pure-helper coverage) |
-| AQ-REQ-004 | TypeScript runtime typing remains sound. | `js/` runtime modules | `npm run check` |
+| AQ-REQ-004 | TypeScript runtime typing remains sound and platform/value helpers behave correctly across the supported runtimes. | `js/` runtime modules | `npm run check`; `npm test` (Vitest); AQ-VER-004-A through AQ-VER-004-D |
 | AQ-REQ-005 | Quality gates block merges on formatting/lint/test failures. | `.github/workflows/test.yml` | CI quality gate job |
 | AQ-REQ-006 | Interpreter execution semantics (mode dispatch, quantization eligibility, epoch-driven plan-cache invalidation) remain stable across regressions. | `rust/src/interpreter/execute-builtin.rs`, `rust/src/interpreter/quantized-block.rs`, `rust/src/interpreter/higher-order-operations.rs`, `rust/src/interpreter/compiled-plan.rs` | `cargo test --all-targets`; AQ-VER-006-A through AQ-VER-006-C |
 
@@ -34,6 +34,10 @@
 | AQ-VER-006-A | AQ-REQ-006 | `Interpreter::is_hedged_mode` ElasticMode disjunction (`HedgedSafe \| HedgedTrace`) | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::hedged_mode_classifier` |
 | AQ-VER-006-B | AQ-REQ-006 | `is_quantizable_block` outer conjunction (`!empty && !any(LineBreak \| SafeMode)`) and inner token-variant disjunction | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::is_quantizable_block_outer`, `::is_quantizable_block_inner_match` |
 | AQ-VER-006-C | AQ-REQ-006 | `get_execution_plan_set` quantized-cache guard (`dictionary_epoch == && module_epoch ==`) observed via `compiled_plan_cache_miss_count` deltas around `bump_dictionary_epoch` / `bump_module_epoch` | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::compiled_plan_cache_guard` |
+| AQ-VER-004-A | AQ-REQ-004 | `detectRuntimeKind` build-time injection conjunction (`typeof __AJISAI_TARGET__ !== 'undefined' && __AJISAI_TARGET__ === 'tauri'`) and runtime DOM-detection conjunction (`typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window`) | `js/platform/runtime-kind.test.ts` |
+| AQ-VER-004-B | AQ-REQ-004 | `compareValue` number-arm equality conjunction (`numerator === && denominator ===`) and vector-arm array-guard disjunction (`!Array.isArray(actual) \|\| !Array.isArray(expected)`) | `js/gui/value-formatter.test.ts::compareValue *` |
+| AQ-VER-004-C | AQ-REQ-004 | `compareStack` per-index 3-disjunct loop guard (`!a \|\| !e \|\| !compareValue(a, e)`) | `js/gui/value-formatter.test.ts::compareStack *` |
+| AQ-VER-004-D | AQ-REQ-004 | `formatFractionScientific` scientific-form conjunction (`numSci.includes('e') && denSci.includes('e')`) | `js/gui/value-formatter.test.ts::formatFractionScientific *` |
 
 ## Coverage Notes
 
