@@ -18,6 +18,10 @@ mod tokenizer_regression_tests;
 mod tokenizer_regression_tests_2;
 
 #[cfg(test)]
+#[path = "tokenizer-mcdc-tests.rs"]
+mod tokenizer_mcdc_tests;
+
+#[cfg(test)]
 #[path = "arithmetic-operation-tests.rs"]
 mod arithmetic_operation_tests;
 
