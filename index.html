@@ -16,19 +16,17 @@
     <a href="#code-input" class="skip-link">Skip to main content</a>
     <div class="container">
         <header role="banner">
-            <div class="app-header-top">
-                <div class="app-brand-meta">
-                    <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
-                        <span class="logo-swap" aria-hidden="true">
-                            <img src="./images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default">
-                            <img src="./images/ajisai-qr.png" alt="" class="logo logo-qr">
-                        </span>
-                        <h1>Ajisai</h1>
-                    </a>
-                    <span class="version">ver.loading...</span>
-                </div>
-            </div>
-            <div class="header-actions">
+            <section class="app-brand-meta">
+                <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
+                    <span class="logo-swap" aria-hidden="true">
+                        <img src="./images/ajisai-logo-thumbnail-w40.jpg" alt="" class="logo logo-default">
+                        <img src="./images/ajisai-qr.png" alt="" class="logo logo-qr">
+                    </span>
+                    <h1>Ajisai</h1>
+                </a>
+                <span class="version">ver.loading...</span>
+            </section>
+            <nav class="header-actions" aria-label="Header actions">
                 <a href="docs/index.html" class="btn-secondary" target="_blank">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
@@ -41,7 +39,7 @@
                     </svg>
                     Test
                 </button>
-            </div>
+            </nav>
         </header>
 
         <main class="main-layout">
@@ -63,10 +61,10 @@
                     <option value="stack">Stack</option>
                     <option value="dictionary">Dictionary</option>
                 </select>
-                <div id="mobile-panel-dictionary-search" class="search-wrapper" hidden>
+                <span id="mobile-panel-dictionary-search" class="search-wrapper" hidden>
                     <input type="text" id="mobile-dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
                     <button id="mobile-dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
-                </div>
+                </span>
             </div>
 
             <div id="editor-panel">
@@ -98,17 +96,15 @@
 
             <div id="state-panel">
                 <div class="area-selector area-selector-right">
-                    <div class="right-mode-selector">
-                        <label for="right-panel-select" class="visually-hidden">Select right panel</label>
-                        <select id="right-panel-select">
-                            <option value="stack">Stack</option>
-                            <option value="dictionary">Dictionary</option>
-                        </select>
-                    </div>
-                    <div id="right-panel-dictionary-search" class="search-wrapper" hidden>
+                    <label for="right-panel-select" class="visually-hidden">Select right panel</label>
+                    <select id="right-panel-select">
+                        <option value="stack">Stack</option>
+                        <option value="dictionary">Dictionary</option>
+                    </select>
+                    <span id="right-panel-dictionary-search" class="search-wrapper" hidden>
                         <input type="text" id="dictionary-search" class="vocabulary-search-input" placeholder="Search word" aria-label="Search word">
                         <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
-                    </div>
+                    </span>
                 </div>
                 <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
@@ -118,19 +114,19 @@
                 </section>
 
                 <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" hidden>
-                    <div class="dictionary-toolbar">
+                    <header class="dictionary-toolbar">
                         <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
                         <select id="dictionary-sheet-select" class="dictionary-sheet-select">
                             <option value="core">Core word</option>
                             <option value="user">User word</option>
                         </select>
-                    </div>
-                    <div id="dictionary-sheet-core" class="dictionary-sheet words-area active">
+                    </header>
+                    <section id="dictionary-sheet-core" class="dictionary-sheet words-area active">
                         <span id="core-word-info" class="word-info-display"></span>
                         <div id="core-words-display" class="words-display"></div>
                         <div class="vocabulary-actions"></div>
-                    </div>
-                    <div id="dictionary-sheet-user" class="dictionary-sheet words-area" hidden>
+                    </section>
+                    <section id="dictionary-sheet-user" class="dictionary-sheet words-area" hidden>
                         <label for="user-dictionary-select" class="visually-hidden">Select user dictionary</label>
                         <select id="user-dictionary-select" class="dictionary-sheet-select">
                             <option value="DEMO">Demonstration word</option>
@@ -141,7 +137,7 @@
                             <button id="export-btn" class="btn-primary" type="button">Export</button>
                             <button id="import-btn" class="btn-primary" type="button">Import</button>
                         </div>
-                    </div>
+                    </section>
                 </section>
             </div>
         </main>
