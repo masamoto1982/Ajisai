@@ -7,6 +7,46 @@ on:
     branches: [ main ]
 
 jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Rust format check
+        working-directory: rust
+        run: cargo fmt --check
+
+      - name: Rust clippy (deny warnings)
+        working-directory: rust
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Rust all-target tests
+        working-directory: rust
+        run: cargo test --all-targets --verbose
+
+      - name: Rust branch coverage
+        working-directory: rust
+        run: cargo llvm-cov --branch --workspace --no-report
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: TypeScript check
+        run: npm run check
+
   rust-test:
     name: Rust Tests
     runs-on: ubuntu-latest

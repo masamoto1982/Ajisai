@@ -87,6 +87,7 @@ Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 - Runtime-specific behavior (Persistence / File I/O / Runtime hooks) is abstracted via `js/platform/` adapters
 
 仕様の完全な定義: `SPECIFICATION.md`
+品質プロセス方針: [`docs/quality/QUALITY_POLICY.md`](docs/quality/QUALITY_POLICY.md)
 
 ---
 
