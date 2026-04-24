@@ -9,9 +9,9 @@
  *   Level 2 (橙    #FF9500): div祖先 1個  — #editor-panel, #state-panel 等
  *   Level 3 (黄    #FFCC00): div祖先 2個  — #output-display, .dictionary-toolbar 等
  *   Level 4 (緑    #34C759): div祖先 3個  — .right-mode-selector, .vocabulary-container 等
- *   Level 5 (青    #007AFF): div祖先 4個  — .words-area
- *   Level 6 (紫    #AF52DE): div祖先 5個  — #core-words-display, .user-dictionary-controls 等
- *   Level 7 (青緑  #00C7BE): div祖先 6個  — .dictionary-sheet-selector (user sheet内)
+ *   Level 5 (青    #007AFF): div祖先 4個  — .words-area, #core-words-display, #user-words-display 等
+ *   Level 6 (紫    #AF52DE): div祖先 5個  — （主に動的module sheetで使用）
+ *   Level 7 (青緑  #00C7BE): div祖先 6個  — （現状は基本的に未使用）
  *
  * 余白について:
  *   padding: 4px !important を全 div に付与することで、親の padding が子 div を
