@@ -7,6 +7,7 @@
 | AQ-REQ-003 | WASM target build integrity is preserved. | `rust/src/wasm-interpreter-bindings.rs`, `rust/src/wasm-value-conversion.rs` | CI rust wasm check in `.github/workflows/test.yml`; AQ-VER-003-A, AQ-VER-003-B (native pure-helper coverage) |
 | AQ-REQ-004 | TypeScript runtime typing remains sound. | `js/` runtime modules | `npm run check` |
 | AQ-REQ-005 | Quality gates block merges on formatting/lint/test failures. | `.github/workflows/test.yml` | CI quality gate job |
+| AQ-REQ-006 | Interpreter execution semantics (mode dispatch, quantization eligibility, epoch-driven plan-cache invalidation) remain stable across regressions. | `rust/src/interpreter/execute-builtin.rs`, `rust/src/interpreter/quantized-block.rs`, `rust/src/interpreter/higher-order-operations.rs`, `rust/src/interpreter/compiled-plan.rs` | `cargo test --all-targets`; AQ-VER-006-A through AQ-VER-006-C |
 
 ## Verification Index
 
@@ -26,6 +27,9 @@
 | AQ-VER-002-F | AQ-REQ-002 | `parse_number_from_string` sign preamble (length-1 and non-digit guards) | `rust/src/tokenizer-mcdc-tests.rs::number_sign_guards` |
 | AQ-VER-003-A | AQ-REQ-003 | `resolve_effective_hint` external/arena precedence | `rust/src/wasm-value-conversion.rs::mcdc_tests::aq_ver_003_a_resolve_effective_hint` |
 | AQ-VER-003-B | AQ-REQ-003 | `build_bracket_structure_from_shape` empty/single/multi-dim | `rust/src/wasm-value-conversion.rs::mcdc_tests::aq_ver_003_b_bracket_structure` |
+| AQ-VER-006-A | AQ-REQ-006 | `Interpreter::is_hedged_mode` ElasticMode disjunction (`HedgedSafe \| HedgedTrace`) | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::hedged_mode_classifier` |
+| AQ-VER-006-B | AQ-REQ-006 | `is_quantizable_block` outer conjunction (`!empty && !any(LineBreak \| SafeMode)`) and inner token-variant disjunction | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::is_quantizable_block_outer`, `::is_quantizable_block_inner_match` |
+| AQ-VER-006-C | AQ-REQ-006 | `get_execution_plan_set` quantized-cache guard (`dictionary_epoch == && module_epoch ==`) observed via `compiled_plan_cache_miss_count` deltas around `bump_dictionary_epoch` / `bump_module_epoch` | `rust/src/interpreter/higher-order-operations-mcdc-tests.rs::compiled_plan_cache_guard` |
 
 ## Coverage Notes
 

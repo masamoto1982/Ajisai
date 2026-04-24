@@ -99,6 +99,9 @@ mod hash_tests;
 #[path = "higher-order-fold-tests.rs"]
 mod higher_order_fold_tests;
 #[cfg(test)]
+#[path = "higher-order-operations-mcdc-tests.rs"]
+mod higher_order_operations_mcdc_tests;
+#[cfg(test)]
 #[path = "interpreter-definition-tests.rs"]
 mod interpreter_definition_tests;
 #[cfg(test)]
