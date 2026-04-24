@@ -115,7 +115,7 @@
     gap: 0.5rem;
 }
 
-.area-selector-right .right-mode-selector {
+.area-selector-right select {
     flex: 1.618 1 0%;
 }
 
