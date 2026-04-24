@@ -194,6 +194,7 @@ impl Capabilities {
     pub const SPAWN: Self = Self { bits: 0b0010_0000 };
     pub const EVAL: Self = Self { bits: 0b0100_0000 };
     pub const MUTATES_DICT: Self = Self { bits: 0b1000_0000 };
+    pub const INPUT_HELPER: Self = Self { bits: 0b0001_0000_0000 };
 
     pub const fn empty() -> Self {
         Self { bits: 0 }

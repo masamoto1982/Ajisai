@@ -21,6 +21,15 @@ mod tests {
         assert_eq!(def.tier, Tier::Core);
         assert_eq!(def.stability, Stability::Stable);
         assert_eq!(def.capabilities, Capabilities::MUTATES_DICT);
+
+        let frame = interp.core_vocabulary.get("FRAME").unwrap();
+        assert_eq!(
+            frame.capabilities,
+            Capabilities::PURE.union(Capabilities::INPUT_HELPER)
+        );
+
+        let quote = interp.core_vocabulary.get("'").unwrap();
+        assert_eq!(quote.capabilities, Capabilities::INPUT_HELPER);
     }
 
     #[tokio::test]
@@ -98,5 +107,9 @@ mod tests {
         let joined = Capabilities::IO | Capabilities::TIME;
         assert!(joined.contains(Capabilities::IO));
         assert!(joined.contains(Capabilities::TIME));
+
+        let helper = Capabilities::PURE.union(Capabilities::INPUT_HELPER);
+        assert!(helper.contains(Capabilities::INPUT_HELPER));
+        assert!(helper.contains(Capabilities::PURE));
     }
 }
