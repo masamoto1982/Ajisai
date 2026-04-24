@@ -349,3 +349,118 @@ mod test_input_helper {
         );
     }
 }
+
+// AQ-VER-003: WASM boundary MC/DC tests for QL-B pure helpers.
+//
+// Scope: the JS-bridge conversion layer is reachable natively only for
+// its pure helpers (`resolve_effective_hint`,
+// `build_bracket_structure_from_shape`). JsValue-based entry points
+// (`js_value_to_value`, `arena_node_to_js`, `extract_display_hint_from_js`)
+// exercise `wasm_bindgen` runtime glue and are verified by the
+// `cargo check --target wasm32-unknown-unknown` step in
+// `.github/workflows/test.yml` (AQ-REQ-003). They are intentionally not
+// asserted here.
+//
+// Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-003.
+#[cfg(test)]
+mod mcdc_tests {
+    use super::{build_bracket_structure_from_shape, resolve_effective_hint};
+    use crate::types::arena::ValueArena;
+    use crate::types::DisplayHint;
+
+    // AQ-VER-003-A
+    // DUT: `resolve_effective_hint`
+    //     external_hint_opt.unwrap_or_else(|| arena.hint(root_id))
+    //
+    // One atomic condition C = external_hint_opt.is_some().
+    //   row 1: C=T -> return external value verbatim
+    //   row 2: C=F -> fall back to arena hint
+    //
+    // Additional row 3 pins that C=T ignores the arena hint even when
+    // the external value disagrees — this matters because a caller
+    // passing an explicit hint must win over arena state.
+    mod aq_ver_003_a_resolve_effective_hint {
+        use super::*;
+
+        #[test]
+        fn row1_some_external_is_returned_verbatim() {
+            let mut arena = ValueArena::new();
+            let id = arena.alloc_nil(DisplayHint::Number);
+            assert_eq!(
+                resolve_effective_hint(&arena, id, Some(DisplayHint::Boolean)),
+                DisplayHint::Boolean,
+            );
+        }
+
+        #[test]
+        fn row2_none_falls_back_to_arena_hint() {
+            let mut arena = ValueArena::new();
+            let id = arena.alloc_nil(DisplayHint::DateTime);
+            assert_eq!(
+                resolve_effective_hint(&arena, id, None),
+                DisplayHint::DateTime,
+            );
+        }
+
+        #[test]
+        fn external_hint_wins_even_when_arena_disagrees() {
+            // Guards against a regression where the fallback arm is
+            // evaluated eagerly and overwrites the external value.
+            let mut arena = ValueArena::new();
+            let id = arena.alloc_nil(DisplayHint::Number);
+            assert_eq!(
+                resolve_effective_hint(&arena, id, Some(DisplayHint::String)),
+                DisplayHint::String,
+            );
+        }
+    }
+
+    // AQ-VER-003-B
+    // DUT: `build_bracket_structure_from_shape`
+    //
+    // Outer decision: `if shape.is_empty()` — one atomic condition.
+    //   row 1: empty shape -> literal "[ ]"
+    //   row 2: non-empty shape -> recurse
+    //
+    // Inner decision (in `build_level`): `if shape.len() == 1`.
+    //   row 3: tail dimension -> emit `[ ]` repeated `shape[0]` times
+    //   row 4: non-tail dimension -> wrap the inner level
+    //
+    // The existing `test_build_bracket_structure_from_shape` covers
+    // several combinations in row 3/4 already. This module adds the
+    // outer-empty boundary (row 1), which was previously untested, and
+    // asserts the leaf-count invariant to make the MC/DC intent explicit.
+    mod aq_ver_003_b_bracket_structure {
+        use super::*;
+
+        #[test]
+        fn row1_empty_shape_returns_single_pair() {
+            assert_eq!(build_bracket_structure_from_shape(&[]), "[ ]");
+        }
+
+        #[test]
+        fn row2_single_dim_emits_n_leaves() {
+            // Complements row 1 by flipping `shape.is_empty()`.
+            let out = build_bracket_structure_from_shape(&[4]);
+            assert_eq!(out, "[ ] [ ] [ ] [ ]");
+            assert_eq!(
+                out.matches("[ ]").count(),
+                4,
+                "leaf count must equal shape[0] on the tail dimension"
+            );
+        }
+
+        #[test]
+        fn row3_row4_multi_dim_wraps_inner_levels() {
+            // Non-tail dimension wraps tail output in brackets.
+            // Shape [2, 3]: 2 outer frames, each containing 3 leaves.
+            let out = build_bracket_structure_from_shape(&[2, 3]);
+            assert_eq!(out, "[ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ]");
+            assert_eq!(
+                out.matches("[ ]").count(),
+                6,
+                "leaf count must equal the product of non-head dims"
+            );
+        }
+    }
+}
