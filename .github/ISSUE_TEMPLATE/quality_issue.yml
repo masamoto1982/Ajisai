@@ -1,5 +1,5 @@
 name: Quality issue
-about: Track verification gaps, process deviations, or quality defects.
+description: Track verification gaps, process deviations, or quality defects.
 title: "[QUALITY] "
 labels: [quality]
 body:
