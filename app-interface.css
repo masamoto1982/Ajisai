@@ -545,10 +545,9 @@
 }
 
 
-.dictionary-sheet-selector {
+.dictionary-toolbar > .dictionary-sheet-select {
     flex: 1.618 1 0%;
 }
-
 
 .words-area > .dictionary-sheet-select {
     flex: 0 0 auto;
