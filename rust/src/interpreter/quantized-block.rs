@@ -67,9 +67,9 @@ pub struct QuantizedBlock {
 fn builtin_arity(name: &str) -> Option<(i32, i32)> {
     match name {
         // Binary arithmetic
-        "+" | "-" | "*" | "/" | "%" | "^" => Some((2, 1)),
+        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "^" => Some((2, 1)),
         // Binary comparison
-        "<" | ">" | "<=" | ">=" | "=" | "!=" => Some((2, 1)),
+        "LT" | ">" | "LTE" | ">=" | "EQ" | "!=" => Some((2, 1)),
         // Binary logical
         "AND" | "OR" | "XOR" => Some((2, 1)),
         // Unary arithmetic / math
@@ -135,7 +135,7 @@ fn analyze_compiled_plan_with_context(
                 | CompiledOp::LineBreak => {}
 
                 CompiledOp::CallBuiltin(name) => {
-                    let normalized = Interpreter::normalize_symbol(name);
+                    let normalized = crate::core_word_aliases::canonicalize_core_word_name(name);
                     let key: &str = normalized.as_ref();
                     if is_side_effecting_builtin(key) {
                         is_pure = false;
@@ -159,8 +159,7 @@ fn analyze_compiled_plan_with_context(
                     if min_depth_at_first_unknown.is_none() {
                         min_depth_at_first_unknown = Some(min_depth);
                     }
-                    let propagated_pure =
-                        try_user_word_is_pure(name, interp, visited, depth);
+                    let propagated_pure = try_user_word_is_pure(name, interp, visited, depth);
                     if !propagated_pure {
                         is_pure = false;
                     }
@@ -173,8 +172,7 @@ fn analyze_compiled_plan_with_context(
                     if min_depth_at_first_unknown.is_none() {
                         min_depth_at_first_unknown = Some(min_depth);
                     }
-                    let propagated_pure =
-                        try_user_word_is_pure(&qualified, interp, visited, depth);
+                    let propagated_pure = try_user_word_is_pure(&qualified, interp, visited, depth);
                     if !propagated_pure {
                         is_pure = false;
                     }
@@ -183,7 +181,7 @@ fn analyze_compiled_plan_with_context(
 
                 CompiledOp::FallbackToken(token) => {
                     if let Token::Symbol(sym) = token {
-                        let normalized = Interpreter::normalize_symbol(sym);
+                        let normalized = crate::core_word_aliases::canonicalize_core_word_name(sym);
                         if is_side_effecting_builtin(normalized.as_ref()) {
                             is_pure = false;
                         }

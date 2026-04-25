@@ -18,7 +18,8 @@ mod detail_lookup_string_cast;
 mod detail_lookup_vector_ops;
 
 pub use builtin_word_definitions::{
-    builtin_specs, collect_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,
+    builtin_specs, collect_builtin_definitions, collect_core_builtin_definitions,
+    lookup_builtin_spec, BuiltinExecutorKey,
 };
 pub use builtin_word_details::lookup_builtin_detail;
 
@@ -50,15 +51,13 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
     }
 }
 
-fn core_builtin_capabilities(
-    key: Option<BuiltinExecutorKey>,
-    name: &str,
-) -> Capabilities {
+fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Capabilities {
     match (key, name) {
         (Some(BuiltinExecutorKey::Def), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Del), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Import), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::ImportOnly), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::Force), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Eval), _) => Capabilities::EVAL,
         (Some(BuiltinExecutorKey::Spawn), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Await), _) => Capabilities::SPAWN,
@@ -67,9 +66,7 @@ fn core_builtin_capabilities(
         (Some(BuiltinExecutorKey::Monitor), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Supervise), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
-        (None, "'") => Capabilities::INPUT_HELPER,
         (None, "FRAME") => Capabilities::PURE.union(Capabilities::INPUT_HELPER),
-        (None, "!") => Capabilities::MUTATES_DICT,
         _ => Capabilities::PURE,
     }
 }

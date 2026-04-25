@@ -1,4 +1,34 @@
+pub(crate) fn check_reserved_word_name(name: &str) -> Option<String> {
+    if let Some(alias) = crate::core_word_aliases::lookup_core_word_alias(name) {
+        return match alias.kind {
+            crate::core_word_aliases::CoreWordAliasKind::SymbolAlias => Some(format!(
+                "Cannot define '{}': '{}' is reserved as an alias of {}.",
+                name,
+                name,
+                alias.canonical.unwrap_or("")
+            )),
+            crate::core_word_aliases::CoreWordAliasKind::SyntaxSugar => Some(format!(
+                "Cannot define '{}': '{}' is reserved as syntax sugar for {}.",
+                name,
+                name,
+                alias.canonical.unwrap_or("")
+            )),
+            crate::core_word_aliases::CoreWordAliasKind::InputHelper => Some(format!(
+                "Cannot define '{}': '{}' is an input helper, not a user word name.",
+                name, name
+            )),
+            crate::core_word_aliases::CoreWordAliasKind::Deprecated => {
+                Some(format!("Cannot define '{}': '{}' is reserved.", name, name))
+            }
+        };
+    }
 
+    if name == "$" {
+        return Some("Cannot define '$': '$' is tokenizer-level syntax.".to_string());
+    }
+
+    None
+}
 
 const AMBIGUOUS_PREFIXES: &[&str] = &["DO-", "HANDLE-", "PROCESS-", "MANAGE-", "UTIL-", "HELPER-"];
 
@@ -6,13 +36,10 @@ const AMBIGUOUS_NAMES: &[&str] = &[
     "CALC", "RUN", "EXEC2", "TEMP", "MAIN", "TEST", "STUFF", "THING",
 ];
 
-
 const SHORT_NAME_MAX_LENGTH: usize = 6;
-
 
 pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
     let upper = name.to_uppercase();
-
 
     for prefix in AMBIGUOUS_PREFIXES {
         if upper.starts_with(prefix) {
@@ -26,7 +53,6 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
         }
     }
 
-
     if AMBIGUOUS_NAMES.contains(&upper.as_str()) {
         return Some(format!(
             "Warning: '{}': naming convention violation: ambiguous word name. \
@@ -36,21 +62,17 @@ pub(crate) fn check_word_name_convention(name: &str) -> Option<String> {
         ));
     }
 
-
     if !upper.contains('-') && upper.len() <= SHORT_NAME_MAX_LENGTH {
         return None;
     }
-
 
     if upper.starts_with("IS-") || upper.starts_with("HAS-") {
         return None;
     }
 
-
     if upper.contains('-') {
         return None;
     }
-
 
     None
 }
