@@ -2,7 +2,7 @@ use super::{Interpreter, ResolveCacheEntry};
 
 impl Interpreter {
     pub(crate) fn make_resolve_cache_key(name: &str) -> String {
-        name.to_uppercase()
+        crate::core_word_aliases::canonicalize_core_word_name(name)
     }
 
     pub(crate) fn lookup_resolve_cache(&mut self, name: &str) -> Option<String> {

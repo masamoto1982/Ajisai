@@ -94,6 +94,16 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn collect_core_word_aliases_info(&self) -> JsValue {
+        to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen]
+    pub fn collect_input_helper_words_info(&self) -> JsValue {
+        to_value(&crate::core_word_aliases::collect_input_helper_words()).unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
         for name in self.interpreter.import_table.modules.keys() {

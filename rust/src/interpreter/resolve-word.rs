@@ -165,6 +165,8 @@ impl Interpreter {
         &self,
         name: &str,
     ) -> Option<(String, Arc<WordDefinition>)> {
+        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let name = canonical_name.as_str();
         let (layers, word) = Self::split_path(name);
 
         match layers.len() {
@@ -253,6 +255,8 @@ impl Interpreter {
         &mut self,
         name: &str,
     ) -> Option<(String, Arc<WordDefinition>)> {
+        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let name = canonical_name.as_str();
         if let Some(cached_name) = self.lookup_resolve_cache(name) {
             let (layers, word) = Self::split_path(&cached_name);
             if layers.is_empty() {
@@ -286,7 +290,16 @@ impl Interpreter {
     }
 
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        self.resolve_word_entry_readonly(name).map(|(_, def)| def)
+        self.resolve_word_entry_readonly(name)
+            .map(|(_, def)| def)
+            .or_else(|| {
+                super::deprecated_core_aliases::lookup_deprecated_core_alias(name).and_then(
+                    |alias| {
+                        self.resolve_word_entry_readonly(alias.replacement_qualified)
+                            .map(|(_, def)| def)
+                    },
+                )
+            })
     }
 
     pub(crate) fn word_exists(&self, name: &str) -> bool {
@@ -318,7 +331,7 @@ impl Interpreter {
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
                     if let crate::types::Token::Symbol(s) = token {
-                        let upper_s = s.to_uppercase();
+                        let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
                         if let Some((resolved_name, resolved_def)) =
                             self.resolve_word_entry(&upper_s)
                         {
