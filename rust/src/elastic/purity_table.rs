@@ -140,14 +140,15 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 /// Returns `None` for user-defined or unknown words; use `infer_purity`
 /// to handle those.
 pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
-    if let Some(info) = crate::builtins::lookup_builtin_spec(name)
+    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    if let Some(info) = crate::builtins::lookup_builtin_spec(&canonical)
         .and_then(|spec| spec.executor_key)
         .map(builtin_purity)
     {
         return Some(info);
     }
 
-    match name.to_uppercase().as_str() {
+    match canonical.as_str() {
         "NOW" | "DATETIME" | "TIMESTAMP" | "TIME@NOW" | "TIME@DATETIME" | "TIME@TIMESTAMP" => {
             Some(PurityInfo {
                 purity: Purity::Impure,

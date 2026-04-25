@@ -24,7 +24,9 @@ export interface AjisaiInterpreter {
     reset(): ExecuteResult;
     collect_stack(): Value[];
     collect_user_words_info(): Array<[string, string, string | null, boolean]>;
-    collect_core_words_info(): Array<[string, string, string]>;
+    collect_core_words_info(): Array<[string, string, string, string]>;
+    collect_core_word_aliases_info(): Array<[string, string, string, string]>;
+    collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
     restore_user_words(words: UserWord[]): void;

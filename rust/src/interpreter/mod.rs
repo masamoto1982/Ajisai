@@ -66,10 +66,10 @@ mod resolve_word;
 #[path = "execution-loop.rs"]
 mod execution_loop;
 
-#[path = "execute-builtin.rs"]
-mod execute_builtin;
 #[path = "deprecated-core-aliases.rs"]
 mod deprecated_core_aliases;
+#[path = "execute-builtin.rs"]
+mod execute_builtin;
 
 #[cfg(test)]
 #[path = "child-runtime-tests.rs"]
@@ -129,6 +129,9 @@ pub use redundancy_layer::{select_degradation_policy, RedundancyCheckpoint};
 #[cfg(test)]
 #[path = "compiled-plan-tests.rs"]
 mod compiled_plan_tests;
+#[cfg(test)]
+#[path = "core-word-canonicalization-tests.rs"]
+mod core_word_canonicalization_tests;
 #[cfg(test)]
 #[path = "fast-guarded-tests.rs"]
 mod fast_guarded_tests;

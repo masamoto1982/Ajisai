@@ -7,7 +7,7 @@ mod tests {
     #[tokio::test]
     async fn core_words_have_expected_attributes() {
         let interp = Interpreter::new();
-        let add = interp.core_vocabulary.get("+").unwrap();
+        let add = interp.core_vocabulary.get("ADD").unwrap();
         assert_eq!(add.tier, Tier::Core);
         assert_eq!(add.stability, Stability::Stable);
         assert_eq!(add.capabilities, Capabilities::PURE);
@@ -28,8 +28,7 @@ mod tests {
             Capabilities::PURE.union(Capabilities::INPUT_HELPER)
         );
 
-        let quote = interp.core_vocabulary.get("'").unwrap();
-        assert_eq!(quote.capabilities, Capabilities::INPUT_HELPER);
+        assert!(!interp.core_vocabulary.contains_key("'"));
     }
 
     #[tokio::test]

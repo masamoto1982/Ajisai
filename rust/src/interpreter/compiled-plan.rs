@@ -46,10 +46,10 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
-        "." => CompiledOp::SetTargetModeStackTop,
-        ".." => CompiledOp::SetTargetModeStack,
-        "," => CompiledOp::SetConsumptionConsume,
-        ",," => CompiledOp::SetConsumptionKeep,
+        "TOP" => CompiledOp::SetTargetModeStackTop,
+        "STAK" => CompiledOp::SetTargetModeStack,
+        "EAT" => CompiledOp::SetConsumptionConsume,
+        "KEEP" => CompiledOp::SetConsumptionKeep,
         "TRUE" => CompiledOp::PushLiteral(Value::from_bool(true)),
         "FALSE" => CompiledOp::PushLiteral(Value::from_bool(false)),
         "NIL" => CompiledOp::PushLiteral(Value::nil()),
@@ -129,7 +129,7 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
                 }
                 Token::LineBreak => CompiledOp::LineBreak,
                 Token::Symbol(s) => {
-                    let upper = Interpreter::normalize_symbol(s);
+                    let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
                     compile_symbol(token, upper.as_ref(), interp)
                 }
             };
