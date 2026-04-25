@@ -90,7 +90,17 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn collect_core_words_info(&self) -> JsValue {
-        to_value(&builtins::collect_builtin_definitions()).unwrap_or(JsValue::NULL)
+        to_value(&builtins::collect_core_builtin_definitions()).unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen]
+    pub fn collect_core_word_aliases_info(&self) -> JsValue {
+        to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen]
+    pub fn collect_input_helper_words_info(&self) -> JsValue {
+        to_value(&crate::core_word_aliases::collect_input_helper_words()).unwrap_or(JsValue::NULL)
     }
 
     #[wasm_bindgen]

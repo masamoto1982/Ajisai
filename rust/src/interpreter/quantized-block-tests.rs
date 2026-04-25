@@ -40,7 +40,10 @@ fn run_code_result(code: &str) -> std::result::Result<Interpreter, crate::error:
 }
 
 fn stack_top(interp: &Interpreter) -> &Value {
-    interp.get_stack().last().expect("stack should not be empty")
+    interp
+        .get_stack()
+        .last()
+        .expect("stack should not be empty")
 }
 
 /// Extract i64 from top of stack, handling both raw scalars and
@@ -53,7 +56,9 @@ fn stack_top_i64(interp: &Interpreter) -> i64 {
     if top.len() == 1 {
         if let Some(child) = top.get_child(0) {
             if let Some(f) = child.as_scalar() {
-                return f.to_i64().expect("inner scalar should be representable as i64");
+                return f
+                    .to_i64()
+                    .expect("inner scalar should be representable as i64");
             }
         }
     }
@@ -197,9 +202,9 @@ fn arity_user_word_is_variable() {
     let mut interp = make_interp();
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        interp.execute("{ + } 'ADD' DEF").await.unwrap();
+        interp.execute("{ + } 'SUMX' DEF").await.unwrap();
     });
-    let tokens = vec![sym("ADD")];
+    let tokens = vec![sym("SUMX")];
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();
     assert_eq!(qb.input_arity, QuantizedArity::Variable);
     assert_eq!(qb.output_arity, QuantizedArity::Variable);
@@ -371,7 +376,12 @@ fn filter_keeps_elements_above_zero() {
 fn filter_with_simple_fast_predicate_pattern() {
     let interp = run_code("[ -2 -1 0 1 2 3 ] { [ 2 ] < } FILTER");
     let top = stack_top(&interp);
-    assert_eq!(top.len(), 4, "expected [-2, -1, 0, 1], got len={}", top.len());
+    assert_eq!(
+        top.len(),
+        4,
+        "expected [-2, -1, 0, 1], got len={}",
+        top.len()
+    );
 }
 
 #[test]
@@ -444,9 +454,7 @@ fn scan_produces_prefix_sums() {
         }
         panic!("SCAN element is not a numeric scalar or single-element vector");
     };
-    let vals: Vec<i64> = (0..3)
-        .map(|i| extract(top.get_child(i).unwrap()))
-        .collect();
+    let vals: Vec<i64> = (0..3).map(|i| extract(top.get_child(i).unwrap())).collect();
     assert_eq!(vals, vec![1, 3, 6]);
 }
 
@@ -485,14 +493,14 @@ fn count_quantized_vs_plain_parity() {
 #[test]
 fn fold_quantized_vs_plain_parity() {
     let q = run_code("[ 1 2 3 4 5 ] [ 0 ] { + } FOLD");
-    let p = run_code("{ + } 'ADD' DEF [ 1 2 3 4 5 ] [ 0 ] 'ADD' FOLD");
+    let p = run_code("{ + } 'SUMX' DEF [ 1 2 3 4 5 ] [ 0 ] 'SUMX' FOLD");
     assert_eq!(q.get_stack(), p.get_stack());
 }
 
 #[test]
 fn scan_quantized_vs_plain_parity() {
     let q = run_code("[ 1 2 3 ] [ 0 ] { + } SCAN");
-    let p = run_code("{ + } 'ADD' DEF [ 1 2 3 ] [ 0 ] 'ADD' SCAN");
+    let p = run_code("{ + } 'SUMX' DEF [ 1 2 3 ] [ 0 ] 'SUMX' SCAN");
     assert_eq!(q.get_stack(), p.get_stack());
 }
 
@@ -598,8 +606,11 @@ fn purity_nested_pure_user_word_is_pure() {
     let mut interp = make_interp();
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        interp.execute("{ + } 'ADD' DEF").await.unwrap();
-        interp.execute("{ ADD ADD } 'ADD_TWICE' DEF").await.unwrap();
+        interp.execute("{ + } 'SUMX' DEF").await.unwrap();
+        interp
+            .execute("{ SUMX SUMX } 'SUMX_TWICE' DEF")
+            .await
+            .unwrap();
     });
     let tokens = vec![sym("ADD_TWICE")];
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();

@@ -118,55 +118,46 @@ macro_rules! builtin_spec {
 
 const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
-        ".",
+        "TOP",
         "modifier",
-        "Set operation target to stack top (default)",
-        ". + → add to stack top",
+        "Set operation target to stack top",
+        ". ADD → apply ADD to stack top",
         "none",
         BuiltinDetailGroup::Modifier,
         None
     ),
     builtin_spec!(
-        "..",
+        "STAK",
         "modifier",
-        "Set operation target to entire stack",
-        ".. + [ 3 ] → add 3 to all stack elements",
+        "Set operation target to the whole stack",
+        ".. ADD → apply ADD to the whole stack",
         "none",
         BuiltinDetailGroup::Modifier,
         None
     ),
     builtin_spec!(
-        ",",
+        "EAT",
         "modifier",
-        "Set consumption mode to consume (default)",
-        ", + → consume operands",
+        "Set consumption mode to consume operands",
+        ", ADD → consume operands",
         "none",
         BuiltinDetailGroup::Modifier,
         None
     ),
     builtin_spec!(
-        ",,",
+        "KEEP",
         "modifier",
-        "Set bifurcation mode. Preserve operands and append result",
-        "[1] [2] ,, + → [1] [2] [3]",
+        "Set consumption mode to keep operands",
+        ",, ADD → keep operands and append result",
         "none",
         BuiltinDetailGroup::Modifier,
         None
     ),
     builtin_spec!(
-        "~",
+        "SAFE",
         "modifier",
-        "Safe mode. Return NIL on error",
-        "[ 1 2 3 ] [ 10 ] ~ GET → NIL",
-        "none",
-        BuiltinDetailGroup::Modifier,
-        None
-    ),
-    builtin_spec!(
-        "'",
-        "modifier",
-        "Input single quote (input helper)",
-        "' → '",
+        "Enable safe mode and return NIL on error",
+        "~ GET → NIL on out-of-range access",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -370,63 +361,63 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         Some(BuiltinExecutorKey::Chr)
     ),
     builtin_spec!(
-        "+",
+        "ADD",
         "arithmetic",
-        "Fold: Addition (broadcast). Numeric, Numeric -> Numeric",
+        "Fold: add values with broadcasting where supported",
         "[ 1 2 ] [ 3 4 ] + → [ 4 6 ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Add)
     ),
     builtin_spec!(
-        "-",
+        "SUB",
         "arithmetic",
-        "Fold: Subtraction (broadcast). Numeric, Numeric -> Numeric",
+        "Fold: subtract values with broadcasting where supported",
         "[ 5 3 ] [ 2 1 ] - → [ 3 2 ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Sub)
     ),
     builtin_spec!(
-        "*",
+        "MUL",
         "arithmetic",
-        "Fold: Multiplication (broadcast). Numeric, Numeric -> Numeric",
+        "Fold: multiply values with broadcasting where supported",
         "[ 2 3 ] [ 4 5 ] * → [ 8 15 ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Mul)
     ),
     builtin_spec!(
-        "/",
+        "DIV",
         "arithmetic",
-        "Fold: Division (broadcast). Numeric, Numeric -> Numeric",
+        "Fold: divide values with broadcasting where supported",
         "[ 10 20 ] [ 2 4 ] / → [ 5 5 ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Div)
     ),
     builtin_spec!(
-        "=",
+        "EQ",
         "comparison",
-        "Fold: Equality comparison (broadcast). Any, Any -> Boolean",
+        "Fold: equality comparison with broadcasting where supported",
         "[ 1 2 ] [ 1 2 ] = → [ TRUE ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Eq)
     ),
     builtin_spec!(
-        "<",
+        "LT",
         "comparison",
-        "Fold: Less-than comparison (broadcast). Numeric, Numeric -> Boolean",
+        "Fold: less-than comparison with broadcasting where supported",
         "[ 1 ] [ 2 ] < → [ TRUE ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Lt)
     ),
     builtin_spec!(
-        "<=",
+        "LTE",
         "comparison",
-        "Fold: Less-or-equal comparison (broadcast). Numeric, Numeric -> Boolean",
+        "Fold: less-than-or-equal comparison with broadcasting where supported",
         "[ 1 ] [ 1 ] <= → [ TRUE ]",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
@@ -604,9 +595,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         Some(BuiltinExecutorKey::Lookup)
     ),
     builtin_spec!(
-        "!",
-        "modifier",
-        "Force flag. Allow DEL/DEF of dependent user words",
+        "FORC",
+        "control",
+        "Force destructive dictionary operations such as DEF and DEL",
         "! 'WORD' DEL",
         "none",
         BuiltinDetailGroup::Modifier,
@@ -853,9 +844,11 @@ pub fn builtin_specs() -> &'static [BuiltinSpec] {
 }
 
 pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
-    BUILTIN_SPECS.iter().find(|spec| spec.name == name)
+    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    BUILTIN_SPECS.iter().find(|spec| spec.name == canonical)
 }
 
+#[allow(dead_code)]
 pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
 {
     BUILTIN_SPECS
@@ -869,4 +862,58 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             )
         })
         .collect()
+}
+
+pub fn collect_core_builtin_definitions(
+) -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
+    const CORE_WORDS: &[&str] = &[
+        "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "TOP", "STAK", "EAT", "KEEP", "SAFE",
+        "FORC",
+    ];
+    BUILTIN_SPECS
+        .iter()
+        .filter(|spec| CORE_WORDS.contains(&spec.name))
+        .map(|spec| {
+            (
+                spec.name,
+                spec.short_description,
+                spec.syntax,
+                spec.signature_type,
+            )
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
+        let forbidden = [
+            "+", "-", "*", "/", "%", "=", "<", "<=", ".", "..", ",", ",,", "~", "!", "'", "$",
+        ];
+
+        for spec in super::builtin_specs() {
+            assert!(
+                !forbidden.contains(&spec.name),
+                "builtin spec must not contain symbol/helper word: {}",
+                spec.name
+            );
+        }
+    }
+
+    #[test]
+    fn builtin_specs_contain_canonical_core_words() {
+        let required = [
+            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "TOP", "STAK", "EAT", "KEEP",
+            "SAFE", "FORC",
+        ];
+
+        for name in required {
+            assert!(
+                super::lookup_builtin_spec(name).is_some(),
+                "missing canonical core word: {}",
+                name
+            );
+        }
+    }
 }

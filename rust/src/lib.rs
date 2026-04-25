@@ -1,6 +1,7 @@
 mod builtins;
-mod error;
+pub mod core_word_aliases;
 pub mod elastic;
+mod error;
 pub mod interpreter;
 mod tokenizer;
 pub mod types;
