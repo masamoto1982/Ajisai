@@ -16,7 +16,7 @@ export interface InputAssistWords {
 const INPUT_ASSIST_WORDS: readonly string[] = Object.freeze([
     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     '[', ']', '{', '}', '(', ')',
-    "'", '"', '~', '$', '%', '@', '=', '<', '>', '.', ',',
+    "'", '"', '+', '-', '*', '/', '~', '$', '%', '@', '=', '<', '>', '.', ',',
 ]);
 
 export const createInputAssistWords = (

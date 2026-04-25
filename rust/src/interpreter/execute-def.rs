@@ -154,6 +154,13 @@ pub(crate) fn op_def_inner(
     tokens: &[Token],
     description: Option<String>,
 ) -> Result<()> {
+    if let Some(message) =
+        crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
+    {
+        interp.force_flag = false;
+        return Err(AjisaiError::from(message));
+    }
+
     let upper_name = name.to_uppercase();
 
     if interp.core_vocabulary.contains_key(&upper_name) {
@@ -217,7 +224,7 @@ pub(crate) fn op_def_inner(
     for line in &lines {
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
-                let upper_s = s.to_uppercase();
+                let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
                     if !resolved_def.is_builtin {
                         new_dependencies.insert(resolved_name);

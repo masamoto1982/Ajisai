@@ -66,15 +66,19 @@ impl Interpreter {
     ///
     /// Never call directly — use `execute_word_core` so tracing applies.
     fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
+        let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
+        let name = canonical_name.as_str();
         if self.resolve_word_entry(name).is_none() {
-            if let Some(alias) = super::deprecated_core_aliases::lookup_deprecated_core_alias(name) {
+            if let Some(alias) = super::deprecated_core_aliases::lookup_deprecated_core_alias(name)
+            {
                 self.execution_step_count += 1;
                 if self.execution_step_count > self.max_execution_steps {
                     return Err(AjisaiError::ExecutionLimitExceeded {
                         limit: self.max_execution_steps,
                     });
                 }
-                self.call_stack.push(alias.replacement_qualified.to_string());
+                self.call_stack
+                    .push(alias.replacement_qualified.to_string());
                 self.output_buffer.push_str(&format!(
                     "Warning: '{}' is deprecated. Use {} instead.\n",
                     alias.old_name, alias.import_hint
@@ -164,7 +168,8 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
-        if name != "DEL" && name != "DEF" && name != "!" {
+        let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+        if canonical != "DEL" && canonical != "DEF" && canonical != "FORC" {
             self.force_flag = false;
         }
 
@@ -174,7 +179,7 @@ impl Interpreter {
             None
         };
 
-        let result = self.execute_builtin_with_conservation(name);
+        let result = self.execute_builtin_with_conservation(canonical.as_str());
 
         if let Some(pre) = pre_snapshot {
             if result.is_ok() {
