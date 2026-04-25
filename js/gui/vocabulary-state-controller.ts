@@ -39,13 +39,6 @@ export interface VocabularyManager {
     readonly updateSearchFilter: (filter: string) => void;
 }
 
-const HIDDEN_CORE_WORD_ALIASES: ReadonlySet<string> = new Set([
-    ';', '"',
-    '+', '-', '*', '/', '=', '<', '>', '<=', '>=',
-    '[', ']', '{', '}', '(', ')',
-    '.', ',',
-]);
-
 const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
     'DEMO': 'Demonstration',
 });
@@ -59,7 +52,7 @@ export const formatDictionaryTabName = (pathName: string): string => {
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
     'NIL': 'nil', 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/',
-    'LT': '<', 'LE': '<=', 'GT': '>', 'GE': '>=', 'EQ': '=',
+    'LT': '<', 'LTE': '<=', 'LE': '<=', 'GT': '>', 'GE': '>=', 'EQ': '=',
     'AND': 'and', 'OR': 'or', 'NOT': 'not',
 });
 
@@ -246,7 +239,6 @@ export const createVocabularyManager = (
             (wd): wd is unknown[] =>
                 Array.isArray(wd)
                 && typeof wd[0] === 'string'
-                && !HIDDEN_CORE_WORD_ALIASES.has(wd[0])
         );
 
 

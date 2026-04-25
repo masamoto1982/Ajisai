@@ -14,11 +14,11 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
 
     let name_str = extract_word_name_from_value(&name_val)?;
 
-    let upper_name = name_str.to_uppercase();
+    let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(&name_str);
 
-    if let Some(def) = interp.resolve_word(&upper_name) {
+    if let Some(def) = interp.resolve_word(&canonical_name) {
         if def.is_builtin {
-            let detailed_info = crate::builtins::lookup_builtin_detail(&upper_name);
+            let detailed_info = crate::builtins::lookup_builtin_detail(&name_str);
             interp.definition_to_load = Some(detailed_info);
             return Ok(());
         }
@@ -27,7 +27,7 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
             interp.definition_to_load = Some(original_source.clone());
         } else {
             let definition = interp
-                .lookup_word_definition_tokens(&upper_name)
+                .lookup_word_definition_tokens(&canonical_name)
                 .unwrap_or_default();
             let full_definition = if definition.is_empty() {
                 format!("[ NIL ] '{}' DEF", name_str)

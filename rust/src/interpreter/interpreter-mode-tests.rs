@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+    use crate::interpreter::Interpreter;
 
     #[tokio::test]
     async fn test_keep_mode_basic() {
