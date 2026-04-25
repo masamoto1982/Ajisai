@@ -39,6 +39,13 @@ export interface VocabularyManager {
     readonly updateSearchFilter: (filter: string) => void;
 }
 
+const HIDDEN_CORE_WORD_ALIASES: ReadonlySet<string> = new Set([
+    ';', '"',
+    '+', '-', '*', '/', '=', '<', '>', '<=', '>=',
+    '[', ']', '{', '}', '(', ')',
+    '.', ',',
+]);
+
 const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
     'DEMO': 'Demonstration',
 });
@@ -237,7 +244,9 @@ export const createVocabularyManager = (
 
         const filtered = coreWords.filter(
             (wd): wd is unknown[] =>
-                Array.isArray(wd) && wd[0] !== ';' && wd[0] !== '"'
+                Array.isArray(wd)
+                && typeof wd[0] === 'string'
+                && !HIDDEN_CORE_WORD_ALIASES.has(wd[0])
         );
 
 

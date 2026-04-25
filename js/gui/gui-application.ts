@@ -23,6 +23,7 @@ import {
     ApplyAreaStateDeps
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
+import { createInputAssistWords, InputAssistWords } from './input-assist-words';
 
 declare global {
     interface Window {
@@ -31,6 +32,12 @@ declare global {
 }
 
 export type { GUIElements };
+
+const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
+    '+', '-', '*', '/', '=', '<', '>', '<=', '>=',
+    '[', ']', '{', '}', '(', ')',
+    '.', ',', "'", '"',
+]);
 
 export interface GUI {
     readonly init: () => Promise<void>;
@@ -48,7 +55,9 @@ const collectAutocompleteWords = (): string[] => {
     if (!window.ajisaiInterpreter) return [];
 
     const coreWordsInfo = window.ajisaiInterpreter.collect_core_words_info();
-    const coreWords: string[] = coreWordsInfo.map(word => word[0]).filter((w): w is string => w !== undefined);
+    const coreWords: string[] = coreWordsInfo
+        .map(word => word[0])
+        .filter((w): w is string => w !== undefined && !HIDDEN_AUTOCOMPLETE_ALIASES.has(w));
 
     const userWordsInfo = window.ajisaiInterpreter.collect_user_words_info();
     const userWords: string[] = userWordsInfo.flatMap(word => [
@@ -87,6 +96,7 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
+    let inputAssistWords: InputAssistWords;
     let layoutState: LayoutState;
 
     const doSwitchDictionarySheet = (sheetId: string): void => {
@@ -205,10 +215,6 @@ export const createGUI = (): GUI => {
     };
 
     const setupInteractionEventListeners = (): void => {
-        elements.runBtn.addEventListener('click', () => {
-            executionController.executeCode(editor.extractValue());
-        });
-
         const applySearchFilter = (filter: string): void => {
             elements.dictionarySearch.value = filter;
             elements.mobileDictionarySearch.value = filter;
@@ -394,6 +400,19 @@ export const createGUI = (): GUI => {
             onSwitchToInputMode: () => switchArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
+
+        inputAssistWords = createInputAssistWords(elements.inputAssistWordsDisplay, {
+            onAssistWordClick: (word: string) => {
+                editor.insertText(word);
+            },
+            onBackgroundClick: () => {
+                editor.insertWord(' ');
+            },
+            onBackgroundDoubleClick: () => {
+                editor.removeLastWord();
+            },
+        });
+        inputAssistWords.render();
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
             onWordClick: (word) => {

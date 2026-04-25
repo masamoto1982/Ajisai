@@ -4,13 +4,13 @@ import type { MobileElements } from './mobile-view-switcher';
 
 export interface GUIElements {
     readonly codeInput: HTMLTextAreaElement;
-    readonly runBtn: HTMLButtonElement;
     readonly clearBtn: HTMLButtonElement;
     readonly testBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
+    readonly inputAssistWordsDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
@@ -37,13 +37,13 @@ export interface GUIElements {
 
 export const cacheElements = (): GUIElements => ({
     codeInput: document.getElementById('code-input') as HTMLTextAreaElement,
-    runBtn: document.getElementById('run-btn') as HTMLButtonElement,
     clearBtn: document.getElementById('clear-btn') as HTMLButtonElement,
     testBtn: document.getElementById('test-btn') as HTMLButtonElement,
     exportBtn: document.getElementById('export-btn') as HTMLButtonElement,
     importBtn: document.getElementById('import-btn') as HTMLButtonElement,
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
+    inputAssistWordsDisplay: document.getElementById('input-assist-words-display')!,
     builtInWordsDisplay: document.getElementById('core-words-display')!,
     userWordsDisplay: document.getElementById('user-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
