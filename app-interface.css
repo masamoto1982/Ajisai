@@ -492,6 +492,15 @@
     justify-content: center;
 }
 
+.input-assist-words-display {
+    min-height: 2.5rem;
+    align-content: flex-start;
+}
+
+.input-assist-word {
+    min-width: 2rem;
+}
+
 .empty-words-message {
     width: 100%;
     padding: 0.75rem;
@@ -820,6 +829,16 @@
 
     .words-area .words-display {
         cursor: default;
+    }
+
+    .input-assist-word {
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+    }
+
+    .input-assist-words-display {
+        max-height: 7rem;
+        overflow-y: auto;
     }
 
     .stack-area {
