@@ -866,13 +866,8 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
 
 pub fn collect_core_builtin_definitions(
 ) -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
-    const CORE_WORDS: &[&str] = &[
-        "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "TOP", "STAK", "EAT", "KEEP", "SAFE",
-        "FORC",
-    ];
     BUILTIN_SPECS
         .iter()
-        .filter(|spec| CORE_WORDS.contains(&spec.name))
         .map(|spec| {
             (
                 spec.name,
