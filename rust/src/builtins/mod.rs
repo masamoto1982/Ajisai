@@ -18,7 +18,7 @@ mod detail_lookup_string_cast;
 mod detail_lookup_vector_ops;
 
 pub use builtin_word_definitions::{
-    builtin_specs, collect_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,
+    builtin_specs, collect_core_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,
 };
 pub use builtin_word_details::lookup_builtin_detail;
 
