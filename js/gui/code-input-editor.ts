@@ -101,11 +101,11 @@ export const createEditor = (
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
 
-    const textareaWrapper = element.closest('.textarea-wrapper');
+    const textareaContainer = element.closest('.area-main');
     const suggestionPanel = document.createElement('div');
     suggestionPanel.className = 'editor-suggestions';
     suggestionPanel.style.display = 'none';
-    textareaWrapper?.appendChild(suggestionPanel);
+    textareaContainer?.appendChild(suggestionPanel);
 
     const emitContentChange = (): void => {
         if (onContentChangeCallback) {

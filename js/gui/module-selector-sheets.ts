@@ -75,27 +75,17 @@ export const createModuleTabManager = (
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
-
-        const wordsArea = document.createElement('div');
-        wordsArea.className = 'words-area';
-        wordsArea.appendChild(wordInfoDisplay);
+        sheet.appendChild(wordInfoDisplay);
 
         const wordsDisplay = document.createElement('div');
         wordsDisplay.className = 'words-display module-words-display';
-        wordsArea.appendChild(wordsDisplay);
+        sheet.appendChild(wordsDisplay);
         registerBackgroundClickListeners(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
-
-        const container = document.createElement('div');
-        container.className = 'vocabulary-container';
-        container.appendChild(wordsArea);
-
-        sheet.appendChild(container);
-
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'vocabulary-actions';
 
         const actions = options.moduleActions?.[moduleName];
         if (actions) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'vocabulary-actions';
             for (const action of actions) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -105,9 +95,8 @@ export const createModuleTabManager = (
                 btn.addEventListener('click', action.onClick);
                 actionsDiv.appendChild(btn);
             }
+            sheet.appendChild(actionsDiv);
         }
-
-        sheet.appendChild(actionsDiv);
 
         return sheet;
     };
