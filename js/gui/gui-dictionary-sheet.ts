@@ -10,11 +10,4 @@ export const switchDictionarySheet = (containerEl: HTMLElement, sheetId: string)
         target.hidden = false;
         target.classList.add('active');
     }
-
-    const userOnlyIds = ['user-dictionary-select', 'export-btn', 'import-btn'];
-    const showUserControls = sheetId === 'user';
-    for (const id of userOnlyIds) {
-        const el = document.getElementById(id);
-        if (el) (el as HTMLElement).hidden = !showUserControls;
-    }
 };

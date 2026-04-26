@@ -101,7 +101,7 @@ export const createEditor = (
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
 
-    const textareaContainer = element.closest('.area-main');
+    const textareaContainer = element.closest('.input-area');
     const suggestionPanel = document.createElement('div');
     suggestionPanel.className = 'editor-suggestions';
     suggestionPanel.style.display = 'none';
