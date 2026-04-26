@@ -80,8 +80,11 @@
                 <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0" hidden>
                     <h2 class="visually-hidden">Output</h2>
                     <div class="area-body">
-                        <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
-                        <div class="vocabulary-actions">
+                        <div class="area-header"></div>
+                        <div class="area-main">
+                            <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
+                        </div>
+                        <div class="area-footer">
                             <button id="copy-output-btn" class="btn-primary" type="button" aria-label="Copy output to clipboard">Copy</button>
                         </div>
                     </div>
@@ -89,15 +92,18 @@
                 <section id="input-panel" class="input-area" role="region" aria-label="Input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
                     <div class="area-body">
-                        <div class="textarea-wrapper">
+                        <div class="area-header"></div>
+                        <div class="area-main">
                             <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
                             <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
                         </div>
-                        <div
-                            id="input-assist-words-display"
-                            class="words-display input-assist-words-display"
-                            aria-label="Input assist words"
-                        ></div>
+                        <div class="area-footer">
+                            <div
+                                id="input-assist-words-display"
+                                class="words-display input-assist-words-display"
+                                aria-label="Input assist words"
+                            ></div>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -119,37 +125,41 @@
                 <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div class="area-body">
-                        <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
-                        <!-- Empty slot for future stack-related buttons. Preserved for structural symmetry with other panels; do not remove. -->
-                        <div class="vocabulary-actions"></div>
+                        <div class="area-header"></div>
+                        <div class="area-main">
+                            <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                        </div>
+                        <div class="area-footer"></div>
                     </div>
                 </section>
 
                 <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" hidden>
+                    <h2 class="visually-hidden">Dictionary</h2>
                     <div class="area-body">
-                        <div class="dictionary-toolbar">
+                        <div class="area-header">
                             <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
                             <select id="dictionary-sheet-select" class="dictionary-sheet-select">
                                 <option value="core">Core word</option>
                                 <option value="user">User word</option>
                             </select>
-                        </div>
-                        <div id="dictionary-sheet-core" class="dictionary-sheet words-area active">
-                            <span id="core-word-info" class="word-info-display"></span>
-                            <div id="core-words-display" class="words-display"></div>
-                            <div class="vocabulary-actions"></div>
-                        </div>
-                        <div id="dictionary-sheet-user" class="dictionary-sheet words-area" hidden>
                             <label for="user-dictionary-select" class="visually-hidden">Select user dictionary</label>
-                            <select id="user-dictionary-select" class="dictionary-sheet-select">
+                            <select id="user-dictionary-select" class="dictionary-sheet-select" hidden>
                                 <option value="DEMO">Demonstration word</option>
                             </select>
-                            <span id="user-word-info" class="word-info-display"></span>
-                            <div id="user-words-display" class="words-display"></div>
-                            <div class="vocabulary-actions">
-                                <button id="export-btn" class="btn-primary" type="button">Export</button>
-                                <button id="import-btn" class="btn-primary" type="button">Import</button>
+                        </div>
+                        <div class="area-main">
+                            <div id="dictionary-sheet-core" class="dictionary-sheet active">
+                                <span id="core-word-info" class="word-info-display"></span>
+                                <div id="core-words-display" class="words-display"></div>
                             </div>
+                            <div id="dictionary-sheet-user" class="dictionary-sheet" hidden>
+                                <span id="user-word-info" class="word-info-display"></span>
+                                <div id="user-words-display" class="words-display"></div>
+                            </div>
+                        </div>
+                        <div class="area-footer">
+                            <button id="export-btn" class="btn-primary" type="button" hidden>Export</button>
+                            <button id="import-btn" class="btn-primary" type="button" hidden>Import</button>
                         </div>
                     </div>
                 </section>

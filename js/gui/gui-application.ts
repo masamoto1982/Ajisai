@@ -347,7 +347,7 @@ export const createGUI = (): GUI => {
 
         moduleTabManager = createModuleTabManager({
             selectEl: elements.dictionarySheetSelect,
-            sheetContainerEl: elements.dictionaryArea,
+            sheetContainerEl: elements.dictionaryArea.querySelector('.area-main') as HTMLElement,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {
                     editor.insertWord(word);
