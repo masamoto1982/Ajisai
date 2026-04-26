@@ -5,7 +5,7 @@ use crate::interpreter::{Interpreter, OperationTargetMode};
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
-            word: "? (LOOKUP)".into(),
+            word: "LOOKUP".into(),
             mode: "Stack".into(),
         });
     }

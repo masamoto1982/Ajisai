@@ -113,11 +113,11 @@ mod tests {
             .unwrap();
 
         let result = interp.execute("'DOUBLE' .. ?").await;
-        assert!(result.is_err(), "? (LOOKUP) should reject Stack mode");
+        assert!(result.is_err(), "LOOKUP should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("?") && err_msg.contains("Stack mode"),
-            "Expected Stack mode error for ?, got: {}",
+            err_msg.contains("LOOKUP") && err_msg.contains("Stack mode"),
+            "Expected Stack mode error for LOOKUP, got: {}",
             err_msg
         );
     }

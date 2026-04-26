@@ -45,10 +45,10 @@ Any roadmap, handover note, TODO note, or design memo is non-canonical unless ex
 | Symbol | Word name (all non-whitespace characters excluding reserved chars) |
 | `[` `]` | Vector boundaries |
 | `{` `}` or `(` `)` | Code block boundaries |
-| `==` | Pipeline marker (visual only, no-op at runtime) |
-| `=>` | NIL coalescing |
+| `==` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
+| `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
 | `$` | COND clause separator |
-| `~` | Safe mode modifier |
+| `~` | Syntactic sugar for `SAFE` (safe mode modifier) |
 | `#` | Line comment: all characters from `#` to end of line are ignored |
 
 ### 3.2 Numeric literal formats
@@ -203,17 +203,36 @@ All modifier combinations are explicit and mechanically testable. Combined forms
 
 ### 6.5 Additional syntax forms
 
-| Form | Name | Behavior |
-|------|------|----------|
-| `==` | Pipeline | Visual separator; no runtime effect |
-| `=>` | NIL coalescing | If the top of the stack is NIL, replace it with the next stack value |
-| `!` | Force | Overrides protection checks when redefining or deleting words that have dependents |
+All built-in words have English-word-based canonical names (see Section 7). The forms below are syntactic sugar that the tokenizer maps to the corresponding canonical word; either spelling is accepted in source code and behaves identically at runtime.
+
+| Form | Canonical word | Behavior |
+|------|----------------|----------|
+| `==` | `PIPE` | Visual pipeline separator; no runtime effect |
+| `=>` | `OR-NIL` | If the top of the stack is NIL, replace it with the next stack value |
+| `!` | `FORC` | Overrides protection checks when redefining or deleting words that have dependents |
+| `?` | `LOOKUP` | Display the definition of a word (see Section 7.8) |
 
 ---
 
 ## 7. Built-in Words
 
 Built-in words are predefined and cannot be redefined or deleted.
+
+### 7.0 English-word-based naming
+
+All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+`, `-`, `*`, `/`, `%`, `=`, `<`, `<=`, `&`, `==`, `=>`, `?`, `!`, `.`, `..`, `,`, `,,`, `~`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
+
+| Canonical | Sugar | Canonical | Sugar |
+|-----------|-------|-----------|-------|
+| `ADD` | `+` | `TOP` | `.` |
+| `SUB` | `-` | `STAK` | `..` |
+| `MUL` | `*` | `EAT` | `,` |
+| `DIV` | `/` | `KEEP` | `,,` |
+| `MOD` | `%` | `SAFE` | `~` |
+| `EQ` | `=` | `FORC` | `!` |
+| `LT` | `<` | `PIPE` | `==` |
+| `LTE` | `<=` | `OR-NIL` | `=>` |
+| `AND` | `&` | `LOOKUP` | `?` |
 
 ### 7.1 Vector operations
 
@@ -322,7 +341,7 @@ Comparisons return a boolean (true/false encoded as Scalar with Boolean display 
 |------|-------------|
 | `DEF` | Define a user word (see Section 8) |
 | `DEL` | Delete a user word (see Section 8) |
-| `?` | Look up and display the definition of a word |
+| `LOOKUP` | Look up and display the definition of a word (sugar: `?`) |
 
 ### 7.9 IO and utilities
 
@@ -569,3 +588,4 @@ A change is conformant only if all of the following hold:
 4. It preserves data-plane/semantic-plane separation.
 5. It keeps vector/tensor staged pipeline boundaries explicit.
 6. It improves or preserves AI-first structural clarity.
+7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
