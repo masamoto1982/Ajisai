@@ -61,4 +61,14 @@ async fn symbol_aliases_and_canonical_core_words_are_reserved_for_user_definitio
     assert_def_rejected("TOP").await;
     assert_def_rejected("!").await;
     assert_def_rejected("FORC").await;
+    assert_def_rejected("?").await;
+    assert_def_rejected("LOOKUP").await;
+}
+
+#[tokio::test]
+async fn lookup_alias_canonicalizes_to_english_word() {
+    use crate::core_word_aliases::canonicalize_core_word_name;
+    assert_eq!(canonicalize_core_word_name("?"), "LOOKUP");
+    assert_eq!(canonicalize_core_word_name("=="), "PIPE");
+    assert_eq!(canonicalize_core_word_name("=>"), "OR-NIL");
 }

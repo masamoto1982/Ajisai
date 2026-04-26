@@ -469,18 +469,18 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         Some(BuiltinExecutorKey::Cond)
     ),
     builtin_spec!(
-        "==",
+        "PIPE",
         "modifier",
-        "Pipeline visual marker (no-op)",
+        "Pipeline visual marker (no-op). Sugar: ==",
         "[ 1 2 3 ] == { [ 2 ] * } MAP",
         "none",
         BuiltinDetailGroup::Modifier,
         None
     ),
     builtin_spec!(
-        "=>",
+        "OR-NIL",
         "modifier",
-        "Nil coalescing. Return alternative if NIL. Any, Any -> Any",
+        "Nil coalescing. Return alternative if NIL. Sugar: =>. Any, Any -> Any",
         "NIL => [ 0 ] → [ 0 ]",
         "none",
         BuiltinDetailGroup::Modifier,
@@ -586,10 +586,10 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         Some(BuiltinExecutorKey::Del)
     ),
     builtin_spec!(
-        "?",
+        "LOOKUP",
         "dictionary",
-        "Display word definition and details. String -> (output effect)",
-        "'DOUBLE' ?",
+        "Display word definition and details. Sugar: ?. String -> (output effect)",
+        "'DOUBLE' LOOKUP",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Lookup)
@@ -885,6 +885,7 @@ mod tests {
     fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
         let forbidden = [
             "+", "-", "*", "/", "%", "=", "<", "<=", ".", "..", ",", ",,", "~", "!", "'", "$",
+            "?", "==", "=>",
         ];
 
         for spec in super::builtin_specs() {
@@ -900,7 +901,7 @@ mod tests {
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
             "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "TOP", "STAK", "EAT", "KEEP",
-            "SAFE", "FORC",
+            "SAFE", "FORC", "LOOKUP", "PIPE", "OR-NIL",
         ];
 
         for name in required {

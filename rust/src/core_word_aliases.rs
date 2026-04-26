@@ -111,6 +111,24 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         kind: CoreWordAliasKind::InputHelper,
         summary: "Insert quoted word marker",
     },
+    CoreWordAlias {
+        alias: "?",
+        canonical: Some("LOOKUP"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Look up and display word definition",
+    },
+    CoreWordAlias {
+        alias: "==",
+        canonical: Some("PIPE"),
+        kind: CoreWordAliasKind::SyntaxSugar,
+        summary: "Pipeline visual marker (no-op)",
+    },
+    CoreWordAlias {
+        alias: "=>",
+        canonical: Some("OR-NIL"),
+        kind: CoreWordAliasKind::SyntaxSugar,
+        summary: "NIL coalescing",
+    },
 ];
 
 pub fn lookup_core_word_alias(alias: &str) -> Option<&'static CoreWordAlias> {

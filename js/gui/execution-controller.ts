@@ -80,7 +80,7 @@ export const createExecutionController = (
             updateView('input');
         } else if (result.definition_to_load) {
             updateEditorValue(result.definition_to_load);
-            const wordName = code.replace("?", "").trim();
+            const wordName = code.replace(/\?|LOOKUP/gi, "").trim();
             showInfo(`Showing definition: ${wordName}`, false);
             updateView('input');
         } else if (result.status === 'OK' && !result.error) {
