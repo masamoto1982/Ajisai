@@ -179,57 +179,16 @@
     min-height: 0;
 }
 
-#editor-panel .input-area,
-#editor-panel .output-area,
-#state-panel .stack-area,
-#state-panel .dictionary-area {
+.input-area,
+.output-area,
+.stack-area,
+.dictionary-area {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-
-.area-body {
-    flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-}
-
-.area-header {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.area-header:empty {
-    display: none;
-}
-
-.area-main {
-    flex: 1;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
     position: relative;
-}
-
-.area-footer {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.area-footer:empty {
-    display: none;
-}
-
-.input-area .area-footer {
-    display: block;
 }
 
 
@@ -248,15 +207,6 @@
     body[data-active-area="dictionary"] #editor-panel {
         display: none;
     }
-}
-
-
-.output-area,
-.input-area {
-    flex: 1 1 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
 }
 
 
@@ -464,7 +414,6 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
-    margin-top: 0.5rem;
 }
 
 .dictionary-sheet .word-info-display {
@@ -473,7 +422,6 @@
     height: 1.25rem;
     line-height: 1.25rem;
     max-width: 100%;
-    margin-bottom: 0.5rem;
     color: var(--color-text);
     white-space: nowrap;
     overflow: hidden;
@@ -551,16 +499,8 @@
 }
 
 
-.dictionary-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.dictionary-area .area-header > .dictionary-sheet-select {
-    flex: 1 1 0%;
-    min-width: 0;
+.dictionary-area > .dictionary-sheet-select {
+    flex: 0 0 auto;
 }
 
 .dictionary-sheet-select:focus-visible {
@@ -584,6 +524,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
     min-height: 0;
     width: 100%;
     background: var(--gradient-child);
@@ -592,6 +533,10 @@
 
 .dictionary-sheet:not(.active) {
     display: none;
+}
+
+.dictionary-sheet > .dictionary-sheet-select {
+    flex: 0 0 auto;
 }
 
 
