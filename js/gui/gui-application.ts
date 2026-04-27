@@ -316,6 +316,46 @@ export const createGUI = (): GUI => {
             }, { passive: true });
         }
 
+        {
+            const MULTI_CLICK_INTERVAL_MS = 350;
+            let clickCount = 0;
+            let lastClickAt = 0;
+            let clickTimer: ReturnType<typeof setTimeout> | null = null;
+
+            elements.codeInput.addEventListener('click', () => {
+                if (mobile.isMobile()) return;
+
+                const now = Date.now();
+                if (now - lastClickAt <= MULTI_CLICK_INTERVAL_MS) {
+                    clickCount += 1;
+                } else {
+                    clickCount = 1;
+                }
+                lastClickAt = now;
+
+                if (clickTimer !== null) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                }
+
+                if (clickCount >= 3) {
+                    executionController.executeStep();
+                    clickCount = 0;
+                    lastClickAt = 0;
+                    return;
+                }
+
+                clickTimer = setTimeout(() => {
+                    if (clickCount === 2) {
+                        executionController.executeCode(editor.extractValue());
+                    }
+                    clickCount = 0;
+                    lastClickAt = 0;
+                    clickTimer = null;
+                }, MULTI_CLICK_INTERVAL_MS);
+            });
+        }
+
         window.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 WORKER_MANAGER.abortAll();
