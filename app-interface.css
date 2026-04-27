@@ -458,6 +458,7 @@
 
 .input-assist-words-display {
     min-height: 2.5rem;
+    flex-shrink: 0;
 }
 
 .input-assist-word {
@@ -766,11 +767,6 @@
         min-height: 0;
     }
 
-    #code-input {
-        min-height: 180px;
-        max-height: none;
-    }
-
     .display-area,
     .state-display,
     .words-display {
@@ -784,11 +780,6 @@
     .input-assist-word {
         min-width: 2.25rem;
         min-height: 2.25rem;
-    }
-
-    .input-assist-words-display {
-        max-height: 7rem;
-        overflow-y: auto;
     }
 
     .stack-area {
