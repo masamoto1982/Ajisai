@@ -9,9 +9,9 @@ use super::compiled_plan::{
 };
 
 use super::{
-    arithmetic, cast, comparison, control, control_cond, datetime, execute_def, execute_del,
-    execute_lookup, hash, higher_order, higher_order_fold, interval_ops, io, logic, modules,
-    random, sort, tensor_cmds, vector_ops, Interpreter,
+    arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
+    higher_order, higher_order_fold, interval_ops, io, logic, modules, tensor_cmds, vector_ops,
+    Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -272,7 +272,6 @@ impl Interpreter {
             BuiltinExecutorKey::Range => vector_ops::op_range(self),
             BuiltinExecutorKey::Reorder => vector_ops::op_reorder(self),
             BuiltinExecutorKey::Collect => vector_ops::op_collect(self),
-            BuiltinExecutorKey::Sort => sort::op_sort(self),
             BuiltinExecutorKey::Shape => tensor_cmds::op_shape(self),
             BuiltinExecutorKey::Rank => tensor_cmds::op_rank(self),
             BuiltinExecutorKey::Reshape => tensor_cmds::op_reshape(self),
@@ -295,11 +294,6 @@ impl Interpreter {
             BuiltinExecutorKey::Chr => cast::op_chr(self),
             BuiltinExecutorKey::Chars => cast::op_chars(self),
             BuiltinExecutorKey::Join => cast::op_join(self),
-            BuiltinExecutorKey::Now => datetime::op_now(self),
-            BuiltinExecutorKey::Datetime => datetime::op_datetime(self),
-            BuiltinExecutorKey::Timestamp => datetime::op_timestamp(self),
-            BuiltinExecutorKey::Csprng => random::op_csprng(self),
-            BuiltinExecutorKey::Hash => hash::op_hash(self),
             BuiltinExecutorKey::Spawn => self.op_spawn(),
             BuiltinExecutorKey::Await => self.op_await(),
             BuiltinExecutorKey::Status => self.op_status(),

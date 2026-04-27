@@ -67,18 +67,15 @@ pub struct QuantizedBlock {
 fn builtin_arity(name: &str) -> Option<(i32, i32)> {
     match name {
         // Binary arithmetic
-        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "^" => Some((2, 1)),
+        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" => Some((2, 1)),
         // Binary comparison
-        "LT" | ">" | "LTE" | ">=" | "EQ" | "!=" => Some((2, 1)),
+        "LT" | "LTE" | "EQ" => Some((2, 1)),
         // Binary logical
-        "AND" | "OR" | "XOR" => Some((2, 1)),
-        // Unary arithmetic / math
-        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" | "SIGN" | "SUCC" | "PRED"
-        | "EXP" | "LOG" | "LOG2" | "LOG10" | "SIN" | "COS" | "TAN" | "ASIN" | "ACOS" | "ATAN" => {
-            Some((1, 1))
-        }
+        "AND" | "OR" => Some((2, 1)),
+        // Unary arithmetic / math (ABS/NEG paired with FastUnaryMapKernel)
+        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" => Some((1, 1)),
         // Type cast / unary
-        "INT" | "FLOAT" | "STR" | "BOOL" | "CHAR" => Some((1, 1)),
+        "STR" | "BOOL" => Some((1, 1)),
         // Unknown arity (vector ops, HOF, stack words not in BUILTIN_SPECS, etc.) → None
         _ => None,
     }

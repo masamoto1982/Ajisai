@@ -163,8 +163,8 @@ fn arity_unary_not() {
 #[test]
 fn arity_non_builtin_word_is_variable() {
     let mut interp = make_interp();
-    // "ABS" is in BUILTIN_SPECS, "NOT" is too, but "REORDER" may not be.
-    // We use a word that is definitely not in BUILTIN_SPECS.
+    // DROP is not an Ajisai builtin and not present in BUILTIN_SPECS;
+    // it is therefore arity-Variable on the analyzer side.
     let tokens = vec![sym("DROP")];
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();
     // DROP is not in BUILTIN_SPECS → FallbackToken → Variable arity
