@@ -196,7 +196,7 @@ export const createGUI = (): GUI => {
             activeMode: ViewMode,
             nextMode: ViewMode
         ): void => {
-            target.addEventListener('dblclick', (e: MouseEvent) => {
+            target.addEventListener('click', (e: MouseEvent) => {
                 if (!mobile.isMobile()) return;
                 if (layoutState.currentMode !== activeMode) return;
                 if ((e.target as HTMLElement).closest('button, a')) return;
@@ -290,7 +290,7 @@ export const createGUI = (): GUI => {
         });
 
         {
-            const TRIPLE_TAP_INTERVAL_MS = 500;
+            const MULTI_TAP_INTERVAL_MS = 500;
             let tapCount = 0;
             let lastTapAt = 0;
 
@@ -299,13 +299,13 @@ export const createGUI = (): GUI => {
                 if (e.changedTouches.length === 0) return;
 
                 const now = Date.now();
-                if (now - lastTapAt <= TRIPLE_TAP_INTERVAL_MS) {
+                if (now - lastTapAt <= MULTI_TAP_INTERVAL_MS) {
                     tapCount += 1;
                 } else {
                     tapCount = 1;
                 }
 
-                if (tapCount >= 3) {
+                if (tapCount >= 2) {
                     executionController.executeCode(editor.extractValue());
                     tapCount = 0;
                     lastTapAt = 0;
