@@ -84,6 +84,8 @@ const clearElement = (element: HTMLElement): void => {
 
 const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
 
+const isCanonicalCoreWordName = (name: string): boolean => /^[A-Z][A-Z0-9-]*$/.test(name);
+
 const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
     element.textContent = text;
     element.classList.toggle('is-placeholder', isPlaceholder);
@@ -239,8 +241,13 @@ export const createVocabularyManager = (
             (wd): wd is unknown[] =>
                 Array.isArray(wd)
                 && typeof wd[0] === 'string'
+                && isCanonicalCoreWordName(wd[0])
         );
 
+        const droppedCount = coreWords.length - filtered.length;
+        if (droppedCount > 0) {
+            console.info(`[Vocabulary] Filtered out ${droppedCount} non-canonical core word entries from WASM payload.`);
+        }
 
         const sorted = [...filtered].sort((a, b) =>
             compareWordName(a[0] as string, b[0] as string)
