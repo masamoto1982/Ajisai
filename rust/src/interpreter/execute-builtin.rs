@@ -352,7 +352,7 @@ impl Interpreter {
             set.compiled = Some(arc_plan(compiled));
         }
 
-        if def.lines.len() == 1 {
+        if !self.force_no_quant && def.lines.len() == 1 {
             let tokens: Vec<_> = def.lines[0].body_tokens.iter().cloned().collect();
             if let Some(qb) = super::quantized_block::quantize_code_block(&tokens, self) {
                 set.quantized = Some(std::sync::Arc::new(qb));
