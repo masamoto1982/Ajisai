@@ -73,11 +73,6 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         cost: Heavy,
         order_sensitive: true,
     };
-    let imp_light = PurityInfo {
-        purity: Impure,
-        cost: Light,
-        order_sensitive: true,
-    };
     let imp_heavy = PurityInfo {
         purity: Impure,
         cost: Heavy,
@@ -102,14 +97,11 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         Str | Num | Bool | Chr | Chars | Join => pure_light,
 
         // ── Pure vector ops ───────────────────────────────────────────────
-        Get | Length | Concat | Reverse | Range | Reorder | Sort => pure_light,
+        Get | Length | Concat | Reverse | Range | Reorder => pure_light,
         Take | Split | Insert | Replace | Remove | Collect => pure_light,
 
         // ── Pure tensor ops ───────────────────────────────────────────────
         Shape | Rank | Reshape | Transpose | Fill => pure_light,
-
-        // ── Hash: deterministic → pure ────────────────────────────────────
-        Hash => pure_light,
 
         // ── Higher-order: purity depends on callback → unknown ────────────
         // (the word itself is fine but the callback may be impure)
@@ -126,9 +118,6 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 
         // ── I/O: impure ───────────────────────────────────────────────────
         Print => imp_heavy,
-
-        // ── Time / randomness: non-deterministic ─────────────────────────
-        Now | Datetime | Timestamp | Csprng => imp_light,
 
         // ── Concurrency: impure ───────────────────────────────────────────
         Spawn | Await | Status | Kill | Monitor | Supervise => imp_heavy,

@@ -26,3 +26,17 @@ fn differential_harness_smoke() {
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
 }
+
+#[test]
+fn differential_arity_logic_and_compare() {
+    let code = "[ TRUE FALSE ] [ TRUE TRUE ] AND";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
+
+#[test]
+fn differential_arity_lte_pair() {
+    let code = "[ 1 ] [ 2 ] LTE";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
