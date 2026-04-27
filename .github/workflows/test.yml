@@ -44,6 +44,21 @@ jobs:
         working-directory: rust
         run: cargo llvm-cov --branch --workspace --no-report
 
+      - name: Generate perf regression JSONL
+        working-directory: rust
+        run: cargo test perf_regression -- --nocapture
+
+      - name: Compare perf report against baseline
+        run: scripts/compare-perf.sh bench-baselines/main.jsonl rust/target/perf-report.jsonl ${{ env.AJISAI_STRICT_QUALITY == 'true' && 'strict' || 'advisory' }}
+
+      - name: Upload perf regression report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-report-jsonl
+          path: rust/target/perf-report.jsonl
+          retention-days: 90
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

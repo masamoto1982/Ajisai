@@ -197,6 +197,7 @@ pub struct Interpreter {
 
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) hedged_trace_log: Vec<String>,
+    pub(crate) force_no_quant: bool,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
     pub(crate) elastic_mode: crate::elastic::ElasticMode,
@@ -248,6 +249,7 @@ impl Interpreter {
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
             hedged_trace_log: Vec::new(),
+            force_no_quant: cfg!(feature = "force-no-quant"),
 
             // Elastic Engine
             elastic_mode: crate::elastic::ElasticMode::Greedy,
@@ -495,6 +497,10 @@ impl Interpreter {
 
     pub fn get_stack(&self) -> &Stack {
         &self.stack
+    }
+
+    pub fn set_force_no_quant(&mut self, force_no_quant: bool) {
+        self.force_no_quant = force_no_quant;
     }
 
     pub fn update_stack(&mut self, stack: Stack) {

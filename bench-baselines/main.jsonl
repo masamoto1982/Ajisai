@@ -1,0 +1,7 @@
+{"label":"FILTER","iterations":1000,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":1000,"plan_total":1000,"quantized_build_count":0,"quantized_use_count":1000}
+{"label":"MAP","iterations":1000,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":1000,"plan_total":1000,"quantized_build_count":0,"quantized_use_count":1000}
+{"label":"FOLD","iterations":500,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":500,"plan_total":500,"quantized_build_count":0,"quantized_use_count":500}
+{"label":"SCAN","iterations":500,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":500,"plan_total":500,"quantized_build_count":0,"quantized_use_count":500}
+{"label":"ANY","iterations":1000,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":1000,"plan_total":1000,"quantized_build_count":0,"quantized_use_count":1000}
+{"label":"ALL","iterations":1000,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":1000,"plan_total":1000,"quantized_build_count":0,"quantized_use_count":1000}
+{"label":"COUNT","iterations":1000,"elapsed_ms":1.0,"quantized_rate_pct":100.0,"plan_hit_rate_pct":100.0,"plan_hits":1000,"plan_total":1000,"quantized_build_count":0,"quantized_use_count":1000}

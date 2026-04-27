@@ -1,4 +1,9 @@
 use crate::interpreter::{Interpreter, RuntimeMetrics};
+use serde::Serialize;
+use std::fs::{create_dir_all, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 /// Upper bound for total loop time.  Each iteration rebuilds a tokio runtime
@@ -6,6 +11,43 @@ use std::time::{Duration, Instant};
 /// generous ceiling meant to catch catastrophic regressions (e.g. fallback
 /// disabling the quantized path), not to gate on micro-benchmark variance.
 const PERF_LOOP_SOFT_LIMIT: Duration = Duration::from_secs(60);
+static PERF_JSONL_LOCK: Mutex<()> = Mutex::new(());
+
+#[derive(Debug, Serialize)]
+struct PerfJsonLine {
+    label: String,
+    iterations: usize,
+    elapsed_ms: f64,
+    quantized_rate_pct: f64,
+    plan_hit_rate_pct: f64,
+    plan_hits: u64,
+    plan_total: u64,
+    quantized_build_count: u64,
+    quantized_use_count: u64,
+}
+
+fn perf_report_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("perf-report.jsonl")
+}
+
+fn append_perf_jsonl(line: &PerfJsonLine) {
+    let _guard = PERF_JSONL_LOCK.lock().expect("perf jsonl lock");
+    let report_path = perf_report_path();
+    if let Some(parent) = report_path.parent() {
+        create_dir_all(parent).expect("create perf report output dir");
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(report_path)
+        .expect("open perf report jsonl");
+
+    let encoded = serde_json::to_string(line).expect("serialize perf report line");
+    writeln!(file, "{encoded}").expect("write perf report line");
+}
 
 fn run_code(code: &str) -> Interpreter {
     let mut interp = Interpreter::new();
@@ -74,6 +116,17 @@ fn run_loop(
     let expected_total_quant = (iterations as u64) * expected_quant_calls_per_iter.max(1);
     let quant_rate = (delta.quantized_block_use_count as f64 / expected_total_quant as f64)
         * 100.0;
+    append_perf_jsonl(&PerfJsonLine {
+        label: label.to_string(),
+        iterations,
+        elapsed_ms: elapsed.as_secs_f64() * 1000.0,
+        quantized_rate_pct: quant_rate,
+        plan_hit_rate_pct: hit_rate,
+        plan_hits: delta.compiled_plan_cache_hit_count,
+        plan_total,
+        quantized_build_count: delta.quantized_block_build_count,
+        quantized_use_count: delta.quantized_block_use_count,
+    });
 
     println!(
         "[perf] {label} x{iterations}: {:.1}ms (quantized: {:.1}%, plan hit rate: {:.1}%, hits: {}/{})",
