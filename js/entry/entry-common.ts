@@ -1,6 +1,7 @@
 import { GUI_INSTANCE } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import type { WasmModule, AjisaiInterpreter } from '../wasm-interpreter-types';
+import { normalizeInterpreterApi } from '../wasm-interpreter-compat';
 
 declare const __AJISAI_CHANGE_NOTE__: string;
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
@@ -41,7 +42,7 @@ export async function initializeApplication(): Promise<void> {
         window.AjisaiWasm = wasm;
 
         console.log('[Main] Creating main thread interpreter...');
-        window.ajisaiInterpreter = new window.AjisaiWasm.AjisaiInterpreter();
+        window.ajisaiInterpreter = normalizeInterpreterApi(new window.AjisaiWasm.AjisaiInterpreter());
 
         console.log('[Main] Initializing GUI...');
         await GUI_INSTANCE.init();
