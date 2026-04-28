@@ -133,6 +133,9 @@ mod compiled_plan_tests;
 #[path = "core-word-canonicalization-tests.rs"]
 mod core_word_canonicalization_tests;
 #[cfg(test)]
+#[path = "coreword-registry-import-compat-tests.rs"]
+mod coreword_registry_import_compat_tests;
+#[cfg(test)]
 #[path = "differential-tests.rs"]
 mod differential_tests;
 #[cfg(test)]

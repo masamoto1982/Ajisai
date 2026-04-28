@@ -1,3 +1,4 @@
+use crate::coreword_registry::WordPurity;
 use crate::error::Result;
 use crate::interpreter::Interpreter;
 use crate::types::{Capabilities, Stability};
@@ -9,6 +10,10 @@ pub(super) struct ModuleWord {
     pub short_name: &'static str,
     pub description: &'static str,
     pub executor: ModuleExecutor,
+    pub purity: WordPurity,
+    pub effects: &'static [&'static str],
+    pub deterministic: bool,
+    pub safe_preview: bool,
     pub preserves_modes: bool,
     pub stability: Stability,
     pub capabilities: Capabilities,
