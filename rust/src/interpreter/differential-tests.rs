@@ -54,3 +54,32 @@ fn differential_math_module_sqrt_eps_hyphen() {
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
 }
+
+#[test]
+fn differential_hof_with_pure_callback() {
+    // Phase 1-B: a HOF with a pure callback should be classifiable as Pure
+    // and produce identical results on both quantized and force-no-quant
+    // paths.
+    let code = "[ 1 2 3 4 ] { [ 2 ] * } MAP";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
+
+#[test]
+fn differential_hof_with_impure_user_callback() {
+    // Phase 1-B PushCodeBlock recursion: a HOF whose callback calls an
+    // impure user word (PRINT-then-pass-through) must produce identical
+    // observable stack output on both paths even though the quantized
+    // path falls back to the generic-compiled lane.
+    let code = "{ ,, PRINT } 'TRACE' DEF [ 1 2 ] { TRACE } MAP";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
+
+#[test]
+fn differential_cond_pure_branches() {
+    // COND is now a pure dispatcher; both guard and body blocks here are pure.
+    let code = "[ 5 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
