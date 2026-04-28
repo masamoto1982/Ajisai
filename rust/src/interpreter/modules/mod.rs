@@ -4,6 +4,7 @@ mod module_registry;
 mod module_samples;
 mod module_word_types;
 
+use crate::coreword_registry::CorewordMetadata;
 use crate::error::Result;
 use crate::interpreter::Interpreter;
 
@@ -25,4 +26,8 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
 
 pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     module_import_execution::restore_module(interp, module_name)
+}
+
+pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
+    module_builtins::module_word_metadata_entries()
 }

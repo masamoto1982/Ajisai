@@ -387,3 +387,88 @@ mod compiled_plan_cache_guard {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// AQ-VER-006-D
+// DUT: rust/src/interpreter/quantized-block.rs `is_quantizable_block`
+//      Phase 1-C purity gate (third conjunct).
+//
+//     !tokens.is_empty()                                          // A
+//         && !tokens.iter().any(|t| matches!(t, LineBreak | SafeMode)) // B
+//         && !tokens.iter().any(token_is_impure_builtin)          // C
+//
+// AQ-VER-006-B already pairs row 1 (A=T, B=T, C=T -> true) with row 2
+// (A=F -> false) and row 3 (A=T, B=F -> false). This row pairs with that
+// shared row 1 to prove the third conjunct C independently flips the
+// outcome:
+//   row 4: A=T, B=T, C=F (block contains an impure builtin) -> false.
+//
+// Independent effect:
+//   Pair (006-B row 1, 006-D row 4): C flips T->F, A and B held T
+//                                    -> outcome flips T->F (C independent).
+// ---------------------------------------------------------------------------
+mod is_quantizable_block_purity_gate {
+    use super::*;
+
+    #[test]
+    fn aq_ver_006_d_row4_impure_builtin_blocks_quantization() {
+        // (A=T, B=T, C=F) -> false — pairs with AQ-VER-006-B row 1 to
+        // prove the impure-builtin gate independent.
+        let tokens = vec![Token::Symbol("PRINT".into())];
+        assert!(
+            !is_quantizable_block(&tokens),
+            "block containing an impure builtin must not quantize"
+        );
+    }
+
+    // ── Inner-predicate truth table for `token_is_impure_builtin` ────────
+    //
+    //   Symbol-Variant: A''  (token is `Token::Symbol`)
+    //   PurityKnown:    B''  (`purity_by_name` returns `Some`)
+    //   PurityImpure:   C''  (`info.purity == Purity::Impure`)
+    //
+    //   row I-1: A''=F                 -> false (Number / Vector marker etc.)
+    //   row I-2: A''=T, B''=F          -> false (unknown user word)
+    //   row I-3: A''=T, B''=T, C''=F   -> false (pure builtin)
+    //   row I-4: A''=T, B''=T, C''=T   -> true  (impure builtin)
+    //
+    // Pair (I-1, I-3): A'' flips F->T (with B''=T, C''=F) -> outcome held F
+    //                 — but the predicate result is still false in both rows,
+    //                 so we instead pair (I-4, I-1) for A'' independence:
+    // Pair (I-4, I-1): A'' flips T->F (others held: structurally vacuous on
+    //                  non-Symbol path) -> outcome flips T->F.
+    // Pair (I-4, I-2): B'' flips T->F (A''=T held, C'' vacuous) -> outcome
+    //                  flips T->F.
+    // Pair (I-4, I-3): C'' flips T->F (A''=T, B''=T held) -> outcome
+    //                  flips T->F.
+
+    #[test]
+    fn aq_ver_006_d_inner_row1_non_symbol_does_not_block() {
+        // A''=F: a Number token cannot be impure → quantization permitted.
+        let tokens = vec![Token::Number("1".into())];
+        assert!(is_quantizable_block(&tokens));
+    }
+
+    #[test]
+    fn aq_ver_006_d_inner_row2_unknown_symbol_does_not_block() {
+        // A''=T, B''=F: an unknown user word has no purity entry → not Impure
+        // for the gate's purposes (deeper purity propagation is the
+        // analyzer's job, not the gate's).
+        let tokens = vec![Token::Symbol("DROP".into())];
+        assert!(is_quantizable_block(&tokens));
+    }
+
+    #[test]
+    fn aq_ver_006_d_inner_row3_pure_builtin_does_not_block() {
+        // A''=T, B''=T, C''=F: ADD is Pure → gate accepts.
+        let tokens = vec![Token::Symbol("ADD".into())];
+        assert!(is_quantizable_block(&tokens));
+    }
+
+    #[test]
+    fn aq_ver_006_d_inner_row4_impure_builtin_blocks() {
+        // A''=T, B''=T, C''=T: PRINT is Impure → gate rejects.
+        let tokens = vec![Token::Symbol("PRINT".into())];
+        assert!(!is_quantizable_block(&tokens));
+    }
+}
