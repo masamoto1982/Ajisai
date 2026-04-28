@@ -102,6 +102,63 @@ fn is_side_effecting_builtin(name: &str) -> bool {
 
 const MAX_PURITY_ANALYSIS_DEPTH: usize = 4;
 
+/// Recurse into the body tokens of a `PushCodeBlock` to determine whether the
+/// block (e.g. a HOF callback, an `EXEC` body, a `COND` clause body) is pure.
+///
+/// When an interpreter is available, the inner tokens are compiled to a
+/// `CompiledPlan` and passed back through `analyze_compiled_plan_with_context`,
+/// which gives full coverage of nested user words and nested code blocks. When
+/// no interpreter is available, we fall back to a name-only scan that flags
+/// any explicit impure builtin token; pure builtins, literals, and unknown
+/// names (treated as pure for this gate, since user words are handled at the
+/// outer level when an interpreter is present) leave the block pure.
+///
+/// Conservative on depth exhaustion: returns `false` so the outer block is
+/// marked impure, preventing fast-path quantization of unanalysable callbacks.
+fn inner_block_tokens_are_pure(
+    tokens: &[Token],
+    interp: Option<&Interpreter>,
+    visited: &mut HashSet<String>,
+    depth: usize,
+) -> bool {
+    if depth + 1 >= MAX_PURITY_ANALYSIS_DEPTH {
+        return false;
+    }
+
+    if let Some(interp) = interp {
+        let lines = vec![crate::types::ExecutionLine {
+            body_tokens: tokens.to_vec().into(),
+        }];
+        let def = WordDefinition {
+            lines: lines.into(),
+            is_builtin: false,
+            tier: Tier::Contrib,
+            stability: Stability::Stable,
+            capabilities: Capabilities::PURE,
+            description: None,
+            dependencies: Default::default(),
+            original_source: None,
+            namespace: None,
+            registration_order: 0,
+            execution_plans: None,
+        };
+        let inner_plan = compile_word_definition(&def, interp);
+        let (_, _, inner_purity, _) =
+            analyze_compiled_plan_with_context(&inner_plan, Some(interp), visited, depth + 1);
+        return inner_purity == QuantizedPurity::Pure;
+    }
+
+    !tokens.iter().any(|t| {
+        if let Token::Symbol(sym) = t {
+            let canonical = crate::core_word_aliases::canonicalize_core_word_name(sym);
+            if let Some(info) = purity_by_name(canonical.as_ref()) {
+                return info.purity == Purity::Impure;
+            }
+        }
+        false
+    })
+}
+
 /// Context-aware variant used both at the top level and for recursive
 /// user-word purity propagation.
 fn analyze_compiled_plan_with_context(
@@ -120,8 +177,14 @@ fn analyze_compiled_plan_with_context(
     for line in &plan.lines {
         for op in &line.ops {
             match op {
-                CompiledOp::PushLiteral(_) | CompiledOp::PushCodeBlock(_) => {
+                CompiledOp::PushLiteral(_) => {
                     cur_depth += 1;
+                }
+                CompiledOp::PushCodeBlock(inner_tokens) => {
+                    cur_depth += 1;
+                    if !inner_block_tokens_are_pure(inner_tokens, interp, visited, depth) {
+                        is_pure = false;
+                    }
                 }
                 // Meta-ops with no stack effect
                 CompiledOp::SetTargetModeStackTop
@@ -258,11 +321,32 @@ fn try_user_word_is_pure(
     purity == QuantizedPurity::Pure
 }
 
+/// Gate: a block is eligible for quantization iff
+///   1. it is non-empty,
+///   2. it contains no `LineBreak` or `SafeMode` token, and
+///   3. no symbol token resolves, via the purity table, to an impure builtin.
+///
+/// Clauses 1 and 2 are token-shape filters (legacy behavior). Clause 3 is the
+/// Phase 1-C "classification-direct reference" gate: it pulls the static
+/// purity classification straight from `purity_by_name` so that explicit
+/// impure builtins (PRINT, EVAL, DEF, …) are rejected before quantization
+/// rather than caught later in the analyzer.
 pub fn is_quantizable_block(tokens: &[Token]) -> bool {
     !tokens.is_empty()
         && !tokens
             .iter()
             .any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
+        && !tokens.iter().any(token_is_impure_builtin)
+}
+
+fn token_is_impure_builtin(t: &Token) -> bool {
+    if let Token::Symbol(sym) = t {
+        let canonical = crate::core_word_aliases::canonicalize_core_word_name(sym);
+        if let Some(info) = purity_by_name(canonical.as_ref()) {
+            return info.purity == Purity::Impure;
+        }
+    }
+    false
 }
 
 fn is_const_vector_token(token: &Token) -> bool {
