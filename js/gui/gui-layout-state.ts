@@ -25,7 +25,6 @@ const MOBILE_EDITOR_PLACEHOLDER = [
     'Run → Double-tap the editor',
     'Move to Stack → Single-tap Input area',
     'Back to Editor → Single-tap Stack area',
-    'Skip-run → Triple-tap (planned)',
     'Input assist → Tap words below',
     'Autocomplete → Tap suggestions while typing'
 ].join('\n');

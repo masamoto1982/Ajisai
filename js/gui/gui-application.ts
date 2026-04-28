@@ -202,8 +202,8 @@ export const createGUI = (): GUI => {
             });
         };
 
-        setupTapToTransition(elements.outputDisplay, 'output', 'stack');
-        setupTapToTransition(elements.stackDisplay, 'stack', 'input');
+        setupTapToTransition(elements.stackDisplay, 'stack', 'output');
+        setupTapToTransition(elements.outputDisplay, 'output', 'input');
 
         window.addEventListener('resize', () => {
             applyAreaState(buildApplyAreaStateDeps(), layoutState.currentMode);
@@ -303,7 +303,7 @@ export const createGUI = (): GUI => {
                     tapCount = 1;
                 }
 
-                if (tapCount >= 2) {
+                if (tapCount === 2) {
                     executionController.executeCode(editor.extractValue());
                     tapCount = 0;
                     lastTapAt = 0;
