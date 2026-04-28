@@ -202,8 +202,8 @@ export const createGUI = (): GUI => {
             });
         };
 
-        setupTapToTransition(elements.outputDisplay, 'output', 'stack');
-        setupTapToTransition(elements.stackDisplay, 'stack', 'input');
+        setupTapToTransition(elements.stackDisplay, 'stack', 'output');
+        setupTapToTransition(elements.outputDisplay, 'output', 'input');
 
         window.addEventListener('resize', () => {
             applyAreaState(buildApplyAreaStateDeps(), layoutState.currentMode);
