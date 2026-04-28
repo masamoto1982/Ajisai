@@ -303,7 +303,7 @@ export const createGUI = (): GUI => {
                     tapCount = 1;
                 }
 
-                if (tapCount >= 2) {
+                if (tapCount === 2) {
                     executionController.executeCode(editor.extractValue());
                     tapCount = 0;
                     lastTapAt = 0;
