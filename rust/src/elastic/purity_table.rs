@@ -81,8 +81,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 
     match key {
         // ── Pure arithmetic ───────────────────────────────────────────────
-        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round | Sqrt | SqrtEps => pure_trivial,
-        Interval | Lower | Upper | Width | IsExact => pure_light,
+        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round => pure_trivial,
 
         // ── Pure comparison ───────────────────────────────────────────────
         Eq | Lt | Le => pure_trivial,
@@ -151,6 +150,13 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
             order_sensitive: true,
         }),
         "HASH" | "CRYPTO@HASH" | "SORT" | "ALGO@SORT" => Some(PurityInfo {
+            purity: Purity::Pure,
+            cost: EvalCost::Light,
+            order_sensitive: false,
+        }),
+        "SQRT" | "SQRT_EPS" | "INTERVAL" | "LOWER" | "UPPER" | "WIDTH" | "IS_EXACT"
+        | "MATH@SQRT" | "MATH@SQRT_EPS" | "MATH@INTERVAL" | "MATH@LOWER" | "MATH@UPPER"
+        | "MATH@WIDTH" | "MATH@IS_EXACT" => Some(PurityInfo {
             purity: Purity::Pure,
             cost: EvalCost::Light,
             order_sensitive: false,

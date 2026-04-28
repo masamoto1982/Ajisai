@@ -35,6 +35,41 @@ pub(crate) const DEPRECATED_CORE_ALIASES: &[DeprecatedCoreAlias] = &[
         replacement_qualified: "ALGO@SORT",
         import_hint: "'algo' IMPORT and ALGO@SORT",
     },
+    DeprecatedCoreAlias {
+        old_name: "SQRT",
+        replacement_qualified: "MATH@SQRT",
+        import_hint: "'math' IMPORT and MATH@SQRT",
+    },
+    DeprecatedCoreAlias {
+        old_name: "SQRT_EPS",
+        replacement_qualified: "MATH@SQRT_EPS",
+        import_hint: "'math' IMPORT and MATH@SQRT_EPS",
+    },
+    DeprecatedCoreAlias {
+        old_name: "INTERVAL",
+        replacement_qualified: "MATH@INTERVAL",
+        import_hint: "'math' IMPORT and MATH@INTERVAL",
+    },
+    DeprecatedCoreAlias {
+        old_name: "LOWER",
+        replacement_qualified: "MATH@LOWER",
+        import_hint: "'math' IMPORT and MATH@LOWER",
+    },
+    DeprecatedCoreAlias {
+        old_name: "UPPER",
+        replacement_qualified: "MATH@UPPER",
+        import_hint: "'math' IMPORT and MATH@UPPER",
+    },
+    DeprecatedCoreAlias {
+        old_name: "WIDTH",
+        replacement_qualified: "MATH@WIDTH",
+        import_hint: "'math' IMPORT and MATH@WIDTH",
+    },
+    DeprecatedCoreAlias {
+        old_name: "IS_EXACT",
+        replacement_qualified: "MATH@IS_EXACT",
+        import_hint: "'math' IMPORT and MATH@IS_EXACT",
+    },
 ];
 
 pub(crate) fn lookup_deprecated_core_alias(name: &str) -> Option<&'static DeprecatedCoreAlias> {

@@ -63,13 +63,6 @@ pub enum BuiltinExecutorKey {
     Floor,
     Ceil,
     Round,
-    Sqrt,
-    SqrtEps,
-    Interval,
-    Lower,
-    Upper,
-    Width,
-    IsExact,
     Mod,
     Str,
     Num,
@@ -641,69 +634,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Fill)
-    ),
-    builtin_spec!(
-        "SQRT",
-        "arithmetic",
-        "Map: Square root. Exact rational roots stay exact; otherwise returns sound interval.",
-        "[ 2 ] SQRT → [lo, hi]",
-        "map",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::Sqrt)
-    ),
-    builtin_spec!(
-        "SQRT_EPS",
-        "arithmetic",
-        "Form: Square root with explicit interval width bound eps.",
-        "[ 2 ] [ 1/100 ] SQRT_EPS → interval width <= 1/100",
-        "form",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::SqrtEps)
-    ),
-    builtin_spec!(
-        "INTERVAL",
-        "arithmetic",
-        "Form: Create interval [lo, hi].",
-        "[ 1 ] [ 2 ] INTERVAL → [1, 2]",
-        "form",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::Interval)
-    ),
-    builtin_spec!(
-        "LOWER",
-        "arithmetic",
-        "Map: Lower endpoint of number/interval.",
-        "[1, 2] LOWER → [ 1 ]",
-        "map",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::Lower)
-    ),
-    builtin_spec!(
-        "UPPER",
-        "arithmetic",
-        "Map: Upper endpoint of number/interval.",
-        "[1, 2] UPPER → [ 2 ]",
-        "map",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::Upper)
-    ),
-    builtin_spec!(
-        "WIDTH",
-        "arithmetic",
-        "Map: Interval width hi-lo.",
-        "[1, 2] WIDTH → [ 1 ]",
-        "map",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::Width)
-    ),
-    builtin_spec!(
-        "IS_EXACT",
-        "arithmetic",
-        "Map: True for exact number or degenerate interval.",
-        "[1, 1] IS_EXACT → TRUE",
-        "map",
-        BuiltinDetailGroup::ArithmeticLogic,
-        Some(BuiltinExecutorKey::IsExact)
     ),
     builtin_spec!(
         "MOD",

@@ -40,3 +40,10 @@ fn differential_arity_lte_pair() {
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
 }
+
+#[test]
+fn differential_math_module_sqrt() {
+    let code = "'math' IMPORT 4 MATH@SQRT";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}
