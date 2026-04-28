@@ -46,12 +46,23 @@ mod tests {
     }
 
     #[test]
-    fn purity_table_higher_order_is_unknown() {
-        for word in &["MAP", "FILTER", "FOLD", "COND"] {
+    fn purity_table_higher_order_dispatchers_are_pure() {
+        // HOF / Cond / Exec dispatchers are themselves pure (Phase 1-B).
+        // Callback purity is propagated separately via the PushCodeBlock
+        // recursion in `analyze_compiled_plan_with_context`.
+        for word in &["MAP", "FILTER", "FOLD", "SCAN", "ANY", "ALL", "COUNT", "UNFOLD", "COND", "EXEC"] {
             let info = purity_by_name(word)
                 .unwrap_or_else(|| panic!("missing purity entry for '{}'", word));
-            assert_eq!(info.purity, Purity::Unknown, "{}: expected Unknown", word);
+            assert_eq!(info.purity, Purity::Pure, "{}: expected Pure", word);
         }
+    }
+
+    #[test]
+    fn purity_table_eval_is_impure() {
+        // EVAL parses arbitrary strings at runtime and is not statically
+        // analysable, so the table keeps it conservatively impure.
+        let info = purity_by_name("EVAL").expect("missing purity entry for 'EVAL'");
+        assert_eq!(info.purity, Purity::Impure);
     }
 
     #[test]

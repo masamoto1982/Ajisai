@@ -425,6 +425,10 @@ Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object 
 | `MUSIC` | Audio sequencing and synthesis |
 | `JSON` | JSON parsing, generation, and manipulation |
 | `IO` | Standard input/output |
+| `TIME` | Wall-clock time and datetime conversion |
+| `CRYPTO` | Cryptographically secure random and hash |
+| `ALGO` | Sorting and other deterministic algorithms |
+| `MATH` | Square root and exact-rational interval arithmetic |
 
 ### 9.2 Import syntax
 
@@ -531,6 +535,7 @@ The semantic plane holds display hints for each stack position. It is separate f
 |------|---------|
 | `Auto` | Determine display from value type at render time |
 | `Number` | Display as a number |
+| `Interval` | Display a 2-element vector as the closed interval `[lo, hi]` |
 | `String` | Display as a string |
 | `Boolean` | Display as a boolean |
 | `DateTime` | Display as a formatted datetime |

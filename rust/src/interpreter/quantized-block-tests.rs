@@ -248,13 +248,13 @@ fn can_fuse_reflects_purity() {
 }
 
 #[test]
-fn impure_builtin_is_not_classified_as_fast_kernel() {
+fn impure_builtin_is_rejected_at_gate() {
+    // Phase 1-C: explicit impure builtins are rejected by `is_quantizable_block`
+    // before quantization, so `quantize_code_block` returns None.
     let mut interp = make_interp();
     let tokens = vec![sym("PRINT")];
-    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
-    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
-    assert_eq!(qb.kernel_kind, KernelKind::GenericCompiled);
-    assert!(qb.fast_path_id.is_none());
+    assert!(!is_quantizable_block(&tokens));
+    assert!(quantize_code_block(&tokens, &mut interp).is_none());
 }
 
 #[test]
@@ -533,39 +533,85 @@ fn fold_error_stack_shape_matches_between_quantized_and_plain() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn purity_now_is_side_effecting() {
+fn impure_now_is_rejected_at_gate() {
+    // NOW is impure (time / non-determinism); the Phase 1-C gate rejects it.
     let mut interp = make_interp();
     let tokens = vec![sym("NOW")];
-    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
-    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
-    assert!(!qb.can_fuse);
-    assert!(!qb.eligible_for_cache);
+    assert!(!is_quantizable_block(&tokens));
+    assert!(quantize_code_block(&tokens, &mut interp).is_none());
 }
 
 #[test]
-fn purity_csprng_is_side_effecting() {
+fn impure_csprng_is_rejected_at_gate() {
     let mut interp = make_interp();
     let tokens = vec![sym("CSPRNG")];
-    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
-    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+    assert!(!is_quantizable_block(&tokens));
+    assert!(quantize_code_block(&tokens, &mut interp).is_none());
 }
 
 #[test]
-fn purity_spawn_is_side_effecting() {
+fn impure_spawn_is_rejected_at_gate() {
     let mut interp = make_interp();
     let tokens = vec![sym("SPAWN")];
-    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
-    assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+    assert!(!is_quantizable_block(&tokens));
+    assert!(quantize_code_block(&tokens, &mut interp).is_none());
 }
 
 #[test]
-fn purity_higher_order_inner_is_side_effecting() {
-    // MAP itself is Purity::Unknown in purity_table; a block containing
-    // MAP must not be classified as Pure.
+fn purity_higher_order_dispatcher_alone_is_pure() {
+    // After Phase 1-B, MAP is a pure dispatcher; a block consisting of
+    // just `MAP` (with no callback in its tokens) is therefore Pure.
     let mut interp = make_interp();
     let tokens = vec![sym("MAP")];
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::Pure);
+}
+
+#[test]
+fn purity_hof_with_impure_callback_is_side_effecting() {
+    // PushCodeBlock recursion: a HOF whose callback contains an impure
+    // user word should propagate impurity to the enclosing block.
+    // (An explicit impure builtin in the callback is caught earlier by
+    // the gate, so we use an impure user word to exercise the recursion.)
+    let mut interp = make_interp();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        interp.execute("{ PRINT } 'SHOUT' DEF").await.unwrap();
+    });
+    let tokens = vec![
+        Token::VectorStart,
+        num("1"),
+        Token::VectorEnd,
+        Token::BlockStart,
+        sym("SHOUT"),
+        Token::BlockEnd,
+        sym("MAP"),
+    ];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
     assert_eq!(qb.purity, QuantizedPurity::SideEffecting);
+    assert!(!qb.can_fuse);
+}
+
+#[test]
+fn purity_hof_with_pure_callback_is_pure() {
+    // Companion to the impure-callback test: a pure callback leaves the
+    // outer HOF block Pure.
+    let mut interp = make_interp();
+    let tokens = vec![
+        Token::VectorStart,
+        num("1"),
+        num("2"),
+        Token::VectorEnd,
+        Token::BlockStart,
+        Token::VectorStart,
+        num("2"),
+        Token::VectorEnd,
+        sym("*"),
+        Token::BlockEnd,
+        sym("MAP"),
+    ];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.purity, QuantizedPurity::Pure);
 }
 
 // ---------------------------------------------------------------------------

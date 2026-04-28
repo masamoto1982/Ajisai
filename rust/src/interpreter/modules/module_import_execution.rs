@@ -96,6 +96,8 @@ pub(super) fn import_all_public(interp: &mut Interpreter, module_name: &str) -> 
 }
 
 pub(super) fn op_import(interp: &mut Interpreter) -> Result<()> {
+    // TODO: Module dictionaries are being migrated toward Coreword Registry.
+    // IMPORT should eventually become a compatibility no-op or category-view operation.
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let value = if is_keep_mode {
         interp
