@@ -94,6 +94,16 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn collect_builtin_word_registry(&self) -> JsValue {
+        to_value(&crate::coreword_registry::get_builtin_word_registry()).unwrap_or(JsValue::NULL)
+    }
+
+    #[wasm_bindgen]
+    pub fn is_safe_preview_word(&self, name: &str) -> bool {
+        crate::coreword_registry::is_safe_preview_word(name)
+    }
+
+    #[wasm_bindgen]
     pub fn collect_core_word_aliases_info(&self) -> JsValue {
         to_value(&crate::core_word_aliases::collect_core_word_aliases()).unwrap_or(JsValue::NULL)
     }
