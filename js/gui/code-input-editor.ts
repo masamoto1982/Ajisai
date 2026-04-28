@@ -65,10 +65,19 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
     end: element.selectionEnd
 });
 
-const MOBILE_BREAKPOINT = 768;
 const MAX_SUGGESTIONS = 10;
 const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
+const MOBILE_BREAKPOINT = 768;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
+const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
+    '[', ']', '{', '}', '(', ')',
+    '+', '-', '*', '/', '%',
+    '=', '<', '>',
+    '!', '?', '&', '|', '^', '~',
+    '@', '#', '$', '\\', '_', ':', ';',
+    "'", '"', '`',
+    '.', ',',
+]);
 
 const extractToken = (
     text: string,
@@ -100,6 +109,7 @@ export const createEditor = (
 
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
+    let lastKnownSelection = lookupSelectionRange(element);
 
     const textareaContainer = element.closest('.input-area');
     const suggestionPanel = document.createElement('div');
@@ -111,6 +121,17 @@ export const createEditor = (
         if (onContentChangeCallback) {
             onContentChangeCallback(element.value);
         }
+    };
+
+    const syncLastKnownSelection = (): void => {
+        lastKnownSelection = lookupSelectionRange(element);
+    };
+
+    const lookupEditableSelectionRange = (): { start: number; end: number } => {
+        if (document.activeElement === element) {
+            syncLastKnownSelection();
+        }
+        return lastKnownSelection;
     };
 
     const hideSuggestions = (): void => {
@@ -159,6 +180,13 @@ export const createEditor = (
 
     const refreshSuggestions = (): void => {
         const { token } = extractToken(element.value, element.selectionStart);
+        if (token.length === 0) {
+            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice(0, MAX_SUGGESTIONS);
+            selectedSuggestionIndex = 0;
+            renderSuggestions();
+            return;
+        }
+
         if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
             hideSuggestions();
             return;
@@ -179,24 +207,33 @@ export const createEditor = (
         updateElementValue(element, newText);
         const newPos = start + suggestion.length;
         updateSelectionRange(element, newPos, newPos);
+        syncLastKnownSelection();
         hideSuggestions();
         emitContentChange();
     };
 
     const registerEventListeners = (): void => {
         element.addEventListener('focus', () => {
+            syncLastKnownSelection();
             switchToInputMode();
             refreshSuggestions();
         });
 
         element.addEventListener('blur', () => {
+            syncLastKnownSelection();
             setTimeout(hideSuggestions, 100);
         });
 
         element.addEventListener('input', () => {
+            syncLastKnownSelection();
             emitContentChange();
             refreshSuggestions();
         });
+
+        element.addEventListener('select', syncLastKnownSelection);
+        element.addEventListener('click', syncLastKnownSelection);
+        element.addEventListener('keyup', syncLastKnownSelection);
+        element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
 
         element.addEventListener('keydown', (e) => {
             if (e.key === ' ' && e.ctrlKey) {
@@ -233,16 +270,22 @@ export const createEditor = (
 
     const updateValue = (value: string): void => {
         updateElementValue(element, value);
+        const cursor = value.length;
+        updateSelectionRange(element, cursor, cursor);
+        syncLastKnownSelection();
         hideSuggestions();
         emitContentChange();
         switchToInputMode();
     };
 
     const clear = (switchView = true): void => {
+        const wasFocused = document.activeElement === element;
         updateElementValue(element, '');
-        if (!checkIsMobile()) {
+        if (wasFocused || !checkIsMobile()) {
             focusElement(element);
         }
+        updateSelectionRange(element, 0, 0);
+        syncLastKnownSelection();
         hideSuggestions();
         emitContentChange();
         if (switchView) {
@@ -251,15 +294,17 @@ export const createEditor = (
     };
 
     const insertWord = (word: string): void => {
-        const { start, end } = lookupSelectionRange(element);
+        const wasFocused = document.activeElement === element;
+        const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, word);
 
         updateElementValue(element, newText);
 
         const newPos = start + word.length;
         updateSelectionRange(element, newPos, newPos);
+        syncLastKnownSelection();
 
-        if (!checkIsMobile()) {
+        if (wasFocused || !checkIsMobile()) {
             focusElement(element);
         }
         hideSuggestions();
@@ -267,15 +312,17 @@ export const createEditor = (
     };
 
     const insertText = (text: string): void => {
-        const { start, end } = lookupSelectionRange(element);
+        const wasFocused = document.activeElement === element;
+        const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, text);
 
         updateElementValue(element, newText);
 
         const cursorPos = computeCursorPosition(start, text, true);
         updateSelectionRange(element, cursorPos, cursorPos);
+        syncLastKnownSelection();
 
-        if (!checkIsMobile()) {
+        if (wasFocused || !checkIsMobile()) {
             focusElement(element);
         }
         hideSuggestions();
@@ -283,7 +330,8 @@ export const createEditor = (
     };
 
     const removeLastWord = (): void => {
-        const { start } = lookupSelectionRange(element);
+        const wasFocused = document.activeElement === element;
+        const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
         const after = element.value.substring(start);
 
@@ -292,8 +340,9 @@ export const createEditor = (
 
         updateElementValue(element, newText);
         updateSelectionRange(element, trimmed.length, trimmed.length);
+        syncLastKnownSelection();
 
-        if (!checkIsMobile()) {
+        if (wasFocused || !checkIsMobile()) {
             focusElement(element);
         }
         hideSuggestions();

@@ -10,7 +10,6 @@ export interface GUIElements {
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
-    readonly inputAssistWordsDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
@@ -43,7 +42,6 @@ export const cacheElements = (): GUIElements => ({
     importBtn: document.getElementById('import-btn') as HTMLButtonElement,
     outputDisplay: document.getElementById('output-display')!,
     stackDisplay: document.getElementById('stack-display')!,
-    inputAssistWordsDisplay: document.getElementById('input-assist-words-display')!,
     builtInWordsDisplay: document.getElementById('core-words-display')!,
     userWordsDisplay: document.getElementById('user-words-display')!,
     builtInWordInfo: document.getElementById('core-word-info')!,
