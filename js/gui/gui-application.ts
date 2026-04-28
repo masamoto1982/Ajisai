@@ -305,6 +305,7 @@ export const createGUI = (): GUI => {
 
                 if (tapCount === 2) {
                     executionController.executeCode(editor.extractValue());
+                    switchArea('stack');
                     tapCount = 0;
                     lastTapAt = 0;
                     return;
