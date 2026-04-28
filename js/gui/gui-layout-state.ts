@@ -22,7 +22,10 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
 const MOBILE_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run → Triple-tap the editor',
+    'Run → Double-tap the editor',
+    'Move to Stack → Single-tap Input area',
+    'Back to Editor → Single-tap Stack area',
+    'Skip-run → Triple-tap (planned)',
     'Input assist → Tap words below',
     'Autocomplete → Tap suggestions while typing'
 ].join('\n');
