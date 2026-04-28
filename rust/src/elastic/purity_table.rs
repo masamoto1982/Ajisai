@@ -58,20 +58,20 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         cost: Light,
         order_sensitive: false,
     };
-    let unk_medium = PurityInfo {
-        purity: Unknown,
+    let pure_medium = PurityInfo {
+        purity: Pure,
         cost: Medium,
         order_sensitive: false,
     };
-    let unk_med_ord = PurityInfo {
-        purity: Unknown,
+    let pure_med_ord = PurityInfo {
+        purity: Pure,
         cost: Medium,
         order_sensitive: true,
     };
-    let unk_heavy = PurityInfo {
-        purity: Unknown,
+    let pure_heavy = PurityInfo {
+        purity: Pure,
         cost: Heavy,
-        order_sensitive: true,
+        order_sensitive: false,
     };
     let imp_heavy = PurityInfo {
         purity: Impure,
@@ -81,8 +81,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 
     match key {
         // ── Pure arithmetic ───────────────────────────────────────────────
-        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round | Sqrt | SqrtEps => pure_trivial,
-        Interval | Lower | Upper | Width | IsExact => pure_light,
+        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round => pure_trivial,
 
         // ── Pure comparison ───────────────────────────────────────────────
         Eq | Lt | Le => pure_trivial,
@@ -103,15 +102,22 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         // ── Pure tensor ops ───────────────────────────────────────────────
         Shape | Rank | Reshape | Transpose | Fill => pure_light,
 
-        // ── Higher-order: purity depends on callback → unknown ────────────
-        // (the word itself is fine but the callback may be impure)
-        Map | Filter | Any | All | Count => unk_medium,
+        // ── Higher-order dispatchers: the word itself is pure; the
+        //    callback's purity is propagated separately by the
+        //    PushCodeBlock recursion in `analyze_compiled_plan_with_context`.
+        Map | Filter | Any | All | Count => pure_medium,
 
-        // order matters for fold / scan / unfold (left-to-right accumulation)
-        Fold | Scan | Unfold => unk_med_ord,
+        // Order matters for fold / scan / unfold (left-to-right accumulation),
+        // but the dispatcher itself remains pure.
+        Fold | Scan | Unfold => pure_med_ord,
 
-        // ── Control flow: unknown ─────────────────────────────────────────
-        Cond | Exec | Eval => unk_heavy,
+        // ── Pure control dispatchers: branch/block selection is itself pure.
+        //    Inner block purity is propagated via PushCodeBlock recursion.
+        Cond | Exec => pure_heavy,
+
+        // Eval parses an arbitrary string at runtime and cannot be analysed
+        // statically, so it stays conservatively impure.
+        Eval => imp_heavy,
 
         // ── Dictionary mutators: impure ───────────────────────────────────
         Def | Del | Import | ImportOnly | Force | Lookup => imp_heavy,
@@ -151,6 +157,13 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
             order_sensitive: true,
         }),
         "HASH" | "CRYPTO@HASH" | "SORT" | "ALGO@SORT" => Some(PurityInfo {
+            purity: Purity::Pure,
+            cost: EvalCost::Light,
+            order_sensitive: false,
+        }),
+        "SQRT" | "SQRT_EPS" | "INTERVAL" | "LOWER" | "UPPER" | "WIDTH" | "IS_EXACT"
+        | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" | "MATH@LOWER" | "MATH@UPPER"
+        | "MATH@WIDTH" | "MATH@IS-EXACT" => Some(PurityInfo {
             purity: Purity::Pure,
             cost: EvalCost::Light,
             order_sensitive: false,
