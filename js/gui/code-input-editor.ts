@@ -67,6 +67,8 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 
 const MAX_SUGGESTIONS = 10;
 const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
+const MOBILE_BREAKPOINT = 768;
+const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
 const extractToken = (
     text: string,
@@ -261,8 +263,11 @@ export const createEditor = (
     };
 
     const clear = (switchView = true): void => {
+        const wasFocused = document.activeElement === element;
         updateElementValue(element, '');
-        focusElement(element);
+        if (wasFocused || !checkIsMobile()) {
+            focusElement(element);
+        }
         updateSelectionRange(element, 0, 0);
         syncLastKnownSelection();
         hideSuggestions();
@@ -273,6 +278,7 @@ export const createEditor = (
     };
 
     const insertWord = (word: string): void => {
+        const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, word);
 
@@ -282,12 +288,15 @@ export const createEditor = (
         updateSelectionRange(element, newPos, newPos);
         syncLastKnownSelection();
 
-        focusElement(element);
+        if (wasFocused || !checkIsMobile()) {
+            focusElement(element);
+        }
         hideSuggestions();
         emitContentChange();
     };
 
     const insertText = (text: string): void => {
+        const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, text);
 
@@ -297,12 +306,15 @@ export const createEditor = (
         updateSelectionRange(element, cursorPos, cursorPos);
         syncLastKnownSelection();
 
-        focusElement(element);
+        if (wasFocused || !checkIsMobile()) {
+            focusElement(element);
+        }
         hideSuggestions();
         emitContentChange();
     };
 
     const removeLastWord = (): void => {
+        const wasFocused = document.activeElement === element;
         const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
         const after = element.value.substring(start);
@@ -314,7 +326,9 @@ export const createEditor = (
         updateSelectionRange(element, trimmed.length, trimmed.length);
         syncLastKnownSelection();
 
-        focusElement(element);
+        if (wasFocused || !checkIsMobile()) {
+            focusElement(element);
+        }
         hideSuggestions();
         emitContentChange();
     };
