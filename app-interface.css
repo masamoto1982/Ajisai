@@ -469,11 +469,6 @@
     min-height: 7rem;
 }
 
-.input-assist-words-display {
-    min-height: 2.5rem;
-    flex-shrink: 0;
-}
-
 .empty-words-message {
     width: 100%;
     padding: 0.75rem;

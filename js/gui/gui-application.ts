@@ -23,7 +23,6 @@ import {
     ApplyAreaStateDeps
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
-import { createInputAssistWords, InputAssistWords } from './input-assist-words';
 
 declare global {
     interface Window {
@@ -96,7 +95,6 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
-    let inputAssistWords: InputAssistWords;
     let layoutState: LayoutState;
 
     const doSwitchDictionarySheet = (sheetId: string): void => {
@@ -440,19 +438,6 @@ export const createGUI = (): GUI => {
             onSwitchToInputMode: () => switchArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
-
-        inputAssistWords = createInputAssistWords(elements.inputAssistWordsDisplay, {
-            onAssistWordClick: (word: string) => {
-                editor.insertText(word);
-            },
-            onBackgroundClick: () => {
-                editor.insertWord(' ');
-            },
-            onBackgroundDoubleClick: () => {
-                editor.removeLastWord();
-            },
-        });
-        inputAssistWords.render();
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
             onWordClick: (word) => {

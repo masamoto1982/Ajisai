@@ -69,6 +69,17 @@ const MAX_SUGGESTIONS = 10;
 const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
 const MOBILE_BREAKPOINT = 768;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
+const QUICK_INPUT_SUGGESTIONS: readonly string[] = Object.freeze([
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+    '[', ']', '{', '}', '(', ')',
+    '+', '-', '*', '/', '%',
+    '=', '<', '>',
+    '!', '?', '&', '|', '^', '~',
+    '@', '#', '$', '\\', '_', ':', ';',
+    "'", '"', '`',
+    '.', ',',
+]);
+const QUICK_INPUT_TRIGGER_PATTERN = /^[0-9\[\]{}()+\-*/%=<>!?&|^~@#$\\_:;'".,`]$/;
 
 const extractToken = (
     text: string,
@@ -171,6 +182,15 @@ export const createEditor = (
 
     const refreshSuggestions = (): void => {
         const { token } = extractToken(element.value, element.selectionStart);
+        if (token.length === 1 && QUICK_INPUT_TRIGGER_PATTERN.test(token)) {
+            currentSuggestions = QUICK_INPUT_SUGGESTIONS
+                .filter(word => word.startsWith(token))
+                .slice(0, MAX_SUGGESTIONS);
+            selectedSuggestionIndex = 0;
+            renderSuggestions();
+            return;
+        }
+
         if (token.length < MIN_SUGGESTION_TRIGGER_LENGTH) {
             hideSuggestions();
             return;
