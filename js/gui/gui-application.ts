@@ -23,7 +23,6 @@ import {
     ApplyAreaStateDeps
 } from './gui-layout-state';
 import { switchDictionarySheet } from './gui-dictionary-sheet';
-import { createInputAssistWords, InputAssistWords } from './input-assist-words';
 
 declare global {
     interface Window {
@@ -96,7 +95,6 @@ export const createGUI = (): GUI => {
     let persistence: Persistence;
     let executionController: ExecutionController;
     let moduleTabManager: ModuleTabManager;
-    let inputAssistWords: InputAssistWords;
     let layoutState: LayoutState;
 
     const doSwitchDictionarySheet = (sheetId: string): void => {
@@ -196,7 +194,7 @@ export const createGUI = (): GUI => {
             activeMode: ViewMode,
             nextMode: ViewMode
         ): void => {
-            target.addEventListener('dblclick', (e: MouseEvent) => {
+            target.addEventListener('click', (e: MouseEvent) => {
                 if (!mobile.isMobile()) return;
                 if (layoutState.currentMode !== activeMode) return;
                 if ((e.target as HTMLElement).closest('button, a')) return;
@@ -290,7 +288,7 @@ export const createGUI = (): GUI => {
         });
 
         {
-            const TRIPLE_TAP_INTERVAL_MS = 500;
+            const MULTI_TAP_INTERVAL_MS = 500;
             let tapCount = 0;
             let lastTapAt = 0;
 
@@ -299,13 +297,13 @@ export const createGUI = (): GUI => {
                 if (e.changedTouches.length === 0) return;
 
                 const now = Date.now();
-                if (now - lastTapAt <= TRIPLE_TAP_INTERVAL_MS) {
+                if (now - lastTapAt <= MULTI_TAP_INTERVAL_MS) {
                     tapCount += 1;
                 } else {
                     tapCount = 1;
                 }
 
-                if (tapCount >= 3) {
+                if (tapCount >= 2) {
                     executionController.executeCode(editor.extractValue());
                     tapCount = 0;
                     lastTapAt = 0;
@@ -314,6 +312,46 @@ export const createGUI = (): GUI => {
 
                 lastTapAt = now;
             }, { passive: true });
+        }
+
+        {
+            const MULTI_CLICK_INTERVAL_MS = 350;
+            let clickCount = 0;
+            let lastClickAt = 0;
+            let clickTimer: ReturnType<typeof setTimeout> | null = null;
+
+            elements.codeInput.addEventListener('click', () => {
+                if (mobile.isMobile()) return;
+
+                const now = Date.now();
+                if (now - lastClickAt <= MULTI_CLICK_INTERVAL_MS) {
+                    clickCount += 1;
+                } else {
+                    clickCount = 1;
+                }
+                lastClickAt = now;
+
+                if (clickTimer !== null) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                }
+
+                if (clickCount >= 3) {
+                    executionController.executeStep();
+                    clickCount = 0;
+                    lastClickAt = 0;
+                    return;
+                }
+
+                clickTimer = setTimeout(() => {
+                    if (clickCount === 2) {
+                        executionController.executeCode(editor.extractValue());
+                    }
+                    clickCount = 0;
+                    lastClickAt = 0;
+                    clickTimer = null;
+                }, MULTI_CLICK_INTERVAL_MS);
+            });
         }
 
         window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -400,19 +438,6 @@ export const createGUI = (): GUI => {
             onSwitchToInputMode: () => switchArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
         });
-
-        inputAssistWords = createInputAssistWords(elements.inputAssistWordsDisplay, {
-            onAssistWordClick: (word: string) => {
-                editor.insertText(word);
-            },
-            onBackgroundClick: () => {
-                editor.insertWord(' ');
-            },
-            onBackgroundDoubleClick: () => {
-                editor.removeLastWord();
-            },
-        });
-        inputAssistWords.render();
 
         vocabulary = createVocabularyManager(extractVocabularyElements(elements), {
             onWordClick: (word) => {
