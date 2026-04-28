@@ -179,8 +179,11 @@ export const createEditor = (
     };
 
     const refreshSuggestions = (): void => {
+        const cursorPos = element.selectionStart;
+        const prevChar = cursorPos > 0 ? element.value[cursorPos - 1] ?? '' : '';
+        const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
         const { token } = extractToken(element.value, element.selectionStart);
-        if (element.value.length === 0) {
+        if (isTokenStart && token.length === 0) {
             currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice(0, MAX_SUGGESTIONS);
             selectedSuggestionIndex = 0;
             renderSuggestions();
