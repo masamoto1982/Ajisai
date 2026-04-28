@@ -52,12 +52,12 @@ const ALGO_WORDS: &[ModuleWord] = &[
 
 const MATH_WORDS: &[ModuleWord] = &[
     ModuleWord { short_name: "SQRT", description: "Map: Square root. Exact rational roots stay exact; otherwise returns sound interval.", executor: interval_ops::op_sqrt, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
-    ModuleWord { short_name: "SQRT_EPS", description: "Form: Square root with explicit interval width bound eps.", executor: interval_ops::op_sqrt_eps, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
+    ModuleWord { short_name: "SQRT-EPS", description: "Form: Square root with explicit interval width bound eps.", executor: interval_ops::op_sqrt_eps, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
     ModuleWord { short_name: "INTERVAL", description: "Form: Create interval [lo, hi].", executor: interval_ops::op_interval, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
     ModuleWord { short_name: "LOWER", description: "Map: Lower endpoint of number/interval.", executor: interval_ops::op_lower, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
     ModuleWord { short_name: "UPPER", description: "Map: Upper endpoint of number/interval.", executor: interval_ops::op_upper, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
     ModuleWord { short_name: "WIDTH", description: "Map: Interval width hi-lo.", executor: interval_ops::op_width, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
-    ModuleWord { short_name: "IS_EXACT", description: "Map: True for exact number or degenerate interval.", executor: interval_ops::op_is_exact, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
+    ModuleWord { short_name: "IS-EXACT", description: "Map: True for exact number or degenerate interval.", executor: interval_ops::op_is_exact, preserves_modes: false, stability: Stability::Stable, capabilities: Capabilities::PURE },
 ];
 
 const MUSIC_SAMPLES: &[SampleWord] = &[

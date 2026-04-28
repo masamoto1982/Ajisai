@@ -155,8 +155,8 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
             order_sensitive: false,
         }),
         "SQRT" | "SQRT_EPS" | "INTERVAL" | "LOWER" | "UPPER" | "WIDTH" | "IS_EXACT"
-        | "MATH@SQRT" | "MATH@SQRT_EPS" | "MATH@INTERVAL" | "MATH@LOWER" | "MATH@UPPER"
-        | "MATH@WIDTH" | "MATH@IS_EXACT" => Some(PurityInfo {
+        | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" | "MATH@LOWER" | "MATH@UPPER"
+        | "MATH@WIDTH" | "MATH@IS-EXACT" => Some(PurityInfo {
             purity: Purity::Pure,
             cost: EvalCost::Light,
             order_sensitive: false,

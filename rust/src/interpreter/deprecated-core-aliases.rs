@@ -42,8 +42,8 @@ pub(crate) const DEPRECATED_CORE_ALIASES: &[DeprecatedCoreAlias] = &[
     },
     DeprecatedCoreAlias {
         old_name: "SQRT_EPS",
-        replacement_qualified: "MATH@SQRT_EPS",
-        import_hint: "'math' IMPORT and MATH@SQRT_EPS",
+        replacement_qualified: "MATH@SQRT-EPS",
+        import_hint: "'math' IMPORT and MATH@SQRT-EPS",
     },
     DeprecatedCoreAlias {
         old_name: "INTERVAL",
@@ -67,8 +67,8 @@ pub(crate) const DEPRECATED_CORE_ALIASES: &[DeprecatedCoreAlias] = &[
     },
     DeprecatedCoreAlias {
         old_name: "IS_EXACT",
-        replacement_qualified: "MATH@IS_EXACT",
-        import_hint: "'math' IMPORT and MATH@IS_EXACT",
+        replacement_qualified: "MATH@IS-EXACT",
+        import_hint: "'math' IMPORT and MATH@IS-EXACT",
     },
 ];
 

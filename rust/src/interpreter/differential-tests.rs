@@ -47,3 +47,10 @@ fn differential_math_module_sqrt() {
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
 }
+
+#[test]
+fn differential_math_module_sqrt_eps_hyphen() {
+    let code = "'math' IMPORT 2 1/100 MATH@SQRT-EPS";
+    let (quantized, plain) = run_with_both_paths(code);
+    assert_eq!(quantized, plain);
+}

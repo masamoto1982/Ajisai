@@ -91,13 +91,46 @@ mod tests {
 
     #[test]
     fn math_words_are_not_in_builtin_specs() {
-        for name in ["SQRT", "SQRT_EPS", "INTERVAL", "LOWER", "UPPER", "WIDTH", "IS_EXACT"] {
+        for name in [
+            "SQRT", "SQRT_EPS", "SQRT-EPS", "INTERVAL", "LOWER", "UPPER", "WIDTH", "IS_EXACT",
+            "IS-EXACT",
+        ] {
             assert!(
                 builtin_specs().iter().all(|s| s.name != name),
                 "{} unexpectedly present in BUILTIN_SPECS",
                 name
             );
         }
+    }
+
+    #[tokio::test]
+    async fn deprecated_sqrt_eps_alias_redirects_to_hyphen_form() {
+        let mut interp = Interpreter::new();
+        interp.execute("2 1/100 SQRT_EPS").await.unwrap();
+        let warning = interp.collect_output();
+        assert!(warning.contains("Warning: 'SQRT_EPS' is deprecated."));
+        assert!(warning.contains("MATH@SQRT-EPS"));
+
+        let from_alias = interp.stack.pop().unwrap();
+        interp.execute("'math' IMPORT").await.unwrap();
+        interp.execute("2 1/100 MATH@SQRT-EPS").await.unwrap();
+        let from_qualified = interp.stack.pop().unwrap();
+        assert_eq!(from_alias, from_qualified);
+    }
+
+    #[tokio::test]
+    async fn deprecated_is_exact_alias_redirects_to_hyphen_form() {
+        let mut interp = Interpreter::new();
+        interp.execute("4 IS_EXACT").await.unwrap();
+        let warning = interp.collect_output();
+        assert!(warning.contains("Warning: 'IS_EXACT' is deprecated."));
+        assert!(warning.contains("MATH@IS-EXACT"));
+
+        let from_alias = interp.stack.pop().unwrap();
+        interp.execute("'math' IMPORT").await.unwrap();
+        interp.execute("4 MATH@IS-EXACT").await.unwrap();
+        let from_qualified = interp.stack.pop().unwrap();
+        assert_eq!(from_alias, from_qualified);
     }
 
     #[tokio::test]

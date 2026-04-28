@@ -12,7 +12,7 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
             Some(DisplayHint::Number)
         }
-        "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT_EPS" | "MATH@INTERVAL" => {
+        "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
             Some(DisplayHint::Interval)
         }
         "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
