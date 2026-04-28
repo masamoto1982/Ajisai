@@ -474,10 +474,6 @@
     flex-shrink: 0;
 }
 
-.input-assist-word {
-    min-width: 2rem;
-}
-
 .empty-words-message {
     width: 100%;
     padding: 0.75rem;
@@ -771,11 +767,6 @@
 
     .words-display {
         cursor: default;
-    }
-
-    .input-assist-word {
-        min-width: 2.25rem;
-        min-height: 2.25rem;
     }
 
     .stack-area {
