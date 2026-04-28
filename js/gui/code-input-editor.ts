@@ -180,7 +180,7 @@ export const createEditor = (
 
     const refreshSuggestions = (): void => {
         const { token } = extractToken(element.value, element.selectionStart);
-        if (token.length === 0) {
+        if (element.value.length === 0) {
             currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice(0, MAX_SUGGESTIONS);
             selectedSuggestionIndex = 0;
             renderSuggestions();
