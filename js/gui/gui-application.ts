@@ -189,21 +189,38 @@ export const createGUI = (): GUI => {
             doSwitchDictionarySheet(selectedValue);
         });
 
-        const setupTapToTransition = (
+        const setupDoubleTapToTransition = (
             target: HTMLElement,
             activeMode: ViewMode,
             nextMode: ViewMode
         ): void => {
+            const MULTI_TAP_INTERVAL_MS = 500;
+            let tapCount = 0;
+            let lastTapAt = 0;
+
             target.addEventListener('click', (e: MouseEvent) => {
                 if (!mobile.isMobile()) return;
                 if (layoutState.currentMode !== activeMode) return;
                 if ((e.target as HTMLElement).closest('button, a')) return;
-                switchArea(nextMode);
+
+                const now = Date.now();
+                if (now - lastTapAt <= MULTI_TAP_INTERVAL_MS) {
+                    tapCount += 1;
+                } else {
+                    tapCount = 1;
+                }
+                lastTapAt = now;
+
+                if (tapCount >= 2) {
+                    switchArea(nextMode);
+                    tapCount = 0;
+                    lastTapAt = 0;
+                }
             });
         };
 
-        setupTapToTransition(elements.stackDisplay, 'stack', 'output');
-        setupTapToTransition(elements.outputDisplay, 'output', 'input');
+        setupDoubleTapToTransition(elements.stackDisplay, 'stack', 'output');
+        setupDoubleTapToTransition(elements.outputDisplay, 'output', 'input');
 
         window.addEventListener('resize', () => {
             applyAreaState(buildApplyAreaStateDeps(), layoutState.currentMode);
@@ -303,7 +320,7 @@ export const createGUI = (): GUI => {
                     tapCount = 1;
                 }
 
-                if (tapCount === 2) {
+                if (tapCount >= 3) {
                     executionController.executeCode(editor.extractValue());
                     switchArea('stack');
                     tapCount = 0;
