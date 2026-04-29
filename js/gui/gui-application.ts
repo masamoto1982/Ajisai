@@ -271,7 +271,7 @@ export const createGUI = (): GUI => {
             testRunner.runAllTests();
         });
 
-        elements.outputArea.addEventListener('click', (e: MouseEvent) => {
+        elements.outputArea.addEventListener('dblclick', (e: MouseEvent) => {
             if ((e.target as HTMLElement).closest('button, a')) return;
             if (!mobile.isMobile() && layoutState.currentLeftMode === 'output') {
                 switchArea('input');
