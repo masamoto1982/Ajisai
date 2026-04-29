@@ -333,10 +333,9 @@ export const createGUI = (): GUI => {
         }
 
         {
-            const MULTI_CLICK_INTERVAL_MS = 350;
+            const MULTI_CLICK_INTERVAL_MS = 500;
             let clickCount = 0;
             let lastClickAt = 0;
-            let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
             elements.codeInput.addEventListener('click', () => {
                 if (mobile.isMobile()) return;
@@ -347,28 +346,15 @@ export const createGUI = (): GUI => {
                 } else {
                     clickCount = 1;
                 }
-                lastClickAt = now;
-
-                if (clickTimer !== null) {
-                    clearTimeout(clickTimer);
-                    clickTimer = null;
-                }
 
                 if (clickCount >= 3) {
-                    executionController.executeStep();
+                    executionController.executeCode(editor.extractValue());
                     clickCount = 0;
                     lastClickAt = 0;
                     return;
                 }
 
-                clickTimer = setTimeout(() => {
-                    if (clickCount === 2) {
-                        executionController.executeCode(editor.extractValue());
-                    }
-                    clickCount = 0;
-                    lastClickAt = 0;
-                    clickTimer = null;
-                }, MULTI_CLICK_INTERVAL_MS);
+                lastClickAt = now;
             });
         }
 
