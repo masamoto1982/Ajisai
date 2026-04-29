@@ -2,6 +2,69 @@ use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NilReason {
+    DivisionByZero,
+    EmptySequence,
+    MissingField,
+    InvalidEncoding,
+    InvalidLens,
+    StackUnderflow,
+    IndexOutOfBounds,
+    UnknownWord,
+    ExecutionFailure,
+    SafeCaught(Box<ErrorCategory>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ErrorCategory {
+    StackUnderflow,
+    StructureError,
+    UnknownWord,
+    UnknownModule,
+    DivisionByZero,
+    IndexOutOfBounds,
+    VectorLengthMismatch,
+    ExecutionLimitExceeded,
+    ModeUnsupported,
+    BuiltinProtection,
+    CondExhausted,
+    Custom,
+    OverConsumption,
+    UnconsumedLeak,
+    FlowBreak,
+    BifurcationViolation,
+}
+
+impl ErrorCategory {
+    pub fn from_error(err: &AjisaiError) -> Self {
+        match err {
+            AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
+            AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
+            AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
+            AjisaiError::UnknownModule(_) => ErrorCategory::UnknownModule,
+            AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
+            AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
+            AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
+            AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
+            AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
+            AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
+            AjisaiError::CondExhausted => ErrorCategory::CondExhausted,
+            AjisaiError::Custom(_) => ErrorCategory::Custom,
+            AjisaiError::OverConsumption { .. } => ErrorCategory::OverConsumption,
+            AjisaiError::UnconsumedLeak { .. } => ErrorCategory::UnconsumedLeak,
+            AjisaiError::FlowBreak { .. } => ErrorCategory::FlowBreak,
+            AjisaiError::BifurcationViolation { .. } => ErrorCategory::BifurcationViolation,
+        }
+    }
+}
+
+impl NilReason {
+    pub fn from_error(err: &AjisaiError) -> Self {
+        NilReason::SafeCaught(Box::new(ErrorCategory::from_error(err)))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
     StackUnderflow,

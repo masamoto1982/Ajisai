@@ -1,6 +1,7 @@
 use super::fraction::Fraction;
 use super::interval::Interval;
 use super::{DisplayHint, Token, Value, ValueData};
+use crate::error::NilReason;
 use std::rc::Rc;
 
 impl Value {
@@ -9,7 +10,22 @@ impl Value {
         Self {
             data: ValueData::Nil,
             hint: DisplayHint::Nil,
+            nil_reason: None,
         }
+    }
+
+    #[inline]
+    pub fn nil_with_reason(reason: NilReason) -> Self {
+        Self {
+            data: ValueData::Nil,
+            hint: DisplayHint::Nil,
+            nil_reason: Some(reason),
+        }
+    }
+
+    #[inline]
+    pub fn nil_reason(&self) -> Option<&NilReason> {
+        self.nil_reason.as_ref()
     }
 
     #[inline]
@@ -17,6 +33,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             hint: DisplayHint::Number,
+            nil_reason: None,
         }
     }
 
@@ -25,6 +42,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
             hint: DisplayHint::Number,
+            nil_reason: None,
         }
     }
 
@@ -33,6 +51,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             hint: DisplayHint::Number,
+            nil_reason: None,
         }
     }
 
@@ -42,11 +61,12 @@ impl Value {
             children.push(Value::from_int(c as u32 as i64));
         }
         if children.is_empty() {
-            return Self::nil();
+            return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint: DisplayHint::String,
+            nil_reason: None,
         }
     }
 
@@ -59,6 +79,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         }
     }
 
@@ -67,26 +88,29 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint,
+            nil_reason: None,
         }
     }
 
     pub fn from_vector(values: Vec<Value>) -> Self {
         if values.is_empty() {
-            return Self::nil();
+            return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         }
     }
 
     pub fn from_vector_with_hint(values: Vec<Value>, hint: DisplayHint) -> Self {
         if values.is_empty() {
-            return Self::nil();
+            return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
             hint,
+            nil_reason: None,
         }
     }
 
@@ -103,6 +127,7 @@ impl Value {
                 Value::from_fraction(interval.hi),
             ])),
             hint: DisplayHint::Interval,
+            nil_reason: None,
         }
     }
 
@@ -111,6 +136,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             hint: DisplayHint::DateTime,
+            nil_reason: None,
         }
     }
 
@@ -424,6 +450,7 @@ impl Value {
         Self {
             data: ValueData::CodeBlock(tokens),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         }
     }
 
@@ -431,6 +458,7 @@ impl Value {
         Self {
             data: ValueData::ProcessHandle(id),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         }
     }
 
@@ -445,6 +473,7 @@ impl Value {
         Self {
             data: ValueData::SupervisorHandle(id),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         }
     }
 

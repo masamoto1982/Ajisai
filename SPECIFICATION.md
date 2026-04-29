@@ -5,6 +5,15 @@ Version: **2026-04-29**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
+Ajisai is a typed, vector-oriented dataflow language. Its safety story is the conjunction of:
+
+- **Value-shape safety** — operations check that operands have the structural shape they require (Scalar / Vector / Record / NIL / CodeBlock / handles).
+- **Encoding safety** — string and code values carry encoding contracts on top of their underlying fraction sequences.
+- **Contract safety** — every Coreword has machine-readable `requires` / `ensures` / partiality / NIL policy / effect metadata in the registry.
+- **NIL projection safety** — partial operations may project failure onto NIL with a structured reason; `SAFE` is the explicit projection operator.
+
+These layers compose. A change is conformant only if it preserves all of them.
+
 ---
 
 ## 1. Language Identity
@@ -141,6 +150,27 @@ A collection of named fields. Each field has a string key and an associated valu
 
 NIL represents the absence of a value. It is pushed by safe mode when an error is absorbed, and produced by operations that yield no meaningful result.
 
+#### 4.5.0 NIL reason
+
+Every NIL value carries an optional internal `NilReason` that records why it was produced. The reason is internal diagnostic state: surface display, equality, hashing, and serialization treat all NIL values uniformly. The reason is preserved across NIL-passthrough operations (Section 4.5.1) and is available to debug logs, tests, and tooling.
+
+The defined reasons are:
+
+| Reason | Meaning |
+|--------|---------|
+| `DivisionByZero` | A division-by-zero was projected to NIL |
+| `EmptySequence` | An empty vector was projected to NIL by a constructor or aggregation |
+| `MissingField` | A record field lookup found no matching key |
+| `InvalidEncoding` | A value did not satisfy the encoding contract required by a conversion |
+| `InvalidLens` | A value could not be interpreted under the requested view (e.g. non-integer codepoint) |
+| `StackUnderflow` | A consumed operand was missing |
+| `IndexOutOfBounds` | An index fell outside the valid range |
+| `UnknownWord` | A symbol resolved to no defined word |
+| `ExecutionFailure` | A nested execution failed |
+| `SafeCaught` | A `~`-guarded operation caught an error; the original error category is preserved alongside |
+
+A NIL produced by ordinary `NIL` literal evaluation has no reason. Reasons are only assigned by operations that project a failure onto NIL.
+
 #### 4.5.1 NIL passthrough
 
 Operations classified as **NIL-passthrough** in Section 7 do not raise `StructureError` when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.
@@ -148,6 +178,8 @@ Operations classified as **NIL-passthrough** in Section 7 do not raise `Structur
 NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.13). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL.
 
 The intent is that pipelines built with safe mode (`~`) propagate NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
+
+When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.
 
 ### 4.6 CodeBlock
 
@@ -396,6 +428,24 @@ Words not listed here retain their existing handling of NIL. In particular, cont
 
 ---
 
+## 7.14 Coreword contract metadata
+
+Every Coreword (built-in or module-provided) has a machine-readable contract entry in the Coreword registry. The contract is the authoritative description of the word's input requirements, output guarantees, and runtime classification. Tests, documentation, and tooling consume this metadata; narrative text is non-canonical.
+
+A contract entry has the following fields, in addition to the existing identification (`name`, `category`) and effect-classification fields (`purity`, `effects`, `deterministic`, `safe_preview`):
+
+| Field | Domain | Meaning |
+|-------|--------|---------|
+| `partiality` | `Total` / `Partial` / `Projecting` | `Total`: the operation is defined on every well-shaped input. `Partial`: the operation has well-shaped inputs for which it raises an error. `Projecting`: the operation is total because it projects all failures onto NIL with reason. |
+| `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
+| `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
+
+`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`, while bare `/` is `Partial` with `nil_policy = Passthrough`.
+
+Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
+
+---
+
 ## 8. User Words
 
 ### 8.1 Definition syntax
@@ -541,9 +591,13 @@ Operations that produce a value equal to their input are successful. Equal-value
 
 ### 11.4 Safe mode behavior
 
-Any operation preceded by `~` absorbs its own errors locally. If an error is raised, NIL is pushed in place of the result. The error does not propagate.
+`~` (`SAFE`) is the explicit projection operator that turns a partial operation into a total one by mapping any error to a NIL with reason. The projected NIL carries `NilReason::SafeCaught` and preserves a structured reference to the original error category (e.g. `DivisionByZero`, `StackUnderflow`, `IndexOutOfBounds`). The error itself does not propagate.
+
+Stack discipline: when `~`-guarded execution fails, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `SafeCaught` reason is pushed. The semantic plane is normalized to the new stack length.
 
 The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore guard a single risky operation with `~` and apply `OR-NIL` (`=>`) once at the end to supply a fallback value, rather than guarding every step.
+
+`~` is **not** a generic exception swallower: the original error reason is preserved on the resulting NIL for debugging, testing, and proof logging.
 
 ---
 
@@ -607,7 +661,33 @@ The `,,` (keep/bifurcation) modifier retains source context while also pushing t
 
 ---
 
-## 15. Conformance Checklist
+## 15. Test Discipline
+
+### 15.1 Per-Coreword contract coverage
+
+For each Coreword, the test suite must exercise:
+
+- inputs that satisfy `requires` (success path)
+- inputs that violate `requires` (failure path)
+- the documented `nil_policy` (NIL passthrough or NIL creation, as appropriate)
+- the documented `partiality` (every error category in the partial case; the projection target in the projecting case)
+- effect-boundary expectations from `purity` (e.g. effectful words must not be reachable in `safe_preview`)
+
+### 15.2 NIL reason coverage
+
+Every NIL-producing path must have at least one test that asserts both the surface NIL and the attached `NilReason`. `SAFE`-projected NILs must additionally assert that the original error category survives in `SafeCaught`.
+
+### 15.3 MC/DC-style coverage for compound decisions
+
+Words whose behavior depends on more than one independent condition (e.g. `~ /` decides on left-operand validity, right-operand validity, right-operand zero-ness, NIL-passthrough applicability, and SAFE engagement) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
+
+### 15.4 Stack discipline under projection
+
+`SAFE`-guarded failures must restore the stack to the pre-call snapshot before pushing the projected NIL. Tests must verify the stack length, the semantic-plane length, and the absence of leaked partial intermediates.
+
+---
+
+## 16. Conformance Checklist
 
 A change is conformant only if all of the following hold:
 
@@ -618,3 +698,6 @@ A change is conformant only if all of the following hold:
 5. It keeps vector/tensor staged pipeline boundaries explicit.
 6. It improves or preserves AI-first structural clarity.
 7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
+8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
+9. Every NIL-producing path attaches the appropriate `NilReason` (Section 4.5.0); `SAFE` projection preserves the original error category (Section 11.4).
+10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.

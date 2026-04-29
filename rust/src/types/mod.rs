@@ -13,6 +13,7 @@ pub mod interval;
 mod value_operations;
 
 use self::fraction::Fraction;
+use crate::error::NilReason;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -58,10 +59,17 @@ pub enum ValueData {
     SupervisorHandle(u64),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
     pub hint: DisplayHint,
+    pub nil_reason: Option<NilReason>,
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data && self.hint == other.hint
+    }
 }
 
 pub struct SemanticRegistry {

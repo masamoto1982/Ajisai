@@ -110,6 +110,9 @@ mod interpreter_execution_tests;
 #[cfg(test)]
 #[path = "interpreter-mode-tests.rs"]
 mod interpreter_mode_tests;
+#[cfg(test)]
+#[path = "nil-reason-tests.rs"]
+mod nil_reason_tests;
 
 pub use interpreter_core::*;
 

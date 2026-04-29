@@ -190,6 +190,7 @@ mod tests {
         Value {
             data: ValueData::Scalar(Fraction::from(n)),
             hint: DisplayHint::Number,
+            nil_reason: None,
         }
     }
 
