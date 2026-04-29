@@ -1,7 +1,9 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
-use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::{
+    extract_integer_from_value, nil_passthrough_binary,
+};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
@@ -131,6 +133,11 @@ where
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
+            if items.iter().any(|v| v.is_nil()) {
+                interp.stack.push(Value::nil());
+                return Ok(());
+            }
+
             let all_true: bool = match check_all_adjacent_pairs(&items, op) {
                 Ok(v) => v,
                 Err(e) => {
@@ -149,6 +156,11 @@ where
 }
 
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let len = interp.stack.len();
         let a = interp.stack[len - 2].clone();
@@ -182,6 +194,11 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let len = interp.stack.len();
         let a = interp.stack[len - 2].clone();
@@ -215,6 +232,12 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
+
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -284,6 +307,11 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
+
+            if items.iter().any(|v| v.is_nil()) {
+                interp.stack.push(Value::nil());
+                return Ok(());
+            }
 
             let all_equal: bool = check_all_adjacent_equal(&items);
             push_boolean_result(interp, all_equal);

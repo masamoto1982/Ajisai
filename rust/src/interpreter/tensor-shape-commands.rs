@@ -1,5 +1,7 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::create_number_value;
+use crate::interpreter::value_extraction_helpers::{
+    create_number_value, nil_passthrough_binary, nil_passthrough_unary,
+};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -214,6 +216,10 @@ where
         });
     }
 
+    if nil_passthrough_unary(interp) {
+        return Ok(());
+    }
+
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     let val: Value = if is_keep_mode {
@@ -291,6 +297,10 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
+    if nil_passthrough_binary(interp) {
+        return Ok(());
+    }
+
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     let b_val: Value = if is_keep_mode {
@@ -312,14 +322,6 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
-
-    if a_val.is_nil() || b_val.is_nil() {
-        if !is_keep_mode {
-            interp.stack.push(a_val);
-            interp.stack.push(b_val);
-        }
-        return Err(AjisaiError::from("MOD requires vectors or numbers"));
-    }
 
     let result = apply_binary_broadcast(&a_val, &b_val, |x, y| {
         if y.is_zero() {

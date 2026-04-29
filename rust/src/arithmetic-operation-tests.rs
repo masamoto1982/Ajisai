@@ -55,14 +55,17 @@ mod ceil_tests {
     }
 
     #[tokio::test]
-    async fn test_ceil_error_restores_stack() {
+    async fn test_ceil_of_nil_passes_nil_through() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.execute("NIL").await.unwrap();
-        let result = interp.execute("CEIL").await;
-        assert!(result.is_err());
+        interp
+            .execute("CEIL")
+            .await
+            .expect("CEIL of NIL should succeed and produce NIL");
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after error");
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "CEIL of NIL should yield NIL");
     }
 }
 
@@ -167,14 +170,17 @@ mod round_tests {
     }
 
     #[tokio::test]
-    async fn test_round_error_restores_stack() {
+    async fn test_round_of_nil_passes_nil_through() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.execute("NIL").await.unwrap();
-        let result = interp.execute("ROUND").await;
-        assert!(result.is_err());
+        interp
+            .execute("ROUND")
+            .await
+            .expect("ROUND of NIL should succeed and produce NIL");
         let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "Stack should be restored after error");
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "ROUND of NIL should yield NIL");
     }
 }
 
@@ -347,5 +353,98 @@ mod interval_tests {
         let mut interp = Interpreter::new();
         interp.execute("2 3 5 INTERVAL *").await.unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[6, 10]");
+    }
+}
+
+#[cfg(test)]
+mod nil_passthrough_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    #[tokio::test]
+    async fn add_with_nil_left_yields_nil() {
+        let interp = run("NIL 3 +").await;
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "got {}", stack[0]);
+    }
+
+    #[tokio::test]
+    async fn add_with_nil_right_yields_nil() {
+        let interp = run("3 NIL +").await;
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_nil(), "got {}", stack[0]);
+    }
+
+    #[tokio::test]
+    async fn sub_mul_div_with_nil_yield_nil() {
+        let interp = run("NIL 5 -").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL 5 *").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL 5 /").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn div_by_nil_does_not_raise_division_by_zero() {
+        let interp = run("5 NIL /").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn mod_with_nil_yields_nil() {
+        let interp = run("NIL 3 MOD").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("3 NIL MOD").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn floor_ceil_round_of_nil_yield_nil() {
+        let interp = run("NIL FLOOR").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL CEIL").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL ROUND").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn comparisons_with_nil_yield_nil() {
+        let interp = run("NIL 3 <").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("3 NIL <=").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL NIL =").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn safe_divide_then_add_propagates_nil_through_pipeline() {
+        let interp = run("[ 10 ] [ 0 ] ~ / 1 +").await;
+        let stack = interp.get_stack();
+        assert!(
+            stack.last().unwrap().is_nil(),
+            "expected NIL on top of stack after safe-divide and add; got {}",
+            stack.last().unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn or_nil_can_supply_fallback_after_passthrough() {
+        let interp = run("[ 10 ] [ 0 ] ~ / 1 + 0 =>").await;
+        let stack = interp.get_stack();
+        assert!(
+            !stack.last().unwrap().is_nil(),
+            "OR-NIL should have replaced NIL with the fallback; got {}",
+            stack.last().unwrap()
+        );
     }
 }

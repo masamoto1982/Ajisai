@@ -157,6 +157,39 @@ pub(crate) fn push_result(interp: &mut Interpreter, result: Value) {
     interp.stack.push(result);
 }
 
+pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
+    let stack_len = interp.stack.len();
+    if stack_len == 0 {
+        return false;
+    }
+    if !interp.stack[stack_len - 1].is_nil() {
+        return false;
+    }
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+    }
+    interp.stack.push(Value::nil());
+    true
+}
+
+pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
+    let stack_len = interp.stack.len();
+    if stack_len < 2 {
+        return false;
+    }
+    let a_nil = interp.stack[stack_len - 2].is_nil();
+    let b_nil = interp.stack[stack_len - 1].is_nil();
+    if !(a_nil || b_nil) {
+        return false;
+    }
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
+    interp.stack.push(Value::nil());
+    true
+}
+
 
 use crate::types::FlowToken;
 
