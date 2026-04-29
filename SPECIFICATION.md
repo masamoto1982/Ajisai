@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-04-13**
+Version: **2026-04-29**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -140,6 +140,14 @@ A collection of named fields. Each field has a string key and an associated valu
 ### 4.5 NIL
 
 NIL represents the absence of a value. It is pushed by safe mode when an error is absorbed, and produced by operations that yield no meaningful result.
+
+#### 4.5.1 NIL passthrough
+
+Operations classified as **NIL-passthrough** in Section 7 do not raise `StructureError` when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.
+
+NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.13). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL.
+
+The intent is that pipelines built with safe mode (`~`) propagate NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
 
 ### 4.6 CodeBlock
 
@@ -372,6 +380,20 @@ Comparisons return a boolean (true/false encoded as Scalar with Boolean display 
 | `MONITOR` | Mark a child runtime for monitoring |
 | `SUPERVISE` | Create a supervisor over a group of child runtimes |
 
+### 7.12 NIL-passthrough words
+
+The following built-in words follow the NIL passthrough rule defined in Section 4.5.1. If any operand they consume is NIL, the result is NIL and no error is raised.
+
+| Category | Words |
+|----------|-------|
+| Arithmetic | `ADD`, `SUB`, `MUL`, `DIV`, `MOD`, `FLOOR`, `CEIL`, `ROUND` |
+| Comparison | `LT`, `LTE`, `EQ` |
+| Logic | `AND`, `OR`, `NOT` (three-valued; see below) |
+
+`AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.
+
+Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), conversion words (`STR`, `NUM`, `BOOL`, `CHR`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough.
+
 ---
 
 ## 8. User Words
@@ -520,6 +542,8 @@ Operations that produce a value equal to their input are successful. Equal-value
 ### 11.4 Safe mode behavior
 
 Any operation preceded by `~` absorbs its own errors locally. If an error is raised, NIL is pushed in place of the result. The error does not propagate.
+
+The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore guard a single risky operation with `~` and apply `OR-NIL` (`=>`) once at the end to supply a fallback value, rather than guarding every step.
 
 ---
 

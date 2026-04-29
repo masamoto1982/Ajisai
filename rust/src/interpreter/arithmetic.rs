@@ -4,7 +4,8 @@ use crate::interpreter::optimization_hooks;
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast;
 use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, extract_operands_with_flow, push_flow_result, push_result,
+    extract_integer_from_value, extract_operands_with_flow, nil_passthrough_binary,
+    push_flow_result, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
@@ -96,6 +97,11 @@ where
                     .collect::<Vec<Value>>()
             };
 
+            if items.iter().any(|v| v.is_nil()) {
+                push_result(interp, Value::nil());
+                return Ok(());
+            }
+
             if items.iter().any(|v| !is_scalar_value(v)) {
                 if !is_keep_mode {
                     interp.stack.extend(items);
@@ -125,6 +131,11 @@ where
 }
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = interp.stack[stack_len - 2].clone();
@@ -175,6 +186,11 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = interp.stack[stack_len - 2].clone();
@@ -210,6 +226,11 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = interp.stack[stack_len - 2].clone();
@@ -260,6 +281,11 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a = interp.stack[stack_len - 2].clone();
