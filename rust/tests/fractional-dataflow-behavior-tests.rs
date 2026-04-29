@@ -594,6 +594,7 @@ async fn test_can_update_in_place_with_aliased_vector() {
     let val = Value {
         data: ValueData::Vector(children),
         hint: DisplayHint::Auto,
+        nil_reason: None,
     };
     let token = FlowToken::from_value(&val);
 
