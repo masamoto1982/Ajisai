@@ -142,10 +142,12 @@ mod tests {
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         };
         let _v2 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         };
 
         let flow = fresh_flow(&v1);
@@ -161,6 +163,7 @@ mod tests {
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         };
 
         drop(children);

@@ -151,6 +151,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
                 hint: DisplayHint::Number,
+                nil_reason: None,
             };
         }
         let children: Vec<Value> = data
@@ -168,6 +169,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         return Value {
             data: ValueData::Vector(Rc::new(children)),
             hint: DisplayHint::Auto,
+            nil_reason: None,
         };
     }
 
@@ -186,6 +188,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     Value {
         data: ValueData::Vector(Rc::new(children)),
         hint: DisplayHint::Auto,
+        nil_reason: None,
     }
 }
 

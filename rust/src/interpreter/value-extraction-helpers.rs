@@ -165,10 +165,14 @@ pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
     if !interp.stack[stack_len - 1].is_nil() {
         return false;
     }
+    let inherited = interp.stack[stack_len - 1].nil_reason().cloned();
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
     }
-    interp.stack.push(Value::nil());
+    interp.stack.push(match inherited {
+        Some(reason) => Value::nil_with_reason(reason),
+        None => Value::nil(),
+    });
     true
 }
 
@@ -182,11 +186,19 @@ pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
     if !(a_nil || b_nil) {
         return false;
     }
+    let inherited = if a_nil {
+        interp.stack[stack_len - 2].nil_reason().cloned()
+    } else {
+        interp.stack[stack_len - 1].nil_reason().cloned()
+    };
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
         interp.stack.pop();
     }
-    interp.stack.push(Value::nil());
+    interp.stack.push(match inherited {
+        Some(reason) => Value::nil_with_reason(reason),
+        None => Value::nil(),
+    });
     true
 }
 

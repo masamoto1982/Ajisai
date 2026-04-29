@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, ExecutionLine, Token, Value};
 
@@ -264,9 +264,10 @@ impl Interpreter {
                                             .normalize_to_stack_len(self.stack.len());
                                         apply_word_hint_override(self, upper.as_ref());
                                     }
-                                    Err(_) => {
+                                    Err(err) => {
                                         self.stack = stack_snapshot;
-                                        self.stack.push(Value::nil());
+                                        self.stack
+                                            .push(Value::nil_with_reason(NilReason::from_error(&err)));
                                         self.semantic_registry
                                             .normalize_to_stack_len(self.stack.len());
                                     }

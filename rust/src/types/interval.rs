@@ -77,7 +77,7 @@ impl Interval {
 
     pub fn reciprocal(&self) -> Result<Self> {
         if self.contains_zero() {
-            return Err(AjisaiError::from("division by interval containing zero"));
+            return Err(AjisaiError::DivisionByZero);
         }
         let one = Fraction::from(1);
         let a = one.div(&self.lo);
