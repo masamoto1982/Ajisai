@@ -1,9 +1,14 @@
 #[cfg(test)]
 mod tests {
+    //! AQ-VER-007-F — IMPORT / IMPORT-ONLY compatibility for the standard
+    //! module set. Linked from `docs/quality/TRACEABILITY_MATRIX.md` to
+    //! AQ-REQ-007. Confirms that the coreword-registry refactor (commit
+    //! `d65cdbb`) does not regress legacy module-load semantics for any of
+    //! `MATH`, `JSON`, `IO`, `TIME`, `CRYPTO`, `ALGO`, `MUSIC`.
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn import_and_import_only_remain_compatible_for_standard_modules() {
+    async fn aq_ver_007_f_import_and_import_only_remain_compatible_for_standard_modules() {
         let mut interp = Interpreter::new();
 
         for module_name in ["MATH", "JSON", "IO", "TIME", "CRYPTO", "ALGO", "MUSIC"] {

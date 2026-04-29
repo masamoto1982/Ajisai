@@ -8,6 +8,7 @@
 | AQ-REQ-004 | TypeScript runtime typing remains sound and platform/value helpers behave correctly across the supported runtimes. | `js/` runtime modules | `npm run check`; `npm test` (Vitest); AQ-VER-004-A through AQ-VER-004-D |
 | AQ-REQ-005 | Quality gates block merges on formatting/lint/test failures. | `.github/workflows/test.yml` | CI quality gate job |
 | AQ-REQ-006 | Interpreter execution semantics (mode dispatch, quantization eligibility, epoch-driven plan-cache invalidation) remain stable across regressions. | `rust/src/interpreter/execute-builtin.rs`, `rust/src/interpreter/quantized-block.rs`, `rust/src/interpreter/higher-order-operations.rs`, `rust/src/interpreter/compiled-plan.rs` | `cargo test --all-targets`; AQ-VER-006-A through AQ-VER-006-D |
+| AQ-REQ-007 | Built-in word purity classification (`pure` / `observable` / `effectful`) and `safe_preview` gating remain self-consistent so that auto-preview never executes side-effecting words, and module IMPORT/IMPORT-ONLY compatibility for the standard module set is preserved. | `rust/src/coreword_registry.rs`, `rust/src/interpreter/modules/module_builtins.rs`, `rust/src/interpreter/modules/module_word_types.rs` | `cargo test --all-targets`; AQ-VER-007-A through AQ-VER-007-F |
 
 ## Verification Index
 
@@ -39,6 +40,12 @@
 | AQ-VER-004-B | AQ-REQ-004 | `compareValue` number-arm equality conjunction (`numerator === && denominator ===`) and vector-arm array-guard disjunction (`!Array.isArray(actual) \|\| !Array.isArray(expected)`) | `js/gui/value-formatter.test.ts::compareValue *` |
 | AQ-VER-004-C | AQ-REQ-004 | `compareStack` per-index 3-disjunct loop guard (`!a \|\| !e \|\| !compareValue(a, e)`) | `js/gui/value-formatter.test.ts::compareStack *` |
 | AQ-VER-004-D | AQ-REQ-004 | `formatFractionScientific` scientific-form conjunction (`numSci.includes('e') && denSci.includes('e')`) | `js/gui/value-formatter.test.ts::formatFractionScientific *` |
+| AQ-VER-007-A | AQ-REQ-007 | Metadata completeness: every entry in `get_builtin_word_registry()` has non-empty `name`, non-empty `category`, and a `purity` ∈ {Pure, Observable, Effectful}. | `rust/src/coreword_registry.rs::tests::aq_ver_007_a_metadata_exists_for_all_builtin_words` |
+| AQ-VER-007-B | AQ-REQ-007 | Pure-word integrity conjunction (`effects.is_empty() && deterministic && safe_preview`) holds for every `WordPurity::Pure` entry. | `rust/src/coreword_registry.rs::tests::aq_ver_007_b_pure_words_must_be_safe_and_deterministic_without_effects` |
+| AQ-VER-007-C | AQ-REQ-007 | Effectful-word safety conjunction (`!safe_preview && !effects.is_empty()`) holds for every `WordPurity::Effectful` entry. | `rust/src/coreword_registry.rs::tests::aq_ver_007_c_effectful_words_must_not_be_safe_preview` |
+| AQ-VER-007-D | AQ-REQ-007 | Observable-word safety conjunction (`!effects.is_empty() && !safe_preview` and `!deterministic` by default, with documented LOOKUP exception) holds for every `WordPurity::Observable` entry. | `rust/src/coreword_registry.rs::tests::aq_ver_007_d_observable_words_are_nondeterministic_and_not_safe_preview_by_default` |
+| AQ-VER-007-E | AQ-REQ-007 | `is_safe_preview_word` decision (`metadata.is_some() && metadata.safe_preview`) — independent-effect MC/DC truth table over (metadata-present × safe_preview) including the default `unwrap_or(false)` short-circuit for unknown names. | `rust/src/coreword_registry.rs::tests::aq_ver_007_e_is_safe_preview_word_decision_truth_table` |
+| AQ-VER-007-F | AQ-REQ-007 | IMPORT / IMPORT-ONLY compatibility for the standard module set (`MATH`, `JSON`, `IO`, `TIME`, `CRYPTO`, `ALGO`, `MUSIC`) is preserved, including selective `'MATH' [ 'SQRT' ] IMPORT-ONLY`. | `rust/src/interpreter/coreword-registry-import-compat-tests.rs::tests::aq_ver_007_f_import_and_import_only_remain_compatible_for_standard_modules` |
 
 ## Coverage Notes
 

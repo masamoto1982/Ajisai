@@ -132,10 +132,18 @@ pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> Corewor
 
 #[cfg(test)]
 mod tests {
-    use super::{get_builtin_word_registry, WordPurity};
+    //! AQ-VER-007 — Coreword purity / safe-preview integrity tests.
+    //!
+    //! These tests are linked from `docs/quality/TRACEABILITY_MATRIX.md`
+    //! to AQ-REQ-007 ("Built-in word purity classification and `safe_preview`
+    //! gating remain self-consistent"). Test names are prefixed with their
+    //! verification ID so that a `cargo test aq_ver_007` invocation runs
+    //! the full coreword-registry coverage subset.
+
+    use super::{get_builtin_word_registry, is_safe_preview_word, WordPurity};
 
     #[test]
-    fn metadata_exists_for_all_builtin_words() {
+    fn aq_ver_007_a_metadata_exists_for_all_builtin_words() {
         let registry = get_builtin_word_registry();
         assert!(!registry.is_empty(), "registry must not be empty");
         for word in registry {
@@ -157,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn pure_words_must_be_safe_and_deterministic_without_effects() {
+    fn aq_ver_007_b_pure_words_must_be_safe_and_deterministic_without_effects() {
         let registry = get_builtin_word_registry();
         for word in registry.iter().filter(|w| w.purity == WordPurity::Pure) {
             assert!(
@@ -179,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn effectful_words_must_not_be_safe_preview() {
+    fn aq_ver_007_c_effectful_words_must_not_be_safe_preview() {
         let registry = get_builtin_word_registry();
         for word in registry
             .iter()
@@ -199,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn observable_words_are_nondeterministic_and_not_safe_preview_by_default() {
+    fn aq_ver_007_d_observable_words_are_nondeterministic_and_not_safe_preview_by_default() {
         let registry = get_builtin_word_registry();
         for word in registry
             .iter()
@@ -210,7 +218,9 @@ mod tests {
                 "{} observable words must declare effects",
                 word.name
             );
-            // LOOKUP reads interpreter dictionary state and is deterministic for the same interpreter snapshot.
+            // LOOKUP reads interpreter dictionary state and is deterministic
+            // for the same interpreter snapshot; tracked as a documented
+            // exception under AQ-VER-007-D.
             if word.name != "LOOKUP" {
                 assert!(
                     !word.deterministic,
@@ -224,5 +234,60 @@ mod tests {
                 word.name
             );
         }
+    }
+
+    /// AQ-VER-007-E — MC/DC truth table for `is_safe_preview_word`.
+    ///
+    /// The decision under test is logically:
+    ///
+    /// ```text
+    /// metadata_present(name) && metadata_safe_preview(name)
+    /// ```
+    ///
+    /// implemented in `is_safe_preview_word` via
+    /// `get_coreword_metadata(name).map(|w| w.safe_preview).unwrap_or(false)`.
+    /// We exercise all three reachable rows (the `metadata_present == false`
+    /// row collapses both `safe_preview` cases to the `unwrap_or(false)`
+    /// short-circuit, so it is covered by a single unknown-name probe):
+    ///
+    /// | row | metadata_present | safe_preview | expected | rationale                          |
+    /// |-----|------------------|--------------|----------|------------------------------------|
+    /// | 1   | true             | true         | true     | known pure word (e.g. `ADD`)       |
+    /// | 2   | true             | false        | false    | known effectful word (e.g. `PRINT`)|
+    /// | 3   | true             | false        | false    | known observable word (e.g. `NOW`) |
+    /// | 4   | false            | n/a          | false    | unknown name → unwrap_or(false)    |
+    ///
+    /// Rows 1 vs 2 demonstrate independent effect of `safe_preview`;
+    /// rows 1 vs 4 demonstrate independent effect of `metadata_present`.
+    #[test]
+    fn aq_ver_007_e_is_safe_preview_word_decision_truth_table() {
+        // Row 1: metadata present, safe_preview=true → true.
+        assert!(
+            is_safe_preview_word("ADD"),
+            "row1: pure builtin ADD must be safe preview"
+        );
+        // Row 2: metadata present, safe_preview=false (effectful) → false.
+        assert!(
+            !is_safe_preview_word("PRINT"),
+            "row2: effectful builtin PRINT must not be safe preview"
+        );
+        // Row 3: metadata present, safe_preview=false (observable) → false.
+        assert!(
+            !is_safe_preview_word("NOW"),
+            "row3: observable builtin NOW must not be safe preview"
+        );
+        // Row 4: metadata absent → unwrap_or(false) short-circuit.
+        assert!(
+            !is_safe_preview_word("__AJISAI_NO_SUCH_WORD__"),
+            "row4: unknown name must default to false"
+        );
+
+        // Case-insensitive lookup also reaches the safe_preview=true arm,
+        // confirming that the upper-casing inside get_coreword_metadata
+        // does not flip the decision.
+        assert!(
+            is_safe_preview_word("add"),
+            "row1 (lowercase): case-insensitive lookup must still be safe preview"
+        );
     }
 }
