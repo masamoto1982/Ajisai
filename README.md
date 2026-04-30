@@ -3,82 +3,69 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
 [![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
 
-![Ajisai Logo](public/images/ajisai-logo.png "Ajisai Programming Language Logo")
 ![Ajisai QR Code](public/images/ajisai-qr.png "Ajisai QR Code")
 
 # Ajisai
 
-Ajisaiはプログラミング言語における型システムの新しい可能性を追求するために生まれた。  
+Ajisai is an AI-first, vector-oriented, fractional-dataflow language.
 
-本言語は、型安全性の担保と丸め誤差の回避を目的に、すべての情報を分数として扱う。  
-分数はVectorという器に対し水のように注がれ、その水面たる表示部には様々な波紋が浮かぶ。
+It is designed around one strict promise: **value integrity first**. Every numeric value stays exact, structure is explicit, and behavior is mechanically testable through clear contracts.
 
-現実の水がそうであるように、その水面をどれだけ掻き回したとしても、水は水のまま不変である。  
-このコンセプトにより、Ajisaiは型安全でありながらも親しみやすい言語を目指す。
+The name *Ajisai* comes from hydrangea, whose scientific meaning is often interpreted as a “water vessel.” This project uses water as its core metaphor for how values move through code.
 
-
-Ajisaiという名前は、「水の器」という意味の学名を持つ紫陽花に因んでいる。
-
-Playground: https://masamoto1982.github.io/Ajisai/
-
-Desktop (Tauri) build channel is available in the same repository (`src-tauri/`).
+- Playground: https://masamoto1982.github.io/Ajisai/
+- Desktop (Tauri) build channel is available in the same repository (`src-tauri/`).
 
 ---
 
-## 水のメタファー
+## Why Ajisai (as a water system)
 
-### 水としての分数
+### 1) Exact fractions: water that never evaporates
 
-Ajisaiの数はすべて分数として扱われ、近似や丸めは一切発生しない。  
-水がどの器を通っても体積を失わないように、値は計算を通過しても厳密な形を保つ。
+In Ajisai, all numeric values are treated as exact rationals internally. No hidden floating-point drift, no silent rounding loss.
 
-→ 技術的な詳細: [SPECIFICATION.md §4.2](SPECIFICATION.md#42-scalar-exact-rational-arithmetic)
+Like water that keeps the same volume no matter which channel it passes through, Ajisai values preserve exactness across operations.
 
-### 器としての Vector
+Spec links: [§4.2 Scalar: exact rational arithmetic](SPECIFICATION.md#42-scalar-exact-rational-arithmetic), [§3.2 Numeric literal formats](SPECIFICATION.md#32-numeric-literal-formats)
 
-Vectorは、値を順序をもって収めるための器である。  
-器は入れ子にすることができ、器の中にさらに器を置くことも可能である。  
-しかしその本質は変わらず、Vectorは一貫して値を受け取り、保持し、渡すための構造として機能する。
+### 2) Vectors with NIL: bubbles inside the vessel
 
-→ 技術的な詳細: [SPECIFICATION.md §4.3](SPECIFICATION.md#43-vector)
+A `Vector` is Ajisai’s vessel: ordered, nestable, and indexable. Unlike many systems that force “all present values,” Ajisai explicitly allows absence via `NIL`, and `NIL` can flow through vector pipelines by rule.
 
-### 器に対する水の注ぎ方としてのコードブロック
+In the water metaphor, `NIL` is a bubble in the flow: not the water itself, but a meaningful part of the stream state.
 
-器があれば、それに注ぐ手段が必要となる。  
-コードブロックは「どのように水を注ぐか」を記述する単位であり、順序・変換・操作の連鎖を表現する。  
-注ぎ方そのものもまた器に収めることができ、別の注ぎ方へ渡すこともできる。
+Spec links: [§4.3 Vector](SPECIFICATION.md#43-vector), [§4.5 NIL](SPECIFICATION.md#45-nil), [§4.5.1 NIL passthrough rule](SPECIFICATION.md#451-nil-passthrough-rule)
 
-→ 技術的な詳細: [SPECIFICATION.md §4.6](SPECIFICATION.md#46-codeblock), [§8](SPECIFICATION.md#8-user-words)
+### 3) 0-origin and 1-origin by function role: choosing the right measuring scale
 
-### 水の流れを制御するモード
+Ajisai uses index semantics intentionally, not accidentally. Core vector indexing is 0-origin (including negative index support), while module/runtime words may define their own domain contracts where needed.
 
-すべての操作は二つの軸によって制御される。
+Think of it as switching rulers depending on the lock gate you operate: one scale for structural addressing, another for domain-facing conventions.
 
-**操作対象モード** —— 水路のどこに作用するかを定める。水面の一点か、あるいは水路全体か。  
-**消費モード** —— 流れが飲み込まれるか、それとも分流するかを定める。  
-分流（`,,`）は流れを失うことがなく、源を残しつつ新たな流れを生み出す。
+Spec links: [§4.3 Vector](SPECIFICATION.md#43-vector), [§7 Built-in Words](SPECIFICATION.md#7-built-in-words), [§9 Module System](SPECIFICATION.md#9-module-system)
 
-→ 技術的な詳細: [SPECIFICATION.md §6](SPECIFICATION.md#6-modifiers)
+### 4) Target mode and consumption mode: where water acts, and whether it branches
 
-### 泡としての NIL
+Ajisai modifiers provide two orthogonal controls:
 
-泡は水ではないが、水のある場所に現れる。  
-NILは値の不在を表す——本来値があるべき場所に、何も存在しないときのかたちである。  
-`~` を付与した操作は乱流を泡に変え、氾濫を未然に防ぐ。これにより上流は守られる。
+- **Target mode** (`TOP` / `STAK`): where the operation applies (surface point vs full stream).
+- **Consumption mode** (`EAT` / `KEEP`): whether the source flow is consumed or bifurcated.
 
-→ 技術的な詳細: [SPECIFICATION.md §4.5](SPECIFICATION.md#45-nil), [§6.3](SPECIFICATION.md#63-safe-mode-modifier)
+`KEEP` (``,,``) acts like a branch channel: it preserves source context while emitting a new result path.
 
-### 波紋としてのセマンティックプレーン
+Spec links: [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§11.5 KEEP modifier semantics](SPECIFICATION.md#115-keep-modifier-semantics)
 
-波紋は水ではないが、確かに水面に浮かび、値の姿を観る者に伝える。  
-セマンティックプレーンは値に添えられる表示のヒントであり、同じ分数を数として見せるか、文字列として見せるか、日時として見せるかを決定する。  
-波紋は水の体積を変えず、流れを乱さず、計算にも影響を与えない。それでも値を読み取る瞬間、そのかたちが見栄えを決める。
+### 5) Safe mode (`~`): flood control without losing diagnostics
 
-→ 技術的な詳細: [SPECIFICATION.md §5.2](SPECIFICATION.md#52-two-plane-architecture), [§12](SPECIFICATION.md#12-semantic-plane)
+`SAFE` projects partial operations into total ones by turning runtime errors into `NIL` with structured reason metadata.
+
+So the pipeline does not crash, but the cause is not erased. In water terms: pressure is released into a controlled spillway, and the incident report is still attached.
+
+Spec links: [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior)
 
 ---
 
-## Runtime
+## Runtime architecture
 
 Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 
@@ -86,12 +73,12 @@ Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 - Desktop channel: Tauri wrapper (`npm run tauri:build`, frontend via `npm run build:tauri-frontend`)
 - Runtime-specific behavior (Persistence / File I/O / Runtime hooks) is abstracted via `js/platform/` adapters
 
-仕様の完全な定義: `SPECIFICATION.md`
-品質プロセス方針: [`docs/quality/QUALITY_POLICY.md`](docs/quality/QUALITY_POLICY.md)
+Formal definition: [`SPECIFICATION.md`](SPECIFICATION.md)  
+Quality process policy: [`docs/quality/QUALITY_POLICY.md`](docs/quality/QUALITY_POLICY.md)
 
 ---
 
-## Development Checks
+## Development checks
 
 ```sh
 cd rust && cargo test --lib
@@ -99,7 +86,7 @@ cd rust && cargo test --tests
 npm run check
 ```
 
-GUI 動作テストはアプリ上の `Test` ボタンから `js/gui/gui-interpreter-test-cases.ts` のケースを実行して確認します。
+GUI behavior checks can be run from the in-app `Test` button using cases in `js/gui/gui-interpreter-test-cases.ts`.
 
 ---
 
