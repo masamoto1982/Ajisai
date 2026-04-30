@@ -219,23 +219,23 @@ Modifiers precede a word and alter its execution behavior. Multiple modifiers ma
 
 ### 6.1 Target modifiers
 
-| Modifier | Name | Behavior |
-|----------|------|----------|
-| `.` | StackTop (default) | The word operates on the top value(s) of the stack |
-| `..` | Stack | The entire stack contents are treated as the operand |
+| Canonical | Sugar | Behavior |
+|-----------|-------|----------|
+| `TOP` | `.` | The word operates on the top value(s) of the stack (default) |
+| `STAK` | `..` | The entire stack contents are treated as the operand |
 
 ### 6.2 Consumption modifiers
 
-| Modifier | Name | Behavior |
-|----------|------|----------|
-| `,` | Consume (default) | Operands are removed from the stack after the operation |
-| `,,` | Keep / Bifurcation | Operands are retained; the result is also pushed |
+| Canonical | Sugar | Behavior |
+|-----------|-------|----------|
+| `EAT` | `,` | Operands are removed from the stack after the operation (default) |
+| `KEEP` | `,,` | Operands are retained; the result is also pushed |
 
 ### 6.3 Safe mode modifier
 
-| Modifier | Name | Behavior |
-|----------|------|----------|
-| `~` | Safe | If the operation raises an error, NIL is pushed instead of propagating the error |
+| Canonical | Sugar | Behavior |
+|-----------|-------|----------|
+| `SAFE` | `~` | If the operation raises an error, NIL is pushed instead of propagating the error |
 
 ### 6.4 Modifier combinations
 
@@ -245,12 +245,12 @@ All modifier combinations are explicit and mechanically testable. Combined forms
 
 All built-in words have English-word-based canonical names (see Section 7). The forms below are syntactic sugar that the tokenizer maps to the corresponding canonical word; either spelling is accepted in source code and behaves identically at runtime.
 
-| Form | Canonical word | Behavior |
-|------|----------------|----------|
-| `==` | `PIPE` | Visual pipeline separator; no runtime effect |
-| `=>` | `OR-NIL` | If the top of the stack is NIL, replace it with the next stack value |
-| `!` | `FORC` | Overrides protection checks when redefining or deleting words that have dependents |
-| `?` | `LOOKUP` | Display the definition of a word (see Section 7.8) |
+| Canonical | Sugar | Behavior |
+|-----------|-------|----------|
+| `PIPE` | `==` | Visual pipeline separator; no runtime effect |
+| `OR-NIL` | `=>` | If the top of the stack is NIL, replace it with the next stack value |
+| `FORC` | `!` | Overrides protection checks when redefining or deleting words that have dependents |
+| `LOOKUP` | `?` | Display the definition of a word (see Section 7.8) |
 
 ---
 
@@ -276,34 +276,34 @@ All built-in words — both Core words and module dictionary words — use Engli
 
 ### 7.1 Vector operations
 
-| Word | Description |
-|------|-------------|
-| `LENGTH` | Number of elements in a vector, or total count of all stack values |
-| `GET` | Retrieve element at a given index |
-| `INSERT` | Insert element at a given index |
-| `REPLACE` | Replace element at a given index |
-| `REMOVE` | Remove element at a given index |
-| `CONCAT` | Concatenate two or more vectors |
-| `REVERSE` | Reverse the order of elements |
-| `RANGE` | Generate a sequence of integers from start to end with optional step |
-| `TAKE` | Take the first N elements |
-| `SPLIT` | Split a vector into sub-vectors by given sizes |
-| `REORDER` | Reorder elements according to an index list; supports duplication and negative indices |
-| `COLLECT` | Gather all current stack values into a single vector |
-| `SORT` | Sort elements in ascending order (exact fraction comparison) |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `LENGTH` | — | Number of elements in a vector, or total count of all stack values |
+| `GET` | — | Retrieve element at a given index |
+| `INSERT` | — | Insert element at a given index |
+| `REPLACE` | — | Replace element at a given index |
+| `REMOVE` | — | Remove element at a given index |
+| `CONCAT` | — | Concatenate two or more vectors |
+| `REVERSE` | — | Reverse the order of elements |
+| `RANGE` | — | Generate a sequence of integers from start to end with optional step |
+| `TAKE` | — | Take the first N elements |
+| `SPLIT` | — | Split a vector into sub-vectors by given sizes |
+| `REORDER` | — | Reorder elements according to an index list; supports duplication and negative indices |
+| `COLLECT` | — | Gather all current stack values into a single vector |
+| `SORT` | — | Sort elements in ascending order (exact fraction comparison) |
 
 ### 7.2 Tensor operations
 
 Tensor operations operate on nested vectors treated as multi-dimensional arrays.
 
-| Word | Description |
-|------|-------------|
-| `SHAPE` | Return the size of each dimension as a vector |
-| `RANK` | Return the number of dimensions |
-| `RESHAPE` | Reshape to new dimension sizes |
-| `TRANSPOSE` | Transpose a 2D tensor |
-| `FILL` | Create a tensor of given shape filled with a value |
-| `FRAME` | Collect stack values into a tensor frame |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `SHAPE` | — | Return the size of each dimension as a vector |
+| `RANK` | — | Return the number of dimensions |
+| `RESHAPE` | — | Reshape to new dimension sizes |
+| `TRANSPOSE` | — | Transpose a 2D tensor |
+| `FILL` | — | Create a tensor of given shape filled with a value |
+| `FRAME` | — | Collect stack values into a tensor frame |
 
 Tensor operation implementations must follow the staged pipeline:
 1. Flatten input
@@ -315,102 +315,102 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited.
 
 ### 7.3 Arithmetic
 
-| Word | Description |
-|------|-------------|
-| `+` | Addition |
-| `-` | Subtraction |
-| `*` | Multiplication |
-| `/` | Exact rational division |
-| `MOD` / `%` | Remainder |
-| `FLOOR` | Floor (largest integer ≤ value) |
-| `CEIL` | Ceiling (smallest integer ≥ value) |
-| `ROUND` | Round to nearest integer |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `ADD` | `+` | Addition |
+| `SUB` | `-` | Subtraction |
+| `MUL` | `*` | Multiplication |
+| `DIV` | `/` | Exact rational division |
+| `MOD` | `%` | Remainder |
+| `FLOOR` | — | Floor (largest integer ≤ value) |
+| `CEIL` | — | Ceiling (smallest integer ≥ value) |
+| `ROUND` | — | Round to nearest integer |
 
 ### 7.4 Comparison
 
-| Word | Description |
-|------|-------------|
-| `<` | Less than |
-| `<=` | Less than or equal |
-| `=` | Equal |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `LT` | `<` | Less than |
+| `LTE` | `<=` | Less than or equal |
+| `EQ` | `=` | Equal |
 
 Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint).
 
 ### 7.5 Logic
 
-| Word | Description |
-|------|-------------|
-| `AND` / `&` | Logical AND |
-| `OR` | Logical OR |
-| `NOT` | Logical NOT |
-| `TRUE` | Push boolean true |
-| `FALSE` | Push boolean false |
-| `NIL` | Push NIL |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `AND` | `&` | Logical AND |
+| `OR` | — | Logical OR |
+| `NOT` | — | Logical NOT |
+| `TRUE` | — | Push boolean true |
+| `FALSE` | — | Push boolean false |
+| `NIL` | — | Push NIL |
 
 ### 7.6 String and type conversion
 
-| Word | Description |
-|------|-------------|
-| `STR` | Convert value to its string representation |
-| `NUM` | Parse a string as a number |
-| `BOOL` | Convert to boolean |
-| `CHR` | Convert a number to its Unicode character |
-| `CHARS` | Split a string into a vector of individual characters |
-| `JOIN` | Join a vector of strings, with optional separator |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `STR` | — | Convert value to its string representation |
+| `NUM` | — | Parse a string as a number |
+| `BOOL` | — | Convert to boolean |
+| `CHR` | — | Convert a number to its Unicode character |
+| `CHARS` | — | Split a string into a vector of individual characters |
+| `JOIN` | — | Join a vector of strings, with optional separator |
 
 ### 7.7 Control and higher-order words
 
-| Word | Description |
-|------|-------------|
-| `MAP` | Apply a code block to each element, collecting results |
-| `FILTER` | Keep elements for which a predicate returns true |
-| `FOLD` | Reduce a sequence to a single value using an accumulator |
-| `UNFOLD` | Generate a sequence by repeatedly applying a generator block |
-| `ANY` | True if at least one element satisfies the predicate |
-| `ALL` | True if all elements satisfy the predicate |
-| `COUNT` | Count elements satisfying the predicate |
-| `SCAN` | Like FOLD but returns all intermediate accumulator values |
-| `COND` | Evaluate clauses separated by `$`; execute the first whose condition is true |
-| `IDLE` | No-op; does nothing |
-| `EXEC` | Execute a code block |
-| `EVAL` | Parse and execute a string as Ajisai code |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `MAP` | — | Apply a code block to each element, collecting results |
+| `FILTER` | — | Keep elements for which a predicate returns true |
+| `FOLD` | — | Reduce a sequence to a single value using an accumulator |
+| `UNFOLD` | — | Generate a sequence by repeatedly applying a generator block |
+| `ANY` | — | True if at least one element satisfies the predicate |
+| `ALL` | — | True if all elements satisfy the predicate |
+| `COUNT` | — | Count elements satisfying the predicate |
+| `SCAN` | — | Like FOLD but returns all intermediate accumulator values |
+| `COND` | — | Evaluate clauses separated by `$`; execute the first whose condition is true |
+| `IDLE` | — | No-op; does nothing |
+| `EXEC` | — | Execute a code block |
+| `EVAL` | — | Parse and execute a string as Ajisai code |
 
 ### 7.8 User word dictionary
 
-| Word | Description |
-|------|-------------|
-| `DEF` | Define a user word (see Section 8) |
-| `DEL` | Delete a user word (see Section 8) |
-| `LOOKUP` | Look up and display the definition of a word (sugar: `?`) |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `DEF` | — | Define a user word (see Section 8) |
+| `DEL` | — | Delete a user word (see Section 8) |
+| `LOOKUP` | `?` | Look up and display the definition of a word |
 
 ### 7.9 IO and utilities
 
-| Word | Description |
-|------|-------------|
-| `PRINT` | Output the top stack value |
-| `NOW` | Push the current timestamp |
-| `DATETIME` | Format a timestamp as a datetime string |
-| `TIMESTAMP` | Parse a datetime string to a timestamp |
-| `CSPRNG` | Push a cryptographically secure random number |
-| `HASH` | Compute a hash of the top stack value |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `PRINT` | — | Output the top stack value |
+| `NOW` | — | Push the current timestamp |
+| `DATETIME` | — | Format a timestamp as a datetime string |
+| `TIMESTAMP` | — | Parse a datetime string to a timestamp |
+| `CSPRNG` | — | Push a cryptographically secure random number |
+| `HASH` | — | Compute a hash of the top stack value |
 
 ### 7.10 Module loading
 
-| Word | Description |
-|------|-------------|
-| `IMPORT` | Load all words from a module into the current scope |
-| `IMPORT-ONLY` | Load only the specified words from a module |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `IMPORT` | — | Load all words from a module into the current scope |
+| `IMPORT-ONLY` | — | Load only the specified words from a module |
 
 ### 7.11 Child runtime words
 
-| Word | Description |
-|------|-------------|
-| `SPAWN` | Create and start a child runtime from a code block; push a ProcessHandle |
-| `AWAIT` | Wait for a child to finish; push `[status result-stack]` |
-| `STATUS` | Return the current state of a child runtime as a string |
-| `KILL` | Terminate a child runtime |
-| `MONITOR` | Mark a child runtime for monitoring |
-| `SUPERVISE` | Create a supervisor over a group of child runtimes |
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `SPAWN` | — | Create and start a child runtime from a code block; push a ProcessHandle |
+| `AWAIT` | — | Wait for a child to finish; push `[status result-stack]` |
+| `STATUS` | — | Return the current state of a child runtime as a string |
+| `KILL` | — | Terminate a child runtime |
+| `MONITOR` | — | Mark a child runtime for monitoring |
+| `SUPERVISE` | — | Create a supervisor over a group of child runtimes |
 
 ### 7.12 NIL-passthrough words
 
