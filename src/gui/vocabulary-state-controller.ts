@@ -1,12 +1,15 @@
 
 
 import {
+    DEFAULT_WORD_INFO_MESSAGE,
     checkWordMatchesFilter,
     compareWordName,
     createEmptyWordsElement,
     createNoResultsElement,
     createWordButtonElement,
     registerBackgroundClickListeners,
+    renderWordInfo,
+    resetWordInfoDisplay,
 } from './dictionary-element-builders';
 
 export interface WordInfo {
@@ -82,18 +85,7 @@ const clearElement = (element: HTMLElement): void => {
     element.innerHTML = '';
 };
 
-const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
-
 const isCanonicalCoreWordName = (name: string): boolean => /^[A-Z][A-Z0-9-]*$/.test(name);
-
-const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
-    element.textContent = text;
-    element.classList.toggle('is-placeholder', isPlaceholder);
-};
-
-const resetWordInfoDisplay = (element: HTMLElement): void => {
-    renderWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
-};
 
 const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
 

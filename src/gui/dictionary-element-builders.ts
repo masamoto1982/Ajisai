@@ -1,3 +1,14 @@
+export const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
+
+export const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
+    element.textContent = text;
+    element.classList.toggle('is-placeholder', isPlaceholder);
+};
+
+export const resetWordInfoDisplay = (element: HTMLElement): void => {
+    renderWordInfo(element, DEFAULT_WORD_INFO_MESSAGE, true);
+};
+
 export const compareWordName = (a: string, b: string): number => {
     const aIsAlpha = /^[A-Za-z]/.test(a);
     const bIsAlpha = /^[A-Za-z]/.test(b);

@@ -16,6 +16,7 @@ interface InterpreterState {
     key: string;
     stack: unknown;
     userWords: unknown;
+    importedModules?: unknown;
     demoWordsVersion?: number;
     updatedAt: string;
 
@@ -155,6 +156,7 @@ class WebPersistence implements Persistence {
             return {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
                 userWords: (result.userWords ?? result.customWords) as InterpreterStateSnapshot['userWords'],
+                importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
                 demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
             };
         });
