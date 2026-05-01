@@ -8,6 +8,7 @@ import { Result, ok, err } from './functional-result-helpers';
 export interface InterpreterState {
     readonly stack: Value[];
     readonly userWords: UserWord[];
+    readonly importedModules?: string[];
     readonly demoWordsVersion?: number;
 }
 
@@ -52,6 +53,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
     return {
         stack: interpreter.collect_stack(),
         userWords,
+        importedModules: interpreter.collect_imported_modules(),
         demoWordsVersion: DEMO_WORDS_VERSION
     };
 };
@@ -154,6 +156,9 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             if (state) {
                 if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
+                }
+                if (state.importedModules && state.importedModules.length > 0) {
+                    window.ajisaiInterpreter.restore_imported_modules(state.importedModules);
                 }
 
                 if (state.userWords && state.userWords.length > 0) {

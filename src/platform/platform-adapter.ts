@@ -3,6 +3,7 @@ import type { UserWord, Value } from '../wasm-interpreter-types';
 export interface InterpreterStateSnapshot {
     readonly stack: Value[];
     readonly userWords: UserWord[];
+    readonly importedModules?: string[];
     readonly demoWordsVersion?: number;
 }
 
@@ -22,6 +23,7 @@ export interface ExportData {
         readonly key: string;
         readonly stack: unknown;
         readonly userWords: unknown;
+        readonly importedModules?: unknown;
         readonly demoWordsVersion?: number;
         readonly updatedAt: string;
     } | null;
