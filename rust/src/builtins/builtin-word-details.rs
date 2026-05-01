@@ -39,9 +39,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
                     crate::core_word_aliases::CoreWordAliasKind::InputHelper => {
                         format!("{} is an input helper.\n\n", alias.alias)
                     }
-                    crate::core_word_aliases::CoreWordAliasKind::Deprecated => {
-                        format!("{} is deprecated.\n\n", alias.alias)
-                    }
                 };
                 lead
             })
