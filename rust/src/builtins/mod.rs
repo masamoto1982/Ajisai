@@ -65,7 +65,6 @@ fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Cap
         (Some(BuiltinExecutorKey::Monitor), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Supervise), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
-        (None, "FRAME") => Capabilities::PURE.union(Capabilities::INPUT_HELPER),
         _ => Capabilities::PURE,
     }
 }

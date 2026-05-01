@@ -1,5 +1,5 @@
 use super::common::{
-    execute_executable_code, extract_executable_code, is_truthy_boolean, ExecutableCode,
+    execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
 use super::hedged::execute_hedged_predicate_kernel;
 use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate_kernel};
@@ -109,22 +109,13 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                                     }
                                 };
 
-                                let is_true: bool = if is_vector_value(&condition_result) {
-                                    if condition_result.len() == 1 {
-                                        is_truthy_boolean(condition_result.get_child(0).unwrap())
-                                    } else {
-                                        error = Some(AjisaiError::create_structure_error(
-                                            "boolean result from FILTER code",
-                                            "other format",
-                                        ));
+                                let is_true: bool = match extract_predicate_boolean(condition_result)
+                                {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        error = Some(e);
                                         break;
                                     }
-                                } else {
-                                    error = Some(AjisaiError::create_structure_error(
-                                        "boolean vector result from FILTER code",
-                                        "other format",
-                                    ));
-                                    break;
                                 };
 
                                 if is_true {

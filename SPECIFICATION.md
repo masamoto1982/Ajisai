@@ -303,7 +303,6 @@ Tensor operations operate on nested vectors treated as multi-dimensional arrays.
 | `RESHAPE` | — | Reshape to new dimension sizes |
 | `TRANSPOSE` | — | Transpose a 2D tensor |
 | `FILL` | — | Create a tensor of given shape filled with a value |
-| `FRAME` | — | Collect stack values into a tensor frame |
 
 Tensor operation implementations must follow the staged pipeline:
 1. Flatten input
@@ -651,7 +650,7 @@ The `,,` (keep/bifurcation) modifier retains source context while also pushing t
 - Keep control flow shallow and phase-separated.
 - Separate semantic changes from structural cleanup in change management.
 - Maintain single canonical implementations; do not allow dual-mode drift.
-- Source code files must contain no inline comments or block comments. All explanatory text must reside in external specification and documentation files.
+- Source code comments are allowed when they clarify intent, invariants, traceability, or non-obvious behavior. When source code is changed, nearby comments must be reviewed and updated so they remain accurate. Comments that merely restate obvious code should be avoided.
 
 ### 14.2 Advisory
 

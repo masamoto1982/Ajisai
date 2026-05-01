@@ -22,11 +22,7 @@ mod tests {
         assert_eq!(def.stability, Stability::Stable);
         assert_eq!(def.capabilities, Capabilities::MUTATES_DICT);
 
-        let frame = interp.core_vocabulary.get("FRAME").unwrap();
-        assert_eq!(
-            frame.capabilities,
-            Capabilities::PURE.union(Capabilities::INPUT_HELPER)
-        );
+        assert!(interp.core_vocabulary.get("FRAME").is_none());
 
         assert!(!interp.core_vocabulary.contains_key("'"));
     }

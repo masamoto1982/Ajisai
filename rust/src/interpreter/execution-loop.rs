@@ -21,7 +21,7 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "BOOL" | "LT" | "LTE" | "EQ" | "AND" | "OR" | "NOT" => Some(DisplayHint::Boolean),
         "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
-        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "FRAME" => {
+        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" => {
             Some(DisplayHint::Auto)
         }
         _ => None,

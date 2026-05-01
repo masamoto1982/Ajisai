@@ -150,15 +150,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         None
     ),
     builtin_spec!(
-        "FRAME",
-        "vector",
-        "Generate empty vector structure from shape. Shape Vector -> Vector",
-        "[ 2 3 ] FRAME → [ [ ] [ ] [ ] ] [ [ ] [ ] [ ] ]",
-        "none",
-        BuiltinDetailGroup::VectorOps,
-        None
-    ),
-    builtin_spec!(
         "GET",
         "vector",
         "Form: Extract element at index. Vector, Index Vector -> element",
