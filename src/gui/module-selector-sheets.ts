@@ -7,6 +7,8 @@ import {
     checkWordMatchesFilter,
     registerBackgroundClickListeners,
     compareWordName,
+    renderWordInfo,
+    resetWordInfoDisplay,
 } from './dictionary-element-builders';
 import { formatDictionaryTabName } from './vocabulary-state-controller';
 
@@ -75,6 +77,7 @@ export const createModuleTabManager = (
 
         const wordInfoDisplay = document.createElement('span');
         wordInfoDisplay.className = 'word-info-display module-word-info';
+        resetWordInfoDisplay(wordInfoDisplay);
         sheet.appendChild(wordInfoDisplay);
 
         const wordsDisplay = document.createElement('div');
@@ -109,6 +112,7 @@ export const createModuleTabManager = (
         if (!wordsDisplay || !wordInfo) return;
 
         wordsDisplay.innerHTML = '';
+        resetWordInfoDisplay(wordInfo as HTMLElement);
 
         try {
             const moduleWords: Array<[string, string | null]> =
@@ -128,8 +132,8 @@ export const createModuleTabManager = (
                     description,
                     'word-button module',
                     () => onWordClick(shortName),
-                    () => { (wordInfo as HTMLElement).textContent = description; },
-                    () => { (wordInfo as HTMLElement).textContent = ''; }
+                    () => { renderWordInfo(wordInfo as HTMLElement, description); },
+                    () => { resetWordInfoDisplay(wordInfo as HTMLElement); }
                 );
 
                 wordsDisplay.appendChild(button);
