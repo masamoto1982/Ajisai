@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/src/styles/tokens.css">
+    <link rel="stylesheet" href="/src/styles/base.css">
+    <link rel="stylesheet" href="/src/styles/layout.css">
+    <link rel="stylesheet" href="/src/styles/components.css">
+    <link rel="stylesheet" href="/src/styles/responsive.css">
     <meta name="description" content="Ajisai - AI-first, vector-oriented, fractional-dataflow language">
     <meta name="theme-color" content="#007bff">
 
     <title>Ajisai</title>
 
-    <link rel="stylesheet" href="./ajisai-base.css?v=20260408">
-    <link rel="stylesheet" href="app-interface.css?v=20260408">
     <!-- DEBUG: div階層を色枠で可視化。確認時は下行のコメントを外す。
          本番ビルドではコメントアウトのままにすること。 -->
-    <!-- <link rel="stylesheet" href="debug-borders.css"> -->
+    <!-- <link rel="stylesheet" href="/src/styles/debug.css"> -->
 </head>
 <body data-active-area="input">
     <a href="#code-input" class="skip-link">Skip to main content</a>
@@ -144,7 +147,7 @@
     </div>
 
     <script type="module">
-        import('./js/entry/entry-bootstrap.ts');
+        import('./src/entry/entry-bootstrap.ts');
     </script>
 </body>
 </html>

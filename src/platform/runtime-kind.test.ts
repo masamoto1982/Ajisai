@@ -1,6 +1,6 @@
 // AQ-VER-004-A: detectRuntimeKind MC/DC for QL-A boolean decisions.
 //
-// DUT: js/platform/runtime-kind.ts:5-15
+// DUT: src/platform/runtime-kind.ts:5-15
 //
 //     export function detectRuntimeKind(): RuntimeKind {
 //         if (typeof __AJISAI_TARGET__ !== 'undefined' && __AJISAI_TARGET__ === 'tauri') {

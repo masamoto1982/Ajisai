@@ -2,9 +2,13 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "outDir": "./dist",
-    "rootDir": "./js",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,11 +25,16 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "paths": {
-      "./pkg/*": ["./pkg/*"]
-    }
+    "noEmit": true
   },
-  "include": ["js/**/*"],
-  "exclude": ["node_modules", "dist", "js/pkg/*.js", "js/types.js", "js/db.js"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/wasm/generated/*.js",
+    "src/types.js",
+    "src/db.js"
+  ]
 }

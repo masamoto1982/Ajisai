@@ -1,3 +1,4 @@
+import { getPlatform } from '../platform';
 import { GUI_INSTANCE } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import type { WasmModule, AjisaiInterpreter } from '../wasm-interpreter-types';
@@ -83,4 +84,12 @@ export function setupLogoTouchQR(): void {
             hideTimer = null;
         }, 3000);
     }, { passive: false });
+}
+
+export function bootstrapApplication(): void {
+    getPlatform().runtime.onReady(() => {
+        setBuildVersionLabel();
+        setupLogoTouchQR();
+        void initializeApplication();
+    });
 }

@@ -1,6 +1,6 @@
 # Current GUI Design Memory
 
-This note captures the current Ajisai web-playground GUI behavior for reference. The web deployment at https://masamoto1982.github.io/Ajisai/ is a playground; installable/desktop usage is provided via the Tauri wrapper (`src-tauri/`). The runtime boot is split by `js/entry/entry-bootstrap.ts` and platform-specific behaviors are abstracted in `js/platform/`. The web entrypoint is not a PWA and has no service worker.
+This note captures the current Ajisai web-playground GUI behavior for reference. The web deployment at https://masamoto1982.github.io/Ajisai/ is a playground; installable/desktop usage is provided via the Tauri wrapper (`src-tauri/`). The runtime boot is split by `src/entry/entry-bootstrap.ts` and platform-specific behaviors are abstracted in `src/platform/`. The web entrypoint is not a PWA and has no service worker.
 
 ## Overall structure
 - Single-page web GUI (`index.html`) with a two-column main layout.
@@ -39,14 +39,14 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 - Desktop and mobile layouts sync via selectors and `body[data-active-area]`.
 
 ## Technical composition
-- GUI implemented as modular TS components under `js/gui/`.
-- Entry bootstrap (`js/entry/entry-bootstrap.ts`) detects runtime and loads `entry-web.ts` / `entry-tauri.ts`; common startup is in `entry-common.ts`.
+- GUI implemented as modular TS components under `src/gui/`.
+- Entry bootstrap (`src/entry/entry-bootstrap.ts`) detects runtime and loads `entry-web.ts` / `entry-tauri.ts`; common startup is in `entry-common.ts`.
 - Worker manager used for parallel execution and abort handling.
-- Persistence/file I/O go through `js/platform/` adapters:
-  - Web: IndexedDB + browser file APIs (`js/platform/web/*`)
-  - Tauri: app-data JSON persistence + native dialogs/fs (`js/platform/tauri/*`)
+- Persistence/file I/O go through `src/platform/` adapters:
+  - Web: IndexedDB + browser file APIs (`src/platform/web/*`)
+  - Tauri: app-data JSON persistence + native dialogs/fs (`src/platform/tauri/*`)
 - No service worker / offline-mode integration in the web app entrypoint.
-- GUI behavior test cases are authored in `js/gui/gui-interpreter-test-cases.ts` and run through the in-app `Test` button (no separate cargo target).
+- GUI behavior test cases are authored in `src/gui/gui-interpreter-test-cases.ts` and run through the in-app `Test` button (no separate cargo target).
 
 ## Styling profile
 - App-specific styling lives in `app-interface.css`.

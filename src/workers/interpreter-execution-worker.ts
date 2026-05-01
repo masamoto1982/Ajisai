@@ -8,7 +8,7 @@ let isAborted = false;
 let currentTaskId: string | null = null;
 
 
-const bindingsPromise = import('../pkg/ajisai_core.js');
+const bindingsPromise = import('../wasm/generated/ajisai_core.js');
 
 
 async function initFromCompiledModule(wasmModule: WebAssembly.Module): Promise<boolean> {

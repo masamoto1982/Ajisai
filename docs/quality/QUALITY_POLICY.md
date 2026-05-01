@@ -21,7 +21,7 @@ It is a development quality framework and **not** a formal avionics certificatio
 ## Scope
 Applies to:
 - Rust interpreter/runtime (`rust/`)
-- TypeScript/Web runtime (`js/`, `index.html`, `src-tauri/` frontend integration)
+- TypeScript/Web runtime (`src/`, `index.html`, `src-tauri/` frontend integration)
 - CI workflows and release validation steps
 
 ## Enforcement

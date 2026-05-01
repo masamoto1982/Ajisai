@@ -97,11 +97,11 @@ export default defineConfig({
     sourcemap: true
   },
   optimizeDeps: {
-    exclude: ['./js/pkg/ajisai_core.js']
+    exclude: ['./src/wasm/generated/ajisai_core.js']
   },
   resolve: {
     alias: {
-      '@': '/js'
+      '@': '/src'
     }
   },
   worker: {

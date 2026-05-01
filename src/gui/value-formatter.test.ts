@@ -36,7 +36,7 @@ function vec(items: Value[]): Value {
 
 // ---------------------------------------------------------------------------
 // AQ-VER-004-B
-// DUT: js/gui/value-formatter.ts:130-133 in `compareValue` (number arm)
+// DUT: src/gui/value-formatter.ts:130-133 in `compareValue` (number arm)
 //
 //     return actualFrac.numerator === expectedFrac.numerator &&
 //            actualFrac.denominator === expectedFrac.denominator;
@@ -77,7 +77,7 @@ describe('AQ-VER-004-B compareValue number-arm equality conjunction', () => {
 
 // ---------------------------------------------------------------------------
 // AQ-VER-004-B (vector arm)
-// DUT: js/gui/value-formatter.ts:136-139 in `compareValue`
+// DUT: src/gui/value-formatter.ts:136-139 in `compareValue`
 //
 //     if (!Array.isArray(actual.value) || !Array.isArray(expected.value)) {
 //         return false;
@@ -123,7 +123,7 @@ describe('AQ-VER-004-B compareValue vector-arm array guard', () => {
 
 // ---------------------------------------------------------------------------
 // AQ-VER-004-C
-// DUT: js/gui/value-formatter.ts:159 in `compareStack` (loop guard)
+// DUT: src/gui/value-formatter.ts:159 in `compareStack` (loop guard)
 //
 //     if (!a || !e || !compareValue(a, e)) { return false; }
 //
@@ -188,7 +188,7 @@ describe('AQ-VER-004-C compareStack per-index disjunction', () => {
 
 // ---------------------------------------------------------------------------
 // AQ-VER-004-D
-// DUT: js/gui/value-formatter.ts:45 in `formatFractionScientific`
+// DUT: src/gui/value-formatter.ts:45 in `formatFractionScientific`
 //
 //     if (numSci.includes('e') && denSci.includes('e')) { /* combine */ }
 //
