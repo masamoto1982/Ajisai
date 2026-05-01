@@ -8,6 +8,7 @@ import { Result, ok, err } from './functional-result-helpers';
 export interface InterpreterState {
     readonly stack: Value[];
     readonly userWords: UserWord[];
+    readonly importedModules?: string[];
     readonly demoWordsVersion?: number;
 }
 
@@ -52,6 +53,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
     return {
         stack: interpreter.collect_stack(),
         userWords,
+        importedModules: interpreter.collect_imported_modules(),
         demoWordsVersion: DEMO_WORDS_VERSION
     };
 };
@@ -69,6 +71,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 };
 
 const buildExportFilename = (name: string): string => `${name}.json`;
+const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
 
 const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     try {
@@ -154,6 +157,9 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
                 }
+                if (state.importedModules && state.importedModules.length > 0) {
+                    window.ajisaiInterpreter.restore_imported_modules(state.importedModules);
+                }
 
                 if (state.userWords && state.userWords.length > 0) {
 
@@ -185,11 +191,14 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
 
-                    const savedWordNames = new Set(wordsToRestore.map((w: UserWord) => w.name.toUpperCase()));
+                    const savedWordKeys = new Set(
+                        wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'DEMO', w.name))
+                    );
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
-                    for (const [name] of currentWords) {
-                        if (!savedWordNames.has(name.toUpperCase())) {
-                            window.ajisaiInterpreter.remove_word(name);
+                    for (const [dictionary, name] of currentWords) {
+                        const currentWordKey = buildWordKey(dictionary, name);
+                        if (!savedWordKeys.has(currentWordKey)) {
+                            window.ajisaiInterpreter.remove_word(`${dictionary}@${name}`);
                         }
                     }
 
