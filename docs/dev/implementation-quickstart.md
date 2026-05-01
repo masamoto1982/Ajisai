@@ -11,4 +11,6 @@ It does not define Ajisai semantics.
 - `cd rust && cargo test --tests`
 - `npm run check`
 
-GUI behavior cases live in `js/gui/gui-interpreter-test-cases.ts` and are executed from the in-app `Test` button.
+GUI behavior cases live in `src/gui/gui-interpreter-test-cases.ts` and are executed from the in-app `Test` button.
+
+WASM generated bindings are located in `src/wasm/generated/`.

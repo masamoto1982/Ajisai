@@ -53,7 +53,7 @@ export const normalizeInterpreterApi = (interpreter: AjisaiInterpreter): AjisaiI
     const missing = ensureRequiredMethods(instance);
     if (missing.length > 0) {
         console.warn(
-            '[WASM] Interpreter API mismatch. Rebuild js/pkg from rust sources. Missing methods:',
+            '[WASM] Interpreter API mismatch. Rebuild src/wasm/generated from rust sources. Missing methods:',
             missing.join(', ')
         );
     }

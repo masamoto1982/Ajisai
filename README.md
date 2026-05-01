@@ -71,7 +71,7 @@ Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
 
 - Web Playground channel: Vite build (`npm run build:web`) for GitHub Pages
 - Desktop channel: Tauri wrapper (`npm run tauri:build`, frontend via `npm run build:tauri-frontend`)
-- Runtime-specific behavior (Persistence / File I/O / Runtime hooks) is abstracted via `js/platform/` adapters
+- Runtime-specific behavior (Persistence / File I/O / Runtime hooks) is abstracted via `src/platform/` adapters
 
 Formal definition: [`SPECIFICATION.md`](SPECIFICATION.md)  
 Quality process policy: [`docs/quality/QUALITY_POLICY.md`](docs/quality/QUALITY_POLICY.md)
@@ -86,7 +86,7 @@ cd rust && cargo test --tests
 npm run check
 ```
 
-GUI behavior checks can be run from the in-app `Test` button using cases in `js/gui/gui-interpreter-test-cases.ts`.
+GUI behavior checks can be run from the in-app `Test` button using cases in `src/gui/gui-interpreter-test-cases.ts`.
 
 ---
 

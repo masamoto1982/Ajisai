@@ -7,8 +7,8 @@ import { defineConfig } from 'vitest/config';
 // targets behavioural correctness of pure helpers).
 export default defineConfig({
     test: {
-        // Co-locate tests with source: js/**/*.test.ts.
-        include: ['js/**/*.test.ts'],
+        // Co-locate tests with source: src/**/*.test.ts.
+        include: ['src/**/*.test.ts'],
         // No DOM helpers required for the current MC/DC suite. The few
         // tests that exercise `window` detection do so via deliberate
         // global stubbing, not via a simulated DOM.
