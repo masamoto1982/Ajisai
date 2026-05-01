@@ -1,4 +1,4 @@
-use crate::coreword_registry::{self, CorewordMetadata, WordPurity};
+use crate::coreword_registry::{self, CanonicalHome, CorewordMetadata, WordPurity};
 use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, sort};
 use crate::types::{Capabilities, Stability};
 
@@ -554,6 +554,18 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     },
 ];
 
+pub(crate) fn module_word_description(
+    module_name: &str,
+    short_name: &str,
+) -> Option<&'static str> {
+    let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
+    module
+        .words
+        .iter()
+        .find(|w| w.short_name == short_name)
+        .map(|w| w.description)
+}
+
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
     MODULE_SPECS
         .iter()
@@ -577,7 +589,11 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 };
                 metadata.deterministic = word.deterministic;
                 metadata.safe_preview = word.safe_preview;
+                metadata.canonical_home = CanonicalHome::Module(spec.name.to_string());
                 metadata.formerly_module = Some(spec.name.to_string());
+                metadata.listed_in_core = false;
+                metadata.listed_in_modules = vec![spec.name.to_string()];
+                metadata.listed_in_categories = Vec::new();
                 metadata
             })
         })

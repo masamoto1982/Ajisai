@@ -31,3 +31,10 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
     module_builtins::module_word_metadata_entries()
 }
+
+/// Look up a module word's user-facing description by qualified name
+/// (e.g. `"ALGO@SORT"`) or by `(module, short_name)`. Returns `None` if no
+/// such canonical module word exists.
+pub fn module_word_description(module_name: &str, short_name: &str) -> Option<&'static str> {
+    module_builtins::module_word_description(module_name, short_name)
+}

@@ -258,6 +258,23 @@ All built-in words have English-word-based canonical names (see Section 7). The 
 
 Built-in words are predefined and cannot be redefined or deleted.
 
+Every built-in word has exactly one **canonical home**, either Core or a specific module. The canonical home determines where the implementation lives and, for module-canonical words, which module name `IMPORT` activates them under.
+
+Independent of canonical home, every built-in word has a set of **listings** identifying which dictionary views surface the word for browsing or documentation. The Core listing view and any module listing view are not necessarily disjoint: a word may be listed in both. Such a word is called a **boundary word**, recognising that it has both a semantic role (Core) and a capability role (module).
+
+Listings are presentation-only. A listing does not change name resolution, IMPORT semantics, or qualified-name resolution: bare names resolve through the Core vocabulary first and then through imported modules; `MODULE@WORD` resolves only to that module's canonical entries.
+
+Boundary classes:
+
+- **Core-only words** — canonical home Core; listed only in Core.
+- **Canonical Core + module-listed boundary words** — canonical home Core; additionally surfaced in one or more module or category listing views (e.g. `PRINT` in `IO`, `STR`/`NUM`/`BOOL` in the `CAST` category, `SHAPE`/`RANK` in the `TENSOR` category, `SPAWN`/`AWAIT` in the `RUNTIME` category).
+- **Canonical Module + core-listed boundary words** — canonical home in a module, additionally surfaced in the Core listing view (e.g. `SORT` whose canonical home is `ALGO`).
+- **Module-only words** — canonical home in a module; listed only under that module.
+
+`IMPORT` and `IMPORT-ONLY` are Canonical Core words and remain Core-only — they are not module-listed and are not affected by listings.
+
+Categories such as `CAST`, `TEXT`, `TENSOR`, and `RUNTIME` are documentation-only labels used to group Core words by capability surface. They are **not** modules, are not registered in `MODULE_SPECS`, and cannot be supplied to `IMPORT`.
+
 ### 7.0 English-word-based naming
 
 All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+`, `-`, `*`, `/`, `%`, `=`, `<`, `<=`, `&`, `==`, `=>`, `?`, `!`, `.`, `..`, `,`, `,,`, `~`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
@@ -431,7 +448,7 @@ Words not listed here retain their existing handling of NIL. In particular, cont
 
 Every Coreword (built-in or module-provided) has a machine-readable contract entry in the Coreword registry. The contract is the authoritative description of the word's input requirements, output guarantees, and runtime classification. Tests, documentation, and tooling consume this metadata; narrative text is non-canonical.
 
-A contract entry has the following fields, in addition to the existing identification (`name`, `category`) and effect-classification fields (`purity`, `effects`, `deterministic`, `safe_preview`):
+A contract entry has the following fields, in addition to the existing identification (`name`, `category`), effect-classification fields (`purity`, `effects`, `deterministic`, `safe_preview`), and listing fields (`canonical_home`, `listed_in_core`, `listed_in_modules`, `listed_in_categories`):
 
 | Field | Domain | Meaning |
 |-------|--------|---------|
@@ -442,6 +459,19 @@ A contract entry has the following fields, in addition to the existing identific
 `partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`, while bare `/` is `Partial` with `nil_policy = Passthrough`.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
+
+The listing fields work as follows:
+
+| Field | Domain | Meaning |
+|-------|--------|---------|
+| `canonical_home` | `Core` / `Module(name)` | Where the canonical implementation lives. For module-canonical words this is also the only module that can resolve the word as `MODULE@WORD` and the only module whose `IMPORT` brings the word into bare scope. |
+| `listed_in_core` | `bool` | Whether the word appears in the Core listing view. Does not affect resolution. |
+| `listed_in_modules` | `[module_name]` | Module listing views in which the word appears. A canonical module word always has its own module here. Boundary listings (e.g. `PRINT` in `IO`) are presentation-only. |
+| `listed_in_categories` | `[category_label]` | Documentation-only category labels (e.g. `CAST`, `TEXT`, `TENSOR`, `RUNTIME`). Categories are not modules and cannot be `IMPORT`ed. |
+
+`IMPORT-ONLY` of a selector that is core-listed in the target module's view but not canonically owned by that module is a no-op: the word is already available as a Canonical Core word, so the selector is silently skipped with a single warning line. Selectors that match neither a canonical word nor a listing remain an error.
+
+A bare name may legitimately appear under more than one canonical home (for example core list `GET` and `JSON@GET`). In that case bare-name lookup resolves to the Canonical Core entry — matching the runtime's resolution order — while `MODULE@WORD` always reaches the module entry.
 
 ---
 
