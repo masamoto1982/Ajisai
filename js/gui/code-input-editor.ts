@@ -70,13 +70,11 @@ const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
 const MOBILE_BREAKPOINT = 768;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
-    '[', ']', '{', '}', '(', ')',
-    '+', '-', '*', '/', '%',
-    '=', '<', '>',
-    '!', '?', '&', '|', '^', '~',
-    '@', '#', '$', '\\', '_', ':', ';',
-    "'", '"', '`',
-    '.', ',',
+    '(', ')', '[', ']', '{', '}',
+    '<', '>', '+', '-', '*', '/',
+    '%', '=', '!', '?', '&', '|',
+    '~', '@', '#', '$', '_', '\\',
+    ':', ';', '.', ',', "'", '"',
 ]);
 
 const extractToken = (
@@ -109,6 +107,7 @@ export const createEditor = (
 
     let currentSuggestions: string[] = [];
     let selectedSuggestionIndex = 0;
+    let isSymbolMode = false;
     let lastKnownSelection = lookupSelectionRange(element);
 
     const textareaContainer = element.closest('.input-area');
@@ -136,8 +135,10 @@ export const createEditor = (
 
     const hideSuggestions = (): void => {
         suggestionPanel.style.display = 'none';
+        suggestionPanel.classList.remove('editor-suggestions--symbols');
         currentSuggestions = [];
         selectedSuggestionIndex = 0;
+        isSymbolMode = false;
     };
 
     const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
@@ -162,6 +163,8 @@ export const createEditor = (
         suggestionPanel.style.left = `${left + 8}px`;
         suggestionPanel.style.bottom = 'auto';
 
+        suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
+
         suggestionPanel.innerHTML = '';
         currentSuggestions.forEach((suggestion, index) => {
             const button = document.createElement('button');
@@ -175,7 +178,7 @@ export const createEditor = (
             suggestionPanel.appendChild(button);
         });
 
-        suggestionPanel.style.display = 'block';
+        suggestionPanel.style.display = isSymbolMode ? 'grid' : 'block';
     };
 
     const refreshSuggestions = (): void => {
@@ -184,7 +187,12 @@ export const createEditor = (
         const isTokenStart = cursorPos === 0 || /\s/.test(prevChar);
         const { token } = extractToken(element.value, element.selectionStart);
         if (isTokenStart && token.length === 0) {
-            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice(0, MAX_SUGGESTIONS);
+            if (!checkIsMobile()) {
+                hideSuggestions();
+                return;
+            }
+            currentSuggestions = QUICK_SYMBOL_SUGGESTIONS.slice();
+            isSymbolMode = true;
             selectedSuggestionIndex = 0;
             renderSuggestions();
             return;
@@ -200,6 +208,7 @@ export const createEditor = (
             .slice(0, MAX_SUGGESTIONS);
 
         currentSuggestions = suggestions;
+        isSymbolMode = false;
         selectedSuggestionIndex = 0;
         renderSuggestions();
     };

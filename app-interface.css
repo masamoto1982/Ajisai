@@ -314,6 +314,30 @@
     background: rgba(0, 0, 0, 0.06);
 }
 
+.editor-suggestions--symbols {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    padding: 4px;
+    min-width: 13rem;
+    max-width: calc(100% - 1rem);
+    max-height: none;
+    overflow-y: visible;
+}
+
+.editor-suggestions--symbols .editor-suggestion-item {
+    width: auto;
+    min-height: 2.25rem;
+    padding: 0.35rem 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.editor-suggestions--symbols .editor-suggestion-item:last-child {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 
 .json-download-link {
     display: inline-block;
