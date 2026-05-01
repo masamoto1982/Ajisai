@@ -3,7 +3,6 @@ pub enum CoreWordAliasKind {
     SymbolAlias,
     SyntaxSugar,
     InputHelper,
-    Deprecated,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -159,7 +158,6 @@ pub fn collect_core_word_aliases() -> Vec<(&'static str, &'static str, &'static 
                 CoreWordAliasKind::SymbolAlias => "symbol_alias",
                 CoreWordAliasKind::SyntaxSugar => "syntax_sugar",
                 CoreWordAliasKind::InputHelper => "input_helper",
-                CoreWordAliasKind::Deprecated => "deprecated",
             };
             Some((a.alias, canonical, kind, a.summary))
         })

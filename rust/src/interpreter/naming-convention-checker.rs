@@ -17,9 +17,6 @@ pub(crate) fn check_reserved_word_name(name: &str) -> Option<String> {
                 "Cannot define '{}': '{}' is an input helper, not a user word name.",
                 name, name
             )),
-            crate::core_word_aliases::CoreWordAliasKind::Deprecated => {
-                Some(format!("Cannot define '{}': '{}' is reserved.", name, name))
-            }
         };
     }
 

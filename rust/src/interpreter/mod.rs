@@ -20,7 +20,6 @@ pub mod execute_lookup;
 #[path = "execution_plan_set.rs"]
 pub mod execution_plan_set;
 pub mod hash;
-#[path = "higher-order-operations.rs"]
 pub mod higher_order;
 #[path = "higher-order-fold-operations.rs"]
 pub mod higher_order_fold;
