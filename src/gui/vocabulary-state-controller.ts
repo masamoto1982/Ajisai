@@ -289,6 +289,7 @@ export const createVocabularyManager = (
         words: WordInfo[]
     ): void => {
         clearElement(container);
+        resetWordInfoDisplay(elements.userWordInfo);
 
 
         const filteredWords = words.filter(wordInfo =>

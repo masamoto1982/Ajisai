@@ -69,6 +69,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 };
 
 const buildExportFilename = (name: string): string => `${name}.json`;
+const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
 
 const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     try {
@@ -185,11 +186,14 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
 
-                    const savedWordNames = new Set(wordsToRestore.map((w: UserWord) => w.name.toUpperCase()));
+                    const savedWordKeys = new Set(
+                        wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'DEMO', w.name))
+                    );
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
-                    for (const [name] of currentWords) {
-                        if (!savedWordNames.has(name.toUpperCase())) {
-                            window.ajisaiInterpreter.remove_word(name);
+                    for (const [dictionary, name] of currentWords) {
+                        const currentWordKey = buildWordKey(dictionary, name);
+                        if (!savedWordKeys.has(currentWordKey)) {
+                            window.ajisaiInterpreter.remove_word(`${dictionary}@${name}`);
                         }
                     }
 
