@@ -9,9 +9,7 @@ use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
-    interp
-        .stack
-        .push(Value::from_vector(vec![Value::from_bool(result)]));
+    interp.stack.push(Value::from_bool(result));
     let stack_len = interp.stack.len();
     interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp

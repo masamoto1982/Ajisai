@@ -29,10 +29,11 @@ mod tests {
         assert_eq!(interp.stack.len(), 4);
         let val = &interp.stack[3];
 
-        assert_eq!(val.len(), 1, "Expected single-element vector boolean");
-        let inner = val.get_child(0).expect("Expected inner element");
         assert!(
-            !inner.as_scalar().expect("Expected scalar in result").is_zero(),
+            !val
+                .as_scalar()
+                .expect("Expected scalar boolean result")
+                .is_zero(),
             "Expected TRUE from comparison"
         );
     }
@@ -195,4 +196,16 @@ ADDTEST
         }
     }
 
+}
+
+#[tokio::test]
+async fn comparison_words_return_scalar_booleans() {
+    let cases = [("1 2 LT", true), ("2 2 LTE", true), ("2 1 LT", false), ("1 1 EQ", true), ("1 2 EQ", false)];
+    for (program, expected) in cases {
+        let mut interp = crate::interpreter::Interpreter::new();
+        interp.execute(program).await.unwrap();
+        assert_eq!(interp.stack.len(), 1, "program: {program}");
+        let scalar = interp.stack[0].as_scalar().expect("comparison should return scalar boolean");
+        assert_eq!(scalar.is_zero(), !expected, "program: {program}");
+    }
 }

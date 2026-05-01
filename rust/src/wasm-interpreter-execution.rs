@@ -1,7 +1,6 @@
-use super::wasm_value_conversion::{build_bracket_structure_from_shape, is_vector_value};
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::tokenizer;
-use crate::types::{ExecutionLine, ValueData};
+use crate::types::ExecutionLine;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -10,90 +9,6 @@ impl AjisaiInterpreter {
     pub async fn execute(&mut self, code: &str) -> Result<JsValue, JsValue> {
         self.interpreter.definition_to_load = None;
         let obj = js_sys::Object::new();
-
-        let trimmed = code.trim();
-        let upper_code = trimmed.to_uppercase();
-
-        if upper_code.ends_with("FRAME") {
-            let prefix_len = upper_code.len() - 5;
-            let is_valid = if prefix_len == 0 {
-                true
-            } else {
-                upper_code
-                    .chars()
-                    .nth(prefix_len - 1)
-                    .map_or(false, |c| c.is_whitespace())
-            };
-
-            if is_valid {
-                if prefix_len > 0 {
-                    let prefix_code = &trimmed[..prefix_len].trim();
-                    if !prefix_code.is_empty() {
-                        if let Err(e) = self.interpreter.execute(prefix_code).await {
-                            set_js_prop(&obj, "status", &("ERROR".into()));
-                            set_js_prop(&obj, "message", &(e.to_string().into()));
-                            set_js_prop(&obj, "error", &(true.into()));
-                            return Ok(obj.into());
-                        }
-                    }
-                }
-
-                let shape = if let Some(top) = self.interpreter.stack.last() {
-                    if is_vector_value(top) && !top.is_nil() {
-                        let mut dims = Vec::new();
-                        let mut valid = top.len() >= 1 && top.len() <= 9;
-                        if valid {
-                            if let ValueData::Vector(children) = &top.data {
-                                for child in children.iter() {
-                                    if let Some(val) = child.as_usize() {
-                                        if val >= 1 && val <= 100 {
-                                            dims.push(val);
-                                        } else {
-                                            valid = false;
-                                            break;
-                                        }
-                                    } else {
-                                        valid = false;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                valid = false;
-                            }
-                        }
-                        if valid {
-                            Some(dims)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
-
-                if let Some(shape_vec) = shape {
-                    self.interpreter.stack.pop();
-                    let helper_text = build_bracket_structure_from_shape(&shape_vec);
-                    set_js_prop(&obj, "inputHelper", &(helper_text.into()));
-                    set_js_prop(&obj, "status", &("OK".into()));
-                    set_js_prop(&obj, "stack", &(self.collect_stack()));
-                    set_js_prop(&obj, "userWords", &(self.collect_user_words_for_state()));
-                    set_js_prop(
-                        &obj,
-                        "importedModules",
-                        &(self.collect_imported_modules_array()),
-                    );
-                    return Ok(obj.into());
-                } else {
-                    set_js_prop(&obj, "status", &("ERROR".into()));
-                    set_js_prop(&obj, "message", &("FRAME requires a shape vector [ dim1 dim2 ... ] (1-9 dimensions, values 1-100)".into()));
-                    set_js_prop(&obj, "error", &(true.into()));
-                    return Ok(obj.into());
-                }
-            }
-        }
 
         match self.interpreter.execute(code).await {
             Ok(()) => {

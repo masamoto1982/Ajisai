@@ -328,7 +328,7 @@ mod interval_tests {
     async fn test_interval_comparison_policy() {
         let mut interp = Interpreter::new();
         interp.execute("1 2 INTERVAL 3 4 INTERVAL <").await.unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[ 1 ]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "1");
 
         let mut interp_undetermined = Interpreter::new();
         let result = interp_undetermined
@@ -341,7 +341,7 @@ mod interval_tests {
             .execute("1 5 INTERVAL 2 4 INTERVAL =")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "[ 0 ]");
+        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "0");
     }
 
     #[tokio::test]
