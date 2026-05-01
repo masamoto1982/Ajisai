@@ -346,7 +346,16 @@ export const createVocabularyManager = (
         if (!window.ajisaiInterpreter) return;
 
         try {
-            const coreWords = window.ajisaiInterpreter.collect_core_words_info();
+            // Prefer the listing-based view (canonical core + core-listed
+            // boundary words like SORT). Fall back to the legacy
+            // canonical-core-only collector for older WASM builds.
+            const interp = window.ajisaiInterpreter as unknown as {
+                collect_core_listed_words_info?: () => unknown[][];
+                collect_core_words_info: () => unknown[][];
+            };
+            const coreWords = typeof interp.collect_core_listed_words_info === 'function'
+                ? interp.collect_core_listed_words_info()
+                : interp.collect_core_words_info();
             renderBuiltInWordsSorted(elements.builtInWordsDisplay, coreWords);
         } catch (error) {
             console.error('Failed to render core words:', error);

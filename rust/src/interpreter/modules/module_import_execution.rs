@@ -139,6 +139,7 @@ pub(super) fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         .get(&module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
     let mut validated: Vec<(String, bool)> = Vec::new();
+    let mut listing_only_skips: Vec<String> = Vec::new();
     for item in selected {
         let short = item.to_uppercase();
         let qualified = format!("{}@{}", module_name, short);
@@ -146,12 +147,23 @@ pub(super) fn op_import_only(interp: &mut Interpreter) -> Result<()> {
             validated.push((short, true));
         } else if module_dict.sample_words.contains_key(&short) {
             validated.push((short, false));
+        } else if crate::coreword_registry::is_listing_only_for_module(&short, &module_name) {
+            // Boundary word: listed in this module's view but canonically a
+            // Core word. Already available without IMPORT, so silently skip
+            // and emit a single warning line for clarity.
+            listing_only_skips.push(short);
         } else {
             return Err(AjisaiError::from(format!(
                 "Unknown module word '{}' in {}",
                 short, module_name
             )));
         }
+    }
+    for short in &listing_only_skips {
+        interp.output_buffer.push_str(&format!(
+            "Warning: '{}' is listed in {} but is a Canonical Core word and is already available.\n",
+            short, module_name
+        ));
     }
 
     let entry = interp

@@ -93,6 +93,44 @@ impl AjisaiInterpreter {
         to_value(&builtins::collect_core_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
+    /// Returns Core-listed words (canonical core + Canonical Module words
+    /// that are core-listed, e.g. SORT). This is the listing-based Core
+    /// view defined by the redesigned vocabulary system; bare module words
+    /// are surfaced for visibility only — invoking SORT bare still requires
+    /// `'ALGO' IMPORT` per current execution semantics.
+    ///
+    /// Tuple shape: `(name, description, syntax, signature_type)` — same as
+    /// `collect_core_words_info` so the GUI can render either list with the
+    /// same code path.
+    #[wasm_bindgen]
+    pub fn collect_core_listed_words_info(&self) -> JsValue {
+        let mut entries: Vec<(String, String, String, String)> =
+            builtins::collect_core_builtin_definitions()
+                .into_iter()
+                .map(|(n, d, s, t)| (n.to_string(), d.to_string(), s.to_string(), t.to_string()))
+                .collect();
+
+        for word in crate::coreword_registry::get_core_listed_words() {
+            if word.is_canonical_core() {
+                continue;
+            }
+            // Boundary word whose canonical home is a module. Pull the
+            // user-facing description from the owning module spec; module
+            // canonical metadata does not carry syntax/signature, so leave
+            // those blank.
+            let module_name = match word.canonical_module() {
+                Some(m) => m.to_string(),
+                None => continue,
+            };
+            let description = interpreter::modules::module_word_description(&module_name, &word.name)
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| word.category.clone());
+            entries.push((word.name.clone(), description, String::new(), "none".to_string()));
+        }
+
+        to_value(&entries).unwrap_or(JsValue::NULL)
+    }
+
     #[wasm_bindgen]
     pub fn collect_builtin_word_registry(&self) -> JsValue {
         to_value(&crate::coreword_registry::get_builtin_word_registry()).unwrap_or(JsValue::NULL)
