@@ -15,6 +15,8 @@ pub mod epoch;
 pub mod execute_def;
 #[path = "execute-del.rs"]
 pub mod execute_del;
+#[path = "error-flow-trace.rs"]
+pub mod error_flow_trace;
 #[path = "execute-lookup.rs"]
 pub mod execute_lookup;
 #[path = "execution_plan_set.rs"]
@@ -112,6 +114,9 @@ mod interpreter_mode_tests;
 #[cfg(test)]
 #[path = "nil-reason-tests.rs"]
 mod nil_reason_tests;
+#[cfg(test)]
+#[path = "error-flow-trace-tests.rs"]
+mod error_flow_trace_tests;
 
 pub use interpreter_core::*;
 
