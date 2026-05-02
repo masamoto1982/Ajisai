@@ -197,6 +197,7 @@ pub struct Interpreter {
 
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) hedged_trace_log: Vec<String>,
+    pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
     pub(crate) force_no_quant: bool,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
@@ -249,6 +250,7 @@ impl Interpreter {
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
             hedged_trace_log: Vec::new(),
+            error_flow_trace_log: Vec::new(),
             force_no_quant: cfg!(feature = "force-no-quant"),
 
             // Elastic Engine
@@ -352,6 +354,22 @@ impl Interpreter {
 
     pub fn drain_hedged_trace(&mut self) -> Vec<String> {
         std::mem::take(&mut self.hedged_trace_log)
+    }
+
+    pub fn push_error_flow_trace(&mut self, event: super::error_flow_trace::ErrorFlowEvent) {
+        self.error_flow_trace_log.push(event);
+    }
+
+    pub fn drain_error_flow_trace(&mut self) -> Vec<super::error_flow_trace::ErrorFlowEvent> {
+        std::mem::take(&mut self.error_flow_trace_log)
+    }
+
+    pub fn peek_error_flow_trace(&self) -> &[super::error_flow_trace::ErrorFlowEvent] {
+        &self.error_flow_trace_log
+    }
+
+    pub fn clear_error_flow_trace(&mut self) {
+        self.error_flow_trace_log.clear();
     }
 
     pub fn current_epoch_snapshot(&self) -> EpochSnapshot {
@@ -487,6 +505,7 @@ impl Interpreter {
         self.next_supervisor_id = 1;
         self.runtime_metrics = RuntimeMetrics::default();
         self.hedged_trace_log.clear();
+        self.error_flow_trace_log.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
         Ok(())
     }

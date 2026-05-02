@@ -1,7 +1,8 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, ExecutionLine, Token, Value};
 
+use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
 use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::SemanticRegistry;
@@ -256,8 +257,75 @@ impl Interpreter {
                         _ => {
                             let upper = canonical;
                             if self.safe_mode {
+                                let stack_len_before = self.stack.len();
+                                self.push_error_flow_trace(ErrorFlowEvent {
+                                    kind: ErrorFlowEventKind::SafeEnter,
+                                    word: Some(upper.to_string()),
+                                    error_category: None,
+                                    nil_reason: None,
+                                    stack_len_before,
+                                    stack_len_after: stack_len_before,
+                                    message: format!("SAFE enter word={}", upper),
+                                });
+
                                 let stack_snapshot = self.stack.clone();
                                 self.safe_mode = false;
+                                match self.execute_word_core(upper.as_ref()) {
+                                    Ok(()) => {
+                                        let stack_len_after = self.stack.len();
+                                        self.push_error_flow_trace(ErrorFlowEvent {
+                                            kind: ErrorFlowEventKind::SafeSuccess,
+                                            word: Some(upper.to_string()),
+                                            error_category: None,
+                                            nil_reason: None,
+                                            stack_len_before,
+                                            stack_len_after,
+                                            message: format!(
+                                                "SAFE success word={} stack_len_before={} stack_len_after={}",
+                                                upper, stack_len_before, stack_len_after
+                                            ),
+                                        });
+                                        self.semantic_registry
+                                            .normalize_to_stack_len(self.stack.len());
+                                        apply_word_hint_override(self, upper.as_ref());
+                                    }
+                                    Err(err) => {
+                                        let category = ErrorCategory::from_error(&err);
+                                        let nil_reason = NilReason::from_error(&err);
+                                        self.stack = stack_snapshot;
+                                        let restored_len = self.stack.len();
+                                        self.push_error_flow_trace(ErrorFlowEvent {
+                                            kind: ErrorFlowEventKind::SafeCaught,
+                                            word: Some(upper.to_string()),
+                                            error_category: Some(category.clone()),
+                                            nil_reason: Some(nil_reason.clone()),
+                                            stack_len_before,
+                                            stack_len_after: restored_len,
+                                            message: format!(
+                                                "SAFE caught word={} error={:?} restored_stack_len={}",
+                                                upper, category, restored_len
+                                            ),
+                                        });
+                                        self.stack.push(Value::nil_with_reason(nil_reason.clone()));
+                                        self.push_error_flow_trace(ErrorFlowEvent {
+                                            kind: ErrorFlowEventKind::NilProduced,
+                                            word: Some(upper.to_string()),
+                                            error_category: Some(category),
+                                            nil_reason: Some(nil_reason),
+                                            stack_len_before: restored_len,
+                                            stack_len_after: self.stack.len(),
+                                            message: format!(
+                                                "NIL produced by SAFE word={} stack_len_after={}",
+                                                upper,
+                                                self.stack.len()
+                                            ),
+                                        });
+                                        self.semantic_registry
+                                            .normalize_to_stack_len(self.stack.len());
+                                    }
+                                }
+                            } else {
+                                let stack_len_before = self.stack.len();
                                 match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
                                         self.semantic_registry
@@ -265,18 +333,22 @@ impl Interpreter {
                                         apply_word_hint_override(self, upper.as_ref());
                                     }
                                     Err(err) => {
-                                        self.stack = stack_snapshot;
-                                        self.stack
-                                            .push(Value::nil_with_reason(NilReason::from_error(&err)));
-                                        self.semantic_registry
-                                            .normalize_to_stack_len(self.stack.len());
+                                        let category = ErrorCategory::from_error(&err);
+                                        self.push_error_flow_trace(ErrorFlowEvent {
+                                            kind: ErrorFlowEventKind::WordError,
+                                            word: Some(upper.to_string()),
+                                            error_category: Some(category),
+                                            nil_reason: None,
+                                            stack_len_before,
+                                            stack_len_after: self.stack.len(),
+                                            message: format!(
+                                                "word error word={} error={}",
+                                                upper, err
+                                            ),
+                                        });
+                                        return Err(err);
                                     }
                                 }
-                            } else {
-                                self.execute_word_core(upper.as_ref())?;
-                                self.semantic_registry
-                                    .normalize_to_stack_len(self.stack.len());
-                                apply_word_hint_override(self, upper.as_ref());
                             }
                             if !modules::is_mode_preserving_word(upper.as_ref()) {
                                 self.reset_execution_modes();

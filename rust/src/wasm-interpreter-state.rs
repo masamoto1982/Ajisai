@@ -321,6 +321,37 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    pub fn collect_error_flow_trace(&mut self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for event in self.interpreter.drain_error_flow_trace() {
+            let obj = js_sys::Object::new();
+            set_js_prop(&obj, "kind", &(format!("{:?}", event.kind).into()));
+            if let Some(word) = event.word {
+                set_js_prop(&obj, "word", &(word.into()));
+            }
+            if let Some(category) = event.error_category {
+                set_js_prop(&obj, "errorCategory", &(format!("{:?}", category).into()));
+            }
+            if let Some(nil_reason) = event.nil_reason {
+                set_js_prop(&obj, "nilReason", &(format!("{:?}", nil_reason).into()));
+            }
+            set_js_prop(
+                &obj,
+                "stackLenBefore",
+                &((event.stack_len_before as u32).into()),
+            );
+            set_js_prop(
+                &obj,
+                "stackLenAfter",
+                &((event.stack_len_after as u32).into()),
+            );
+            set_js_prop(&obj, "message", &(event.message.into()));
+            arr.push(&obj);
+        }
+        arr.into()
+    }
+
+    #[wasm_bindgen]
     pub fn push_json_string(&mut self, json_string: &str) -> Result<JsValue, JsValue> {
         let obj = js_sys::Object::new();
 

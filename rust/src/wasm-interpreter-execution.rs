@@ -27,6 +27,7 @@ impl AjisaiInterpreter {
                     set_js_prop(&obj, "definition_to_load", &(def_str.into()));
                 }
                 set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
+                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
             Err(e) => {
                 let error_msg = e.to_string();
@@ -34,6 +35,7 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "message", &(error_msg.into()));
                 set_js_prop(&obj, "error", &(true.into()));
                 set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
+                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }
         Ok(obj.into())
@@ -101,6 +103,7 @@ impl AjisaiInterpreter {
                     "importedModules",
                     &(self.collect_imported_modules_array()),
                 );
+                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
             Err(e) => {
                 self.step_mode = false;
@@ -108,6 +111,7 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "message", &(e.to_string().into()));
                 set_js_prop(&obj, "error", &(true.into()));
                 set_js_prop(&obj, "hasMore", &(false.into()));
+                set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
         }
 
