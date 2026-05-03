@@ -42,6 +42,34 @@ export interface AjisaiInterpreter {
     collect_hedged_trace(): string[];
 }
 
+export interface DebugDiagnosis {
+    when: string;
+    where: {
+        kind: string;
+        word?: string;
+        module?: string;
+        dictionary?: string;
+    };
+    why: string;
+    summary: string;
+    evidence: string[];
+    nextChecks: Array<{
+        label: string;
+        detail: string;
+    }>;
+}
+
+export interface ErrorFlowTraceEvent {
+    kind: string;
+    word?: string;
+    errorCategory?: string;
+    nilReason?: string;
+    stackLenBefore: number;
+    stackLenAfter: number;
+    message: string;
+    diagnosis?: DebugDiagnosis;
+}
+
 export interface ExecuteResult {
     status: 'OK' | 'ERROR';
     output?: string;
@@ -59,6 +87,7 @@ export interface ExecuteResult {
     hedgedWinner?: string;
     hedgedFallbackReason?: string;
     hedgedCancelled?: string[];
+    errorFlowTrace?: ErrorFlowTraceEvent[];
 
 }
 

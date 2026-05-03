@@ -10,13 +10,15 @@ pub mod control;
 #[path = "control-cond.rs"]
 pub mod control_cond;
 pub mod datetime;
+#[path = "debug-diagnosis.rs"]
+pub mod debug_diagnosis;
 pub mod epoch;
+#[path = "error-flow-trace.rs"]
+pub mod error_flow_trace;
 #[path = "execute-def.rs"]
 pub mod execute_def;
 #[path = "execute-del.rs"]
 pub mod execute_del;
-#[path = "error-flow-trace.rs"]
-pub mod error_flow_trace;
 #[path = "execute-lookup.rs"]
 pub mod execute_lookup;
 #[path = "execution_plan_set.rs"]
@@ -94,6 +96,9 @@ mod dictionary_resolution_tests;
 #[path = "dictionary-tier-tests.rs"]
 mod dictionary_tier_tests;
 #[cfg(test)]
+#[path = "error-flow-trace-tests.rs"]
+mod error_flow_trace_tests;
+#[cfg(test)]
 #[path = "hash-tests.rs"]
 mod hash_tests;
 #[cfg(test)]
@@ -114,9 +119,6 @@ mod interpreter_mode_tests;
 #[cfg(test)]
 #[path = "nil-reason-tests.rs"]
 mod nil_reason_tests;
-#[cfg(test)]
-#[path = "error-flow-trace-tests.rs"]
-mod error_flow_trace_tests;
 
 pub use interpreter_core::*;
 

@@ -2,6 +2,7 @@ use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, ExecutionLine, Token, Value};
 
+use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
 use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
@@ -266,6 +267,7 @@ impl Interpreter {
                                     stack_len_before,
                                     stack_len_after: stack_len_before,
                                     message: format!("SAFE enter word={}", upper),
+                                    diagnosis: None,
                                 });
 
                                 let stack_snapshot = self.stack.clone();
@@ -284,6 +286,7 @@ impl Interpreter {
                                                 "SAFE success word={} stack_len_before={} stack_len_after={}",
                                                 upper, stack_len_before, stack_len_after
                                             ),
+                                            diagnosis: None,
                                         });
                                         self.semantic_registry
                                             .normalize_to_stack_len(self.stack.len());
@@ -294,6 +297,16 @@ impl Interpreter {
                                         let nil_reason = NilReason::from_error(&err);
                                         self.stack = stack_snapshot;
                                         let restored_len = self.stack.len();
+                                        let safe_caught_diagnosis =
+                                            DebugDiagnosis::from_error_category(
+                                                ErrorPhase::SafeProjection,
+                                                Some(upper.as_ref()),
+                                                Some(&category),
+                                                Some(&nil_reason),
+                                                stack_len_before,
+                                                restored_len,
+                                                Some(format!("{}", err)),
+                                            );
                                         self.push_error_flow_trace(ErrorFlowEvent {
                                             kind: ErrorFlowEventKind::SafeCaught,
                                             word: Some(upper.to_string()),
@@ -305,8 +318,19 @@ impl Interpreter {
                                                 "SAFE caught word={} error={:?} restored_stack_len={}",
                                                 upper, category, restored_len
                                             ),
+                                            diagnosis: Some(safe_caught_diagnosis),
                                         });
                                         self.stack.push(Value::nil_with_reason(nil_reason.clone()));
+                                        let nil_produced_diagnosis =
+                                            DebugDiagnosis::from_error_category(
+                                                ErrorPhase::SafeProjection,
+                                                Some(upper.as_ref()),
+                                                Some(&category),
+                                                Some(&nil_reason),
+                                                restored_len,
+                                                self.stack.len(),
+                                                Some("NIL produced by SAFE".to_string()),
+                                            );
                                         self.push_error_flow_trace(ErrorFlowEvent {
                                             kind: ErrorFlowEventKind::NilProduced,
                                             word: Some(upper.to_string()),
@@ -319,6 +343,7 @@ impl Interpreter {
                                                 upper,
                                                 self.stack.len()
                                             ),
+                                            diagnosis: Some(nil_produced_diagnosis),
                                         });
                                         self.semantic_registry
                                             .normalize_to_stack_len(self.stack.len());
@@ -334,6 +359,12 @@ impl Interpreter {
                                     }
                                     Err(err) => {
                                         let category = ErrorCategory::from_error(&err);
+                                        let diagnosis = DebugDiagnosis::from_error(
+                                            &err,
+                                            Some(upper.as_ref()),
+                                            stack_len_before,
+                                            self.stack.len(),
+                                        );
                                         self.push_error_flow_trace(ErrorFlowEvent {
                                             kind: ErrorFlowEventKind::WordError,
                                             word: Some(upper.to_string()),
@@ -345,6 +376,7 @@ impl Interpreter {
                                                 "word error word={} error={}",
                                                 upper, err
                                             ),
+                                            diagnosis: Some(diagnosis),
                                         });
                                         return Err(err);
                                     }
