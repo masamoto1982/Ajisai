@@ -21,6 +21,7 @@ export class AjisaiInterpreter {
     collect_core_word_aliases_info(): any;
     collect_core_words_info(): any;
     collect_dictionary_dependencies(): any;
+    collect_error_flow_trace(): any;
     collect_hedged_trace(): any;
     collect_imported_modules(): any;
     collect_input_helper_words_info(): any;
@@ -56,6 +57,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
+    readonly ajisaiinterpreter_collect_error_flow_trace: (a: number) => any;
     readonly ajisaiinterpreter_collect_hedged_trace: (a: number) => any;
     readonly ajisaiinterpreter_collect_imported_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;

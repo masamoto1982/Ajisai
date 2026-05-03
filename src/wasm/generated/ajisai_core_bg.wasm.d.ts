@@ -8,6 +8,7 @@ export const ajisaiinterpreter_collect_core_listed_words_info: (a: number) => an
 export const ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
 export const ajisaiinterpreter_collect_core_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
+export const ajisaiinterpreter_collect_error_flow_trace: (a: number) => any;
 export const ajisaiinterpreter_collect_hedged_trace: (a: number) => any;
 export const ajisaiinterpreter_collect_imported_modules: (a: number) => any;
 export const ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
