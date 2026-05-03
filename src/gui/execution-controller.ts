@@ -1,5 +1,9 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
-import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
+import type {
+    AjisaiInterpreter,
+    DebugDiagnosis,
+    ExecuteResult
+} from '../wasm-interpreter-types';
 import {
     createExecutionSnapshot,
     syncInterpreterState,
@@ -72,6 +76,23 @@ export const createExecutionController = (
         }
         if (result.hedgedCancelled && result.hedgedCancelled.length > 0) {
             showInfo(`[HEDGED-CANCEL] ${result.hedgedCancelled.join(', ')}`, true);
+        }
+        const lastDiagnosis: DebugDiagnosis | undefined = result.errorFlowTrace
+            ?.map((event) => event.diagnosis)
+            .filter((d): d is DebugDiagnosis => Boolean(d))
+            .at(-1);
+        if (lastDiagnosis) {
+            const whereLabel = lastDiagnosis.where.word ?? lastDiagnosis.where.kind;
+            const lines = [
+                `[DIAGNOSIS] ${lastDiagnosis.summary}`,
+                `Q1 when: ${lastDiagnosis.when}`,
+                `Q2 where: ${whereLabel}`,
+                `Q3 why: ${lastDiagnosis.why}`,
+                ...lastDiagnosis.nextChecks.map(
+                    (check) => `next: ${check.label} - ${check.detail}`
+                )
+            ];
+            showInfo(lines.join('\n'), true);
         }
         if (result.inputHelper) {
             clearEditor(false);

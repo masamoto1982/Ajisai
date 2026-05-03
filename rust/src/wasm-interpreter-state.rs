@@ -5,10 +5,53 @@ use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
 use crate::elastic::ElasticMode;
 use crate::interpreter;
+use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::tokenizer;
 use crate::types::arena::{arena_to_value, json_to_arena_node, value_to_arena, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
+
+fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
+    let obj = js_sys::Object::new();
+
+    set_js_prop(&obj, "when", &(format!("{:?}", diagnosis.when).into()));
+    set_js_prop(&obj, "why", &(format!("{:?}", diagnosis.why).into()));
+    set_js_prop(&obj, "summary", &(diagnosis.summary.clone().into()));
+
+    let where_obj = js_sys::Object::new();
+    set_js_prop(
+        &where_obj,
+        "kind",
+        &(format!("{:?}", diagnosis.where_.kind).into()),
+    );
+    if let Some(word) = &diagnosis.where_.word {
+        set_js_prop(&where_obj, "word", &(word.clone().into()));
+    }
+    if let Some(module) = &diagnosis.where_.module {
+        set_js_prop(&where_obj, "module", &(module.clone().into()));
+    }
+    if let Some(dictionary) = &diagnosis.where_.dictionary {
+        set_js_prop(&where_obj, "dictionary", &(dictionary.clone().into()));
+    }
+    set_js_prop(&obj, "where", &where_obj.into());
+
+    let evidence_arr = js_sys::Array::new();
+    for item in &diagnosis.evidence {
+        evidence_arr.push(&JsValue::from_str(item));
+    }
+    set_js_prop(&obj, "evidence", &evidence_arr.into());
+
+    let checks_arr = js_sys::Array::new();
+    for c in &diagnosis.next_checks {
+        let check_obj = js_sys::Object::new();
+        set_js_prop(&check_obj, "label", &(c.label.clone().into()));
+        set_js_prop(&check_obj, "detail", &(c.detail.clone().into()));
+        checks_arr.push(&check_obj);
+    }
+    set_js_prop(&obj, "nextChecks", &checks_arr.into());
+
+    obj.into()
+}
 
 #[wasm_bindgen]
 impl AjisaiInterpreter {
@@ -122,10 +165,16 @@ impl AjisaiInterpreter {
                 Some(m) => m.to_string(),
                 None => continue,
             };
-            let description = interpreter::modules::module_word_description(&module_name, &word.name)
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| word.category.clone());
-            entries.push((word.name.clone(), description, String::new(), "none".to_string()));
+            let description =
+                interpreter::modules::module_word_description(&module_name, &word.name)
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| word.category.clone());
+            entries.push((
+                word.name.clone(),
+                description,
+                String::new(),
+                "none".to_string(),
+            ));
         }
 
         to_value(&entries).unwrap_or(JsValue::NULL)
@@ -346,6 +395,9 @@ impl AjisaiInterpreter {
                 &((event.stack_len_after as u32).into()),
             );
             set_js_prop(&obj, "message", &(event.message.into()));
+            if let Some(diagnosis) = event.diagnosis {
+                set_js_prop(&obj, "diagnosis", &diagnosis_to_js(&diagnosis));
+            }
             arr.push(&obj);
         }
         arr.into()

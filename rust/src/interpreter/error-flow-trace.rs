@@ -1,3 +1,4 @@
+use super::debug_diagnosis::DebugDiagnosis;
 use crate::error::{ErrorCategory, NilReason};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,4 +19,5 @@ pub struct ErrorFlowEvent {
     pub stack_len_before: usize,
     pub stack_len_after: usize,
     pub message: String,
+    pub diagnosis: Option<DebugDiagnosis>,
 }
