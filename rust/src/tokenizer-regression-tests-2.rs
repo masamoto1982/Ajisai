@@ -125,6 +125,29 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
+    fn test_semicolon_mode_sugar() {
+        let result = tokenize("; +").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Symbol(".".into()),
+                Token::Symbol(",".into()),
+                Token::Symbol("+".into()),
+            ]
+        );
+
+        let result2 = tokenize(";; +").unwrap();
+        assert_eq!(
+            result2,
+            vec![
+                Token::Symbol("..".into()),
+                Token::Symbol(",,".into()),
+                Token::Symbol("+".into()),
+            ]
+        );
+    }
+
+    #[test]
     fn test_dot_operator_with_vector() {
         let result = tokenize("[ 1 2 3 ] . LENGTH").unwrap();
         assert_eq!(

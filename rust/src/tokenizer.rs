@@ -36,7 +36,16 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             return Err("':' (code block start) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
         }
         if chars[i] == ';' {
-            return Err("';' (code block end) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
+            if i + 1 < chars.len() && chars[i + 1] == ';' {
+                tokens.push(Token::Symbol("..".into()));
+                tokens.push(Token::Symbol(",,".into()));
+                i += 2;
+                continue;
+            }
+            tokens.push(Token::Symbol(".".into()));
+            tokens.push(Token::Symbol(",".into()));
+            i += 1;
+            continue;
         }
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
