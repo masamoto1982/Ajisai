@@ -3,18 +3,12 @@ pub(crate) fn lookup_detail_arithmetic_logic(name: &str) -> Option<String> {
         "ADD" => {
             r#"# + - 加算
 
-## 機能
-Foldモードでは、2つのベクタを要素ごとに加算します。片方が単一要素ならブロードキャストされます。Stackモードでは、スタックから指定個数の要素を取り、左から順に加算します。
+## Features
+Fold mode adds two vectors element-wise. If one side has a single element, it is broadcast across the other side.
+Stack mode pops a count and that many stack elements, then adds them left-to-right.
 
-## 使用法
-```ajisai
-[ a... ] [ b... ] +
-```
-```ajisai
-a... [ count ] .. +
-```
-
-## 使用例
+## Examples
+Element-wise addition:
 ```ajisai
 [ 1 2 3 ] [ 4 5 6 ] +
 ```
@@ -23,7 +17,7 @@ Result:
 [ 5 7 9 ]
 ```
 
-ブロードキャスト：
+Broadcast:
 ```ajisai
 [ 1 2 3 ] [ 10 ] +
 ```
@@ -32,7 +26,7 @@ Result:
 [ 11 12 13 ]
 ```
 
-Stackモード：
+Stack mode:
 ```ajisai
 [ 1 ] [ 2 ] [ 3 ] [ 3 ] .. +
 ```
@@ -41,10 +35,18 @@ Result:
 [ 6 ]
 ```
 
-## 注意
-- ベクタ長が異なり、かつブロードキャストできない場合はエラー
-- 演算結果が入力と同じ場合はエラー
-- これは「変化なしはエラー」原則に基づく"#
+Syntactic sugar:
+```ajisai
+[ 1 ] [ 2 ] +
+```
+Equivalent canonical form:
+```ajisai
+[ 1 ] [ 2 ] ADD
+```
+
+## Notes
+- Vector lengths must match unless one side can be broadcast.
+- The operation follows current runtime behavior only; legacy principles are intentionally omitted from this description."#
         }
 
         "SUB" => {
