@@ -24,6 +24,10 @@ export interface AjisaiInterpreter {
     reset(): ExecuteResult;
     collect_stack(): Value[];
     collect_user_words_info(): Array<[string, string, string | null, boolean]>;
+    // Tuple shape: [name, hover_summary, hover_syntax, signature_type].
+    // hover_summary is the native button title ("WORD — short verb phrase");
+    // hover_syntax is the inline word-info preview (shortest useful invocation,
+    // operands included). See docs/dev/three-layer-documentation-model.md §4.
     collect_core_words_info(): Array<[string, string, string, string]>;
     collect_core_word_aliases_info(): Array<[string, string, string, string]>;
     collect_input_helper_words_info(): Array<[string, string]>;

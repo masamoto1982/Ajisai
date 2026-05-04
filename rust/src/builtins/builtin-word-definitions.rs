@@ -83,9 +83,14 @@ pub enum BuiltinExecutorKey {
 pub struct BuiltinSpec {
     pub name: &'static str,
     pub category: &'static str,
-    pub short_description: &'static str,
-    #[allow(dead_code)]
-    pub syntax: &'static str,
+    /// Layer 3 (hover): one-line "WORD — short verb phrase" shown in the
+    /// native button title attribute. See three-layer-documentation-model.md
+    /// §4.2.
+    pub hover_summary: &'static str,
+    /// Layer 3 (hover): shortest useful invocation (operands included, sugar
+    /// preferred when shorter) shown in the inline word-info strip. See
+    /// three-layer-documentation-model.md §4.3.
+    pub hover_syntax: &'static str,
     pub signature_type: &'static str,
     #[allow(dead_code)]
     pub detail_group: BuiltinDetailGroup,
@@ -93,12 +98,12 @@ pub struct BuiltinSpec {
 }
 
 macro_rules! builtin_spec {
-    ($name:expr, $category:expr, $description:expr, $syntax:expr, $signature:expr, $detail:expr, $executor:expr) => {
+    ($name:expr, $category:expr, $hover_summary:expr, $hover_syntax:expr, $signature:expr, $detail:expr, $executor:expr) => {
         BuiltinSpec {
             name: $name,
             category: $category,
-            short_description: $description,
-            syntax: $syntax,
+            hover_summary: $hover_summary,
+            hover_syntax: $hover_syntax,
             signature_type: $signature,
             detail_group: $detail,
             executor_key: $executor,
@@ -106,12 +111,15 @@ macro_rules! builtin_spec {
     };
 }
 
+// Hover text follows three-layer-documentation-model.md §4.2/§4.3:
+//   hover_summary = "WORD — short verb phrase"
+//   hover_syntax  = shortest useful invocation, sugar preferred when shorter
 const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "TOP",
         "modifier",
-        "Set operation target to stack top",
-        ". ADD → apply ADD to stack top",
+        "TOP — apply operation to stack top",
+        ". +",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -119,8 +127,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "STAK",
         "modifier",
-        "Set operation target to the whole stack",
-        ".. ADD → apply ADD to the whole stack",
+        "STAK — apply operation to whole stack",
+        ".. +",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -128,8 +136,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "EAT",
         "modifier",
-        "Set consumption mode to consume operands",
-        ", ADD → consume operands",
+        "EAT — consume operands",
+        ", +",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -137,8 +145,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "KEEP",
         "modifier",
-        "Set consumption mode to keep operands",
-        ",, ADD → keep operands and append result",
+        "KEEP — keep operands and append result",
+        ",, +",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -146,8 +154,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SAFE",
         "modifier",
-        "Enable safe mode and return NIL on error",
-        "~ GET → NIL on out-of-range access",
+        "SAFE — return NIL on error",
+        "~ GET",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -155,8 +163,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "GET",
         "vector",
-        "Form: Extract element at index. Vector, Index Vector -> element",
-        "[ 10 20 30 ] [ 0 ] GET → [ 10 ]",
+        "GET — extract element at index",
+        "[ 10 20 30 ] [ 0 ] GET",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Get)
@@ -164,8 +172,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "INSERT",
         "vector",
-        "Form: Insert element at index. Vector, [Index, Value] Vector -> Vector",
-        "[ 1 3 ] [ 1 2 ] INSERT → [ 1 2 3 ]",
+        "INSERT — insert element at index",
+        "[ 1 3 ] [ 1 2 ] INSERT",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Insert)
@@ -173,8 +181,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "REPLACE",
         "vector",
-        "Form: Replace element at index. Vector, [Index, Value] Vector -> Vector",
-        "[ 1 2 3 ] [ 0 9 ] REPLACE → [ 9 2 3 ]",
+        "REPLACE — replace element at index",
+        "[ 1 2 3 ] [ 0 9 ] REPLACE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Replace)
@@ -182,8 +190,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "REMOVE",
         "vector",
-        "Form: Remove element at index. Vector, Index Vector -> Vector",
-        "[ 1 2 3 ] [ 0 ] REMOVE → [ 2 3 ]",
+        "REMOVE — remove element at index",
+        "[ 1 2 3 ] [ 0 ] REMOVE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Remove)
@@ -191,8 +199,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "LENGTH",
         "vector",
-        "Form: Return element count. Vector -> Scalar",
-        "[ 1 2 3 4 5 ] LENGTH → [ 5 ]",
+        "LENGTH — return element count",
+        "[ 1 2 3 ] LENGTH",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Length)
@@ -200,8 +208,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "TAKE",
         "vector",
-        "Form: Take N elements from start or end. Vector, Scalar -> Vector",
-        "[ 1 2 3 4 5 ] [ 3 ] TAKE → [ 1 2 3 ]",
+        "TAKE — take N elements from start or end",
+        "[ 1 2 3 4 5 ] [ 3 ] TAKE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Take)
@@ -209,8 +217,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SPLIT",
         "vector",
-        "Form: Split vector at specified sizes. Vector, Sizes Vector -> Vectors",
-        "[ 1 2 3 4 5 6 ] [ 2 3 ] SPLIT → [ 1 2 ] [ 3 4 5 ] [ 6 ]",
+        "SPLIT — split vector at sizes",
+        "[ 1 2 3 4 ] [ 2 2 ] SPLIT",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Split)
@@ -218,8 +226,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "CONCAT",
         "vector",
-        "Form: Flatten-concatenate two vectors. Vector, Vector -> Vector",
-        "[ 1 2 ] [ 3 4 ] CONCAT → [ 1 2 3 4 ]",
+        "CONCAT — flatten and concatenate vectors",
+        "[ 1 2 ] [ 3 4 ] CONCAT",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Concat)
@@ -227,8 +235,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "REVERSE",
         "vector",
-        "Form: Reverse element order. Vector -> Vector",
-        "[ 1 2 3 ] REVERSE → [ 3 2 1 ]",
+        "REVERSE — reverse element order",
+        "[ 1 2 3 ] REVERSE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Reverse)
@@ -236,8 +244,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "RANGE",
         "vector",
-        "Form: Generate numeric sequence. [start, end] or [end] -> Vector",
-        "[ 0 5 ] RANGE → [ 0 1 2 3 4 5 ]",
+        "RANGE — generate numeric sequence",
+        "[ 0 5 ] RANGE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Range)
@@ -245,8 +253,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "REORDER",
         "vector",
-        "Form: Reorder elements by index list. Vector, Index Vector -> Vector",
-        "[ a b c ] [ 2 0 1 ] REORDER → [ c a b ]",
+        "REORDER — reorder by index list",
+        "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Reorder)
@@ -254,8 +262,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "COLLECT",
         "vector",
-        "Collect N items from stack into vector. ...values, Scalar -> Vector",
-        "1 2 3 3 COLLECT → [ 1 2 3 ]",
+        "COLLECT — collect N items into vector",
+        "1 2 3 3 COLLECT",
         "none",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Collect)
@@ -263,8 +271,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "TRUE",
         "constant",
-        "Push TRUE to stack",
-        "TRUE → TRUE",
+        "TRUE — push TRUE",
+        "TRUE",
         "none",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::True)
@@ -272,8 +280,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FALSE",
         "constant",
-        "Push FALSE to stack",
-        "FALSE → FALSE",
+        "FALSE — push FALSE",
+        "FALSE",
         "none",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::False)
@@ -281,8 +289,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "NIL",
         "constant",
-        "Push NIL to stack",
-        "NIL → NIL",
+        "NIL — push NIL",
+        "NIL",
         "none",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Nil)
@@ -290,8 +298,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "CHARS",
         "cast",
-        "Map: Split string into character code vector. String -> Numeric Vector",
-        "[ 'hello' ] CHARS → [ 'h' 'e' 'l' 'l' 'o' ]",
+        "CHARS — split string into characters",
+        "'hi' CHARS",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Chars)
@@ -299,8 +307,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "JOIN",
         "cast",
-        "Map: Join character code vector into string. Numeric Vector -> String",
-        "[ 'h' 'e' 'l' 'l' 'o' ] JOIN → [ 'hello' ]",
+        "JOIN — join characters into string",
+        "[ 'h' 'i' ] JOIN",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Join)
@@ -308,8 +316,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "NUM",
         "cast",
-        "Map: Parse to number. Any -> Numeric (NIL on failure)",
-        "'123' NUM → [ 123 ], returns NIL on failure",
+        "NUM — parse to number",
+        "'42' NUM",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Num)
@@ -317,8 +325,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "STR",
         "cast",
-        "Map: Convert to string representation. Any -> String",
-        "123 STR → '123'",
+        "STR — convert to string",
+        "42 STR",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Str)
@@ -326,8 +334,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "BOOL",
         "cast",
-        "Map: Convert to boolean. Any -> Boolean",
-        "'true' BOOL → TRUE, 100 BOOL → TRUE",
+        "BOOL — convert to boolean",
+        "1 BOOL",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Bool)
@@ -335,8 +343,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "CHR",
         "cast",
-        "Map: Convert character code to single-char string. Numeric -> String",
-        "65 CHR → 'A'",
+        "CHR — convert code to character",
+        "65 CHR",
         "map",
         BuiltinDetailGroup::StringCast,
         Some(BuiltinExecutorKey::Chr)
@@ -344,8 +352,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "ADD",
         "arithmetic",
-        "Fold: add values with broadcasting where supported",
-        "[ 1 2 ] [ 3 4 ] + → [ 4 6 ]",
+        "ADD — add values",
+        "1 2 +",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Add)
@@ -353,8 +361,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SUB",
         "arithmetic",
-        "Fold: subtract values with broadcasting where supported",
-        "[ 5 3 ] [ 2 1 ] - → [ 3 2 ]",
+        "SUB — subtract values",
+        "5 3 -",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Sub)
@@ -362,8 +370,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "MUL",
         "arithmetic",
-        "Fold: multiply values with broadcasting where supported",
-        "[ 2 3 ] [ 4 5 ] * → [ 8 15 ]",
+        "MUL — multiply values",
+        "2 4 *",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Mul)
@@ -371,8 +379,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "DIV",
         "arithmetic",
-        "Fold: divide values with broadcasting where supported",
-        "[ 10 20 ] [ 2 4 ] / → [ 5 5 ]",
+        "DIV — divide values",
+        "10 2 /",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Div)
@@ -380,8 +388,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "EQ",
         "comparison",
-        "Fold: equality comparison with broadcasting where supported",
-        "[ 1 2 ] [ 1 2 ] = → [ TRUE ]",
+        "EQ — test equality",
+        "1 1 =",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Eq)
@@ -389,8 +397,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "LT",
         "comparison",
-        "Fold: less-than comparison with broadcasting where supported",
-        "[ 1 ] [ 2 ] < → [ TRUE ]",
+        "LT — test less than",
+        "1 2 <",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Lt)
@@ -398,8 +406,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "LTE",
         "comparison",
-        "Fold: less-than-or-equal comparison with broadcasting where supported",
-        "[ 1 ] [ 1 ] <= → [ TRUE ]",
+        "LTE — test less than or equal",
+        "1 1 <=",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Le)
@@ -407,8 +415,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "AND",
         "logic",
-        "Fold: Logical AND (Kleene three-valued). Alias: & (postfix sugar). Boolean, Boolean -> Boolean",
-        "[ TRUE FALSE ] [ TRUE TRUE ] AND → [ TRUE FALSE ], [ TRUE FALSE ] [ TRUE TRUE ] & → [ TRUE FALSE ]",
+        "AND — logical AND",
+        "TRUE TRUE &",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::And)
@@ -416,8 +424,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "OR",
         "logic",
-        "Fold: Logical OR (Kleene three-valued). Boolean, Boolean -> Boolean",
-        "[ TRUE FALSE ] [ FALSE FALSE ] OR → [ TRUE FALSE ]",
+        "OR — logical OR",
+        "TRUE FALSE OR",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Or)
@@ -425,8 +433,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "NOT",
         "logic",
-        "Map: Logical negation. Boolean -> Boolean",
-        "[ TRUE FALSE ] NOT → [ FALSE TRUE ]",
+        "NOT — logical negation",
+        "TRUE NOT",
         "map",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Not)
@@ -434,7 +442,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "IDLE",
         "control",
-        "Pass through flow unchanged (no-op)",
+        "IDLE — pass through unchanged",
         "IDLE",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
@@ -443,8 +451,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "COND",
         "control",
-        "Form: Evaluate guard/body clauses, execute first match. Any, ...CodeBlock clauses -> Any",
-        "value { guard1 $ body1 } { IDLE $ else_body } COND",
+        "COND — evaluate guard/body clauses",
+        "1 { TRUE $ 'y' } { IDLE $ 'n' } COND",
         "form",
         BuiltinDetailGroup::Cond,
         Some(BuiltinExecutorKey::Cond)
@@ -452,8 +460,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "PIPE",
         "modifier",
-        "Pipeline visual marker (no-op). Sugar: ==",
-        "[ 1 2 3 ] == { [ 2 ] * } MAP",
+        "PIPE — pipeline marker",
+        "xs == { ... } MAP",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -461,8 +469,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "OR-NIL",
         "modifier",
-        "Nil coalescing. Return alternative if NIL. Sugar: =>. Any, Any -> Any",
-        "NIL => [ 0 ] → [ 0 ]",
+        "OR-NIL — coalesce NIL to alternative",
+        "NIL => [ 0 ]",
         "none",
         BuiltinDetailGroup::Modifier,
         None
@@ -470,8 +478,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "MAP",
         "higher-order",
-        "Form: Apply code block to each element. Vector, CodeBlock -> Vector",
-        "[ 1 2 3 ] { [ 2 ] * } MAP → [ 2 4 6 ]",
+        "MAP — apply block to each element",
+        "[ 1 2 3 ] { [ 2 ] * } MAP",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Map)
@@ -479,8 +487,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FILTER",
         "higher-order",
-        "Form: Extract elements matching predicate. Vector, CodeBlock -> Vector",
-        "[ 1 2 3 4 ] { [ 2 ] MOD [ 0 ] = } FILTER → [ 2 4 ]",
+        "FILTER — keep elements matching predicate",
+        "[ 1 2 3 ] { [ 2 ] = } FILTER",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Filter)
@@ -488,8 +496,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FOLD",
         "higher-order",
-        "Form: Reduce with initial value. Vector, Scalar, CodeBlock -> Scalar",
-        "[ 1 2 3 4 ] [ 0 ] { + } FOLD → [ 10 ]",
+        "FOLD — reduce with initial value",
+        "[ 1 2 3 ] [ 0 ] { + } FOLD",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Fold)
@@ -497,8 +505,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "UNFOLD",
         "higher-order",
-        "Form: Generate sequence from state transition. State, CodeBlock -> Vector/NIL",
-        "[ 1 ] { { [ 1 ] = } { [ 1 2 ] } { [ 2 ] = } { [ 2 3 ] } { [ 3 ] = } { [ 3 NIL ] } { IDLE } { NIL } COND } UNFOLD",
+        "UNFOLD — generate from state transition",
+        "[ 1 ] { ... COND } UNFOLD",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Unfold)
@@ -506,8 +514,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "ANY",
         "higher-order",
-        "Form: Return TRUE if any element satisfies predicate. Vector, CodeBlock -> Boolean",
-        "[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY → TRUE",
+        "ANY — true if any element matches",
+        "[ 1 2 3 ] { [ 2 ] = } ANY",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Any)
@@ -515,8 +523,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "ALL",
         "higher-order",
-        "Form: Return TRUE if all elements satisfy predicate. Vector, CodeBlock -> Boolean",
-        "[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL → TRUE",
+        "ALL — true if all elements match",
+        "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::All)
@@ -524,8 +532,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "COUNT",
         "higher-order",
-        "Form: Count elements satisfying predicate. Vector, CodeBlock -> Scalar",
-        "[ 1 2 3 4 5 6 ] { [ 2 ] MOD [ 0 ] = } COUNT → [ 3 ]",
+        "COUNT — count matching elements",
+        "[ 1 2 3 ] { [ 2 ] = } COUNT",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Count)
@@ -533,8 +541,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SCAN",
         "higher-order",
-        "Form: Return intermediate fold accumulators. Vector, Scalar, CodeBlock -> Vector/NIL",
-        "[ 1 2 3 4 ] [ 0 ] { + } SCAN → [ 1 3 6 10 ]",
+        "SCAN — return intermediate fold results",
+        "[ 1 2 3 ] [ 0 ] { + } SCAN",
         "form",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Scan)
@@ -542,8 +550,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "PRINT",
         "io",
-        "Map: Output value to display. Any -> Any",
-        "[ 42 ] PRINT → (outputs 42)",
+        "PRINT — output value to display",
+        "42 PRINT",
         "map",
         BuiltinDetailGroup::IoModule,
         Some(BuiltinExecutorKey::Print)
@@ -551,8 +559,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "DEF",
         "dictionary",
-        "Define user word in dictionary. CodeBlock, String [, String] -> (dictionary effect)",
-        "{ [ 2 ] * } 'DOUBLE' DEF",
+        "DEF — define user word",
+        "{ 2 * } 'DOUBLE' DEF",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Def)
@@ -560,7 +568,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "DEL",
         "dictionary",
-        "Delete user word from dictionary. String -> (dictionary effect)",
+        "DEL — delete user word",
         "'WORD' DEL",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
@@ -569,8 +577,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "LOOKUP",
         "dictionary",
-        "Display word definition and details. Sugar: ?. String -> (output effect)",
-        "'DOUBLE' LOOKUP",
+        "LOOKUP — show word documentation",
+        "'ADD' ?",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Lookup)
@@ -578,7 +586,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FORC",
         "control",
-        "Force destructive dictionary operations such as DEF and DEL",
+        "FORC — force destructive operation",
         "! 'WORD' DEL",
         "none",
         BuiltinDetailGroup::Modifier,
@@ -587,8 +595,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SHAPE",
         "tensor",
-        "Map: Return vector shape. Vector -> Numeric Vector",
-        "[ 1 2 3 ] SHAPE → [ 3 ]",
+        "SHAPE — return vector shape",
+        "[ 1 2 3 ] SHAPE",
         "map",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Shape)
@@ -596,8 +604,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "RANK",
         "tensor",
-        "Map: Return number of dimensions. Vector -> Scalar",
-        "[ [ 1 2 ] [ 3 4 ] ] RANK → [ 2 ]",
+        "RANK — return number of dimensions",
+        "[ [ 1 2 ] ] RANK",
         "map",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Rank)
@@ -605,8 +613,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "RESHAPE",
         "tensor",
-        "Form: Reshape vector to specified shape. Vector, Shape Vector -> Vector",
-        "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE → { ( 1 2 3 ) ( 4 5 6 ) }",
+        "RESHAPE — reshape to specified shape",
+        "[ 1 2 3 4 ] [ 2 2 ] RESHAPE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Reshape)
@@ -614,8 +622,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "TRANSPOSE",
         "tensor",
-        "Form: Transpose vector axes. Vector -> Vector",
-        "{ ( 1 2 3 ) ( 4 5 6 ) } TRANSPOSE → { ( 1 4 ) ( 2 5 ) ( 3 6 ) }",
+        "TRANSPOSE — transpose vector axes",
+        "[ ( 1 2 ) ( 3 4 ) ] TRANSPOSE",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Transpose)
@@ -623,8 +631,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FILL",
         "tensor",
-        "Form: Fill shape with value. Scalar, Shape Vector -> Vector",
-        "[ 2 3 0 ] FILL → { ( 0 0 0 ) ( 0 0 0 ) }",
+        "FILL — fill shape with value",
+        "[ 2 2 0 ] FILL",
         "form",
         BuiltinDetailGroup::VectorOps,
         Some(BuiltinExecutorKey::Fill)
@@ -632,8 +640,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "MOD",
         "arithmetic",
-        "Fold: Modulo (broadcast). Alias: % (postfix sugar). Numeric, Numeric -> Numeric",
-        "[ 7 ] [ 3 ] MOD → [ 1 ], [ 7 ] [ 3 ] % → [ 1 ]",
+        "MOD — modulo",
+        "7 3 %",
         "fold",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Mod)
@@ -641,8 +649,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "FLOOR",
         "arithmetic",
-        "Map: Floor (round toward negative infinity). Numeric -> Numeric",
-        "[ 7/3 ] FLOOR → [ 2 ]",
+        "FLOOR — round toward negative infinity",
+        "[ 7/3 ] FLOOR",
         "map",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Floor)
@@ -650,8 +658,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "CEIL",
         "arithmetic",
-        "Map: Ceiling (round toward positive infinity). Numeric -> Numeric",
-        "[ 7/3 ] CEIL → [ 3 ]",
+        "CEIL — round toward positive infinity",
+        "[ 7/3 ] CEIL",
         "map",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Ceil)
@@ -659,8 +667,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "ROUND",
         "arithmetic",
-        "Map: Round to nearest integer. Numeric -> Numeric",
-        "[ 5/2 ] ROUND → [ 3 ]",
+        "ROUND — round to nearest integer",
+        "[ 5/2 ] ROUND",
         "map",
         BuiltinDetailGroup::ArithmeticLogic,
         Some(BuiltinExecutorKey::Round)
@@ -668,8 +676,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "EXEC",
         "control",
-        "Interpret vector as code and execute. Vector -> (execution result)",
-        "[ 1 2 + ] EXEC → 3, 1 2 + .. EXEC → 3",
+        "EXEC — execute vector as code",
+        "[ 1 2 + ] EXEC",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Exec)
@@ -677,8 +685,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "EVAL",
         "control",
-        "Parse string as code and execute. String -> (execution result)",
-        "'1 2 +' EVAL → 3",
+        "EVAL — parse and execute string",
+        "'1 2 +' EVAL",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Eval)
@@ -686,8 +694,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "IMPORT",
         "module",
-        "Load standard library module. String -> (dictionary effect)",
-        "'music' IMPORT → imports all public words from MUSIC",
+        "IMPORT — load module",
+        "'IO' IMPORT",
         "none",
         BuiltinDetailGroup::IoModule,
         Some(BuiltinExecutorKey::Import)
@@ -695,8 +703,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "IMPORT-ONLY",
         "module",
-        "Import selected public words from a module. String Vector -> (dictionary effect)",
-        "'json' [ 'parse' ] IMPORT-ONLY → imports JSON@PARSE only",
+        "IMPORT-ONLY — import selected words",
+        "'json' [ 'parse' ] IMPORT-ONLY",
         "none",
         BuiltinDetailGroup::IoModule,
         Some(BuiltinExecutorKey::ImportOnly)
@@ -704,8 +712,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SPAWN",
         "control",
-        "Spawn an isolated child runtime from a code block. Block -> ProcessHandle",
-        "{ [ 1 ] [ 0 ] / } SPAWN",
+        "SPAWN — spawn isolated child runtime",
+        "{ 1 2 + } SPAWN",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Spawn)
@@ -713,8 +721,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "AWAIT",
         "control",
-        "Run/wait a child runtime and return exit tuple.",
-        "{ ... } SPAWN AWAIT → [ 'completed' [ ... ] ] / [ 'failed' [ ... ] ]",
+        "AWAIT — wait for child runtime",
+        "{ 1 2 + } SPAWN AWAIT",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Await)
@@ -722,8 +730,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "STATUS",
         "control",
-        "Read child status. ProcessHandle -> String",
-        "{ ... } SPAWN STATUS → 'running'|'completed'|'failed'|'killed'|'timeout'",
+        "STATUS — read child status",
+        "{ 1 2 + } SPAWN STATUS",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Status)
@@ -731,8 +739,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "KILL",
         "control",
-        "Force child termination. ProcessHandle -> 'killed'",
-        "{ ... } SPAWN KILL",
+        "KILL — terminate child runtime",
+        "{ 1 2 + } SPAWN KILL",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Kill)
@@ -740,8 +748,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "MONITOR",
         "control",
-        "Register monitor on a child handle.",
-        "{ ... } SPAWN MONITOR",
+        "MONITOR — register monitor on child",
+        "{ 1 2 + } SPAWN MONITOR",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Monitor)
@@ -749,8 +757,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     builtin_spec!(
         "SUPERVISE",
         "control",
-        "Run block under one_for_one restart policy.",
-        "{ unstable } [ 3 ] SUPERVISE",
+        "SUPERVISE — run under restart policy",
+        "{ 1 2 + } [ 3 ] SUPERVISE",
         "none",
         BuiltinDetailGroup::ControlHigherOrder,
         Some(BuiltinExecutorKey::Supervise)
@@ -766,6 +774,10 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
     BUILTIN_SPECS.iter().find(|spec| spec.name == canonical)
 }
 
+/// WASM/GUI tuple shape: `(name, hover_summary, hover_syntax, signature_type)`.
+/// Position 1 (`hover_summary`) is the native button-title text;
+/// position 2 (`hover_syntax`) is the inline word-info preview.
+/// See three-layer-documentation-model.md §4.
 #[allow(dead_code)]
 pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
 {
@@ -774,8 +786,8 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
         .map(|spec| {
             (
                 spec.name,
-                spec.short_description,
-                BUILTIN_SYNTAX_PLACEHOLDER,
+                spec.hover_summary,
+                spec.hover_syntax,
                 spec.signature_type,
             )
         })
@@ -789,19 +801,13 @@ pub fn collect_core_builtin_definitions(
         .map(|spec| {
             (
                 spec.name,
-                spec.short_description,
-                BUILTIN_SYNTAX_PLACEHOLDER,
+                spec.hover_summary,
+                spec.hover_syntax,
                 spec.signature_type,
             )
         })
         .collect()
 }
-
-/// Placeholder shown on hover until the per-word usage examples are
-/// rewritten. Kept in English and short enough to fit the mobile word-info
-/// strip without truncation.
-pub const BUILTIN_SYNTAX_PLACEHOLDER: &str =
-    "An example of how to use the specified word will be displayed here.";
 
 #[cfg(test)]
 mod tests {
