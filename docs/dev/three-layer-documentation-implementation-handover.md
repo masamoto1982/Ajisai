@@ -98,6 +98,20 @@
 
 各フェーズは独立。Phase 1 だけでもリリース可。
 
+### Phase 4 — Module words (将来)
+
+Phase 1〜3 が対象とするのは canonical core words（`BUILTIN_SPECS` の登録語）のみ。
+**module word（`'IO' IMPORT` 等で取り込まれる words）は当面三層モデルの対象外**。
+理由はモジュールワードのラインナップが現在も流動的で、ドキュメント化のコストに対してリターンが低いため。
+
+将来的にモジュールワードのラインナップが安定した時点で、本モデルをモジュールワードへも拡張する。具体的には:
+
+- モジュール側のメタデータ（`rust/src/interpreter/modules/module_registry.rs`、`module_samples.rs`、`module_builtins.rs::module_word_description` 周辺）に `hover_summary` / `hover_syntax` および LOOKUP-tier フィールドを追加。
+- `lookup_builtin_detail` と同等の renderer をモジュールワードにも適用し、`?` LOOKUP が built-in と同じ §3.4 テンプレートを返すようにする。
+- Reference サイトのモジュールページ（仕様書 §2.1 項4）で同データを再利用する。
+
+最終ゴールは「すべてのワード（canonical core / core-listed module / 一般 module）が三層モデルで統一的に扱われる」状態。
+
 ---
 
 ## 3. 既存コードの座標（実装前に頭に入れておく）

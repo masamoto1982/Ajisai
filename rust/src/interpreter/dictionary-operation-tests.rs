@@ -104,18 +104,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_builtin_loads_placeholder() {
+    async fn test_lookup_builtin_renders_three_layer_template() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'GET' ?").await;
         assert!(result.is_ok(), "LOOKUP on built-in GET should succeed: {:?}", result.err());
         let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
+        for section in ["# GET", "Summary:", "Stack Effect:", "Behavior:", "Examples:"] {
+            assert!(
+                loaded.contains(section),
+                "Built-in LOOKUP must include '{}' section, got: {}",
+                section,
+                loaded
+            );
+        }
         assert!(
-            loaded.contains("placeholder"),
-            "Built-in LOOKUP should load placeholder text, got: {}",
-            loaded
-        );
-        assert!(
-            !loaded.contains("DEF"),
+            !loaded.contains("] DEF"),
             "Built-in LOOKUP should not produce a DEF expression, got: {}",
             loaded
         );

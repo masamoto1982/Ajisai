@@ -797,6 +797,33 @@ mod tests {
     }
 
     #[test]
+    fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
+        // Three-layer documentation model §5.3: stability label must agree
+        // with the §7.14 contract metadata produced by
+        // `apply_contract_overrides`. The mapping is:
+        //   safety_level A or B          -> "stable"
+        //   safety_level C, D, or
+        //   Quarantined                  -> "experimental"
+        // This test catches drift between BuiltinSpec.stability and the
+        // registry contract.
+        for spec in crate::builtins::builtin_specs() {
+            let meta = get_coreword_metadata(spec.name)
+                .unwrap_or_else(|| panic!("{} must be in registry", spec.name));
+            let expected = match meta.safety_level {
+                SafetyLevel::A | SafetyLevel::B => "stable",
+                SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined => {
+                    "experimental"
+                }
+            };
+            assert_eq!(
+                spec.stability, expected,
+                "{}: BuiltinSpec.stability = {:?} but safety_level = {:?} maps to {:?}",
+                spec.name, spec.stability, meta.safety_level, expected
+            );
+        }
+    }
+
+    #[test]
     fn aq_ver_contract_d_runtime_handle_words_are_quarantined() {
         for name in &["SPAWN", "AWAIT", "STATUS", "KILL", "MONITOR", "SUPERVISE"] {
             let meta = get_coreword_metadata(name)
