@@ -104,6 +104,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_lookup_builtin_loads_placeholder() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("'GET' ?").await;
+        assert!(result.is_ok(), "LOOKUP on built-in GET should succeed: {:?}", result.err());
+        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
+        assert!(
+            loaded.contains("placeholder"),
+            "Built-in LOOKUP should load placeholder text, got: {}",
+            loaded
+        );
+        assert!(
+            !loaded.contains("DEF"),
+            "Built-in LOOKUP should not produce a DEF expression, got: {}",
+            loaded
+        );
+    }
+
+    #[tokio::test]
+    async fn test_lookup_module_word_loads_placeholder() {
+        let mut interp = Interpreter::new();
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+        let result = interp.execute("'MUSIC@PLAY' ?").await;
+        assert!(result.is_ok(), "LOOKUP on module word should succeed: {:?}", result.err());
+        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
+        assert!(
+            loaded.contains("placeholder"),
+            "Module-word LOOKUP should load placeholder text, got: {}",
+            loaded
+        );
+    }
+
+    #[tokio::test]
+    async fn test_lookup_user_word_loads_def_source() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
+        let _ = interp.collect_output();
+        let result = interp.execute("'DOUBLE' ?").await;
+        assert!(result.is_ok(), "LOOKUP on user word should succeed: {:?}", result.err());
+        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
+        assert!(
+            loaded.contains("DEF") && loaded.contains("'DOUBLE'"),
+            "User-word LOOKUP should reconstruct DEF source, got: {}",
+            loaded
+        );
+        assert!(
+            !loaded.contains("placeholder"),
+            "User-word LOOKUP should not load placeholder text, got: {}",
+            loaded
+        );
+    }
+
+    #[tokio::test]
     async fn test_lookup_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 

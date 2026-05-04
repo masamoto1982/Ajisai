@@ -1,4 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum BuiltinDetailGroup {
     Modifier,
     ArithmeticLogic,
@@ -85,6 +86,7 @@ pub struct BuiltinSpec {
     pub short_description: &'static str,
     pub syntax: &'static str,
     pub signature_type: &'static str,
+    #[allow(dead_code)]
     pub detail_group: BuiltinDetailGroup,
     pub executor_key: Option<BuiltinExecutorKey>,
 }
