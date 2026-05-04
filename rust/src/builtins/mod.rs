@@ -15,7 +15,7 @@ use std::sync::Arc;
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for spec in builtin_specs() {
         let name = spec.name;
-        let description = spec.short_description;
+        let description = spec.hover_summary;
         let capabilities = core_builtin_capabilities(spec.executor_key, name);
         dictionary.insert(
             name.to_string(),
