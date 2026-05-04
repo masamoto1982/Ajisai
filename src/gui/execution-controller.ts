@@ -20,6 +20,7 @@ export interface ExecutionCallbacks {
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
+    readonly showReference: (markdown: string) => void;
     readonly updateDisplays: () => void;
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
@@ -49,6 +50,7 @@ export const createExecutionController = (
         showInfo,
         showError,
         showExecutionResult,
+        showReference,
         updateDisplays,
         saveState,
         fullReset,
@@ -100,10 +102,17 @@ export const createExecutionController = (
             showInfo('Input helper inserted', false);
             updateView('input');
         } else if (result.definition_to_load) {
-            updateEditorValue(result.definition_to_load);
+            const text = result.definition_to_load;
             const wordName = code.replace(/\?|LOOKUP/gi, "").trim();
-            showInfo(`Showing definition: ${wordName}`, false);
-            updateView('input');
+            const isUserDefinitionSource = text.trimStart().startsWith('[');
+            if (isUserDefinitionSource) {
+                updateEditorValue(text);
+                showInfo(`Showing definition: ${wordName}`, false);
+                updateView('input');
+            } else {
+                showReference(text);
+                updateView('output');
+            }
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
             clearEditor(false);

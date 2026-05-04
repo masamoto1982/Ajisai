@@ -263,6 +263,7 @@ export const createGUI = (): GUI => {
             showInfo: (text, append) => display.renderInfo(text, append),
             showError: (error) => display.renderError(error),
             showExecutionResult: (result) => display.renderExecutionResult(result),
+            showReference: (markdown) => display.renderReference(markdown),
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
