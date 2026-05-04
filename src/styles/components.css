@@ -212,6 +212,10 @@
     display: none;
 }
 
+.input-area.is-showing-reference #clear-btn {
+    display: inline-flex;
+}
+
 
 .editor-suggestions {
     position: absolute;
@@ -756,6 +760,16 @@
 
 
 /* Rendered Markdown reference (output of `?` for builtin words) */
+#reference-display.md-reference-overlay {
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem 1rem;
+    overflow-y: auto;
+    background-color: var(--code-bg);
+    color: var(--color-text);
+    cursor: text;
+}
+
 .md-reference {
     font-family: var(--font-family-base, system-ui, -apple-system, sans-serif);
     color: var(--color-text);

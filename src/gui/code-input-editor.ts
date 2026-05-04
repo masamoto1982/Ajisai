@@ -1,4 +1,4 @@
-
+import { renderMarkdownToFragment } from './markdown-renderer';
 
 export interface EditorCallbacks {
     readonly onContentChange?: (content: string) => void;
@@ -14,7 +14,13 @@ export interface Editor {
     readonly insertText: (text: string) => void;
     readonly removeLastWord: () => void;
     readonly focus: () => void;
+    readonly showReference: (markdown: string) => void;
     readonly registerContentChangeCallback: (callback: (content: string) => void) => void;
+}
+
+export interface EditorElements {
+    readonly textarea: HTMLTextAreaElement;
+    readonly referenceDisplay: HTMLElement;
 }
 
 const insertAt = (
@@ -98,9 +104,11 @@ const extractToken = (
 };
 
 export const createEditor = (
-    element: HTMLTextAreaElement,
+    elements: EditorElements,
     callbacks: EditorCallbacks = {}
 ): Editor => {
+    const element = elements.textarea;
+    const referenceDisplay = elements.referenceDisplay;
     let onContentChangeCallback = callbacks.onContentChange;
     const switchToInputMode = callbacks.onSwitchToInputMode ?? (() => {});
     const requestSuggestions = callbacks.onRequestSuggestions ?? (() => []);
@@ -276,11 +284,34 @@ export const createEditor = (
     if (element.value.trim() === '') {
         updateElementValue(element, '');
     }
+
+    const inputArea = element.closest('.input-area');
+
+    const hideReference = (): void => {
+        if (referenceDisplay.hidden) return;
+        referenceDisplay.hidden = true;
+        referenceDisplay.replaceChildren();
+        element.hidden = false;
+        inputArea?.classList.remove('is-showing-reference');
+    };
+
+    const showReference = (markdown: string): void => {
+        referenceDisplay.classList.add('md-reference');
+        referenceDisplay.replaceChildren(renderMarkdownToFragment(markdown));
+        referenceDisplay.hidden = false;
+        element.hidden = true;
+        inputArea?.classList.add('is-showing-reference');
+        updateElementValue(element, '');
+        hideSuggestions();
+        emitContentChange();
+    };
+
     registerEventListeners();
 
     const extractValue = (): string => element.value.trim();
 
     const updateValue = (value: string): void => {
+        hideReference();
         updateElementValue(element, value);
         const cursor = value.length;
         updateSelectionRange(element, cursor, cursor);
@@ -291,6 +322,7 @@ export const createEditor = (
     };
 
     const clear = (switchView = true): void => {
+        hideReference();
         const wasFocused = document.activeElement === element;
         updateElementValue(element, '');
         if (wasFocused || !checkIsMobile()) {
@@ -306,6 +338,7 @@ export const createEditor = (
     };
 
     const insertWord = (word: string): void => {
+        hideReference();
         const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, word);
@@ -324,6 +357,7 @@ export const createEditor = (
     };
 
     const insertText = (text: string): void => {
+        hideReference();
         const wasFocused = document.activeElement === element;
         const { start, end } = lookupEditableSelectionRange();
         const newText = insertAt(element.value, start, end, text);
@@ -342,6 +376,7 @@ export const createEditor = (
     };
 
     const removeLastWord = (): void => {
+        hideReference();
         const wasFocused = document.activeElement === element;
         const { start } = lookupEditableSelectionRange();
         const before = element.value.substring(0, start);
@@ -362,6 +397,7 @@ export const createEditor = (
     };
 
     const focus = (): void => {
+        hideReference();
         focusElement(element);
         switchToInputMode();
         refreshSuggestions();
@@ -379,6 +415,7 @@ export const createEditor = (
         insertText,
         removeLastWord,
         focus,
+        showReference,
         registerContentChangeCallback
     };
 };

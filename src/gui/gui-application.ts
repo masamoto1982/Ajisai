@@ -228,7 +228,10 @@ export const createGUI = (): GUI => {
         });
         await persistence.init();
 
-        editor = createEditor(elements.codeInput, {
+        editor = createEditor({
+            textarea: elements.codeInput,
+            referenceDisplay: elements.referenceDisplay
+        }, {
             onContentChange: (content) => updateHighlights(elements, content),
             onSwitchToInputMode: () => layoutController.setArea('input'),
             onRequestSuggestions: () => collectAutocompleteWords()
@@ -263,7 +266,7 @@ export const createGUI = (): GUI => {
             showInfo: (text, append) => display.renderInfo(text, append),
             showError: (error) => display.renderError(error),
             showExecutionResult: (result) => display.renderExecutionResult(result),
-            showReference: (markdown) => display.renderReference(markdown),
+            showReference: (markdown) => editor.showReference(markdown),
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),

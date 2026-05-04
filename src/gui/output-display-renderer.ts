@@ -2,7 +2,6 @@ import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { formatFractionScientific } from './value-formatter';
 import { pipe } from './functional-result-helpers';
-import { renderMarkdownToFragment } from './markdown-renderer';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -20,7 +19,6 @@ export interface Display {
     readonly renderOutput: (text: string) => void;
     readonly renderError: (error: Error | { message?: string } | string) => void;
     readonly renderInfo: (text: string, append?: boolean) => void;
-    readonly renderReference: (markdown: string) => void;
     readonly renderStack: (stack: Value[]) => void;
     readonly extractState: () => DisplayState;
 }
@@ -499,15 +497,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         }
     };
 
-    const renderReference = (markdown: string): void => {
-        mainOutput = markdown;
-        clearElement(elements.outputDisplay);
-        const wrapper = document.createElement('div');
-        wrapper.className = 'md-reference';
-        wrapper.appendChild(renderMarkdownToFragment(markdown));
-        elements.outputDisplay.appendChild(wrapper);
-    };
-
     const renderStack = (stack: Value[]): void => {
         const display = elements.stackDisplay;
         clearElement(display);
@@ -550,7 +539,6 @@ export const createDisplay = (elements: DisplayElements): Display => {
         renderOutput,
         renderError,
         renderInfo,
-        renderReference,
         renderStack,
         extractState
     };

@@ -5,6 +5,7 @@ import type { MobileElements } from './mobile-view-switcher';
 export interface GUIElements {
     readonly codeInput: HTMLTextAreaElement;
     readonly clearBtn: HTMLButtonElement;
+    readonly referenceDisplay: HTMLElement;
     readonly testBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
@@ -70,6 +71,7 @@ function requireElementBySelector<T extends HTMLElement>(selector: string, expec
 export const cacheElements = (): GUIElements => ({
     codeInput: requireElementById('code-input', HTMLTextAreaElement),
     clearBtn: requireElementById('clear-btn', HTMLButtonElement),
+    referenceDisplay: requireElementById('reference-display', HTMLElement),
     testBtn: requireElementById('test-btn', HTMLButtonElement),
     exportBtn: requireElementById('export-btn', HTMLButtonElement),
     importBtn: requireElementById('import-btn', HTMLButtonElement),

@@ -107,12 +107,11 @@ export const createExecutionController = (
             const isUserDefinitionSource = text.trimStart().startsWith('[');
             if (isUserDefinitionSource) {
                 updateEditorValue(text);
-                showInfo(`Showing definition: ${wordName}`, false);
-                updateView('input');
             } else {
                 showReference(text);
-                updateView('output');
             }
+            showInfo(`Showing definition: ${wordName}`, false);
+            updateView('input');
         } else if (result.status === 'OK' && !result.error) {
             showExecutionResult(result);
             clearEditor(false);
