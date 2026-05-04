@@ -38,9 +38,11 @@ jobs:
         run: cd rust && cargo bench --no-run
 
       - name: Build WASM artifacts
-        run: |
-          cd rust
-          wasm-pack build --target web --out-dir ../js/pkg
+        # Write straight into src/wasm/generated/ so the Vite build below
+        # always picks up the freshest bundle, regardless of whether the
+        # committed copy on main was rebuilt. See scripts/rebuild-wasm.sh
+        # for the same logic for local rebuilds.
+        run: bash ./scripts/rebuild-wasm.sh
 
       - name: Update asset version stamps
         run: |

@@ -111,6 +111,32 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo check --target wasm32-unknown-unknown
 
+      - name: Detect stale committed wasm bundle (advisory)
+        # Build the wasm bundle the same way the deploy workflow does and
+        # compare against the committed copy. This is advisory only: even
+        # if the committed bundle is stale, the deploy workflow rebuilds
+        # before publishing, so production stays fresh. The warning exists
+        # so reviewers know `npm run build:wasm` is needed for local dev to
+        # match production.
+        continue-on-error: true
+        run: |
+          set -e
+          if ! command -v wasm-pack >/dev/null 2>&1; then
+            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          fi
+          bash ./scripts/rebuild-wasm.sh > /tmp/rebuild-wasm.log 2>&1 || {
+            cat /tmp/rebuild-wasm.log
+            echo "::warning::wasm rebuild failed during stale-bundle check; skipping diff."
+            exit 0
+          }
+          if ! git diff --quiet -- src/wasm/generated/; then
+            echo "::warning::Committed src/wasm/generated/ bundle is stale relative to the Rust source."
+            echo "::warning::Run \`npm run build:wasm\` and commit the result so local dev matches production."
+            git --no-pager diff --stat -- src/wasm/generated/
+          else
+            echo "Committed wasm bundle matches a fresh build."
+          fi
+
   typescript-check:
     name: TypeScript Check
     runs-on: ubuntu-latest
