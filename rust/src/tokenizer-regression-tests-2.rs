@@ -315,14 +315,24 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_colon_and_semicolon_removed() {
+    fn test_colon_removed_and_semicolon_is_sugar() {
         let colon_result = tokenize(": [ 2 ] *");
         assert!(colon_result.is_err());
         assert!(colon_result.unwrap_err().contains("removed"));
 
         let semicolon_result = tokenize("[ 2 ] * ;");
-        assert!(semicolon_result.is_err());
-        assert!(semicolon_result.unwrap_err().contains("removed"));
+        assert!(semicolon_result.is_ok());
+        assert_eq!(
+            semicolon_result.unwrap(),
+            vec![
+                Token::VectorStart,
+                Token::Number("2".into()),
+                Token::VectorEnd,
+                Token::Symbol("*".into()),
+                Token::Symbol(".".into()),
+                Token::Symbol(",".into()),
+            ]
+        );
     }
 
 
