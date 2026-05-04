@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:wasm": "bash ./scripts/rebuild-wasm.sh",
     "build:web": "AJISAI_BUILD_TARGET=web vite build",
     "watch": "tsc --watch",
     "dev": "vite",

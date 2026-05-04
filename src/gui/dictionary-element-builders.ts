@@ -1,4 +1,5 @@
-export const DEFAULT_WORD_INFO_MESSAGE = 'Hover over a word button to view its usage.';
+export const DEFAULT_WORD_INFO_MESSAGE =
+    'An example of how to use the specified word will be displayed here.';
 
 export const renderWordInfo = (element: HTMLElement, text: string, isPlaceholder = false): void => {
     element.textContent = text;

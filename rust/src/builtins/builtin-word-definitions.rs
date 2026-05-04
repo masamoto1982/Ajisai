@@ -84,6 +84,7 @@ pub struct BuiltinSpec {
     pub name: &'static str,
     pub category: &'static str,
     pub short_description: &'static str,
+    #[allow(dead_code)]
     pub syntax: &'static str,
     pub signature_type: &'static str,
     #[allow(dead_code)]
@@ -774,7 +775,7 @@ pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'stati
             (
                 spec.name,
                 spec.short_description,
-                spec.syntax,
+                BUILTIN_SYNTAX_PLACEHOLDER,
                 spec.signature_type,
             )
         })
@@ -789,12 +790,18 @@ pub fn collect_core_builtin_definitions(
             (
                 spec.name,
                 spec.short_description,
-                spec.syntax,
+                BUILTIN_SYNTAX_PLACEHOLDER,
                 spec.signature_type,
             )
         })
         .collect()
 }
+
+/// Placeholder shown on hover until the per-word usage examples are
+/// rewritten. Kept in English and short enough to fit the mobile word-info
+/// strip without truncation.
+pub const BUILTIN_SYNTAX_PLACEHOLDER: &str =
+    "An example of how to use the specified word will be displayed here.";
 
 #[cfg(test)]
 mod tests {
