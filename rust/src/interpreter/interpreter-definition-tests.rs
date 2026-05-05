@@ -386,6 +386,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_precompute_basic_arithmetic() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("{ { 1 2 ADD } PRECOMPUTE } 'X' DEF")
+            .await
+            .expect("DEF with PRECOMPUTE should succeed");
+        let stack_before = interp.stack.len();
+        assert_eq!(stack_before, 0, "DEF should not leave residue on stack");
+        interp.execute("X").await.expect("X should evaluate");
+        assert_eq!(interp.stack.len(), 1);
+        let val = interp.stack.last().unwrap();
+        assert_eq!(
+            val.as_scalar().expect("scalar").numerator().to_string(),
+            "3"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_precompute_multivalue_result() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("{ { 1 2 } PRECOMPUTE ADD } 'THREE' DEF")
+            .await
+            .expect("multi-value PRECOMPUTE should succeed");
+        interp.execute("THREE").await.expect("THREE should evaluate");
+        let val = interp.stack.last().unwrap();
+        assert_eq!(
+            val.as_scalar().expect("scalar").numerator().to_string(),
+            "3"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_precompute_runtime_call_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("PRECOMPUTE").await;
+        assert!(result.is_err(), "PRECOMPUTE at runtime should error");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("PRECOMPUTE"));
+    }
+
+    #[tokio::test]
+    async fn test_precompute_does_not_pollute_parent_stack() {
+        let mut interp = Interpreter::new();
+        interp.execute("42").await.unwrap();
+        let before = interp.stack.len();
+        let result = interp
+            .execute("{ { 'hello' PRINT } PRECOMPUTE } 'BAD' DEF")
+            .await;
+        assert!(result.is_err(), "impure PRECOMPUTE block should fail");
+        assert_eq!(
+            interp.stack.len(),
+            before,
+            "failed PRECOMPUTE must not pollute parent stack"
+        );
+    }
+
+    #[tokio::test]
     async fn test_precompute_rejects_impure_builtin() {
         let mut interp = Interpreter::new();
         let result = interp
