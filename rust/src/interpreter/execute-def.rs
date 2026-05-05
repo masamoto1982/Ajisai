@@ -218,7 +218,8 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    let lines = parse_definition_body(tokens)?;
+    let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
+    let lines = parse_definition_body(&staged_tokens)?;
 
     let mut new_dependencies = HashSet::new();
     for line in &lines {
