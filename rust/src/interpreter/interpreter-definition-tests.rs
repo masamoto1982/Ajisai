@@ -384,4 +384,28 @@ mod tests {
             err_msg
         );
     }
+
+    #[tokio::test]
+    async fn test_precompute_rejects_impure_builtin() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("{ { 'hello' PRINT } PRECOMPUTE } 'BAD' DEF")
+            .await;
+        assert!(result.is_err(), "impure PRECOMPUTE block should fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("PRECOMPUTE"));
+        assert!(err.contains("not comptime-safe"));
+        assert!(err.contains("PRINT"));
+    }
+
+    #[tokio::test]
+    async fn test_precompute_rejects_recursive_user_word() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ REC } 'REC' DEF").await.unwrap();
+        let result = interp.execute("{ { REC } PRECOMPUTE } 'BAD' DEF").await;
+        assert!(result.is_err(), "recursive PRECOMPUTE should fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("PRECOMPUTE"));
+        assert!(err.contains("recursive dependency"));
+    }
 }

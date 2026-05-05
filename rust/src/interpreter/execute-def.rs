@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::comptime::precompute_definition_tokens;
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::vector_exec::format_vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
@@ -218,7 +219,8 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    let lines = parse_definition_body(tokens)?;
+    let staged_tokens = precompute_definition_tokens(interp, tokens)?;
+    let lines = parse_definition_body(&staged_tokens)?;
 
     let mut new_dependencies = HashSet::new();
     for line in &lines {

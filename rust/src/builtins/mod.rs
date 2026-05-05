@@ -51,6 +51,7 @@ fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Cap
         (Some(BuiltinExecutorKey::Monitor), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Supervise), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
+        (Some(BuiltinExecutorKey::Precompute), _) => Capabilities::MUTATES_DICT,
         _ => Capabilities::PURE,
     }
 }

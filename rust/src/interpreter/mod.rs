@@ -4,6 +4,7 @@ pub mod cast;
 #[path = "child-runtime.rs"]
 pub mod child_runtime;
 pub mod comparison;
+pub mod comptime;
 #[path = "compiled-plan.rs"]
 pub mod compiled_plan;
 pub mod control;
