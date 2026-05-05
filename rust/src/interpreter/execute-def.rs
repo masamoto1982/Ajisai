@@ -35,7 +35,56 @@ fn extract_block(tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> 
     Err(AjisaiError::from("PRECOMPUTE rejected: unterminated block"))
 }
 
-fn precompute_definition_tokens(interp: &Interpreter, tokens: &[Token]) -> Result<Vec<Token>> {
+fn assert_comptime_safe_tokens(
+    interp: &mut Interpreter,
+    tokens: &[Token],
+    visiting: &mut std::collections::HashSet<String>,
+) -> Result<()> {
+    for token in tokens {
+        if let Token::Symbol(name) = token {
+            if name.eq_ignore_ascii_case("PRECOMPUTE") {
+                return Err(AjisaiError::from(
+                    "PRECOMPUTE rejected: nested PRECOMPUTE is not supported in Phase 1",
+                ));
+            }
+            let Some((resolved_name, def)) = interp.resolve_word_entry(name) else {
+                return Err(AjisaiError::from(format!(
+                    "PRECOMPUTE rejected: unresolved word {}",
+                    name
+                )));
+            };
+
+            if def.is_builtin {
+                if !def.capabilities.contains(Capabilities::PURE)
+                    || def.capabilities.contains(Capabilities::EVAL)
+                    || def.capabilities.contains(Capabilities::IO)
+                    || def.capabilities.contains(Capabilities::SPAWN)
+                    || def.capabilities.contains(Capabilities::MUTATES_DICT)
+                {
+                    return Err(AjisaiError::from(format!(
+                        "PRECOMPUTE rejected: word {} is not comptime-safe",
+                        name
+                    )));
+                }
+            } else {
+                if visiting.contains(&resolved_name) {
+                    return Err(AjisaiError::from(format!(
+                        "PRECOMPUTE rejected: recursive dependency detected at {}",
+                        resolved_name
+                    )));
+                }
+                visiting.insert(resolved_name.clone());
+                for line in def.lines.iter() {
+                    assert_comptime_safe_tokens(interp, &line.body_tokens, visiting)?;
+                }
+                visiting.remove(&resolved_name);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn precompute_definition_tokens(interp: &mut Interpreter, tokens: &[Token]) -> Result<Vec<Token>> {
     let mut out = Vec::new();
     let mut i = 0usize;
     while i < tokens.len() {
@@ -43,6 +92,12 @@ fn precompute_definition_tokens(interp: &Interpreter, tokens: &[Token]) -> Resul
             let (block_tokens, block_end) = extract_block(tokens, i)?;
             if matches!(tokens.get(block_end + 1), Some(Token::Symbol(s)) if s.eq_ignore_ascii_case("PRECOMPUTE"))
             {
+                assert_comptime_safe_tokens(
+                    interp,
+                    &block_tokens[1..block_tokens.len() - 1],
+                    &mut std::collections::HashSet::new(),
+                )?;
+
                 let mut sandbox = Interpreter::new();
                 sandbox.core_vocabulary = interp.core_vocabulary.clone();
                 sandbox.user_words = interp.user_words.clone();
