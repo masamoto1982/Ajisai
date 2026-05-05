@@ -12,13 +12,14 @@ pub(crate) fn run_precompute_block(interp: &Interpreter, block_body_tokens: &[To
     sandbox.module_vocabulary = interp.module_vocabulary.clone();
     sandbox.active_user_dictionary = interp.active_user_dictionary.clone();
     sandbox.max_execution_steps = PRECOMPUTE_STEP_LIMIT;
-    sandbox.execute_section_core(block_body_tokens, 0)?;
-
-    if sandbox.execution_step_count >= PRECOMPUTE_STEP_LIMIT {
-        return Err(AjisaiError::from(
-            "PRECOMPUTE failed: execution exceeded step limit",
-        ));
-    }
+    sandbox
+        .execute_section_core(block_body_tokens, 0)
+        .map_err(|e| match e {
+            AjisaiError::ExecutionLimitExceeded { .. } => {
+                AjisaiError::from("PRECOMPUTE failed: execution exceeded step limit")
+            }
+            other => AjisaiError::from(format!("PRECOMPUTE failed: {}", other)),
+        })?;
 
     Ok(sandbox.stack)
 }
