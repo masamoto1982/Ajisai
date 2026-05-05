@@ -357,7 +357,7 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    let staged_tokens = precompute_definition_tokens(interp, tokens)?;
+    let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
     let lines = parse_definition_body(&staged_tokens)?;
 
     let mut new_dependencies = HashSet::new();
