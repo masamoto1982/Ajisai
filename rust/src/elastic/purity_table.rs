@@ -120,7 +120,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         Eval => imp_heavy,
 
         // ── Dictionary mutators: impure ───────────────────────────────────
-        Def | Del | Import | ImportOnly | Force | Lookup => imp_heavy,
+        Def | Del | Import | ImportOnly | Force | Lookup | Precompute => imp_heavy,
 
         // ── I/O: impure ───────────────────────────────────────────────────
         Print => imp_heavy,

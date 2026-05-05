@@ -454,6 +454,11 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::PreservesReason;
             meta.safety_level = SafetyLevel::A;
         }
+        Some(Precompute) => {
+            meta.partiality = Partiality::Partial;
+            meta.nil_policy = NilPolicy::RejectsNil;
+            meta.safety_level = SafetyLevel::B;
+        }
         Some(Str) | Some(Num) | Some(Bool) | Some(Chr) | Some(Chars) | Some(Join) => {
             meta.partiality = Partiality::Partial;
             meta.nil_policy = NilPolicy::RejectsNil;

@@ -292,6 +292,9 @@ impl Interpreter {
             BuiltinExecutorKey::Kill => self.op_kill(),
             BuiltinExecutorKey::Monitor => self.op_monitor(),
             BuiltinExecutorKey::Supervise => self.op_supervise(),
+            BuiltinExecutorKey::Precompute => Err(AjisaiError::from(
+                "PRECOMPUTE can only be used during definition-time precomputation",
+            )),
         }
     }
 
