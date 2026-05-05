@@ -24,12 +24,16 @@ pub(crate) fn assert_comptime_safe_tokens(
             };
 
             if def.is_builtin {
-                if !def.capabilities.contains(Capabilities::PURE)
-                    || def.capabilities.contains(Capabilities::EVAL)
-                    || def.capabilities.contains(Capabilities::IO)
-                    || def.capabilities.contains(Capabilities::SPAWN)
-                    || def.capabilities.contains(Capabilities::MUTATES_DICT)
-                {
+                let caps = def.capabilities;
+                let unsafe_cap = caps.contains(Capabilities::EVAL)
+                    || caps.contains(Capabilities::IO)
+                    || caps.contains(Capabilities::TIME)
+                    || caps.contains(Capabilities::RANDOM)
+                    || caps.contains(Capabilities::CRYPTO)
+                    || caps.contains(Capabilities::SPAWN)
+                    || caps.contains(Capabilities::MUTATES_DICT)
+                    || caps.contains(Capabilities::INPUT_HELPER);
+                if unsafe_cap || !caps.contains(Capabilities::PURE) {
                     return Err(AjisaiError::from(format!(
                         "PRECOMPUTE rejected: word {} is not comptime-safe",
                         name
