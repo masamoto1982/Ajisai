@@ -257,6 +257,8 @@ impl Interpreter {
             BuiltinExecutorKey::Lookup => execute_lookup::op_lookup(self),
             BuiltinExecutorKey::Import => modules::op_import(self),
             BuiltinExecutorKey::ImportOnly => modules::op_import_only(self),
+            BuiltinExecutorKey::Unimport => modules::op_unimport(self),
+            BuiltinExecutorKey::UnimportOnly => modules::op_unimport_only(self),
             BuiltinExecutorKey::Force => {
                 self.force_flag = true;
                 Ok(())

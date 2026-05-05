@@ -7,23 +7,27 @@ use crate::types::Value;
 
 use super::module_registry::{ensure_module_dictionary, extract_module_name_from_value};
 
-fn parse_only_items(value: &Value) -> Result<Vec<String>> {
+fn parse_only_items(value: &Value, op_name: &str) -> Result<Vec<String>> {
     if is_string_value(value) {
         let s = value_as_string(value)
-            .ok_or_else(|| AjisaiError::from("IMPORT-ONLY expects string selectors"))?;
+            .ok_or_else(|| AjisaiError::from(format!("{} expects string selectors", op_name)))?;
         return Ok(vec![s]);
     }
 
     let Some(items) = value.as_vector() else {
-        return Err(AjisaiError::from(
-            "IMPORT-ONLY expects a vector of word names",
-        ));
+        return Err(AjisaiError::from(format!(
+            "{} expects a vector of word names",
+            op_name
+        )));
     };
 
     let mut result = Vec::new();
     for item in items {
         if !is_string_value(item) {
-            return Err(AjisaiError::from("IMPORT-ONLY selectors must be strings"));
+            return Err(AjisaiError::from(format!(
+                "{} selectors must be strings",
+                op_name
+            )));
         }
         let Some(name) = value_as_string(item) else {
             continue;
@@ -57,6 +61,256 @@ fn emit_import_conflict_warnings(interp: &mut Interpreter, module_name: &str) {
             all_paths.join(" and ")
         ));
     }
+}
+
+fn expand_import_all_to_explicit_selection(
+    interp: &mut Interpreter,
+    module_name: &str,
+) -> Result<()> {
+    ensure_module_dictionary(interp, module_name)?;
+    let module_dict = interp
+        .module_vocabulary
+        .get(module_name)
+        .ok_or_else(|| AjisaiError::UnknownModule(module_name.to_string()))?;
+
+    let mut imported_words = HashSet::new();
+    let mut imported_samples = HashSet::new();
+    for qualified in module_dict.words.keys() {
+        if let Some((_, short)) = qualified.split_once('@') {
+            imported_words.insert(short.to_string());
+        }
+    }
+    for short in module_dict.sample_words.keys() {
+        imported_samples.insert(short.clone());
+    }
+
+    let entry = interp
+        .import_table
+        .modules
+        .entry(module_name.to_string())
+        .or_insert_with(|| ImportedModule {
+            import_all_public: false,
+            imported_words: HashSet::new(),
+            imported_samples: HashSet::new(),
+        });
+    if entry.import_all_public {
+        entry.import_all_public = false;
+        entry.imported_words = imported_words;
+        entry.imported_samples = imported_samples;
+    }
+    Ok(())
+}
+
+fn referenced_module_items_from_user_words(
+    interp: &Interpreter,
+    module_name: &str,
+) -> (HashSet<String>, HashSet<String>) {
+    let mut words = HashSet::new();
+    let mut samples = HashSet::new();
+    let Some(module_dict) = interp.module_vocabulary.get(module_name) else {
+        return (words, samples);
+    };
+
+    let mut pending = Vec::new();
+    for dict in interp.user_dictionaries.values() {
+        for def in dict.words.values() {
+            for dep in &def.dependencies {
+                if let Some((dep_module, short)) = interp.split_qualified_name(dep) {
+                    if dep_module == module_name {
+                        pending.push(short);
+                    }
+                }
+            }
+        }
+    }
+
+    while let Some(short) = pending.pop() {
+        let qualified = format!("{}@{}", module_name, short);
+        if module_dict.words.contains_key(&qualified) {
+            words.insert(short);
+            continue;
+        }
+        if !module_dict.sample_words.contains_key(&short) || !samples.insert(short.clone()) {
+            continue;
+        }
+        if let Some(sample_def) = module_dict.sample_words.get(&short) {
+            for dep in &sample_def.dependencies {
+                if let Some((dep_module, dep_short)) = interp.split_qualified_name(dep) {
+                    if dep_module == module_name {
+                        pending.push(dep_short);
+                    }
+                }
+            }
+        }
+    }
+
+    (words, samples)
+}
+
+fn referenced_by_user_words(interp: &Interpreter, qualified_name: &str) -> Vec<String> {
+    let mut dependents = Vec::new();
+    for (dict_name, dict) in &interp.user_dictionaries {
+        for (name, def) in &dict.words {
+            if def.dependencies.contains(qualified_name) {
+                dependents.push(format!("{}@{}", dict_name, name));
+            }
+        }
+    }
+    dependents.sort();
+    dependents
+}
+
+pub(super) fn op_unimport(interp: &mut Interpreter) -> Result<()> {
+    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let value = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
+
+    let module_name = extract_module_name_from_value(&value)
+        .ok_or_else(|| AjisaiError::UnknownModule(value.to_string()))?
+        .to_uppercase();
+
+    ensure_module_dictionary(interp, &module_name)?;
+    if !interp.import_table.modules.contains_key(&module_name) {
+        interp.output_buffer.push_str(&format!(
+            "Warning: {} is not currently imported.\n",
+            module_name
+        ));
+        return Ok(());
+    }
+
+    interp.rebuild_dependencies()?;
+    let (referenced_words, referenced_samples) =
+        referenced_module_items_from_user_words(interp, &module_name);
+
+    if referenced_words.is_empty() && referenced_samples.is_empty() {
+        interp.import_table.modules.remove(&module_name);
+    } else {
+        let entry = interp
+            .import_table
+            .modules
+            .entry(module_name.clone())
+            .or_insert_with(|| ImportedModule {
+                import_all_public: false,
+                imported_words: HashSet::new(),
+                imported_samples: HashSet::new(),
+            });
+        entry.import_all_public = false;
+        entry.imported_words = referenced_words.clone();
+        entry.imported_samples = referenced_samples.clone();
+    }
+
+    interp.bump_module_epoch();
+    interp.rebuild_dependencies()?;
+    interp
+        .output_buffer
+        .push_str(&format!("Unimported unused words from {}.\n", module_name));
+    let mut kept: Vec<String> = referenced_words
+        .into_iter()
+        .chain(referenced_samples)
+        .collect();
+    kept.sort();
+    if !kept.is_empty() {
+        interp.output_buffer.push_str(&format!(
+            "Kept {} because they are referenced by user words.\n",
+            kept.join(", ")
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn op_unimport_only(interp: &mut Interpreter) -> Result<()> {
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    let selectors = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let module_value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let module_name = extract_module_name_from_value(&module_value)
+        .ok_or_else(|| AjisaiError::UnknownModule(module_value.to_string()))?
+        .to_uppercase();
+
+    ensure_module_dictionary(interp, &module_name)?;
+    let selected = parse_only_items(&selectors, "UNIMPORT-ONLY")?;
+
+    let module_dict = interp
+        .module_vocabulary
+        .get(&module_name)
+        .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
+    let mut validated: Vec<(String, bool)> = Vec::new();
+    let mut listing_only_skips: Vec<String> = Vec::new();
+    for item in selected {
+        let short = item.to_uppercase();
+        let qualified = format!("{}@{}", module_name, short);
+        if module_dict.words.contains_key(&qualified) {
+            validated.push((short, true));
+        } else if module_dict.sample_words.contains_key(&short) {
+            validated.push((short, false));
+        } else if crate::coreword_registry::is_listing_only_for_module(&short, &module_name) {
+            listing_only_skips.push(short);
+        } else {
+            return Err(AjisaiError::from(format!(
+                "Unknown module word '{}' in {}",
+                short, module_name
+            )));
+        }
+    }
+    for short in &listing_only_skips {
+        interp.output_buffer.push_str(&format!(
+            "Warning: '{}' is listed in {} but is a Canonical Core word and cannot be unimported.\n",
+            short, module_name
+        ));
+    }
+
+    if validated.is_empty() {
+        return Ok(());
+    }
+
+    if !interp.import_table.modules.contains_key(&module_name) {
+        interp.output_buffer.push_str(&format!(
+            "Warning: {} is not currently imported.\n",
+            module_name
+        ));
+        return Ok(());
+    }
+
+    interp.rebuild_dependencies()?;
+    for (short, _) in &validated {
+        let qualified = format!("{}@{}", module_name, short);
+        let dependents = referenced_by_user_words(interp, &qualified);
+        if !dependents.is_empty() {
+            return Err(AjisaiError::from(format!(
+                "Cannot unimport {}: referenced by {}.",
+                qualified,
+                dependents.join(", ")
+            )));
+        }
+    }
+
+    expand_import_all_to_explicit_selection(interp, &module_name)?;
+    if let Some(entry) = interp.import_table.modules.get_mut(&module_name) {
+        for (short, is_word) in validated {
+            if is_word {
+                entry.imported_words.remove(&short);
+            } else {
+                entry.imported_samples.remove(&short);
+            }
+        }
+        if entry.imported_words.is_empty() && entry.imported_samples.is_empty() {
+            interp.import_table.modules.remove(&module_name);
+        }
+    }
+
+    interp.bump_module_epoch();
+    interp.rebuild_dependencies()?;
+    Ok(())
 }
 
 pub(super) fn import_all_public(interp: &mut Interpreter, module_name: &str) -> Result<()> {
@@ -132,7 +386,7 @@ pub(super) fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         .to_uppercase();
 
     ensure_module_dictionary(interp, &module_name)?;
-    let selected = parse_only_items(&selectors)?;
+    let selected = parse_only_items(&selectors, "IMPORT-ONLY")?;
 
     let module_dict = interp
         .module_vocabulary

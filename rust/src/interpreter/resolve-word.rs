@@ -335,7 +335,7 @@ impl Interpreter {
                         if let Some((resolved_name, resolved_def)) =
                             self.resolve_word_entry(&upper_s)
                         {
-                            if !resolved_def.is_builtin {
+                            if !resolved_def.is_builtin || resolved_name.contains('@') {
                                 dependencies.insert(resolved_name.clone());
                                 self.dependents
                                     .entry(resolved_name)

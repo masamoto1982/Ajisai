@@ -42,6 +42,8 @@ fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Cap
         (Some(BuiltinExecutorKey::Del), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Import), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::ImportOnly), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::Unimport), _) => Capabilities::MUTATES_DICT,
+        (Some(BuiltinExecutorKey::UnimportOnly), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Force), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Eval), _) => Capabilities::EVAL,
         (Some(BuiltinExecutorKey::Spawn), _) => Capabilities::SPAWN,

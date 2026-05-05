@@ -213,8 +213,14 @@ impl AjisaiInterpreter {
     pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
         let arr = js_sys::Array::new();
+        let Some(imported) = self.interpreter.import_table.modules.get(&upper) else {
+            return arr.into();
+        };
         if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
             for (name, def) in &module_dict.sample_words {
+                if !imported.import_all_public && !imported.imported_samples.contains(name) {
+                    continue;
+                }
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(
@@ -233,8 +239,18 @@ impl AjisaiInterpreter {
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
         let arr = js_sys::Array::new();
+        let Some(imported) = self.interpreter.import_table.modules.get(&upper) else {
+            return arr.into();
+        };
         if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
             for (name, def) in &module_dict.words {
+                let short_name = name
+                    .split_once('@')
+                    .map(|(_, short)| short)
+                    .unwrap_or(name.as_str());
+                if !imported.import_all_public && !imported.imported_words.contains(short_name) {
+                    continue;
+                }
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(

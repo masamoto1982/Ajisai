@@ -45,6 +45,8 @@ pub enum BuiltinExecutorKey {
     Lookup,
     Import,
     ImportOnly,
+    Unimport,
+    UnimportOnly,
     Force,
     Print,
     Insert,
@@ -1993,6 +1995,63 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Modifies the dictionary; capability MUTATES_DICT required.",
         ],
         related: &["IMPORT"],
+        stability: "experimental",
+        ..SPEC_DEFAULT
+    },
+
+    BuiltinSpec {
+        name: "UNIMPORT",
+        category: "module",
+        hover_summary: "UNIMPORT — hide imported module words",
+        hover_syntax: "'IO' UNIMPORT",
+        detail_group: BuiltinDetailGroup::IoModule,
+        executor_key: Some(BuiltinExecutorKey::Unimport),
+        summary: "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "[ name ] UNIMPORT",
+            shorthand: None,
+            description: None,
+        }],
+        stack_effect: "[ name ] -> []",
+        behavior:
+            "Pops a module name and removes unreferenced imported module words from\nthe current vocabulary. Module words referenced by user definitions remain imported.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "'MUSIC' UNIMPORT",
+            shorthand: None,
+            result: Some("(unreferenced MUSIC words hidden)"),
+        }],
+        side_effects: &[
+            "Modifies the import table; capability MUTATES_DICT required.",
+        ],
+        related: &["IMPORT", "IMPORT-ONLY", "UNIMPORT-ONLY"],
+        stability: "experimental",
+        ..SPEC_DEFAULT
+    },
+    BuiltinSpec {
+        name: "UNIMPORT-ONLY",
+        category: "module",
+        hover_summary: "UNIMPORT-ONLY — hide selected module words",
+        hover_syntax: "'json' [ 'parse' ] UNIMPORT-ONLY",
+        detail_group: BuiltinDetailGroup::IoModule,
+        executor_key: Some(BuiltinExecutorKey::UnimportOnly),
+        summary: "Hide only the listed imported module words.",
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "[ name ] [ words ] UNIMPORT-ONLY",
+            shorthand: None,
+            description: None,
+        }],
+        stack_effect: "[ name ] [ words ] -> []",
+        behavior:
+            "Pops a module name and a vector of word names, removing those words\nfrom the current vocabulary. Referenced module words are rejected.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "'json' [ 'parse' ] UNIMPORT-ONLY",
+            shorthand: None,
+            result: Some("(JSON@PARSE hidden)"),
+        }],
+        side_effects: &[
+            "Modifies the import table; capability MUTATES_DICT required.",
+        ],
+        related: &["IMPORT", "IMPORT-ONLY", "UNIMPORT"],
         stability: "experimental",
         ..SPEC_DEFAULT
     },
