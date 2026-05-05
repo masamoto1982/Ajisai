@@ -6,6 +6,90 @@ use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, Value, V
 use std::collections::HashSet;
 use std::sync::Arc;
 
+const PRECOMPUTE_STEP_LIMIT: usize = 20_000;
+
+fn extract_block(tokens: &[Token], start: usize) -> Result<(Vec<Token>, usize)> {
+    let mut depth = 0usize;
+    let mut out = Vec::new();
+    let mut i = start;
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::BlockStart => {
+                depth += 1;
+                out.push(tokens[i].clone());
+            }
+            Token::BlockEnd => {
+                if depth == 0 {
+                    return Err(AjisaiError::from("PRECOMPUTE rejected: malformed block"));
+                }
+                depth -= 1;
+                out.push(tokens[i].clone());
+                if depth == 0 {
+                    return Ok((out, i));
+                }
+            }
+            _ => out.push(tokens[i].clone()),
+        }
+        i += 1;
+    }
+    Err(AjisaiError::from("PRECOMPUTE rejected: unterminated block"))
+}
+
+fn precompute_definition_tokens(interp: &Interpreter, tokens: &[Token]) -> Result<Vec<Token>> {
+    let mut out = Vec::new();
+    let mut i = 0usize;
+    while i < tokens.len() {
+        if matches!(tokens[i], Token::BlockStart) {
+            let (block_tokens, block_end) = extract_block(tokens, i)?;
+            if matches!(tokens.get(block_end + 1), Some(Token::Symbol(s)) if s.eq_ignore_ascii_case("PRECOMPUTE"))
+            {
+                let mut sandbox = Interpreter::new();
+                sandbox.core_vocabulary = interp.core_vocabulary.clone();
+                sandbox.user_words = interp.user_words.clone();
+                sandbox.user_dictionaries = interp.user_dictionaries.clone();
+                sandbox.module_vocabulary = interp.module_vocabulary.clone();
+                sandbox.active_user_dictionary = interp.active_user_dictionary.clone();
+                sandbox.max_execution_steps = PRECOMPUTE_STEP_LIMIT;
+                sandbox.execute_section_core(&block_tokens[1..block_tokens.len() - 1], 0)?;
+                if sandbox.execution_step_count >= PRECOMPUTE_STEP_LIMIT {
+                    return Err(AjisaiError::from("PRECOMPUTE failed: execution exceeded step limit"));
+                }
+                for v in &sandbox.stack {
+                    match &v.data {
+                        ValueData::Scalar(n) => out.push(Token::Number(n.to_string().into())),
+                        ValueData::Vector(vals) => {
+                            out.push(Token::VectorStart);
+                            for child in vals.iter() {
+                                match &child.data {
+                                    ValueData::Scalar(n) => {
+                                        out.push(Token::Number(n.to_string().into()))
+                                    }
+                                    _ => {
+                                        return Err(AjisaiError::from(
+                                            "PRECOMPUTE failed: result contains unsupported value type",
+                                        ))
+                                    }
+                                }
+                            }
+                            out.push(Token::VectorEnd);
+                        }
+                        _ => {
+                            return Err(AjisaiError::from(
+                                "PRECOMPUTE failed: result contains unsupported value type",
+                            ))
+                        }
+                    }
+                }
+                i = block_end + 2;
+                continue;
+            }
+        }
+        out.push(tokens[i].clone());
+        i += 1;
+    }
+    Ok(out)
+}
+
 fn extract_string_from_value(val: &Value) -> Result<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
@@ -218,7 +302,8 @@ pub(crate) fn op_def_inner(
         }
     }
 
-    let lines = parse_definition_body(tokens)?;
+    let staged_tokens = precompute_definition_tokens(interp, tokens)?;
+    let lines = parse_definition_body(&staged_tokens)?;
 
     let mut new_dependencies = HashSet::new();
     for line in &lines {

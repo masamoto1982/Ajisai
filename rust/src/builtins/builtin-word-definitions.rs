@@ -77,6 +77,7 @@ pub enum BuiltinExecutorKey {
     Kill,
     Monitor,
     Supervise,
+    Precompute,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1490,6 +1491,35 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     },
 
     // === Dictionary ===
+    BuiltinSpec {
+        name: "PRECOMPUTE",
+        category: "Control / Staging",
+        hover_summary: "PRECOMPUTE — definition-time precompute marker",
+        hover_syntax: "{ ... } PRECOMPUTE",
+        signature_type: "CodeBlock -- value* (definition-time only)",
+        detail_group: BuiltinDetailGroup::ControlHigherOrder,
+        executor_key: Some(BuiltinExecutorKey::Precompute),
+        summary: "Definition-time staging marker (not a macro).",
+        role: Some("Definition-time only"),
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "{ ... } PRECOMPUTE",
+            shorthand: None,
+            description: Some("Evaluates the preceding CodeBlock during DEF and embeds result values as literals."),
+        }],
+        stack_effect: "CodeBlock -- value* (during DEF rewrite)",
+        behavior: "Not a macro: PRECOMPUTE does not generate arbitrary syntax and errors when executed at runtime.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "{ { 1 2 ADD } PRECOMPUTE 3 MUL } 'X' DEF",
+            shorthand: None,
+            result: Some("X evaluates to 9"),
+        }],
+        failure: Some("Runtime error if executed outside DEF staging."),
+        related: &["DEF", "EVAL"],
+        side_effects: &["None at runtime; DEF-time rewrite marker only."],
+        stability: "stable",
+        modifier_interaction: None,
+        ..SPEC_DEFAULT
+    },
     BuiltinSpec {
         name: "DEF",
         category: "dictionary",
