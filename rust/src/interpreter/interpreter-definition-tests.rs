@@ -444,6 +444,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_precompute_runtime_error_is_wrapped() {
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("{ { 1 0 DIV } PRECOMPUTE } 'BAD' DEF")
+            .await;
+        assert!(result.is_err(), "division by zero in PRECOMPUTE should fail DEF");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("PRECOMPUTE"),
+            "runtime error inside PRECOMPUTE must mention PRECOMPUTE: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
     async fn test_precompute_rejects_impure_builtin() {
         let mut interp = Interpreter::new();
         let result = interp
