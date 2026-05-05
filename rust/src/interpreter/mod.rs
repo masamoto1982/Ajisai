@@ -4,9 +4,9 @@ pub mod cast;
 #[path = "child-runtime.rs"]
 pub mod child_runtime;
 pub mod comparison;
-pub mod comptime;
 #[path = "compiled-plan.rs"]
 pub mod compiled_plan;
+pub mod comptime;
 pub mod control;
 #[path = "control-cond.rs"]
 pub mod control_cond;
@@ -117,6 +117,9 @@ mod interpreter_execution_tests;
 #[cfg(test)]
 #[path = "interpreter-mode-tests.rs"]
 mod interpreter_mode_tests;
+#[cfg(test)]
+#[path = "module-unimport-tests.rs"]
+mod module_unimport_tests;
 #[cfg(test)]
 #[path = "nil-reason-tests.rs"]
 mod nil_reason_tests;
