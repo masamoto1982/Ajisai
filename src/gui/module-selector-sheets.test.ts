@@ -13,9 +13,11 @@ describe('module selector sheet simplicity', () => {
     test('does not render the removed module unimport hint in DOM source or CSS', () => {
         const moduleSelectorSource = readRepoFile('src/gui/module-selector-sheets.ts');
         const componentStyles = readRepoFile('src/styles/components.css');
+        const removedHintClass = ['module', 'unimport', 'hint'].join('-');
+        const removedHintCopy = ['Right-click module words', 'to Unimport'].join(' ');
 
-        expect(moduleSelectorSource).not.toContain('module-unimport-hint');
-        expect(moduleSelectorSource).not.toContain('Right-click module words to Unimport');
-        expect(componentStyles).not.toContain('module-unimport-hint');
+        expect(moduleSelectorSource).not.toContain(removedHintClass);
+        expect(moduleSelectorSource).not.toContain(removedHintCopy);
+        expect(componentStyles).not.toContain(removedHintClass);
     });
 });
