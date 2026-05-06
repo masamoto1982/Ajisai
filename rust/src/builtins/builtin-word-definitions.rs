@@ -96,6 +96,14 @@ pub struct BuiltinExampleDoc {
     pub result: Option<&'static str>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WordShape {
+    Map,
+    Form,
+    Fold,
+    Other,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
@@ -108,7 +116,8 @@ pub struct BuiltinSpec {
     /// preferred when shorter) shown in the inline word-info strip. See
     /// three-layer-documentation-model.md §4.3.
     pub hover_syntax: &'static str,
-    pub signature_type: &'static str,
+    #[allow(dead_code)]
+    pub word_shape: WordShape,
     #[allow(dead_code)]
     pub detail_group: BuiltinDetailGroup,
     pub executor_key: Option<BuiltinExecutorKey>,
@@ -138,7 +147,7 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     category: "",
     hover_summary: "",
     hover_syntax: "",
-    signature_type: "none",
+    word_shape: WordShape::Other,
     detail_group: BuiltinDetailGroup::Modifier,
     executor_key: None,
     summary: "",
@@ -303,7 +312,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "GET — extract element at index",
         hover_syntax: "[ 10 20 30 ] [ 0 ] GET",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Get),
         summary: "Extract one element of a vector by index.",
@@ -332,7 +341,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "INSERT — insert element at index",
         hover_syntax: "[ 1 3 ] [ 1 2 ] INSERT",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Insert),
         summary: "Insert a value at a given index in a vector.",
@@ -361,7 +370,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "REPLACE — replace element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 9 ] REPLACE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Replace),
         summary: "Replace an element of a vector at a given index.",
@@ -388,7 +397,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "REMOVE — remove element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 ] REMOVE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Remove),
         summary: "Remove an element from a vector at a given index.",
@@ -415,7 +424,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "LENGTH — return element count",
         hover_syntax: "[ 1 2 3 ] LENGTH",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Length),
         summary: "Return the number of elements in a vector.",
@@ -441,7 +450,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "TAKE — take N elements from start or end",
         hover_syntax: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Take),
         summary: "Take the first N or last -N elements of a vector.",
@@ -467,7 +476,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "SPLIT — split vector at sizes",
         hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] SPLIT",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Split),
         summary: "Split a vector into chunks at the specified sizes.",
@@ -495,7 +504,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "CONCAT — flatten and concatenate vectors",
         hover_syntax: "[ 1 2 ] [ 3 4 ] CONCAT",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Concat),
         summary: "Flatten and concatenate two vectors.",
@@ -520,7 +529,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "REVERSE — reverse element order",
         hover_syntax: "[ 1 2 3 ] REVERSE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Reverse),
         summary: "Reverse the order of vector elements.",
@@ -546,7 +555,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "RANGE — generate numeric sequence",
         hover_syntax: "[ 0 5 ] RANGE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Range),
         summary: "Generate a numeric sequence from a [start, end] pair.",
@@ -576,7 +585,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "vector",
         hover_summary: "REORDER — reorder by index list",
         hover_syntax: "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Reorder),
         summary: "Reorder vector elements according to an index permutation.",
@@ -704,7 +713,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "CHARS — split string into characters",
         hover_syntax: "'hi' CHARS",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Chars),
         summary: "Split a string into a vector of one-character strings.",
@@ -732,7 +741,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "JOIN — join characters into string",
         hover_syntax: "[ 'h' 'i' ] JOIN",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Join),
         summary: "Join a vector of strings into a single string.",
@@ -758,7 +767,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "NUM — parse to number",
         hover_syntax: "'42' NUM",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Num),
         summary: "Parse a value as a number; NIL on parse failure.",
@@ -783,7 +792,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Str),
         summary: "Convert a value to its string representation.",
@@ -809,7 +818,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "BOOL — convert to boolean",
         hover_syntax: "1 BOOL",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Bool),
         summary: "Convert a value to a boolean by truthiness.",
@@ -835,7 +844,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "cast",
         hover_summary: "CHR — convert code to character",
         hover_syntax: "65 CHR",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Chr),
         summary:
@@ -864,7 +873,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "ADD — add values",
         hover_syntax: "1 2 +",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Add),
         summary:
@@ -896,7 +905,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "SUB — subtract values",
         hover_syntax: "5 3 -",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Sub),
         summary:
@@ -925,7 +934,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "MUL — multiply values",
         hover_syntax: "2 4 *",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Mul),
         summary:
@@ -954,7 +963,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "DIV — divide values",
         hover_syntax: "10 2 /",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Div),
         summary: "Divide two numeric values exactly (fractional result).",
@@ -980,7 +989,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "comparison",
         hover_summary: "EQ — test equality",
         hover_syntax: "1 1 =",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Eq),
         summary: "Test equality of two values.",
@@ -1005,7 +1014,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "comparison",
         hover_summary: "LT — test less than",
         hover_syntax: "1 2 <",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Lt),
         summary: "Test less-than comparison.",
@@ -1030,7 +1039,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "comparison",
         hover_summary: "LTE — test less than or equal",
         hover_syntax: "1 1 <=",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Le),
         summary: "Test less-than-or-equal comparison.",
@@ -1057,7 +1066,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "logic",
         hover_summary: "AND — logical AND",
         hover_syntax: "TRUE TRUE &",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::And),
         summary: "Logical AND with three-valued (Kleene) NIL handling.",
@@ -1082,7 +1091,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "logic",
         hover_summary: "OR — logical OR",
         hover_syntax: "TRUE FALSE OR",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Or),
         summary: "Logical OR with three-valued (Kleene) NIL handling.",
@@ -1107,7 +1116,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "logic",
         hover_summary: "NOT — logical negation",
         hover_syntax: "TRUE NOT",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Not),
         summary: "Logical negation.",
@@ -1161,7 +1170,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "control",
         hover_summary: "COND — evaluate guard/body clauses",
         hover_syntax: "1 { TRUE $ 'y' } { IDLE $ 'n' } COND",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::Cond,
         executor_key: Some(BuiltinExecutorKey::Cond),
         summary:
@@ -1255,7 +1264,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "MAP — apply block to each element",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] * } MAP",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Map),
         summary: "Apply a code block to each element of a vector.",
@@ -1281,7 +1290,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "FILTER — keep elements matching predicate",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } FILTER",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Filter),
         summary:
@@ -1310,7 +1319,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "FOLD — reduce with initial value",
         hover_syntax: "[ 1 2 3 ] [ 0 ] { + } FOLD",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Fold),
         summary:
@@ -1336,7 +1345,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "UNFOLD — generate from state transition",
         hover_syntax: "[ 1 ] { ... COND } UNFOLD",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Unfold),
         summary:
@@ -1365,7 +1374,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "ANY — true if any element matches",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } ANY",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Any),
         summary: "TRUE if at least one element satisfies the predicate.",
@@ -1390,7 +1399,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "ALL — true if all elements match",
         hover_syntax: "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::All),
         summary: "TRUE if every element satisfies the predicate.",
@@ -1415,7 +1424,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "COUNT — count matching elements",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } COUNT",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Count),
         summary: "Count the elements that satisfy the predicate.",
@@ -1440,7 +1449,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "higher-order",
         hover_summary: "SCAN — return intermediate fold results",
         hover_syntax: "[ 1 2 3 ] [ 0 ] { + } SCAN",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Scan),
         summary: "Return a vector of intermediate fold accumulators.",
@@ -1467,7 +1476,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "io",
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::IoModule,
         executor_key: Some(BuiltinExecutorKey::Print),
         summary: "Output a value to the display.",
@@ -1498,7 +1507,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "Control / Staging",
         hover_summary: "PRECOMPUTE — definition-time precompute marker",
         hover_syntax: "{ ... } PRECOMPUTE",
-        signature_type: "CodeBlock -- value* (definition-time only)",
+        word_shape: WordShape::Other,
         detail_group: BuiltinDetailGroup::ControlHigherOrder,
         executor_key: Some(BuiltinExecutorKey::Precompute),
         summary: "Definition-time staging marker (not a macro).",
@@ -1508,7 +1517,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             shorthand: None,
             description: Some("Evaluates the preceding CodeBlock during DEF and embeds result values as literals."),
         }],
-        stack_effect: "CodeBlock -- value* (during DEF rewrite)",
+        stack_effect: "CodeBlock -- value* (definition-time only)",
         behavior: "Not a macro: PRECOMPUTE does not generate arbitrary syntax and errors when executed at runtime.",
         examples: &[BuiltinExampleDoc {
             canonical: "{ { 1 2 ADD } PRECOMPUTE 3 MUL } 'X' DEF",
@@ -1653,7 +1662,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "tensor",
         hover_summary: "SHAPE — return vector shape",
         hover_syntax: "[ 1 2 3 ] SHAPE",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Shape),
         summary: "Return a vector describing the dimensions of a value.",
@@ -1679,7 +1688,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "tensor",
         hover_summary: "RANK — return number of dimensions",
         hover_syntax: "[ [ 1 2 ] ] RANK",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Rank),
         summary: "Return the number of dimensions of a value.",
@@ -1705,7 +1714,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "tensor",
         hover_summary: "RESHAPE — reshape to specified shape",
         hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] RESHAPE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Reshape),
         summary:
@@ -1734,7 +1743,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "tensor",
         hover_summary: "TRANSPOSE — transpose vector axes",
         hover_syntax: "[ ( 1 2 ) ( 3 4 ) ] TRANSPOSE",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Transpose),
         summary: "Transpose the axes of a tensor.",
@@ -1759,7 +1768,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "tensor",
         hover_summary: "FILL — fill shape with value",
         hover_syntax: "[ 2 2 0 ] FILL",
-        signature_type: "form",
+        word_shape: WordShape::Form,
         detail_group: BuiltinDetailGroup::VectorOps,
         executor_key: Some(BuiltinExecutorKey::Fill),
         summary: "Fill a target shape with a constant value.",
@@ -1786,7 +1795,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "MOD — modulo",
         hover_syntax: "7 3 %",
-        signature_type: "fold",
+        word_shape: WordShape::Fold,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Mod),
         summary: "Modulo (remainder) of two numeric values.",
@@ -1812,7 +1821,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "FLOOR — round toward negative infinity",
         hover_syntax: "[ 7/3 ] FLOOR",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Floor),
         summary: "Round toward negative infinity.",
@@ -1837,7 +1846,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "CEIL — round toward positive infinity",
         hover_syntax: "[ 7/3 ] CEIL",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Ceil),
         summary: "Round toward positive infinity.",
@@ -1862,7 +1871,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         category: "arithmetic",
         hover_summary: "ROUND — round to nearest integer",
         hover_syntax: "[ 5/2 ] ROUND",
-        signature_type: "map",
+        word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::ArithmeticLogic,
         executor_key: Some(BuiltinExecutorKey::Round),
         summary: "Round to nearest integer (half-up).",
@@ -2241,38 +2250,22 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
     BUILTIN_SPECS.iter().find(|spec| spec.name == canonical)
 }
 
-/// WASM/GUI tuple shape: `(name, hover_summary, hover_syntax, signature_type)`.
+/// WASM/GUI tuple shape: `(name, hover_summary, hover_syntax)`.
 /// Position 1 (`hover_summary`) is the native button-title text;
 /// position 2 (`hover_syntax`) is the inline word-info preview.
 /// See three-layer-documentation-model.md §4.
 #[allow(dead_code)]
-pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
-{
+pub fn collect_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     BUILTIN_SPECS
         .iter()
-        .map(|spec| {
-            (
-                spec.name,
-                spec.hover_summary,
-                spec.hover_syntax,
-                spec.signature_type,
-            )
-        })
+        .map(|spec| (spec.name, spec.hover_summary, spec.hover_syntax))
         .collect()
 }
 
-pub fn collect_core_builtin_definitions(
-) -> Vec<(&'static str, &'static str, &'static str, &'static str)> {
+pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     BUILTIN_SPECS
         .iter()
-        .map(|spec| {
-            (
-                spec.name,
-                spec.hover_summary,
-                spec.hover_syntax,
-                spec.signature_type,
-            )
-        })
+        .map(|spec| (spec.name, spec.hover_summary, spec.hover_syntax))
         .collect()
 }
 
@@ -2281,8 +2274,8 @@ mod tests {
     #[test]
     fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
         let forbidden = [
-            "+", "-", "*", "/", "%", "=", "<", "<=", ".", "..", ",", ",,", "~", "!", "'", "$",
-            "?", "==", "=>",
+            "+", "-", "*", "/", "%", "=", "<", "<=", ".", "..", ",", ",,", "~", "!", "'", "$", "?",
+            "==", "=>",
         ];
 
         for spec in super::builtin_specs() {
@@ -2313,31 +2306,19 @@ mod tests {
     #[test]
     fn builtin_specs_have_required_lookup_content() {
         for spec in super::builtin_specs() {
-            assert!(
-                !spec.summary.is_empty(),
-                "{} missing summary",
-                spec.name
-            );
+            assert!(!spec.summary.is_empty(), "{} missing summary", spec.name);
             assert!(
                 !spec.stack_effect.is_empty(),
                 "{} missing stack_effect",
                 spec.name
             );
-            assert!(
-                !spec.behavior.is_empty(),
-                "{} missing behavior",
-                spec.name
-            );
+            assert!(!spec.behavior.is_empty(), "{} missing behavior", spec.name);
             assert!(
                 !spec.syntax_forms.is_empty(),
                 "{} has no syntax_forms",
                 spec.name
             );
-            assert!(
-                !spec.examples.is_empty(),
-                "{} has no examples",
-                spec.name
-            );
+            assert!(!spec.examples.is_empty(), "{} has no examples", spec.name);
             assert!(
                 spec.stability == "stable"
                     || spec.stability == "experimental"

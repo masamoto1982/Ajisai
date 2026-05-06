@@ -13,7 +13,7 @@ export class AjisaiInterpreter {
      * are surfaced for visibility only — invoking SORT bare still requires
      * `'ALGO' IMPORT` per current execution semantics.
      *
-     * Tuple shape: `(name, description, syntax, signature_type)` — same as
+     * Tuple shape: `(name, description, syntax)` — same as
      * `collect_core_words_info` so the GUI can render either list with the
      * same code path.
      */

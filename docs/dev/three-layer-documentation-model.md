@@ -249,14 +249,17 @@ The codebase already has `BuiltinSpec` in `rust/src/builtins/builtin-word-defini
 
 ### 5.1 New / renamed fields
 
+> Design note: map / form / fold の分類は UI 境界には公開しない。Rust内部では `WordShape` として型付きで保持する。この分類は内部メタデータであり、通常UIのワードボタン表示には反映しない。
+
 ```rust
 pub struct BuiltinSpec {
     // — existing identity —
     pub name: &'static str,
     pub category: &'static str,
-    pub signature_type: &'static str,
+    pub word_shape: WordShape,
     pub detail_group: BuiltinDetailGroup,
     pub executor_key: Option<BuiltinExecutorKey>,
+
 
     // — Layer 3 (hover) —
     pub hover_summary: &'static str,    // replaces today's `short_description` for the title attribute

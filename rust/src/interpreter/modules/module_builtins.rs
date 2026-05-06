@@ -22,20 +22,18 @@ macro_rules! module_word {
 }
 
 /// Convention for module-word descriptions: an optional leading
-/// `"Form: "`, `"Map: "`, or `"Fold: "` token declares the word's
-/// signature type. The token is stripped from any user-facing
-/// description; the GUI uses the derived signature type to color the
-/// word button. Words without a recognized prefix are classified as
-/// `"none"`.
-pub(crate) fn parse_signature_prefix(raw: &'static str) -> (&'static str, &'static str) {
+/// `"Form: "`, `"Map: "`, or `"Fold: "` token is stripped from the
+/// user-facing description. The classification is internal metadata and
+/// is not exposed through the WASM/TypeScript/GUI boundary.
+pub(crate) fn strip_signature_prefix(raw: &'static str) -> &'static str {
     if let Some(rest) = raw.strip_prefix("Form: ") {
-        ("form", rest)
+        rest
     } else if let Some(rest) = raw.strip_prefix("Map: ") {
-        ("map", rest)
+        rest
     } else if let Some(rest) = raw.strip_prefix("Fold: ") {
-        ("fold", rest)
+        rest
     } else {
-        ("none", raw)
+        raw
     }
 }
 
@@ -572,28 +570,13 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     },
 ];
 
-pub(crate) fn module_word_description(
-    module_name: &str,
-    short_name: &str,
-) -> Option<&'static str> {
+pub(crate) fn module_word_description(module_name: &str, short_name: &str) -> Option<&'static str> {
     let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
     module
         .words
         .iter()
         .find(|w| w.short_name == short_name)
-        .map(|w| parse_signature_prefix(w.description).1)
-}
-
-pub(crate) fn module_word_signature_type(
-    module_name: &str,
-    short_name: &str,
-) -> Option<&'static str> {
-    let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
-    module
-        .words
-        .iter()
-        .find(|w| w.short_name == short_name)
-        .map(|w| parse_signature_prefix(w.description).0)
+        .map(|w| strip_signature_prefix(w.description))
 }
 
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
