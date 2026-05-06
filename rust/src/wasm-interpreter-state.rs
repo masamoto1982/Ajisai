@@ -142,15 +142,15 @@ impl AjisaiInterpreter {
     /// are surfaced for visibility only — invoking SORT bare still requires
     /// `'ALGO' IMPORT` per current execution semantics.
     ///
-    /// Tuple shape: `(name, description, syntax, signature_type)` — same as
+    /// Tuple shape: `(name, description, syntax)` — same as
     /// `collect_core_words_info` so the GUI can render either list with the
     /// same code path.
     #[wasm_bindgen]
     pub fn collect_core_listed_words_info(&self) -> JsValue {
-        let mut entries: Vec<(String, String, String, String)> =
+        let mut entries: Vec<(String, String, String)> =
             builtins::collect_core_builtin_definitions()
                 .into_iter()
-                .map(|(n, d, s, t)| (n.to_string(), d.to_string(), s.to_string(), t.to_string()))
+                .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
                 .collect();
 
         for word in crate::coreword_registry::get_core_listed_words() {
@@ -159,8 +159,7 @@ impl AjisaiInterpreter {
             }
             // Boundary word whose canonical home is a module. Pull the
             // user-facing description from the owning module spec; module
-            // canonical metadata does not carry syntax/signature, so leave
-            // those blank.
+            // canonical metadata does not carry syntax, so leave it blank.
             let module_name = match word.canonical_module() {
                 Some(m) => m.to_string(),
                 None => continue,
@@ -169,12 +168,7 @@ impl AjisaiInterpreter {
                 interpreter::modules::module_word_description(&module_name, &word.name)
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| word.category.clone());
-            entries.push((
-                word.name.clone(),
-                description,
-                String::new(),
-                "none".to_string(),
-            ));
+            entries.push((word.name.clone(), description, String::new()));
         }
 
         to_value(&entries).unwrap_or(JsValue::NULL)
@@ -235,6 +229,7 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
+    /// Tuple shape: `(name, description)`.
     #[wasm_bindgen]
     pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
         let upper = module_name.to_uppercase();
@@ -251,9 +246,6 @@ impl AjisaiInterpreter {
                 if !imported.import_all_public && !imported.imported_words.contains(short_name) {
                     continue;
                 }
-                let signature_type =
-                    interpreter::modules::module_word_signature_type(&upper, short_name)
-                        .unwrap_or("none");
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(
@@ -262,7 +254,6 @@ impl AjisaiInterpreter {
                         .map(JsValue::from)
                         .unwrap_or(JsValue::NULL),
                 );
-                item.push(&JsValue::from_str(signature_type));
                 arr.push(&item);
             }
         }

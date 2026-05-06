@@ -594,18 +594,6 @@
 }
 
 
-.word-button.signature-map {
-    background: var(--color-signature-map);
-}
-
-.word-button.signature-form {
-    background: var(--color-signature-form);
-}
-
-.word-button.signature-fold {
-    background: var(--color-signature-fold);
-}
-
 
 .stack-item {
     font-family: var(--font-stack-mono);

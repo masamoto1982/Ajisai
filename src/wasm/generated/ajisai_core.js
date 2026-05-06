@@ -1,5 +1,12 @@
 /* @ts-self-types="./ajisai_core.d.ts" */
 
+function trimTupleEntries(entries, length) {
+    return Array.isArray(entries)
+        ? entries.map((entry) => Array.isArray(entry) ? entry.slice(0, length) : entry)
+        : entries;
+}
+
+
 export class AjisaiInterpreter {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -28,14 +35,14 @@ export class AjisaiInterpreter {
      * are surfaced for visibility only — invoking SORT bare still requires
      * `'ALGO' IMPORT` per current execution semantics.
      *
-     * Tuple shape: `(name, description, syntax, signature_type)` — same as
+     * Tuple shape: `(name, description, syntax)` — same as
      * `collect_core_words_info` so the GUI can render either list with the
      * same code path.
      * @returns {any}
      */
     collect_core_listed_words_info() {
         const ret = wasm.ajisaiinterpreter_collect_core_listed_words_info(this.__wbg_ptr);
-        return ret;
+        return trimTupleEntries(ret, 3);
     }
     /**
      * @returns {any}
@@ -49,7 +56,7 @@ export class AjisaiInterpreter {
      */
     collect_core_words_info() {
         const ret = wasm.ajisaiinterpreter_collect_core_words_info(this.__wbg_ptr);
-        return ret;
+        return trimTupleEntries(ret, 3);
     }
     /**
      * @returns {any}
@@ -104,7 +111,7 @@ export class AjisaiInterpreter {
         const ptr0 = passStringToWasm0(module_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ajisaiinterpreter_collect_module_words_info(this.__wbg_ptr, ptr0, len0);
-        return ret;
+        return trimTupleEntries(ret, 2);
     }
     /**
      * @returns {any}

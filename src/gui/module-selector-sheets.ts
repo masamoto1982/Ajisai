@@ -208,7 +208,7 @@ export const createModuleTabManager = (
         resetWordInfoDisplay(wordInfo as HTMLElement);
 
         try {
-            const moduleWords: Array<[string, string | null, string]> =
+            const moduleWords: Array<[string, string | null]> =
                 window.ajisaiInterpreter.collect_module_words_info(moduleSheet.moduleName);
 
             const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
@@ -226,13 +226,10 @@ Right-click to unimport this word.`;
 
 Built-in word from module ${moduleSheet.moduleName}.
 Right-click to unimport this word.`;
-                const signatureType = (typeof wordData[2] === 'string' ? wordData[2] : 'none') || 'none';
-                const sigClass = signatureType !== 'none' ? ` signature-${signatureType}` : '';
-
                 const button = createWordButtonElement(
                     shortName,
                     moduleTitle,
-                    `word-button core module${sigClass}`,
+                    `word-button core module`,
                     () => onWordClick(shortName),
                     () => { renderWordInfo(wordInfo as HTMLElement, moduleInfo); },
                     () => { resetWordInfoDisplay(wordInfo as HTMLElement); },
