@@ -402,6 +402,10 @@ fn core_word_metadata(
         Some(BuiltinExecutorKey::ImportOnly) => {
             effectful(name, category, &["dictionary-import-only"])
         }
+        Some(BuiltinExecutorKey::Unimport) => effectful(name, category, &["dictionary-unimport"]),
+        Some(BuiltinExecutorKey::UnimportOnly) => {
+            effectful(name, category, &["dictionary-unimport-only"])
+        }
         Some(BuiltinExecutorKey::Force) => effectful(name, category, &["interpreter-mode-write"]),
         Some(BuiltinExecutorKey::Eval) => effectful(name, category, &["code-execution"]),
         Some(BuiltinExecutorKey::Spawn)
@@ -480,7 +484,8 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::PreservesReason;
             meta.safety_level = SafetyLevel::D;
         }
-        Some(Def) | Some(Del) | Some(Import) | Some(ImportOnly) | Some(Force) => {
+        Some(Def) | Some(Del) | Some(Import) | Some(ImportOnly) | Some(Unimport)
+        | Some(UnimportOnly) | Some(Force) => {
             meta.partiality = Partiality::Partial;
             meta.nil_policy = NilPolicy::RejectsNil;
             meta.safety_level = SafetyLevel::D;

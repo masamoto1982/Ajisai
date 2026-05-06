@@ -16,7 +16,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let upper_name = name.to_uppercase();
 
-
     let (target_dict, word_name) = if let Some((ns, w)) = interp.split_qualified_name(&upper_name) {
         (Some(ns), w)
     } else {
@@ -31,7 +30,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-
     if target_dict.is_none() {
         if interp.user_dictionaries.contains_key(&word_name) {
             interp.user_dictionaries.remove(&word_name);
@@ -45,29 +43,50 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if interp.module_vocabulary.contains_key(&word_name) {
-            interp.module_vocabulary.remove(&word_name);
-            interp.import_table.modules.remove(&word_name);
-            interp.sync_user_words_cache();
-            interp.rebuild_dependencies()?;
-            interp
-                .output_buffer
-                .push_str(&format!("Deleted dictionary: {}\n", word_name));
-            interp.bump_dictionary_epoch();
+        if crate::interpreter::modules::is_known_module(&word_name) {
             interp.force_flag = false;
-            return Ok(());
+            return Err(AjisaiError::from(format!(
+                "Cannot delete module dictionary {}. Use '{}' UNIMPORT to hide imported module words.",
+                word_name, word_name
+            )));
+        }
+
+        if let Some((module_name, is_sample)) = find_imported_module_item(interp, &word_name) {
+            interp.force_flag = false;
+            if is_sample {
+                return Err(AjisaiError::from(format!(
+                    "Cannot delete module sample word {}@{}. Use '{}' [ '{}' ] UNIMPORT-ONLY to hide it.",
+                    module_name, word_name, module_name, word_name
+                )));
+            }
+            return Err(AjisaiError::from(format!(
+                "Cannot delete module word {}@{}. Use '{}' [ '{}' ] UNIMPORT-ONLY to hide it.",
+                module_name, word_name, module_name, word_name
+            )));
         }
     }
 
+    if let Some(module_name) = target_dict.as_deref() {
+        if let Some(module) = interp.module_vocabulary.get(module_name) {
+            let qualified = format!("{}@{}", module_name, word_name);
+            if module.words.contains_key(&qualified) || module.sample_words.contains_key(&word_name)
+            {
+                interp.force_flag = false;
+                return Err(AjisaiError::from(format!(
+                    "Cannot delete module word {}. Use '{}' [ '{}' ] UNIMPORT-ONLY to hide it.",
+                    qualified, module_name, word_name
+                )));
+            }
+        }
+    }
 
     let (owner_name, is_module) = find_word_owner(interp, target_dict.as_deref(), &word_name)?;
 
-
-    if is_module && !interp.force_flag {
+    if is_module {
         interp.force_flag = false;
         return Err(AjisaiError::from(format!(
-            "Word '{}' is a module sample word. Use ! '{}' DEL to force delete.",
-            word_name, word_name
+            "Cannot delete module word {}@{}. Use '{}' [ '{}' ] UNIMPORT-ONLY to hide it.",
+            owner_name, word_name, owner_name, word_name
         )));
     }
 
@@ -81,7 +100,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             word_name, dep_list, word_name
         )));
     }
-
 
     let removed_def = if is_module {
         interp
@@ -125,6 +143,25 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+fn find_imported_module_item(interp: &Interpreter, word_name: &str) -> Option<(String, bool)> {
+    for (module_name, module) in &interp.module_vocabulary {
+        let Some(imported) = interp.import_table.modules.get(module_name) else {
+            continue;
+        };
+        let qualified = format!("{}@{}", module_name, word_name);
+        if module.words.contains_key(&qualified)
+            && (imported.import_all_public || imported.imported_words.contains(word_name))
+        {
+            return Some((module_name.clone(), false));
+        }
+        if module.sample_words.contains_key(word_name)
+            && (imported.import_all_public || imported.imported_samples.contains(word_name))
+        {
+            return Some((module_name.clone(), true));
+        }
+    }
+    None
+}
 
 fn find_word_owner(
     interp: &Interpreter,
@@ -132,7 +169,6 @@ fn find_word_owner(
     word_name: &str,
 ) -> Result<(String, bool)> {
     if let Some(dict_name) = target_dict {
-
         if let Some(dict) = interp.user_dictionaries.get(dict_name) {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.to_string(), false));
@@ -148,7 +184,6 @@ fn find_word_owner(
             dict_name, word_name
         )))
     } else {
-
         for (dict_name, dict) in &interp.user_dictionaries {
             if dict.words.contains_key(word_name) {
                 return Ok((dict_name.clone(), false));
