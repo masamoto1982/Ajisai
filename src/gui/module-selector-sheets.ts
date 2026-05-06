@@ -165,6 +165,11 @@ export const createModuleTabManager = (
         resetWordInfoDisplay(wordInfoDisplay);
         sheet.appendChild(wordInfoDisplay);
 
+        const hint = document.createElement('div');
+        hint.className = 'module-unimport-hint';
+        hint.textContent = 'Right-click module words to Unimport; right-click empty module space to Unimport this module.';
+        sheet.appendChild(hint);
+
         const wordsDisplay = document.createElement('div');
         wordsDisplay.className = 'words-display module-words-display';
         sheet.appendChild(wordsDisplay);
