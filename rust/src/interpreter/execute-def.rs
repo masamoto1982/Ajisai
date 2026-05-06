@@ -227,7 +227,7 @@ pub(crate) fn op_def_inner(
             if let Token::Symbol(s) = token {
                 let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);
                 if let Some((resolved_name, resolved_def)) = interp.resolve_word_entry(&upper_s) {
-                    if !resolved_def.is_builtin {
+                    if !resolved_def.is_builtin || resolved_name.contains('@') {
                         new_dependencies.insert(resolved_name);
                     }
                 }

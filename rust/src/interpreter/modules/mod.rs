@@ -24,8 +24,23 @@ pub fn op_import_only(interp: &mut Interpreter) -> Result<()> {
     module_import_execution::op_import_only(interp)
 }
 
+pub fn op_unimport(interp: &mut Interpreter) -> Result<()> {
+    module_import_execution::op_unimport(interp)
+}
+
+pub fn op_unimport_only(interp: &mut Interpreter) -> Result<()> {
+    module_import_execution::op_unimport_only(interp)
+}
+
 pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     module_import_execution::restore_module(interp, module_name)
+}
+
+pub(crate) fn is_known_module(module_name: &str) -> bool {
+    let upper = module_name.to_uppercase();
+    module_builtins::MODULE_SPECS
+        .iter()
+        .any(|module| module.name == upper)
 }
 
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {

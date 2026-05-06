@@ -256,7 +256,13 @@ All built-in words have English-word-based canonical names (see Section 7). The 
 
 ## 7. Built-in Words
 
+Ajisai vocabulary follows the rule: **Core is permanent, Module is detachable, User is editable.**
+
 Built-in words are predefined and cannot be redefined or deleted.
+
+- **Core words** belong to the Ajisai runtime itself. They are always available and cannot be deleted, hidden, unimported, or redefined.
+- **Module words** belong to a module dictionary. Their definitions are built in and cannot be redefined or destructively deleted, but their visibility in the current vocabulary is controlled with `IMPORT`, `IMPORT-ONLY`, `UNIMPORT`, and `UNIMPORT-ONLY`.
+- **User words** belong to a user dictionary. They are editable, and deletion or redefinition is controlled by dependency checks and the force modifier where applicable.
 
 Every built-in word has exactly one **canonical home**, either Core or a specific module. The canonical home determines where the implementation lives and, for module-canonical words, which module name `IMPORT` activates them under.
 
@@ -271,7 +277,7 @@ Boundary classes:
 - **Canonical Module + core-listed boundary words** — canonical home in a module, additionally surfaced in the Core listing view (e.g. `SORT` whose canonical home is `ALGO`).
 - **Module-only words** — canonical home in a module; listed only under that module.
 
-`IMPORT` and `IMPORT-ONLY` are Canonical Core words and remain Core-only — they are not module-listed and are not affected by listings.
+`IMPORT`, `IMPORT-ONLY`, `UNIMPORT`, and `UNIMPORT-ONLY` are Canonical Core words and remain Core-only — they are not module-listed and are not affected by listings.
 
 Categories such as `CAST`, `TEXT`, `TENSOR`, and `RUNTIME` are documentation-only labels used to group Core words by capability surface. They are **not** modules, are not registered in `MODULE_SPECS`, and cannot be supplied to `IMPORT`.
 
@@ -502,6 +508,8 @@ A code block followed by a name string defines a user word in the active diction
 
 Deletes a user word. The force modifier `!` is required if other words depend on the word being deleted.
 
+`DEL` never destroys module dictionaries or module words. To remove module words from the current vocabulary, use `UNIMPORT` or `UNIMPORT-ONLY`; the module dictionary remains cached as the definition source.
+
 ### 8.4 Recursion
 
 User words may call themselves or other user words recursively. There is no hard-coded call-depth limit as a language semantic rule.
@@ -531,18 +539,26 @@ Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object 
 | `ALGO` | Sorting and other deterministic algorithms |
 | `MATH` | Square root and exact-rational interval arithmetic |
 
-### 9.2 Import syntax
+### 9.2 Import and unimport syntax
 
 ```
 'MODULE-NAME' IMPORT
 'MODULE-NAME' [ 'WORD1' 'WORD2' ] IMPORT-ONLY
+'MODULE-NAME' UNIMPORT
+'MODULE-NAME' [ 'WORD1' 'WORD2' ] UNIMPORT-ONLY
 ```
 
-`IMPORT` loads all words from a module into the current scope. `IMPORT-ONLY` loads only the specified words.
+`IMPORT` loads all public words from a module into the current vocabulary. `IMPORT-ONLY` loads only the specified module words or sample words.
+
+`UNIMPORT` hides unreferenced imported words from the current vocabulary without deleting the module dictionary. If a user word references a module word or module sample word, `UNIMPORT` keeps that referenced item visible and shrinks the module import to an explicit partial-import state.
+
+`UNIMPORT-ONLY` hides only the specified module words or sample words. It fails if a selected item is referenced by a user word; use dictionary-level `UNIMPORT` when the desired operation is to clean up unused module imports while preserving referenced items.
+
+Selectors that name Core words merely listed in a module view are no-ops for `IMPORT-ONLY` and `UNIMPORT-ONLY`, because Core words are always available and cannot be imported or unimported through a module.
 
 ### 9.3 Module-provided sample words
 
-Modules may provide sample user words for demonstration. Sample words require the force modifier `!` to delete.
+Modules may provide sample words for demonstration. Sample words are part of the module dictionary for import visibility: they can be introduced with `IMPORT` / `IMPORT-ONLY` and hidden with `UNIMPORT` / `UNIMPORT-ONLY`, but they are not destructively deleted with `DEL`.
 
 ---
 
