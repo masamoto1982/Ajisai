@@ -106,24 +106,6 @@ export const createModuleTabManager = (
     let searchFilter = '';
     const contextMenu = createContextMenuElement();
 
-    const buildSignatureTypeIndex = (): Map<string, string> => {
-        const index = new Map<string, string>();
-        if (!window.ajisaiInterpreter) return index;
-        try {
-            const coreWords = window.ajisaiInterpreter.collect_core_words_info();
-            for (const tuple of coreWords) {
-                const name = tuple[0];
-                const sig = tuple[3];
-                if (typeof name === 'string' && typeof sig === 'string' && sig !== 'none') {
-                    index.set(name.toUpperCase(), sig);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to build signature type index for module words:', error);
-        }
-        return index;
-    };
-
     const hideContextMenu = (): void => {
         contextMenu.hidden = true;
     };
@@ -226,13 +208,12 @@ export const createModuleTabManager = (
         resetWordInfoDisplay(wordInfo as HTMLElement);
 
         try {
-            const moduleWords: Array<[string, string | null]> =
+            const moduleWords: Array<[string, string | null, string]> =
                 window.ajisaiInterpreter.collect_module_words_info(moduleSheet.moduleName);
 
             const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
             const prefix = `${moduleSheet.moduleName}@`;
-            const signatureIndex = buildSignatureTypeIndex();
 
             matched.forEach(wordData => {
                 const name = wordData[0];
@@ -245,7 +226,7 @@ Right-click to unimport this word.`;
 
 Built-in word from module ${moduleSheet.moduleName}.
 Right-click to unimport this word.`;
-                const signatureType = signatureIndex.get(shortName.toUpperCase()) ?? 'none';
+                const signatureType = (typeof wordData[2] === 'string' ? wordData[2] : 'none') || 'none';
                 const sigClass = signatureType !== 'none' ? ` signature-${signatureType}` : '';
 
                 const button = createWordButtonElement(

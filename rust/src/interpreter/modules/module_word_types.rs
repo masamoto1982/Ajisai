@@ -17,6 +17,7 @@ pub(super) struct ModuleWord {
     pub preserves_modes: bool,
     pub stability: Stability,
     pub capabilities: Capabilities,
+    pub signature_type: &'static str,
 }
 
 #[derive(Clone)]

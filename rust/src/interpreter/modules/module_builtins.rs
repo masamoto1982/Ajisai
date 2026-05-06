@@ -6,6 +6,21 @@ use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
 
 macro_rules! module_word {
     ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
+        module_word!(
+            $name,
+            $description,
+            $executor,
+            $purity,
+            $effects,
+            $det,
+            $preview,
+            $preserves,
+            $stability,
+            $caps,
+            "none"
+        )
+    };
+    ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr, $sig:expr) => {
         ModuleWord {
             short_name: $name,
             description: $description,
@@ -17,6 +32,7 @@ macro_rules! module_word {
             preserves_modes: $preserves,
             stability: $stability,
             capabilities: $caps,
+            signature_type: $sig,
         }
     };
 }
@@ -383,7 +399,8 @@ const ALGO_WORDS: &[ModuleWord] = &[module_word!(
     true,
     false,
     Stability::Stable,
-    Capabilities::PURE
+    Capabilities::PURE,
+    "form"
 )];
 
 const MATH_WORDS: &[ModuleWord] = &[
@@ -397,7 +414,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "map"
     ),
     module_word!(
         "SQRT-EPS",
@@ -409,7 +427,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "form"
     ),
     module_word!(
         "INTERVAL",
@@ -421,7 +440,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "form"
     ),
     module_word!(
         "LOWER",
@@ -433,7 +453,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "map"
     ),
     module_word!(
         "UPPER",
@@ -445,7 +466,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "map"
     ),
     module_word!(
         "WIDTH",
@@ -457,7 +479,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "map"
     ),
     module_word!(
         "IS-EXACT",
@@ -469,7 +492,8 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE
+        Capabilities::PURE,
+        "map"
     ),
 ];
 
@@ -564,6 +588,18 @@ pub(crate) fn module_word_description(
         .iter()
         .find(|w| w.short_name == short_name)
         .map(|w| w.description)
+}
+
+pub(crate) fn module_word_signature_type(
+    module_name: &str,
+    short_name: &str,
+) -> Option<&'static str> {
+    let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
+    module
+        .words
+        .iter()
+        .find(|w| w.short_name == short_name)
+        .map(|w| w.signature_type)
 }
 
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
