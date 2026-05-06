@@ -6,7 +6,7 @@ use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_str
 use crate::interpreter::{Interpreter, ModuleDictionary};
 use crate::types::{Tier, Value, ValueData, WordDefinition};
 
-use super::module_builtins::MODULE_SPECS;
+use super::module_builtins::{parse_signature_prefix, MODULE_SPECS};
 use super::module_samples::build_sample_words;
 
 pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &str) -> Result<()> {
@@ -21,6 +21,7 @@ pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &s
     let mut words = HashMap::new();
     for word in module.words {
         let qualified = format!("{}@{}", module.name, word.short_name);
+        let (_signature_type, cleaned_description) = parse_signature_prefix(word.description);
         words.insert(
             qualified,
             Arc::new(WordDefinition {
@@ -29,7 +30,7 @@ pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &s
                 tier: Tier::Standard,
                 stability: word.stability,
                 capabilities: word.capabilities,
-                description: Some(word.description.to_string()),
+                description: Some(cleaned_description.to_string()),
                 dependencies: HashSet::new(),
                 original_source: None,
                 namespace: Some(module.name.to_string()),
