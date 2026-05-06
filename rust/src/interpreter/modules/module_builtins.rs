@@ -6,21 +6,6 @@ use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
 
 macro_rules! module_word {
     ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
-        module_word!(
-            $name,
-            $description,
-            $executor,
-            $purity,
-            $effects,
-            $det,
-            $preview,
-            $preserves,
-            $stability,
-            $caps,
-            "none"
-        )
-    };
-    ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr, $sig:expr) => {
         ModuleWord {
             short_name: $name,
             description: $description,
@@ -32,9 +17,26 @@ macro_rules! module_word {
             preserves_modes: $preserves,
             stability: $stability,
             capabilities: $caps,
-            signature_type: $sig,
         }
     };
+}
+
+/// Convention for module-word descriptions: an optional leading
+/// `"Form: "`, `"Map: "`, or `"Fold: "` token declares the word's
+/// signature type. The token is stripped from any user-facing
+/// description; the GUI uses the derived signature type to color the
+/// word button. Words without a recognized prefix are classified as
+/// `"none"`.
+pub(crate) fn parse_signature_prefix(raw: &'static str) -> (&'static str, &'static str) {
+    if let Some(rest) = raw.strip_prefix("Form: ") {
+        ("form", rest)
+    } else if let Some(rest) = raw.strip_prefix("Map: ") {
+        ("map", rest)
+    } else if let Some(rest) = raw.strip_prefix("Fold: ") {
+        ("fold", rest)
+    } else {
+        ("none", raw)
+    }
 }
 
 const MUSIC_WORDS: &[ModuleWord] = &[
@@ -391,7 +393,7 @@ const CRYPTO_WORDS: &[ModuleWord] = &[
 
 const ALGO_WORDS: &[ModuleWord] = &[module_word!(
     "SORT",
-    "Sort vector elements in ascending order",
+    "Form: Sort vector elements in ascending order",
     sort::op_sort,
     WordPurity::Pure,
     &[],
@@ -399,8 +401,7 @@ const ALGO_WORDS: &[ModuleWord] = &[module_word!(
     true,
     false,
     Stability::Stable,
-    Capabilities::PURE,
-    "form"
+    Capabilities::PURE
 )];
 
 const MATH_WORDS: &[ModuleWord] = &[
@@ -414,8 +415,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "map"
+        Capabilities::PURE
     ),
     module_word!(
         "SQRT-EPS",
@@ -427,8 +427,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "form"
+        Capabilities::PURE
     ),
     module_word!(
         "INTERVAL",
@@ -440,8 +439,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "form"
+        Capabilities::PURE
     ),
     module_word!(
         "LOWER",
@@ -453,8 +451,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "map"
+        Capabilities::PURE
     ),
     module_word!(
         "UPPER",
@@ -466,8 +463,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "map"
+        Capabilities::PURE
     ),
     module_word!(
         "WIDTH",
@@ -479,8 +475,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "map"
+        Capabilities::PURE
     ),
     module_word!(
         "IS-EXACT",
@@ -492,8 +487,7 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
-        Capabilities::PURE,
-        "map"
+        Capabilities::PURE
     ),
 ];
 
@@ -587,7 +581,7 @@ pub(crate) fn module_word_description(
         .words
         .iter()
         .find(|w| w.short_name == short_name)
-        .map(|w| w.description)
+        .map(|w| parse_signature_prefix(w.description).1)
 }
 
 pub(crate) fn module_word_signature_type(
@@ -599,7 +593,7 @@ pub(crate) fn module_word_signature_type(
         .words
         .iter()
         .find(|w| w.short_name == short_name)
-        .map(|w| w.signature_type)
+        .map(|w| parse_signature_prefix(w.description).0)
 }
 
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
