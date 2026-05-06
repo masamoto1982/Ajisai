@@ -100,6 +100,8 @@ export class TauriPersistence implements Persistence {
             userWords: state.userWords,
             importedModules: state.importedModules,
             demoWordsVersion: state.demoWordsVersion,
+            activeDictionarySheet: state.activeDictionarySheet,
+            activeUserDictionary: state.activeUserDictionary,
             updatedAt: new Date().toISOString()
         };
         await writeStoredData(current);
@@ -117,7 +119,9 @@ export class TauriPersistence implements Persistence {
             stack: state.stack as InterpreterStateSnapshot['stack'],
             userWords: state.userWords as InterpreterStateSnapshot['userWords'],
             importedModules: state.importedModules as InterpreterStateSnapshot['importedModules'],
-            demoWordsVersion: state.demoWordsVersion
+            demoWordsVersion: state.demoWordsVersion,
+            activeDictionarySheet: state.activeDictionarySheet,
+            activeUserDictionary: state.activeUserDictionary
         };
     }
 

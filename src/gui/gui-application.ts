@@ -287,8 +287,20 @@ export const createGUI = (): GUI => {
         vocabulary.renderBuiltInWords();
         updateAllDisplays();
 
-        await persistence.loadDatabaseData();
+        const restored = await persistence.loadDatabaseData();
         updateAllDisplays();
+
+        if (restored.activeUserDictionary) {
+            vocabulary.setSelectedDictionary(restored.activeUserDictionary);
+        }
+        if (restored.activeDictionarySheet) {
+            const targetSheetEl = document.getElementById(`dictionary-sheet-${restored.activeDictionarySheet}`);
+            if (targetSheetEl) {
+                elements.dictionarySheetSelect.value = restored.activeDictionarySheet;
+                doSwitchDictionarySheet(restored.activeDictionarySheet);
+            }
+        }
+
         await initializeWorkers();
 
         console.log('[GUI] GUI initialization completed');
