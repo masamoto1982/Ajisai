@@ -1,3 +1,4 @@
+use crate::builtins::WordShape;
 use crate::coreword_registry::{self, CanonicalHome, CorewordMetadata, WordPurity};
 use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, sort};
 use crate::types::{Capabilities, Stability};
@@ -5,10 +6,11 @@ use crate::types::{Capabilities, Stability};
 use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
 
 macro_rules! module_word {
-    ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
+    ($name:expr, $word_shape:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
         ModuleWord {
             short_name: $name,
             description: $description,
+            word_shape: Some($word_shape),
             executor: $executor,
             purity: $purity,
             effects: $effects,
@@ -19,22 +21,21 @@ macro_rules! module_word {
             capabilities: $caps,
         }
     };
-}
-
-/// Convention for module-word descriptions: an optional leading
-/// `"Form: "`, `"Map: "`, or `"Fold: "` token is stripped from the
-/// user-facing description. The classification is internal metadata and
-/// is not exposed through the WASM/TypeScript/GUI boundary.
-pub(crate) fn strip_signature_prefix(raw: &'static str) -> &'static str {
-    if let Some(rest) = raw.strip_prefix("Form: ") {
-        rest
-    } else if let Some(rest) = raw.strip_prefix("Map: ") {
-        rest
-    } else if let Some(rest) = raw.strip_prefix("Fold: ") {
-        rest
-    } else {
-        raw
-    }
+    ($name:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
+        ModuleWord {
+            short_name: $name,
+            description: $description,
+            word_shape: None,
+            executor: $executor,
+            purity: $purity,
+            effects: $effects,
+            deterministic: $det,
+            safe_preview: $preview,
+            preserves_modes: $preserves,
+            stability: $stability,
+            capabilities: $caps,
+        }
+    };
 }
 
 const MUSIC_WORDS: &[ModuleWord] = &[
@@ -391,7 +392,8 @@ const CRYPTO_WORDS: &[ModuleWord] = &[
 
 const ALGO_WORDS: &[ModuleWord] = &[module_word!(
     "SORT",
-    "Form: Sort vector elements in ascending order",
+    WordShape::Form,
+    "Sort vector elements in ascending order",
     sort::op_sort,
     WordPurity::Pure,
     &[],
@@ -405,7 +407,8 @@ const ALGO_WORDS: &[ModuleWord] = &[module_word!(
 const MATH_WORDS: &[ModuleWord] = &[
     module_word!(
         "SQRT",
-        "Map: Square root. Exact rational roots stay exact; otherwise returns sound interval.",
+        WordShape::Map,
+        "Square root. Exact rational roots stay exact; otherwise returns sound interval.",
         interval_ops::op_sqrt,
         WordPurity::Pure,
         &[],
@@ -417,7 +420,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "SQRT-EPS",
-        "Form: Square root with explicit interval width bound eps.",
+        WordShape::Form,
+        "Square root with explicit interval width bound eps.",
         interval_ops::op_sqrt_eps,
         WordPurity::Pure,
         &[],
@@ -429,7 +433,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "INTERVAL",
-        "Form: Create interval [lo, hi].",
+        WordShape::Form,
+        "Create interval [lo, hi].",
         interval_ops::op_interval,
         WordPurity::Pure,
         &[],
@@ -441,7 +446,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "LOWER",
-        "Map: Lower endpoint of number/interval.",
+        WordShape::Map,
+        "Lower endpoint of number/interval.",
         interval_ops::op_lower,
         WordPurity::Pure,
         &[],
@@ -453,7 +459,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "UPPER",
-        "Map: Upper endpoint of number/interval.",
+        WordShape::Map,
+        "Upper endpoint of number/interval.",
         interval_ops::op_upper,
         WordPurity::Pure,
         &[],
@@ -465,7 +472,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "WIDTH",
-        "Map: Interval width hi-lo.",
+        WordShape::Map,
+        "Interval width hi-lo.",
         interval_ops::op_width,
         WordPurity::Pure,
         &[],
@@ -477,7 +485,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
     module_word!(
         "IS-EXACT",
-        "Map: True for exact number or degenerate interval.",
+        WordShape::Map,
+        "True for exact number or degenerate interval.",
         interval_ops::op_is_exact,
         WordPurity::Pure,
         &[],
@@ -576,7 +585,7 @@ pub(crate) fn module_word_description(module_name: &str, short_name: &str) -> Op
         .words
         .iter()
         .find(|w| w.short_name == short_name)
-        .map(|w| strip_signature_prefix(w.description))
+        .map(|w| w.description)
 }
 
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {

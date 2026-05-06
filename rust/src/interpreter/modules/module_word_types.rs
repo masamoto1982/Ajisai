@@ -1,3 +1,4 @@
+use crate::builtins::WordShape;
 use crate::coreword_registry::WordPurity;
 use crate::error::Result;
 use crate::interpreter::Interpreter;
@@ -9,6 +10,8 @@ pub(super) type ModuleExecutor = fn(&mut Interpreter) -> Result<()>;
 pub(super) struct ModuleWord {
     pub short_name: &'static str,
     pub description: &'static str,
+    #[allow(dead_code)]
+    pub word_shape: Option<WordShape>,
     pub executor: ModuleExecutor,
     pub purity: WordPurity,
     pub effects: &'static [&'static str],

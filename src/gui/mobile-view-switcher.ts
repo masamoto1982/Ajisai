@@ -50,13 +50,13 @@ const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right')
 };
 
 const lookupVisibilityForMode = (mode: ViewMode): Record<keyof MobileElements, boolean> => {
-    const modeMap: Record<ViewMode, Record<keyof MobileElements, boolean>> = {
+    const visibilityByMode: Record<ViewMode, Record<keyof MobileElements, boolean>> = {
         input: { inputArea: false, outputArea: true, stackArea: true, dictionaryArea: true },
         output: { inputArea: true, outputArea: false, stackArea: true, dictionaryArea: true },
         stack: { inputArea: true, outputArea: true, stackArea: false, dictionaryArea: true },
         dictionary: { inputArea: true, outputArea: true, stackArea: true, dictionaryArea: false },
     };
-    return modeMap[mode];
+    return visibilityByMode[mode];
 };
 
 const applyVisibility = (
