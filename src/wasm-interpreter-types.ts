@@ -37,7 +37,7 @@ export interface AjisaiInterpreter {
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
     collect_imported_modules(): string[];
-    collect_module_words_info(module_name: string): Array<[string, string | null]>;
+    collect_module_words_info(module_name: string): Array<[string, string | null, string]>;
     collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
     collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;

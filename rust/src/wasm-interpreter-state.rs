@@ -251,6 +251,9 @@ impl AjisaiInterpreter {
                 if !imported.import_all_public && !imported.imported_words.contains(short_name) {
                     continue;
                 }
+                let signature_type =
+                    interpreter::modules::module_word_signature_type(&upper, short_name)
+                        .unwrap_or("none");
                 let item = js_sys::Array::new();
                 item.push(&JsValue::from_str(name));
                 item.push(
@@ -259,6 +262,7 @@ impl AjisaiInterpreter {
                         .map(JsValue::from)
                         .unwrap_or(JsValue::NULL),
                 );
+                item.push(&JsValue::from_str(signature_type));
                 arr.push(&item);
             }
         }
