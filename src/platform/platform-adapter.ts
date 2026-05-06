@@ -5,6 +5,8 @@ export interface InterpreterStateSnapshot {
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
     readonly demoWordsVersion?: number;
+    readonly activeDictionarySheet?: string;
+    readonly activeUserDictionary?: string;
 }
 
 export interface TablePayload {
@@ -25,6 +27,8 @@ export interface ExportData {
         readonly userWords: unknown;
         readonly importedModules?: unknown;
         readonly demoWordsVersion?: number;
+        readonly activeDictionarySheet?: string;
+        readonly activeUserDictionary?: string;
         readonly updatedAt: string;
     } | null;
 }

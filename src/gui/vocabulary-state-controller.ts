@@ -40,6 +40,7 @@ export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
     readonly updateUserWords: (userWordsInfo: Array<[string, string, string | null, boolean]>) => void;
     readonly updateSearchFilter: (filter: string) => void;
+    readonly setSelectedDictionary: (dictionary: string) => void;
 }
 
 const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
@@ -384,15 +385,27 @@ export const createVocabularyManager = (
         renderUserWordButtons(elements.userWordsDisplay, words);
     };
 
+    const setSelectedDictionary = (dictionary: string): void => {
+        if (!dictionary) return;
+        const optionExists = Array.from(elements.userDictionarySelect.options).some(opt => opt.value === dictionary);
+        if (!optionExists) return;
+        selectedDictionary = dictionary;
+        elements.userDictionarySelect.value = dictionary;
+        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
+        renderUserWordButtons(elements.userWordsDisplay, words);
+    };
+
     elements.userDictionarySelect.addEventListener('change', () => {
         selectedDictionary = elements.userDictionarySelect.value;
         const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
         renderUserWordButtons(elements.userWordsDisplay, words);
+        void onSaveState?.();
     });
 
     return {
         renderBuiltInWords,
         updateUserWords,
-        updateSearchFilter
+        updateSearchFilter,
+        setSelectedDictionary
     };
 };

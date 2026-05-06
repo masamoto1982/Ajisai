@@ -18,6 +18,8 @@ interface InterpreterState {
     userWords: unknown;
     importedModules?: unknown;
     demoWordsVersion?: number;
+    activeDictionarySheet?: string;
+    activeUserDictionary?: string;
     updatedAt: string;
 
     customWords?: unknown;
@@ -157,7 +159,9 @@ class WebPersistence implements Persistence {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
                 userWords: (result.userWords ?? result.customWords) as InterpreterStateSnapshot['userWords'],
                 importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
-                demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion
+                demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion,
+                activeDictionarySheet: result.activeDictionarySheet,
+                activeUserDictionary: result.activeUserDictionary
             };
         });
     }

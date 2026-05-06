@@ -44,7 +44,8 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
         layoutState,
         switchArea,
         doSwitchDictionarySheet,
-        layoutController
+        layoutController,
+        persistence
     } = context;
 
     elements.leftPanelSelect.addEventListener('change', () => {
@@ -59,6 +60,7 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 
     elements.dictionarySheetSelect.addEventListener('change', () => {
         doSwitchDictionarySheet(elements.dictionarySheetSelect.value);
+        void persistence.saveCurrentState();
     });
 
     const setupDoubleTapToTransition = (

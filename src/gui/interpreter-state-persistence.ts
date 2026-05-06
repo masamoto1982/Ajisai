@@ -10,6 +10,13 @@ export interface InterpreterState {
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
     readonly demoWordsVersion?: number;
+    readonly activeDictionarySheet?: string;
+    readonly activeUserDictionary?: string;
+}
+
+export interface RestoredSelection {
+    readonly activeDictionarySheet?: string;
+    readonly activeUserDictionary?: string;
 }
 
 export interface PersistenceCallbacks {
@@ -21,7 +28,7 @@ export interface PersistenceCallbacks {
 export interface Persistence {
     readonly init: () => Promise<void>;
     readonly saveCurrentState: () => Promise<void>;
-    readonly loadDatabaseData: () => Promise<void>;
+    readonly loadDatabaseData: () => Promise<RestoredSelection>;
     readonly fullReset: () => Promise<void>;
     readonly exportUserWords: () => void;
     readonly importUserWords: () => void;
@@ -44,17 +51,33 @@ const toUserWord = (
     definition: getDefinition(`${wordData[0]}@${wordData[1]}`)
 });
 
+const readActiveSelections = (): {
+    activeDictionarySheet?: string;
+    activeUserDictionary?: string;
+} => {
+    const sheetSelect = document.getElementById('dictionary-sheet-select') as HTMLSelectElement | null;
+    const userDictSelect = document.getElementById('user-dictionary-select') as HTMLSelectElement | null;
+    return {
+        activeDictionarySheet: sheetSelect?.value || undefined,
+        activeUserDictionary: userDictSelect?.value || undefined
+    };
+};
+
 const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState => {
     const userWordsInfo = interpreter.collect_user_words_info();
     const userWords: UserWord[] = userWordsInfo.map(wordData =>
         toUserWord(wordData, name => interpreter.lookup_word_definition(name))
     );
 
+    const selections = readActiveSelections();
+
     return {
         stack: interpreter.collect_stack(),
         userWords,
         importedModules: interpreter.collect_imported_modules(),
-        demoWordsVersion: DEMO_WORDS_VERSION
+        demoWordsVersion: DEMO_WORDS_VERSION,
+        activeDictionarySheet: selections.activeDictionarySheet,
+        activeUserDictionary: selections.activeUserDictionary
     };
 };
 
@@ -142,12 +165,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         }
     };
 
-    const loadDatabaseData = async (): Promise<void> => {
-        if (!window.ajisaiInterpreter) return;
+    const loadDatabaseData = async (): Promise<RestoredSelection> => {
+        if (!window.ajisaiInterpreter) return {};
         if (!dbInitialized) {
             console.warn('Database not initialized, loading sample words instead.');
             await loadDemoWords();
-            return;
+            return {};
         }
 
         try {
@@ -211,12 +234,19 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 } else {
                     await loadDemoWords();
                 }
+
+                return {
+                    activeDictionarySheet: state.activeDictionarySheet,
+                    activeUserDictionary: state.activeUserDictionary
+                };
             } else {
                 await loadDemoWords();
+                return {};
             }
         } catch (error) {
             console.error('Failed to load database data:', error);
             showError?.(error as Error);
+            return {};
         }
     };
 
