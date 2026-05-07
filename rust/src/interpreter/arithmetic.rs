@@ -18,6 +18,8 @@ fn extract_scalar_from_value(val: &Value) -> Option<&Fraction> {
             extract_scalar_from_value(&children[0])
         }
         ValueData::Vector(_) => None,
+        ValueData::Tensor { data, .. } if data.len() == 1 => Some(&data[0]),
+        ValueData::Tensor { .. } => None,
         ValueData::Nil => None,
         ValueData::Record { .. } => None,
         ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {

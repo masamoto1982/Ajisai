@@ -152,6 +152,48 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     }
 }
 
+fn tensor_data_to_js_array(
+    data: &[crate::types::fraction::Fraction],
+    shape: &[usize],
+) -> js_sys::Array {
+    let arr = js_sys::Array::new();
+    if shape.is_empty() || shape.len() == 1 {
+        for f in data {
+            let num_obj = js_sys::Object::new();
+            js_sys::Reflect::set(
+                &num_obj,
+                &"numerator".into(),
+                &f.numerator().to_string().into(),
+            )
+            .unwrap();
+            js_sys::Reflect::set(
+                &num_obj,
+                &"denominator".into(),
+                &f.denominator().to_string().into(),
+            )
+            .unwrap();
+            let elem = js_sys::Object::new();
+            js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
+            js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
+            js_sys::Reflect::set(&elem, &"displayHint".into(), &"number".into()).unwrap();
+            arr.push(&elem);
+        }
+    } else {
+        let outer = shape[0];
+        let rest = &shape[1..];
+        let stride: usize = rest.iter().product();
+        for i in 0..outer {
+            let inner = tensor_data_to_js_array(&data[i * stride..(i + 1) * stride], rest);
+            let elem = js_sys::Object::new();
+            js_sys::Reflect::set(&elem, &"type".into(), &"vector".into()).unwrap();
+            js_sys::Reflect::set(&elem, &"value".into(), &inner).unwrap();
+            js_sys::Reflect::set(&elem, &"displayHint".into(), &"auto".into()).unwrap();
+            arr.push(&elem);
+        }
+    }
+    arr
+}
+
 pub(crate) fn arena_node_to_js(
     arena: &ValueArena,
     root_id: NodeId,
@@ -238,6 +280,22 @@ pub(crate) fn arena_node_to_js(
                 for child in children {
                     js_array.push(&arena_node_to_js(arena, *child, child_external));
                 }
+                js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+            }
+        }
+        NodeKind::Tensor { data, shape } => {
+            // Hydrate a dense Tensor at the WASM boundary so the GUI/TS layer
+            // can keep treating values uniformly as nested Vectors.
+            if effective_hint == DisplayHint::String && shape.len() <= 1 {
+                let text: String = data
+                    .iter()
+                    .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
+                    .collect();
+                js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
+                js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
+            } else {
+                let js_array = tensor_data_to_js_array(data, shape);
                 js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
             }

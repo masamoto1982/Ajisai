@@ -39,6 +39,11 @@ fn format_as_interval(value: &Value) -> String {
             };
             format!("[{}, {}]", lo, hi)
         }
+        ValueData::Tensor { data, shape }
+            if shape.as_slice() == [2] && data.len() == 2 =>
+        {
+            format!("[{}, {}]", format_fraction(&data[0]), format_fraction(&data[1]))
+        }
         _ => format_value_recursive(&value.data, 0),
     }
 }
@@ -54,6 +59,7 @@ fn format_value_auto(value: &Value) -> String {
             }
             format_value_recursive(&value.data, 0)
         }
+        ValueData::Tensor { .. } => format_value_recursive(&value.data, 0),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
@@ -105,10 +111,36 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
 
             format!("{} {} {}", open, inner.join(" "), close)
         }
+        ValueData::Tensor { data, shape } => {
+            format_tensor_recursive(data, shape, depth)
+        }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
+}
+
+fn format_tensor_recursive(data: &[Fraction], shape: &[usize], _depth: usize) -> String {
+    if shape.is_empty() {
+        return "[ ]".to_string();
+    }
+    if shape.len() == 1 {
+        if data.is_empty() {
+            return "[ ]".to_string();
+        }
+        let inner: Vec<String> = data.iter().map(format_fraction).collect();
+        return format!("[ {} ]", inner.join(" "));
+    }
+    let outer = shape[0];
+    let rest = &shape[1..];
+    let stride: usize = rest.iter().product();
+    if outer == 0 || stride == 0 {
+        return "[ ]".to_string();
+    }
+    let inner: Vec<String> = (0..outer)
+        .map(|i| format_tensor_recursive(&data[i * stride..(i + 1) * stride], rest, _depth + 1))
+        .collect();
+    format!("[ {} ]", inner.join(" "))
 }
 
 fn format_code_block(tokens: &[super::Token]) -> String {
@@ -181,6 +213,24 @@ fn format_as_string(data: &ValueData) -> String {
 
             format!("'{}'", chars)
         }
+        ValueData::Tensor { data, .. } => {
+            if data.is_empty() {
+                return "''".to_string();
+            }
+            let chars: String = data
+                .iter()
+                .filter_map(|f| {
+                    f.to_i64().and_then(|n| {
+                        if n >= 0 && n <= 0x10FFFF {
+                            char::from_u32(n as u32)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect();
+            format!("'{}'", chars)
+        }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
@@ -229,8 +279,33 @@ fn format_as_boolean(data: &ValueData) -> String {
                             "TRUE"
                         }
                     }
+                    ValueData::Tensor { data, .. } => {
+                        if data.is_empty() {
+                            "FALSE"
+                        } else {
+                            "TRUE"
+                        }
+                    }
                     ValueData::CodeBlock(_) => "TRUE",
                     ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
+                })
+                .collect();
+            format!("{{ {} }}", inner.join(" "))
+        }
+        ValueData::Tensor { data, .. } => {
+            if data.is_empty() {
+                return "FALSE".to_string();
+            }
+            let inner: Vec<&str> = data
+                .iter()
+                .map(|f| {
+                    if f.is_nil() {
+                        "NIL"
+                    } else if f.is_zero() {
+                        "FALSE"
+                    } else {
+                        "TRUE"
+                    }
                 })
                 .collect();
             format!("{{ {} }}", inner.join(" "))
@@ -251,7 +326,9 @@ fn format_as_datetime(data: &ValueData) -> String {
                 format!("@{}/{}", f.numerator(), f.denominator())
             }
         }
-        ValueData::Vector(_) | ValueData::Record { .. } => format_value_recursive(data, 0),
+        ValueData::Vector(_)
+        | ValueData::Tensor { .. }
+        | ValueData::Record { .. } => format_value_recursive(data, 0),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),

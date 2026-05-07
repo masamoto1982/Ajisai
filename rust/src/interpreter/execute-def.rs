@@ -25,6 +25,18 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_chars(c)).collect(),
+            ValueData::Tensor { data, .. } => data
+                .iter()
+                .filter_map(|f| {
+                    f.to_i64().and_then(|n| {
+                        if (0..=0x10FFFF).contains(&n) {
+                            char::from_u32(n as u32)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect(),
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec![],
@@ -52,6 +64,9 @@ fn is_string_like(val: &Value) -> bool {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().all(|c| check_codepoints(c)),
+            ValueData::Tensor { data, .. } => data
+                .iter()
+                .all(|f| f.to_i64().map(|n| (0..=0x10FFFF).contains(&n)).unwrap_or(false)),
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => false,

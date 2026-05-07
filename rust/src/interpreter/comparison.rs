@@ -30,6 +30,15 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             }
             Ok(tensor.data[0].clone())
         }
+        ValueData::Tensor { data, .. } => {
+            if data.len() != 1 {
+                return Err(AjisaiError::create_structure_error(
+                    "scalar value",
+                    "non-scalar value",
+                ));
+            }
+            Ok(data[0].clone())
+        }
         ValueData::Nil => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",

@@ -21,6 +21,21 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool 
     let children: &Vec<Value> = match &val.data {
         ValueData::Vector(v) if !v.is_empty() => v,
         ValueData::Vector(_) => return false,
+        ValueData::Tensor { data, .. } => {
+            if data.is_empty() {
+                return false;
+            }
+            return data.iter().all(|f| {
+                let n: i64 = match f.to_i64() {
+                    Some(n) if (0..=0x10FFFF).contains(&n) => n,
+                    _ => return false,
+                };
+                match char::from_u32(n as u32) {
+                    Some(c) => !c.is_control() || c == '\n' || c == '\r' || c == '\t',
+                    None => false,
+                }
+            });
+        }
         ValueData::Scalar(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
@@ -35,6 +50,7 @@ fn check_char_scalar(child: &Value) -> bool {
     let f: &Fraction = match &child.data {
         ValueData::Scalar(f) => f,
         ValueData::Vector(_) => return false,
+        ValueData::Tensor { .. } => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
         ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
@@ -200,6 +216,9 @@ pub(crate) fn format_value_to_string_repr_with_hint(
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
+            ValueData::Tensor { data, .. } => {
+                data.iter().map(format_fraction_to_string).collect()
+            }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],

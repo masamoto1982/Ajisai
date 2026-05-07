@@ -94,13 +94,33 @@ These are observational only: they describe what shape-aware work the
 runtime did, not what it cost in energy. The names deliberately avoid
 verbs like `energy_saved`.
 
+## Phase II — Dense Vector representation (in progress)
+
+Phase II is now under way. See `docs/dev/vtu-phase-ii-handover.md` for the
+multi-PR plan. The first concrete change is a parallel `Tensor` variant
+on `ValueData`:
+
+- `Vector(Rc<Vec<Value>>)` remains the **nested** form — used for mixed-type
+  vectors and any tree-shaped data.
+- `Tensor { data: Rc<Vec<Fraction>>, shape: Rc<Vec<usize>> }` is the new
+  **dense** form — used when every leaf is a Fraction and the shape is
+  rectangular.
+
+Observable semantics are identical between the two; classification is a
+construction-time decision. PR #1 (this work) only adds the variant and
+makes every consumer match-exhaustive against it. No producer is wired yet,
+so the existing test suite is unchanged. PR #2 will switch the literal
+parser and `apply_*_with_metrics` outputs over to `Tensor`, at which point
+`vtu_tensor_rebuild_count` should drop sharply.
+
 ## Future scope (not implemented)
 
 - `ajisai trace --vtu` / `ajisai trace --energy` displays.
 - `ajisai explain --vtu <word>` per-word classification dump.
-- Fusion-candidate detection across consecutive elementwise ops.
-- Safe-by-construction fusion execution.
-- `ExecutionValue::FlatTensor` / `TensorView` to defer rebuild.
+- Plan-level fusion execution (Phase II PR #4).
+- In-place mutation of dense `Tensor.data` (Phase II PR #5).
+- Pure-plan result memoisation keyed on Fraction digests (Phase II PR #6).
+- Integer-Fraction SIMD extension for `MAP` / `FILTER` kernels (Phase II PR #7).
 - An explicit `EXACT` / `APPROX` boundary (e.g. `TO-F32`, `TO-BF16`)
   before any approximate backend may run.
 - StableHLO / MLIR-style textual dump.

@@ -20,6 +20,7 @@ fn check_value_has_truthy(val: &Value) -> bool {
                 false
             }
         }
+        ValueData::Tensor { data, .. } => data.iter().any(|f| !f.is_zero()),
     }
 }
 

@@ -51,6 +51,16 @@ impl FlowToken {
                 }
                 acc
             }
+            ValueData::Tensor { data, .. } => {
+                let mut acc = Fraction::from(0);
+                for f in data.iter() {
+                    if f.is_nil() {
+                        continue;
+                    }
+                    acc = acc.add(&f.abs());
+                }
+                acc
+            }
             ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Fraction::from(0),
         }
     }

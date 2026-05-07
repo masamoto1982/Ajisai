@@ -35,6 +35,18 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_chars(c)).collect(),
+            ValueData::Tensor { data, .. } => data
+                .iter()
+                .filter_map(|f| {
+                    f.to_i64().and_then(|n| {
+                        if (0..=0x10FFFF).contains(&n) {
+                            char::from_u32(n as u32)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect(),
             ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec![],
         }
     }
@@ -67,6 +79,19 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             "single-element value with integer",
             "multi-element vector",
         )),
+        ValueData::Tensor { data, .. } => {
+            if data.len() == 1 {
+                if !data[0].is_integer() {
+                    return Err(AjisaiError::create_structure_error("integer", "fraction"));
+                }
+                Ok(data[0].numerator())
+            } else {
+                Err(AjisaiError::create_structure_error(
+                    "single-element value with integer",
+                    "multi-element vector",
+                ))
+            }
+        }
         ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "code block",
