@@ -73,7 +73,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
-                let elem: Value = target_val.get_child(i).unwrap().clone();
+                let elem: Value = target_val
+                    .child(i)
+                    .expect("FILTER: child index in 0..len must be valid");
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
                         match execute_hedged_predicate_kernel(
@@ -146,7 +148,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             if results.is_empty() {
                 interp.stack.push(Value::nil());
             } else {
-                interp.stack.push(Value::from_vector(results));
+                interp.stack.push(Value::from_vector_promoted(results));
             }
         }
         OperationTargetMode::Stack => {

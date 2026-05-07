@@ -1,0 +1,6 @@
+{"label":"vtu_tensor_rebuild_count","scenario":"unary_flat_FLOOR_over_3_elements","phase":"pre_phase_ii","value":1,"note":"PR #1 baseline: apply_unary_flat_with_metrics rebuilt FlatTensor -> nested Vector via build_nested_value"}
+{"label":"vtu_tensor_rebuild_count","scenario":"unary_flat_FLOOR_over_3_elements","phase":"post_phase_ii","value":0,"note":"PR #2: FlatTensor::to_value() returns ValueData::Tensor directly; record_rebuild call removed from apply_unary_flat_with_metrics"}
+{"label":"vtu_tensor_rebuild_count","scenario":"binary_broadcast_same_shape","phase":"pre_phase_ii","value":1,"note":"PR #1 baseline: apply_binary_broadcast_with_metrics same-shape branch rebuilt output to nested Vector"}
+{"label":"vtu_tensor_rebuild_count","scenario":"binary_broadcast_same_shape","phase":"post_phase_ii","value":0,"note":"PR #2: output now constructed as ValueData::Tensor directly via FlatTensor::to_value()"}
+{"label":"vtu_tensor_rebuild_count","scenario":"binary_broadcast_projected","phase":"pre_phase_ii","value":1,"note":"PR #1 baseline: projected-broadcast path also rebuilt to nested Vector"}
+{"label":"vtu_tensor_rebuild_count","scenario":"binary_broadcast_projected","phase":"post_phase_ii","value":0,"note":"PR #2: projected-broadcast also returns Tensor directly"}

@@ -59,11 +59,28 @@ fn format_value_auto(value: &Value) -> String {
             }
             format_value_recursive(&value.data, 0)
         }
-        ValueData::Tensor { .. } => format_value_recursive(&value.data, 0),
+        ValueData::Tensor { data, shape } => {
+            if shape.len() == 1 && !data.is_empty() && is_fraction_string_like(data) {
+                return format_as_string(&value.data);
+            }
+            format_value_recursive(&value.data, 0)
+        }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
+}
+
+fn is_fraction_string_like(data: &[Fraction]) -> bool {
+    data.iter().all(|f| {
+        f.is_integer()
+            && f.to_i64().is_some_and(|n| {
+                (0..=0x10FFFF).contains(&n)
+                    && char::from_u32(n as u32).is_some_and(|c| {
+                        !c.is_control() || c == '\n' || c == '\r' || c == '\t'
+                    })
+            })
+    })
 }
 
 /// Returns whether every element can be interpreted as a printable Unicode code point.

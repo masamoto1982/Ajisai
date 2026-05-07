@@ -14,15 +14,6 @@ fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
     }
 }
 
-#[inline]
-fn record_rebuild(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
-    if let Some(m) = metrics.as_deref_mut() {
-        m.vtu_tensor_rebuild_count = m.vtu_tensor_rebuild_count.saturating_add(1);
-        m.vtu_tensor_rebuilt_elements = m
-            .vtu_tensor_rebuilt_elements
-            .saturating_add(elements as u64);
-    }
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct FlatTensor {
@@ -95,7 +86,7 @@ impl FlatTensor {
         if self.shape.is_empty() {
             return Value::from_fraction(self.data[0].clone());
         }
-        build_nested_value(&self.data, &self.shape)
+        Value::from_tensor(self.data.clone(), self.shape.clone())
     }
 }
 
@@ -268,11 +259,10 @@ where
             out_data.push(op(&tensor_a.data[i], &tensor_b.data[i])?);
         }
         let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
-        record_rebuild(&mut metrics, out_tensor.data.len());
         return Ok(out_tensor.to_value());
     }
 
-    if let Some(m) = metrics.as_deref_mut() {
+    if let Some(m) = metrics {
         m.vtu_projected_broadcast_count = m.vtu_projected_broadcast_count.saturating_add(1);
     }
 
@@ -292,7 +282,6 @@ where
     }
 
     let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
-    record_rebuild(&mut metrics, out_tensor.data.len());
     Ok(out_tensor.to_value())
 }
 
@@ -310,7 +299,7 @@ where
     let element_count = tensor.data.len();
     record_flatten(&mut metrics, element_count);
 
-    if let Some(m) = metrics.as_deref_mut() {
+    if let Some(m) = metrics {
         m.vtu_unary_flat_count = m.vtu_unary_flat_count.saturating_add(1);
         m.vtu_allocated_elements = m
             .vtu_allocated_elements
@@ -319,6 +308,5 @@ where
 
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
-    record_rebuild(&mut metrics, result_tensor.data.len());
     Ok(result_tensor.to_value())
 }

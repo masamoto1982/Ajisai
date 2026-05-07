@@ -76,7 +76,10 @@ impl Interpreter {
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
-                    values.push(Value::from_vector_with_hint(nested_values, nested_hint));
+                    values.push(Value::from_vector_promoted_with_hint(
+                        nested_values,
+                        nested_hint,
+                    ));
                     has_other = true;
                     i += consumed;
                 }
@@ -201,7 +204,8 @@ impl Interpreter {
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
-                    self.stack.push(Value::from_vector(values));
+                    self.stack
+                        .push(Value::from_vector_promoted(values));
                     self.semantic_registry.push_hint(element_hint);
                     i += consumed;
                     continue;

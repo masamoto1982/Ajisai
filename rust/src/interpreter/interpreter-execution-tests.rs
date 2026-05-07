@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
-    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_stack_get_basic() {
@@ -86,10 +85,12 @@ ADDTEST
 
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1, "Result should have one element");
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            {
                 assert_eq!(
-                    children[0]
+                    only
                         .as_scalar()
                         .expect("Expected scalar")
                         .numerator()
@@ -97,8 +98,6 @@ ADDTEST
                     "8",
                     "Result should be 8"
                 );
-            } else {
-                panic!("Expected vector result from addition");
             }
         }
     }
@@ -144,10 +143,12 @@ ADDTEST
 
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1, "Result should have one element");
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            {
                 assert_eq!(
-                    children[0]
+                    only
                         .as_scalar()
                         .expect("Expected scalar")
                         .numerator()
@@ -155,8 +156,6 @@ ADDTEST
                     "9",
                     "Result should be 9"
                 );
-            } else {
-                panic!("Expected vector result");
             }
         }
     }
@@ -179,10 +178,12 @@ ADDTEST
 
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1, "Result should have one element");
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            {
                 assert_eq!(
-                    children[0]
+                    only
                         .as_scalar()
                         .expect("Expected scalar")
                         .numerator()
@@ -190,8 +191,6 @@ ADDTEST
                     "150",
                     "Result should be 150"
                 );
-            } else {
-                panic!("Expected vector result");
             }
         }
     }

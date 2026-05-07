@@ -81,6 +81,19 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
         for elem in children.iter() {
             serialize_value_inner_for_hash(elem, bytes);
         }
+        return;
+    }
+
+    if matches!(&val.data, ValueData::Tensor { .. }) {
+        let len = val.len();
+        bytes.push(0x04);
+        bytes.extend_from_slice(&(len as u32).to_le_bytes());
+        for i in 0..len {
+            let child = val
+                .child(i)
+                .expect("Tensor child index in 0..len must be valid");
+            serialize_value_inner_for_hash(&child, bytes);
+        }
     }
 }
 

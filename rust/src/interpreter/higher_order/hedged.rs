@@ -10,7 +10,7 @@ use crate::elastic::{
 use crate::error::Result;
 use crate::interpreter::quantized_block::QuantizedBlock;
 use crate::interpreter::Interpreter;
-use crate::types::{Token, Value};
+use crate::types::{DisplayHint, Token, Value};
 
 fn hedged_mode(mode: ElasticMode) -> bool {
     matches!(mode, ElasticMode::HedgedSafe | ElasticMode::HedgedTrace)
@@ -45,10 +45,13 @@ fn trace_hedged(interp: &Interpreter, msg: &str) {
 }
 
 fn normalize_map_kernel_result(value: Value) -> Value {
+    if value.hint == DisplayHint::String {
+        return value;
+    }
     if value.len() == 1 {
-        if let Some(child) = value.get_child(0) {
+        if let Some(child) = value.child(0) {
             if child.as_scalar().is_some() {
-                return child.clone();
+                return child;
             }
         }
     }
@@ -63,11 +66,12 @@ pub(crate) fn execute_hedged_map_kernel(
     elem: Value,
 ) -> Result<Value> {
     let Some(tokens) = plain_tokens else {
-        return execute_quantized_map_kernel(interp, qb, elem);
+        return execute_quantized_map_kernel(interp, qb, elem).map(normalize_map_kernel_result);
     };
     if fast_guarded_mode(interp.elastic_mode()) {
         if is_quantized_block_guard_valid(interp, qb) {
-            return execute_quantized_map_kernel(interp, qb, elem);
+            return execute_quantized_map_kernel(interp, qb, elem)
+                .map(normalize_map_kernel_result);
         }
         interp.runtime_metrics.hedged_race_fallback_count += 1;
         interp.push_hedged_trace(format!(
@@ -75,10 +79,11 @@ pub(crate) fn execute_hedged_map_kernel(
             op_name
         ));
         let plain_exec = ExecutableCode::CodeBlock(tokens.to_vec());
-        return execute_plain_map_kernel(interp, &plain_exec, elem);
+        return execute_plain_map_kernel(interp, &plain_exec, elem)
+            .map(normalize_map_kernel_result);
     }
     if !hedged_mode(interp.elastic_mode()) || !can_hedge_hof_kernel(op_name) {
-        return execute_quantized_map_kernel(interp, qb, elem);
+        return execute_quantized_map_kernel(interp, qb, elem).map(normalize_map_kernel_result);
     }
     interp.runtime_metrics.hedged_race_started_count += 1;
     interp.push_hedged_trace(format!("hof-race:start op={}", op_name));

@@ -231,6 +231,27 @@ impl Value {
         }
     }
 
+    /// Representation-agnostic child accessor. Works for both `Vector` and
+    /// `Tensor` payloads by materializing a sub-Value (Scalar leaf or
+    /// sub-Tensor) when the receiver is dense. Cloning is cheap because
+    /// inner buffers are reference-counted.
+    ///
+    /// Prefer this over [`get_child`] when the call site can be reached with
+    /// a dense `Tensor` input. Use `get_child` only when the caller is known
+    /// to operate on `Record` or already-nested `Vector` payloads.
+    pub fn child(&self, index: usize) -> Option<Value> {
+        match &self.data {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index).cloned(),
+            ValueData::Scalar(_) if index == 0 => Some(self.clone()),
+            ValueData::Tensor { data, shape } => tensor_child(data, shape, index),
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
+        }
+    }
+
     pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
         if matches!(self.data, ValueData::Tensor { .. }) {
             self.hydrate_tensor_to_vector();
@@ -580,6 +601,109 @@ impl Value {
             hint: DisplayHint::Auto,
             nil_reason: None,
         }
+    }
+
+    /// Like [`from_vector_with_hint`] but promotes the value to a dense
+    /// `Tensor` when every leaf is a Fraction scalar and the shape is
+    /// rectangular. Otherwise the nested form is preserved.
+    ///
+    /// The `String` display hint suppresses promotion at every level so that
+    /// codepoint-based strings retain their nested representation.
+    pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: DisplayHint) -> Self {
+        if values.is_empty() {
+            return Self::nil_with_reason(NilReason::EmptySequence);
+        }
+        if hint == DisplayHint::String {
+            return Self {
+                data: ValueData::Vector(Rc::new(values)),
+                hint,
+                nil_reason: None,
+            };
+        }
+        if let Some((data, shape)) = try_collect_dense(&values) {
+            return Self {
+                data: ValueData::Tensor {
+                    data: Rc::new(data),
+                    shape: Rc::new(shape),
+                },
+                hint,
+                nil_reason: None,
+            };
+        }
+        Self {
+            data: ValueData::Vector(Rc::new(values)),
+            hint,
+            nil_reason: None,
+        }
+    }
+
+    /// Convenience wrapper around [`from_vector_promoted_with_hint`] using
+    /// `DisplayHint::Auto`.
+    pub fn from_vector_promoted(values: Vec<Value>) -> Self {
+        Self::from_vector_promoted_with_hint(values, DisplayHint::Auto)
+    }
+}
+
+/// Walk a list of `Value`s and return `(flat data, shape)` if every leaf is a
+/// Fraction scalar (or a child Tensor) and the shape is rectangular. Returns
+/// `None` if any leaf is non-numeric (NIL, Record, CodeBlock, Vector with
+/// String hint, etc.) or if shapes disagree.
+fn try_collect_dense(values: &[Value]) -> Option<(Vec<Fraction>, Vec<usize>)> {
+    if values.is_empty() {
+        return None;
+    }
+    let first = try_dense_value(&values[0])?;
+    let inner_shape = first.1;
+    let mut data = first.0;
+    for v in values.iter().skip(1) {
+        let (cdata, cshape) = try_dense_value(v)?;
+        if cshape != inner_shape {
+            return None;
+        }
+        data.extend(cdata);
+    }
+    let mut shape = vec![values.len()];
+    shape.extend(inner_shape);
+    Some((data, shape))
+}
+
+/// Materialize the i-th child of a dense Tensor as an owned `Value`. For 1-D
+/// shape `[n]` the child is a Scalar; for higher rank the child is itself a
+/// dense Tensor with the trailing dimensions.
+fn tensor_child(
+    data: &[Fraction],
+    shape: &[usize],
+    index: usize,
+) -> Option<Value> {
+    if shape.is_empty() {
+        return None;
+    }
+    let outer = shape[0];
+    if index >= outer {
+        return None;
+    }
+    if shape.len() == 1 {
+        return Some(Value::from_fraction(data[index].clone()));
+    }
+    let rest: Vec<usize> = shape[1..].to_vec();
+    let stride: usize = rest.iter().product();
+    let slice: Vec<Fraction> = data[index * stride..(index + 1) * stride].to_vec();
+    Some(Value::from_tensor(slice, rest))
+}
+
+fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
+    if v.hint == DisplayHint::String {
+        return None;
+    }
+    match &v.data {
+        ValueData::Scalar(f) => Some((vec![f.clone()], Vec::new())),
+        ValueData::Tensor { data, shape } => Some(((**data).clone(), (**shape).clone())),
+        ValueData::Vector(children) => try_collect_dense(children),
+        ValueData::Nil
+        | ValueData::Record { .. }
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => None,
     }
 }
 

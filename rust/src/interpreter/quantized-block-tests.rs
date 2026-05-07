@@ -55,7 +55,7 @@ fn stack_top_i64(interp: &Interpreter) -> i64 {
         return f.to_i64().expect("scalar should be representable as i64");
     }
     if top.len() == 1 {
-        if let Some(child) = top.get_child(0) {
+        if let Some(child) = top.child(0) {
             if let Some(f) = child.as_scalar() {
                 return f
                     .to_i64()
@@ -76,7 +76,7 @@ fn stack_top_bool(interp: &Interpreter) -> bool {
         return !f.is_zero();
     }
     if top.len() == 1 {
-        if let Some(child) = top.get_child(0) {
+        if let Some(child) = top.child(0) {
             if let Some(f) = child.as_scalar() {
                 return !f.is_zero();
             }
@@ -442,12 +442,12 @@ fn scan_produces_prefix_sums() {
     let top = stack_top(&interp);
     assert_eq!(top.len(), 3, "SCAN result should have 3 elements");
     // Each child may be a scalar or a single-element vector — extract i64 from either.
-    let extract = |v: &Value| -> i64 {
+    let extract = |v: Value| -> i64 {
         if let Some(f) = v.as_scalar() {
             return f.to_i64().expect("scalar should be i64");
         }
         if v.len() == 1 {
-            if let Some(child) = v.get_child(0) {
+            if let Some(child) = v.child(0) {
                 if let Some(f) = child.as_scalar() {
                     return f.to_i64().expect("inner scalar should be i64");
                 }
@@ -455,7 +455,9 @@ fn scan_produces_prefix_sums() {
         }
         panic!("SCAN element is not a numeric scalar or single-element vector");
     };
-    let vals: Vec<i64> = (0..3).map(|i| extract(top.get_child(i).unwrap())).collect();
+    let vals: Vec<i64> = (0..3)
+        .map(|i| extract(top.child(i).expect("len==3 implies child(i) exists for i<3")))
+        .collect();
     assert_eq!(vals, vec![1, 3, 6]);
 }
 
@@ -824,6 +826,10 @@ fn vtu_unary_flat_increments_counter() {
     let m = interp.runtime_metrics();
     assert!(m.vtu_unary_flat_count >= 1, "unary flat path should fire");
     assert!(m.vtu_tensor_flatten_count >= 1);
-    assert!(m.vtu_tensor_rebuild_count >= 1);
+    // VTU Phase II: outputs are now Tensor directly, no rebuild needed.
+    assert_eq!(
+        m.vtu_tensor_rebuild_count, 0,
+        "rebuild path should be retired after Phase II producer switch"
+    );
     assert!(m.vtu_allocated_elements >= 3);
 }

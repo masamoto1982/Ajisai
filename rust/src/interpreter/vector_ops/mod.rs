@@ -16,9 +16,19 @@ pub use structure::{op_concat, op_reverse, op_range, op_reorder, op_collect};
 
 use crate::types::{Value, ValueData};
 
-pub(crate) fn extract_vector_elements(val: &Value) -> &[Value] {
+pub(crate) fn extract_vector_elements(val: &Value) -> Vec<Value> {
     match &val.data {
-        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => children,
-        _ => &[],
+        ValueData::Vector(children) | ValueData::Record { pairs: children, .. } => {
+            children.as_ref().clone()
+        }
+        ValueData::Tensor { .. } => {
+            let n = val.len();
+            let mut out = Vec::with_capacity(n);
+            for i in 0..n {
+                out.push(val.child(i).expect("Tensor child index in 0..len must be valid"));
+            }
+            out
+        }
+        _ => Vec::new(),
     }
 }

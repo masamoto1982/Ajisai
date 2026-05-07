@@ -7,7 +7,7 @@ mod tests {
         if let Some(f) = top.as_scalar() {
             return f.to_i64().expect("scalar i64");
         }
-        let child = top.get_child(0).expect("vector[0]");
+        let child = top.child(0).expect("vector[0]");
         child
             .as_scalar()
             .and_then(|f| f.to_i64())
@@ -80,7 +80,11 @@ mod tests {
         let below_num = below
             .as_scalar()
             .and_then(|f| f.to_i64())
-            .or_else(|| below.get_child(0).and_then(|v| v.as_scalar()).and_then(|f| f.to_i64()));
+            .or_else(|| {
+                below
+                    .child(0)
+                    .and_then(|v| v.as_scalar().and_then(|f| f.to_i64()))
+            });
         assert_eq!(below_num, Some(99));
     }
 

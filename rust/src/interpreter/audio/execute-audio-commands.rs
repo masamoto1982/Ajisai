@@ -171,17 +171,13 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
     })?;
 
 
-    let param_children = match &params.data {
-        ValueData::Vector(v) => v,
-        _ => {
-            interp.stack.push(target);
-            interp.stack.push(params);
-            return Err(AjisaiError::from("ADSR parameters must be a vector"));
-        }
-    };
+    if !params.is_vector() {
+        interp.stack.push(target);
+        interp.stack.push(params);
+        return Err(AjisaiError::from("ADSR parameters must be a vector"));
+    }
 
-
-    if param_children.len() != 4 {
+    if params.len() != 4 {
         interp.stack.push(target);
         interp.stack.push(params);
         return Err(AjisaiError::from(
@@ -197,22 +193,16 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
     }
 
 
-    let attack = param_children[0]
-        .as_scalar()
-        .and_then(|f| f.to_f64())
-        .ok_or_else(|| AjisaiError::from("ADSR attack must be a number"))?;
-    let decay = param_children[1]
-        .as_scalar()
-        .and_then(|f| f.to_f64())
-        .ok_or_else(|| AjisaiError::from("ADSR decay must be a number"))?;
-    let sustain = param_children[2]
-        .as_scalar()
-        .and_then(|f| f.to_f64())
-        .ok_or_else(|| AjisaiError::from("ADSR sustain must be a number"))?;
-    let release = param_children[3]
-        .as_scalar()
-        .and_then(|f| f.to_f64())
-        .ok_or_else(|| AjisaiError::from("ADSR release must be a number"))?;
+    let param_at = |i: usize, label: &str| -> Result<f64> {
+        params
+            .child(i)
+            .and_then(|v| v.as_scalar().and_then(|f| f.to_f64()))
+            .ok_or_else(|| AjisaiError::from(format!("ADSR {} must be a number", label)))
+    };
+    let attack = param_at(0, "attack")?;
+    let decay = param_at(1, "decay")?;
+    let sustain = param_at(2, "sustain")?;
+    let release = param_at(3, "release")?;
 
 
     if attack < 0.0 || decay < 0.0 || release < 0.0 {
