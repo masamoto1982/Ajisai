@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::optimization_hooks;
 use crate::interpreter::simd_ops;
-use crate::interpreter::tensor_ops::apply_binary_broadcast;
+use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, extract_operands_with_flow, nil_passthrough_binary,
     push_flow_result, push_result,
@@ -50,7 +50,12 @@ where
                 ]
             });
 
-            let result = match apply_binary_broadcast(a_val, b_val, op) {
+            let result = match apply_binary_broadcast_with_metrics(
+                a_val,
+                b_val,
+                op,
+                Some(&mut interp.runtime_metrics),
+            ) {
                 Ok(r) => r,
                 Err(e) => {
                     if !is_keep_mode {
@@ -159,6 +164,10 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
             ];
+            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+                .runtime_metrics
+                .vtu_simd_kernel_use_count
+                .saturating_add(1);
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -174,6 +183,10 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
             ];
+            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+                .runtime_metrics
+                .vtu_simd_kernel_use_count
+                .saturating_add(1);
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -214,6 +227,10 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
             ];
+            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+                .runtime_metrics
+                .vtu_simd_kernel_use_count
+                .saturating_add(1);
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -254,6 +271,10 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
             ];
+            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+                .runtime_metrics
+                .vtu_simd_kernel_use_count
+                .saturating_add(1);
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -269,6 +290,10 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                 optimization_hooks::check_in_place_candidate(a, None),
                 optimization_hooks::check_in_place_candidate(b, None),
             ];
+            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+                .runtime_metrics
+                .vtu_simd_kernel_use_count
+                .saturating_add(1);
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();

@@ -1,7 +1,28 @@
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
 use std::rc::Rc;
+
+#[inline]
+fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
+    if let Some(m) = metrics.as_deref_mut() {
+        m.vtu_tensor_flatten_count = m.vtu_tensor_flatten_count.saturating_add(1);
+        m.vtu_tensor_flattened_elements = m
+            .vtu_tensor_flattened_elements
+            .saturating_add(elements as u64);
+    }
+}
+
+#[inline]
+fn record_rebuild(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
+    if let Some(m) = metrics.as_deref_mut() {
+        m.vtu_tensor_rebuild_count = m.vtu_tensor_rebuild_count.saturating_add(1);
+        m.vtu_tensor_rebuilt_elements = m
+            .vtu_tensor_rebuilt_elements
+            .saturating_add(elements as u64);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct FlatTensor {
@@ -192,7 +213,18 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     }
 }
 
-pub(crate) fn apply_binary_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
+/// Metrics-aware tensor broadcast.
+///
+/// When `metrics` is `Some`, observational VTU counters are incremented at
+/// the points where work actually begins, so NIL-rejection and
+/// shape-mismatch errors do not bump them. Pass `None` to skip metrics
+/// accounting (e.g. internal helpers without access to an interpreter).
+pub(crate) fn apply_binary_broadcast_with_metrics<F>(
+    a: &Value,
+    b: &Value,
+    op: F,
+    mut metrics: Option<&mut RuntimeMetrics>,
+) -> Result<Value>
 where
     F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
 {
@@ -201,7 +233,9 @@ where
     }
 
     let tensor_a = FlatTensor::from_value(a)?;
+    record_flatten(&mut metrics, tensor_a.data.len());
     let tensor_b = FlatTensor::from_value(b)?;
+    record_flatten(&mut metrics, tensor_b.data.len());
 
     let out_shape = broadcast_shape(&tensor_a.shape, &tensor_b.shape)?;
     let out_size: usize = if out_shape.is_empty() {
@@ -210,14 +244,27 @@ where
         out_shape.iter().product()
     };
 
+    if let Some(m) = metrics.as_deref_mut() {
+        m.vtu_broadcast_count = m.vtu_broadcast_count.saturating_add(1);
+        m.vtu_allocated_elements = m.vtu_allocated_elements.saturating_add(out_size as u64);
+    }
 
     if tensor_a.shape == tensor_b.shape {
+        if let Some(m) = metrics.as_deref_mut() {
+            m.vtu_same_shape_elementwise_count =
+                m.vtu_same_shape_elementwise_count.saturating_add(1);
+        }
         let mut out_data = Vec::with_capacity(out_size);
         for i in 0..out_size {
             out_data.push(op(&tensor_a.data[i], &tensor_b.data[i])?);
         }
         let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
+        record_rebuild(&mut metrics, out_tensor.data.len());
         return Ok(out_tensor.to_value());
+    }
+
+    if let Some(m) = metrics.as_deref_mut() {
+        m.vtu_projected_broadcast_count = m.vtu_projected_broadcast_count.saturating_add(1);
     }
 
     let out_strides = compute_strides(&out_shape);
@@ -236,17 +283,33 @@ where
     }
 
     let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
+    record_rebuild(&mut metrics, out_tensor.data.len());
     Ok(out_tensor.to_value())
 }
 
-pub(crate) fn apply_unary_flat<F>(val: &Value, op: F) -> Result<Value>
+/// Metrics-aware unary flat tensor operation. See
+/// [`apply_binary_broadcast_with_metrics`] for the metrics contract.
+pub(crate) fn apply_unary_flat_with_metrics<F>(
+    val: &Value,
+    op: F,
+    mut metrics: Option<&mut RuntimeMetrics>,
+) -> Result<Value>
 where
     F: Fn(&Fraction) -> Fraction,
 {
     let tensor = FlatTensor::from_value(val)?;
+    let element_count = tensor.data.len();
+    record_flatten(&mut metrics, element_count);
 
+    if let Some(m) = metrics.as_deref_mut() {
+        m.vtu_unary_flat_count = m.vtu_unary_flat_count.saturating_add(1);
+        m.vtu_allocated_elements = m
+            .vtu_allocated_elements
+            .saturating_add(element_count as u64);
+    }
 
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;
+    record_rebuild(&mut metrics, result_tensor.data.len());
     Ok(result_tensor.to_value())
 }

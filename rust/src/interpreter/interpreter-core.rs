@@ -148,6 +148,38 @@ pub struct RuntimeMetrics {
     pub redundancy_degrade_compiled: u64,
     /// Times the auto-degrade threshold was crossed (demotion to PlainOnly).
     pub redundancy_auto_degrade_count: u64,
+
+    // ── Virtual Tensor Unit / Energy-aware Execution ──────────────────────
+    // These counters are observational proxies for energy / data-movement
+    // cost. They never alter execution semantics; they only describe how
+    // much shape-aware work the runtime did. See
+    // `docs/dev/virtual-tensor-unit-design.md`.
+    /// Number of times a Value was flattened into FlatTensor form.
+    pub vtu_tensor_flatten_count: u64,
+    /// Total scalar elements observed during flattening.
+    pub vtu_tensor_flattened_elements: u64,
+    /// Number of times a FlatTensor was rebuilt into nested Value form.
+    pub vtu_tensor_rebuild_count: u64,
+    /// Total scalar elements rebuilt into Value form.
+    pub vtu_tensor_rebuilt_elements: u64,
+    /// Number of binary broadcast operations that began executing.
+    pub vtu_broadcast_count: u64,
+    /// Number of unary flat tensor operations that began executing.
+    pub vtu_unary_flat_count: u64,
+    /// Output scalar elements allocated by tensor operations.
+    pub vtu_allocated_elements: u64,
+    /// Same-shape elementwise fast paths taken inside tensor ops.
+    pub vtu_same_shape_elementwise_count: u64,
+    /// Real broadcast index-projection paths taken inside tensor ops.
+    pub vtu_projected_broadcast_count: u64,
+    /// SIMD fast paths actually taken (target-arch dependent).
+    pub vtu_simd_kernel_use_count: u64,
+    /// QuantizedBlocks classified as VTU candidates (Strong or Weak).
+    pub vtu_candidate_block_count: u64,
+    /// QuantizedBlocks rejected as not suitable for VTU.
+    pub vtu_rejected_block_count: u64,
+    /// QuantizedBlocks whose VtuHint marked them as fusion candidates.
+    pub vtu_fusion_candidate_count: u64,
 }
 
 pub struct Interpreter {

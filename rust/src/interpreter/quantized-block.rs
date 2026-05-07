@@ -22,6 +22,81 @@ pub enum QuantizedPurity {
     Unknown,
 }
 
+// ── Virtual Tensor Unit (VTU) classification ─────────────────────────────
+//
+// VTU is *not* a physical accelerator. It is an internal classification of
+// pure, shape-aware kernels that lets the runtime explain (and, in the
+// future, schedule) work onto the most appropriate execution surface.
+//
+// Important invariants:
+//   - VtuHint never affects execution semantics. Including it in
+//     `GuardSignature` would cause spurious guard invalidations on what is
+//     fundamentally an explanation field, so it is intentionally kept out.
+//   - All variants are forward-looking; only `CpuScalar`, `WasmSimd`, and
+//     `DenseTensorLoop` map to surfaces Ajisai actually executes today.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VtuBackendCandidate {
+    CpuScalar,
+    WasmSimd,
+    DenseTensorLoop,
+    #[allow(dead_code)]
+    NpuCandidate,
+    #[allow(dead_code)]
+    GpuCandidate,
+    #[allow(dead_code)]
+    TpuCandidate,
+    FallbackInterpreter,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VtuSuitability {
+    StrongCandidate,
+    WeakCandidate,
+    NotSuitable,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DataMovementClass {
+    None,
+    Low,
+    Medium,
+    #[allow(dead_code)]
+    High,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VtuHint {
+    pub suitability: VtuSuitability,
+    pub backend_candidates: Vec<VtuBackendCandidate>,
+    pub data_movement: DataMovementClass,
+    pub reason: &'static str,
+}
+
+impl Default for VtuHint {
+    fn default() -> Self {
+        Self::not_suitable("default")
+    }
+}
+
+impl VtuHint {
+    pub fn not_suitable(reason: &'static str) -> Self {
+        Self {
+            suitability: VtuSuitability::NotSuitable,
+            backend_candidates: vec![VtuBackendCandidate::FallbackInterpreter],
+            data_movement: DataMovementClass::Unknown,
+            reason,
+        }
+    }
+
+    pub fn is_candidate(&self) -> bool {
+        matches!(
+            self.suitability,
+            VtuSuitability::StrongCandidate | VtuSuitability::WeakCandidate
+        )
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KernelKind {
     MapUnaryPure,
@@ -60,6 +135,9 @@ pub struct QuantizedBlock {
     pub can_fuse: bool,
     pub can_short_circuit: bool,
     pub dependency_words: Vec<String>,
+    /// Observational VTU classification. Never participates in
+    /// `GuardSignature`; never affects execution semantics.
+    pub vtu_hint: VtuHint,
 }
 
 /// Returns (inputs_consumed, outputs_produced) for well-known pure builtins.
@@ -400,6 +478,65 @@ fn detect_kernel_kind(
     KernelKind::GenericCompiled
 }
 
+/// Derive a `VtuHint` from kernel classification + purity. This is purely
+/// observational; the runtime ignores the hint when picking an execution
+/// path. The conservative defaults below ensure that side-effecting,
+/// unknown-purity, or non-quantizable blocks never surface as candidates.
+fn infer_vtu_hint(kernel_kind: KernelKind, purity: QuantizedPurity) -> VtuHint {
+    use DataMovementClass::*;
+    use VtuBackendCandidate::*;
+    use VtuSuitability::*;
+
+    if matches!(purity, QuantizedPurity::SideEffecting) {
+        return VtuHint::not_suitable("side-effecting block");
+    }
+
+    match kernel_kind {
+        KernelKind::MapUnaryPure => VtuHint {
+            suitability: StrongCandidate,
+            backend_candidates: vec![
+                CpuScalar,
+                WasmSimd,
+                DenseTensorLoop,
+                NpuCandidate,
+                GpuCandidate,
+            ],
+            data_movement: Low,
+            reason: "elementwise pure map; embarrassingly parallel",
+        },
+        KernelKind::PredicateUnaryPure => VtuHint {
+            suitability: StrongCandidate,
+            backend_candidates: vec![CpuScalar, WasmSimd, DenseTensorLoop],
+            data_movement: Low,
+            reason: "elementwise pure predicate",
+        },
+        KernelKind::FoldBinaryPure => VtuHint {
+            suitability: WeakCandidate,
+            backend_candidates: vec![CpuScalar, DenseTensorLoop],
+            data_movement: Medium,
+            reason: "reduction may depend on order/associativity; \
+                     parallelization requires Approx boundary",
+        },
+        KernelKind::ScanBinaryPure => VtuHint {
+            suitability: WeakCandidate,
+            backend_candidates: vec![CpuScalar, DenseTensorLoop],
+            data_movement: Medium,
+            reason: "scan carries an accumulator; not embarrassingly parallel",
+        },
+        KernelKind::GenericCompiled => match purity {
+            QuantizedPurity::Pure => VtuHint {
+                suitability: WeakCandidate,
+                backend_candidates: vec![CpuScalar, FallbackInterpreter],
+                data_movement: Unknown,
+                reason: "pure but unspecialized",
+            },
+            QuantizedPurity::Unknown => VtuHint::not_suitable("unknown purity"),
+            QuantizedPurity::SideEffecting => VtuHint::not_suitable("side-effecting block"),
+        },
+        KernelKind::NonQuantizable => VtuHint::not_suitable("non-quantizable block"),
+    }
+}
+
 pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option<QuantizedBlock> {
     if !is_quantizable_block(tokens) {
         return None;
@@ -454,6 +591,28 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
         KernelKind::MapUnaryPure | KernelKind::PredicateUnaryPure
     );
 
+    let vtu_hint = infer_vtu_hint(kernel_kind, purity);
+
+    // Count VTU classifications at build time. Cache hits do not bump these
+    // counters, so the totals reflect distinct block builds, not uses.
+    if vtu_hint.is_candidate() {
+        interp.runtime_metrics.vtu_candidate_block_count = interp
+            .runtime_metrics
+            .vtu_candidate_block_count
+            .saturating_add(1);
+    } else {
+        interp.runtime_metrics.vtu_rejected_block_count = interp
+            .runtime_metrics
+            .vtu_rejected_block_count
+            .saturating_add(1);
+    }
+    if eligible_for_fusion || can_fuse {
+        interp.runtime_metrics.vtu_fusion_candidate_count = interp
+            .runtime_metrics
+            .vtu_fusion_candidate_count
+            .saturating_add(1);
+    }
+
     #[cfg(feature = "trace-quant")]
     eprintln!(
         "[trace-quant] quantized block generated: input={:?} output={:?} purity={:?} deps={:?}",
@@ -475,5 +634,6 @@ pub fn quantize_code_block(tokens: &[Token], interp: &mut Interpreter) -> Option
         can_fuse,
         can_short_circuit,
         dependency_words,
+        vtu_hint,
     })
 }
