@@ -175,6 +175,55 @@ impl Value {
         }
     }
 
+    /// Borrow the children of an iterable `Value` as a `Cow<[Value]>`.
+    /// `Vector` and `Record` borrow their backing slice directly; `Tensor`
+    /// materializes its children once into an owned `Vec<Value>`. Non-iterable
+    /// kinds (`Scalar`, `Nil`, `CodeBlock`, handles) return `None`.
+    ///
+    /// Use this in non-hot consumers (JSON serialization, sort, structural
+    /// helpers) so they only need a single iteration path regardless of
+    /// whether the value is `Vector` or `Tensor`. For tight numeric loops
+    /// prefer [`as_dense_tensor`] which returns `&[Fraction]` without
+    /// materializing per-element `Value`s.
+    pub fn as_vector_view(&self) -> Option<std::borrow::Cow<'_, [Value]>> {
+        match &self.data {
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+                Some(std::borrow::Cow::Borrowed(v.as_slice()))
+            }
+            ValueData::Tensor { data, shape } => Some(std::borrow::Cow::Owned(
+                tensor_to_nested_values(data, shape),
+            )),
+            ValueData::Scalar(_)
+            | ValueData::Nil
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => None,
+        }
+    }
+
+    /// Return a `Cow<Value>` that is guaranteed to use a non-`Tensor`
+    /// representation. `Tensor` values are converted into a nested
+    /// `ValueData::Vector` (preserving `hint` and `nil_reason`); every other
+    /// variant is borrowed in place.
+    ///
+    /// Useful at user-visible boundaries (PRINT, JSON-EXPORT, GUI hand-off,
+    /// error message formatting) where the caller wants to operate on a
+    /// uniform `Vector` shape without caring whether the producer happened to
+    /// emit a dense `Tensor`.
+    pub fn ensure_hydrated(&self) -> std::borrow::Cow<'_, Value> {
+        match &self.data {
+            ValueData::Tensor { data, shape } => {
+                let children = tensor_to_nested_values(data, shape);
+                std::borrow::Cow::Owned(Value {
+                    data: ValueData::Vector(Rc::new(children)),
+                    hint: self.hint,
+                    nil_reason: self.nil_reason.clone(),
+                })
+            }
+            _ => std::borrow::Cow::Borrowed(self),
+        }
+    }
+
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
@@ -802,5 +851,78 @@ mod vtu_tensor_tests {
         dense.push_child(Value::from_int(3));
         assert!(matches!(dense.data, ValueData::Vector(_)));
         assert_eq!(dense.len(), 3);
+    }
+
+    // -----------------------------------------------------------------------
+    // VTU Phase III boundary helpers: as_vector_view / ensure_hydrated
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn as_vector_view_borrows_for_vector_owns_for_tensor() {
+        use std::borrow::Cow;
+
+        let nested = Value::from_children(vec![Value::from_int(1), Value::from_int(2)]);
+        match nested.as_vector_view() {
+            Some(Cow::Borrowed(slice)) => {
+                assert_eq!(slice.len(), 2);
+            }
+            other => panic!("expected Cow::Borrowed for Vector, got {:?}", other.is_some()),
+        }
+
+        let dense = Value::from_tensor(vec![Fraction::from(1), Fraction::from(2)], vec![2]);
+        match dense.as_vector_view() {
+            Some(Cow::Owned(vec)) => {
+                assert_eq!(vec.len(), 2);
+                assert_eq!(vec[0].as_scalar().map(|f| f.to_i64().unwrap()), Some(1));
+                assert_eq!(vec[1].as_scalar().map(|f| f.to_i64().unwrap()), Some(2));
+            }
+            other => panic!(
+                "expected Cow::Owned for Tensor, got {}",
+                if other.is_some() { "Borrowed" } else { "None" }
+            ),
+        }
+    }
+
+    #[test]
+    fn as_vector_view_returns_none_for_scalar_and_nil() {
+        assert!(Value::from_int(7).as_vector_view().is_none());
+        assert!(Value::nil().as_vector_view().is_none());
+    }
+
+    #[test]
+    fn ensure_hydrated_borrows_non_tensor_in_place() {
+        use std::borrow::Cow;
+
+        let nested = Value::from_children(vec![Value::from_int(1)]);
+        match nested.ensure_hydrated() {
+            Cow::Borrowed(_) => {}
+            Cow::Owned(_) => panic!("Vector should not be re-allocated"),
+        }
+
+        let scalar = Value::from_int(3);
+        match scalar.ensure_hydrated() {
+            Cow::Borrowed(_) => {}
+            Cow::Owned(_) => panic!("Scalar should be borrowed in place"),
+        }
+    }
+
+    #[test]
+    fn ensure_hydrated_converts_tensor_into_vector_preserving_hint() {
+        use std::borrow::Cow;
+
+        let mut dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3)],
+            vec![3],
+        );
+        dense.hint = DisplayHint::Number;
+        let hydrated = dense.ensure_hydrated();
+        match hydrated {
+            Cow::Owned(v) => {
+                assert!(matches!(v.data, ValueData::Vector(_)));
+                assert_eq!(v.hint, DisplayHint::Number);
+                assert_eq!(v.len(), 3);
+            }
+            Cow::Borrowed(_) => panic!("Tensor should hydrate into an owned Vector"),
+        }
     }
 }
