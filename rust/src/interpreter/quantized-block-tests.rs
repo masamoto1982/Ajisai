@@ -1,5 +1,6 @@
 use crate::interpreter::quantized_block::{
     is_quantizable_block, quantize_code_block, KernelKind, QuantizedArity, QuantizedPurity,
+    VtuSuitability,
 };
 use crate::interpreter::Interpreter;
 use crate::types::{Token, Value};
@@ -706,4 +707,123 @@ fn arity_fully_known_still_fixed() {
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();
     assert_eq!(qb.input_arity, QuantizedArity::Fixed(1));
     assert_eq!(qb.output_arity, QuantizedArity::Fixed(1));
+}
+
+// ---------------------------------------------------------------------------
+// Virtual Tensor Unit (VTU) classification
+// ---------------------------------------------------------------------------
+
+#[test]
+fn vtu_hint_map_unary_is_strong_candidate() {
+    // `[ 1 ] +` is the const-vector pattern detected as MapUnaryPure.
+    let mut interp = make_interp();
+    let tokens = vec![
+        Token::VectorStart,
+        num("1"),
+        Token::VectorEnd,
+        sym("+"),
+    ];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::MapUnaryPure);
+    assert_eq!(qb.vtu_hint.suitability, VtuSuitability::StrongCandidate);
+    assert!(qb.vtu_hint.is_candidate());
+}
+
+#[test]
+fn vtu_hint_predicate_unary_is_strong_candidate() {
+    let mut interp = make_interp();
+    let tokens = vec![sym("NOT")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::PredicateUnaryPure);
+    assert_eq!(qb.vtu_hint.suitability, VtuSuitability::StrongCandidate);
+}
+
+#[test]
+fn vtu_hint_fold_binary_is_weak_candidate() {
+    // A bare `+` with no const-vector wrapper is FoldBinaryPure.
+    let mut interp = make_interp();
+    let tokens = vec![sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::FoldBinaryPure);
+    // Reductions are weak candidates because parallel reduction needs an
+    // Approx boundary; Ajisai is exact-by-default.
+    assert_eq!(qb.vtu_hint.suitability, VtuSuitability::WeakCandidate);
+}
+
+#[test]
+fn vtu_hint_generic_pure_is_weak_candidate() {
+    // Two pushes plus DUP — quantizable but no kernel pattern, so generic.
+    let mut interp = make_interp();
+    let tokens = vec![num("1"), num("2"), sym("DUP")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert_eq!(qb.kernel_kind, KernelKind::GenericCompiled);
+    assert_eq!(qb.purity, QuantizedPurity::Pure);
+    assert_eq!(qb.vtu_hint.suitability, VtuSuitability::WeakCandidate);
+}
+
+#[test]
+fn vtu_metrics_increment_on_quantize() {
+    let mut interp = make_interp();
+    let baseline = interp.runtime_metrics().vtu_candidate_block_count;
+    let tokens = vec![sym("NOT")];
+    let _ = quantize_code_block(&tokens, &mut interp).unwrap();
+    let after = interp.runtime_metrics().vtu_candidate_block_count;
+    assert_eq!(after, baseline + 1);
+}
+
+#[test]
+fn vtu_default_metrics_are_zero() {
+    let interp = make_interp();
+    let m = interp.runtime_metrics();
+    assert_eq!(m.vtu_tensor_flatten_count, 0);
+    assert_eq!(m.vtu_tensor_flattened_elements, 0);
+    assert_eq!(m.vtu_tensor_rebuild_count, 0);
+    assert_eq!(m.vtu_tensor_rebuilt_elements, 0);
+    assert_eq!(m.vtu_broadcast_count, 0);
+    assert_eq!(m.vtu_unary_flat_count, 0);
+    assert_eq!(m.vtu_allocated_elements, 0);
+    assert_eq!(m.vtu_same_shape_elementwise_count, 0);
+    assert_eq!(m.vtu_projected_broadcast_count, 0);
+    assert_eq!(m.vtu_simd_kernel_use_count, 0);
+    assert_eq!(m.vtu_candidate_block_count, 0);
+    assert_eq!(m.vtu_rejected_block_count, 0);
+    assert_eq!(m.vtu_fusion_candidate_count, 0);
+}
+
+#[test]
+fn vtu_same_shape_broadcast_increments_counters() {
+    // `[ 1 2 3 ] [ 4 5 6 ] +` -> same-shape elementwise.
+    let interp = run_code("[ 1 2 3 ] [ 4 5 6 ] +");
+    let m = interp.runtime_metrics();
+    assert!(m.vtu_broadcast_count >= 1, "broadcast count should fire");
+    assert!(
+        m.vtu_same_shape_elementwise_count >= 1,
+        "same-shape fast path should fire"
+    );
+    assert_eq!(m.vtu_projected_broadcast_count, 0);
+    assert!(m.vtu_tensor_flatten_count >= 2, "two operands flattened");
+    assert!(m.vtu_allocated_elements >= 3);
+}
+
+#[test]
+fn vtu_projected_broadcast_increments_counters() {
+    // Scalar broadcast over a 3-vector exercises the projection path.
+    let interp = run_code("[ 1 2 3 ] [ 10 ] +");
+    let m = interp.runtime_metrics();
+    assert!(m.vtu_broadcast_count >= 1);
+    assert!(
+        m.vtu_projected_broadcast_count >= 1,
+        "projection path should fire when shapes differ"
+    );
+}
+
+#[test]
+fn vtu_unary_flat_increments_counter() {
+    // FLOOR over a vector exercises apply_unary_flat_with_metrics.
+    let interp = run_code("[ 1/2 3/2 5/2 ] FLOOR");
+    let m = interp.runtime_metrics();
+    assert!(m.vtu_unary_flat_count >= 1, "unary flat path should fire");
+    assert!(m.vtu_tensor_flatten_count >= 1);
+    assert!(m.vtu_tensor_rebuild_count >= 1);
+    assert!(m.vtu_allocated_elements >= 3);
 }

@@ -7,7 +7,8 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 
 use super::tensor_ops::{
-    apply_binary_broadcast, apply_unary_flat, build_nested_value, FlatTensor,
+    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
+    FlatTensor,
 };
 
 fn apply_tensor_metadata(
@@ -251,7 +252,7 @@ where
     }
 
     if val.is_vector() {
-        match apply_unary_flat(&val, op) {
+        match apply_unary_flat_with_metrics(&val, op, Some(&mut interp.runtime_metrics)) {
             Ok(result) => {
                 interp.stack.push(result);
                 return Ok(());
@@ -323,13 +324,18 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    let result = apply_binary_broadcast(&a_val, &b_val, |x, y| {
-        if y.is_zero() {
-            Err(AjisaiError::from("Modulo by zero"))
-        } else {
-            Ok(x.modulo(y))
-        }
-    });
+    let result = apply_binary_broadcast_with_metrics(
+        &a_val,
+        &b_val,
+        |x, y| {
+            if y.is_zero() {
+                Err(AjisaiError::from("Modulo by zero"))
+            } else {
+                Ok(x.modulo(y))
+            }
+        },
+        Some(&mut interp.runtime_metrics),
+    );
 
     match result {
         Ok(r) => {

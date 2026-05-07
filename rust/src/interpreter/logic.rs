@@ -1,6 +1,9 @@
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::interpreter_core::RuntimeMetrics;
+use crate::interpreter::tensor_ops::{
+    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, FlatTensor,
+};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
-use crate::interpreter::tensor_ops::{apply_binary_broadcast, apply_unary_flat, FlatTensor};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
@@ -28,14 +31,17 @@ fn compute_inverted_fraction(f: &Fraction) -> Fraction {
     }
 }
 
-fn compute_inverted_value(val: &Value) -> Result<Value> {
+fn compute_inverted_value(
+    val: &Value,
+    metrics: Option<&mut RuntimeMetrics>,
+) -> Result<Value> {
     if val.is_nil() {
         return Ok(Value::nil());
     }
     if let Some(f) = val.as_scalar() {
         return Ok(Value::from_fraction(compute_inverted_fraction(f)));
     }
-    apply_unary_flat(val, compute_inverted_fraction)
+    apply_unary_flat_with_metrics(val, compute_inverted_fraction, metrics)
 }
 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
@@ -53,7 +59,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            let result = match compute_inverted_value(&val) {
+            let result = match compute_inverted_value(&val, Some(&mut interp.runtime_metrics)) {
                 Ok(v) => v,
                 Err(e) => {
                     if !is_keep_mode {
@@ -70,7 +76,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             let source: Vec<Value> = interp.stack.iter().cloned().collect();
             let mut results: Vec<Value> = Vec::with_capacity(source.len());
             for value in &source {
-                results.push(compute_inverted_value(value)?);
+                results.push(compute_inverted_value(value, Some(&mut interp.runtime_metrics))?);
             }
 
             if is_keep_mode {
@@ -126,11 +132,16 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let result = apply_binary_broadcast(&a_val, &b_val, |a, b| {
-                let a_truthy = !a.is_zero();
-                let b_truthy = !b.is_zero();
-                Ok(Fraction::from(if a_truthy && b_truthy { 1 } else { 0 }))
-            })?;
+            let result = apply_binary_broadcast_with_metrics(
+                &a_val,
+                &b_val,
+                |a, b| {
+                    let a_truthy = !a.is_zero();
+                    let b_truthy = !b.is_zero();
+                    Ok(Fraction::from(if a_truthy && b_truthy { 1 } else { 0 }))
+                },
+                Some(&mut interp.runtime_metrics),
+            )?;
             interp.stack.push(result);
             Ok(())
         }
@@ -217,11 +228,16 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let result = apply_binary_broadcast(&a_val, &b_val, |a, b| {
-                let a_truthy = !a.is_zero();
-                let b_truthy = !b.is_zero();
-                Ok(Fraction::from(if a_truthy || b_truthy { 1 } else { 0 }))
-            })?;
+            let result = apply_binary_broadcast_with_metrics(
+                &a_val,
+                &b_val,
+                |a, b| {
+                    let a_truthy = !a.is_zero();
+                    let b_truthy = !b.is_zero();
+                    Ok(Fraction::from(if a_truthy || b_truthy { 1 } else { 0 }))
+                },
+                Some(&mut interp.runtime_metrics),
+            )?;
             interp.stack.push(result);
             Ok(())
         }
