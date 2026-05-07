@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 
 fn sort_fractions_by_introsort(values: &mut [(usize, Fraction)]) {
     values.sort_unstable_by(|a, b| a.1.cmp(&b.1));
@@ -28,29 +28,12 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            let materialized_children: Option<Vec<Value>> = match &val.data {
-                ValueData::Tensor { data, .. } => Some(
-                    data.iter().map(|f| Value::from_fraction(f.clone())).collect(),
-                ),
-                _ => None,
-            };
-            let children: &Vec<Value> = match (&val.data, &materialized_children) {
-                (_, Some(v)) => v,
-                (ValueData::Vector(children), _) => children,
-                (
-                    ValueData::Record {
-                        pairs: children, ..
-                    },
-                    _,
-                ) => children,
-                (
-                    ValueData::Scalar(_)
-                    | ValueData::Nil
-                    | ValueData::CodeBlock(_)
-                    | ValueData::ProcessHandle(_)
-                    | ValueData::SupervisorHandle(_),
-                    _,
-                ) => {
+            // VTU Phase III boundary helper: as_vector_view() borrows for
+            // Vector/Record and materializes once for Tensor, collapsing the
+            // old representation-juggling.
+            let children = match val.as_vector_view() {
+                Some(view) => view,
+                None => {
                     if !is_keep_mode {
                         interp.stack.push(val);
                     }
@@ -59,7 +42,6 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                         "other format",
                     ));
                 }
-                (ValueData::Tensor { .. }, _) => unreachable!(),
             };
 
             if children.is_empty() {
@@ -88,7 +70,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 .iter()
                 .map(|(orig_idx, _)| *orig_idx)
                 .collect::<Vec<usize>>();
-            let sorted_v: Vec<Value> = reorder_values_by_permutation(children, &perm);
+            let sorted_v: Vec<Value> = reorder_values_by_permutation(&children, &perm);
             interp.stack.push(Value::from_vector(sorted_v));
             Ok(())
         }
