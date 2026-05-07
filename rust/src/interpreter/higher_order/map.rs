@@ -59,6 +59,38 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
+            // VTU Phase III bulk fast path: when target is a 1-D dense Tensor
+            // and the kernel is a fast unary, iterate `Tensor.data` directly
+            // and emit a Tensor output, skipping per-element Value
+            // materialization. Disabled in hedged modes so the
+            // quantized/plain race still observes per-element kernel events.
+            if let ExecutableCode::QuantizedBlock(qb) = &executable {
+                if !super::hedged::hedged_mode(interp.elastic_mode()) {
+                if let Some(bulk) = super::fast_kernels::try_bulk_quantized_map(
+                    interp, qb, &target_val,
+                ) {
+                    match bulk {
+                        Ok(out) => {
+                            let result =
+                                Value::from_tensor(out.data, vec![n_elements]);
+                            if is_keep_mode {
+                                interp.stack.push(target_val);
+                            }
+                            interp.stack.push(result);
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            if !is_keep_mode {
+                                interp.stack.push(target_val);
+                            }
+                            interp.stack.push(code_val);
+                            return Err(e);
+                        }
+                    }
+                }
+                }
+            }
+
             let mut results: Vec<Value> = Vec::with_capacity(n_elements);
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);

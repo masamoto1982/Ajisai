@@ -115,6 +115,231 @@ pub(super) fn try_execute_fast_quantized_map_kernel(
     execute_fast_unary_map_kernel(&kernel, elem)
 }
 
+/// Apply a unary fast kernel to every Fraction in `data`, producing a fresh
+/// `Vec<Fraction>` of the same length. Returns `Err` for division/modulo by
+/// zero. Caller is responsible for wrapping the output as a `Tensor` with
+/// the appropriate shape.
+fn apply_fast_unary_map_to_data(
+    kernel: &FastUnaryMapKernel,
+    data: &[Fraction],
+) -> Result<Vec<Fraction>> {
+    let mut out = Vec::with_capacity(data.len());
+    match kernel {
+        FastUnaryMapKernel::AddConst(c) => {
+            for x in data {
+                out.push(x.add(c));
+            }
+        }
+        FastUnaryMapKernel::SubConst(c) => {
+            for x in data {
+                out.push(x.sub(c));
+            }
+        }
+        FastUnaryMapKernel::MulConst(c) => {
+            for x in data {
+                out.push(x.mul(c));
+            }
+        }
+        FastUnaryMapKernel::DivConst(c) => {
+            if c.is_zero() {
+                return Err(AjisaiError::from("MAP fast kernel: division by zero"));
+            }
+            for x in data {
+                out.push(x.div(c));
+            }
+        }
+        FastUnaryMapKernel::ModConst(c) => {
+            if c.is_zero() {
+                return Err(AjisaiError::from("MAP fast kernel: modulo by zero"));
+            }
+            for x in data {
+                out.push(x.modulo(c));
+            }
+        }
+        FastUnaryMapKernel::EqConst(c) => {
+            for x in data {
+                out.push(if x == c { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+            }
+        }
+        FastUnaryMapKernel::LtConst(c) => {
+            for x in data {
+                out.push(if x.lt(c) { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+            }
+        }
+        FastUnaryMapKernel::Abs => {
+            for x in data {
+                out.push(x.abs());
+            }
+        }
+        FastUnaryMapKernel::Neg => {
+            let neg_one = Fraction::from(-1_i64);
+            for x in data {
+                out.push(x.mul(&neg_one));
+            }
+        }
+        FastUnaryMapKernel::Not => {
+            for x in data {
+                out.push(if x.is_zero() { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn apply_fast_unary_predicate_to_data(
+    kernel: &FastUnaryPredicateKernel,
+    data: &[Fraction],
+) -> Vec<bool> {
+    let mut out = Vec::with_capacity(data.len());
+    match kernel {
+        FastUnaryPredicateKernel::EqConst(c) => {
+            for x in data {
+                out.push(x == c);
+            }
+        }
+        FastUnaryPredicateKernel::LtConst(c) => {
+            for x in data {
+                out.push(x.lt(c));
+            }
+        }
+        FastUnaryPredicateKernel::Not => {
+            for x in data {
+                out.push(x.is_zero());
+            }
+        }
+    }
+    out
+}
+
+fn fold_fast_binary_over_data(
+    kernel: FastBinaryFoldKernel,
+    init: Fraction,
+    data: &[Fraction],
+) -> Result<Fraction> {
+    let mut acc = init;
+    match kernel {
+        FastBinaryFoldKernel::Add => {
+            for x in data {
+                acc = acc.add(x);
+            }
+        }
+        FastBinaryFoldKernel::Sub => {
+            for x in data {
+                acc = acc.sub(x);
+            }
+        }
+        FastBinaryFoldKernel::Mul => {
+            for x in data {
+                acc = acc.mul(x);
+            }
+        }
+        FastBinaryFoldKernel::Div => {
+            for x in data {
+                if x.is_zero() {
+                    return Err(AjisaiError::from("FOLD fast kernel: division by zero"));
+                }
+                acc = acc.div(x);
+            }
+        }
+        FastBinaryFoldKernel::Mod => {
+            for x in data {
+                if x.is_zero() {
+                    return Err(AjisaiError::from("FOLD fast kernel: modulo by zero"));
+                }
+                acc = acc.modulo(x);
+            }
+        }
+    }
+    Ok(acc)
+}
+
+/// Result of an attempted bulk Tensor MAP. `None` means the input was not a
+/// 1-D dense Tensor or the kernel is not fast-bulk eligible — caller falls
+/// back to the per-element path.
+pub(crate) struct BulkMapResult {
+    pub data: Vec<Fraction>,
+}
+
+pub(super) fn try_bulk_quantized_map(
+    interp: &mut Interpreter,
+    qb: &QuantizedBlock,
+    target: &Value,
+) -> Option<Result<BulkMapResult>> {
+    let (data, shape) = target.as_dense_tensor()?;
+    if shape.len() != 1 {
+        return None;
+    }
+    let line = qb.compiled_plan.lines.first()?;
+    let kernel = detect_fast_unary_map_kernel(&line.source_tokens)?;
+    interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
+    interp.runtime_metrics.vtu_bulk_kernel_use_count =
+        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
+    Some(apply_fast_unary_map_to_data(&kernel, data).map(|d| BulkMapResult { data: d }))
+}
+
+pub(crate) struct BulkPredicateResult {
+    pub flags: Vec<bool>,
+}
+
+pub(super) fn try_bulk_quantized_predicate(
+    interp: &mut Interpreter,
+    qb: &QuantizedBlock,
+    target: &Value,
+) -> Option<BulkPredicateResult> {
+    let (data, shape) = target.as_dense_tensor()?;
+    if shape.len() != 1 {
+        return None;
+    }
+    let line = qb.compiled_plan.lines.first()?;
+    let kernel = detect_fast_unary_predicate_kernel(&line.source_tokens)?;
+    interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
+    interp.runtime_metrics.vtu_bulk_kernel_use_count =
+        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
+    Some(BulkPredicateResult {
+        flags: apply_fast_unary_predicate_to_data(&kernel, data),
+    })
+}
+
+/// Extract the single Fraction inside a length-1 vector/tensor or a Scalar.
+fn singleton_scalar(v: &Value) -> Option<Fraction> {
+    if let Some(f) = v.as_scalar() {
+        return Some(f.clone());
+    }
+    if v.len() == 1 {
+        let child = v.child(0)?;
+        return child.as_scalar().cloned();
+    }
+    None
+}
+
+pub(super) fn try_bulk_quantized_fold(
+    interp: &mut Interpreter,
+    qb: &QuantizedBlock,
+    init: &Value,
+    target: &Value,
+) -> Option<Result<Value>> {
+    let init_scalar = singleton_scalar(init)?;
+    let (data, shape) = target.as_dense_tensor()?;
+    if shape.len() != 1 {
+        return None;
+    }
+    let line = qb.compiled_plan.lines.first()?;
+    let kernel = detect_fast_binary_fold_kernel(&line.source_tokens)?;
+    interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
+    interp.runtime_metrics.vtu_bulk_kernel_use_count =
+        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
+    // Mirror the init shape: callers using `[ x ]` expect a Tensor[1] back,
+    // while a bare Scalar accumulator should stay Scalar.
+    let wrap_singleton = init.as_scalar().is_none();
+    Some(fold_fast_binary_over_data(kernel, init_scalar, data).map(|f| {
+        if wrap_singleton {
+            Value::from_tensor(vec![f], vec![1])
+        } else {
+            Value::from_number(f)
+        }
+    }))
+}
+
 fn detect_fast_unary_predicate_kernel(tokens: &[Token]) -> Option<FastUnaryPredicateKernel> {
     if tokens.len() == 1 {
         if let Token::Symbol(sym) = &tokens[0] {

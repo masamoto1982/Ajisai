@@ -12,7 +12,7 @@ use crate::interpreter::quantized_block::QuantizedBlock;
 use crate::interpreter::Interpreter;
 use crate::types::{DisplayHint, Token, Value};
 
-fn hedged_mode(mode: ElasticMode) -> bool {
+pub(super) fn hedged_mode(mode: ElasticMode) -> bool {
     matches!(mode, ElasticMode::HedgedSafe | ElasticMode::HedgedTrace)
 }
 

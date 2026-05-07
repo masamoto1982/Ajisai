@@ -46,6 +46,22 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 ));
             }
 
+            // VTU Phase III bulk fast path: COUNT over a 1-D dense Tensor
+            // with a fast unary predicate. Disabled in hedged modes.
+            if let ExecutableCode::QuantizedBlock(qb) = &executable {
+                if !super::hedged_mode_active(interp) {
+                    if let Some(bulk) =
+                        super::try_bulk_quantized_predicate_pub(interp, qb, &target_val)
+                    {
+                        let count: i64 = bulk.flags.into_iter().filter(|b| *b).count() as i64;
+                        interp
+                            .stack
+                            .push(Value::from_vector(vec![Value::from_int(count)]));
+                        return Ok(());
+                    }
+                }
+            }
+
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
             let saved_hints: Vec<DisplayHint> =

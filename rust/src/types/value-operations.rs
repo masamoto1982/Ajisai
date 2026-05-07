@@ -163,6 +163,18 @@ impl Value {
         matches!(self.data, ValueData::Tensor { .. })
     }
 
+    /// Borrow the dense numeric backing of a `Tensor` value as
+    /// `(data, shape)`. Returns `None` for any other representation.
+    /// Use this on hot HOF paths to iterate `Fraction`s directly without
+    /// materializing per-element `Value`s.
+    #[inline]
+    pub fn as_dense_tensor(&self) -> Option<(&[Fraction], &[usize])> {
+        match &self.data {
+            ValueData::Tensor { data, shape } => Some((data.as_slice(), shape.as_slice())),
+            _ => None,
+        }
+    }
+
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
