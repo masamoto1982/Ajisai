@@ -46,6 +46,20 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                 ));
             }
 
+            // VTU Phase III bulk fast path: ANY over a 1-D dense Tensor with
+            // a fast unary predicate. Disabled in hedged modes.
+            if let ExecutableCode::QuantizedBlock(qb) = &executable {
+                if !super::hedged_mode_active(interp) {
+                    if let Some(bulk) =
+                        super::try_bulk_quantized_predicate_pub(interp, qb, &target_val)
+                    {
+                        let result = bulk.flags.into_iter().any(|b| b);
+                        interp.stack.push(Value::from_bool(result));
+                        return Ok(());
+                    }
+                }
+            }
+
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
             let saved_target = interp.operation_target_mode;

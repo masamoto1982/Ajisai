@@ -67,6 +67,40 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
+            // VTU Phase III bulk fast path: 1-D dense Tensor + fast binary
+            // fold kernel + scalar/Tensor[1] init → fold over Fractions
+            // directly. Disabled in hedged modes so the race observes events.
+            if let ExecutableCode::QuantizedBlock(qb) = &executable {
+                if !crate::interpreter::higher_order::hedged_mode_active(interp) {
+                    if let Some(bulk) =
+                        crate::interpreter::higher_order::try_bulk_quantized_fold_pub(
+                            interp,
+                            qb,
+                            &init_val,
+                            &target_val,
+                        )
+                    {
+                        match bulk {
+                            Ok(result) => {
+                                if is_keep_mode {
+                                    interp.stack.push(target_val);
+                                }
+                                interp.stack.push(result);
+                                return Ok(());
+                            }
+                            Err(e) => {
+                                if !is_keep_mode {
+                                    interp.stack.push(target_val);
+                                }
+                                interp.stack.push(init_val);
+                                interp.stack.push(code_val);
+                                return Err(e);
+                            }
+                        }
+                    }
+                }
+            }
+
             let mut accumulator: Value = init_val;
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);

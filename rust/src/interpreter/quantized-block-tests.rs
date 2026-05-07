@@ -833,3 +833,79 @@ fn vtu_unary_flat_increments_counter() {
     );
     assert!(m.vtu_allocated_elements >= 3);
 }
+
+// ---------------------------------------------------------------------------
+// VTU Phase III bulk fast path: 1-D dense Tensor inputs to MAP/FILTER/FOLD/
+// ANY/ALL/COUNT iterate the underlying `&[Fraction]` directly.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn vtu_phase_iii_map_bulk_kernel_fires_and_matches_per_element() {
+    let bulk = run_code("[ 1 2 3 4 ] { [ 2 ] * } MAP");
+    let plain = run_code("{ [ 2 ] * } 'DBL' DEF [ 1 2 3 4 ] 'DBL' MAP");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    let m = bulk.runtime_metrics();
+    assert!(
+        m.vtu_bulk_kernel_use_count >= 1,
+        "MAP over dense Tensor + fast unary kernel should take the bulk path"
+    );
+}
+
+#[test]
+fn vtu_phase_iii_filter_bulk_kernel_matches_per_element() {
+    let bulk = run_code("[ 1 2 3 4 ] { [ 2 ] = } FILTER");
+    let plain = run_code("{ [ 2 ] = } 'EQ2' DEF [ 1 2 3 4 ] 'EQ2' FILTER");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    assert!(bulk.runtime_metrics().vtu_bulk_kernel_use_count >= 1);
+}
+
+#[test]
+fn vtu_phase_iii_fold_bulk_kernel_matches_per_element() {
+    let bulk = run_code("[ 1 2 3 4 ] [ 0 ] { + } FOLD");
+    let plain = run_code("{ + } 'PLUS' DEF [ 1 2 3 4 ] [ 0 ] 'PLUS' FOLD");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    assert!(bulk.runtime_metrics().vtu_bulk_kernel_use_count >= 1);
+}
+
+#[test]
+fn vtu_phase_iii_any_bulk_kernel_matches_per_element() {
+    let bulk = run_code("[ 1 2 3 ] { [ 2 ] = } ANY");
+    let plain = run_code("{ [ 2 ] = } 'EQ2' DEF [ 1 2 3 ] 'EQ2' ANY");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    assert!(bulk.runtime_metrics().vtu_bulk_kernel_use_count >= 1);
+}
+
+#[test]
+fn vtu_phase_iii_all_bulk_kernel_matches_per_element() {
+    // Predicate `{ [ 0 ] = }` -> elements equal to 0; none in [1 2 3] so ALL=FALSE.
+    let bulk = run_code("[ 1 2 3 ] { [ 0 ] = } ALL");
+    let plain = run_code("{ [ 0 ] = } 'EQ0' DEF [ 1 2 3 ] 'EQ0' ALL");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    assert!(bulk.runtime_metrics().vtu_bulk_kernel_use_count >= 1);
+}
+
+#[test]
+fn vtu_phase_iii_count_bulk_kernel_matches_per_element() {
+    let bulk = run_code("[ 1 2 3 4 ] { [ 2 ] = } COUNT");
+    let plain = run_code("{ [ 2 ] = } 'EQ2' DEF [ 1 2 3 4 ] 'EQ2' COUNT");
+    assert_eq!(bulk.get_stack(), plain.get_stack());
+    assert!(bulk.runtime_metrics().vtu_bulk_kernel_use_count >= 1);
+}
+
+#[test]
+fn vtu_phase_iii_map_bulk_division_by_zero_propagates() {
+    let result = run_code_result("[ 1 2 3 ] { [ 0 ] / } MAP");
+    assert!(result.is_err(), "division by zero should error out");
+}
+
+#[test]
+fn vtu_phase_iii_bulk_metric_zero_for_user_word_kernel() {
+    // User word does not match a fast unary kernel -> per-element path,
+    // bulk metric stays at 0.
+    let interp = run_code("{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP");
+    assert_eq!(
+        interp.runtime_metrics().vtu_bulk_kernel_use_count,
+        0,
+        "user-word kernel should not take the bulk path"
+    );
+}

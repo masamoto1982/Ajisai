@@ -180,6 +180,10 @@ pub struct RuntimeMetrics {
     pub vtu_rejected_block_count: u64,
     /// QuantizedBlocks whose VtuHint marked them as fusion candidates.
     pub vtu_fusion_candidate_count: u64,
+    /// HOF invocations that took a Tensor-bulk fast path, iterating
+    /// `Tensor.data: &[Fraction]` directly without per-element Value
+    /// materialization. Phase III metric.
+    pub vtu_bulk_kernel_use_count: u64,
 }
 
 pub struct Interpreter {
