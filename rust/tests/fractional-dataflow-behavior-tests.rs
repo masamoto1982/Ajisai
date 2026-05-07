@@ -29,22 +29,29 @@ fn assert_number(val: &Value, num: i64, denom: i64) {
 
     if let Some(f) = val.as_scalar() {
         assert_eq!(f, &expected, "Expected {}/{}, got {}", num, denom, f);
-    } else if let Some(vec) = val.as_vector() {
-        if vec.len() == 1 {
-            let f = vec[0]
-                .as_scalar()
-                .unwrap_or_else(|| panic!("Expected scalar in vector, got {:?}", vec[0]));
-            assert_eq!(f, &expected, "Expected {}/{}, got {}", num, denom, f);
-        } else {
-            panic!(
-                "Expected single scalar, got vector of length {}: {:?}",
-                vec.len(),
-                val
-            );
-        }
-    } else {
-        panic!("Expected scalar, got {:?}", val);
+        return;
     }
+
+    if val.is_vector() {
+        if val.len() == 1 {
+            let child = val
+                .child(0)
+                .unwrap_or_else(|| panic!("Expected child(0) for len==1, got {:?}", val));
+            let f = child
+                .as_scalar()
+                .cloned()
+                .unwrap_or_else(|| panic!("Expected scalar in vector, got {:?}", child));
+            assert_eq!(f, expected, "Expected {}/{}, got {}", num, denom, f);
+            return;
+        }
+        panic!(
+            "Expected single scalar, got vector of length {}: {:?}",
+            val.len(),
+            val
+        );
+    }
+
+    panic!("Expected scalar, got {:?}", val);
 }
 
 
@@ -353,8 +360,8 @@ async fn test_interpreter_flow_tracking_vector_ops() {
         .unwrap();
     assert_eq!(stack.len(), 1);
 
-    let vec = stack[0].as_vector().unwrap();
-    assert_eq!(vec.len(), 3);
+    assert!(stack[0].is_vector(), "Expected vector result, got {:?}", stack[0]);
+    assert_eq!(stack[0].len(), 3);
     assert!(interp.verify_all_flows().is_ok());
 }
 
