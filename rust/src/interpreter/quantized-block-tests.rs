@@ -997,3 +997,80 @@ fn vtu_phase_iii_sort_accepts_tensor_input() {
         .collect();
     assert_eq!(collected, vec![1, 2, 3]);
 }
+
+// ---------------------------------------------------------------------------
+// VTU Phase III consumer ops: COMPARE / LOGIC / CAST must accept a dense
+// Tensor input and behave identically to the nested-Vector input path.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn vtu_phase_iii_eq_dense_tensor_singleton_matches_scalar() {
+    // [ 5 ] becomes a Tensor[1] under Phase II producers. EQ between a
+    // scalar and a singleton tensor must collapse to TRUE / FALSE.
+    let true_case = run_code("[ 5 ] [ 5 ] =");
+    let false_case = run_code("[ 5 ] [ 6 ] =");
+    let t = stack_top(&true_case);
+    let f = stack_top(&false_case);
+    let truthy = |v: &Value| -> bool {
+        v.as_scalar()
+            .map(|f| !f.is_zero())
+            .or_else(|| v.child(0).and_then(|c| c.as_scalar().map(|f| !f.is_zero())))
+            .unwrap_or(false)
+    };
+    assert!(truthy(t), "5 = 5 should be truthy");
+    assert!(!truthy(f), "5 = 6 should be falsy");
+}
+
+#[test]
+fn vtu_phase_iii_lt_dense_tensor_against_scalar() {
+    let interp = run_code("[ 1 ] [ 2 ] <");
+    let t = stack_top(&interp);
+    let truthy = t
+        .as_scalar()
+        .map(|f| !f.is_zero())
+        .or_else(|| t.child(0).and_then(|c| c.as_scalar().map(|f| !f.is_zero())))
+        .unwrap_or(false);
+    assert!(truthy, "1 < 2 should be truthy");
+}
+
+#[test]
+fn vtu_phase_iii_not_over_dense_tensor() {
+    // NOT applied to [ 0 1 0 ] should produce [ 1 0 1 ] regardless of layout.
+    let interp = run_code("[ 0 1 0 ] NOT");
+    let top = stack_top(&interp);
+    assert_eq!(top.shape(), vec![3]);
+    let collected: Vec<i64> = (0..top.len())
+        .map(|i| top.child(i).unwrap().as_scalar().unwrap().to_i64().unwrap())
+        .collect();
+    assert_eq!(collected, vec![1, 0, 1]);
+}
+
+#[test]
+fn vtu_phase_iii_and_or_truthiness_on_dense_tensor() {
+    // AND/OR consume from the stack; the operands are Tensor[1] under Phase II.
+    // [ 1 ] AND [ 1 ] -> 1, [ 0 ] AND [ 1 ] -> 0, [ 0 ] OR [ 1 ] -> 1
+    let and_true = run_code("[ 1 ] [ 1 ] AND");
+    let and_false = run_code("[ 0 ] [ 1 ] AND");
+    let or_true = run_code("[ 0 ] [ 1 ] OR");
+    let truthy = |interp: &Interpreter| -> bool {
+        let t = stack_top(interp);
+        t.as_scalar()
+            .map(|f| !f.is_zero())
+            .or_else(|| t.child(0).and_then(|c| c.as_scalar().map(|f| !f.is_zero())))
+            .unwrap_or(false)
+    };
+    assert!(truthy(&and_true), "[1] AND [1] should be truthy");
+    assert!(!truthy(&and_false), "[0] AND [1] should be falsy");
+    assert!(truthy(&or_true), "[0] OR [1] should be truthy");
+}
+
+#[test]
+fn vtu_phase_iii_chars_decomposes_string_independent_of_target_layout() {
+    // CHARS expects a string and produces the code-point sequence. The string
+    // representation is preserved by Display::String hint, but verify the
+    // round-trip CHARS -> JOIN over the produced sequence matches the input
+    // even if intermediates pass through Tensor producers.
+    let interp = run_code("'ABC' CHARS JOIN");
+    let top = stack_top(&interp);
+    assert_eq!(format!("{}", top), "'ABC'");
+}
