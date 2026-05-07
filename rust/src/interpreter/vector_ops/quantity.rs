@@ -144,7 +144,10 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
 
         let mut sizes = Vec::with_capacity(n);
         for i in 0..n {
-            match extract_bigint_from_value(args_val.get_child(i).unwrap()) {
+            let child = args_val
+                .child(i)
+                .expect("SPLIT: child index in 0..len must be valid");
+            match extract_bigint_from_value(&child) {
                 Ok(bi) => match bi.to_usize() {
                     Some(s) => sizes.push(s),
                     None => {

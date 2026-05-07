@@ -286,6 +286,22 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                         {
                             children[0].data == b_val.data
                         }
+                        (ValueData::Scalar(_), ValueData::Tensor { .. })
+                            if b_val.len() == 1 =>
+                        {
+                            b_val
+                                .child(0)
+                                .map(|c| a_val.data == c.data)
+                                .unwrap_or(false)
+                        }
+                        (ValueData::Tensor { .. }, ValueData::Scalar(_))
+                            if a_val.len() == 1 =>
+                        {
+                            a_val
+                                .child(0)
+                                .map(|c| c.data == b_val.data)
+                                .unwrap_or(false)
+                        }
                         _ => false,
                     }
                 }

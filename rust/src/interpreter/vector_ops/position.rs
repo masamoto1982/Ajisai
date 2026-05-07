@@ -27,9 +27,14 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
         )));
     }
 
-    let index = extract_integer_from_value(args_val.get_child(0).unwrap())
+    let index_child = args_val
+        .child(0)
+        .ok_or_else(|| AjisaiError::from(format!("{} missing index", word)))?;
+    let index = extract_integer_from_value(&index_child)
         .map_err(|_| AjisaiError::from(format!("{} index must be an integer", word)))?;
-    let element = args_val.get_child(1).unwrap().clone();
+    let element = args_val
+        .child(1)
+        .ok_or_else(|| AjisaiError::from(format!("{} missing element", word)))?;
     Ok((index, element))
 }
 
@@ -50,7 +55,9 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
 
                     let actual_index = normalize_index(index, len)
                         .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
-                    Ok(target_val.get_child(actual_index).unwrap().clone())
+                    target_val
+                        .child(actual_index)
+                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })
                 })?;
 
             if is_keep_mode {

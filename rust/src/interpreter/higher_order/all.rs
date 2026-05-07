@@ -56,7 +56,9 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
             let mut result = true;
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
-                let elem = target_val.get_child(i).unwrap().clone();
+                let elem = target_val
+                    .child(i)
+                    .expect("ALL: child index in 0..len must be valid");
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
                         match execute_hedged_predicate_kernel(

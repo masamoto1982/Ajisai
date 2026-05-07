@@ -78,7 +78,9 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
-                let elem: Value = target_val.get_child(i).unwrap().clone();
+                let elem: Value = target_val
+                    .child(i)
+                    .expect("FOLD: child index in 0..len must be valid");
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
                         match execute_hedged_fold_kernel(
@@ -286,14 +288,19 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 }
 
                 if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                    results.push(unwrapped.get_child(0).unwrap().clone());
+                    let yielded = unwrapped
+                        .child(0)
+                        .expect("len==2 implies child(0) exists");
+                    results.push(yielded);
 
-                    let next_state: &Value = unwrapped.get_child(1).unwrap();
+                    let next_state = unwrapped
+                        .child(1)
+                        .expect("len==2 implies child(1) exists");
                     if next_state.is_nil() {
                         break;
                     }
 
-                    state = Value::from_vector(vec![next_state.clone()]);
+                    state = Value::from_vector(vec![next_state]);
                     continue;
                 }
 
@@ -365,14 +372,19 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         }
 
                         if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                            results.push(unwrapped.get_child(0).unwrap().clone());
+                            let yielded = unwrapped
+                                .child(0)
+                                .expect("len==2 implies child(0) exists");
+                            results.push(yielded);
 
-                            let next_state: &Value = unwrapped.get_child(1).unwrap();
+                            let next_state = unwrapped
+                                .child(1)
+                                .expect("len==2 implies child(1) exists");
                             if next_state.is_nil() {
                                 break;
                             }
 
-                            state = Value::from_vector(vec![next_state.clone()]);
+                            state = Value::from_vector(vec![next_state]);
                             continue;
                         }
 
@@ -472,7 +484,9 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
             let mut error: Option<AjisaiError> = None;
             for i in 0..target_val.len() {
-                let elem: Value = target_val.get_child(i).unwrap().clone();
+                let elem: Value = target_val
+                    .child(i)
+                    .expect("SCAN: child index in 0..len must be valid");
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => {
                         match execute_hedged_fold_kernel(
@@ -539,7 +553,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                     .into_iter()
                     .map(|v| {
                         if is_vector_value(&v) && v.len() == 1 {
-                            v.get_child(0).unwrap().clone()
+                            v.child(0).expect("len==1 implies child(0) exists")
                         } else {
                             v
                         }
@@ -621,7 +635,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
                     .into_iter()
                     .map(|v| {
                         if is_vector_value(&v) && v.len() == 1 {
-                            v.get_child(0).unwrap().clone()
+                            v.child(0).expect("len==1 implies child(0) exists")
                         } else {
                             v
                         }

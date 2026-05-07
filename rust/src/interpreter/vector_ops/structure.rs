@@ -44,7 +44,7 @@ fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
     let mut result_vec = Vec::new();
     for value in ordered {
         if value.is_vector() {
-            result_vec.extend_from_slice(extract_vector_elements(&value));
+            result_vec.extend(extract_vector_elements(&value));
         } else {
             result_vec.push(value);
         }
@@ -54,7 +54,10 @@ fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
 }
 
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
-    let bigint = extract_bigint_from_value(args_val.get_child(index).unwrap())
+    let child = args_val
+        .child(index)
+        .ok_or_else(|| AjisaiError::from(format!("RANGE missing {}", label)))?;
+    let bigint = extract_bigint_from_value(&child)
         .map_err(|_| AjisaiError::from(format!("RANGE {} must be an integer", label)))?;
     bigint
         .to_i64()
@@ -97,7 +100,10 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
 
         let mut indices = Vec::with_capacity(n);
         for i in 0..n {
-            let idx = extract_integer_from_value(indices_val.get_child(i).unwrap())
+            let child = indices_val
+                .child(i)
+                .ok_or_else(|| AjisaiError::from("REORDER missing index"))?;
+            let idx = extract_integer_from_value(&child)
                 .map_err(|_| AjisaiError::from("REORDER indices must be integers"))?;
             indices.push(idx);
         }
@@ -253,7 +259,12 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                                 index: idx,
                                 length: len,
                             })?;
-                        result.push(target_val.get_child(actual).unwrap().clone());
+                        result.push(target_val.child(actual).ok_or(
+                            AjisaiError::IndexOutOfBounds {
+                                index: idx,
+                                length: len,
+                            },
+                        )?);
                     }
 
                     if result.is_empty() {

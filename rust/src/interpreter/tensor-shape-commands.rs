@@ -98,12 +98,10 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
 
     let mut new_shape: Vec<usize> = Vec::with_capacity(dim_count);
     for i in 0..dim_count {
-        let dim = match shape_val
-            .get_child(i)
-            .unwrap()
-            .as_scalar()
-            .and_then(|f| f.as_usize())
-        {
+        let dim_child = shape_val
+            .child(i)
+            .expect("RESHAPE: child index in 0..len must be valid");
+        let dim = match dim_child.as_scalar().and_then(|f| f.as_usize()) {
             Some(d) => d,
             None => {
                 interp.stack.push(data_val);
@@ -376,8 +374,8 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    let fill_value = match args_val.get_child(n - 1).and_then(|v| v.as_scalar()) {
-        Some(f) => f.clone(),
+    let fill_value = match args_val.child(n - 1).and_then(|v| v.as_scalar().cloned()) {
+        Some(f) => f,
         None => {
             interp.stack.push(args_val);
             return Err(AjisaiError::from("FILL value must be a scalar"));
@@ -388,12 +386,10 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
 
     let mut shape = Vec::with_capacity(shape_len);
     for i in 0..shape_len {
-        let dim = match args_val
-            .get_child(i)
-            .unwrap()
-            .as_scalar()
-            .and_then(|f| f.as_usize())
-        {
+        let dim_child = args_val
+            .child(i)
+            .expect("FILL: child index in 0..len must be valid");
+        let dim = match dim_child.as_scalar().and_then(|f| f.as_usize()) {
             Some(d) if d > 0 => d,
             Some(_) | None => {
                 interp.stack.push(args_val);

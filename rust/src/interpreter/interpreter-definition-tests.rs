@@ -18,38 +18,19 @@ mod tests {
 
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 3, "Result should have 3 elements");
-                assert_eq!(
-                    children[0]
-                        .as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "2",
-                    "First element should be 2"
-                );
-                assert_eq!(
-                    children[1]
-                        .as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "3",
-                    "Second element should be 3"
-                );
-                assert_eq!(
-                    children[2]
-                        .as_scalar()
-                        .expect("Expected scalar")
-                        .numerator()
-                        .to_string(),
-                    "4",
-                    "Third element should be 4"
-                );
-            } else {
-                panic!("Expected vector result");
-            }
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 3, "Result should have 3 elements");
+            let extract = |i: usize| -> String {
+                val.child(i)
+                    .expect("child within len")
+                    .as_scalar()
+                    .expect("Expected scalar")
+                    .numerator()
+                    .to_string()
+            };
+            assert_eq!(extract(0), "2", "First element should be 2");
+            assert_eq!(extract(1), "3", "Second element should be 3");
+            assert_eq!(extract(2), "4", "Third element should be 4");
         }
     }
 
@@ -205,12 +186,10 @@ mod tests {
             vec![3],
             "Vector should have 3 elements including NIL"
         );
-        if let ValueData::Vector(children) = &vec_val.data {
-            assert_eq!(children.len(), 3, "Data should have 3 elements");
-            assert!(children[1].is_nil(), "Second element should be NIL");
-        } else {
-            panic!("Expected vector");
-        }
+        assert!(vec_val.is_vector(), "Expected vector");
+        assert_eq!(vec_val.len(), 3, "Data should have 3 elements");
+        let second = vec_val.child(1).expect("len==3 implies child(1) exists");
+        assert!(second.is_nil(), "Second element should be NIL");
     }
 
     #[tokio::test]

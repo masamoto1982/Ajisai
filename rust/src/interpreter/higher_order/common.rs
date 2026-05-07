@@ -44,7 +44,10 @@ pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool>
 
     if is_vector_value(&condition_result) {
         if condition_result.len() == 1 {
-            return Ok(is_truthy_boolean(condition_result.get_child(0).unwrap()));
+            let child = condition_result
+                .child(0)
+                .expect("len==1 implies child(0) exists");
+            return Ok(is_truthy_boolean(&child));
         }
         return Err(AjisaiError::create_structure_error(
             "boolean result from FILTER code",

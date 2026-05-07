@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
-    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
@@ -33,15 +32,15 @@ mod tests {
 
         assert_eq!(interp.stack.len(), 1, "Stack should have one element");
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1, "Result should have one element");
-                if let Some(f) = children[0].as_scalar() {
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            {
+                if let Some(f) = only.as_scalar() {
                     assert_eq!(f.to_i64().unwrap(), 15, "Result should be 15");
                 } else {
                     panic!("Expected scalar inside vector");
                 }
-            } else {
-                panic!("Expected vector result");
             }
         }
     }
@@ -360,12 +359,10 @@ mod tests {
             result.err()
         );
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1);
-                assert_eq!(children[0].as_scalar().unwrap().to_i64().unwrap(), 10);
-            } else {
-                panic!("Expected vector result");
-            }
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1);
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            assert_eq!(only.as_scalar().unwrap().to_i64().unwrap(), 10);
         }
     }
 
@@ -411,15 +408,15 @@ mod tests {
 
         assert_eq!(interp.stack.len(), 1, "Stack should have 1 element");
         if let Some(val) = interp.stack.last() {
-            if let ValueData::Vector(children) = &val.data {
-                assert_eq!(children.len(), 1, "Result should have one element");
-                if let Some(f) = children[0].as_scalar() {
+            assert!(val.is_vector(), "Expected vector result");
+            assert_eq!(val.len(), 1, "Result should have one element");
+            let only = val.child(0).expect("len==1 implies child(0) exists");
+            {
+                if let Some(f) = only.as_scalar() {
                     assert_eq!(f.to_i64().unwrap(), 10, "Result should be 10");
                 } else {
                     panic!("Expected scalar inside vector");
                 }
-            } else {
-                panic!("Expected vector result");
             }
         }
     }
@@ -469,14 +466,10 @@ mod tests {
         let result = interp.execute("DEMO@C4").await;
         assert!(result.is_ok(), "Qualified DEMO@C4 should work: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
-            let scalar = val
-                .as_scalar()
-                .or_else(|| {
-                    val.as_vector()
-                        .and_then(|children| children.first())
-                        .and_then(|child| child.as_scalar())
-                })
-                .expect("DEMO@C4 should resolve to a numeric value");
+            let scalar_owned = val.as_scalar().cloned().or_else(|| {
+                val.child(0).and_then(|c| c.as_scalar().cloned())
+            });
+            let scalar = scalar_owned.expect("DEMO@C4 should resolve to a numeric value");
             assert_eq!(scalar.to_i64().unwrap(), 999,
                 "DEMO@C4 should remain the user-defined value");
         }

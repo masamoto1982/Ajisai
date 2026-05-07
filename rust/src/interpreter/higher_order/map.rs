@@ -70,7 +70,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
             let mut error: Option<AjisaiError> = None;
             for i in 0..n_elements {
-                let elem: Value = target_val.get_child(i).unwrap().clone();
+                let elem: Value = target_val
+                    .child(i)
+                    .expect("MAP: child index in 0..len must be valid");
                 match &executable {
                     ExecutableCode::QuantizedBlock(qb) => match execute_hedged_map_kernel(
                         interp,
@@ -96,11 +98,17 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                 Some(result_val) => {
                                     let result_hint: DisplayHint =
                                         interp.semantic_registry.pop_hint();
+                                    let is_string_result = result_hint == DisplayHint::String
+                                        || result_val.hint == DisplayHint::String;
                                     if is_vector_value(&result_val)
                                         && result_val.len() == 1
-                                        && result_hint != DisplayHint::String
+                                        && !is_string_result
                                     {
-                                        results.push(result_val.get_child(0).unwrap().clone());
+                                        results.push(
+                                            result_val
+                                                .child(0)
+                                                .expect("len==1 implies child(0) exists"),
+                                        );
                                     } else {
                                         results.push(result_val);
                                     }
@@ -133,7 +141,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 return Err(e);
             }
 
-            interp.stack.push(Value::from_vector(results));
+            interp.stack.push(Value::from_vector_promoted(results));
         }
         OperationTargetMode::Stack => {
             let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

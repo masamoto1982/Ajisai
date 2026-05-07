@@ -7,7 +7,7 @@ use num_traits::ToPrimitive;
 
 #[inline]
 pub(crate) fn is_vector_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
+    matches!(&val.data, ValueData::Vector(_) | ValueData::Tensor { .. })
 }
 
 #[inline]
