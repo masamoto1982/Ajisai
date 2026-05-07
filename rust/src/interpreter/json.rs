@@ -300,14 +300,14 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
 }
 
 fn extract_string_content_from_value(val: &Value) -> String {
-    if let ValueData::Vector(chars) = &val.data {
-        if chars.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
-            return chars
+    if let Some(view) = val.as_vector_view() {
+        if view.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
+            return view
                 .iter()
                 .filter_map(|c| {
                     if let ValueData::Scalar(f) = &c.data {
                         f.to_i64().and_then(|n| {
-                            if n >= 0 && n <= 0x10FFFF {
+                            if (0..=0x10FFFF).contains(&n) {
                                 char::from_u32(n as u32)
                             } else {
                                 None

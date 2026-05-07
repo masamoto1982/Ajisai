@@ -4,7 +4,7 @@ use crate::interpreter::cast::cast_value_helpers::{
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::{Interpreter, OperationTargetMode};
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     match interp.operation_target_mode {
@@ -117,7 +117,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 return Err(AjisaiError::from("JOIN: expected Vector, got Nil"));
             }
 
-            if let ValueData::Vector(children) = &val.data {
+            if let Some(children) = val.as_vector_view() {
                 if children.is_empty() {
                     interp.stack.push(val);
                     return Err(AjisaiError::from(
@@ -201,7 +201,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 }
 
 
-                if let ValueData::Vector(children) = &elem.data {
+                if let Some(children) = elem.as_vector_view() {
                     if children.is_empty() {
                         interp.stack = results;
                         interp.stack.push(elem);

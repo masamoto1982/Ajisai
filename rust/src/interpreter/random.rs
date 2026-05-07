@@ -152,7 +152,6 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
-    use crate::types::ValueData;
 
     #[tokio::test]
     async fn test_csprng_rejects_stack_mode() {
@@ -175,11 +174,8 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         let val = &interp.stack[0];
-        if let ValueData::Vector(children) = &val.data {
-            assert_eq!(children.len(), 1);
-        } else {
-            panic!("Expected Vector");
-        }
+        assert!(val.is_vector(), "Expected vector-like value");
+        assert_eq!(val.len(), 1);
     }
 
     #[tokio::test]
@@ -194,11 +190,8 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         let val = &interp.stack[0];
-        if let ValueData::Vector(children) = &val.data {
-            assert_eq!(children.len(), 5);
-        } else {
-            panic!("Expected Vector");
-        }
+        assert!(val.is_vector(), "Expected vector-like value");
+        assert_eq!(val.len(), 5);
     }
 
     #[tokio::test]
@@ -214,11 +207,8 @@ mod tests {
         assert_eq!(interp.stack.len(), 1);
 
         let val = &interp.stack[0];
-        if let ValueData::Vector(children) = &val.data {
-            assert_eq!(children.len(), 3);
-        } else {
-            panic!("Expected Vector");
-        }
+        assert!(val.is_vector(), "Expected vector-like value");
+        assert_eq!(val.len(), 3);
     }
 
     #[tokio::test]
@@ -254,10 +244,7 @@ mod tests {
         assert!(result.is_ok());
 
         let val = &interp.stack[0];
-        if let ValueData::Vector(children) = &val.data {
-            assert_eq!(children.len(), 50);
-        } else {
-            panic!("Expected Vector");
-        }
+        assert!(val.is_vector(), "Expected vector-like value");
+        assert_eq!(val.len(), 50);
     }
 }
