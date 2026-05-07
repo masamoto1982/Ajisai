@@ -28,12 +28,29 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
             };
 
-            let children = match &val.data {
-                ValueData::Vector(children) => children,
-                ValueData::Record {
-                    pairs: children, ..
-                } => children,
-                ValueData::Scalar(_) | ValueData::Nil | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            let materialized_children: Option<Vec<Value>> = match &val.data {
+                ValueData::Tensor { data, .. } => Some(
+                    data.iter().map(|f| Value::from_fraction(f.clone())).collect(),
+                ),
+                _ => None,
+            };
+            let children: &Vec<Value> = match (&val.data, &materialized_children) {
+                (_, Some(v)) => v,
+                (ValueData::Vector(children), _) => children,
+                (
+                    ValueData::Record {
+                        pairs: children, ..
+                    },
+                    _,
+                ) => children,
+                (
+                    ValueData::Scalar(_)
+                    | ValueData::Nil
+                    | ValueData::CodeBlock(_)
+                    | ValueData::ProcessHandle(_)
+                    | ValueData::SupervisorHandle(_),
+                    _,
+                ) => {
                     if !is_keep_mode {
                         interp.stack.push(val);
                     }
@@ -42,6 +59,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                         "other format",
                     ));
                 }
+                (ValueData::Tensor { .. }, _) => unreachable!(),
             };
 
             if children.is_empty() {

@@ -45,10 +45,14 @@ pub enum DisplayHint {
     Nil,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum ValueData {
     Scalar(Fraction),
     Vector(Rc<Vec<Value>>),
+    Tensor {
+        data: Rc<Vec<self::fraction::Fraction>>,
+        shape: Rc<Vec<usize>>,
+    },
     Record {
         pairs: Rc<Vec<Value>>,
         index: HashMap<String, usize>,
@@ -57,6 +61,96 @@ pub enum ValueData {
     CodeBlock(Vec<Token>),
     ProcessHandle(u64),
     SupervisorHandle(u64),
+}
+
+impl PartialEq for ValueData {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ValueData::Scalar(a), ValueData::Scalar(b)) => a == b,
+            (ValueData::Vector(a), ValueData::Vector(b)) => a == b,
+            (
+                ValueData::Tensor { data: a_data, shape: a_shape },
+                ValueData::Tensor { data: b_data, shape: b_shape },
+            ) => a_data == b_data && a_shape == b_shape,
+            (
+                ValueData::Vector(v),
+                ValueData::Tensor { data, shape },
+            )
+            | (
+                ValueData::Tensor { data, shape },
+                ValueData::Vector(v),
+            ) => tensor_eq_vector(data, shape, v),
+            (
+                ValueData::Record { pairs: ap, index: ai },
+                ValueData::Record { pairs: bp, index: bi },
+            ) => ap == bp && ai == bi,
+            (ValueData::Nil, ValueData::Nil) => true,
+            (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
+            (ValueData::ProcessHandle(a), ValueData::ProcessHandle(b)) => a == b,
+            (ValueData::SupervisorHandle(a), ValueData::SupervisorHandle(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+fn tensor_eq_vector(
+    data: &[self::fraction::Fraction],
+    shape: &[usize],
+    v: &[Value],
+) -> bool {
+    let nested_shape = nested_vector_shape(v);
+    if nested_shape != shape {
+        return false;
+    }
+    let mut idx = 0usize;
+    nested_flatten_matches(v, data, &mut idx) && idx == data.len()
+}
+
+fn nested_vector_shape(v: &[Value]) -> Vec<usize> {
+    if v.is_empty() {
+        return vec![0];
+    }
+    let first_shape = v[0].shape();
+    let all_same = v.iter().skip(1).all(|c| c.shape() == first_shape);
+    if all_same && !first_shape.is_empty() {
+        let mut s = vec![v.len()];
+        s.extend(first_shape);
+        s
+    } else {
+        vec![v.len()]
+    }
+}
+
+fn nested_flatten_matches(
+    v: &[Value],
+    data: &[self::fraction::Fraction],
+    idx: &mut usize,
+) -> bool {
+    for child in v {
+        match &child.data {
+            ValueData::Scalar(f) => {
+                if *idx >= data.len() || data[*idx] != *f {
+                    return false;
+                }
+                *idx += 1;
+            }
+            ValueData::Vector(inner) => {
+                if !nested_flatten_matches(inner, data, idx) {
+                    return false;
+                }
+            }
+            ValueData::Tensor { data: inner_data, .. } => {
+                for f in inner_data.iter() {
+                    if *idx >= data.len() || data[*idx] != *f {
+                        return false;
+                    }
+                    *idx += 1;
+                }
+            }
+            _ => return false,
+        }
+    }
+    true
 }
 
 #[derive(Debug, Clone)]

@@ -5,6 +5,22 @@ const SIMD_THRESHOLD: usize = 8;
 pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
     let children: &Vec<Value> = match &val.data {
         ValueData::Vector(v) => v,
+        ValueData::Tensor { data, shape } => {
+            if shape.len() != 1 || data.len() < SIMD_THRESHOLD {
+                return None;
+            }
+            let mut result: Vec<i64> = Vec::with_capacity(data.len());
+            for f in data.iter() {
+                if !f.is_integer() {
+                    return None;
+                }
+                match f.to_i64() {
+                    Some(n) => result.push(n),
+                    None => return None,
+                }
+            }
+            return Some(result);
+        }
         ValueData::Scalar(_)
         | ValueData::Record { .. }
         | ValueData::Nil
@@ -24,6 +40,7 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
             },
             ValueData::Scalar(_)
             | ValueData::Vector(_)
+            | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
             | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
@@ -42,6 +59,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         ValueData::Scalar(f) if f.is_integer() => f.to_i64(),
         ValueData::Scalar(_)
         | ValueData::Vector(_)
+        | ValueData::Tensor { .. }
         | ValueData::Record { .. }
         | ValueData::Nil
         | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,

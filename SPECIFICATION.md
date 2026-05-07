@@ -142,6 +142,19 @@ Numeric display is guided by the semantic plane (see Section 12) and does not af
 
 An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: `-1` is the last element.
 
+#### 4.3.1 Internal representation classes
+
+A Vector value is internally represented in one of two classes:
+
+- **nested** — a tree of `Value` elements (`Vec<Value>`). Any element type may appear, including mixed types (Scalars, Vectors, Strings, NIL, etc.).
+- **dense** — a flat buffer of Fractions plus a `shape` (`Vec<Fraction>` + `Vec<usize>`). Every leaf is a Fraction; the shape encodes a (possibly multi-dimensional) rectangular structure.
+
+The class is chosen at construction time. Observable semantics — `Display`, ordering, equality, NIL-ness, `SHAPE`, `LENGTH`, indexing, iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.
+
+Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions yields the same sequence as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
+
+This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see `docs/dev/virtual-tensor-unit-design.md`). It does not introduce approximate numeric types: all numeric leaves remain exact Fractions.
+
 ### 4.4 Record
 
 A collection of named fields. Each field has a string key and an associated value. Field insertion order is preserved.

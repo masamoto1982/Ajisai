@@ -54,6 +54,15 @@ impl FlatTensor {
                     strides,
                 })
             }
+            ValueData::Tensor { data, shape } => {
+                let shape_vec: Vec<usize> = (**shape).clone();
+                let strides: Vec<usize> = compute_strides(&shape_vec);
+                Ok(Self {
+                    data: (**data).clone(),
+                    shape: shape_vec,
+                    strides,
+                })
+            }
             ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),

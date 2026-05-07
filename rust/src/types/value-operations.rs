@@ -152,7 +152,15 @@ impl Value {
 
     #[inline]
     pub fn is_vector(&self) -> bool {
-        matches!(self.data, ValueData::Vector(_) | ValueData::Record { .. })
+        matches!(
+            self.data,
+            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. }
+        )
+    }
+
+    #[inline]
+    pub fn is_tensor(&self) -> bool {
+        matches!(self.data, ValueData::Tensor { .. })
     }
 
     #[inline]
@@ -160,6 +168,9 @@ impl Value {
         match &self.data {
             ValueData::Scalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
+            ValueData::Tensor { data, shape } => {
+                Rc::strong_count(data) == 1 && Rc::strong_count(shape) == 1
+            }
             ValueData::Record { pairs, .. } => Rc::strong_count(pairs) == 1,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -175,6 +186,9 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
             }
+            ValueData::Tensor { data, .. } => {
+                !data.is_empty() && !data.iter().all(|f| f.is_zero() || f.is_nil())
+            }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => true,
@@ -187,6 +201,13 @@ impl Value {
             ValueData::Nil => 0,
             ValueData::Scalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
+            ValueData::Tensor { data, shape } => {
+                if shape.is_empty() {
+                    data.len()
+                } else {
+                    shape[0]
+                }
+            }
             ValueData::CodeBlock(tokens) => tokens.len(),
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => 1,
         }
@@ -200,6 +221,7 @@ impl Value {
     pub fn get_child(&self, index: usize) -> Option<&Value> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
+            ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) if index == 0 => Some(self),
             ValueData::Scalar(_)
             | ValueData::Nil
@@ -210,11 +232,15 @@ impl Value {
     }
 
     pub fn get_child_mut(&mut self, index: usize) -> Option<&mut Value> {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).get_mut(index)
             }
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -231,6 +257,7 @@ impl Value {
     pub fn last(&self) -> Option<&Value> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
+            ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) => Some(self),
             ValueData::Nil => None,
             ValueData::CodeBlock(_)
@@ -239,7 +266,21 @@ impl Value {
         }
     }
 
+    /// Convert a `ValueData::Tensor` in-place to a nested `ValueData::Vector`
+    /// so that mutating helpers (push/pop/insert/remove/replace) can operate
+    /// on a uniform `Vec<Value>` representation.
+    fn hydrate_tensor_to_vector(&mut self) {
+        let ValueData::Tensor { data, shape } = &self.data else {
+            return;
+        };
+        let children = tensor_to_nested_values(data, shape);
+        self.data = ValueData::Vector(Rc::new(children));
+    }
+
     pub fn push_child(&mut self, child: Value) {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).push(child);
@@ -251,16 +292,21 @@ impl Value {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(Rc::new(vec![old, child]));
             }
-            ValueData::CodeBlock(_)
+            ValueData::Tensor { .. }
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => {}
         }
     }
 
     pub fn pop_child(&mut self) -> Option<Value> {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -269,9 +315,13 @@ impl Value {
     }
 
     pub fn insert_child(&mut self, index: usize, child: Value) {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -283,9 +333,13 @@ impl Value {
     }
 
     pub fn remove_child(&mut self, index: usize) -> Option<Value> {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -299,9 +353,13 @@ impl Value {
     }
 
     pub fn replace_child(&mut self, index: usize, child: Value) -> Option<Value> {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -319,6 +377,7 @@ impl Value {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
             ValueData::Vector(_)
+            | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -332,6 +391,7 @@ impl Value {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
             ValueData::Vector(_)
+            | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -354,6 +414,7 @@ impl Value {
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
+            ValueData::Tensor { .. } => None,
             ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -364,9 +425,13 @@ impl Value {
 
     #[inline]
     pub fn as_vector_mut(&mut self) -> Option<&mut Vec<Value>> {
+        if matches!(self.data, ValueData::Tensor { .. }) {
+            self.hydrate_tensor_to_vector();
+        }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
-            ValueData::Scalar(_)
+            ValueData::Tensor { .. }
+            | ValueData::Scalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -389,6 +454,9 @@ impl Value {
                     child.collect_fractions_flat_into(buf);
                 }
             }
+            ValueData::Tensor { data, .. } => {
+                buf.extend(data.iter().cloned());
+            }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => {}
@@ -402,6 +470,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().map(|c| c.count_fractions()).sum()
             }
+            ValueData::Tensor { data, .. } => data.len(),
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => 0,
@@ -427,6 +496,7 @@ impl Value {
                     }
                 }
             }
+            ValueData::Tensor { shape, .. } => (**shape).clone(),
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec![],
@@ -481,10 +551,120 @@ impl Value {
         match &self.data {
             ValueData::Nil => DisplayHint::Nil,
             ValueData::Scalar(_) => DisplayHint::Number,
-            ValueData::Vector(_) | ValueData::Record { .. } => DisplayHint::Auto,
+            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
+                DisplayHint::Auto
+            }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => DisplayHint::Auto,
         }
+    }
+
+    /// Construct a dense `Tensor` value. `data.len()` must equal the product of
+    /// `shape` (or `shape` may be empty for a flat 1-D buffer; in that case
+    /// `[data.len()]` is used).
+    pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
+        if data.is_empty() {
+            return Self::nil_with_reason(NilReason::EmptySequence);
+        }
+        let resolved_shape = if shape.is_empty() {
+            vec![data.len()]
+        } else {
+            shape
+        };
+        Self {
+            data: ValueData::Tensor {
+                data: Rc::new(data),
+                shape: Rc::new(resolved_shape),
+            },
+            hint: DisplayHint::Auto,
+            nil_reason: None,
+        }
+    }
+}
+
+/// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
+/// Used by mutating helpers that need a uniform `Vec<Value>` representation,
+/// and by display fallbacks.
+pub(super) fn tensor_to_nested_values(
+    data: &[Fraction],
+    shape: &[usize],
+) -> Vec<Value> {
+    if shape.is_empty() {
+        return data.iter().map(|f| Value::from_fraction(f.clone())).collect();
+    }
+    if shape.len() == 1 {
+        return data.iter().map(|f| Value::from_fraction(f.clone())).collect();
+    }
+    let outer = shape[0];
+    let rest = &shape[1..];
+    let stride: usize = rest.iter().product();
+    let mut out = Vec::with_capacity(outer);
+    for i in 0..outer {
+        let slice = &data[i * stride..(i + 1) * stride];
+        let inner = tensor_to_nested_values(slice, rest);
+        out.push(Value::from_children(inner));
+    }
+    out
+}
+
+#[cfg(test)]
+mod vtu_tensor_tests {
+    use super::*;
+
+    #[test]
+    fn tensor_and_nested_vector_compare_equal_when_flatten_matches() {
+        let dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![2, 2],
+        );
+        let nested = Value::from_children(vec![
+            Value::from_children(vec![Value::from_int(1), Value::from_int(2)]),
+            Value::from_children(vec![Value::from_int(3), Value::from_int(4)]),
+        ]);
+        assert_eq!(dense.data, nested.data);
+        assert_eq!(nested.data, dense.data);
+    }
+
+    #[test]
+    fn tensor_shape_matches_nested_shape() {
+        let dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![2, 2],
+        );
+        assert_eq!(dense.shape(), vec![2, 2]);
+        assert_eq!(dense.count_fractions(), 4);
+        assert_eq!(dense.collect_fractions_flat().len(), 4);
+    }
+
+    #[test]
+    fn tensor_with_different_shape_compares_unequal_to_nested() {
+        let dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![4],
+        );
+        let nested = Value::from_children(vec![
+            Value::from_children(vec![Value::from_int(1), Value::from_int(2)]),
+            Value::from_children(vec![Value::from_int(3), Value::from_int(4)]),
+        ]);
+        assert_ne!(dense.data, nested.data);
+    }
+
+    #[test]
+    fn tensor_is_vector_predicate_holds() {
+        let dense = Value::from_tensor(vec![Fraction::from(1)], vec![1]);
+        assert!(dense.is_vector());
+        assert!(dense.is_tensor());
+    }
+
+    #[test]
+    fn tensor_hydrates_to_vector_on_push_child() {
+        let mut dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2)],
+            vec![2],
+        );
+        dense.push_child(Value::from_int(3));
+        assert!(matches!(dense.data, ValueData::Vector(_)));
+        assert_eq!(dense.len(), 3);
     }
 }

@@ -58,6 +58,52 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
                 Ok(joined)
             }
         }
+        ValueData::Tensor { data, shape } => {
+            format_tensor_to_source(data, shape, depth)
+        }
+    }
+}
+
+fn format_tensor_to_source(
+    data: &[crate::types::fraction::Fraction],
+    shape: &[usize],
+    depth: usize,
+) -> Result<String> {
+    if shape.is_empty() || shape.len() == 1 {
+        let inner: Vec<String> = data
+            .iter()
+            .map(|f| {
+                if f.is_integer() {
+                    format!("{}", f.numerator())
+                } else {
+                    format!("{}/{}", f.numerator(), f.denominator())
+                }
+            })
+            .collect();
+        let joined = inner.join(" ");
+        if depth > 0 {
+            Ok(format!("[ {} ]", joined))
+        } else {
+            Ok(joined)
+        }
+    } else {
+        let outer = shape[0];
+        let rest = &shape[1..];
+        let stride: usize = rest.iter().product();
+        let mut parts: Vec<String> = Vec::with_capacity(outer);
+        for i in 0..outer {
+            parts.push(format_tensor_to_source(
+                &data[i * stride..(i + 1) * stride],
+                rest,
+                depth + 1,
+            )?);
+        }
+        let joined = parts.join(" ");
+        if depth > 0 {
+            Ok(format!("[ {} ]", joined))
+        } else {
+            Ok(joined)
+        }
     }
 }
 

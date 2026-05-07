@@ -14,6 +14,10 @@ pub enum NodeKind {
     Vector {
         children: Vec<NodeId>,
     },
+    Tensor {
+        data: Vec<Fraction>,
+        shape: Vec<usize>,
+    },
     Record {
         pairs: Vec<NodeId>,
         index: HashMap<String, usize>,
@@ -47,6 +51,15 @@ impl ValueArena {
 
     pub fn alloc_vector(&mut self, children: Vec<NodeId>, hint: DisplayHint) -> NodeId {
         self.alloc_node(NodeKind::Vector { children }, hint)
+    }
+
+    pub fn alloc_tensor(
+        &mut self,
+        data: Vec<Fraction>,
+        shape: Vec<usize>,
+        hint: DisplayHint,
+    ) -> NodeId {
+        self.alloc_node(NodeKind::Tensor { data, shape }, hint)
     }
 
     pub fn alloc_record(
@@ -90,7 +103,12 @@ impl ValueArena {
         match self.kind(id) {
             NodeKind::Vector { children } => children.as_slice(),
             NodeKind::Record { pairs, .. } => pairs.as_slice(),
-            _ => &[],
+            NodeKind::Tensor { .. }
+            | NodeKind::Nil
+            | NodeKind::Scalar(_)
+            | NodeKind::CodeBlock(_)
+            | NodeKind::ProcessHandle(_)
+            | NodeKind::SupervisorHandle(_) => &[],
         }
     }
 }
@@ -107,6 +125,11 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
                     .collect();
                 arena.alloc_vector(child_ids, value.hint)
             }
+            ValueData::Tensor { data, shape } => arena.alloc_tensor(
+                (**data).clone(),
+                (**shape).clone(),
+                value.hint,
+            ),
             ValueData::Record { pairs, index } => {
                 let pair_ids = pairs
                     .iter()
@@ -158,6 +181,14 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     nil_reason: None,
                 }
             }
+            NodeKind::Tensor { data, shape } => Value {
+                data: ValueData::Tensor {
+                    data: Rc::new(data.clone()),
+                    shape: Rc::new(shape.clone()),
+                },
+                hint: arena.hint(id),
+                nil_reason: None,
+            },
             NodeKind::Record { pairs, index } => {
                 let values = pairs
                     .iter()
@@ -281,6 +312,9 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
                 .collect();
             JsonValue::Array(arr)
         }
+        NodeKind::Tensor { data, shape } => {
+            tensor_to_json(arena.hint(root), data, shape)
+        }
         NodeKind::Record { pairs, .. } => {
             let mut map = serde_json::Map::new();
             for pair_id in pairs {
@@ -303,6 +337,49 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::Null
         }
     }
+}
+
+fn fraction_to_json(frac: &Fraction) -> JsonValue {
+    if frac.is_integer() {
+        if let Some(int_val) = frac.to_i64() {
+            return JsonValue::Number(serde_json::Number::from(int_val));
+        }
+    }
+    let pair = frac.numerator().to_f64().zip(frac.denominator().to_f64());
+    if let Some((n, d)) = pair {
+        if let Some(num) = serde_json::Number::from_f64(n / d) {
+            return JsonValue::Number(num);
+        }
+    }
+    JsonValue::Null
+}
+
+fn tensor_to_json(hint: DisplayHint, data: &[Fraction], shape: &[usize]) -> JsonValue {
+    if hint == DisplayHint::String && (shape.is_empty() || shape.len() == 1) {
+        let mut buf = String::new();
+        for codepoint in data {
+            if let Some(n) = codepoint.to_i64() {
+                if let Some(ch) = char::from_u32(n as u32) {
+                    buf.push(ch);
+                }
+            }
+        }
+        return JsonValue::String(buf);
+    }
+    if shape.is_empty() || shape.len() == 1 {
+        let arr = data.iter().map(fraction_to_json).collect();
+        return JsonValue::Array(arr);
+    }
+    let outer = shape[0];
+    let rest = &shape[1..];
+    let stride: usize = rest.iter().product();
+    if outer == 0 || stride == 0 {
+        return JsonValue::Array(Vec::new());
+    }
+    let arr = (0..outer)
+        .map(|i| tensor_to_json(hint, &data[i * stride..(i + 1) * stride], rest))
+        .collect();
+    JsonValue::Array(arr)
 }
 
 #[cfg(test)]
@@ -434,5 +511,34 @@ mod tests {
         let mut arena = ValueArena::new();
         let root = arena.alloc_string("AB");
         assert_eq!(arena.hint(root), DisplayHint::String);
+    }
+
+    #[test]
+    fn tensor_roundtrip_through_arena_preserves_dense_form() {
+        use crate::types::Value;
+
+        let value = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![2, 2],
+        );
+        let (arena, root) = value_to_arena(&value);
+        assert!(matches!(arena.kind(root), NodeKind::Tensor { .. }));
+        let rebuilt = arena_to_value(&arena, root);
+        assert_eq!(rebuilt, value);
+        assert!(rebuilt.is_tensor());
+    }
+
+    #[test]
+    fn tensor_arena_node_to_json_emits_nested_array() {
+        use crate::types::Value;
+
+        let value = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![2, 2],
+        );
+        let (arena, root) = value_to_arena(&value);
+        let json = arena_node_to_json(&arena, root);
+        let expected = serde_json::json!([[1, 2], [3, 4]]);
+        assert_eq!(json, expected);
     }
 }
