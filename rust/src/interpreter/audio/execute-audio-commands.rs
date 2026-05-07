@@ -4,7 +4,7 @@ use super::audio_types::{update_play_mode, PlayMode, WaveformType};
 use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 use num_traits::ToPrimitive;
 
 
@@ -21,11 +21,14 @@ pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
 
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
-    match &val.data {
-        ValueData::Scalar(f) => Some(f.clone()),
-        ValueData::Vector(children) if children.len() == 1 => extract_scalar_from_value(&children[0]),
-        _ => None,
+    if let Some(f) = val.as_scalar() {
+        return Some(f.clone());
     }
+    if val.is_vector() && val.len() == 1 {
+        let child = val.child(0)?;
+        return extract_scalar_from_value(&child);
+    }
+    None
 }
 
 
