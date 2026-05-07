@@ -909,3 +909,91 @@ fn vtu_phase_iii_bulk_metric_zero_for_user_word_kernel() {
         "user-word kernel should not take the bulk path"
     );
 }
+
+// ---------------------------------------------------------------------------
+// VTU Phase III consumer ops: SHAPE / RANK / RESHAPE / TRANSPOSE / FILL /
+// JSON-STRINGIFY / JOIN / SORT must all accept a dense Tensor input and
+// produce the same observable result they produced for nested Vector inputs
+// before the producer switch.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn vtu_phase_iii_shape_accepts_tensor_input() {
+    // [ 1 2 3 ] is now a dense Tensor under Phase II. SHAPE must still
+    // return [ 3 ].
+    let interp = run_code("[ 1 2 3 ] SHAPE");
+    let top = stack_top(&interp);
+    assert!(top.is_vector(), "SHAPE result should be a vector");
+    assert_eq!(top.len(), 1);
+    let dim = top
+        .child(0)
+        .and_then(|c| c.as_scalar().and_then(|f| f.to_i64()));
+    assert_eq!(dim, Some(3));
+}
+
+#[test]
+fn vtu_phase_iii_rank_accepts_tensor_input() {
+    let interp = run_code("[ 1 2 3 ] RANK");
+    let top = stack_top(&interp);
+    let rank = top
+        .as_scalar()
+        .and_then(|f| f.to_i64())
+        .or_else(|| top.child(0).and_then(|c| c.as_scalar().and_then(|f| f.to_i64())));
+    assert_eq!(rank, Some(1));
+}
+
+#[test]
+fn vtu_phase_iii_reshape_dense_to_2d_matches_nested() {
+    let dense = run_code("[ 1 2 3 4 ] [ 2 2 ] RESHAPE");
+    // SHAPE of the result should be [ 2 2 ].
+    let mut sh = run_code("[ 1 2 3 4 ] [ 2 2 ] RESHAPE SHAPE");
+    let shape_top = sh.stack.pop().unwrap();
+    assert!(shape_top.is_vector());
+    assert_eq!(shape_top.len(), 2);
+    // The reshaped value should round-trip through TRANSPOSE -> TRANSPOSE
+    // back to itself.
+    let twice = run_code("[ 1 2 3 4 ] [ 2 2 ] RESHAPE TRANSPOSE TRANSPOSE");
+    assert_eq!(dense.get_stack(), twice.get_stack());
+}
+
+#[test]
+fn vtu_phase_iii_transpose_accepts_tensor_2d() {
+    // Transposing [[1 2 3] [4 5 6]] should yield [[1 4] [2 5] [3 6]].
+    let interp = run_code("[ [ 1 2 3 ] [ 4 5 6 ] ] TRANSPOSE");
+    let top = stack_top(&interp);
+    assert!(top.is_vector());
+    assert_eq!(top.shape(), vec![3, 2]);
+}
+
+#[test]
+fn vtu_phase_iii_fill_produces_dense_tensor() {
+    let interp = run_code("[ 3 0 ] FILL");
+    let top = stack_top(&interp);
+    assert_eq!(top.shape(), vec![3]);
+    for i in 0..3 {
+        let elem = top.child(i).unwrap();
+        assert_eq!(elem.as_scalar().and_then(|f| f.to_i64()), Some(0));
+    }
+}
+
+#[test]
+fn vtu_phase_iii_join_accepts_tensor_of_codepoints() {
+    // [ 65 66 67 ] is a dense Tensor. JOIN must still treat its elements as
+    // Unicode code points and produce 'ABC'.
+    let interp = run_code("[ 65 66 67 ] JOIN");
+    let top = stack_top(&interp);
+    assert_eq!(format!("{}", top), "'ABC'");
+}
+
+#[test]
+fn vtu_phase_iii_sort_accepts_tensor_input() {
+    // [ 3 1 2 ] is a dense Tensor under Phase II producers. SORT must
+    // accept it via the new boundary-helper code path.
+    let interp = run_code("[ 3 1 2 ] SORT");
+    let top = stack_top(&interp);
+    assert_eq!(top.shape(), vec![3]);
+    let collected: Vec<i64> = (0..top.len())
+        .map(|i| top.child(i).unwrap().as_scalar().unwrap().to_i64().unwrap())
+        .collect();
+    assert_eq!(collected, vec![1, 2, 3]);
+}
