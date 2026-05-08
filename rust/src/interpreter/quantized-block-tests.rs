@@ -790,6 +790,7 @@ fn vtu_default_metrics_are_zero() {
     assert_eq!(m.vtu_candidate_block_count, 0);
     assert_eq!(m.vtu_rejected_block_count, 0);
     assert_eq!(m.vtu_fusion_candidate_count, 0);
+    assert_eq!(m.vtu_bulk_kernel_use_count, 0);
 }
 
 #[test]
