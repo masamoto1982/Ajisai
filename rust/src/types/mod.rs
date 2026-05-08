@@ -21,6 +21,103 @@ use std::sync::Arc;
 
 pub use flow_token::{FlowResult, FlowToken};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseTensor {
+    pub numerators: Vec<i64>,
+    pub denominators: Vec<i64>,
+    pub valid_mask: Vec<u64>,
+    pub shape: Vec<usize>,
+    pub is_pure_integer: bool,
+    fractions: Vec<Fraction>,
+}
+
+impl DenseTensor {
+    pub fn from_fractions(data: Vec<Fraction>, shape: Vec<usize>) -> Option<Self> {
+        let expected_len = if shape.is_empty() {
+            0
+        } else {
+            shape.iter().product()
+        };
+        if expected_len != data.len() {
+            return None;
+        }
+
+        let mut numerators = Vec::with_capacity(data.len());
+        let mut denominators = Vec::with_capacity(data.len());
+        let mut is_pure_integer = true;
+        for fraction in &data {
+            let (numerator, denominator) = fraction.extract_i64_pair()?;
+            numerators.push(numerator);
+            denominators.push(denominator);
+            is_pure_integer &= denominator == 1;
+        }
+
+        let valid_mask_len = data.len().div_ceil(64);
+        let mut valid_mask = vec![u64::MAX; valid_mask_len];
+        if let Some(last) = valid_mask.last_mut() {
+            let live_bits = data.len() % 64;
+            if live_bits != 0 {
+                *last = (1u64 << live_bits) - 1;
+            }
+        }
+
+        Some(Self {
+            numerators,
+            denominators,
+            valid_mask,
+            shape,
+            is_pure_integer,
+            fractions: data,
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.numerators.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.numerators.is_empty()
+    }
+
+    pub fn as_slice(&self) -> &[Fraction] {
+        &self.fractions
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Fraction> {
+        self.fractions.iter()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&Fraction> {
+        if self.is_valid(index) {
+            self.fractions.get(index)
+        } else {
+            None
+        }
+    }
+
+    pub fn to_fractions(&self) -> Vec<Fraction> {
+        self.fractions.clone()
+    }
+
+    pub fn is_valid(&self, index: usize) -> bool {
+        if index >= self.len() {
+            return false;
+        }
+        let word = self.valid_mask[index / 64];
+        ((word >> (index % 64)) & 1) == 1
+    }
+}
+
+impl std::ops::Deref for DenseTensor {
+    type Target = [Fraction];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+pub type NilReasonRegistry = HashMap<usize, NilReason>;
+
 pub trait ValueExt: std::fmt::Debug + 'static {
     fn clone_box(&self) -> Box<dyn ValueExt>;
     fn as_any(&self) -> &dyn Any;
@@ -50,7 +147,7 @@ pub enum ValueData {
     Scalar(Fraction),
     Vector(Rc<Vec<Value>>),
     Tensor {
-        data: Rc<Vec<self::fraction::Fraction>>,
+        data: Rc<DenseTensor>,
         shape: Rc<Vec<usize>>,
     },
     Record {
@@ -69,20 +166,28 @@ impl PartialEq for ValueData {
             (ValueData::Scalar(a), ValueData::Scalar(b)) => a == b,
             (ValueData::Vector(a), ValueData::Vector(b)) => a == b,
             (
-                ValueData::Tensor { data: a_data, shape: a_shape },
-                ValueData::Tensor { data: b_data, shape: b_shape },
+                ValueData::Tensor {
+                    data: a_data,
+                    shape: a_shape,
+                },
+                ValueData::Tensor {
+                    data: b_data,
+                    shape: b_shape,
+                },
             ) => a_data == b_data && a_shape == b_shape,
+            (ValueData::Vector(v), ValueData::Tensor { data, shape })
+            | (ValueData::Tensor { data, shape }, ValueData::Vector(v)) => {
+                tensor_eq_vector(data.as_slice(), shape, v)
+            }
             (
-                ValueData::Vector(v),
-                ValueData::Tensor { data, shape },
-            )
-            | (
-                ValueData::Tensor { data, shape },
-                ValueData::Vector(v),
-            ) => tensor_eq_vector(data, shape, v),
-            (
-                ValueData::Record { pairs: ap, index: ai },
-                ValueData::Record { pairs: bp, index: bi },
+                ValueData::Record {
+                    pairs: ap,
+                    index: ai,
+                },
+                ValueData::Record {
+                    pairs: bp,
+                    index: bi,
+                },
             ) => ap == bp && ai == bi,
             (ValueData::Nil, ValueData::Nil) => true,
             (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
@@ -93,11 +198,7 @@ impl PartialEq for ValueData {
     }
 }
 
-fn tensor_eq_vector(
-    data: &[self::fraction::Fraction],
-    shape: &[usize],
-    v: &[Value],
-) -> bool {
+fn tensor_eq_vector(data: &[self::fraction::Fraction], shape: &[usize], v: &[Value]) -> bool {
     let nested_shape = nested_vector_shape(v);
     if nested_shape != shape {
         return false;
@@ -121,11 +222,7 @@ fn nested_vector_shape(v: &[Value]) -> Vec<usize> {
     }
 }
 
-fn nested_flatten_matches(
-    v: &[Value],
-    data: &[self::fraction::Fraction],
-    idx: &mut usize,
-) -> bool {
+fn nested_flatten_matches(v: &[Value], data: &[self::fraction::Fraction], idx: &mut usize) -> bool {
     for child in v {
         match &child.data {
             ValueData::Scalar(f) => {
@@ -139,7 +236,9 @@ fn nested_flatten_matches(
                     return false;
                 }
             }
-            ValueData::Tensor { data: inner_data, .. } => {
+            ValueData::Tensor {
+                data: inner_data, ..
+            } => {
                 for f in inner_data.iter() {
                     if *idx >= data.len() || data[*idx] != *f {
                         return false;
@@ -299,7 +398,9 @@ impl Capabilities {
     pub const SPAWN: Self = Self { bits: 0b0010_0000 };
     pub const EVAL: Self = Self { bits: 0b0100_0000 };
     pub const MUTATES_DICT: Self = Self { bits: 0b1000_0000 };
-    pub const INPUT_HELPER: Self = Self { bits: 0b0001_0000_0000 };
+    pub const INPUT_HELPER: Self = Self {
+        bits: 0b0001_0000_0000,
+    };
 
     pub const fn empty() -> Self {
         Self { bits: 0 }

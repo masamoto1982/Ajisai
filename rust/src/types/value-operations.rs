@@ -1,6 +1,6 @@
 use super::fraction::Fraction;
 use super::interval::Interval;
-use super::{DisplayHint, Token, Value, ValueData};
+use super::{DenseTensor, DisplayHint, Token, Value, ValueData};
 use crate::error::NilReason;
 use std::rc::Rc;
 
@@ -654,9 +654,15 @@ impl Value {
         } else {
             shape
         };
+        let Some(tensor) = DenseTensor::from_fractions(data.clone(), resolved_shape.clone()) else {
+            return Self::from_vector_with_hint(
+                tensor_to_nested_values(&data, &resolved_shape),
+                DisplayHint::Auto,
+            );
+        };
         Self {
             data: ValueData::Tensor {
-                data: Rc::new(data),
+                data: Rc::new(tensor),
                 shape: Rc::new(resolved_shape),
             },
             hint: DisplayHint::Auto,
@@ -682,14 +688,16 @@ impl Value {
             };
         }
         if let Some((data, shape)) = try_collect_dense(&values) {
-            return Self {
-                data: ValueData::Tensor {
-                    data: Rc::new(data),
-                    shape: Rc::new(shape),
-                },
-                hint,
-                nil_reason: None,
-            };
+            if let Some(tensor) = DenseTensor::from_fractions(data, shape.clone()) {
+                return Self {
+                    data: ValueData::Tensor {
+                        data: Rc::new(tensor),
+                        shape: Rc::new(shape),
+                    },
+                    hint,
+                    nil_reason: None,
+                };
+            }
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
@@ -731,11 +739,7 @@ fn try_collect_dense(values: &[Value]) -> Option<(Vec<Fraction>, Vec<usize>)> {
 /// Materialize the i-th child of a dense Tensor as an owned `Value`. For 1-D
 /// shape `[n]` the child is a Scalar; for higher rank the child is itself a
 /// dense Tensor with the trailing dimensions.
-fn tensor_child(
-    data: &[Fraction],
-    shape: &[usize],
-    index: usize,
-) -> Option<Value> {
+fn tensor_child(data: &[Fraction], shape: &[usize], index: usize) -> Option<Value> {
     if shape.is_empty() {
         return None;
     }
@@ -758,7 +762,7 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
     }
     match &v.data {
         ValueData::Scalar(f) => Some((vec![f.clone()], Vec::new())),
-        ValueData::Tensor { data, shape } => Some(((**data).clone(), (**shape).clone())),
+        ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
         ValueData::Nil
         | ValueData::Record { .. }
@@ -771,15 +775,18 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
 /// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
 /// Used by mutating helpers that need a uniform `Vec<Value>` representation,
 /// and by display fallbacks.
-pub(super) fn tensor_to_nested_values(
-    data: &[Fraction],
-    shape: &[usize],
-) -> Vec<Value> {
+pub(super) fn tensor_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<Value> {
     if shape.is_empty() {
-        return data.iter().map(|f| Value::from_fraction(f.clone())).collect();
+        return data
+            .iter()
+            .map(|f| Value::from_fraction(f.clone()))
+            .collect();
     }
     if shape.len() == 1 {
-        return data.iter().map(|f| Value::from_fraction(f.clone())).collect();
+        return data
+            .iter()
+            .map(|f| Value::from_fraction(f.clone()))
+            .collect();
     }
     let outer = shape[0];
     let rest = &shape[1..];
@@ -800,7 +807,12 @@ mod vtu_tensor_tests {
     #[test]
     fn tensor_and_nested_vector_compare_equal_when_flatten_matches() {
         let dense = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![
+                Fraction::from(1),
+                Fraction::from(2),
+                Fraction::from(3),
+                Fraction::from(4),
+            ],
             vec![2, 2],
         );
         let nested = Value::from_children(vec![
@@ -814,7 +826,12 @@ mod vtu_tensor_tests {
     #[test]
     fn tensor_shape_matches_nested_shape() {
         let dense = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![
+                Fraction::from(1),
+                Fraction::from(2),
+                Fraction::from(3),
+                Fraction::from(4),
+            ],
             vec![2, 2],
         );
         assert_eq!(dense.shape(), vec![2, 2]);
@@ -825,7 +842,12 @@ mod vtu_tensor_tests {
     #[test]
     fn tensor_with_different_shape_compares_unequal_to_nested() {
         let dense = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![
+                Fraction::from(1),
+                Fraction::from(2),
+                Fraction::from(3),
+                Fraction::from(4),
+            ],
             vec![4],
         );
         let nested = Value::from_children(vec![
@@ -844,13 +866,37 @@ mod vtu_tensor_tests {
 
     #[test]
     fn tensor_hydrates_to_vector_on_push_child() {
-        let mut dense = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2)],
-            vec![2],
-        );
+        let mut dense = Value::from_tensor(vec![Fraction::from(1), Fraction::from(2)], vec![2]);
         dense.push_child(Value::from_int(3));
         assert!(matches!(dense.data, ValueData::Vector(_)));
         assert_eq!(dense.len(), 3);
+    }
+
+    #[test]
+    fn dense_tensor_uses_soa_buffers_and_full_valid_mask() {
+        let dense = Value::from_tensor(
+            vec![Fraction::from(1), Fraction::new(3.into(), 2.into())],
+            vec![2],
+        );
+        let ValueData::Tensor { data, shape } = dense.data else {
+            panic!("expected DenseTensor representation");
+        };
+        assert_eq!(&*shape, &[2]);
+        assert_eq!(data.numerators, vec![1, 3]);
+        assert_eq!(data.denominators, vec![1, 2]);
+        assert_eq!(data.valid_mask, vec![0b11]);
+        assert!(!data.is_pure_integer);
+    }
+
+    #[test]
+    fn big_fraction_tensor_falls_back_without_losing_shape() {
+        use num_bigint::BigInt;
+
+        let big = Fraction::new(BigInt::from(i128::from(i64::MAX) + 1), 1.into());
+        let value = Value::from_tensor(vec![big.clone()], vec![1]);
+        assert!(matches!(value.data, ValueData::Vector(_)));
+        assert_eq!(value.shape(), vec![1]);
+        assert_eq!(value.collect_fractions_flat(), vec![big]);
     }
 
     // -----------------------------------------------------------------------
@@ -866,7 +912,10 @@ mod vtu_tensor_tests {
             Some(Cow::Borrowed(slice)) => {
                 assert_eq!(slice.len(), 2);
             }
-            other => panic!("expected Cow::Borrowed for Vector, got {:?}", other.is_some()),
+            other => panic!(
+                "expected Cow::Borrowed for Vector, got {:?}",
+                other.is_some()
+            ),
         }
 
         let dense = Value::from_tensor(vec![Fraction::from(1), Fraction::from(2)], vec![2]);

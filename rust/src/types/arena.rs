@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{DisplayHint, Token, Value, ValueData};
+use super::{DenseTensor, DisplayHint, Token, Value, ValueData};
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -125,11 +125,9 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
                     .collect();
                 arena.alloc_vector(child_ids, value.hint)
             }
-            ValueData::Tensor { data, shape } => arena.alloc_tensor(
-                (**data).clone(),
-                (**shape).clone(),
-                value.hint,
-            ),
+            ValueData::Tensor { data, shape } => {
+                arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
+            }
             ValueData::Record { pairs, index } => {
                 let pair_ids = pairs
                     .iter()
@@ -183,7 +181,10 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
             }
             NodeKind::Tensor { data, shape } => Value {
                 data: ValueData::Tensor {
-                    data: Rc::new(data.clone()),
+                    data: Rc::new(
+                        DenseTensor::from_fractions(data.clone(), shape.clone())
+                            .expect("arena tensor nodes preserve shape-compatible dense data"),
+                    ),
                     shape: Rc::new(shape.clone()),
                 },
                 hint: arena.hint(id),
@@ -312,9 +313,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
                 .collect();
             JsonValue::Array(arr)
         }
-        NodeKind::Tensor { data, shape } => {
-            tensor_to_json(arena.hint(root), data, shape)
-        }
+        NodeKind::Tensor { data, shape } => tensor_to_json(arena.hint(root), data, shape),
         NodeKind::Record { pairs, .. } => {
             let mut map = serde_json::Map::new();
             for pair_id in pairs {
@@ -496,11 +495,15 @@ mod tests {
         let (arena, _root) = value_to_arena(&value);
         for id in 0..arena.nodes.len() as u32 {
             if let NodeKind::Vector { children } = arena.kind(id) {
-                let all_plain_ints = children.iter().all(|c| {
-                    matches!(arena.kind(*c), NodeKind::Scalar(f) if f.is_integer())
-                });
+                let all_plain_ints = children
+                    .iter()
+                    .all(|c| matches!(arena.kind(*c), NodeKind::Scalar(f) if f.is_integer()));
                 if all_plain_ints && !children.is_empty() {
-                    assert_ne!(arena.hint(id), DisplayHint::String, "node {id} incorrectly string");
+                    assert_ne!(
+                        arena.hint(id),
+                        DisplayHint::String,
+                        "node {id} incorrectly string"
+                    );
                 }
             }
         }
@@ -518,7 +521,12 @@ mod tests {
         use crate::types::Value;
 
         let value = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![
+                Fraction::from(1),
+                Fraction::from(2),
+                Fraction::from(3),
+                Fraction::from(4),
+            ],
             vec![2, 2],
         );
         let (arena, root) = value_to_arena(&value);
@@ -533,7 +541,12 @@ mod tests {
         use crate::types::Value;
 
         let value = Value::from_tensor(
-            vec![Fraction::from(1), Fraction::from(2), Fraction::from(3), Fraction::from(4)],
+            vec![
+                Fraction::from(1),
+                Fraction::from(2),
+                Fraction::from(3),
+                Fraction::from(4),
+            ],
             vec![2, 2],
         );
         let (arena, root) = value_to_arena(&value);

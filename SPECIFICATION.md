@@ -147,11 +147,13 @@ An ordered, indexable sequence of values. Vectors may be nested (tensor-like). I
 A Vector value is internally represented in one of two classes:
 
 - **nested** — a tree of `Value` elements (`Vec<Value>`). Any element type may appear, including mixed types (Scalars, Vectors, Strings, NIL, etc.).
-- **dense** — a flat buffer of Fractions plus a `shape` (`Vec<Fraction>` + `Vec<usize>`). Every leaf is a Fraction; the shape encodes a (possibly multi-dimensional) rectangular structure.
+- **dense** — a SIMD-oriented `DenseTensor` with Structure-of-Arrays numerator and denominator buffers, a `shape` (`Vec<usize>`), and a validity mask (`Vec<u64>`). Every valid lane is an exact Fraction; an invalid lane represents NIL occupancy without changing the dense representation class.
 
 The class is chosen at construction time. Observable semantics — `Display`, ordering, equality, NIL-ness, `SHAPE`, `LENGTH`, indexing, iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.
 
-Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions yields the same sequence as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
+**No-Rebuild Principle:** a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by lane/index; they are not embedded in `DenseTensor`.
+
+Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions/NIL lanes yields the same lane sequence and validity as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
 
 This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see `docs/dev/virtual-tensor-unit-design.md`). It does not introduce approximate numeric types: all numeric leaves remain exact Fractions.
 
@@ -632,22 +634,11 @@ Accepts a ProcessHandle. Terminates the child runtime immediately.
 | `CondExhausted` | COND expression has no matching clause |
 | `Custom` | Explicit error raised by user code |
 
-### 11.2 Internal flow-level error categories
-
-The following errors are raised by the internal flow conservation mechanism. They are not user-level language constructs and are not observable in normal execution.
-
-| Error | Trigger condition |
-|-------|-------------------|
-| `OverConsumption` | More flow mass consumed than available |
-| `UnconsumedLeak` | Flow mass not fully consumed at an operation boundary |
-| `FlowBreak` | Flow conservation invariant violated |
-| `BifurcationViolation` | Sum of child flow masses does not equal parent flow mass |
-
-### 11.3 Equal-value output
+### 11.2 Equal-value output
 
 Operations that produce a value equal to their input are successful. Equal-value output is not an error.
 
-### 11.4 Safe mode behavior
+### 11.3 Safe mode behavior
 
 `~` (`SAFE`) is the explicit projection operator that turns a partial operation into a total one by mapping any error to a NIL with reason. The projected NIL carries `NilReason::SafeCaught` and preserves a structured reference to the original error category (e.g. `DivisionByZero`, `StackUnderflow`, `IndexOutOfBounds`). The error itself does not propagate.
 
@@ -683,20 +674,15 @@ Display hints are applied only at explicit semantic boundaries: rendering, `PRIN
 
 ## 13. Fractional-Dataflow Internal Invariants
 
-### 13.1 Flow tokens
+### 13.1 Static Mass Conservation
 
-The runtime optionally tracks flow mass via internal FlowToken objects. Each FlowToken holds:
-- A unique runtime-assigned ID
-- Total mass and remaining mass
-- Value shape information
-- Parent and child flow relationships
-- Mass ratio for bifurcations
+Ajisai treats flow mass conservation as a compile/JIT-time property. A Coreword Contract declares the arity, consumption, production, bifurcation, and NIL-projection behavior needed to prove that a flow preserves mass before it is admitted to an optimized execution path.
 
-FlowToken state is an **internal runtime invariant**. It is not a user-visible language construct and must not appear as default runtime output.
+The runtime does not maintain per-value FlowToken objects for ordinary execution and does not perform step-by-step mass accounting. Dynamic categories formerly associated with runtime flow accounting — over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations — are contract-validation failures. They must be rejected by the compiler/JIT, loader, or developer diagnostics before execution of the optimized path.
 
 ### 13.2 Bifurcation
 
-The `,,` (keep/bifurcation) modifier retains source context while also pushing the result. Mass ratio and branch conservation details are internal. Optional diagnostics may surface FlowToken information, but only when diagnostic visibility is explicitly enabled.
+The `,,` (keep/bifurcation) modifier retains source context while also pushing the result. Its mass relationship is specified by the relevant Coreword Contract and is statically checked with the surrounding flow. Runtime execution only performs the value-level stack effects that the contract has already proven.
 
 ---
 
@@ -757,5 +743,5 @@ A change is conformant only if all of the following hold:
 6. It improves or preserves AI-first structural clarity.
 7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
 8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
-9. Every NIL-producing path attaches the appropriate `NilReason` (Section 4.5.0); `SAFE` projection preserves the original error category (Section 11.4).
+9. Every NIL-producing path attaches the appropriate `NilReason` (Section 4.5.0); `SAFE` projection preserves the original error category (Section 11.3).
 10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
