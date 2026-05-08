@@ -14,7 +14,6 @@ fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub(crate) struct FlatTensor {
     pub(crate) data: Vec<Fraction>,
@@ -49,12 +48,14 @@ impl FlatTensor {
                 let shape_vec: Vec<usize> = (**shape).clone();
                 let strides: Vec<usize> = compute_strides(&shape_vec);
                 Ok(Self {
-                    data: (**data).clone(),
+                    data: data.to_fractions(),
                     shape: shape_vec,
                     strides,
                 })
             }
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),
         }
