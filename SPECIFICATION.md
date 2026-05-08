@@ -147,11 +147,16 @@ An ordered, indexable sequence of values. Vectors may be nested (tensor-like). I
 A Vector value is internally represented in one of two classes:
 
 - **nested** — a tree of `Value` elements (`Vec<Value>`). Any element type may appear, including mixed types (Scalars, Vectors, Strings, NIL, etc.).
-- **dense** — a SIMD-oriented `DenseTensor` with Structure-of-Arrays numerator and denominator buffers, a `shape` (`Vec<usize>`), and a validity mask (`Vec<u64>`). Every valid lane is an exact Fraction; an invalid lane represents NIL occupancy without changing the dense representation class.
+- **dense** — a SIMD-oriented `DenseTensor` backed by Structure-of-Arrays numerator and denominator buffers, a shape, and a validity mask. Every valid lane is an exact small Fraction; an invalid lane represents NIL occupancy without rebuilding the dense representation into nested `Vec<Value>` form.
 
 The class is chosen at construction time. Observable semantics — `Display`, ordering, equality, NIL-ness, `SHAPE`, `LENGTH`, indexing, iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.
 
-**No-Rebuild Principle:** a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by lane/index; they are not embedded in `DenseTensor`.
+Dense Tensor exactness rule:
+- Small fractions are stored as normalized `(i64 numerator, i64 denominator)` lanes.
+- Fractions that require BigInt storage remain exact values, but they are not admitted to the small-lane `DenseTensor` representation until a BigInt-capable SoA representation is introduced.
+- Implementations must not truncate, round, or otherwise approximate a BigInt-backed Fraction to fit a dense lane.
+
+**No-Rebuild Principle:** a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by tensor identity and lane index; they are not embedded in `DenseTensor`.
 
 Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions/NIL lanes yields the same lane sequence and validity as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
 
@@ -676,9 +681,9 @@ Display hints are applied only at explicit semantic boundaries: rendering, `PRIN
 
 ### 13.1 Static Mass Conservation
 
-Ajisai treats flow mass conservation as a compile/JIT-time property. A Coreword Contract declares the arity, consumption, production, bifurcation, and NIL-projection behavior needed to prove that a flow preserves mass before it is admitted to an optimized execution path.
+Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.
 
-The runtime does not maintain per-value FlowToken objects for ordinary execution and does not perform step-by-step mass accounting. Dynamic categories formerly associated with runtime flow accounting — over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations — are contract-validation failures. They must be rejected by the compiler/JIT, loader, or developer diagnostics before execution of the optimized path.
+The ordinary runtime must not maintain per-value `FlowToken` objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes.
 
 ### 13.2 Bifurcation
 

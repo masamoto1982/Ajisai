@@ -1,7 +1,5 @@
 pub mod arena;
 pub mod display;
-#[path = "flow-token.rs"]
-pub mod flow_token;
 pub mod fraction;
 #[path = "fraction-arithmetic.rs"]
 mod fraction_arithmetic;
@@ -19,8 +17,6 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
-pub use flow_token::{FlowResult, FlowToken};
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DenseTensor {
     pub numerators: Vec<i64>,
@@ -28,7 +24,6 @@ pub struct DenseTensor {
     pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub is_pure_integer: bool,
-    fractions: Vec<Fraction>,
 }
 
 impl DenseTensor {
@@ -45,17 +40,17 @@ impl DenseTensor {
         let mut numerators = Vec::with_capacity(data.len());
         let mut denominators = Vec::with_capacity(data.len());
         let mut is_pure_integer = true;
-        for fraction in &data {
+        for fraction in data {
             let (numerator, denominator) = fraction.extract_i64_pair()?;
             numerators.push(numerator);
             denominators.push(denominator);
             is_pure_integer &= denominator == 1;
         }
 
-        let valid_mask_len = data.len().div_ceil(64);
+        let valid_mask_len = numerators.len().div_ceil(64);
         let mut valid_mask = vec![u64::MAX; valid_mask_len];
         if let Some(last) = valid_mask.last_mut() {
-            let live_bits = data.len() % 64;
+            let live_bits = numerators.len() % 64;
             if live_bits != 0 {
                 *last = (1u64 << live_bits) - 1;
             }
@@ -67,7 +62,6 @@ impl DenseTensor {
             valid_mask,
             shape,
             is_pure_integer,
-            fractions: data,
         })
     }
 
@@ -79,44 +73,52 @@ impl DenseTensor {
         self.numerators.is_empty()
     }
 
-    pub fn as_slice(&self) -> &[Fraction] {
-        &self.fractions
+    pub fn iter(&self) -> impl Iterator<Item = Fraction> + '_ {
+        (0..self.len()).map(|index| self.fraction_or_nil(index))
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Fraction> {
-        self.fractions.iter()
-    }
-
-    pub fn get(&self, index: usize) -> Option<&Fraction> {
-        if self.is_valid(index) {
-            self.fractions.get(index)
-        } else {
-            None
+    pub fn get_small_fraction(&self, index: usize) -> Option<Fraction> {
+        if !self.is_valid(index) {
+            return None;
         }
+        Some(Fraction::new(
+            self.numerators[index].into(),
+            self.denominators[index].into(),
+        ))
+    }
+
+    pub fn fraction_or_nil(&self, index: usize) -> Fraction {
+        self.get_small_fraction(index).unwrap_or_else(Fraction::nil)
     }
 
     pub fn to_fractions(&self) -> Vec<Fraction> {
-        self.fractions.clone()
+        self.iter().collect()
+    }
+
+    pub fn clear_valid(&mut self, index: usize) {
+        if index < self.len() {
+            self.valid_mask[index / 64] &= !(1u64 << (index % 64));
+        }
     }
 
     pub fn is_valid(&self, index: usize) -> bool {
         if index >= self.len() {
             return false;
         }
-        let word = self.valid_mask[index / 64];
+        let Some(word) = self.valid_mask.get(index / 64) else {
+            return false;
+        };
         ((word >> (index % 64)) & 1) == 1
     }
 }
 
-impl std::ops::Deref for DenseTensor {
-    type Target = [Fraction];
-
-    fn deref(&self) -> &Self::Target {
-        self.as_slice()
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TensorLaneId {
+    pub tensor_id: u64,
+    pub lane: usize,
 }
 
-pub type NilReasonRegistry = HashMap<usize, NilReason>;
+pub type NilReasonRegistry = HashMap<TensorLaneId, NilReason>;
 
 pub trait ValueExt: std::fmt::Debug + 'static {
     fn clone_box(&self) -> Box<dyn ValueExt>;
@@ -177,7 +179,7 @@ impl PartialEq for ValueData {
             ) => a_data == b_data && a_shape == b_shape,
             (ValueData::Vector(v), ValueData::Tensor { data, shape })
             | (ValueData::Tensor { data, shape }, ValueData::Vector(v)) => {
-                tensor_eq_vector(data.as_slice(), shape, v)
+                tensor_eq_vector(data, shape, v)
             }
             (
                 ValueData::Record {
@@ -198,7 +200,7 @@ impl PartialEq for ValueData {
     }
 }
 
-fn tensor_eq_vector(data: &[self::fraction::Fraction], shape: &[usize], v: &[Value]) -> bool {
+fn tensor_eq_vector(data: &DenseTensor, shape: &[usize], v: &[Value]) -> bool {
     let nested_shape = nested_vector_shape(v);
     if nested_shape != shape {
         return false;
@@ -222,11 +224,11 @@ fn nested_vector_shape(v: &[Value]) -> Vec<usize> {
     }
 }
 
-fn nested_flatten_matches(v: &[Value], data: &[self::fraction::Fraction], idx: &mut usize) -> bool {
+fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> bool {
     for child in v {
         match &child.data {
             ValueData::Scalar(f) => {
-                if *idx >= data.len() || data[*idx] != *f {
+                if *idx >= data.len() || data.fraction_or_nil(*idx) != *f {
                     return false;
                 }
                 *idx += 1;
@@ -240,7 +242,7 @@ fn nested_flatten_matches(v: &[Value], data: &[self::fraction::Fraction], idx: &
                 data: inner_data, ..
             } => {
                 for f in inner_data.iter() {
-                    if *idx >= data.len() || data[*idx] != *f {
+                    if *idx >= data.len() || data.fraction_or_nil(*idx) != f {
                         return false;
                     }
                     *idx += 1;

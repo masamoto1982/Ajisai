@@ -12,7 +12,6 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
 
 #[inline]
 pub(crate) fn is_string_value(val: &Value) -> bool {
-
     matches!(&val.data, ValueData::Vector(_))
 }
 
@@ -47,7 +46,9 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                     })
                 })
                 .collect(),
-            ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => vec![],
+            ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => vec![],
         }
     }
 
@@ -75,16 +76,21 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
         | ValueData::Record {
             pairs: children, ..
         } if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) | ValueData::Record { .. } => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "multi-element vector",
-        )),
+        ValueData::Vector(_) | ValueData::Record { .. } => {
+            Err(AjisaiError::create_structure_error(
+                "single-element value with integer",
+                "multi-element vector",
+            ))
+        }
         ValueData::Tensor { data, .. } => {
             if data.len() == 1 {
-                if !data[0].is_integer() {
+                let fraction = data
+                    .get_small_fraction(0)
+                    .ok_or_else(|| AjisaiError::create_structure_error("integer", "NIL"))?;
+                if !fraction.is_integer() {
                     return Err(AjisaiError::create_structure_error("integer", "fraction"));
                 }
-                Ok(data[0].numerator())
+                Ok(fraction.numerator())
             } else {
                 Err(AjisaiError::create_structure_error(
                     "single-element value with integer",
@@ -92,10 +98,12 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
                 ))
             }
         }
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "code block",
-        )),
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            Err(AjisaiError::create_structure_error(
+                "single-element value with integer",
+                "code block",
+            ))
+        }
     }
 }
 
@@ -225,39 +233,6 @@ pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
         None => Value::nil(),
     });
     true
-}
-
-
-use crate::types::FlowToken;
-
-
-pub(crate) fn extract_operands_with_flow(
-    interp: &mut Interpreter,
-    count: usize,
-) -> Result<(Vec<Value>, Option<Vec<FlowToken>>)> {
-    let operands = extract_operands(interp, count)?;
-    let tokens = if interp.flow_tracking {
-        Some(operands.iter().map(|v| interp.begin_flow(v)).collect())
-    } else {
-        None
-    };
-    Ok((operands, tokens))
-}
-
-
-pub(crate) fn push_flow_result(
-    interp: &mut Interpreter,
-    result: Value,
-    input_flows: Option<&[FlowToken]>,
-    consumed_amounts: &[Fraction],
-) {
-    interp.stack.push(result);
-
-    if let Some(flows) = input_flows {
-        for (flow, consumed) in flows.iter().zip(consumed_amounts.iter()) {
-            let _ = interp.record_consumption(flow, consumed);
-        }
-    }
 }
 
 #[cfg(test)]

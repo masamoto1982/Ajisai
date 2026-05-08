@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{DisplayHint, Value, ValueData};
+use super::{DenseTensor, DisplayHint, Value, ValueData};
 use std::fmt;
 
 impl fmt::Display for Value {
@@ -39,10 +39,12 @@ fn format_as_interval(value: &Value) -> String {
             };
             format!("[{}, {}]", lo, hi)
         }
-        ValueData::Tensor { data, shape }
-            if shape.as_slice() == [2] && data.len() == 2 =>
-        {
-            format!("[{}, {}]", format_fraction(&data[0]), format_fraction(&data[1]))
+        ValueData::Tensor { data, shape } if shape.as_slice() == [2] && data.len() == 2 => {
+            format!(
+                "[{}, {}]",
+                format_fraction(&data.fraction_or_nil(0)),
+                format_fraction(&data.fraction_or_nil(1))
+            )
         }
         _ => format_value_recursive(&value.data, 0),
     }
@@ -71,14 +73,13 @@ fn format_value_auto(value: &Value) -> String {
     }
 }
 
-fn is_fraction_string_like(data: &[Fraction]) -> bool {
+fn is_fraction_string_like(data: &DenseTensor) -> bool {
     data.iter().all(|f| {
         f.is_integer()
             && f.to_i64().is_some_and(|n| {
                 (0..=0x10FFFF).contains(&n)
-                    && char::from_u32(n as u32).is_some_and(|c| {
-                        !c.is_control() || c == '\n' || c == '\r' || c == '\t'
-                    })
+                    && char::from_u32(n as u32)
+                        .is_some_and(|c| !c.is_control() || c == '\n' || c == '\r' || c == '\t')
             })
     })
 }
@@ -128,16 +129,40 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
 
             format!("{} {} {}", open, inner.join(" "), close)
         }
-        ValueData::Tensor { data, shape } => {
-            format_tensor_recursive(data, shape, depth)
-        }
+        ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
-fn format_tensor_recursive(data: &[Fraction], shape: &[usize], _depth: usize) -> String {
+fn format_tensor_recursive(data: &DenseTensor, shape: &[usize], _depth: usize) -> String {
+    if shape.is_empty() {
+        return "[ ]".to_string();
+    }
+    if shape.len() == 1 {
+        if data.is_empty() {
+            return "[ ]".to_string();
+        }
+        let inner: Vec<String> = data.iter().map(|f| format_fraction(&f)).collect();
+        return format!("[ {} ]", inner.join(" "));
+    }
+    let outer = shape[0];
+    let rest = &shape[1..];
+    let stride: usize = rest.iter().product();
+    if outer == 0 || stride == 0 {
+        return "[ ]".to_string();
+    }
+    let flat = data.to_fractions();
+    let inner: Vec<String> = (0..outer)
+        .map(|i| {
+            format_tensor_slice_recursive(&flat[i * stride..(i + 1) * stride], rest, _depth + 1)
+        })
+        .collect();
+    format!("[ {} ]", inner.join(" "))
+}
+
+fn format_tensor_slice_recursive(data: &[Fraction], shape: &[usize], _depth: usize) -> String {
     if shape.is_empty() {
         return "[ ]".to_string();
     }
@@ -155,7 +180,9 @@ fn format_tensor_recursive(data: &[Fraction], shape: &[usize], _depth: usize) ->
         return "[ ]".to_string();
     }
     let inner: Vec<String> = (0..outer)
-        .map(|i| format_tensor_recursive(&data[i * stride..(i + 1) * stride], rest, _depth + 1))
+        .map(|i| {
+            format_tensor_slice_recursive(&data[i * stride..(i + 1) * stride], rest, _depth + 1)
+        })
         .collect();
     format!("[ {} ]", inner.join(" "))
 }
@@ -343,9 +370,9 @@ fn format_as_datetime(data: &ValueData) -> String {
                 format!("@{}/{}", f.numerator(), f.denominator())
             }
         }
-        ValueData::Vector(_)
-        | ValueData::Tensor { .. }
-        | ValueData::Record { .. } => format_value_recursive(data, 0),
+        ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
+            format_value_recursive(data, 0)
+        }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),

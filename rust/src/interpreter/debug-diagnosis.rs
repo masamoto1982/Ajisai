@@ -82,10 +82,6 @@ impl CauseClass {
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             ErrorCategory::CondExhausted => CauseClass::UserLogic,
             ErrorCategory::Custom => CauseClass::Unknown,
-            ErrorCategory::OverConsumption => CauseClass::Effect,
-            ErrorCategory::UnconsumedLeak => CauseClass::Effect,
-            ErrorCategory::FlowBreak => CauseClass::Effect,
-            ErrorCategory::BifurcationViolation => CauseClass::InternalInvariant,
         }
     }
 }

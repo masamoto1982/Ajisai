@@ -158,12 +158,20 @@ fn apply_fast_unary_map_to_data(
         }
         FastUnaryMapKernel::EqConst(c) => {
             for x in data {
-                out.push(if x == c { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+                out.push(if x == c {
+                    Fraction::from(1_i64)
+                } else {
+                    Fraction::from(0_i64)
+                });
             }
         }
         FastUnaryMapKernel::LtConst(c) => {
             for x in data {
-                out.push(if x.lt(c) { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+                out.push(if x.lt(c) {
+                    Fraction::from(1_i64)
+                } else {
+                    Fraction::from(0_i64)
+                });
             }
         }
         FastUnaryMapKernel::Abs => {
@@ -179,7 +187,11 @@ fn apply_fast_unary_map_to_data(
         }
         FastUnaryMapKernel::Not => {
             for x in data {
-                out.push(if x.is_zero() { Fraction::from(1_i64) } else { Fraction::from(0_i64) });
+                out.push(if x.is_zero() {
+                    Fraction::from(1_i64)
+                } else {
+                    Fraction::from(0_i64)
+                });
             }
         }
     }
@@ -272,9 +284,14 @@ pub(super) fn try_bulk_quantized_map(
     let line = qb.compiled_plan.lines.first()?;
     let kernel = detect_fast_unary_map_kernel(&line.source_tokens)?;
     interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
-    interp.runtime_metrics.vtu_bulk_kernel_use_count =
-        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
-    Some(apply_fast_unary_map_to_data(&kernel, data).map(|d| BulkMapResult { data: d }))
+    interp.runtime_metrics.vtu_bulk_kernel_use_count = interp
+        .runtime_metrics
+        .vtu_bulk_kernel_use_count
+        .saturating_add(1);
+    Some(
+        apply_fast_unary_map_to_data(&kernel, &data.to_fractions())
+            .map(|d| BulkMapResult { data: d }),
+    )
 }
 
 pub(crate) struct BulkPredicateResult {
@@ -293,10 +310,12 @@ pub(super) fn try_bulk_quantized_predicate(
     let line = qb.compiled_plan.lines.first()?;
     let kernel = detect_fast_unary_predicate_kernel(&line.source_tokens)?;
     interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
-    interp.runtime_metrics.vtu_bulk_kernel_use_count =
-        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
+    interp.runtime_metrics.vtu_bulk_kernel_use_count = interp
+        .runtime_metrics
+        .vtu_bulk_kernel_use_count
+        .saturating_add(1);
     Some(BulkPredicateResult {
-        flags: apply_fast_unary_predicate_to_data(&kernel, data),
+        flags: apply_fast_unary_predicate_to_data(&kernel, &data.to_fractions()),
     })
 }
 
@@ -326,18 +345,22 @@ pub(super) fn try_bulk_quantized_fold(
     let line = qb.compiled_plan.lines.first()?;
     let kernel = detect_fast_binary_fold_kernel(&line.source_tokens)?;
     interp.runtime_metrics.quantized_block_use_count += data.len() as u64;
-    interp.runtime_metrics.vtu_bulk_kernel_use_count =
-        interp.runtime_metrics.vtu_bulk_kernel_use_count.saturating_add(1);
+    interp.runtime_metrics.vtu_bulk_kernel_use_count = interp
+        .runtime_metrics
+        .vtu_bulk_kernel_use_count
+        .saturating_add(1);
     // Mirror the init shape: callers using `[ x ]` expect a Tensor[1] back,
     // while a bare Scalar accumulator should stay Scalar.
     let wrap_singleton = init.as_scalar().is_none();
-    Some(fold_fast_binary_over_data(kernel, init_scalar, data).map(|f| {
-        if wrap_singleton {
-            Value::from_tensor(vec![f], vec![1])
-        } else {
-            Value::from_number(f)
-        }
-    }))
+    Some(
+        fold_fast_binary_over_data(kernel, init_scalar, &data.to_fractions()).map(|f| {
+            if wrap_singleton {
+                Value::from_tensor(vec![f], vec![1])
+            } else {
+                Value::from_number(f)
+            }
+        }),
+    )
 }
 
 fn detect_fast_unary_predicate_kernel(tokens: &[Token]) -> Option<FastUnaryPredicateKernel> {

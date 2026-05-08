@@ -1,6 +1,5 @@
 use crate::error::Result;
-use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, FlowToken, SemanticRegistry, Stack, Token, Value, WordDefinition};
+use crate::types::{DisplayHint, SemanticRegistry, Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -209,10 +208,6 @@ pub struct Interpreter {
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 
-    pub(crate) flow_tracking: bool,
-    pub(crate) active_flows: Vec<FlowToken>,
-    pub(crate) flow_consumed_log: Vec<(u64, Fraction)>,
-
     pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
@@ -267,9 +262,6 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             input_buffer: String::new(),
             io_output_buffer: String::new(),
-            flow_tracking: false,
-            active_flows: Vec::new(),
-            flow_consumed_log: Vec::new(),
             module_vocabulary: HashMap::new(),
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
@@ -415,70 +407,6 @@ impl Interpreter {
             module_epoch: self.module_epoch,
             execution_epoch: self.execution_epoch,
         }
-    }
-
-    pub fn update_flow_tracking(&mut self, enabled: bool) {
-        self.flow_tracking = enabled;
-        if enabled {
-            self.active_flows.clear();
-            self.flow_consumed_log.clear();
-        }
-    }
-
-    pub fn begin_flow(&mut self, value: &Value) -> FlowToken {
-        let token = FlowToken::from_value(value);
-        if self.flow_tracking {
-            self.active_flows.push(token.clone());
-        }
-        token
-    }
-
-    pub fn record_consumption(
-        &mut self,
-        flow: &FlowToken,
-        consumed: &Fraction,
-    ) -> Result<FlowToken> {
-        let (_consumed_amount, new_flow) = flow.consume(consumed)?;
-        if self.flow_tracking {
-            self.flow_consumed_log.push((flow.id, consumed.abs()));
-            if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
-                *af = new_flow.clone();
-            }
-        }
-        Ok(new_flow)
-    }
-
-    pub fn verify_all_flows(&self) -> Result<()> {
-        for flow in &self.active_flows {
-            let consumed_for_flow: Vec<Fraction> = self
-                .flow_consumed_log
-                .iter()
-                .filter(|(id, _)| *id == flow.id)
-                .map(|(_, c)| c.clone())
-                .collect();
-            flow.verify_conservation(&consumed_for_flow)?;
-        }
-        Ok(())
-    }
-
-    pub fn assert_all_flows_complete(&self) -> Result<()> {
-        for flow in &self.active_flows {
-            flow.assert_complete("pipeline end")?;
-        }
-        Ok(())
-    }
-
-    pub fn record_bifurcation(&mut self, flow: &FlowToken, n: usize) -> Result<Vec<FlowToken>> {
-        let (updated_parent, children) = flow.bifurcate(n)?;
-        if self.flow_tracking {
-            if let Some(af) = self.active_flows.iter_mut().find(|f| f.id == flow.id) {
-                *af = updated_parent;
-            }
-            for child in &children {
-                self.active_flows.push(child.clone());
-            }
-        }
-        Ok(children)
     }
 
     pub(crate) fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
