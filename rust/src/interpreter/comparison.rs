@@ -37,7 +37,9 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                     "non-scalar value",
                 ));
             }
-            Ok(data[0].clone())
+            data.get_small_fraction(0).ok_or_else(|| {
+                AjisaiError::create_structure_error("scalar value", "non-scalar value")
+            })
         }
         ValueData::Nil => Err(AjisaiError::create_structure_error(
             "scalar value",
@@ -286,17 +288,13 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                         {
                             children[0].data == b_val.data
                         }
-                        (ValueData::Scalar(_), ValueData::Tensor { .. })
-                            if b_val.len() == 1 =>
-                        {
+                        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => {
                             b_val
                                 .child(0)
                                 .map(|c| a_val.data == c.data)
                                 .unwrap_or(false)
                         }
-                        (ValueData::Tensor { .. }, ValueData::Scalar(_))
-                            if a_val.len() == 1 =>
-                        {
+                        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => {
                             a_val
                                 .child(0)
                                 .map(|c| c.data == b_val.data)

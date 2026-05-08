@@ -1,8 +1,7 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
 use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
-use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, FlowToken, Token, Value};
+use crate::types::{DisplayHint, Token, Value};
 
 use super::compiled_plan::{
     arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback,
@@ -172,34 +171,10 @@ impl Interpreter {
             self.force_flag = false;
         }
 
-        let pre_snapshot = if self.flow_tracking {
-            Some(self.collect_stack_totals_snapshot())
-        } else {
-            None
-        };
-
-        let result = self.execute_builtin_with_conservation(canonical.as_str());
-
-        if let Some(pre) = pre_snapshot {
-            if result.is_ok() {
-                let post = self.collect_stack_totals_snapshot();
-                let _delta = post.sub(&pre);
-            }
-        }
-
-        result
+        self.execute_builtin_direct(canonical.as_str())
     }
 
-    pub(crate) fn collect_stack_totals_snapshot(&self) -> Fraction {
-        let mut total = Fraction::from(0);
-        for val in &self.stack {
-            let token = FlowToken::from_value(val);
-            total = total.add(&token.total);
-        }
-        total
-    }
-
-    pub(crate) fn execute_builtin_with_conservation(&mut self, name: &str) -> Result<()> {
+    pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
         if let Some(spec) = lookup_builtin_spec(name) {
             if let Some(executor_key) = spec.executor_key {
                 return self.execute_builtin_by_key(executor_key);

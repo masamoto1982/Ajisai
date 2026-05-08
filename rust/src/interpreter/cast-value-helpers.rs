@@ -173,10 +173,7 @@ pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
     format_value_to_string_repr_with_hint(value, DisplayHint::Auto)
 }
 
-pub(crate) fn format_value_to_string_repr_with_hint(
-    value: &Value,
-    hint: DisplayHint,
-) -> String {
+pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: DisplayHint) -> String {
     if value.is_nil() {
         return "NIL".to_string();
     }
@@ -217,7 +214,7 @@ pub(crate) fn format_value_to_string_repr_with_hint(
                 pairs: children, ..
             } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
             ValueData::Tensor { data, .. } => {
-                data.iter().map(format_fraction_to_string).collect()
+                data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
