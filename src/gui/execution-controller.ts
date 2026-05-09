@@ -1,7 +1,7 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type {
     AjisaiInterpreter,
-    DebugDiagnosis,
+    ProtocolDiagnosis,
     ExecuteResult
 } from '../wasm-interpreter-types';
 import {
@@ -77,9 +77,9 @@ export const createExecutionController = (
         if (result.hedgedCancelled && result.hedgedCancelled.length > 0) {
             showInfo(`[HEDGED-CANCEL] ${result.hedgedCancelled.join(', ')}`, true);
         }
-        const lastDiagnosis: DebugDiagnosis | undefined = result.errorFlowTrace
+        const lastDiagnosis: ProtocolDiagnosis | undefined = result.errorFlowTrace
             ?.map((event) => event.diagnosis)
-            .filter((d): d is DebugDiagnosis => Boolean(d))
+            .filter((d): d is ProtocolDiagnosis => Boolean(d))
             .at(-1);
         if (lastDiagnosis) {
             const whereLabel = lastDiagnosis.where.word ?? lastDiagnosis.where.kind;

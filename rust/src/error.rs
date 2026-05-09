@@ -33,6 +33,23 @@ pub enum ErrorCategory {
 }
 
 impl ErrorCategory {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            ErrorCategory::StackUnderflow => "stackUnderflow",
+            ErrorCategory::StructureError => "structureError",
+            ErrorCategory::UnknownWord => "unknownWord",
+            ErrorCategory::UnknownModule => "unknownModule",
+            ErrorCategory::DivisionByZero => "divisionByZero",
+            ErrorCategory::IndexOutOfBounds => "indexOutOfBounds",
+            ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
+            ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
+            ErrorCategory::ModeUnsupported => "modeUnsupported",
+            ErrorCategory::BuiltinProtection => "builtinProtection",
+            ErrorCategory::CondExhausted => "condExhausted",
+            ErrorCategory::Custom => "custom",
+        }
+    }
+
     pub fn from_error(err: &AjisaiError) -> Self {
         match err {
             AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
@@ -52,6 +69,28 @@ impl ErrorCategory {
 }
 
 impl NilReason {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            NilReason::DivisionByZero => "divisionByZero",
+            NilReason::EmptySequence => "emptySequence",
+            NilReason::MissingField => "missingField",
+            NilReason::InvalidEncoding => "invalidEncoding",
+            NilReason::InvalidLens => "invalidLens",
+            NilReason::StackUnderflow => "stackUnderflow",
+            NilReason::IndexOutOfBounds => "indexOutOfBounds",
+            NilReason::UnknownWord => "unknownWord",
+            NilReason::ExecutionFailure => "executionFailure",
+            NilReason::SafeCaught(_) => "safeCaught",
+        }
+    }
+
+    pub fn caught_category(&self) -> Option<&ErrorCategory> {
+        match self {
+            NilReason::SafeCaught(category) => Some(category),
+            _ => None,
+        }
+    }
+
     pub fn from_error(err: &AjisaiError) -> Self {
         NilReason::SafeCaught(Box::new(ErrorCategory::from_error(err)))
     }

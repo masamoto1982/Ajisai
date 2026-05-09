@@ -1,4 +1,5 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
+use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, ExecutionLine, Token, Value};
 
@@ -204,8 +205,7 @@ impl Interpreter {
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
-                    self.stack
-                        .push(Value::from_vector_promoted(values));
+                    self.stack.push(Value::from_vector_promoted(values));
                     self.semantic_registry.push_hint(element_hint);
                     i += consumed;
                     continue;
@@ -267,7 +267,7 @@ impl Interpreter {
                                     kind: ErrorFlowEventKind::SafeEnter,
                                     word: Some(upper.to_string()),
                                     error_category: None,
-                                    nil_reason: None,
+                                    absence: None,
                                     stack_len_before,
                                     stack_len_after: stack_len_before,
                                     message: format!("SAFE enter word={}", upper),
@@ -283,7 +283,7 @@ impl Interpreter {
                                             kind: ErrorFlowEventKind::SafeSuccess,
                                             word: Some(upper.to_string()),
                                             error_category: None,
-                                            nil_reason: None,
+                                            absence: None,
                                             stack_len_before,
                                             stack_len_after,
                                             message: format!(
@@ -315,7 +315,11 @@ impl Interpreter {
                                             kind: ErrorFlowEventKind::SafeCaught,
                                             word: Some(upper.to_string()),
                                             error_category: Some(category.clone()),
-                                            nil_reason: Some(nil_reason.clone()),
+                                            absence: Some(AbsenceMetadata::with_reason(
+                                                nil_reason.clone(),
+                                                AbsenceOrigin::SafeProjection,
+                                                Recoverability::Recoverable,
+                                            )),
                                             stack_len_before,
                                             stack_len_after: restored_len,
                                             message: format!(
@@ -324,7 +328,6 @@ impl Interpreter {
                                             ),
                                             diagnosis: Some(safe_caught_diagnosis),
                                         });
-                                        self.stack.push(Value::nil_with_reason(nil_reason.clone()));
                                         let nil_produced_diagnosis =
                                             DebugDiagnosis::from_error_category(
                                                 ErrorPhase::SafeProjection,
@@ -332,14 +335,25 @@ impl Interpreter {
                                                 Some(&category),
                                                 Some(&nil_reason),
                                                 restored_len,
-                                                self.stack.len(),
+                                                restored_len + 1,
                                                 Some("NIL produced by SAFE".to_string()),
                                             );
+                                        self.stack.push(Value::nil_from_diagnosis(
+                                            nil_reason.clone(),
+                                            AbsenceOrigin::SafeProjection,
+                                            Recoverability::Recoverable,
+                                            nil_produced_diagnosis.clone(),
+                                        ));
                                         self.push_error_flow_trace(ErrorFlowEvent {
                                             kind: ErrorFlowEventKind::NilProduced,
                                             word: Some(upper.to_string()),
                                             error_category: Some(category),
-                                            nil_reason: Some(nil_reason),
+                                            absence: Some(AbsenceMetadata::from_diagnosis(
+                                                nil_reason,
+                                                AbsenceOrigin::SafeProjection,
+                                                Recoverability::Recoverable,
+                                                nil_produced_diagnosis.clone(),
+                                            )),
                                             stack_len_before: restored_len,
                                             stack_len_after: self.stack.len(),
                                             message: format!(
@@ -373,7 +387,7 @@ impl Interpreter {
                                             kind: ErrorFlowEventKind::WordError,
                                             word: Some(upper.to_string()),
                                             error_category: Some(category),
-                                            nil_reason: None,
+                                            absence: None,
                                             stack_len_before,
                                             stack_len_after: self.stack.len(),
                                             message: format!(

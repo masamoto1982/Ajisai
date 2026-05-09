@@ -67,6 +67,58 @@ pub struct DebugDiagnosis {
     pub next_checks: Vec<DebugCheck>,
 }
 
+impl ErrorPhase {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            ErrorPhase::Tokenize => "tokenize",
+            ErrorPhase::ParseStructure => "parseStructure",
+            ErrorPhase::ResolveWord => "resolveWord",
+            ErrorPhase::ExecuteWord => "executeWord",
+            ErrorPhase::SafeProjection => "safeProjection",
+            ErrorPhase::NilPropagation => "nilPropagation",
+            ErrorPhase::Assertion => "assertion",
+            ErrorPhase::HostIo => "hostIo",
+            ErrorPhase::OptimizationValidation => "optimizationValidation",
+            ErrorPhase::Unknown => "unknown",
+        }
+    }
+}
+
+impl ErrorLocusKind {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            ErrorLocusKind::UserWord => "userWord",
+            ErrorLocusKind::CoreWord => "coreWord",
+            ErrorLocusKind::BuiltinWord => "builtinWord",
+            ErrorLocusKind::ModuleWord => "moduleWord",
+            ErrorLocusKind::HostEnvironment => "hostEnvironment",
+            ErrorLocusKind::Optimizer => "optimizer",
+            ErrorLocusKind::Unknown => "unknown",
+        }
+    }
+}
+
+impl CauseClass {
+    pub fn as_protocol_str(&self) -> &'static str {
+        match self {
+            CauseClass::TypoOrUnknownName => "typoOrUnknownName",
+            CauseClass::StackShape => "stackShape",
+            CauseClass::ValueShape => "valueShape",
+            CauseClass::Domain => "domain",
+            CauseClass::Index => "index",
+            CauseClass::VectorLength => "vectorLength",
+            CauseClass::NilFlow => "nilFlow",
+            CauseClass::Environment => "environment",
+            CauseClass::Effect => "effect",
+            CauseClass::UserLogic => "userLogic",
+            CauseClass::ContractViolation => "contractViolation",
+            CauseClass::OptimizerMismatch => "optimizerMismatch",
+            CauseClass::InternalInvariant => "internalInvariant",
+            CauseClass::Unknown => "unknown",
+        }
+    }
+}
+
 impl CauseClass {
     pub fn from_error_category(category: &ErrorCategory) -> Self {
         match category {
@@ -188,9 +240,9 @@ fn build_summary(
     let where_str = locus
         .word
         .clone()
-        .unwrap_or_else(|| format!("{:?}", locus.kind));
+        .unwrap_or_else(|| locus.kind.as_protocol_str().to_string());
     let category_str = category
-        .map(|c| format!("{:?}", c))
+        .map(|c| c.as_protocol_str().to_string())
         .unwrap_or_else(|| "UnknownCategory".to_string());
     let nil_str = nil_reason
         .map(|r| format!(" nil={:?}", r))
@@ -212,10 +264,10 @@ fn build_evidence(
 ) -> Vec<String> {
     let mut out = Vec::new();
     if let Some(c) = category {
-        out.push(format!("errorCategory={:?}", c));
+        out.push(format!("category={}", c.as_protocol_str()));
     }
     if let Some(r) = nil_reason {
-        out.push(format!("nilReason={:?}", r));
+        out.push(format!("absenceReason={}", r.as_protocol_str()));
     }
     out.push(format!("stackLenBefore={}", stack_len_before));
     out.push(format!("stackLenAfter={}", stack_len_after));

@@ -15,8 +15,8 @@ async fn safe_caught_division_by_zero_has_three_question_diagnosis() {
 
     let diagnosis = event.diagnosis.as_ref().expect("expected diagnosis");
 
-    assert_eq!(format!("{:?}", diagnosis.when), "SafeProjection");
-    assert_eq!(format!("{:?}", diagnosis.why), "Domain");
+    assert_eq!(diagnosis.when.as_protocol_str(), "safeProjection");
+    assert_eq!(diagnosis.why.as_protocol_str(), "domain");
     assert!(
         diagnosis.summary.contains("DivisionByZero") || diagnosis.summary.contains("division"),
         "summary should mention DivisionByZero, got: {}",
@@ -38,8 +38,8 @@ async fn nil_produced_event_has_diagnosis() {
         .expect("expected NilProduced event");
 
     let diagnosis = event.diagnosis.as_ref().expect("expected diagnosis");
-    assert_eq!(format!("{:?}", diagnosis.when), "SafeProjection");
-    assert_eq!(format!("{:?}", diagnosis.why), "Domain");
+    assert_eq!(diagnosis.when.as_protocol_str(), "safeProjection");
+    assert_eq!(diagnosis.why.as_protocol_str(), "domain");
 }
 
 #[tokio::test]
@@ -56,8 +56,8 @@ async fn uncaught_word_error_has_execute_word_diagnosis() {
 
     let diagnosis = event.diagnosis.as_ref().expect("expected diagnosis");
 
-    assert_eq!(format!("{:?}", diagnosis.when), "ExecuteWord");
-    assert_eq!(format!("{:?}", diagnosis.why), "Domain");
+    assert_eq!(diagnosis.when.as_protocol_str(), "executeWord");
+    assert_eq!(diagnosis.why.as_protocol_str(), "domain");
     assert_eq!(diagnosis.where_.word.as_deref(), Some("DIV"));
 }
 
@@ -75,7 +75,7 @@ async fn stack_underflow_has_stack_shape_diagnosis() {
 
     let diagnosis = event.diagnosis.as_ref().expect("expected diagnosis");
 
-    assert_eq!(format!("{:?}", diagnosis.why), "StackShape");
+    assert_eq!(diagnosis.why.as_protocol_str(), "stackShape");
     assert!(!diagnosis.next_checks.is_empty());
 }
 
@@ -122,10 +122,45 @@ async fn error_flow_trace_records_safe_caught_division_by_zero() {
         trace
             .iter()
             .any(|e| e.kind == ErrorFlowEventKind::NilProduced
-                && matches!(e.nil_reason, Some(NilReason::SafeCaught(_)))),
+                && matches!(
+                    e.absence.as_ref().and_then(|a| a.reason.as_ref()),
+                    Some(NilReason::SafeCaught(_))
+                )),
         "expected NilProduced with SafeCaught reason, got {:?}",
         trace
     );
+}
+
+#[tokio::test]
+async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
+    let mut interp = Interpreter::new();
+    interp.execute("10 0 ~ /").await.unwrap();
+
+    let trace = interp.drain_error_flow_trace();
+    let event = trace
+        .iter()
+        .find(|e| e.kind == ErrorFlowEventKind::NilProduced)
+        .expect("expected NilProduced event");
+    let absence = event
+        .absence
+        .as_ref()
+        .expect("NilProduced event must carry absence metadata");
+    let reason = absence.reason.as_ref().expect("SAFE NIL has a reason");
+
+    assert_eq!(event.kind.as_protocol_str(), "nilProduced");
+    assert_eq!(reason.as_protocol_str(), "safeCaught");
+    assert_eq!(
+        reason.caught_category().map(ErrorCategory::as_protocol_str),
+        Some("divisionByZero")
+    );
+    assert_eq!(absence.origin.as_protocol_str(), "safeProjection");
+    assert_eq!(absence.recoverability.as_protocol_str(), "recoverable");
+    let diagnosis = absence
+        .diagnosis
+        .as_ref()
+        .expect("SAFE-produced NIL carries diagnosis");
+    assert_eq!(diagnosis.when.as_protocol_str(), "safeProjection");
+    assert_eq!(diagnosis.why.as_protocol_str(), "domain");
 }
 
 #[tokio::test]

@@ -158,7 +158,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
             NodeKind::Nil => Value {
                 data: ValueData::Nil,
                 hint: arena.hint(id),
-                nil_reason: None,
+                absence: None,
             },
             NodeKind::Scalar(f) => Value {
                 data: ValueData::Scalar(f.clone()),
@@ -166,7 +166,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     DisplayHint::DateTime => DisplayHint::DateTime,
                     _ => DisplayHint::Number,
                 },
-                nil_reason: None,
+                absence: None,
             },
             NodeKind::Vector { children } => {
                 let values = children
@@ -176,7 +176,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                 Value {
                     data: ValueData::Vector(Rc::new(values)),
                     hint: arena.hint(id),
-                    nil_reason: None,
+                    absence: None,
                 }
             }
             NodeKind::Tensor { data, shape } => Value {
@@ -188,7 +188,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     shape: Rc::new(shape.clone()),
                 },
                 hint: arena.hint(id),
-                nil_reason: None,
+                absence: None,
             },
             NodeKind::Record { pairs, index } => {
                 let values = pairs
@@ -201,23 +201,23 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                         index: index.clone(),
                     },
                     hint: arena.hint(id),
-                    nil_reason: None,
+                    absence: None,
                 }
             }
             NodeKind::CodeBlock(tokens) => Value {
                 data: ValueData::CodeBlock(tokens.clone()),
                 hint: arena.hint(id),
-                nil_reason: None,
+                absence: None,
             },
             NodeKind::ProcessHandle(handle_id) => Value {
                 data: ValueData::ProcessHandle(*handle_id),
                 hint: arena.hint(id),
-                nil_reason: None,
+                absence: None,
             },
             NodeKind::SupervisorHandle(handle_id) => Value {
                 data: ValueData::SupervisorHandle(*handle_id),
                 hint: arena.hint(id),
-                nil_reason: None,
+                absence: None,
             },
         }
     }

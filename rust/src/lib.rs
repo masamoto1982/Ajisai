@@ -4,6 +4,7 @@ pub mod coreword_registry;
 pub mod elastic;
 mod error;
 pub mod interpreter;
+pub mod semantic;
 mod tokenizer;
 pub mod types;
 #[path = "wasm-interpreter-bindings.rs"]
