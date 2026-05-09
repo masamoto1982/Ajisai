@@ -19,7 +19,8 @@
     "tauri:build": "AJISAI_BUILD_TARGET=tauri tauri build",
     "branch:new": "bash ./scripts/create-dated-branch.sh",
     "dev:tauri": "AJISAI_BUILD_TARGET=tauri vite",
-    "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build"
+    "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build",
+    "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

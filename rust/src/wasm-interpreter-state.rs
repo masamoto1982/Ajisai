@@ -1,5 +1,5 @@
 use super::wasm_value_conversion::{
-    arena_node_to_js, extract_display_hint_from_js, js_value_to_value, UserWordData,
+    extract_display_hint_from_js, js_value_to_value, value_to_js, UserWordData,
 };
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
@@ -7,22 +7,22 @@ use crate::elastic::ElasticMode;
 use crate::interpreter;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::tokenizer;
-use crate::types::arena::{arena_to_value, json_to_arena_node, value_to_arena, ValueArena};
+use crate::types::arena::{arena_to_value, json_to_arena_node, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
 fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     let obj = js_sys::Object::new();
 
-    set_js_prop(&obj, "when", &(format!("{:?}", diagnosis.when).into()));
-    set_js_prop(&obj, "why", &(format!("{:?}", diagnosis.why).into()));
+    set_js_prop(&obj, "when", &(diagnosis.when.as_protocol_str().into()));
+    set_js_prop(&obj, "why", &(diagnosis.why.as_protocol_str().into()));
     set_js_prop(&obj, "summary", &(diagnosis.summary.clone().into()));
 
     let where_obj = js_sys::Object::new();
     set_js_prop(
         &where_obj,
         "kind",
-        &(format!("{:?}", diagnosis.where_.kind).into()),
+        &(diagnosis.where_.kind.as_protocol_str().into()),
     );
     if let Some(word) = &diagnosis.where_.word {
         set_js_prop(&where_obj, "word", &(word.clone().into()));
@@ -64,8 +64,7 @@ impl AjisaiInterpreter {
                 .get(i)
                 .copied()
                 .unwrap_or(crate::types::DisplayHint::Auto);
-            let (arena, root) = value_to_arena(value);
-            js_array.push(&arena_node_to_js(&arena, root, Some(hint)));
+            js_array.push(&value_to_js(value, Some(hint)));
         }
         js_array.into()
     }
@@ -385,15 +384,36 @@ impl AjisaiInterpreter {
         let arr = js_sys::Array::new();
         for event in self.interpreter.drain_error_flow_trace() {
             let obj = js_sys::Object::new();
-            set_js_prop(&obj, "kind", &(format!("{:?}", event.kind).into()));
+            set_js_prop(&obj, "kind", &(event.kind.as_protocol_str().into()));
             if let Some(word) = event.word {
                 set_js_prop(&obj, "word", &(word.into()));
             }
-            if let Some(category) = event.error_category {
-                set_js_prop(&obj, "errorCategory", &(format!("{:?}", category).into()));
-            }
-            if let Some(nil_reason) = event.nil_reason {
-                set_js_prop(&obj, "nilReason", &(format!("{:?}", nil_reason).into()));
+            if let Some(absence) = event.absence {
+                let absence_obj = js_sys::Object::new();
+                if let Some(reason) = &absence.reason {
+                    set_js_prop(&absence_obj, "reason", &(reason.as_protocol_str().into()));
+                    if let Some(category) = reason.caught_category() {
+                        set_js_prop(
+                            &absence_obj,
+                            "caughtCategory",
+                            &(category.as_protocol_str().into()),
+                        );
+                    }
+                }
+                set_js_prop(
+                    &absence_obj,
+                    "origin",
+                    &(absence.origin.as_protocol_str().into()),
+                );
+                set_js_prop(
+                    &absence_obj,
+                    "recoverability",
+                    &(absence.recoverability.as_protocol_str().into()),
+                );
+                if let Some(diagnosis) = &absence.diagnosis {
+                    set_js_prop(&absence_obj, "diagnosis", &diagnosis_to_js(diagnosis));
+                }
+                set_js_prop(&obj, "absence", &absence_obj.into());
             }
             set_js_prop(
                 &obj,

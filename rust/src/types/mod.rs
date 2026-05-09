@@ -12,6 +12,7 @@ mod value_operations;
 
 use self::fraction::Fraction;
 use crate::error::NilReason;
+use crate::semantic::AbsenceMetadata;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -258,7 +259,7 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
 pub struct Value {
     pub data: ValueData,
     pub hint: DisplayHint,
-    pub nil_reason: Option<NilReason>,
+    pub absence: Option<AbsenceMetadata>,
 }
 
 impl PartialEq for Value {

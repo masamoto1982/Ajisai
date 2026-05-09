@@ -152,6 +152,207 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     }
 }
 
+fn set_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
+    js_sys::Reflect::set(obj, &key.into(), value).unwrap();
+}
+
+fn diagnosis_to_protocol_js(
+    diagnosis: &crate::interpreter::debug_diagnosis::DebugDiagnosis,
+) -> JsValue {
+    let obj = js_sys::Object::new();
+    set_prop(&obj, "when", &diagnosis.when.as_protocol_str().into());
+    set_prop(&obj, "why", &diagnosis.why.as_protocol_str().into());
+    set_prop(&obj, "summary", &diagnosis.summary.clone().into());
+
+    let where_obj = js_sys::Object::new();
+    set_prop(
+        &where_obj,
+        "kind",
+        &diagnosis.where_.kind.as_protocol_str().into(),
+    );
+    if let Some(word) = &diagnosis.where_.word {
+        set_prop(&where_obj, "word", &word.clone().into());
+    }
+    if let Some(module) = &diagnosis.where_.module {
+        set_prop(&where_obj, "module", &module.clone().into());
+    }
+    if let Some(dictionary) = &diagnosis.where_.dictionary {
+        set_prop(&where_obj, "dictionary", &dictionary.clone().into());
+    }
+    set_prop(&obj, "where", &where_obj.into());
+
+    let evidence_arr = js_sys::Array::new();
+    for item in &diagnosis.evidence {
+        evidence_arr.push(&JsValue::from_str(item));
+    }
+    set_prop(&obj, "evidence", &evidence_arr.into());
+
+    let checks_arr = js_sys::Array::new();
+    for c in &diagnosis.next_checks {
+        let check_obj = js_sys::Object::new();
+        set_prop(&check_obj, "label", &c.label.clone().into());
+        set_prop(&check_obj, "detail", &c.detail.clone().into());
+        checks_arr.push(&check_obj);
+    }
+    set_prop(&obj, "nextChecks", &checks_arr.into());
+    obj.into()
+}
+
+fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue {
+    let obj = js_sys::Object::new();
+    if let Some(reason) = &absence.reason {
+        set_prop(&obj, "reason", &reason.as_protocol_str().into());
+        if let Some(category) = reason.caught_category() {
+            set_prop(&obj, "caughtCategory", &category.as_protocol_str().into());
+        }
+    }
+    set_prop(&obj, "origin", &absence.origin.as_protocol_str().into());
+    set_prop(
+        &obj,
+        "recoverability",
+        &absence.recoverability.as_protocol_str().into(),
+    );
+    if let Some(diagnosis) = &absence.diagnosis {
+        set_prop(&obj, "diagnosis", &diagnosis_to_protocol_js(diagnosis));
+    }
+    obj.into()
+}
+
+fn value_semantics_to_js(value: &Value) -> JsValue {
+    let obj = js_sys::Object::new();
+    set_prop(
+        &obj,
+        "semanticKind",
+        &value.semantic_kind().as_protocol_str().into(),
+    );
+    set_prop(&obj, "shape", &value.shape_kind().as_protocol_str().into());
+    let capabilities = js_sys::Array::new();
+    for capability in value.capabilities() {
+        capabilities.push(&JsValue::from_str(capability.as_protocol_str()));
+    }
+    set_prop(&obj, "capabilities", &capabilities.into());
+    set_prop(&obj, "origin", &value.origin().as_protocol_str().into());
+    if let Some(absence) = value.normalized_absence_metadata() {
+        set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
+    }
+    obj.into()
+}
+
+fn set_value_common_fields(obj: &js_sys::Object, value: &Value, hint: DisplayHint) {
+    let hint_str: &str = match hint {
+        DisplayHint::Auto => "auto",
+        DisplayHint::Number => "number",
+        DisplayHint::Interval => "interval",
+        DisplayHint::String => "string",
+        DisplayHint::Boolean => "boolean",
+        DisplayHint::DateTime => "datetime",
+        DisplayHint::Nil => "nil",
+    };
+    set_prop(obj, "displayHint", &hint_str.into());
+    set_prop(obj, "semantics", &value_semantics_to_js(value));
+}
+
+pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>) -> JsValue {
+    let obj = js_sys::Object::new();
+    let effective_hint = external_hint_opt.unwrap_or(value.hint);
+    set_value_common_fields(&obj, value, effective_hint);
+
+    match &value.data {
+        crate::types::ValueData::Nil => {
+            set_prop(&obj, "type", &"nil".into());
+            set_prop(&obj, "value", &JsValue::NULL);
+        }
+        crate::types::ValueData::Scalar(f) => {
+            let scalar_type = match effective_hint {
+                DisplayHint::Boolean => "boolean",
+                DisplayHint::DateTime => "datetime",
+                DisplayHint::String => "string",
+                _ => "number",
+            };
+            set_prop(&obj, "type", &scalar_type.into());
+            match scalar_type {
+                "boolean" => set_prop(&obj, "value", &(!f.is_zero()).into()),
+                "string" => {
+                    let as_char = f
+                        .to_i64()
+                        .and_then(|n| char::from_u32(n as u32))
+                        .map(|c| c.to_string())
+                        .unwrap_or_default();
+                    set_prop(&obj, "value", &as_char.into());
+                }
+                _ => {
+                    let num_obj = js_sys::Object::new();
+                    set_prop(&num_obj, "numerator", &f.numerator().to_string().into());
+                    set_prop(&num_obj, "denominator", &f.denominator().to_string().into());
+                    set_prop(&obj, "value", &num_obj.into());
+                }
+            }
+        }
+        crate::types::ValueData::Vector(children) => {
+            if effective_hint == DisplayHint::String {
+                let text = children
+                    .iter()
+                    .filter_map(|child| match &child.data {
+                        crate::types::ValueData::Scalar(codepoint) => {
+                            codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
+                        }
+                        _ => None,
+                    })
+                    .collect::<String>();
+                set_prop(&obj, "type", &"string".into());
+                set_prop(&obj, "value", &text.into());
+            } else {
+                let child_hint = match effective_hint {
+                    DisplayHint::Boolean => Some(DisplayHint::Boolean),
+                    _ => None,
+                };
+                let js_array = js_sys::Array::new();
+                for child in children.iter() {
+                    js_array.push(&value_to_js(child, child_hint));
+                }
+                set_prop(&obj, "type", &"vector".into());
+                set_prop(&obj, "value", &js_array.into());
+            }
+        }
+        crate::types::ValueData::Tensor { data, shape } => {
+            if effective_hint == DisplayHint::String && shape.len() <= 1 {
+                let text: String = data
+                    .iter()
+                    .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
+                    .collect();
+                set_prop(&obj, "type", &"string".into());
+                set_prop(&obj, "value", &text.into());
+            } else {
+                let tensor_values = data.to_fractions();
+                let js_array = tensor_data_to_js_array(&tensor_values, shape);
+                set_prop(&obj, "type", &"vector".into());
+                set_prop(&obj, "value", &js_array.into());
+            }
+        }
+        crate::types::ValueData::Record { pairs, .. } => {
+            let js_array = js_sys::Array::new();
+            for pair in pairs.iter() {
+                js_array.push(&value_to_js(pair, None));
+            }
+            set_prop(&obj, "type", &"vector".into());
+            set_prop(&obj, "value", &js_array.into());
+        }
+        crate::types::ValueData::CodeBlock(_) => {
+            set_prop(&obj, "type", &"nil".into());
+            set_prop(&obj, "value", &JsValue::NULL);
+        }
+        crate::types::ValueData::ProcessHandle(id) => {
+            set_prop(&obj, "type", &"process_handle".into());
+            set_prop(&obj, "value", &(*id as f64).into());
+        }
+        crate::types::ValueData::SupervisorHandle(id) => {
+            set_prop(&obj, "type", &"supervisor_handle".into());
+            set_prop(&obj, "value", &(*id as f64).into());
+        }
+    }
+    obj.into()
+}
+
 fn tensor_data_to_js_array(
     data: &[crate::types::fraction::Fraction],
     shape: &[usize],
@@ -176,6 +377,13 @@ fn tensor_data_to_js_array(
             js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
             js_sys::Reflect::set(&elem, &"displayHint".into(), &"number".into()).unwrap();
+            let element_value = Value::from_fraction(f.clone());
+            js_sys::Reflect::set(
+                &elem,
+                &"semantics".into(),
+                &value_semantics_to_js(&element_value),
+            )
+            .unwrap();
             arr.push(&elem);
         }
     } else {
@@ -194,6 +402,7 @@ fn tensor_data_to_js_array(
     arr
 }
 
+#[allow(dead_code)]
 pub(crate) fn arena_node_to_js(
     arena: &ValueArena,
     root_id: NodeId,
@@ -325,6 +534,7 @@ pub(crate) fn arena_node_to_js(
     obj.into()
 }
 
+#[allow(dead_code)]
 fn resolve_effective_hint(
     arena: &ValueArena,
     root_id: NodeId,

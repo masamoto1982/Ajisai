@@ -2,30 +2,106 @@ use super::fraction::Fraction;
 use super::interval::Interval;
 use super::{DenseTensor, DisplayHint, Token, Value, ValueData};
 use crate::error::NilReason;
+use crate::interpreter::debug_diagnosis::DebugDiagnosis;
+use crate::semantic::{
+    AbsenceMetadata, AbsenceOrigin, Capability, Recoverability, SemanticKind, ValueOrigin,
+    ValueShape,
+};
 use std::rc::Rc;
+
+fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
+    match reason {
+        NilReason::EmptySequence => AbsenceOrigin::EmptySequence,
+        NilReason::MissingField => AbsenceOrigin::MissingField,
+        NilReason::InvalidEncoding => AbsenceOrigin::InvalidEncoding,
+        NilReason::InvalidLens => AbsenceOrigin::InvalidLens,
+        NilReason::StackUnderflow => AbsenceOrigin::StackUnderflow,
+        NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
+        NilReason::UnknownWord => AbsenceOrigin::UnknownWord,
+        NilReason::ExecutionFailure => AbsenceOrigin::ExecutionFailure,
+        NilReason::SafeCaught(_) => AbsenceOrigin::SafeProjection,
+        NilReason::DivisionByZero => AbsenceOrigin::SafeProjection,
+    }
+}
 
 impl Value {
     #[inline]
     pub fn nil() -> Self {
+        Self::nil_literal()
+    }
+
+    #[inline]
+    pub fn nil_literal() -> Self {
         Self {
             data: ValueData::Nil,
             hint: DisplayHint::Nil,
-            nil_reason: None,
+            absence: Some(AbsenceMetadata::literal()),
+        }
+    }
+
+    #[inline]
+    pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
+        Self {
+            data: ValueData::Nil,
+            hint: DisplayHint::Nil,
+            absence: Some(absence),
         }
     }
 
     #[inline]
     pub fn nil_with_reason(reason: NilReason) -> Self {
-        Self {
-            data: ValueData::Nil,
-            hint: DisplayHint::Nil,
-            nil_reason: Some(reason),
+        let origin = absence_origin_for_reason(&reason);
+        Self::nil_with_absence(AbsenceMetadata::with_reason(
+            reason,
+            origin,
+            Recoverability::Unknown,
+        ))
+    }
+
+    #[inline]
+    pub fn nil_from_diagnosis(
+        reason: NilReason,
+        origin: AbsenceOrigin,
+        recoverability: Recoverability,
+        diagnosis: DebugDiagnosis,
+    ) -> Self {
+        Self::nil_with_absence(AbsenceMetadata::from_diagnosis(
+            reason,
+            origin,
+            recoverability,
+            diagnosis,
+        ))
+    }
+
+    #[inline]
+    pub fn absence_metadata(&self) -> Option<&AbsenceMetadata> {
+        self.absence.as_ref()
+    }
+
+    #[inline]
+    pub fn normalized_absence_metadata(&self) -> Option<AbsenceMetadata> {
+        if !self.is_absent() {
+            return None;
         }
+        Some(
+            self.absence
+                .clone()
+                .unwrap_or_else(|| AbsenceMetadata::with_reasonless_unknown()),
+        )
     }
 
     #[inline]
     pub fn nil_reason(&self) -> Option<&NilReason> {
-        self.nil_reason.as_ref()
+        self.absence
+            .as_ref()
+            .and_then(|absence| absence.reason.as_ref())
+    }
+
+    #[inline]
+    pub fn nil_diagnosis(&self) -> Option<&DebugDiagnosis> {
+        self.absence
+            .as_ref()
+            .and_then(|absence| absence.diagnosis.as_ref())
     }
 
     #[inline]
@@ -33,7 +109,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             hint: DisplayHint::Number,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -42,7 +118,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
             hint: DisplayHint::Number,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -51,7 +127,7 @@ impl Value {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
             hint: DisplayHint::Number,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -66,7 +142,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint: DisplayHint::String,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -79,7 +155,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -88,7 +164,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -99,7 +175,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(values)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -110,7 +186,7 @@ impl Value {
         Self {
             data: ValueData::Vector(Rc::new(values)),
             hint,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -127,7 +203,7 @@ impl Value {
                 Value::from_fraction(interval.hi),
             ])),
             hint: DisplayHint::Interval,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -136,13 +212,86 @@ impl Value {
         Self {
             data: ValueData::Scalar(f),
             hint: DisplayHint::DateTime,
-            nil_reason: None,
+            absence: None,
         }
     }
 
     #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
+    }
+
+    #[inline]
+    pub fn is_absent(&self) -> bool {
+        matches!(self.data, ValueData::Nil)
+    }
+
+    #[inline]
+    pub fn semantic_kind(&self) -> SemanticKind {
+        match &self.data {
+            ValueData::Scalar(_) => SemanticKind::Number,
+            ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
+            ValueData::Record { .. } => SemanticKind::Record,
+            ValueData::Nil => SemanticKind::Absence,
+            ValueData::CodeBlock(_) => SemanticKind::Code,
+            ValueData::ProcessHandle(_) => SemanticKind::Process,
+            ValueData::SupervisorHandle(_) => SemanticKind::Supervisor,
+        }
+    }
+
+    #[inline]
+    pub fn shape_kind(&self) -> ValueShape {
+        match &self.data {
+            ValueData::Scalar(_) => ValueShape::Scalar,
+            ValueData::Vector(_) => ValueShape::Vector,
+            ValueData::Tensor { .. } => ValueShape::Tensor,
+            ValueData::Record { .. } => ValueShape::Record,
+            ValueData::Nil => ValueShape::Absence,
+            ValueData::CodeBlock(_) => ValueShape::CodeBlock,
+            ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => ValueShape::Handle,
+        }
+    }
+
+    pub fn capabilities(&self) -> Vec<Capability> {
+        let mut capabilities = vec![
+            Capability::StackItem,
+            Capability::Serializable,
+            Capability::Displayable,
+        ];
+        match &self.data {
+            ValueData::Scalar(_) => {
+                capabilities.push(Capability::Numeric);
+                capabilities.push(Capability::ExactNumeric);
+                capabilities.push(Capability::UserEditable);
+            }
+            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
+                capabilities.push(Capability::Iterable);
+                capabilities.push(Capability::Indexable);
+                capabilities.push(Capability::UserEditable);
+            }
+            ValueData::Nil => {
+                capabilities.push(Capability::NilPassthrough);
+                capabilities.push(Capability::Diagnosable);
+                capabilities.push(Capability::AiExplainable);
+            }
+            ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
+            ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
+        }
+        capabilities
+    }
+
+    pub fn has_capability(&self, capability: Capability) -> bool {
+        self.capabilities().contains(&capability)
+    }
+
+    pub fn origin(&self) -> ValueOrigin {
+        match self.absence_metadata().map(|metadata| &metadata.origin) {
+            Some(AbsenceOrigin::Literal) => ValueOrigin::Literal,
+            Some(AbsenceOrigin::SafeProjection) => ValueOrigin::SafeProjection,
+            Some(AbsenceOrigin::NilPropagation) => ValueOrigin::NilPropagation,
+            Some(AbsenceOrigin::HostEnvironment) => ValueOrigin::HostEnvironment,
+            _ => ValueOrigin::Unknown,
+        }
     }
 
     #[inline]
@@ -203,7 +352,7 @@ impl Value {
 
     /// Return a `Cow<Value>` that is guaranteed to use a non-`Tensor`
     /// representation. `Tensor` values are converted into a nested
-    /// `ValueData::Vector` (preserving `hint` and `nil_reason`); every other
+    /// `ValueData::Vector` (preserving `hint` and `absence`); every other
     /// variant is borrowed in place.
     ///
     /// Useful at user-visible boundaries (PRINT, JSON-EXPORT, GUI hand-off,
@@ -217,7 +366,7 @@ impl Value {
                 std::borrow::Cow::Owned(Value {
                     data: ValueData::Vector(Rc::new(children)),
                     hint: self.hint,
-                    nil_reason: self.nil_reason.clone(),
+                    absence: self.absence.clone(),
                 })
             }
             _ => std::borrow::Cow::Borrowed(self),
@@ -602,7 +751,7 @@ impl Value {
         Self {
             data: ValueData::CodeBlock(tokens),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -610,7 +759,7 @@ impl Value {
         Self {
             data: ValueData::ProcessHandle(id),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -625,7 +774,7 @@ impl Value {
         Self {
             data: ValueData::SupervisorHandle(id),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -666,7 +815,7 @@ impl Value {
                 shape: Rc::new(resolved_shape),
             },
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }
     }
 
@@ -684,7 +833,7 @@ impl Value {
             return Self {
                 data: ValueData::Vector(Rc::new(values)),
                 hint,
-                nil_reason: None,
+                absence: None,
             };
         }
         if let Some((data, shape)) = try_collect_dense(&values) {
@@ -695,14 +844,14 @@ impl Value {
                         shape: Rc::new(shape),
                     },
                     hint,
-                    nil_reason: None,
+                    absence: None,
                 };
             }
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
             hint,
-            nil_reason: None,
+            absence: None,
         }
     }
 

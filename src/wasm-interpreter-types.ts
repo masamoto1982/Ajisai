@@ -46,7 +46,7 @@ export interface AjisaiInterpreter {
     collect_hedged_trace(): string[];
 }
 
-export interface DebugDiagnosis {
+export interface ProtocolDiagnosis {
     when: string;
     where: {
         kind: string;
@@ -63,15 +63,30 @@ export interface DebugDiagnosis {
     }>;
 }
 
+export interface ProtocolAbsence {
+    reason?: string;
+    origin: string;
+    recoverability: string;
+    caughtCategory?: string;
+    diagnosis?: ProtocolDiagnosis;
+}
+
+export interface ProtocolValueSemantics {
+    semanticKind: string;
+    shape: string;
+    capabilities: string[];
+    origin: string;
+    absence?: ProtocolAbsence;
+}
+
 export interface ErrorFlowTraceEvent {
     kind: string;
     word?: string;
-    errorCategory?: string;
-    nilReason?: string;
+    absence?: ProtocolAbsence;
     stackLenBefore: number;
     stackLenAfter: number;
     message: string;
-    diagnosis?: DebugDiagnosis;
+    diagnosis?: ProtocolDiagnosis;
 }
 
 export interface ExecuteResult {
@@ -104,6 +119,7 @@ export interface Value {
     type: string;
     value: any | Fraction | Value[];
     displayHint?: 'auto' | 'number' | 'string' | 'boolean' | 'datetime' | 'nil';
+    semantics?: ProtocolValueSemantics;
 }
 
 export interface ProcessHandleValue extends Value {

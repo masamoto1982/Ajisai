@@ -169,7 +169,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value {
             data: ValueData::Vector(Rc::new(keys)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         });
     }
 
@@ -229,7 +229,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                                 new_value.clone(),
                             ])),
                             hint: DisplayHint::Auto,
-                            nil_reason: None,
+                            absence: None,
                         });
                         continue;
                     }
@@ -243,7 +243,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             new_pairs.push(Value {
                 data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
                 hint: DisplayHint::Auto,
-                nil_reason: None,
+                absence: None,
             });
         }
 
@@ -265,7 +265,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 index: new_index,
             },
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         });
     } else {
         let mut index = HashMap::new();
@@ -273,12 +273,12 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         let pairs = Rc::new(vec![Value {
             data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         }]);
         interp.stack.push(Value {
             data: ValueData::Record { pairs, index },
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         });
     }
 

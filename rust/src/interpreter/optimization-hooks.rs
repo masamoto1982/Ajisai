@@ -48,12 +48,12 @@ mod tests {
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         };
         let _v2 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         };
 
         assert_eq!(check_in_place_candidate(&v1), InPlaceJudgment::Aliased);
@@ -65,7 +65,7 @@ mod tests {
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
             hint: DisplayHint::Auto,
-            nil_reason: None,
+            absence: None,
         };
 
         drop(children);
