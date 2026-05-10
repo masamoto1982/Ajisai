@@ -33,12 +33,14 @@ pub enum QuantizedPurity {
 //     `GuardSignature` would cause spurious guard invalidations on what is
 //     fundamentally an explanation field, so it is intentionally kept out.
 //   - All variants are forward-looking; only `CpuScalar`, `WasmSimd`, and
-//     `DenseTensorLoop` map to surfaces Ajisai actually executes today.
+//     `DenseTensorLoop` and `SparseTensorLoop` map to surfaces Ajisai can
+//     exercise internally today.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VtuBackendCandidate {
     CpuScalar,
     WasmSimd,
     DenseTensorLoop,
+    SparseTensorLoop,
     #[allow(dead_code)]
     NpuCandidate,
     #[allow(dead_code)]
@@ -498,6 +500,7 @@ fn infer_vtu_hint(kernel_kind: KernelKind, purity: QuantizedPurity) -> VtuHint {
                 CpuScalar,
                 WasmSimd,
                 DenseTensorLoop,
+                SparseTensorLoop,
                 NpuCandidate,
                 GpuCandidate,
             ],
@@ -506,20 +509,20 @@ fn infer_vtu_hint(kernel_kind: KernelKind, purity: QuantizedPurity) -> VtuHint {
         },
         KernelKind::PredicateUnaryPure => VtuHint {
             suitability: StrongCandidate,
-            backend_candidates: vec![CpuScalar, WasmSimd, DenseTensorLoop],
+            backend_candidates: vec![CpuScalar, WasmSimd, DenseTensorLoop, SparseTensorLoop],
             data_movement: Low,
             reason: "elementwise pure predicate",
         },
         KernelKind::FoldBinaryPure => VtuHint {
             suitability: WeakCandidate,
-            backend_candidates: vec![CpuScalar, DenseTensorLoop],
+            backend_candidates: vec![CpuScalar, DenseTensorLoop, SparseTensorLoop],
             data_movement: Medium,
             reason: "reduction may depend on order/associativity; \
                      parallelization requires Approx boundary",
         },
         KernelKind::ScanBinaryPure => VtuHint {
             suitability: WeakCandidate,
-            backend_candidates: vec![CpuScalar, DenseTensorLoop],
+            backend_candidates: vec![CpuScalar, DenseTensorLoop, SparseTensorLoop],
             data_movement: Medium,
             reason: "scan carries an accumulator; not embarrassingly parallel",
         },

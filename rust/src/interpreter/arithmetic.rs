@@ -8,7 +8,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{DisplayHint, SparseTensor, Value, ValueData};
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
@@ -29,6 +29,65 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
 
 fn is_scalar_value(val: &Value) -> bool {
     extract_scalar_from_value(val).is_some()
+}
+
+fn sparse_mul_candidate(a: &Value, b: &Value) -> Option<Value> {
+    if let Some(result) = sparse_tensor_scalar_mul(a, b) {
+        return Some(result);
+    }
+    if let Some(result) = sparse_tensor_scalar_mul(b, a) {
+        return Some(result);
+    }
+    sparse_same_shape_tensor_mul(a, b)
+}
+
+fn sparse_tensor_scalar_mul(tensor_value: &Value, scalar_value: &Value) -> Option<Value> {
+    let (dense, shape) = tensor_value.as_dense_tensor()?;
+    if !dense.is_sparse_candidate() {
+        return None;
+    }
+    let scalar = extract_scalar_from_value(scalar_value)?;
+    let sparse = SparseTensor::from_dense(dense)?;
+    let mut result = vec![Fraction::from(0_i64); sparse.len];
+    for (&index, entry) in sparse.indices.iter().zip(0..) {
+        result[index] = Fraction::new(
+            sparse.numerators[entry].into(),
+            sparse.denominators[entry].into(),
+        )
+        .mul(&scalar);
+    }
+    Some(Value::from_tensor(result, shape.to_vec()))
+}
+
+fn sparse_same_shape_tensor_mul(a: &Value, b: &Value) -> Option<Value> {
+    let (a_dense, a_shape) = a.as_dense_tensor()?;
+    let (b_dense, b_shape) = b.as_dense_tensor()?;
+    if a_shape != b_shape || a_dense.len() != b_dense.len() {
+        return None;
+    }
+
+    let use_a_sparse = a_dense.is_sparse_candidate();
+    let use_b_sparse = b_dense.is_sparse_candidate();
+    if !use_a_sparse && !use_b_sparse {
+        return None;
+    }
+
+    let (sparse, other) = if use_a_sparse {
+        (SparseTensor::from_dense(a_dense)?, b_dense)
+    } else {
+        (SparseTensor::from_dense(b_dense)?, a_dense)
+    };
+
+    let mut result = vec![Fraction::from(0_i64); sparse.len];
+    for (&index, entry) in sparse.indices.iter().zip(0..) {
+        let lhs = Fraction::new(
+            sparse.numerators[entry].into(),
+            sparse.denominators[entry].into(),
+        );
+        let rhs = other.get_small_fraction(index)?;
+        result[index] = lhs.mul(&rhs);
+    }
+    Some(Value::from_tensor(result, a_shape.to_vec()))
 }
 
 fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F) -> Result<()>
@@ -257,6 +316,15 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
                 .runtime_metrics
                 .vtu_simd_kernel_use_count
                 .saturating_add(1);
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+
+        if let Some(result) = sparse_mul_candidate(a, b) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();

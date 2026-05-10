@@ -137,3 +137,9 @@ parser and `apply_*_with_metrics` outputs over to `Tensor`, at which point
 >
 > Ajisai is a debuggable, exact-by-default, virtual-accelerator-aware
 > language.
+
+## Sparse tensor candidates
+
+Ajisai's VTU layer may classify dense Tensor values with many zero lanes as sparse candidates. This is an internal optimization hint and does not change Ajisai's observable value semantics. Sparse candidates are used only to reduce unnecessary data movement and element-wise work.
+
+AjisaiのVTU層は、ゼロ要素の多いTensorをSparse候補として分類する場合があります。これは内部最適化のためのヒントであり、Ajisaiプログラムから観測できる値の意味論は変わりません。Sparse候補は、不要なデータ移動と要素ごとの処理を減らすためにのみ利用されます。

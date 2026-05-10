@@ -154,16 +154,21 @@ mod tensor_ops_integration_tests {
         assert_eq!(result, "[ [ 101 102 103 ] [ 204 205 206 ] ]");
     }
 
-
     #[tokio::test]
     async fn test_percent_alias_matches_mod_basic() {
         let mut mod_interp = Interpreter::new();
-        mod_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        mod_interp
+            .execute("'json' IMPORT 'io' IMPORT")
+            .await
+            .unwrap();
         mod_interp.execute("[ 7 ] [ 3 ] MOD").await.unwrap();
         let mod_result = format!("{}", mod_interp.get_stack().last().unwrap());
 
         let mut alias_interp = Interpreter::new();
-        alias_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        alias_interp
+            .execute("'json' IMPORT 'io' IMPORT")
+            .await
+            .unwrap();
         alias_interp.execute("[ 7 ] [ 3 ] %").await.unwrap();
         let alias_result = format!("{}", alias_interp.get_stack().last().unwrap());
 
@@ -174,19 +179,19 @@ mod tensor_ops_integration_tests {
     #[tokio::test]
     async fn test_percent_alias_matches_mod_broadcast() {
         let mut mod_interp = Interpreter::new();
-        mod_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         mod_interp
-            .execute("[ 1 2 3 4 5 ] [ 2 ] MOD")
+            .execute("'json' IMPORT 'io' IMPORT")
             .await
             .unwrap();
+        mod_interp.execute("[ 1 2 3 4 5 ] [ 2 ] MOD").await.unwrap();
         let mod_result = format!("{}", mod_interp.get_stack().last().unwrap());
 
         let mut alias_interp = Interpreter::new();
-        alias_interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         alias_interp
-            .execute("[ 1 2 3 4 5 ] [ 2 ] %")
+            .execute("'json' IMPORT 'io' IMPORT")
             .await
             .unwrap();
+        alias_interp.execute("[ 1 2 3 4 5 ] [ 2 ] %").await.unwrap();
         let alias_result = format!("{}", alias_interp.get_stack().last().unwrap());
 
         assert_eq!(alias_result, mod_result);
@@ -291,5 +296,52 @@ mod unicode_tests {
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
         assert_eq!(result, "'hello'");
+    }
+}
+
+#[cfg(test)]
+mod sparse_tensor_fast_path_integration_tests {
+    use crate::interpreter::Interpreter;
+
+    fn sparse_fraction_vector_literal() -> String {
+        let mut lanes = vec!["0".to_string(); 64];
+        lanes[5] = "3/2".to_string();
+        lanes[40] = "-5/3".to_string();
+        format!("[ {} ]", lanes.join(" "))
+    }
+
+    #[tokio::test]
+    async fn sparse_candidate_tensor_scalar_mul_matches_dense_semantics() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(&format!("{} 2 *", sparse_fraction_vector_literal()))
+            .await
+            .unwrap();
+        let result = interp.get_stack().last().unwrap();
+        assert_eq!(format!("{}", result.child(5).unwrap()), "3");
+        assert_eq!(format!("{}", result.child(40).unwrap()), "-10/3");
+        for index in 0..64 {
+            if index != 5 && index != 40 {
+                assert_eq!(format!("{}", result.child(index).unwrap()), "0");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn sparse_candidate_same_shape_mul_matches_dense_semantics() {
+        let mut interp = Interpreter::new();
+        let rhs = "[ ".to_string() + &vec!["2"; 64].join(" ") + " ]";
+        interp
+            .execute(&format!("{} {} *", sparse_fraction_vector_literal(), rhs))
+            .await
+            .unwrap();
+        let result = interp.get_stack().last().unwrap();
+        assert_eq!(format!("{}", result.child(5).unwrap()), "3");
+        assert_eq!(format!("{}", result.child(40).unwrap()), "-10/3");
+        for index in 0..64 {
+            if index != 5 && index != 40 {
+                assert_eq!(format!("{}", result.child(index).unwrap()), "0");
+            }
+        }
     }
 }

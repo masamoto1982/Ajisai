@@ -14,6 +14,29 @@ fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
     }
 }
 
+fn record_sparse_candidate_value(metrics: &mut Option<&mut RuntimeMetrics>, value: &Value) {
+    let ValueData::Tensor { data, .. } = &value.data else {
+        return;
+    };
+    if !data.is_sparse_candidate() {
+        return;
+    }
+
+    if let Some(m) = metrics.as_deref_mut() {
+        let nonzero = data.nonzero_count() as u64;
+        let zero = data.zero_count() as u64;
+        m.vtu_sparse_candidate_count = m.vtu_sparse_candidate_count.saturating_add(1);
+        m.vtu_sparse_candidate_elements = m
+            .vtu_sparse_candidate_elements
+            .saturating_add(data.len() as u64);
+        m.vtu_sparse_candidate_nonzero_elements = m
+            .vtu_sparse_candidate_nonzero_elements
+            .saturating_add(nonzero);
+        m.vtu_sparse_skippable_zero_elements =
+            m.vtu_sparse_skippable_zero_elements.saturating_add(zero);
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct FlatTensor {
     pub(crate) data: Vec<Fraction>,
@@ -239,6 +262,8 @@ where
     record_flatten(&mut metrics, tensor_b.data.len());
 
     let out_shape = broadcast_shape(&tensor_a.shape, &tensor_b.shape)?;
+    record_sparse_candidate_value(&mut metrics, a);
+    record_sparse_candidate_value(&mut metrics, b);
     let out_size: usize = if out_shape.is_empty() {
         1
     } else {
@@ -299,6 +324,7 @@ where
     let tensor = FlatTensor::from_value(val)?;
     let element_count = tensor.data.len();
     record_flatten(&mut metrics, element_count);
+    record_sparse_candidate_value(&mut metrics, val);
 
     if let Some(m) = metrics {
         m.vtu_unary_flat_count = m.vtu_unary_flat_count.saturating_add(1);

@@ -111,6 +111,146 @@ impl DenseTensor {
         };
         ((word >> (index % 64)) & 1) == 1
     }
+
+    pub fn zero_count(&self) -> usize {
+        (0..self.len())
+            .filter(|&index| self.is_valid(index) && self.numerators[index] == 0)
+            .count()
+    }
+
+    pub fn nonzero_count(&self) -> usize {
+        (0..self.len())
+            .filter(|&index| self.is_valid(index) && self.numerators[index] != 0)
+            .count()
+    }
+
+    pub fn density(&self) -> f64 {
+        if self.is_empty() {
+            return 0.0;
+        }
+        self.nonzero_count() as f64 / self.len() as f64
+    }
+
+    pub fn is_sparse_candidate(&self) -> bool {
+        const MIN_LEN: usize = 64;
+        const MAX_DENSITY: f64 = 0.25;
+
+        self.len() >= MIN_LEN && self.density() <= MAX_DENSITY
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SparseTensor {
+    pub indices: Vec<usize>,
+    pub numerators: Vec<i64>,
+    pub denominators: Vec<i64>,
+    pub valid_mask: Vec<u64>,
+    pub shape: Vec<usize>,
+    pub len: usize,
+    pub is_pure_integer: bool,
+}
+
+impl SparseTensor {
+    pub fn from_dense(dense: &DenseTensor) -> Option<Self> {
+        let expected_len = if dense.shape.is_empty() {
+            dense.len()
+        } else {
+            dense.shape.iter().product()
+        };
+        if expected_len != dense.len() {
+            return None;
+        }
+        if (0..dense.len()).any(|index| !dense.is_valid(index)) {
+            return None;
+        }
+
+        let nonzero_count = dense.nonzero_count();
+        let mut indices = Vec::with_capacity(nonzero_count);
+        let mut numerators = Vec::with_capacity(nonzero_count);
+        let mut denominators = Vec::with_capacity(nonzero_count);
+
+        for index in 0..dense.len() {
+            if dense.numerators[index] != 0 {
+                indices.push(index);
+                numerators.push(dense.numerators[index]);
+                denominators.push(dense.denominators[index]);
+            }
+        }
+
+        let valid_mask_len = dense.len().div_ceil(64);
+        let mut valid_mask = vec![u64::MAX; valid_mask_len];
+        if let Some(last) = valid_mask.last_mut() {
+            let live_bits = dense.len() % 64;
+            if live_bits != 0 {
+                *last = (1u64 << live_bits) - 1;
+            }
+        }
+
+        Some(Self {
+            indices,
+            numerators,
+            denominators,
+            valid_mask,
+            shape: dense.shape.clone(),
+            len: dense.len(),
+            is_pure_integer: dense.is_pure_integer,
+        })
+    }
+
+    pub fn to_dense(&self) -> DenseTensor {
+        let mut numerators = vec![0; self.len];
+        let mut denominators = vec![1; self.len];
+        for (entry, &index) in self.indices.iter().enumerate() {
+            if index < self.len {
+                numerators[index] = self.numerators[entry];
+                denominators[index] = self.denominators[entry];
+            }
+        }
+        DenseTensor {
+            numerators,
+            denominators,
+            valid_mask: self.valid_mask.clone(),
+            shape: self.shape.clone(),
+            is_pure_integer: self.is_pure_integer,
+        }
+    }
+
+    pub fn get_small_fraction(&self, index: usize) -> Option<Fraction> {
+        if index >= self.len || !self.is_valid(index) {
+            return None;
+        }
+        let entry = self.indices.binary_search(&index).ok()?;
+        Some(Fraction::new(
+            self.numerators[entry].into(),
+            self.denominators[entry].into(),
+        ))
+    }
+
+    pub fn fraction_or_zero(&self, index: usize) -> Fraction {
+        self.get_small_fraction(index)
+            .unwrap_or_else(|| Fraction::new(0.into(), 1.into()))
+    }
+
+    pub fn nonzero_count(&self) -> usize {
+        self.indices.len()
+    }
+
+    pub fn density(&self) -> f64 {
+        if self.len == 0 {
+            return 0.0;
+        }
+        self.nonzero_count() as f64 / self.len as f64
+    }
+
+    pub fn is_valid(&self, index: usize) -> bool {
+        if index >= self.len {
+            return false;
+        }
+        let Some(word) = self.valid_mask.get(index / 64) else {
+            return false;
+        };
+        ((word >> (index % 64)) & 1) == 1
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -460,3 +600,72 @@ pub struct WordDefinition {
 }
 
 pub type Stack = Vec<Value>;
+
+#[cfg(test)]
+mod sparse_tensor_tests {
+    use super::{DenseTensor, SparseTensor};
+    use crate::types::fraction::Fraction;
+
+    fn dense_from_i64(values: &[i64], shape: Vec<usize>) -> DenseTensor {
+        DenseTensor::from_fractions(values.iter().copied().map(Fraction::from).collect(), shape)
+            .expect("small dense tensor should build")
+    }
+
+    #[test]
+    fn dense_tensor_sparse_density_counts_zero_and_nonzero_lanes() {
+        let all_zero = dense_from_i64(&vec![0; 64], vec![64]);
+        assert_eq!(all_zero.zero_count(), 64);
+        assert_eq!(all_zero.nonzero_count(), 0);
+        assert_eq!(all_zero.density(), 0.0);
+        assert!(all_zero.is_sparse_candidate());
+
+        let all_nonzero = dense_from_i64(&vec![1; 64], vec![64]);
+        assert_eq!(all_nonzero.zero_count(), 0);
+        assert_eq!(all_nonzero.nonzero_count(), 64);
+        assert_eq!(all_nonzero.density(), 1.0);
+        assert!(!all_nonzero.is_sparse_candidate());
+
+        let mixed = dense_from_i64(&[0, 7, 0, -3], vec![4]);
+        assert_eq!(mixed.zero_count(), 2);
+        assert_eq!(mixed.nonzero_count(), 2);
+        assert_eq!(mixed.density(), 0.5);
+        assert!(!mixed.is_sparse_candidate());
+    }
+
+    #[test]
+    fn dense_tensor_sparse_density_does_not_count_invalid_lanes_as_zero() {
+        let mut dense = dense_from_i64(&[0, 5, 0, 9], vec![4]);
+        dense.clear_valid(0);
+        dense.clear_valid(1);
+        assert_eq!(dense.zero_count(), 1);
+        assert_eq!(dense.nonzero_count(), 1);
+        assert_eq!(dense.density(), 0.25);
+        assert!(SparseTensor::from_dense(&dense).is_none());
+    }
+
+    #[test]
+    fn sparse_tensor_round_trips_dense_values_and_shape() {
+        let dense = dense_from_i64(&[0, 0, 3, 0, -4, 0], vec![2, 3]);
+        let sparse =
+            SparseTensor::from_dense(&dense).expect("all-valid dense tensor is sparseable");
+        assert_eq!(sparse.shape, vec![2, 3]);
+        assert_eq!(sparse.len, 6);
+        assert_eq!(sparse.indices, vec![2, 4]);
+        assert_eq!(sparse.nonzero_count(), 2);
+        assert!(sparse.indices.windows(2).all(|w| w[0] < w[1]));
+        assert_eq!(sparse.fraction_or_zero(0), Fraction::from(0_i64));
+        assert_eq!(sparse.get_small_fraction(2), Some(Fraction::from(3_i64)));
+        assert_eq!(sparse.to_dense(), dense);
+    }
+
+    #[test]
+    fn sparse_tensor_accepts_all_zero_dense_tensor() {
+        let dense = dense_from_i64(&vec![0; 64], vec![8, 8]);
+        let sparse =
+            SparseTensor::from_dense(&dense).expect("all-zero all-valid tensor is sparseable");
+        assert!(sparse.indices.is_empty());
+        assert_eq!(sparse.nonzero_count(), 0);
+        assert_eq!(sparse.density(), 0.0);
+        assert_eq!(sparse.to_dense(), dense);
+    }
+}
