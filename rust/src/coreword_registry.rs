@@ -431,7 +431,12 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::Passthrough;
             meta.safety_level = SafetyLevel::A;
         }
-        Some(Div) | Some(Mod) => {
+        Some(Div) => {
+            meta.partiality = Partiality::Projecting;
+            meta.nil_policy = NilPolicy::CreatesNil;
+            meta.safety_level = SafetyLevel::B;
+        }
+        Some(Mod) => {
             meta.partiality = Partiality::Partial;
             meta.nil_policy = NilPolicy::Passthrough;
             meta.safety_level = SafetyLevel::B;
@@ -441,7 +446,12 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::Passthrough;
             meta.safety_level = SafetyLevel::A;
         }
-        Some(Get) | Some(Insert) | Some(Replace) | Some(Remove) | Some(Take) | Some(Split) => {
+        Some(Get) => {
+            meta.partiality = Partiality::Projecting;
+            meta.nil_policy = NilPolicy::CreatesNil;
+            meta.safety_level = SafetyLevel::B;
+        }
+        Some(Insert) | Some(Replace) | Some(Remove) | Some(Take) | Some(Split) => {
             meta.partiality = Partiality::Partial;
             meta.nil_policy = NilPolicy::RejectsNil;
             meta.safety_level = SafetyLevel::B;
@@ -463,7 +473,12 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::RejectsNil;
             meta.safety_level = SafetyLevel::B;
         }
-        Some(Str) | Some(Num) | Some(Bool) | Some(Chr) | Some(Chars) | Some(Join) => {
+        Some(Num) | Some(Chr) => {
+            meta.partiality = Partiality::Projecting;
+            meta.nil_policy = NilPolicy::CreatesNil;
+            meta.safety_level = SafetyLevel::B;
+        }
+        Some(Str) | Some(Bool) | Some(Chars) | Some(Join) => {
             meta.partiality = Partiality::Partial;
             meta.nil_policy = NilPolicy::RejectsNil;
             meta.safety_level = SafetyLevel::B;
@@ -778,10 +793,10 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_contract_b_arithmetic_passthrough_partial_division() {
+    fn aq_ver_contract_b_arithmetic_division_creates_nil_under_bubble_rule() {
         let div = get_coreword_metadata("DIV").expect("DIV must be in registry");
-        assert_eq!(div.partiality, Partiality::Partial);
-        assert_eq!(div.nil_policy, NilPolicy::Passthrough);
+        assert_eq!(div.partiality, Partiality::Projecting);
+        assert_eq!(div.nil_policy, NilPolicy::CreatesNil);
         assert_eq!(div.safety_level, SafetyLevel::B);
 
         let add = get_coreword_metadata("ADD").expect("ADD must be in registry");

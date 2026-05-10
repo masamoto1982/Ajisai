@@ -28,13 +28,17 @@ Like water that keeps the same volume no matter which channel it passes through,
 
 Spec links: [§4.2 Scalar: exact rational arithmetic](SPECIFICATION.md#42-scalar-exact-rational-arithmetic), [§3.2 Numeric literal formats](SPECIFICATION.md#32-numeric-literal-formats)
 
-### 2) Vectors with NIL: bubbles inside the vessel
+### 2) Bubble/NIL: bubbles that keep the flow inspectable
 
-A `Vector` is Ajisai’s vessel: ordered, nestable, and indexable. Unlike many systems that force “all present values,” Ajisai explicitly allows absence via `NIL`, and `NIL` can flow through vector pipelines by rule.
+Ajisai treats absence as a first-class value: `NIL`. In the water metaphor, `NIL` is a bubble in the flow: not the water itself, but a meaningful part of the stream state.
 
-In the water metaphor, `NIL` is a bubble in the flow: not the water itself, but a meaningful part of the stream state.
+The current failure model is the **Bubble Rule**:
 
-Spec links: [§4.3 Vector](SPECIFICATION.md#43-vector), [§4.5 NIL](SPECIFICATION.md#45-nil), [§4.5.1 NIL passthrough rule](SPECIFICATION.md#451-nil-passthrough-rule)
+> If the operation was well-formed but could not produce a value, it produces Bubble/NIL with a reason. If the operation was malformed, it raises an error.
+
+For example, division by zero, an out-of-range `GET` on a valid vector, `NUM` parse failure, and invalid `CHR` code points produce reasoned Bubble/NIL values. Misusing a word — such as dividing by text or calling `GET` on a non-vector target — remains an error. Existing NIL-passthrough words preserve the reason as the bubble flows onward, and `=>` supplies a fallback when a bubble reaches a point where the program wants an ordinary value.
+
+Spec links: [§4.5 NIL](SPECIFICATION.md#45-nil), [§4.5.1 NIL passthrough rule](SPECIFICATION.md#451-nil-passthrough-rule), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule)
 
 ### 3) 0-origin and 1-origin by function role: choosing the right measuring scale
 
@@ -55,13 +59,13 @@ Ajisai modifiers provide two orthogonal controls:
 
 Spec links: [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§11.5 KEEP modifier semantics](SPECIFICATION.md#115-keep-modifier-semantics)
 
-### 5) Safe mode (`~`): flood control without losing diagnostics
+### 5) Safe mode (`~`): flood control for raised errors
 
-`SAFE` projects partial operations into total ones by turning runtime errors into `NIL` with structured reason metadata.
+`SAFE` is a boundary for errors that still raise, not the main way to make ordinary partial operations recoverable. If the next word raises an error — for example stack underflow, an unknown word, or a malformed input shape — `SAFE` converts that error to `NIL` with `safeCaught` diagnostic metadata. If the next word already produced a direct Bubble/NIL by the Bubble Rule, `SAFE` leaves that bubble and the word’s normal stack effect unchanged.
 
-So the pipeline does not crash, but the cause is not erased. In water terms: pressure is released into a controlled spillway, and the incident report is still attached.
+So the pipeline does not crash on raised errors that you explicitly guard, while ordinary “could not produce a value” cases can flow as reasoned bubbles without `SAFE`. In water terms: `SAFE` is still a spillway for incidents that would otherwise break the channel; bubbles already in the stream do not get relabeled at the gate.
 
-Spec links: [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior)
+Spec links: [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.3 Safe mode behavior](SPECIFICATION.md#113-safe-mode-behavior)
 
 ---
 

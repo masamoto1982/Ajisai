@@ -93,7 +93,7 @@ mod tests {
         assert_eq!(
             interp.stack.len(),
             3,
-            "Stack should have 3 elements: {:?}",
+            "Stack should have 3 elements after keep mode then reset: {:?}",
             interp.stack
         );
     }
@@ -149,7 +149,6 @@ mod tests {
         );
     }
 
-
     #[tokio::test]
     async fn test_safe_mode_normal_execution() {
         let mut interp = Interpreter::new();
@@ -167,18 +166,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_safe_mode_error_returns_nil() {
+    async fn test_safe_mode_bubble_returns_nil() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET").await;
         assert!(
             result.is_ok(),
-            "Safe mode should suppress error: {:?}",
+            "Safe mode should allow GET Bubble/NIL: {:?}",
             result
         );
         assert_eq!(
             interp.stack.len(),
-            3,
-            "Stack should have 3 elements (restored + NIL): {:?}",
+            2,
+            "Stack should follow GET's normal Bubble/NIL stack effect: {:?}",
             interp.stack
         );
         assert!(
@@ -213,8 +212,8 @@ mod tests {
         );
         assert_eq!(
             interp.stack.len(),
-            3,
-            "Stack should have 3 elements: {:?}",
+            1,
+            "Stack should follow DIV's normal Bubble/NIL stack effect: {:?}",
             interp.stack
         );
         assert!(
@@ -226,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn test_safe_mode_stack_restore_on_error() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 100 ] [ 1 2 3 ] [ 10 ] ~ GET").await;
+        let result = interp.execute("[ 100 ] 123 [ 0 ] ~ GET").await;
         assert!(
             result.is_ok(),
             "Safe mode should suppress error: {:?}",
@@ -251,7 +250,8 @@ mod tests {
         assert!(result.is_ok());
 
         let result2 = interp.execute("[ 1 2 3 ] [ 10 ] GET").await;
-        assert!(result2.is_err(), "Second GET without ~ should fail");
+        assert!(result2.is_ok(), "Second GET without ~ should bubble");
+        assert!(interp.stack.last().unwrap().is_nil());
     }
 
     #[tokio::test]
@@ -296,7 +296,15 @@ mod tests {
             "Safe mode should allow REVERSE on singleton vector: {:?}",
             result
         );
-        assert_eq!(interp.stack.len(), 1, "Stack should remain unchanged: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_vector(), "Top should be the reversed vector");
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should remain unchanged: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_vector(),
+            "Top should be the reversed vector"
+        );
     }
 }
