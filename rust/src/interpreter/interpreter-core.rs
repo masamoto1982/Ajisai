@@ -173,6 +173,14 @@ pub struct RuntimeMetrics {
     pub vtu_projected_broadcast_count: u64,
     /// SIMD fast paths actually taken (target-arch dependent).
     pub vtu_simd_kernel_use_count: u64,
+    /// Dense Tensor values classified as sparse optimization candidates.
+    pub vtu_sparse_candidate_count: u64,
+    /// Total dense lanes in sparse candidate Tensor values.
+    pub vtu_sparse_candidate_elements: u64,
+    /// Non-zero dense lanes in sparse candidate Tensor values.
+    pub vtu_sparse_candidate_nonzero_elements: u64,
+    /// Zero dense lanes that sparse handling may skip moving or scanning.
+    pub vtu_sparse_skippable_zero_elements: u64,
     /// QuantizedBlocks classified as VTU candidates (Strong or Weak).
     pub vtu_candidate_block_count: u64,
     /// QuantizedBlocks rejected as not suitable for VTU.

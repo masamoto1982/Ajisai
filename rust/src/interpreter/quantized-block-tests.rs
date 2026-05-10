@@ -1,8 +1,12 @@
 use crate::interpreter::quantized_block::{
     is_quantizable_block, quantize_code_block, KernelKind, QuantizedArity, QuantizedPurity,
-    VtuSuitability,
+    VtuBackendCandidate, VtuSuitability,
 };
-use crate::interpreter::Interpreter;
+use crate::interpreter::tensor_ops::{
+    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics,
+};
+use crate::interpreter::{Interpreter, RuntimeMetrics};
+use crate::types::fraction::Fraction;
 use crate::types::{Token, Value};
 
 // ---------------------------------------------------------------------------
@@ -456,7 +460,12 @@ fn scan_produces_prefix_sums() {
         panic!("SCAN element is not a numeric scalar or single-element vector");
     };
     let vals: Vec<i64> = (0..3)
-        .map(|i| extract(top.child(i).expect("len==3 implies child(i) exists for i<3")))
+        .map(|i| {
+            extract(
+                top.child(i)
+                    .expect("len==3 implies child(i) exists for i<3"),
+            )
+        })
         .collect();
     assert_eq!(vals, vec![1, 3, 6]);
 }
@@ -719,12 +728,7 @@ fn arity_fully_known_still_fixed() {
 fn vtu_hint_map_unary_is_strong_candidate() {
     // `[ 1 ] +` is the const-vector pattern detected as MapUnaryPure.
     let mut interp = make_interp();
-    let tokens = vec![
-        Token::VectorStart,
-        num("1"),
-        Token::VectorEnd,
-        sym("+"),
-    ];
+    let tokens = vec![Token::VectorStart, num("1"), Token::VectorEnd, sym("+")];
     let qb = quantize_code_block(&tokens, &mut interp).unwrap();
     assert_eq!(qb.kernel_kind, KernelKind::MapUnaryPure);
     assert_eq!(qb.vtu_hint.suitability, VtuSuitability::StrongCandidate);
@@ -764,6 +768,62 @@ fn vtu_hint_generic_pure_is_weak_candidate() {
 }
 
 #[test]
+fn vtu_hint_map_unary_includes_sparse_tensor_loop_without_guard_effect() {
+    let mut interp = make_interp();
+    let tokens = vec![Token::VectorStart, num("1"), Token::VectorEnd, sym("+")];
+    let qb = quantize_code_block(&tokens, &mut interp).unwrap();
+    assert!(qb
+        .vtu_hint
+        .backend_candidates
+        .contains(&VtuBackendCandidate::SparseTensorLoop));
+    assert_eq!(qb.guard_signature.kernel_kind, KernelKind::MapUnaryPure);
+}
+
+#[test]
+fn vtu_sparse_candidate_metrics_increment_for_dense_tensor_unary() {
+    let mut metrics = RuntimeMetrics::default();
+    let mut data = vec![Fraction::from(0_i64); 64];
+    data[7] = Fraction::from(5_i64);
+    let value = Value::from_tensor(data, vec![64]);
+
+    let _ = apply_unary_flat_with_metrics(&value, |f| f.clone(), Some(&mut metrics))
+        .expect("unary tensor operation should succeed");
+
+    assert_eq!(metrics.vtu_sparse_candidate_count, 1);
+    assert_eq!(metrics.vtu_sparse_candidate_elements, 64);
+    assert_eq!(metrics.vtu_sparse_candidate_nonzero_elements, 1);
+    assert_eq!(metrics.vtu_sparse_skippable_zero_elements, 63);
+}
+
+#[test]
+fn vtu_sparse_candidate_metrics_skip_shape_mismatch_and_nil_rejection() {
+    let mut sparse_data = vec![Fraction::from(0_i64); 64];
+    sparse_data[3] = Fraction::from(2_i64);
+    let sparse = Value::from_tensor(sparse_data, vec![8, 8]);
+    let mismatched = Value::from_tensor(vec![Fraction::from(1_i64); 9], vec![3, 3]);
+
+    let mut shape_metrics = RuntimeMetrics::default();
+    assert!(apply_binary_broadcast_with_metrics(
+        &sparse,
+        &mismatched,
+        |a, b| Ok(a.add(b)),
+        Some(&mut shape_metrics),
+    )
+    .is_err());
+    assert_eq!(shape_metrics.vtu_sparse_candidate_count, 0);
+
+    let mut nil_metrics = RuntimeMetrics::default();
+    assert!(apply_binary_broadcast_with_metrics(
+        &Value::nil(),
+        &sparse,
+        |a, b| Ok(a.add(b)),
+        Some(&mut nil_metrics),
+    )
+    .is_err());
+    assert_eq!(nil_metrics.vtu_sparse_candidate_count, 0);
+}
+
+#[test]
 fn vtu_metrics_increment_on_quantize() {
     let mut interp = make_interp();
     let baseline = interp.runtime_metrics().vtu_candidate_block_count;
@@ -787,6 +847,10 @@ fn vtu_default_metrics_are_zero() {
     assert_eq!(m.vtu_same_shape_elementwise_count, 0);
     assert_eq!(m.vtu_projected_broadcast_count, 0);
     assert_eq!(m.vtu_simd_kernel_use_count, 0);
+    assert_eq!(m.vtu_sparse_candidate_count, 0);
+    assert_eq!(m.vtu_sparse_candidate_elements, 0);
+    assert_eq!(m.vtu_sparse_candidate_nonzero_elements, 0);
+    assert_eq!(m.vtu_sparse_skippable_zero_elements, 0);
     assert_eq!(m.vtu_candidate_block_count, 0);
     assert_eq!(m.vtu_rejected_block_count, 0);
     assert_eq!(m.vtu_fusion_candidate_count, 0);
@@ -936,10 +1000,10 @@ fn vtu_phase_iii_shape_accepts_tensor_input() {
 fn vtu_phase_iii_rank_accepts_tensor_input() {
     let interp = run_code("[ 1 2 3 ] RANK");
     let top = stack_top(&interp);
-    let rank = top
-        .as_scalar()
-        .and_then(|f| f.to_i64())
-        .or_else(|| top.child(0).and_then(|c| c.as_scalar().and_then(|f| f.to_i64())));
+    let rank = top.as_scalar().and_then(|f| f.to_i64()).or_else(|| {
+        top.child(0)
+            .and_then(|c| c.as_scalar().and_then(|f| f.to_i64()))
+    });
     assert_eq!(rank, Some(1));
 }
 
