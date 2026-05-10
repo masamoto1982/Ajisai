@@ -73,6 +73,18 @@ impl Value {
         ))
     }
 
+    /// Create a reasoned NIL for the Bubble Rule: well-formed operations that
+    /// cannot produce a value return Bubble/NIL directly instead of reusing
+    /// SAFE's `SafeCaught` reason.
+    #[inline]
+    pub fn bubble_with_reason(
+        reason: NilReason,
+        origin: AbsenceOrigin,
+        recoverability: Recoverability,
+    ) -> Self {
+        Self::nil_with_absence(AbsenceMetadata::with_reason(reason, origin, recoverability))
+    }
+
     #[inline]
     pub fn absence_metadata(&self) -> Option<&AbsenceMetadata> {
         self.absence.as_ref()

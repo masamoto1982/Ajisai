@@ -283,10 +283,13 @@ mod interval_tests {
     }
 
     #[tokio::test]
-    async fn test_interval_division_by_zero_interval_fails() {
+    async fn test_interval_division_by_zero_interval_bubbles() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("1 2 INTERVAL -1 1 INTERVAL /").await;
-        assert!(result.is_err());
+        interp
+            .execute("1 2 INTERVAL -1 1 INTERVAL /")
+            .await
+            .unwrap();
+        assert!(interp.get_stack().last().unwrap().is_nil());
     }
 
     #[tokio::test]

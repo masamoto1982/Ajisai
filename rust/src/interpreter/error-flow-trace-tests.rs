@@ -43,22 +43,25 @@ async fn nil_produced_event_has_diagnosis() {
 }
 
 #[tokio::test]
-async fn uncaught_word_error_has_execute_word_diagnosis() {
+async fn bubble_produced_by_word_has_execute_word_diagnosis() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("10 0 /").await;
-    assert!(result.is_err());
+    interp.execute("10 0 /").await.unwrap();
 
     let trace = interp.drain_error_flow_trace();
     let event = trace
         .iter()
-        .find(|e| e.kind == ErrorFlowEventKind::WordError)
-        .expect("expected WordError event");
+        .find(|e| e.kind == ErrorFlowEventKind::NilProduced)
+        .expect("expected NilProduced event");
 
     let diagnosis = event.diagnosis.as_ref().expect("expected diagnosis");
 
     assert_eq!(diagnosis.when.as_protocol_str(), "executeWord");
     assert_eq!(diagnosis.why.as_protocol_str(), "domain");
     assert_eq!(diagnosis.where_.word.as_deref(), Some("DIV"));
+    assert_eq!(
+        event.absence.as_ref().and_then(|a| a.reason.as_ref()),
+        Some(&NilReason::DivisionByZero)
+    );
 }
 
 #[tokio::test]
@@ -185,16 +188,17 @@ async fn error_flow_trace_records_safe_success() {
 }
 
 #[tokio::test]
-async fn error_flow_trace_records_uncaught_word_error() {
+async fn error_flow_trace_records_direct_bubble_from_word() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("10 0 /").await;
-    assert!(result.is_err());
+    interp.execute("10 0 /").await.unwrap();
     let trace = interp.drain_error_flow_trace();
     assert!(
-        trace.iter().any(|e| e.kind == ErrorFlowEventKind::WordError
-            && e.word.as_deref() == Some("DIV")
-            && e.error_category == Some(ErrorCategory::DivisionByZero)),
-        "expected WordError(DIV, DivisionByZero), got {:?}",
+        trace
+            .iter()
+            .any(|e| e.kind == ErrorFlowEventKind::NilProduced
+                && e.word.as_deref() == Some("DIV")
+                && e.error_category == Some(ErrorCategory::DivisionByZero)),
+        "expected NilProduced(DIV, DivisionByZero), got {:?}",
         trace
     );
 }

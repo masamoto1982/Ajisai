@@ -273,8 +273,8 @@ mod tests {
         interp
             .stack
             .push(create_number_value(Fraction::new(BigInt::from(-1), BigInt::one())));
-        let result = op_chr(&mut interp);
-        assert!(result.is_err());
+        op_chr(&mut interp).unwrap();
+        assert!(interp.stack.last().unwrap().is_nil());
 
 
         interp.stack.clear();
@@ -282,8 +282,8 @@ mod tests {
             BigInt::from(0x110000),
             BigInt::one(),
         )));
-        let result = op_chr(&mut interp);
-        assert!(result.is_err());
+        op_chr(&mut interp).unwrap();
+        assert!(interp.stack.last().unwrap().is_nil());
     }
 
     #[tokio::test]

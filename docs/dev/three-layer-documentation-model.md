@@ -72,6 +72,8 @@ Implementation Notes (optional)
 
 Such language-design context belongs in Reference and may be repeated in concept-guide pages. It does **not** appear in LOOKUP.
 
+Reference must include a concept page for the Bubble Rule. The page explains: well-formed operations that cannot produce a value return Bubble/NIL with a reason, while malformed usage raises an error. Per-word Reference entries for `GET`, `DIV`/`/`, `NUM`, and `CHR` must describe their Bubble/NIL cases separately from contract-violation errors.
+
 ---
 
 ## 3. LOOKUP (Layer 2)
@@ -88,6 +90,7 @@ LOOKUP answers, for one specific word the user already chose:
 - What related words should I know?
 
 LOOKUP does not teach the language and does not include design history.
+For Bubble Rule words, LOOKUP may include concise ASCII English failure text such as "Produces a Bubble/NIL when the index is out of range; raises StructureError when the target is not indexable." It must not use Japanese prose such as "泡".
 
 ### 3.2 Built-in vs user word — preserve current behavior
 

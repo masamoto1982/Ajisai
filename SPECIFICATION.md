@@ -512,7 +512,7 @@ The following built-in words follow the NIL passthrough rule defined in Section 
 
 `AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.
 
-Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), conversion words (`STR`, `NUM`, `BOOL`, `CHR`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough.
+Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), most conversion words (`STR`, `BOOL`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough. `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
 
 ---
 
@@ -528,7 +528,7 @@ A contract entry has the following fields, in addition to the existing identific
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
 
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`, while bare `/` is `Partial` with `nil_policy = Passthrough`.
+`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -685,7 +685,26 @@ Accepts a ProcessHandle. Terminates the child runtime immediately.
 | `CondExhausted` | COND expression has no matching clause |
 | `Custom` | Explicit error raised by user code |
 
-### 11.2 Equal-value output
+### 11.2 Bubble Rule
+
+The Bubble Rule is the user-level failure model for well-formed partial operations:
+
+> If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.
+
+In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`; it is not represented by `NilReason::SafeCaught` unless it was produced by the `SAFE` (`~`) compatibility boundary.
+
+Initial Core words following this rule include:
+
+| Word | Bubble/NIL case | Error case |
+|------|-----------------|------------|
+| `DIV` / `/` | Division by zero (`NilReason::DivisionByZero`) | Non-numeric operands or malformed shapes |
+| `GET` | Valid vector target with an out-of-range index (`NilReason::IndexOutOfBounds`) | Non-vector target or non-numeric index |
+| `NUM` | Text cannot be parsed as a number (`NilReason::InvalidEncoding`) | Input shape is not convertible text |
+| `CHR` | Numeric code point is outside the valid Unicode scalar range (`NilReason::InvalidEncoding`) | Operand is not numeric, or numeric operand is not an integer |
+
+`OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
+
+### 11.3 Equal-value output
 
 Operations that produce a value equal to their input are successful. Equal-value output is not an error.
 

@@ -149,7 +149,6 @@ mod tests {
         );
     }
 
-
     #[tokio::test]
     async fn test_safe_mode_normal_execution() {
         let mut interp = Interpreter::new();
@@ -251,7 +250,8 @@ mod tests {
         assert!(result.is_ok());
 
         let result2 = interp.execute("[ 1 2 3 ] [ 10 ] GET").await;
-        assert!(result2.is_err(), "Second GET without ~ should fail");
+        assert!(result2.is_ok(), "Second GET without ~ should bubble");
+        assert!(interp.stack.last().unwrap().is_nil());
     }
 
     #[tokio::test]
@@ -296,7 +296,15 @@ mod tests {
             "Safe mode should allow REVERSE on singleton vector: {:?}",
             result
         );
-        assert_eq!(interp.stack.len(), 1, "Stack should remain unchanged: {:?}", interp.stack);
-        assert!(interp.stack.last().unwrap().is_vector(), "Top should be the reversed vector");
+        assert_eq!(
+            interp.stack.len(),
+            1,
+            "Stack should remain unchanged: {:?}",
+            interp.stack
+        );
+        assert!(
+            interp.stack.last().unwrap().is_vector(),
+            "Top should be the reversed vector"
+        );
     }
 }
