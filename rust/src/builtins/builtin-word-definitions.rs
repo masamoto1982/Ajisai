@@ -280,13 +280,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
         name: "SAFE",
         category: "modifier",
-        hover_summary: "SAFE — compatibility safety boundary",
+        hover_summary: "SAFE — catch next-word errors",
         hover_syntax: "~ GET",
         detail_group: BuiltinDetailGroup::Modifier,
         summary:
-            "Compatibility safety boundary for converting the next operation's error to NIL.",
+            "Safety boundary for converting the next operation's raised error to NIL.",
         role: Some(
-            "Modifier that preserves legacy SAFE behavior around one word.",
+            "Modifier that catches an error from one word without rewrapping direct Bubble/NIL results.",
         ),
         syntax_forms: &[BuiltinSyntaxDoc {
             canonical: "SAFE <next-word>",
@@ -295,7 +295,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         stack_effect: "no values popped or pushed",
         behavior:
-            "Sets the safe-mode flag. If the next word fails, the runtime\npushes NIL instead of raising the error. Words that already produce\nBubble/NIL keep working without SAFE.",
+            "Sets the safe-mode flag. If the next word raises an error, the runtime\npushes NIL instead. A direct Bubble/NIL result is left unchanged.",
         examples: &[BuiltinExampleDoc {
             canonical: "[ 1 2 ] [ 9 ] SAFE GET",
             shorthand: Some("[ 1 2 ] [ 9 ] ~ GET"),

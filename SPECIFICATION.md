@@ -235,7 +235,7 @@ The diagnostic object uses the existing three-layer model:
 | `evidence` | human-readable evidence list | non-canonical; do not parse |
 | `nextChecks` | suggested checks for UI/AI display | structured label/detail strings |
 
-SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = divisionByZero`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
+SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = structureError`. Direct Bubble/NIL results use their own reason and are not wrapped as `safeCaught`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
 
 #### 4.5.1 NIL passthrough
 
@@ -691,7 +691,7 @@ The Bubble Rule is the user-level failure model for well-formed partial operatio
 
 > If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.
 
-In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`; it is not represented by `NilReason::SafeCaught` unless it was produced by the `SAFE` (`~`) compatibility boundary.
+In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`. `NilReason::SafeCaught` is reserved for actual errors caught by the `SAFE` (`~`) boundary; `SAFE` does not rewrap a direct Bubble/NIL produced by a well-formed operation.
 
 Initial Core words following this rule include:
 
@@ -710,11 +710,11 @@ Operations that produce a value equal to their input are successful. Equal-value
 
 ### 11.3 Safe mode behavior
 
-`~` (`SAFE`) is the explicit projection operator that turns a partial operation into a total one by mapping any error to diagnostic NIL metadata. The projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `divisionByZero`, `stackUnderflow`, or `indexOutOfBounds`). The error itself does not propagate.
+`~` (`SAFE`) is the explicit projection operator for malformed-use errors that have not already become Bubble/NIL values. If the guarded word raises an error, the projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `stackUnderflow`, `unknownWord`, or `structureError`). The error itself does not propagate.
 
-Stack discipline: when `~`-guarded execution fails, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. The semantic plane is normalized to the new stack length.
+Stack discipline: when `~`-guarded execution raises an error, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. When the guarded word succeeds by producing a direct Bubble/NIL, `SAFE` leaves that Bubble/NIL and the word's normal stack effect unchanged. The semantic plane is normalized to the new stack length.
 
-The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore guard a single risky operation with `~` and apply `OR-NIL` (`=>`) once at the end to supply a fallback value, rather than guarding every step.
+The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore use `OR-NIL` (`=>`) once at the end to supply a fallback value.
 
 `~` is **not** a generic exception swallower: the original error category and three-layer diagnosis are preserved on the resulting NIL for debugging, testing, and proof logging.
 

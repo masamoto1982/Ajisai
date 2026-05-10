@@ -93,7 +93,7 @@ mod tests {
         assert_eq!(
             interp.stack.len(),
             3,
-            "Stack should have 3 elements: {:?}",
+            "Stack should have 3 elements after keep mode then reset: {:?}",
             interp.stack
         );
     }
@@ -166,18 +166,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_safe_mode_error_returns_nil() {
+    async fn test_safe_mode_bubble_returns_nil() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1 2 3 ] [ 10 ] ~ GET").await;
         assert!(
             result.is_ok(),
-            "Safe mode should suppress error: {:?}",
+            "Safe mode should allow GET Bubble/NIL: {:?}",
             result
         );
         assert_eq!(
             interp.stack.len(),
-            3,
-            "Stack should have 3 elements (restored + NIL): {:?}",
+            2,
+            "Stack should follow GET's normal Bubble/NIL stack effect: {:?}",
             interp.stack
         );
         assert!(
@@ -212,8 +212,8 @@ mod tests {
         );
         assert_eq!(
             interp.stack.len(),
-            3,
-            "Stack should have 3 elements: {:?}",
+            1,
+            "Stack should follow DIV's normal Bubble/NIL stack effect: {:?}",
             interp.stack
         );
         assert!(
@@ -225,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn test_safe_mode_stack_restore_on_error() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 100 ] [ 1 2 3 ] [ 10 ] ~ GET").await;
+        let result = interp.execute("[ 100 ] 123 [ 0 ] ~ GET").await;
         assert!(
             result.is_ok(),
             "Safe mode should suppress error: {:?}",

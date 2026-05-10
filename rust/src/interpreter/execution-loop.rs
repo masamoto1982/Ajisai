@@ -66,6 +66,46 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
     }
 }
 
+fn trace_direct_nil_produced(interp: &mut Interpreter, word: &str, stack_len_before: usize) {
+    let Some(reason) = top_direct_nil_reason(interp) else {
+        return;
+    };
+
+    let category = error_category_for_nil_reason(&reason);
+    let stack_len_after = interp.stack.len();
+    let diagnosis = DebugDiagnosis::from_error_category(
+        ErrorPhase::ExecuteWord,
+        Some(word),
+        category.as_ref(),
+        Some(&reason),
+        stack_len_before,
+        stack_len_after,
+        Some(format!(
+            "NIL produced by {} reason={}",
+            word,
+            reason.as_protocol_str()
+        )),
+    );
+    let absence = interp
+        .stack
+        .last()
+        .and_then(|value| value.normalized_absence_metadata());
+    interp.push_error_flow_trace(ErrorFlowEvent {
+        kind: ErrorFlowEventKind::NilProduced,
+        word: Some(word.to_string()),
+        error_category: category,
+        absence,
+        stack_len_before,
+        stack_len_after,
+        message: format!(
+            "NIL produced by {} reason={}",
+            word,
+            reason.as_protocol_str()
+        ),
+        diagnosis: Some(diagnosis),
+    });
+}
+
 impl Interpreter {
     pub(crate) fn collect_vector(
         &mut self,
@@ -307,99 +347,25 @@ impl Interpreter {
                                 self.safe_mode = false;
                                 match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
-                                        if let Some(direct_reason) = top_direct_nil_reason(self) {
-                                            let category =
-                                                error_category_for_nil_reason(&direct_reason)
-                                                    .unwrap_or(ErrorCategory::Custom);
-                                            let nil_reason =
-                                                NilReason::SafeCaught(Box::new(category.clone()));
-                                            self.stack = stack_snapshot;
-                                            let restored_len = self.stack.len();
-                                            let safe_caught_diagnosis =
-                                                DebugDiagnosis::from_error_category(
-                                                    ErrorPhase::SafeProjection,
-                                                    Some(upper.as_ref()),
-                                                    Some(&category),
-                                                    Some(&nil_reason),
-                                                    stack_len_before,
-                                                    restored_len,
-                                                    Some(format!(
-                                                        "SAFE projected Bubble/NIL reason={}",
-                                                        direct_reason.as_protocol_str()
-                                                    )),
-                                                );
-                                            self.push_error_flow_trace(ErrorFlowEvent {
-                                                kind: ErrorFlowEventKind::SafeCaught,
-                                                word: Some(upper.to_string()),
-                                                error_category: Some(category.clone()),
-                                                absence: Some(AbsenceMetadata::with_reason(
-                                                    nil_reason.clone(),
-                                                    AbsenceOrigin::SafeProjection,
-                                                    Recoverability::Recoverable,
-                                                )),
-                                                stack_len_before,
-                                                stack_len_after: restored_len,
-                                                message: format!(
-                                                    "SAFE projected Bubble/NIL word={} reason={} restored_stack_len={}",
-                                                    upper,
-                                                    direct_reason.as_protocol_str(),
-                                                    restored_len
-                                                ),
-                                                diagnosis: Some(safe_caught_diagnosis),
-                                            });
-                                            let nil_produced_diagnosis =
-                                                DebugDiagnosis::from_error_category(
-                                                    ErrorPhase::SafeProjection,
-                                                    Some(upper.as_ref()),
-                                                    Some(&category),
-                                                    Some(&nil_reason),
-                                                    restored_len,
-                                                    restored_len + 1,
-                                                    Some(
-                                                        "NIL produced by SAFE boundary".to_string(),
-                                                    ),
-                                                );
-                                            self.stack.push(Value::nil_from_diagnosis(
-                                                nil_reason.clone(),
-                                                AbsenceOrigin::SafeProjection,
-                                                Recoverability::Recoverable,
-                                                nil_produced_diagnosis.clone(),
-                                            ));
-                                            self.push_error_flow_trace(ErrorFlowEvent {
-                                                kind: ErrorFlowEventKind::NilProduced,
-                                                word: Some(upper.to_string()),
-                                                error_category: Some(category),
-                                                absence: Some(AbsenceMetadata::from_diagnosis(
-                                                    nil_reason,
-                                                    AbsenceOrigin::SafeProjection,
-                                                    Recoverability::Recoverable,
-                                                    nil_produced_diagnosis.clone(),
-                                                )),
-                                                stack_len_before: restored_len,
-                                                stack_len_after: self.stack.len(),
-                                                message: format!(
-                                                    "NIL produced by SAFE boundary word={} stack_len_after={}",
-                                                    upper,
-                                                    self.stack.len()
-                                                ),
-                                                diagnosis: Some(nil_produced_diagnosis),
-                                            });
-                                        } else {
-                                            let stack_len_after = self.stack.len();
-                                            self.push_error_flow_trace(ErrorFlowEvent {
-                                                kind: ErrorFlowEventKind::SafeSuccess,
-                                                word: Some(upper.to_string()),
-                                                error_category: None,
-                                                absence: None,
-                                                stack_len_before,
-                                                stack_len_after,
-                                                message: format!(
-                                                    "SAFE success word={} stack_len_before={} stack_len_after={}",
-                                                    upper, stack_len_before, stack_len_after
-                                                ),
-                                                diagnosis: None,
-                                            });
-                                        }
+                                        trace_direct_nil_produced(
+                                            self,
+                                            upper.as_ref(),
+                                            stack_len_before,
+                                        );
+                                        let stack_len_after = self.stack.len();
+                                        self.push_error_flow_trace(ErrorFlowEvent {
+                                            kind: ErrorFlowEventKind::SafeSuccess,
+                                            word: Some(upper.to_string()),
+                                            error_category: None,
+                                            absence: None,
+                                            stack_len_before,
+                                            stack_len_after,
+                                            message: format!(
+                                                "SAFE success word={} stack_len_before={} stack_len_after={}",
+                                                upper, stack_len_before, stack_len_after
+                                            ),
+                                            diagnosis: None,
+                                        });
                                         self.semantic_registry
                                             .normalize_to_stack_len(self.stack.len());
                                         apply_word_hint_override(self, upper.as_ref());
@@ -479,40 +445,11 @@ impl Interpreter {
                                 let stack_len_before = self.stack.len();
                                 match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
-                                        if let Some(reason) = top_direct_nil_reason(self) {
-                                            let category = error_category_for_nil_reason(&reason);
-                                            let stack_len_after = self.stack.len();
-                                            let diagnosis = DebugDiagnosis::from_error_category(
-                                                ErrorPhase::ExecuteWord,
-                                                Some(upper.as_ref()),
-                                                category.as_ref(),
-                                                Some(&reason),
-                                                stack_len_before,
-                                                stack_len_after,
-                                                Some(format!(
-                                                    "NIL produced by {} reason={}",
-                                                    upper,
-                                                    reason.as_protocol_str()
-                                                )),
-                                            );
-                                            let absence = self.stack.last().and_then(|value| {
-                                                value.normalized_absence_metadata()
-                                            });
-                                            self.push_error_flow_trace(ErrorFlowEvent {
-                                                kind: ErrorFlowEventKind::NilProduced,
-                                                word: Some(upper.to_string()),
-                                                error_category: category,
-                                                absence,
-                                                stack_len_before,
-                                                stack_len_after,
-                                                message: format!(
-                                                    "NIL produced by {} reason={}",
-                                                    upper,
-                                                    reason.as_protocol_str()
-                                                ),
-                                                diagnosis: Some(diagnosis),
-                                            });
-                                        }
+                                        trace_direct_nil_produced(
+                                            self,
+                                            upper.as_ref(),
+                                            stack_len_before,
+                                        );
                                         self.semantic_registry
                                             .normalize_to_stack_len(self.stack.len());
                                         apply_word_hint_override(self, upper.as_ref());
