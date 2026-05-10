@@ -235,7 +235,7 @@ The diagnostic object uses the existing three-layer model:
 | `evidence` | human-readable evidence list | non-canonical; do not parse |
 | `nextChecks` | suggested checks for UI/AI display | structured label/detail strings |
 
-SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = divisionByZero`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
+SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = structureError`. Direct Bubble/NIL results use their own reason and are not wrapped as `safeCaught`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
 
 #### 4.5.1 NIL passthrough
 
@@ -512,7 +512,7 @@ The following built-in words follow the NIL passthrough rule defined in Section 
 
 `AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.
 
-Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), conversion words (`STR`, `NUM`, `BOOL`, `CHR`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough.
+Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), most conversion words (`STR`, `BOOL`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough. `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
 
 ---
 
@@ -528,7 +528,7 @@ A contract entry has the following fields, in addition to the existing identific
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
 
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`, while bare `/` is `Partial` with `nil_policy = Passthrough`.
+`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -685,17 +685,36 @@ Accepts a ProcessHandle. Terminates the child runtime immediately.
 | `CondExhausted` | COND expression has no matching clause |
 | `Custom` | Explicit error raised by user code |
 
-### 11.2 Equal-value output
+### 11.2 Bubble Rule
+
+The Bubble Rule is the user-level failure model for well-formed partial operations:
+
+> If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.
+
+In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`. `NilReason::SafeCaught` is reserved for actual errors caught by the `SAFE` (`~`) boundary; `SAFE` does not rewrap a direct Bubble/NIL produced by a well-formed operation.
+
+Initial Core words following this rule include:
+
+| Word | Bubble/NIL case | Error case |
+|------|-----------------|------------|
+| `DIV` / `/` | Division by zero (`NilReason::DivisionByZero`) | Non-numeric operands or malformed shapes |
+| `GET` | Valid vector target with an out-of-range index (`NilReason::IndexOutOfBounds`) | Non-vector target or non-numeric index |
+| `NUM` | Text cannot be parsed as a number (`NilReason::InvalidEncoding`) | Input shape is not convertible text |
+| `CHR` | Numeric code point is outside the valid Unicode scalar range (`NilReason::InvalidEncoding`) | Operand is not numeric, or numeric operand is not an integer |
+
+`OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
+
+### 11.3 Equal-value output
 
 Operations that produce a value equal to their input are successful. Equal-value output is not an error.
 
 ### 11.3 Safe mode behavior
 
-`~` (`SAFE`) is the explicit projection operator that turns a partial operation into a total one by mapping any error to diagnostic NIL metadata. The projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `divisionByZero`, `stackUnderflow`, or `indexOutOfBounds`). The error itself does not propagate.
+`~` (`SAFE`) is the explicit projection operator for malformed-use errors that have not already become Bubble/NIL values. If the guarded word raises an error, the projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `stackUnderflow`, `unknownWord`, or `structureError`). The error itself does not propagate.
 
-Stack discipline: when `~`-guarded execution fails, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. The semantic plane is normalized to the new stack length.
+Stack discipline: when `~`-guarded execution raises an error, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. When the guarded word succeeds by producing a direct Bubble/NIL, `SAFE` leaves that Bubble/NIL and the word's normal stack effect unchanged. The semantic plane is normalized to the new stack length.
 
-The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore guard a single risky operation with `~` and apply `OR-NIL` (`=>`) once at the end to supply a fallback value, rather than guarding every step.
+The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore use `OR-NIL` (`=>`) once at the end to supply a fallback value.
 
 `~` is **not** a generic exception swallower: the original error category and three-layer diagnosis are preserved on the resulting NIL for debugging, testing, and proof logging.
 

@@ -1,10 +1,11 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_value_helpers::{
     apply_unary_cast, format_fraction_to_string, format_value_to_string_repr_with_hint,
     is_boolean_value, is_number_value, is_string_value_with_hint,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value};
 
@@ -37,7 +38,13 @@ fn convert_value_to_number(val: &Value, hint: DisplayHint) -> Result<Value> {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
             Ok(fraction) => return Ok(create_number_value(fraction)),
-            Err(_) => return Ok(Value::nil()),
+            Err(_) => {
+                return Ok(Value::bubble_with_reason(
+                    NilReason::InvalidEncoding,
+                    AbsenceOrigin::InvalidEncoding,
+                    Recoverability::Recoverable,
+                ));
+            }
         }
     }
 
@@ -45,9 +52,7 @@ fn convert_value_to_number(val: &Value, hint: DisplayHint) -> Result<Value> {
         return Ok(val.clone());
     }
     if is_boolean_value(val) {
-        return Err(AjisaiError::from(
-            "NUM: expected String, got Boolean",
-        ));
+        return Err(AjisaiError::from("NUM: expected String, got Boolean"));
     }
     if val.is_nil() {
         return Err(AjisaiError::from("NUM: expected String, got Nil"));
@@ -122,22 +127,17 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
 
     if is_boolean_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from(
-            "NIL: expected String, got Boolean",
-        ));
+        return Err(AjisaiError::from("NIL: expected String, got Boolean"));
     }
 
     if is_number_value(&val) {
         interp.stack.push(val);
-        return Err(AjisaiError::from(
-            "NIL: expected String, got Number",
-        ));
+        return Err(AjisaiError::from("NIL: expected String, got Number"));
     }
 
     interp.stack.push(val);
     Err(AjisaiError::from("NIL: expected String input"))
 }
-
 
 fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
     if is_number_value(val) {
@@ -148,10 +148,11 @@ fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
                         return Ok(Value::from_string(&c.to_string()));
                     }
                 }
-                return Err(AjisaiError::from(format!(
-                    "CHR: {} is not a valid Unicode code point (valid range: 0-0x10FFFF, excluding surrogates)",
-                    code
-                )));
+                return Ok(Value::bubble_with_reason(
+                    NilReason::InvalidEncoding,
+                    AbsenceOrigin::InvalidEncoding,
+                    Recoverability::Recoverable,
+                ));
             } else {
                 let frac_str = format_fraction_to_string(f);
                 return Err(AjisaiError::from(format!(

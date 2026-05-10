@@ -280,13 +280,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
         name: "SAFE",
         category: "modifier",
-        hover_summary: "SAFE — return NIL on error",
+        hover_summary: "SAFE — catch next-word errors",
         hover_syntax: "~ GET",
         detail_group: BuiltinDetailGroup::Modifier,
         summary:
-            "Enable safe mode so the next operation returns NIL on error.",
+            "Safety boundary for converting the next operation's raised error to NIL.",
         role: Some(
-            "Modifier that converts the next word's failures into a NIL result.",
+            "Modifier that catches an error from one word without rewrapping direct Bubble/NIL results.",
         ),
         syntax_forms: &[BuiltinSyntaxDoc {
             canonical: "SAFE <next-word>",
@@ -295,7 +295,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         stack_effect: "no values popped or pushed",
         behavior:
-            "Sets the safe-mode flag. If the next word fails, the runtime\npushes NIL instead of raising the error.",
+            "Sets the safe-mode flag. If the next word raises an error, the runtime\npushes NIL instead. A direct Bubble/NIL result is left unchanged.",
         examples: &[BuiltinExampleDoc {
             canonical: "[ 1 2 ] [ 9 ] SAFE GET",
             shorthand: Some("[ 1 2 ] [ 9 ] ~ GET"),
@@ -331,7 +331,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ 10 ]"),
         }],
         failure: Some(
-            "Out-of-range index raises IndexOutOfBounds.\nNIL operands raise RejectsNil.",
+            "Produces a Bubble/NIL when the index is out of range.\nRaises StructureError when the target is not indexable or the index is not numeric.",
         ),
         related: &["INSERT", "REPLACE", "REMOVE", "SAFE"],
         ..SPEC_DEFAULT
@@ -770,7 +770,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
         executor_key: Some(BuiltinExecutorKey::Num),
-        summary: "Parse a value as a number; NIL on parse failure.",
+        summary: "Parse text as a number; Bubble/NIL on parse failure.",
         syntax_forms: &[BuiltinSyntaxDoc {
             canonical: "[ x ] NUM",
             shorthand: None,
@@ -778,12 +778,15 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         stack_effect: "[ x ] -> [ n | NIL ]",
         behavior:
-            "Attempts to interpret the operand as a numeric value. Returns\nthe parsed number on success, NIL on parse failure.",
+            "Attempts to interpret the operand as a numeric value. Returns\nthe parsed number on success, Bubble/NIL on parse failure.",
         examples: &[BuiltinExampleDoc {
             canonical: "'42' NUM",
             shorthand: None,
             result: Some("[ 42 ]"),
         }],
+        failure: Some(
+            "Produces a Bubble/NIL when text cannot be parsed as a number.\nRaises StructureError when the input shape is not convertible text.",
+        ),
         related: &["STR", "BOOL", "OR-NIL"],
         ..SPEC_DEFAULT
     },
@@ -842,7 +845,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
         name: "CHR",
         category: "cast",
-        hover_summary: "CHR — convert code to character",
+        hover_summary: "CHR — make a character",
         hover_syntax: "65 CHR",
         word_shape: WordShape::Map,
         detail_group: BuiltinDetailGroup::StringCast,
@@ -862,7 +865,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             shorthand: None,
             result: Some("[ 'A' ]"),
         }],
-        failure: Some("Non-numeric operand raises TypeError."),
+        failure: Some(
+            "Produces a Bubble/NIL when the code point is invalid.\nRaises StructureError when the operand is not numeric.",
+        ),
         related: &["CHARS", "STR"],
         ..SPEC_DEFAULT
     },
@@ -980,7 +985,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             shorthand: Some("[ 10 ] [ 2 ] /"),
             result: Some("[ 5 ]"),
         }],
-        failure: Some("Division by zero raises DivisionByZero."),
+        failure: Some(
+            "Produces a Bubble/NIL on division by zero.\nRaises StructureError when operands are not numeric.",
+        ),
         related: &["ADD", "SUB", "MUL", "MOD"],
         ..SPEC_DEFAULT
     },
@@ -1230,9 +1237,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_syntax: "NIL => [ 0 ]",
         detail_group: BuiltinDetailGroup::Modifier,
         summary:
-            "NIL coalescing operator: substitute alternative if value is NIL.",
+            "Bubble/NIL fallback operator: substitute an alternative if value is NIL.",
         role: Some(
-            "Modifier that returns its right operand when the left side is NIL.",
+            "Modifier that replaces a Bubble/NIL with a fallback value.",
         ),
         syntax_forms: &[BuiltinSyntaxDoc {
             canonical: "<a> OR-NIL <b>",
@@ -1241,7 +1248,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         stack_effect: "[a] [b] -> [a if a != NIL else b]",
         behavior:
-            "If the left operand is NIL, the right operand is taken;\notherwise the left operand is preserved and the right is dropped.",
+            "If the left operand is Bubble/NIL, the right operand is taken;\notherwise the left operand is preserved and the right is dropped.",
         examples: &[
             BuiltinExampleDoc {
                 canonical: "NIL OR-NIL [ 0 ]",

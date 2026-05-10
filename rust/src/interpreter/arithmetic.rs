@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
@@ -6,8 +6,9 @@ use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{DisplayHint, Value, ValueData};
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
@@ -282,11 +283,68 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.pop();
                 interp.stack.pop();
             }
-            let result = ai.div(&bi)?;
-            interp.stack.push(interval_to_value(result));
+            match ai.div(&bi) {
+                Ok(result) => interp.stack.push(interval_to_value(result)),
+                Err(AjisaiError::DivisionByZero) => interp.stack.push(Value::bubble_with_reason(
+                    NilReason::DivisionByZero,
+                    AbsenceOrigin::ExecutionFailure,
+                    Recoverability::Recoverable,
+                )),
+                Err(error) => return Err(error),
+            }
             return Ok(());
         }
     }
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        let stack_len = interp.stack.len();
+        if stack_len >= 2 {
+            let left_hint = interp.semantic_registry.lookup_hint_at(stack_len - 2);
+            let right_hint = interp.semantic_registry.lookup_hint_at(stack_len - 1);
+            if matches!(left_hint, DisplayHint::String) || matches!(right_hint, DisplayHint::String)
+            {
+                return Err(AjisaiError::create_structure_error("number", "string"));
+            }
+        }
+        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+        let operands = extract_operands(interp, 2)?;
+        let a_val = &operands[0];
+        let b_val = &operands[1];
+
+        match apply_binary_broadcast_with_metrics(
+            a_val,
+            b_val,
+            |a, b| {
+                if b.is_zero() {
+                    Err(AjisaiError::DivisionByZero)
+                } else {
+                    Ok(a.div(b))
+                }
+            },
+            Some(&mut interp.runtime_metrics),
+        ) {
+            Ok(result) => {
+                push_result(interp, result);
+                return Ok(());
+            }
+            Err(AjisaiError::DivisionByZero) => {
+                interp.stack.push(Value::bubble_with_reason(
+                    NilReason::DivisionByZero,
+                    AbsenceOrigin::ExecutionFailure,
+                    Recoverability::Recoverable,
+                ));
+                return Ok(());
+            }
+            Err(error) => {
+                if !is_keep_mode {
+                    for val in operands {
+                        interp.stack.push(val);
+                    }
+                }
+                return Err(error);
+            }
+        }
+    }
+
     apply_binary_arithmetic(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)

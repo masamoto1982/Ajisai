@@ -2,11 +2,14 @@ use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::Interpreter;
 
 fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
-    interp.get_stack().last().and_then(|v| v.nil_reason().cloned())
+    interp
+        .get_stack()
+        .last()
+        .and_then(|v| v.nil_reason().cloned())
 }
 
 #[tokio::test]
-async fn safe_division_by_zero_creates_nil_with_safe_caught_division_by_zero() {
+async fn safe_division_by_zero_preserves_direct_bubble_reason() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 ~ /").await.unwrap();
     let stack = interp.get_stack();
@@ -14,15 +17,12 @@ async fn safe_division_by_zero_creates_nil_with_safe_caught_division_by_zero() {
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
         "top of stack must be NIL after safe-guarded division by zero"
     );
-    let reason = last_nil_reason(&interp).expect("safe-projected NIL must carry a reason");
-    match reason {
-        NilReason::SafeCaught(category) => assert_eq!(*category, ErrorCategory::DivisionByZero),
-        other => panic!("expected SafeCaught(DivisionByZero), got {:?}", other),
-    }
+    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
+    assert_eq!(reason, NilReason::DivisionByZero);
 }
 
 #[tokio::test]
-async fn safe_index_out_of_bounds_creates_nil_with_safe_caught_index_out_of_bounds() {
+async fn safe_index_out_of_bounds_preserves_direct_bubble_reason() {
     let mut interp = Interpreter::new();
     interp.execute("[ 10 20 ] [ 99 ] ~ GET").await.unwrap();
     let stack = interp.get_stack();
@@ -30,11 +30,8 @@ async fn safe_index_out_of_bounds_creates_nil_with_safe_caught_index_out_of_boun
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
         "top of stack must be NIL after safe-guarded out-of-bounds GET"
     );
-    let reason = last_nil_reason(&interp).expect("safe-projected NIL must carry a reason");
-    match reason {
-        NilReason::SafeCaught(category) => assert_eq!(*category, ErrorCategory::IndexOutOfBounds),
-        other => panic!("expected SafeCaught(IndexOutOfBounds), got {:?}", other),
-    }
+    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
+    assert_eq!(reason, NilReason::IndexOutOfBounds);
 }
 
 #[tokio::test]
@@ -44,7 +41,7 @@ async fn safe_unknown_word_creates_nil_with_safe_caught_unknown_word() {
     let stack = interp.get_stack();
     assert_eq!(stack.len(), 1);
     assert!(stack[0].is_nil());
-    let reason = last_nil_reason(&interp).expect("safe-projected NIL must carry a reason");
+    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
     match reason {
         NilReason::SafeCaught(category) => assert_eq!(*category, ErrorCategory::UnknownWord),
         other => panic!("expected SafeCaught(UnknownWord), got {:?}", other),
@@ -52,20 +49,19 @@ async fn safe_unknown_word_creates_nil_with_safe_caught_unknown_word() {
 }
 
 #[tokio::test]
-async fn safe_failure_restores_stack_to_pre_call_snapshot() {
+async fn safe_successful_bubble_uses_normal_word_stack_effect() {
     let mut interp = Interpreter::new();
     interp.execute("1 2 3 0 ~ /").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
-        5,
-        "stack restored to pre-call snapshot (4 operands) plus a single NIL"
+        3,
+        "SAFE only restores the stack when the guarded word raises an error"
     );
     assert_eq!(format!("{}", stack[0]), "1");
     assert_eq!(format!("{}", stack[1]), "2");
-    assert_eq!(format!("{}", stack[2]), "3");
-    assert_eq!(format!("{}", stack[3]), "0");
-    assert!(stack[4].is_nil());
+    assert!(stack[2].is_nil());
+    assert_eq!(stack[2].nil_reason(), Some(&NilReason::DivisionByZero));
 }
 
 #[tokio::test]
@@ -75,14 +71,15 @@ async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
     interp.execute(", 10 +").await.unwrap();
     interp.execute(", 2 *").await.unwrap();
     assert!(
-        interp.get_stack().last().map(|v| v.is_nil()).unwrap_or(false),
+        interp
+            .get_stack()
+            .last()
+            .map(|v| v.is_nil())
+            .unwrap_or(false),
         "top of stack should still be NIL after passthrough pipeline"
     );
     let reason = last_nil_reason(&interp).expect("reason must propagate through passthrough");
-    match reason {
-        NilReason::SafeCaught(category) => assert_eq!(*category, ErrorCategory::DivisionByZero),
-        other => panic!("expected reason to survive passthrough, got {:?}", other),
-    }
+    assert_eq!(reason, NilReason::DivisionByZero);
 }
 
 #[tokio::test]
@@ -99,7 +96,7 @@ async fn bare_nil_literal_has_no_reason() {
 }
 
 #[tokio::test]
-async fn or_nil_consumes_safe_caught_nil_and_substitutes_fallback() {
+async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 ~ /").await.unwrap();
     interp.execute("42 =>").await.unwrap();
@@ -133,20 +130,15 @@ mod mcdc_safe_division {
         let mut interp = Interpreter::new();
         interp.execute("5 0 ~ /").await.unwrap();
         let reason = last_nil_reason(&interp).expect("must carry reason");
-        match reason {
-            NilReason::SafeCaught(c) => assert_eq!(*c, ErrorCategory::DivisionByZero),
-            other => panic!("expected DivisionByZero, got {:?}", other),
-        }
+        assert_eq!(reason, NilReason::DivisionByZero);
     }
 
     #[tokio::test]
-    async fn aq_ver_safe_div_d_safe_disengaged_zero_propagates_error() {
+    async fn aq_ver_safe_div_d_safe_disengaged_zero_produces_direct_bubble() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("5 0 /").await;
-        assert!(
-            result.is_err(),
-            "without SAFE, division by zero must propagate as an error"
-        );
+        interp.execute("5 0 /").await.unwrap();
+        let reason = last_nil_reason(&interp).expect("must carry reason");
+        assert_eq!(reason, NilReason::DivisionByZero);
     }
 
     #[tokio::test]
@@ -159,4 +151,81 @@ mod mcdc_safe_division {
         assert_eq!(format!("{}", stack[0]), "5");
         assert!(stack[0].nil_reason().is_none());
     }
+}
+
+#[tokio::test]
+async fn bubble_rule_division_by_zero_without_safe_has_direct_reason() {
+    let mut interp = Interpreter::new();
+    interp.execute("10 0 /").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(top.is_nil());
+    assert_eq!(top.nil_reason(), Some(&NilReason::DivisionByZero));
+}
+
+#[tokio::test]
+async fn bubble_rule_division_by_zero_recovers_with_or_nil() {
+    let mut interp = Interpreter::new();
+    interp.execute("10 0 / => 99").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(!top.is_nil());
+    assert_eq!(format!("{}", top), "99");
+}
+
+#[tokio::test]
+async fn bubble_rule_get_out_of_range_without_safe_has_direct_reason() {
+    let mut interp = Interpreter::new();
+    interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(top.is_nil());
+    assert_eq!(top.nil_reason(), Some(&NilReason::IndexOutOfBounds));
+}
+
+#[tokio::test]
+async fn bubble_rule_get_out_of_range_recovers_with_or_nil() {
+    let mut interp = Interpreter::new();
+    interp.execute("[ 10 20 ] [ 99 ] GET => 0").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(!top.is_nil());
+    assert_eq!(format!("{}", top), "0");
+}
+
+#[tokio::test]
+async fn bubble_rule_contract_violations_remain_errors() {
+    let mut interp = Interpreter::new();
+    assert!(interp.execute("10 'x' /").await.is_err());
+
+    let mut interp = Interpreter::new();
+    assert!(interp.execute("123 [ 0 ] GET").await.is_err());
+
+    let mut interp = Interpreter::new();
+    assert!(interp.execute("[ 10 20 ] 'x' GET").await.is_err());
+}
+
+#[tokio::test]
+async fn bubble_rule_num_parse_failure_has_direct_reason_and_fallback() {
+    let mut interp = Interpreter::new();
+    interp.execute("'abc' NUM").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(top.is_nil());
+    assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
+
+    let mut interp = Interpreter::new();
+    interp.execute("'abc' NUM => 0").await.unwrap();
+    assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0");
+}
+
+#[tokio::test]
+async fn bubble_rule_chr_invalid_codepoint_has_direct_reason_and_fallback() {
+    let mut interp = Interpreter::new();
+    interp.execute("1114112 CHR").await.unwrap();
+    let top = interp.get_stack().last().expect("top value");
+    assert!(top.is_nil());
+    assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
+
+    let mut interp = Interpreter::new();
+    interp.execute("1114112 CHR => 'fallback'").await.unwrap();
+    assert_eq!(
+        format!("{}", interp.get_stack().last().unwrap()),
+        "'fallback'"
+    );
 }
