@@ -59,11 +59,11 @@ Ajisai modifiers provide two orthogonal controls:
 
 Spec links: [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§11.5 KEEP modifier semantics](SPECIFICATION.md#115-keep-modifier-semantics)
 
-### 5) Safe mode (`~`): flood control for malformed-use errors
+### 5) Safe mode (`~`): flood control for raised errors
 
-`SAFE` is now a boundary for raised errors, not the main way to make ordinary partial operations recoverable. If the next word raises an error, `SAFE` converts that error to `NIL` with `safeCaught` diagnostic metadata. If the next word already produced a direct Bubble/NIL by the Bubble Rule, `SAFE` leaves that bubble and the word’s normal stack effect unchanged.
+`SAFE` is a boundary for errors that still raise, not the main way to make ordinary partial operations recoverable. If the next word raises an error — for example stack underflow, an unknown word, or a malformed input shape — `SAFE` converts that error to `NIL` with `safeCaught` diagnostic metadata. If the next word already produced a direct Bubble/NIL by the Bubble Rule, `SAFE` leaves that bubble and the word’s normal stack effect unchanged.
 
-So the pipeline does not crash on malformed-use errors that you explicitly guard, but ordinary “could not produce a value” cases can flow as reasoned bubbles without `SAFE`. In water terms: `SAFE` is still a spillway for structural incidents; bubbles already in the stream do not get relabeled at the gate.
+So the pipeline does not crash on raised errors that you explicitly guard, while ordinary “could not produce a value” cases can flow as reasoned bubbles without `SAFE`. In water terms: `SAFE` is still a spillway for incidents that would otherwise break the channel; bubbles already in the stream do not get relabeled at the gate.
 
 Spec links: [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.3 Safe mode behavior](SPECIFICATION.md#113-safe-mode-behavior)
 
