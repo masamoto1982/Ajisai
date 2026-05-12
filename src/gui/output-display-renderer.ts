@@ -120,6 +120,8 @@ const extractByteFromFraction = (frac: unknown): number | null => {
     return parseFractionToNumber(fraction);
 };
 
+const escapeStringLiteral = (s: string): string => s.replace(/'/g, "''");
+
 const deserializeBytesToString = (data: unknown[]): string => {
     const bytes: number[] = data
         .map(extractByteFromFraction)
@@ -144,7 +146,7 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
         if (data.length === 0) return `${open}${close}`;
         if (displayHint === 'string') {
             const str = deserializeBytesToString(data);
-            return `'${str}'`;
+            return `'${escapeStringLiteral(str)}'`;
         }
         const elements: string = data.map(frac => formatFraction(frac)).join(' ');
         return `${open} ${elements} ${close}`;
@@ -222,7 +224,8 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
 
             if (tensorShape.length === 1) {
                 if ((tensor.displayHint ?? '').toLowerCase() === 'string') {
-                    tensorNode.append(deserializeBytesToString(tensorData));
+                    const decoded = deserializeBytesToString(tensorData);
+                    tensorNode.append(`'${escapeStringLiteral(decoded)}'`);
                 } else {
                     tensorNode.appendChild(createBracketSpan('[', tensorDepth));
                     tensorData.forEach((frac, index) => {
@@ -268,7 +271,7 @@ const formatValue = (item: Value, depth: number): string => {
         case 'tensor':
             return formatTensor(item.value, depth);
         case 'string':
-            return `'${item.value}'`;
+            return `'${escapeStringLiteral(String(item.value))}'`;
         case 'symbol':
             return String(item.value);
         case 'boolean':

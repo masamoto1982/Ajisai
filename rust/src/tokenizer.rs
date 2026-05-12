@@ -6,13 +6,18 @@
 //!   integer := -? [0-9]+
 //!   fraction:= integer '/' integer
 //!   decimal := -? [0-9]* '.' [0-9]+
-//!   string  := "'" any-char-except-quote* "'"
+//!   string  := "'" ( any-char-except-quote | "''" )* "'"
 //!   symbol  := any non-whitespace run that is not a number or string
 //!
 //! A `'` only opens a string literal when it appears as the first character
 //! of a token (i.e. immediately after whitespace or at the start of input).
 //! Apostrophes inside a symbol — `O'Brien`, `it's` — therefore remain part
 //! of that symbol.
+//!
+//! Inside a string literal, two consecutive single quotes (`''`) encode one
+//! literal single quote (SQL convention). The first un-doubled `'` closes
+//! the string. `'TE''ST'` therefore lexes to one literal with content
+//! `TE'ST`.
 //!
 //! Comments start with `#` and run to end of line.
 
@@ -53,6 +58,12 @@ pub fn tokenize(src: &str) -> Result<Vec<Token>, TokenizeError> {
             let mut closed = false;
             while let Some(nc) = chars.next() {
                 if nc == '\'' {
+                    // Doubled single quote -> literal single quote, keep reading.
+                    if chars.peek() == Some(&'\'') {
+                        chars.next();
+                        s.push('\'');
+                        continue;
+                    }
                     closed = true;
                     break;
                 }
