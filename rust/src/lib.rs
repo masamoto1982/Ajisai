@@ -1,41 +1,24 @@
-mod builtins;
-pub mod core_word_aliases;
-pub mod coreword_registry;
-pub mod elastic;
-mod error;
+//! Ajisai core library.
+//!
+//! Phase 1 scope:
+//!  - All numeric values are stored as continued fractions `(a0 (a1 (a2 ...)))`.
+//!  - Stack-oriented interpreter (no return stack).
+//!  - Four arithmetic operations on continued fractions via exact rational pivot.
+//!  - DEF / DEL for user word definitions.
+//!  - Nil as bubble (propagates through operations).
+//!
+//! Internal representation is intentionally hidden from observable semantics:
+//! protocol fields exposed across the WASM boundary follow the semantic-plane
+//! contract defined in `SPECIFICATION.md`.
+
+pub mod cf;
+pub mod error;
+pub mod tokenizer;
+pub mod value;
 pub mod interpreter;
-pub mod semantic;
-mod tokenizer;
-pub mod types;
-#[path = "wasm-interpreter-bindings.rs"]
-mod wasm_interpreter_bindings;
+pub mod wasm;
 
-pub use wasm_interpreter_bindings::AjisaiInterpreter;
+pub use wasm::AjisaiInterpreter;
 
 #[cfg(test)]
-#[path = "tokenizer-regression-tests.rs"]
-mod tokenizer_regression_tests;
-
-#[cfg(test)]
-#[path = "tokenizer-regression-tests-2.rs"]
-mod tokenizer_regression_tests_2;
-
-#[cfg(test)]
-#[path = "tokenizer-mcdc-tests.rs"]
-mod tokenizer_mcdc_tests;
-
-#[cfg(test)]
-#[path = "arithmetic-operation-tests.rs"]
-mod arithmetic_operation_tests;
-
-#[cfg(test)]
-#[path = "dimension-limit-tests.rs"]
-mod dimension_limit_tests;
-
-#[cfg(test)]
-#[path = "tensor-operation-tests.rs"]
-mod tensor_operation_tests;
-
-#[cfg(test)]
-#[path = "json-io-tests.rs"]
-mod json_io_tests;
+mod tests;

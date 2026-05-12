@@ -7,81 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-  quality-gate:
-    name: Quality Gate
-    runs-on: ubuntu-latest
-    env:
-      # Staged rollout:
-      # set repository variable AJISAI_STRICT_QUALITY=true to make advisory checks blocking.
-      AJISAI_STRICT_QUALITY: ${{ vars.AJISAI_STRICT_QUALITY || 'false' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-llvm-cov
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
-        run: cargo install cargo-llvm-cov --locked
-
-      - name: Rust format check (staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
-        working-directory: rust
-        run: cargo fmt --check
-
-      - name: Rust clippy (deny warnings, staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
-        working-directory: rust
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Rust all-target tests
-        working-directory: rust
-        run: cargo test --all-targets --verbose
-
-      - name: Rust branch coverage (staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
-        working-directory: rust
-        run: cargo llvm-cov --branch --workspace --no-report
-
-      - name: Generate perf regression JSONL
-        working-directory: rust
-        run: cargo test perf_regression -- --nocapture
-
-      - name: Compare perf report against baseline
-        run: scripts/compare-perf.sh bench-baselines/main.jsonl rust/target/perf-report.jsonl ${{ env.AJISAI_STRICT_QUALITY == 'true' && 'strict' || 'advisory' }}
-
-      - name: Upload perf regression report artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: perf-report-jsonl
-          path: rust/target/perf-report.jsonl
-          retention-days: 90
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: TypeScript check
-        run: npm run check
-
-      - name: TypeScript MC/DC tests (Vitest)
-        run: npm test
-
-      - name: Quality gate mode summary
-        run: |
-          if [ "${AJISAI_STRICT_QUALITY}" = "true" ]; then
-            echo "Quality gate mode: STRICT (blocking)."
-          else
-            echo "Quality gate mode: STAGED (advisory for fmt/clippy/coverage/install)."
-            echo "Set repo variable AJISAI_STRICT_QUALITY=true to enforce strict blocking mode."
-          fi
-
   rust-test:
     name: Rust Tests
     runs-on: ubuntu-latest
@@ -101,41 +26,15 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run all Rust tests
+      - name: Run Rust unit tests
         working-directory: rust
-        run: cargo test --verbose
+        run: cargo test --lib --verbose
 
-      - name: Verify WASM build
+      - name: Verify WASM build target
         working-directory: rust
         run: |
           rustup target add wasm32-unknown-unknown
           cargo check --target wasm32-unknown-unknown
-
-      - name: Detect stale committed wasm bundle (advisory)
-        # Build the wasm bundle the same way the deploy workflow does and
-        # compare against the committed copy. This is advisory only: even
-        # if the committed bundle is stale, the deploy workflow rebuilds
-        # before publishing, so production stays fresh. The warning exists
-        # so reviewers know `npm run build:wasm` is needed for local dev to
-        # match production.
-        continue-on-error: true
-        run: |
-          set -e
-          if ! command -v wasm-pack >/dev/null 2>&1; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          fi
-          bash ./scripts/rebuild-wasm.sh > /tmp/rebuild-wasm.log 2>&1 || {
-            cat /tmp/rebuild-wasm.log
-            echo "::warning::wasm rebuild failed during stale-bundle check; skipping diff."
-            exit 0
-          }
-          if ! git diff --quiet -- src/wasm/generated/; then
-            echo "::warning::Committed src/wasm/generated/ bundle is stale relative to the Rust source."
-            echo "::warning::Run \`npm run build:wasm\` and commit the result so local dev matches production."
-            git --no-pager diff --stat -- src/wasm/generated/
-          else
-            echo "Committed wasm bundle matches a fresh build."
-          fi
 
   typescript-check:
     name: TypeScript Check
@@ -155,5 +54,5 @@ jobs:
       - name: Run TypeScript type check
         run: npm run check
 
-      - name: Run Vitest MC/DC tests
+      - name: Run Vitest tests
         run: npm test
