@@ -28,10 +28,19 @@ struct Fraction {
 }
 
 #[derive(Serialize)]
+struct TensorPayload {
+    shape: Vec<usize>,
+    data: Vec<Fraction>,
+    #[serde(rename = "displayHint", skip_serializing_if = "Option::is_none")]
+    display_hint: Option<String>,
+}
+
+#[derive(Serialize)]
 #[serde(untagged)]
 enum ProtocolValuePayload {
     Number(Fraction),
     Nil(String),
+    Tensor(TensorPayload),
 }
 
 #[derive(Serialize)]
@@ -43,7 +52,7 @@ struct ProtocolValue {
     #[serde(rename = "continuedFraction")]
     continued_fraction: String,
     #[serde(rename = "displayHint")]
-    display_hint: &'static str,
+    display_hint: String,
     semantics: ProtocolValueSemantics,
 }
 
@@ -304,7 +313,7 @@ fn protocol_value(v: &Value) -> ProtocolValue {
             kind: "nil",
             value: ProtocolValuePayload::Nil("Nil".to_string()),
             continued_fraction: "Nil".to_string(),
-            display_hint: "nil",
+            display_hint: "nil".to_string(),
             semantics: ProtocolValueSemantics {
                 semantic_kind: "absence",
                 shape: "absence",
@@ -321,11 +330,46 @@ fn protocol_value(v: &Value) -> ProtocolValue {
                     denominator: q.to_string(),
                 }),
                 continued_fraction: cf.nested_display(),
-                display_hint: "number",
+                display_hint: "number".to_string(),
                 semantics: ProtocolValueSemantics {
                     semantic_kind: "number",
                     shape: "scalar",
                     capabilities: vec!["numeric", "exactNumeric", "stackItem", "displayable", "aiExplainable"],
+                    origin: "literal",
+                },
+            }
+        }
+        Value::Tensor { shape, data, display_hint } => {
+            let payload_data: Vec<Fraction> = data
+                .iter()
+                .map(|cf| {
+                    let (p, q) = cf.to_ratio().expect("non-Nil CF must yield a ratio");
+                    Fraction {
+                        numerator: p.to_string(),
+                        denominator: q.to_string(),
+                    }
+                })
+                .collect();
+            let is_string = display_hint.as_deref() == Some("string");
+            let hint = display_hint.clone().unwrap_or_else(|| "tensor".to_string());
+            let semantic_kind = if is_string { "string" } else { "tensor" };
+            ProtocolValue {
+                kind: "tensor",
+                value: ProtocolValuePayload::Tensor(TensorPayload {
+                    shape: shape.clone(),
+                    data: payload_data,
+                    display_hint: display_hint.clone(),
+                }),
+                continued_fraction: v.nested_display(),
+                display_hint: hint,
+                semantics: ProtocolValueSemantics {
+                    semantic_kind,
+                    shape: if is_string { "string" } else { "tensor" },
+                    capabilities: if is_string {
+                        vec!["string", "stackItem", "displayable", "aiExplainable"]
+                    } else {
+                        vec!["tensor", "stackItem", "displayable", "aiExplainable"]
+                    },
                     origin: "literal",
                 },
             }

@@ -219,6 +219,26 @@ export const TEST_CASES: TestCase[] = [
         category: 'Output',
     },
 
+    // Strings
+    {
+        name: "'TEST' prints as 'TEST'",
+        code: "'TEST' .",
+        expectedOutput: "'TEST'",
+        category: 'Strings',
+    },
+    {
+        name: "Multibyte UTF-8 string round-trips",
+        code: "'こんにちは' .",
+        expectedOutput: "'こんにちは'",
+        category: 'Strings',
+    },
+    {
+        name: "Unterminated string literal is reported as error",
+        code: "'unfinished",
+        expectError: true,
+        category: 'Strings',
+    },
+
     // Errors
     {
         name: 'Stack underflow is reported as error',
