@@ -1,11 +1,5 @@
-
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
-import {
-    createExecutionSnapshot,
-    syncInterpreterState,
-    resolveExecutionException
-} from './interpreter-execution-utils';
+import { resolveExecutionException } from './interpreter-execution-utils';
 
 export interface StepState {
     readonly active: boolean;
@@ -122,15 +116,7 @@ export const createStepExecutor = (
                 false
             );
 
-            const currentState = createExecutionSnapshot(interpreter);
-            const result = await WORKER_MANAGER.execute(token, currentState);
-
-            try {
-                syncInterpreterState(interpreter, result);
-            } catch (error) {
-                console.error('[StepExecutor] Failed to sync state:', error);
-                showError(error as Error);
-            }
+            const result = await interpreter.execute(token);
 
             if (result.status === 'OK' && !result.error) {
                 showExecutionResult(result);

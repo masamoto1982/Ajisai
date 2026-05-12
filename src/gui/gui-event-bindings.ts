@@ -1,4 +1,3 @@
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { Display } from './output-display-renderer';
 import type { Editor } from './code-input-editor';
 import type { MobileHandler, ViewMode } from './mobile-view-switcher';
@@ -225,7 +224,6 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
-            WORKER_MANAGER.abortAll();
             executionController.abortExecution();
             e.preventDefault();
             e.stopImmediatePropagation();
