@@ -200,13 +200,12 @@ impl Interpreter {
             "RECALL" | "R>" => self.register_recall(),
             "PEEK" | "R@" => self.register_peek(),
 
-            // Comparison
+            // Comparison (right-pointing inequalities are intentionally absent;
+            // Ajisai mandates the "values increase from left to right" reading).
             "EQ" | "=" => self.cmp(name, |o| o == std::cmp::Ordering::Equal),
             "NE" | "<>" => self.cmp(name, |o| o != std::cmp::Ordering::Equal),
             "LT" | "<" => self.cmp(name, |o| o == std::cmp::Ordering::Less),
             "LE" | "<=" => self.cmp(name, |o| o != std::cmp::Ordering::Greater),
-            "GE" | ">=" => self.cmp(name, |o| o != std::cmp::Ordering::Less),
-            "GT" => self.cmp(name, |o| o == std::cmp::Ordering::Greater),
 
             // Three-valued logic (Kleene K3)
             "AND" | "&" => self.logic_and(name),

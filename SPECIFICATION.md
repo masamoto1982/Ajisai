@@ -24,9 +24,13 @@ lineage.
   Avoiding mid-computation memos is a deliberate VTU (Very Thrifty Use)
   energy goal.
 * Words are **English-rooted**, with selected symbols (`+`, `-`, `*`,
-  `/`, `=`, `<`, `<=`, `>=`, `<>`, `&`, `|`, `!`, `>R`, `R>`, `R@`, `.`)
-  acting as syntactic sugar. The standalone `>` symbol and the legacy
-  `=>` operator are intentionally **not** provided.
+  `/`, `=`, `<`, `<=`, `<>`, `&`, `|`, `!`, `>R`, `R>`, `R@`, `.`)
+  acting as syntactic sugar. **Right-pointing inequalities are wholly
+  absent from the language**: neither the symbols `>` and `>=` nor the
+  English words `GT` and `GE` are provided. A comparison `a > b` is
+  written `b a <`, with operands ordered so that values increase from
+  left to right. This follows the convention popularised by Takenori
+  Nabetani (see §7.4).
 * Ajisai is named after the hydrangea, whose temari (ball-shaped)
   inflorescence visually echoes the human cerebrum. The execution model
   mirrors a coarse model of human memory: **Register** as short-term
@@ -328,8 +332,8 @@ phases.
 ### 7.4 Comparison
 
 All comparisons take two numeric operands and push 1 (true), 0 (false),
-or Nil (if either operand is Nil). The standalone `>` symbol is
-**not** provided to keep `>R` parseable; use the English `GT` instead.
+or Nil (if either operand is Nil). Only left-pointing forms are
+provided:
 
 | Word | Sugar | Meaning            |
 |------|-------|--------------------|
@@ -337,8 +341,20 @@ or Nil (if either operand is Nil). The standalone `>` symbol is
 | NE   | `<>`  | a does not equal b |
 | LT   | `<`   | a is less than b   |
 | LE   | `<=`  | a is at most b     |
-| GE   | `>=`  | a is at least b    |
-| GT   | (none)| a is greater than b|
+
+The English words `GT` and `GE`, and the symbols `>` and `>=`, are
+**not** provided. A test for "a is greater than b" is written `b a <`,
+keeping the rule that *operands are written so that values increase
+from left to right*. The rationale follows Takenori Nabetani's
+2018 essay ["比較演算子「>」「>=」を使わなければ QOL が上昇する"][nabetani]:
+restricting all comparisons to one direction (1) keeps formulas
+isomorphic to the number line, (2) makes ordering bugs in chained
+predicates such as `1 <= x AND x <= 10` easier to spot, and (3) removes
+the small but recurring "which direction reads more naturally?"
+decision cost. Combined with Ajisai's stack syntax, the convention
+also keeps the `>R` Register-store sugar lexically unambiguous.
+
+[nabetani]: https://qiita.com/Nabetani/items/2eafad6cee85be0e9e76
 
 ### 7.5 Three-valued logic (Kleene K3)
 
@@ -398,7 +414,10 @@ without backwards-compatibility shims:
 * `COND` and other Ajisai-specific control structures inherited from
   the vector dialect.
 * The return stack (never introduced).
-* The standalone `>` symbol and the legacy `=>` NIL-coalescing operator.
+* Right-pointing comparisons: the symbols `>` / `>=` and the English
+  words `GT` / `GE`. Comparisons are always written with the smaller
+  operand on the left.
+* The legacy `=>` NIL-coalescing operator.
 
 ---
 
@@ -407,7 +426,7 @@ without backwards-compatibility shims:
 | Phase | Scope |
 |-------|-------|
 | 1 | Continued-fraction values, stack, four arithmetic ops, DEF/DEL, Nil, three-layer errors, GUI compatibility. |
-| **2 (this file)** | **Single Register slot with STORE/RECALL/PEEK, comparison words (EQ/NE/LT/LE/GE/GT), three-valued logic (AND/OR/NOT), GUI Register area, expanded test coverage.** |
+| **2 (this file)** | **Single Register slot with STORE/RECALL/PEEK, left-pointing comparison words (EQ/NE/LT/LE), three-valued logic (AND/OR/NOT), GUI Register area, expanded test coverage.** |
 | 3 | Caller-clobbers static linter for Register, lexical quotations and IF combinator, modules. |
 | 4 | Tensors as continued-fraction coefficients, exact irrational numbers, AI-explainable diagnostics. |
 

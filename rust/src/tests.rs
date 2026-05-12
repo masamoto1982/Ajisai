@@ -17,9 +17,10 @@
 //!  * REQ-REG-003: PEEK pushes a copy of the Register without clearing it.
 //!  * REQ-REG-004: Sugar `>R` / `R>` / `R@` resolve to the same primitives.
 //!  * REQ-REG-005: RESET clears Register together with the stack.
-//!  * REQ-CMP-001: EQ/NE/LT/LE/GE/GT compare exact rationals correctly.
-//!  * REQ-CMP-002: Symbolic comparison sugar (`=`, `<>`, `<`, `<=`, `>=`) work.
+//!  * REQ-CMP-001: EQ/NE/LT/LE compare exact rationals correctly.
+//!  * REQ-CMP-002: Symbolic comparison sugar (`=`, `<>`, `<`, `<=`) work.
 //!  * REQ-CMP-003: Comparisons involving Nil yield Nil.
+//!  * REQ-CMP-004: Right-pointing comparisons (GT/GE/>/>=) are absent.
 //!  * REQ-LOG-001: AND/OR/NOT realise Kleene K3 three-valued logic.
 //!  * REQ-LOG-002: Symbolic logic sugar (`&`, `|`, `!`) work.
 
@@ -213,7 +214,9 @@ fn req_reg_005_reset_clears_register() {
 
 #[test]
 fn req_cmp_001_exact_rational_comparison() {
-    let i = run("1/3 1/6 GT");
+    // Greater-than is expressed by swapping operands: `1/6 1/3 LT` means
+    // "1/6 < 1/3", i.e. 1/3 > 1/6.
+    let i = run("1/6 1/3 LT");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
     let i = run("1/3 2/6 EQ");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
@@ -221,7 +224,7 @@ fn req_cmp_001_exact_rational_comparison() {
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
     let i = run("3 3 LE");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
-    let i = run("3 4 GE");
+    let i = run("4 3 LE"); // 4 <= 3 is false
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
     let i = run("3 4 NE");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
@@ -237,8 +240,20 @@ fn req_cmp_002_symbolic_comparison_sugar() {
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
     let i = run("2 2 <=");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
-    let i = run("3 2 >=");
-    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+}
+
+#[test]
+fn req_cmp_004_right_pointing_inequalities_are_absent() {
+    // GT, GE, `>`, and `>=` must all fail as unknown words.
+    for src in &["1 2 GT", "1 2 GE", "1 2 >", "1 2 >="] {
+        let mut i = Interpreter::new();
+        let err = i.execute(src).unwrap_err();
+        assert!(
+            err.summary.contains("Unknown word"),
+            "expected unknown-word error for `{src}`, got: {}",
+            err.summary
+        );
+    }
 }
 
 #[test]
