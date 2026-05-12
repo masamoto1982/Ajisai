@@ -1,14 +1,9 @@
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type {
     AjisaiInterpreter,
     ProtocolDiagnosis,
     ExecuteResult
 } from '../wasm-interpreter-types';
-import {
-    createExecutionSnapshot,
-    syncInterpreterState,
-    resolveExecutionException
-} from './interpreter-execution-utils';
+import { resolveExecutionException } from './interpreter-execution-utils';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
 
@@ -126,16 +121,7 @@ export const createExecutionController = (
             updateView('output');
             showInfo('Executing...', false);
 
-            const currentState = createExecutionSnapshot(interpreter);
-            const result = await WORKER_MANAGER.execute(code, currentState);
-
-            try {
-                syncInterpreterState(interpreter, result);
-            } catch (error) {
-                console.error('[ExecController] Failed to sync state:', error);
-                showError(error as Error);
-            }
-
+            const result = await interpreter.execute(code);
             applyExecutionResult(result, code);
 
         } catch (error) {
@@ -150,7 +136,6 @@ export const createExecutionController = (
         try {
             console.log('[ExecController] Executing full reset');
             stepExecutor.reset();
-            await WORKER_MANAGER.resetAllWorkers();
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {

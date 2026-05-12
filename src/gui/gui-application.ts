@@ -5,7 +5,6 @@ import { createMobileHandler, MobileHandler } from './mobile-view-switcher';
 import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
-import { WORKER_MANAGER } from '../workers/execution-worker-manager';
 import type { AjisaiInterpreter } from '../wasm-interpreter-types';
 import {
     GUIElements,
@@ -153,17 +152,6 @@ export const createGUI = (): GUI => {
         }
     };
 
-    const initializeWorkers = async (): Promise<void> => {
-        try {
-            display.renderInfo('Initializing...', false);
-            await WORKER_MANAGER.init();
-            display.renderInfo('Ready', true);
-        } catch (error) {
-            console.error('[GUI] Failed to initialize workers:', error);
-            display.renderError(new Error(`Failed to initialize parallel execution: ${error}`));
-        }
-    };
-
     const init = async (): Promise<void> => {
         console.log('[GUI] Initializing GUI...');
 
@@ -302,7 +290,7 @@ export const createGUI = (): GUI => {
             }
         }
 
-        await initializeWorkers();
+        display.renderInfo('Ready', false);
 
         console.log('[GUI] GUI initialization completed');
     };
