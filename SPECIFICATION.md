@@ -82,7 +82,7 @@ includes spaces, tabs, and newlines.
 | Integer    | `-?[0-9]+`, e.g. `42`, `-7`. |
 | Fraction   | `Integer '/' Integer`, e.g. `3/4`, `-5/2`. |
 | Decimal    | `-?[0-9]*'.'[0-9]+`, e.g. `3.14`, `.5`. |
-| String     | `'` followed by content, closed by `'`, e.g. `'TEST'`, `'hello world'`. A `'` only opens a string when it is the first character of a token; apostrophes inside a word (`O'Brien`) remain part of that symbol. Inside the literal, two single quotes (`''`) encode one literal `'` (SQL convention): `'TE''ST'` is one literal whose content is `TE'ST`. Display re-escapes inner quotes so the rendered form round-trips through the lexer. |
+| String     | `'` followed by content, closed by `'`, e.g. `'TEST'`, `'hello world'`. A `'` only opens a string when it is the first character of a token; apostrophes inside a word (`O'Brien`) remain part of that symbol. Inside the literal, a `'` closes the literal **only** when the next character is whitespace, `#`, or end-of-input. Otherwise the `'` is content. `'TE''ST'` is therefore one literal whose content is the six characters `TE''ST`; `'O'Brien'` is one literal whose content is `O'Brien`. Display wraps content in `'...'` without any escape transformation, so the rendered form round-trips through the lexer. |
 | Symbol     | Any other run of non-whitespace characters. |
 | Comment    | `#` to end of line is ignored. |
 

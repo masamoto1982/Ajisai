@@ -6,7 +6,7 @@
 //!   integer := -? [0-9]+
 //!   fraction:= integer '/' integer
 //!   decimal := -? [0-9]* '.' [0-9]+
-//!   string  := "'" ( any-char-except-quote | "''" )* "'"
+//!   string  := "'" ( any-char | "'" followed-by non-delimiter )* "'" delimiter
 //!   symbol  := any non-whitespace run that is not a number or string
 //!
 //! A `'` only opens a string literal when it appears as the first character
@@ -14,10 +14,12 @@
 //! Apostrophes inside a symbol — `O'Brien`, `it's` — therefore remain part
 //! of that symbol.
 //!
-//! Inside a string literal, two consecutive single quotes (`''`) encode one
-//! literal single quote (SQL convention). The first un-doubled `'` closes
-//! the string. `'TE''ST'` therefore lexes to one literal with content
-//! `TE'ST`.
+//! Inside a string literal, a `'` closes the literal **only** when the next
+//! character is whitespace, `#`, or end-of-input. Otherwise the `'` is
+//! taken as content and reading continues. This is the legacy Ajisai rule:
+//! `'TE''ST'` is one literal whose content is the 6 characters `TE''ST`,
+//! `'O'Brien'` is one literal whose content is `O'Brien`, and the rendered
+//! form `'...'` simply wraps the content — no escape transformation occurs.
 //!
 //! Comments start with `#` and run to end of line.
 
@@ -58,14 +60,19 @@ pub fn tokenize(src: &str) -> Result<Vec<Token>, TokenizeError> {
             let mut closed = false;
             while let Some(nc) = chars.next() {
                 if nc == '\'' {
-                    // Doubled single quote -> literal single quote, keep reading.
-                    if chars.peek() == Some(&'\'') {
-                        chars.next();
-                        s.push('\'');
-                        continue;
+                    // Legacy rule: a `'` closes the literal only when the
+                    // following character is whitespace, `#`, or EOF. In
+                    // every other case the `'` is taken as content.
+                    let closes = match chars.peek() {
+                        None => true,
+                        Some(&next) => next.is_whitespace() || next == '#',
+                    };
+                    if closes {
+                        closed = true;
+                        break;
                     }
-                    closed = true;
-                    break;
+                    s.push('\'');
+                    continue;
                 }
                 s.push(nc);
             }

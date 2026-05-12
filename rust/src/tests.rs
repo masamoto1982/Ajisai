@@ -28,9 +28,10 @@
 //!  * REQ-STR-003: `.` prints a string literal as `'TEXT'`.
 //!  * REQ-STR-004: Strings round-trip multibyte UTF-8 content (e.g. ひらがな).
 //!  * REQ-STR-005: An unterminated string literal raises a three-layer error.
-//!  * REQ-STR-006: `''` inside a string literal lexes to a single `'`.
-//!  * REQ-STR-007: A string containing `'` re-escapes on display so the
-//!    rendered form is itself a valid Ajisai source literal.
+//!  * REQ-STR-006: a `'` inside a string literal closes the literal only
+//!    when followed by whitespace, `#`, or EOF; otherwise it is content.
+//!  * REQ-STR-007: the rendered form `'...'` round-trips through the
+//!    lexer because no escape transformation is applied.
 
 use num_bigint::BigInt;
 
@@ -373,16 +374,19 @@ fn req_str_005_unterminated_string_raises_three_layer_error() {
 }
 
 #[test]
-fn req_str_006_doubled_quote_is_escape_for_single_quote() {
-    // `'TE''ST'` is one literal whose content is the 5 characters TE'ST.
+fn req_str_006_inner_quote_is_content_unless_followed_by_delimiter() {
+    // `'TE''ST'` is one literal: the inner `''` is content because the
+    // first inner quote is followed by another `'` (not a delimiter),
+    // and the second inner quote is followed by `S` (not a delimiter).
+    // Only the final `'`, followed by EOF, closes the literal.
     let toks = tokenize("'TE''ST'").expect("tokenize");
-    assert_eq!(toks, vec![Token::StringLit("TE'ST".into())]);
+    assert_eq!(toks, vec![Token::StringLit("TE''ST".into())]);
 
-    // `''''` is one literal whose content is a single `'`.
+    // `''''` -> open `'`, then content `''`, then closing `'` at EOF.
     let toks = tokenize("''''").expect("tokenize");
-    assert_eq!(toks, vec![Token::StringLit("'".into())]);
+    assert_eq!(toks, vec![Token::StringLit("''".into())]);
 
-    // `''` alone is the empty string literal.
+    // `''` -> open `'`, then immediate close `'` at EOF: empty string.
     let toks = tokenize("''").expect("tokenize");
     assert_eq!(toks, vec![Token::StringLit(String::new())]);
 
@@ -395,15 +399,21 @@ fn req_str_006_doubled_quote_is_escape_for_single_quote() {
             Token::StringLit("b".into()),
         ]
     );
+
+    // `'O'Brien'`: the inner `'` is followed by `B`, so it is content.
+    // The trailing `'` is followed by EOF, so it closes the literal.
+    let toks = tokenize("'O'Brien'").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit("O'Brien".into())]);
 }
 
 #[test]
-fn req_str_007_display_re_escapes_inner_quote() {
+fn req_str_007_rendered_form_round_trips() {
+    // Printing the literal must yield a source-equivalent form that the
+    // lexer accepts and reduces to the same content.
     let mut i = Interpreter::new();
     i.execute("'TE''ST' .").unwrap();
     assert_eq!(i.take_output(), "'TE''ST'");
 
-    // Round-trip: the rendered output should re-lex to the same content.
     let toks = tokenize("'TE''ST'").expect("tokenize");
-    assert_eq!(toks, vec![Token::StringLit("TE'ST".into())]);
+    assert_eq!(toks, vec![Token::StringLit("TE''ST".into())]);
 }

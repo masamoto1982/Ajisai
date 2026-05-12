@@ -239,9 +239,15 @@ export const TEST_CASES: TestCase[] = [
         category: 'Strings',
     },
     {
-        name: "Doubled quote inside literal renders as single quote",
+        name: "Inner quote without delimiter stays in content; round-trips through dot",
         code: "'TE''ST' .",
         expectedOutput: "'TE''ST'",
+        category: 'Strings',
+    },
+    {
+        name: "Apostrophe inside literal: O'Brien parses as one string",
+        code: "'O'Brien' .",
+        expectedOutput: "'O'Brien'",
         category: 'Strings',
     },
 
