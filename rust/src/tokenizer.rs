@@ -1,12 +1,18 @@
 //! Tokenizer for Ajisai source text.
 //!
-//! Phase 1 grammar:
-//!   token   := number | symbol | '#' line-comment
+//! Grammar:
+//!   token   := number | string | symbol | '#' line-comment
 //!   number  := integer | fraction | decimal
 //!   integer := -? [0-9]+
 //!   fraction:= integer '/' integer
 //!   decimal := -? [0-9]* '.' [0-9]+
-//!   symbol  := any non-whitespace run that is not a number
+//!   string  := "'" any-char-except-quote* "'"
+//!   symbol  := any non-whitespace run that is not a number or string
+//!
+//! A `'` only opens a string literal when it appears as the first character
+//! of a token (i.e. immediately after whitespace or at the start of input).
+//! Apostrophes inside a symbol — `O'Brien`, `it's` — therefore remain part
+//! of that symbol.
 //!
 //! Comments start with `#` and run to end of line.
 
@@ -15,10 +21,16 @@ pub enum Token {
     Integer(String),
     Fraction(String, String),
     Decimal(String),
+    StringLit(String),
     Symbol(String),
 }
 
-pub fn tokenize(src: &str) -> Vec<Token> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenizeError {
+    UnterminatedString,
+}
+
+pub fn tokenize(src: &str) -> Result<Vec<Token>, TokenizeError> {
     let mut out = Vec::new();
     let mut chars = src.chars().peekable();
     while let Some(&c) = chars.peek() {
@@ -35,6 +47,23 @@ pub fn tokenize(src: &str) -> Vec<Token> {
             }
             continue;
         }
+        if c == '\'' {
+            chars.next();
+            let mut s = String::new();
+            let mut closed = false;
+            while let Some(nc) = chars.next() {
+                if nc == '\'' {
+                    closed = true;
+                    break;
+                }
+                s.push(nc);
+            }
+            if !closed {
+                return Err(TokenizeError::UnterminatedString);
+            }
+            out.push(Token::StringLit(s));
+            continue;
+        }
         let mut buf = String::new();
         while let Some(&nc) = chars.peek() {
             if nc.is_whitespace() {
@@ -45,7 +74,7 @@ pub fn tokenize(src: &str) -> Vec<Token> {
         }
         out.push(classify(&buf));
     }
-    out
+    Ok(out)
 }
 
 fn classify(raw: &str) -> Token {

@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-12 (Phase 2.1)**
+Version: **2026-05-12 (Phase 2.2)**
 
 This document is the single design authority for Ajisai. It supersedes all
 prior specifications. Where this file conflicts with any other document,
@@ -82,6 +82,7 @@ includes spaces, tabs, and newlines.
 | Integer    | `-?[0-9]+`, e.g. `42`, `-7`. |
 | Fraction   | `Integer '/' Integer`, e.g. `3/4`, `-5/2`. |
 | Decimal    | `-?[0-9]*'.'[0-9]+`, e.g. `3.14`, `.5`. |
+| String     | `'` followed by any characters except `'`, closed by `'`, e.g. `'TEST'`, `'hello world'`. A `'` only opens a string when it is the first character of a token; apostrophes inside a word (`O'Brien`) remain part of that symbol. |
 | Symbol     | Any other run of non-whitespace characters. |
 | Comment    | `#` to end of line is ignored. |
 
@@ -130,7 +131,26 @@ Canonical nested display:
 When the coefficient list has more than one element, the last element is
 ≥ 2: `[…, a, 1]` is rewritten as `[…, a+1]`.
 
-### 4.3 Nil (the bubble)
+### 4.3 Tensors and strings
+
+Beyond scalar continued fractions, Ajisai values include **tensors**:
+a `shape` (a list of dimension sizes) plus a contiguous `data` array of
+continued-fraction elements. Tensors carry an optional `displayHint`
+that survives across the WASM boundary and steers how the shell
+renders them.
+
+**String literals** are rank-1 tensors whose elements are the UTF-8
+byte values of the source text, with `displayHint = "string"`. The
+encoding is exactly what `String::as_bytes` produces in Rust, so any
+valid Unicode string round-trips through the byte array. Multibyte
+characters such as `'こんにちは'` are stored as their full UTF-8
+sequence (15 bytes for that example).
+
+This representation mirrors the legacy Ajisai behaviour: strings are
+not a primitive type but a tensor with a hint, which keeps the value
+algebra uniform.
+
+### 4.4 Nil (the bubble)
 
 Nil represents structured absence and propagates:
 
@@ -141,10 +161,13 @@ Nil represents structured absence and propagates:
 
 `NIL?` pushes 1 if the top is Nil, else 0.
 
-### 4.4 Truth value of a number
+### 4.5 Truth value of a value
 
-For Boolean tests, a number is **false** iff its rational value is `0`,
-otherwise **true**. Negative numbers and proper fractions are true.
+For Boolean tests:
+
+* A number is **false** iff its rational value is `0`, otherwise **true**. Negative numbers and proper fractions are true.
+* A tensor is **false** iff it has zero elements, otherwise **true**. A non-empty string is therefore truthy.
+* Nil is **Unknown** in three-valued logic.
 
 ---
 
@@ -242,18 +265,28 @@ form the canonical machine-readable contract.
 
 ```json
 {
-  "type": "number" | "nil",
-  "value": { "numerator": "string", "denominator": "string" } | "Nil",
-  "continuedFraction": "(a0 (a1 (a2)))" | "Nil",
-  "displayHint": "number" | "nil",
+  "type": "number" | "nil" | "tensor",
+  "value":
+      { "numerator": "string", "denominator": "string" }
+    | "Nil"
+    | {
+        "shape": [number, ...],
+        "data": [{ "numerator": "string", "denominator": "string" }, ...],
+        "displayHint": "string" | "tensor" | ...
+      },
+  "continuedFraction": "(a0 (a1 (a2)))" | "Nil" | "'decoded'",
+  "displayHint": "number" | "nil" | "string" | "tensor",
   "semantics": {
-    "semanticKind": "number" | "absence",
-    "shape": "scalar" | "absence",
+    "semanticKind": "number" | "absence" | "string" | "tensor",
+    "shape": "scalar" | "absence" | "string" | "tensor",
     "capabilities": ["..."],
     "origin": "literal"
   }
 }
 ```
+
+String literals use `type: "tensor"` with `value.displayHint = "string"`;
+the shell decodes the byte data as UTF-8 for rendering.
 
 The same shape is returned for `collect_register()` (a single value
 rather than a list).
@@ -449,7 +482,8 @@ without backwards-compatibility shims:
 |-------|-------|
 | 1 | Continued-fraction values, stack, four arithmetic ops, DEF/DEL, Nil, three-layer errors, GUI compatibility. |
 | 2 | Single Register slot with STORE/RECALL/PEEK, comparison words (EQ/NE/LT/LE/GT/GE) with full bidirectional sugar, three-valued logic (AND/OR/NOT), GUI Register area, expanded test coverage. |
-| **2.1 (this file)** | **Reinstate right-pointing comparisons (GT/GE and `>`/`>=`) on AI-first grounds; restore natural-language to code mapping for LLM-driven generation.** |
+| 2.1 | Reinstate right-pointing comparisons (GT/GE and `>`/`>=`) on AI-first grounds; restore natural-language to code mapping for LLM-driven generation. |
+| **2.2 (this file)** | **String literals as rank-1 UTF-8 byte tensors with `displayHint = "string"`, matching the legacy Ajisai encoding so the existing shell renderer decodes them automatically.** |
 | 3 | Caller-clobbers static linter for Register, lexical quotations and IF combinator, modules. |
 | 4 | Tensors as continued-fraction coefficients, exact irrational numbers, AI-explainable diagnostics. |
 

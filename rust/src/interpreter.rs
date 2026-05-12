@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use crate::cf::{self, ContinuedFraction};
 use crate::error::AjisaiError;
-use crate::tokenizer::{tokenize, Token};
+use crate::tokenizer::{tokenize, Token, TokenizeError};
 use crate::value::Value;
 
 #[derive(Clone, Debug)]
@@ -37,6 +37,16 @@ impl Truth {
     fn of(v: &Value) -> Self {
         match v {
             Value::Nil => Truth::Unknown,
+            // A tensor is truthy iff it has at least one element; the
+            // displayable surface treats it like a non-empty container.
+            Value::Tensor { shape, .. } => {
+                let len: usize = shape.iter().copied().product();
+                if shape.is_empty() || len == 0 {
+                    Truth::False
+                } else {
+                    Truth::True
+                }
+            }
             Value::Number(cf) => match cf.to_ratio() {
                 None => Truth::Unknown,
                 Some((p, _)) => {
@@ -110,13 +120,20 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self, code: &str) -> Result<(), AjisaiError> {
-        let tokens = tokenize(code);
+        let tokens = tokenize(code).map_err(|e| match e {
+            TokenizeError::UnterminatedString => AjisaiError::new(
+                "Unterminated string literal",
+                "A `'` opened a string literal that never closed before end of input.",
+                "Add a closing `'` so the string is bounded, e.g. `'TEST'`.",
+            ),
+        })?;
         let mut iter = tokens.into_iter().peekable();
         while let Some(tok) = iter.next() {
             match tok {
                 Token::Integer(s) => self.push_int(&s)?,
                 Token::Fraction(n, d) => self.push_fraction(&n, &d)?,
                 Token::Decimal(s) => self.push_decimal(&s)?,
+                Token::StringLit(s) => self.push_string(&s),
                 Token::Symbol(sym) => {
                     let upper = sym.to_ascii_uppercase();
                     if upper == "DEF" {
@@ -249,6 +266,21 @@ impl Interpreter {
         let cf = ContinuedFraction::from_decimal_str(s).ok_or_else(|| AjisaiError::parse_error(s))?;
         self.stack.push(Value::Number(cf));
         Ok(())
+    }
+
+    fn push_string(&mut self, s: &str) {
+        // String literals are stored as rank-1 tensors of UTF-8 byte values,
+        // carrying a `string` display hint that survives the WASM boundary.
+        let bytes = s.as_bytes();
+        let data: Vec<ContinuedFraction> = bytes
+            .iter()
+            .map(|b| ContinuedFraction::from_int(BigInt::from(*b)))
+            .collect();
+        self.stack.push(Value::Tensor {
+            shape: vec![bytes.len()],
+            data,
+            display_hint: Some("string".to_string()),
+        });
     }
 
     fn bin_arith<F>(&mut self, name: &str, op: F) -> Result<(), AjisaiError>
@@ -442,6 +474,7 @@ fn token_source(t: &Token) -> String {
         Token::Integer(s) => s.clone(),
         Token::Fraction(n, d) => format!("{}/{}", n, d),
         Token::Decimal(s) => s.clone(),
+        Token::StringLit(s) => format!("'{}'", s),
         Token::Symbol(s) => s.clone(),
     }
 }

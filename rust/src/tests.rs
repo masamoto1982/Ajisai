@@ -22,6 +22,12 @@
 //!  * REQ-CMP-003: Comparisons involving Nil yield Nil.
 //!  * REQ-LOG-001: AND/OR/NOT realise Kleene K3 three-valued logic.
 //!  * REQ-LOG-002: Symbolic logic sugar (`&`, `|`, `!`) work.
+//!  * REQ-STR-001: `'TEXT'` lexes to a single StringLit token.
+//!  * REQ-STR-002: Executing a string literal pushes a rank-1 tensor of
+//!    UTF-8 bytes with `display_hint = "string"`.
+//!  * REQ-STR-003: `.` prints a string literal as `'TEXT'`.
+//!  * REQ-STR-004: Strings round-trip multibyte UTF-8 content (e.g. ひらがな).
+//!  * REQ-STR-005: An unterminated string literal raises a three-layer error.
 
 use num_bigint::BigInt;
 
@@ -39,7 +45,7 @@ fn run(code: &str) -> Interpreter {
 fn ratio(v: &Value) -> (BigInt, BigInt) {
     match v {
         Value::Number(cf) => cf.to_ratio().expect("expected rational"),
-        Value::Nil => panic!("expected Number, got Nil"),
+        other => panic!("expected Number, got {:?}", other),
     }
 }
 
@@ -133,7 +139,7 @@ fn req_int_005_dot_writes_rational_to_output() {
 
 #[test]
 fn req_tok_001_classifies_tokens() {
-    let toks = tokenize("42 3/4 3.14 FOO");
+    let toks = tokenize("42 3/4 3.14 FOO").expect("tokenize");
     assert_eq!(
         toks,
         vec![
@@ -147,7 +153,7 @@ fn req_tok_001_classifies_tokens() {
 
 #[test]
 fn req_tok_002_skips_line_comments() {
-    let toks = tokenize("1 # comment ignored\n 2 +");
+    let toks = tokenize("1 # comment ignored\n 2 +").expect("tokenize");
     assert_eq!(
         toks,
         vec![
@@ -297,4 +303,68 @@ fn req_log_002_symbolic_logic_sugar() {
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
     let i = run("0 !");
     assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+}
+
+#[test]
+fn req_str_001_string_literal_lexes_as_one_token() {
+    let toks = tokenize("'TEST'").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit("TEST".into())]);
+
+    let toks = tokenize("'hello world' DROP").expect("tokenize");
+    assert_eq!(
+        toks,
+        vec![
+            Token::StringLit("hello world".into()),
+            Token::Symbol("DROP".into()),
+        ]
+    );
+
+    // Apostrophes inside a word remain part of that symbol.
+    let toks = tokenize("O'Brien").expect("tokenize");
+    assert_eq!(toks, vec![Token::Symbol("O'Brien".into())]);
+}
+
+#[test]
+fn req_str_002_string_literal_pushes_byte_tensor() {
+    let i = run("'TEST'");
+    assert_eq!(i.stack().len(), 1);
+    match &i.stack()[0] {
+        Value::Tensor { shape, data, display_hint } => {
+            assert_eq!(shape, &vec![4]);
+            assert_eq!(display_hint.as_deref(), Some("string"));
+            let bytes: Vec<u8> = data
+                .iter()
+                .map(|cf| {
+                    let (p, _) = cf.to_ratio().unwrap();
+                    use num_traits::ToPrimitive;
+                    p.to_u8().unwrap()
+                })
+                .collect();
+            assert_eq!(bytes, b"TEST".to_vec());
+        }
+        other => panic!("expected Tensor, got {:?}", other),
+    }
+}
+
+#[test]
+fn req_str_003_dot_prints_string_in_quotes() {
+    let mut i = Interpreter::new();
+    i.execute("'TEST' .").unwrap();
+    assert_eq!(i.take_output(), "'TEST'");
+}
+
+#[test]
+fn req_str_004_multibyte_utf8_round_trip() {
+    let mut i = Interpreter::new();
+    i.execute("'こんにちは' .").unwrap();
+    assert_eq!(i.take_output(), "'こんにちは'");
+}
+
+#[test]
+fn req_str_005_unterminated_string_raises_three_layer_error() {
+    let mut i = Interpreter::new();
+    let err = i.execute("'unfinished").unwrap_err();
+    assert!(err.summary.contains("Unterminated string"));
+    assert!(!err.detail.is_empty());
+    assert!(!err.diagnosis.is_empty());
 }
