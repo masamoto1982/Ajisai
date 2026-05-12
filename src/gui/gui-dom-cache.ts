@@ -10,6 +10,7 @@ export interface GUIElements {
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
     readonly stackDisplay: HTMLElement;
+    readonly registerDisplay: HTMLElement;
     readonly builtInWordsDisplay: HTMLElement;
     readonly userWordsDisplay: HTMLElement;
     readonly builtInWordInfo: HTMLElement;
@@ -75,6 +76,7 @@ export const cacheElements = (): GUIElements => ({
     importBtn: requireElementById('import-btn', HTMLButtonElement),
     outputDisplay: requireElementById('output-display', HTMLElement),
     stackDisplay: requireElementById('stack-display', HTMLElement),
+    registerDisplay: requireElementById('register-display', HTMLElement),
     builtInWordsDisplay: requireElementById('core-words-display', HTMLElement),
     userWordsDisplay: requireElementById('user-words-display', HTMLElement),
     builtInWordInfo: requireElementById('core-word-info', HTMLElement),
@@ -101,7 +103,8 @@ export const cacheElements = (): GUIElements => ({
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
     outputDisplay: elements.outputDisplay,
-    stackDisplay: elements.stackDisplay
+    stackDisplay: elements.stackDisplay,
+    registerDisplay: elements.registerDisplay
 });
 
 export const extractVocabularyElements = (elements: GUIElements): VocabularyElements => ({

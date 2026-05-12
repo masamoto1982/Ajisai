@@ -76,6 +76,13 @@ export class AjisaiInterpreter {
     /**
      * @returns {any}
      */
+    collect_register() {
+        const ret = wasm.ajisaiinterpreter_collect_register(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {any}
+     */
     collect_stack() {
         const ret = wasm.ajisaiinterpreter_collect_stack(this.__wbg_ptr);
         return ret;

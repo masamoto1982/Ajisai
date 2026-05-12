@@ -319,6 +319,35 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    gap: var(--space-2, 8px);
+}
+
+.stack-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.register-section {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.state-section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted, #666);
+    margin: 0 0 var(--space-1, 4px) 0;
+    padding: 0;
+}
+
+.register-display {
+    min-height: 2.5em;
+    max-height: 4em;
 }
 
 

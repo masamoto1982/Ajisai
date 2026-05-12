@@ -4,11 +4,15 @@
 //! as continued-fraction `Value::Number`. Symbolic tokens are looked up first
 //! as core words (built-ins), then as user words defined via `DEF`.
 //!
-//! The interpreter intentionally has *no* return stack: control flow is
-//! expressed purely by data stack operations. This supports the VTU goal of
-//! avoiding mid-computation memos.
+//! There is no return stack: control flow is expressed purely by data stack
+//! operations. As a single named auxiliary slot, the interpreter holds one
+//! **Register** (the short-term memory of the brain metaphor). The Register
+//! follows a caller-clobbers convention: a word that calls another word must
+//! not assume the Register is preserved across the call. The Register is
+//! initialised to Nil and reset to Nil by `RESET`.
 
 use num_bigint::BigInt;
+use num_traits::Zero;
 use std::collections::HashMap;
 
 use crate::cf::{self, ContinuedFraction};
@@ -22,8 +26,43 @@ pub struct UserWord {
     pub definition: String,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Truth {
+    True,
+    False,
+    Unknown,
+}
+
+impl Truth {
+    fn of(v: &Value) -> Self {
+        match v {
+            Value::Nil => Truth::Unknown,
+            Value::Number(cf) => match cf.to_ratio() {
+                None => Truth::Unknown,
+                Some((p, _)) => {
+                    if p.is_zero() {
+                        Truth::False
+                    } else {
+                        Truth::True
+                    }
+                }
+            },
+        }
+    }
+
+    fn into_value(self) -> Value {
+        match self {
+            Truth::True => Value::Number(ContinuedFraction::from_int(BigInt::from(1))),
+            Truth::False => Value::Number(ContinuedFraction::from_int(BigInt::from(0))),
+            Truth::Unknown => Value::Nil,
+        }
+    }
+}
+
 pub struct Interpreter {
     stack: Vec<Value>,
+    /// Single-slot Register (short-term memory). Nil represents "empty".
+    register: Value,
     user_words: HashMap<String, UserWord>,
     user_word_order: Vec<String>,
     output: String,
@@ -39,6 +78,7 @@ impl Interpreter {
     pub fn new() -> Self {
         Self {
             stack: Vec::new(),
+            register: Value::Nil,
             user_words: HashMap::new(),
             user_word_order: Vec::new(),
             output: String::new(),
@@ -47,6 +87,10 @@ impl Interpreter {
 
     pub fn stack(&self) -> &[Value] {
         &self.stack
+    }
+
+    pub fn register(&self) -> &Value {
+        &self.register
     }
 
     pub fn user_words(&self) -> impl Iterator<Item = &UserWord> {
@@ -61,6 +105,7 @@ impl Interpreter {
 
     pub fn reset(&mut self) {
         self.stack.clear();
+        self.register = Value::Nil;
         self.output.clear();
     }
 
@@ -75,9 +120,6 @@ impl Interpreter {
                 Token::Symbol(sym) => {
                     let upper = sym.to_ascii_uppercase();
                     if upper == "DEF" {
-                        // DEF expects: ... <name-symbol> <body-tokens-until-end-of-input>
-                        // Phase 1 minimal: capture next symbol as the name, consume the
-                        // rest of the token stream as the body source.
                         let name = match iter.next() {
                             Some(Token::Symbol(n)) => n,
                             _ => {
@@ -131,20 +173,45 @@ impl Interpreter {
 
     fn dispatch(&mut self, name: &str) -> Result<(), AjisaiError> {
         match name {
+            // Arithmetic
             "+" | "ADD" => self.bin_arith(name, cf::add),
             "-" | "SUB" => self.bin_arith(name, cf::sub),
             "*" | "MUL" => self.bin_arith(name, cf::mul),
             "/" | "DIV" => self.bin_arith(name, cf::div),
+
+            // Stack shuffles
             "DUP" => self.dup(),
             "DROP" => self.drop_top(),
             "SWAP" => self.swap(),
             "OVER" => self.over(),
+
+            // Nil
             "NIL" => {
                 self.stack.push(Value::Nil);
                 Ok(())
             }
             "NIL?" => self.nil_q(),
+
+            // Output
             "." => self.print_top(),
+
+            // Register
+            "STORE" | ">R" => self.register_store(),
+            "RECALL" | "R>" => self.register_recall(),
+            "PEEK" | "R@" => self.register_peek(),
+
+            // Comparison (right-pointing inequalities are intentionally absent;
+            // Ajisai mandates the "values increase from left to right" reading).
+            "EQ" | "=" => self.cmp(name, |o| o == std::cmp::Ordering::Equal),
+            "NE" | "<>" => self.cmp(name, |o| o != std::cmp::Ordering::Equal),
+            "LT" | "<" => self.cmp(name, |o| o == std::cmp::Ordering::Less),
+            "LE" | "<=" => self.cmp(name, |o| o != std::cmp::Ordering::Greater),
+
+            // Three-valued logic (Kleene K3)
+            "AND" | "&" => self.logic_and(name),
+            "OR" | "|" => self.logic_or(name),
+            "NOT" | "!" => self.logic_not(name),
+
             other => {
                 if let Some(uw) = self.user_words.get(other).cloned() {
                     return self.execute(&uw.definition);
@@ -264,6 +331,105 @@ impl Interpreter {
             self.output.push('\n');
         }
         self.output.push_str(&top.rational_display());
+        Ok(())
+    }
+
+    fn register_store(&mut self) -> Result<(), AjisaiError> {
+        let top = self
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::stack_underflow("STORE", 1, 0))?;
+        self.register = top;
+        Ok(())
+    }
+
+    fn register_recall(&mut self) -> Result<(), AjisaiError> {
+        let v = std::mem::replace(&mut self.register, Value::Nil);
+        self.stack.push(v);
+        Ok(())
+    }
+
+    fn register_peek(&mut self) -> Result<(), AjisaiError> {
+        self.stack.push(self.register.clone());
+        Ok(())
+    }
+
+    fn cmp<F>(&mut self, name: &str, accept: F) -> Result<(), AjisaiError>
+    where
+        F: Fn(std::cmp::Ordering) -> bool,
+    {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::stack_underflow(name, 2, self.stack.len()));
+        }
+        let b = self.stack.pop().unwrap();
+        let a = self.stack.pop().unwrap();
+        let result = match (&a, &b) {
+            (Value::Number(x), Value::Number(y)) => {
+                let (p1, q1) = x.to_ratio().expect("non-Nil CF must yield a ratio");
+                let (p2, q2) = y.to_ratio().expect("non-Nil CF must yield a ratio");
+                // Compare p1/q1 to p2/q2 as p1*q2 vs p2*q1 (q1, q2 > 0).
+                let lhs = &p1 * &q2;
+                let rhs = &p2 * &q1;
+                let ord = lhs.cmp(&rhs);
+                if accept(ord) {
+                    Truth::True
+                } else {
+                    Truth::False
+                }
+            }
+            _ => Truth::Unknown,
+        };
+        self.stack.push(result.into_value());
+        Ok(())
+    }
+
+    fn logic_and(&mut self, name: &str) -> Result<(), AjisaiError> {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::stack_underflow(name, 2, self.stack.len()));
+        }
+        let b = self.stack.pop().unwrap();
+        let a = self.stack.pop().unwrap();
+        let ta = Truth::of(&a);
+        let tb = Truth::of(&b);
+        // Kleene K3 AND: False dominates Unknown; Unknown dominates True.
+        let result = match (ta, tb) {
+            (Truth::False, _) | (_, Truth::False) => Truth::False,
+            (Truth::Unknown, _) | (_, Truth::Unknown) => Truth::Unknown,
+            _ => Truth::True,
+        };
+        self.stack.push(result.into_value());
+        Ok(())
+    }
+
+    fn logic_or(&mut self, name: &str) -> Result<(), AjisaiError> {
+        if self.stack.len() < 2 {
+            return Err(AjisaiError::stack_underflow(name, 2, self.stack.len()));
+        }
+        let b = self.stack.pop().unwrap();
+        let a = self.stack.pop().unwrap();
+        let ta = Truth::of(&a);
+        let tb = Truth::of(&b);
+        // Kleene K3 OR: True dominates Unknown; Unknown dominates False.
+        let result = match (ta, tb) {
+            (Truth::True, _) | (_, Truth::True) => Truth::True,
+            (Truth::Unknown, _) | (_, Truth::Unknown) => Truth::Unknown,
+            _ => Truth::False,
+        };
+        self.stack.push(result.into_value());
+        Ok(())
+    }
+
+    fn logic_not(&mut self, name: &str) -> Result<(), AjisaiError> {
+        let top = self
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::stack_underflow(name, 1, 0))?;
+        let result = match Truth::of(&top) {
+            Truth::True => Truth::False,
+            Truth::False => Truth::True,
+            Truth::Unknown => Truth::Unknown,
+        };
+        self.stack.push(result.into_value());
         Ok(())
     }
 }

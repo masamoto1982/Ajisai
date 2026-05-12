@@ -7,6 +7,7 @@ export const ajisaiinterpreter_collect_core_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
 export const ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_module_sample_words_info: (a: number, b: number, c: number) => any;
+export const ajisaiinterpreter_collect_register: (a: number) => any;
 export const ajisaiinterpreter_collect_stack: (a: number) => any;
 export const ajisaiinterpreter_collect_user_words_info: (a: number) => any;
 export const ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
