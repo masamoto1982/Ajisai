@@ -37,8 +37,8 @@ export const DEMO_USER_WORDS: UserWord[] = [
     },
     {
         name: 'POSITIVE?',
-        definition: '0 SWAP LT',
-        description: 'Is the top strictly greater than 0? Number -> 1/0/Nil. Written as "0 < x" because Ajisai has no right-pointing comparisons.',
+        definition: '0 >',
+        description: 'Is the top strictly greater than 0? Number -> 1/0/Nil',
     },
     {
         name: 'BETWEEN?',

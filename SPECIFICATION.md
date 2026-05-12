@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-12 (Phase 2)**
+Version: **2026-05-12 (Phase 2.1)**
 
 This document is the single design authority for Ajisai. It supersedes all
 prior specifications. Where this file conflicts with any other document,
@@ -24,13 +24,10 @@ lineage.
   Avoiding mid-computation memos is a deliberate VTU (Very Thrifty Use)
   energy goal.
 * Words are **English-rooted**, with selected symbols (`+`, `-`, `*`,
-  `/`, `=`, `<`, `<=`, `<>`, `&`, `|`, `!`, `>R`, `R>`, `R@`, `.`)
-  acting as syntactic sugar. **Right-pointing inequalities are wholly
-  absent from the language**: neither the symbols `>` and `>=` nor the
-  English words `GT` and `GE` are provided. A comparison `a > b` is
-  written `b a <`, with operands ordered so that values increase from
-  left to right. This follows the convention popularised by Takenori
-  Nabetani (see §7.4).
+  `/`, `=`, `<>`, `<`, `<=`, `>`, `>=`, `&`, `|`, `!`, `>R`, `R>`,
+  `R@`, `.`) acting as syntactic sugar. The legacy `=>` operator is
+  not provided. All six comparison directions are deliberately
+  exposed: see §7.4 for the AI-first rationale.
 * Ajisai is named after the hydrangea, whose temari (ball-shaped)
   inflorescence visually echoes the human cerebrum. The execution model
   mirrors a coarse model of human memory: **Register** as short-term
@@ -332,27 +329,55 @@ phases.
 ### 7.4 Comparison
 
 All comparisons take two numeric operands and push 1 (true), 0 (false),
-or Nil (if either operand is Nil). Only left-pointing forms are
-provided:
+or Nil (if either operand is Nil). Both directions are provided in
+both English-rooted and symbolic form:
 
-| Word | Sugar | Meaning            |
-|------|-------|--------------------|
-| EQ   | `=`   | a equals b         |
-| NE   | `<>`  | a does not equal b |
-| LT   | `<`   | a is less than b   |
-| LE   | `<=`  | a is at most b     |
+| Word | Sugar | Meaning               |
+|------|-------|-----------------------|
+| EQ   | `=`   | a equals b            |
+| NE   | `<>`  | a does not equal b    |
+| LT   | `<`   | a is less than b      |
+| LE   | `<=`  | a is at most b        |
+| GT   | `>`   | a is greater than b   |
+| GE   | `>=`  | a is at least b       |
 
-The English words `GT` and `GE`, and the symbols `>` and `>=`, are
-**not** provided. A test for "a is greater than b" is written `b a <`,
-keeping the rule that *operands are written so that values increase
-from left to right*. The rationale follows Takenori Nabetani's
-2018 essay ["比較演算子「>」「>=」を使わなければ QOL が上昇する"][nabetani]:
-restricting all comparisons to one direction (1) keeps formulas
-isomorphic to the number line, (2) makes ordering bugs in chained
-predicates such as `1 <= x AND x <= 10` easier to spot, and (3) removes
-the small but recurring "which direction reads more naturally?"
-decision cost. Combined with Ajisai's stack syntax, the convention
-also keeps the `>R` Register-store sugar lexically unambiguous.
+The tokenizer is whitespace-delimited, so `>` (GT) and `>R` (STORE)
+coexist as separate tokens without ambiguity.
+
+#### 7.4.1 Why both directions?
+
+Takenori Nabetani's 2018 essay ["比較演算子「>」「>=」を使わなければ QOL
+が上昇する"][nabetani] argues for restricting source code to `<` and
+`<=` so that operands are always written in ascending order, matching
+the number line. The argument is compelling for human teams: it
+removes a recurring "which direction reads more naturally?" decision,
+makes ordering bugs in chained predicates easier to spot, and keeps
+formulas isomorphic to the number line.
+
+Ajisai is, however, AI-first, and the three Nabetani benefits
+transfer poorly to LLM-driven code generation:
+
+1. *Less hesitation* — LLMs do not hesitate between forms; they
+   pattern-match.
+2. *Fewer ordering bugs* — LLM mistakes in comparisons stem from
+   training distribution mismatches, not direction confusion.
+3. *Number-line readability* — LLMs read both directions equally
+   well.
+
+Restricting the language to one direction would in fact harm AI use:
+
+* It widens the translation distance from natural-language
+  specifications. "Temperature exceeds 100" maps most directly to
+  `temp 100 >`; forcing `100 temp <` adds a normalisation step that
+  can fail.
+* It diverges from the dominant training corpora (C / Python / Rust
+  all use both directions), increasing the rate of generation errors.
+* It piles extra reordering work on top of the operand-juggling that
+  stack syntax already requires.
+
+We therefore expose all six comparisons. Teams that prefer the
+Nabetani style can enforce it at lint time without removing the
+language's expressive surface.
 
 [nabetani]: https://qiita.com/Nabetani/items/2eafad6cee85be0e9e76
 
@@ -414,9 +439,6 @@ without backwards-compatibility shims:
 * `COND` and other Ajisai-specific control structures inherited from
   the vector dialect.
 * The return stack (never introduced).
-* Right-pointing comparisons: the symbols `>` / `>=` and the English
-  words `GT` / `GE`. Comparisons are always written with the smaller
-  operand on the left.
 * The legacy `=>` NIL-coalescing operator.
 
 ---
@@ -426,7 +448,8 @@ without backwards-compatibility shims:
 | Phase | Scope |
 |-------|-------|
 | 1 | Continued-fraction values, stack, four arithmetic ops, DEF/DEL, Nil, three-layer errors, GUI compatibility. |
-| **2 (this file)** | **Single Register slot with STORE/RECALL/PEEK, left-pointing comparison words (EQ/NE/LT/LE), three-valued logic (AND/OR/NOT), GUI Register area, expanded test coverage.** |
+| 2 | Single Register slot with STORE/RECALL/PEEK, comparison words (EQ/NE/LT/LE/GT/GE) with full bidirectional sugar, three-valued logic (AND/OR/NOT), GUI Register area, expanded test coverage. |
+| **2.1 (this file)** | **Reinstate right-pointing comparisons (GT/GE and `>`/`>=`) on AI-first grounds; restore natural-language to code mapping for LLM-driven generation.** |
 | 3 | Caller-clobbers static linter for Register, lexical quotations and IF combinator, modules. |
 | 4 | Tensors as continued-fraction coefficients, exact irrational numbers, AI-explainable diagnostics. |
 
