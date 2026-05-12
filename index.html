@@ -108,9 +108,16 @@
                         <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
                     </div>
                 </div>
-                <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
-                    <h2 class="visually-hidden">Stack</h2>
-                    <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                <section id="stack-panel" class="stack-area" role="region" aria-label="Stack and Register" tabindex="0">
+                    <h2 class="visually-hidden">Stack and Register</h2>
+                    <div class="stack-section">
+                        <h3 class="state-section-label">Stack</h3>
+                        <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
+                    </div>
+                    <div class="register-section">
+                        <h3 class="state-section-label">Register</h3>
+                        <div id="register-display" class="state-display register-display" aria-live="polite" aria-atomic="false"></div>
+                    </div>
                 </section>
 
                 <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" hidden>

@@ -1,4 +1,4 @@
-//! DO-178B style requirement-based tests for Phase 1.
+//! DO-178B style requirement-based tests.
 //!
 //! Each test names the requirement it covers. Coverage targets:
 //!  * REQ-CF-001: integer → CF round-trip preserves value.
@@ -12,6 +12,16 @@
 //!  * REQ-INT-005: `.` prints rational form to the output buffer.
 //!  * REQ-TOK-001: tokenizer classifies integer / fraction / decimal / symbol.
 //!  * REQ-TOK-002: comments starting with `#` are skipped to end-of-line.
+//!  * REQ-REG-001: STORE moves the top of the stack into the Register.
+//!  * REQ-REG-002: RECALL pushes the Register and resets it to Nil.
+//!  * REQ-REG-003: PEEK pushes a copy of the Register without clearing it.
+//!  * REQ-REG-004: Sugar `>R` / `R>` / `R@` resolve to the same primitives.
+//!  * REQ-REG-005: RESET clears Register together with the stack.
+//!  * REQ-CMP-001: EQ/NE/LT/LE/GE/GT compare exact rationals correctly.
+//!  * REQ-CMP-002: Symbolic comparison sugar (`=`, `<>`, `<`, `<=`, `>=`) work.
+//!  * REQ-CMP-003: Comparisons involving Nil yield Nil.
+//!  * REQ-LOG-001: AND/OR/NOT realise Kleene K3 three-valued logic.
+//!  * REQ-LOG-002: Symbolic logic sugar (`&`, `|`, `!`) work.
 
 use num_bigint::BigInt;
 
@@ -154,4 +164,126 @@ fn cf_add_function_is_exact_on_thirds_and_sixths() {
     let b = ContinuedFraction::from_ratio(BigInt::from(1), BigInt::from(6));
     let c = cf::add(&a, &b);
     assert_eq!(c.to_ratio().unwrap(), (BigInt::from(1), BigInt::from(2)));
+}
+
+#[test]
+fn req_reg_001_store_moves_top_to_register() {
+    let i = run("42 STORE");
+    assert_eq!(i.stack().len(), 0);
+    assert_eq!(ratio(i.register()), (BigInt::from(42), BigInt::from(1)));
+}
+
+#[test]
+fn req_reg_002_recall_pushes_and_clears() {
+    let i = run("42 STORE RECALL");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(42), BigInt::from(1)));
+    assert!(i.register().is_nil());
+}
+
+#[test]
+fn req_reg_003_peek_does_not_clear() {
+    let i = run("42 STORE PEEK PEEK");
+    assert_eq!(i.stack().len(), 2);
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(42), BigInt::from(1)));
+    assert_eq!(ratio(&i.stack()[1]), (BigInt::from(42), BigInt::from(1)));
+    assert_eq!(ratio(i.register()), (BigInt::from(42), BigInt::from(1)));
+}
+
+#[test]
+fn req_reg_004_sugar_resolves_to_primitives() {
+    let i = run("7 >R R@ R>");
+    // 7 >R puts 7 into register; R@ copies it to stack; R> pulls it.
+    // Stack should be [7 (peeked), 7 (recalled)].
+    assert_eq!(i.stack().len(), 2);
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(7), BigInt::from(1)));
+    assert_eq!(ratio(&i.stack()[1]), (BigInt::from(7), BigInt::from(1)));
+    assert!(i.register().is_nil());
+}
+
+#[test]
+fn req_reg_005_reset_clears_register() {
+    let mut i = Interpreter::new();
+    i.execute("9 STORE 1 2 3").unwrap();
+    assert_eq!(i.stack().len(), 3);
+    assert_eq!(ratio(i.register()), (BigInt::from(9), BigInt::from(1)));
+    i.reset();
+    assert_eq!(i.stack().len(), 0);
+    assert!(i.register().is_nil());
+}
+
+#[test]
+fn req_cmp_001_exact_rational_comparison() {
+    let i = run("1/3 1/6 GT");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("1/3 2/6 EQ");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("1 2 LT");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("3 3 LE");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("3 4 GE");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
+    let i = run("3 4 NE");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+}
+
+#[test]
+fn req_cmp_002_symbolic_comparison_sugar() {
+    let i = run("1 1 =");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("1 2 <>");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("1 2 <");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("2 2 <=");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("3 2 >=");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+}
+
+#[test]
+fn req_cmp_003_nil_in_comparison_yields_nil() {
+    let i = run("NIL 1 EQ");
+    assert!(matches!(i.stack()[0], Value::Nil));
+    let i = run("1 NIL LT");
+    assert!(matches!(i.stack()[0], Value::Nil));
+}
+
+#[test]
+fn req_log_001_kleene_three_valued_logic() {
+    // AND
+    let i = run("1 1 AND");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("1 0 AND");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
+    let i = run("0 NIL AND"); // False dominates Nil
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
+    let i = run("1 NIL AND"); // Nil dominates True
+    assert!(matches!(i.stack()[0], Value::Nil));
+
+    // OR
+    let i = run("0 0 OR");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
+    let i = run("1 NIL OR"); // True dominates Nil
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("0 NIL OR"); // Nil dominates False
+    assert!(matches!(i.stack()[0], Value::Nil));
+
+    // NOT
+    let i = run("1 NOT");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(0), BigInt::from(1)));
+    let i = run("0 NOT");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("NIL NOT");
+    assert!(matches!(i.stack()[0], Value::Nil));
+}
+
+#[test]
+fn req_log_002_symbolic_logic_sugar() {
+    let i = run("1 1 &");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("0 1 |");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
+    let i = run("0 !");
+    assert_eq!(ratio(&i.stack()[0]), (BigInt::from(1), BigInt::from(1)));
 }

@@ -6,6 +6,7 @@ import { pipe } from './functional-result-helpers';
 export interface DisplayElements {
     outputDisplay: HTMLElement;
     stackDisplay: HTMLElement;
+    registerDisplay: HTMLElement;
 }
 
 export interface DisplayState {
@@ -20,6 +21,7 @@ export interface Display {
     readonly renderError: (error: Error | { message?: string } | string) => void;
     readonly renderInfo: (text: string, append?: boolean) => void;
     readonly renderStack: (stack: Value[]) => void;
+    readonly renderRegister: (value: Value | null | undefined) => void;
     readonly extractState: () => DisplayState;
 }
 
@@ -530,6 +532,38 @@ export const createDisplay = (elements: DisplayElements): Display => {
         appendToElement(display, container);
     };
 
+    const renderRegister = (value: Value | null | undefined): void => {
+        const display = elements.registerDisplay;
+        clearElement(display);
+
+        const isEmpty =
+            !value ||
+            value.type === 'nil' ||
+            (value.type === 'number' && (value.value as { numerator?: string })?.numerator === undefined);
+
+        if (isEmpty) {
+            display.classList.add('is-empty');
+            const message = document.createElement('div');
+            message.className = 'empty-words-message';
+            message.textContent = 'Register is empty (Nil).';
+            display.appendChild(message);
+            return;
+        }
+
+        display.classList.remove('is-empty');
+        const container = document.createElement('div');
+        container.className = 'area-content-flow stack-content-flow';
+        const elem = document.createElement('span');
+        elem.className = 'stack-item';
+        try {
+            elem.appendChild(renderStackValueNode(value, 1));
+        } catch {
+            elem.textContent = 'ERROR';
+        }
+        appendToElement(container, elem);
+        appendToElement(display, container);
+    };
+
     const extractState = (): DisplayState => ({ mainOutput });
 
     return {
@@ -540,6 +574,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
         renderError,
         renderInfo,
         renderStack,
+        renderRegister,
         extractState
     };
 };

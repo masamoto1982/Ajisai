@@ -132,6 +132,7 @@ export const createGUI = (): GUI => {
 
         try {
             display.renderStack(INTERPRETER_CLIENT.collectStack());
+            display.renderRegister(INTERPRETER_CLIENT.collectRegister());
             vocabulary.updateUserWords(INTERPRETER_CLIENT.collectUserWordsInfo());
 
             const newSheetIds: string[] = moduleTabManager.syncModuleTabs();

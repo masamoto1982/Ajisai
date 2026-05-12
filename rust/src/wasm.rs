@@ -1,10 +1,9 @@
-//! WASM bindings for the Phase 1 interpreter.
+//! WASM bindings for the Ajisai interpreter.
 //!
 //! The TypeScript shell expects a minimal protocol surface defined in
-//! `src/wasm-interpreter-types.ts`. Phase 1 implements the subset required
-//! to run a Stack/CF interpreter with DEF/DEL and Nil; richer subsystems
-//! (modules, hedged execution, etc.) will return empty/no-op responses
-//! pending Phase 2.
+//! `src/wasm-interpreter-types.ts`. The bindings expose Stack, Register,
+//! and DEF/DEL-managed user words; richer subsystems (modules, hedged
+//! execution, etc.) return empty/no-op responses pending later phases.
 
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -126,6 +125,11 @@ impl AjisaiInterpreter {
         serde_wasm_bindgen::to_value(&items).unwrap_or(JsValue::NULL)
     }
 
+    pub fn collect_register(&self) -> JsValue {
+        let v = protocol_value(self.inner.register());
+        serde_wasm_bindgen::to_value(&v).unwrap_or(JsValue::NULL)
+    }
+
     pub fn collect_user_words_info(&self) -> JsValue {
         // [name, definition, description-or-null, is-builtin-shadow]
         let rows: Vec<(String, String, Option<String>, bool)> = self
@@ -138,14 +142,26 @@ impl AjisaiInterpreter {
 
     pub fn collect_core_words_info(&self) -> JsValue {
         let rows: Vec<(&'static str, &'static str, &'static str)> = vec![
-            ("+", "Add the top two numbers.", "a b +"),
-            ("-", "Subtract the top from the next.", "a b -"),
-            ("*", "Multiply the top two numbers.", "a b *"),
-            ("/", "Divide the next by the top.", "a b /"),
+            ("ADD", "Add the top two numbers.", "a b ADD"),
+            ("SUB", "Subtract the top from the next.", "a b SUB"),
+            ("MUL", "Multiply the top two numbers.", "a b MUL"),
+            ("DIV", "Divide the next by the top.", "a b DIV"),
             ("DUP", "Duplicate the top of the stack.", "a DUP"),
             ("DROP", "Discard the top of the stack.", "a DROP"),
             ("SWAP", "Swap the top two stack items.", "a b SWAP"),
             ("OVER", "Copy the second item on top.", "a b OVER"),
+            ("STORE", "Move the top into the Register.", "a STORE"),
+            ("RECALL", "Push the Register onto the stack and clear it.", "RECALL"),
+            ("PEEK", "Copy the Register onto the stack.", "PEEK"),
+            ("EQ", "Push 1 when the top two are equal, else 0; Nil if either is Nil.", "a b EQ"),
+            ("NE", "Push 1 when unequal, else 0.", "a b NE"),
+            ("LT", "Push 1 when the next is less than the top.", "a b LT"),
+            ("LE", "Push 1 when the next is less than or equal to the top.", "a b LE"),
+            ("GE", "Push 1 when the next is greater than or equal to the top.", "a b GE"),
+            ("GT", "Push 1 when the next is greater than the top.", "a b GT"),
+            ("AND", "Three-valued AND on the top two.", "a b AND"),
+            ("OR", "Three-valued OR on the top two.", "a b OR"),
+            ("NOT", "Three-valued NOT on the top.", "a NOT"),
             ("NIL", "Push a Nil bubble.", "NIL"),
             ("NIL?", "Test the top for Nil (1 or 0).", "x NIL?"),
             (".", "Print the top value to output.", "x ."),
@@ -157,24 +173,47 @@ impl AjisaiInterpreter {
 
     pub fn collect_core_word_aliases_info(&self) -> JsValue {
         let rows: Vec<(&'static str, &'static str, &'static str, &'static str)> = vec![
-            ("ADD", "+", "Alias for +.", "a b ADD"),
-            ("SUB", "-", "Alias for -.", "a b SUB"),
-            ("MUL", "*", "Alias for *.", "a b MUL"),
-            ("DIV", "/", "Alias for /.", "a b DIV"),
+            ("+", "ADD", "Symbolic sugar for ADD.", "a b +"),
+            ("-", "SUB", "Symbolic sugar for SUB.", "a b -"),
+            ("*", "MUL", "Symbolic sugar for MUL.", "a b *"),
+            ("/", "DIV", "Symbolic sugar for DIV.", "a b /"),
+            (">R", "STORE", "Symbolic sugar for STORE.", "a >R"),
+            ("R>", "RECALL", "Symbolic sugar for RECALL.", "R>"),
+            ("R@", "PEEK", "Symbolic sugar for PEEK.", "R@"),
+            ("=", "EQ", "Symbolic sugar for EQ.", "a b ="),
+            ("<>", "NE", "Symbolic sugar for NE.", "a b <>"),
+            ("<", "LT", "Symbolic sugar for LT.", "a b <"),
+            ("<=", "LE", "Symbolic sugar for LE.", "a b <="),
+            (">=", "GE", "Symbolic sugar for GE.", "a b >="),
+            ("&", "AND", "Symbolic sugar for AND.", "a b &"),
+            ("|", "OR", "Symbolic sugar for OR.", "a b |"),
+            ("!", "NOT", "Symbolic sugar for NOT.", "a !"),
         ];
         serde_wasm_bindgen::to_value(&rows).unwrap_or(JsValue::NULL)
     }
 
     pub fn collect_input_helper_words_info(&self) -> JsValue {
         let rows: Vec<(&'static str, &'static str)> = vec![
-            ("+", "+ "),
-            ("-", "- "),
-            ("*", "* "),
-            ("/", "/ "),
+            ("ADD", "ADD "),
+            ("SUB", "SUB "),
+            ("MUL", "MUL "),
+            ("DIV", "DIV "),
             ("DUP", "DUP "),
             ("DROP", "DROP "),
             ("SWAP", "SWAP "),
             ("OVER", "OVER "),
+            ("STORE", "STORE "),
+            ("RECALL", "RECALL "),
+            ("PEEK", "PEEK "),
+            ("EQ", "EQ "),
+            ("NE", "NE "),
+            ("LT", "LT "),
+            ("LE", "LE "),
+            ("GE", "GE "),
+            ("GT", "GT "),
+            ("AND", "AND "),
+            ("OR", "OR "),
+            ("NOT", "NOT "),
             ("NIL", "NIL "),
             ("NIL?", "NIL? "),
             (".", ". "),

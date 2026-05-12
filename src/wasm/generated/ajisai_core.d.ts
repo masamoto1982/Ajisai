@@ -12,6 +12,7 @@ export class AjisaiInterpreter {
     collect_input_helper_words_info(): any;
     collect_module_sample_words_info(_module_name: string): any;
     collect_module_words_info(_module_name: string): any;
+    collect_register(): any;
     collect_stack(): any;
     collect_user_words_info(): any;
     execute(code: string): any;
@@ -38,6 +39,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_module_sample_words_info: (a: number, b: number, c: number) => any;
+    readonly ajisaiinterpreter_collect_register: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
     readonly ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
