@@ -1,31 +1,41 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-04-29**
+Version: **2026-05-12 (Phase 1 redesign)**
 
-This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
-
-Ajisai is a typed, vector-oriented dataflow language. Its safety story is the conjunction of:
-
-- **Value-shape safety** — operations check that operands have the structural shape they require (Scalar / Vector / Record / NIL / CodeBlock / handles).
-- **Encoding safety** — string and code values carry encoding contracts on top of their underlying fraction sequences.
-- **Contract safety** — every Coreword has machine-readable `requires` / `ensures` / partiality / NIL policy / effect metadata in the registry.
-- **NIL projection safety** — partial operations may project failure onto NIL with a structured reason; `SAFE` is the explicit projection operator.
-
-These layers compose. A change is conformant only if it preserves all of them.
+This document is the single design authority for Ajisai. Earlier versions
+described a vector-oriented, fraction-only dialect; this version replaces
+that design with the continued-fraction stack model described below.
+Where this file conflicts with any other document, this file takes
+precedence. The historical `CLAUDE.md` and any older specification
+materials are non-canonical.
 
 ---
 
-## 1. Language Identity
+## 1. Identity
 
-Ajisai is an **AI-first, vector-oriented, fractional-dataflow language**.
+Ajisai is an **AI-first, stack-oriented dataflow language** in the Forth
+lineage.
+
+* Every numeric value is stored internally as a **finite continued
+  fraction** of partial quotients drawn from arbitrary-precision integers
+  (Phase 1) and, in later phases, tensors. This gives exact arithmetic on
+  rational numbers and a path to exact representation of selected
+  irrational numbers.
+* Programs manipulate a single **data stack**. There is no return stack;
+  control flow is expressed entirely by data on the stack. Avoiding mid-
+  computation memos is a deliberate VTU (Very Thrifty Use) energy goal.
+* Words are **English-rooted**, with selected symbols (`+`, `-`, `*`,
+  `/`, `.`) acting as syntactic sugar for the underlying English-named
+  core words.
+* Internal representation is hidden behind a **semantic plane** so that
+  observable behaviour does not depend on the in-memory layout.
 
 Runtime stack:
-- Rust interpreter core
-- WASM boundary
-- TypeScript GUI/runtime shell
 
-Ajisai is designed for mechanical reasoning, automated refactoring, and structurally searchable implementation.
+* Rust interpreter core (`rust/`)
+* WASM boundary (`src/wasm/generated/`)
+* TypeScript GUI shell (`src/`)
 
 ---
 
@@ -33,785 +43,280 @@ Ajisai is designed for mechanical reasoning, automated refactoring, and structur
 
 ### 2.1 Canonical
 
-1. This file (`SPECIFICATION.md`)
-2. Rust implementation behavior conforming to this file
-3. WASM/TypeScript observable contracts derived from this file
+1. This file (`SPECIFICATION.md`).
+2. Rust implementation behaviour conforming to this file.
+3. The WASM-exposed protocol surface derived from this file.
 
 ### 2.2 Non-canonical
 
-Any roadmap, handover note, TODO note, or design memo is non-canonical unless explicitly promoted here. Secondary documents must not define competing semantics and must not be treated as specification.
+Any roadmap, handover note, design memo, or commit message is
+non-canonical unless explicitly promoted here.
 
-### 2.3 Semantic Firewall
+### 2.3 Semantic plane
 
-Ajisai separates internal representation from observable semantics. Internal representation may change freely; observable semantics must be accessed through semantic axes and protocol fields. Machine-readable consumers must use protocol fields only. Human-readable strings are non-canonical and may change.
+The following are **not** part of Ajisai's observable semantics:
 
-The following are not part of Ajisai's observable semantics:
+* Rust enum variant names and `Debug` output.
+* Internal continued-fraction storage layout.
+* GUI colours, CSS class names, and display strings.
+* User-word storage layout.
 
-- Rust enum variant names
-- Rust `Debug` output
-- internal value representation
-- display strings
-- GUI colors
-- CSS class names
-- dictionary storage layout
-- module file layout
-
-Ajisai values are observed through independent semantic axes:
-
-| Axis | Protocol field | Initial protocol strings |
-|------|----------------|--------------------------|
-| semantic kind | `semanticKind` | `number`, `collection`, `record`, `code`, `process`, `supervisor`, `absence`, `unknown` |
-| shape | `shape` | `scalar`, `vector`, `tensor`, `record`, `codeBlock`, `handle`, `absence`, `unknown` |
-| capabilities | `capabilities` | `numeric`, `exactNumeric`, `iterable`, `indexable`, `callable`, `stackItem`, `nilPassthrough`, `diagnosable`, `serializable`, `displayable`, `userEditable`, `moduleOwned`, `coreOwned`, `aiExplainable` |
-| origin | `origin` | `literal`, `computed`, `coreWord`, `builtinWord`, `moduleWord`, `userWord`, `safeProjection`, `nilPropagation`, `hostEnvironment`, `optimizer`, `unknown` |
-| absence metadata | `absence` | structured object |
-| diagnostic context | `diagnosis` | structured object |
-| display | `display` | human-readable only; non-canonical |
-| serialization | `serialization` | explicit format contract only |
-
-External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine-readable tooling must not branch on Rust enum names, `Debug` strings, display text, GUI colors, or storage layout. Protocol strings are lower camel case and are the canonical machine-readable surface.
+External consumers (the GUI, AI tooling, automated tests) must use the
+machine-readable protocol fields described in §6 rather than human-
+readable display strings or internal type names.
 
 ---
 
 ## 3. Syntax
 
-### 3.1 Token types
+Source text is a whitespace-separated stream of tokens. Whitespace
+includes spaces, tabs, and newlines.
 
-| Token | Description |
-|-------|-------------|
-| Number | Numeric literal (see 3.2) |
-| String | Single-quoted text `'...'` |
-| Symbol | Word name (all non-whitespace characters excluding reserved chars) |
-| `[` `]` | Vector boundaries |
-| `{` `}` or `(` `)` | Code block boundaries |
-| `==` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
-| `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
-| `$` | COND clause separator |
-| `~` | Syntactic sugar for `SAFE` (safe mode modifier) |
-| `#` | Line comment: all characters from `#` to end of line are ignored |
+### 3.1 Tokens
 
-### 3.2 Numeric literal formats
+| Token form | Description |
+|------------|-------------|
+| Integer    | `-?[0-9]+`, e.g. `42`, `-7`. |
+| Fraction   | `Integer '/' Integer`, e.g. `3/4`, `-5/2`. |
+| Decimal    | `-?[0-9]*'.'[0-9]+`, e.g. `3.14`, `.5`. |
+| Symbol     | Any other run of non-whitespace characters. |
+| Comment    | `#` to end of line is ignored. |
 
-| Format | Example |
-|--------|---------|
-| Integer | `42`, `-7` |
-| Fraction | `3/4`, `-5/2` |
-| Decimal | `3.14`, `.5`, `-1.0` |
-| Scientific notation | `1e5`, `1.5e-2`, `-3.0e4` |
+There are no string, vector, or code-block literals in Phase 1. Those
+syntactic forms are reserved for later phases.
 
-All numeric literals are parsed as exact rational numbers.
+### 3.2 Reserved heads
 
-### 3.3 String literals
+Two symbols receive special treatment by the parser:
 
-A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `(`, `)`, `#`, `=`, `~`, `$`).
+* `DEF NAME body…` — capture the rest of the current execution chunk as
+  the body of a new user word named `NAME` (see §5.2).
+* `DEL NAME` — remove the user word named `NAME`.
 
-Any `'` that appears before a non-boundary character is a literal quote character in the string content.
+All other symbols are looked up in the dictionary (core words first,
+then user words).
+
+---
+
+## 4. Values
+
+### 4.1 Continued fractions
+
+A continued fraction is the finite list of partial quotients
+`[a₀, a₁, …, aₙ]` representing the value
+
+```
+a₀ + 1 / (a₁ + 1 / (a₂ + … + 1/aₙ))
+```
+
+The canonical display form is the nested parenthesised form
+
+```
+(a₀ (a₁ (a₂ … (aₙ))))
+```
 
 Examples:
 
-| Source | String value |
-|--------|-------------|
-| `'hello'` | `hello` |
-| `'it's'` | `it's` |
-| `'hel''lo'` | `hel''lo` |
-| `'これは'テスト'です'` | `これは'テスト'です` |
+| Value     | Nested form         |
+|-----------|---------------------|
+| `42`      | `(42)`              |
+| `3/4`     | `(0 (1 (3)))`       |
+| `13/4`    | `(3 (4))`           |
+| `355/113` | `(3 (7 (16)))`      |
 
-### 3.4 Code blocks
+Internally, an empty list of partial quotients encodes **Nil**.
 
-A sequence of tokens enclosed in `{...}` or `(...)`. A code block must be written on a single line.
+### 4.2 Canonicalisation
 
-### 3.5 Vectors
+A continued fraction with more than one partial quotient is canonical
+when its last quotient is greater than or equal to `2`. The pair
+`[…, a, 1]` is rewritten as `[…, a+1]` because both denote the same
+value.
 
-A sequence of values enclosed in `[...]`.
+### 4.3 Nil (the bubble)
 
-### 3.6 COND clauses
+Nil represents structured absence. Nil propagates:
 
-Inside a `COND` expression, clauses are separated by `$`. Each clause must occupy exactly one line.
+* Any arithmetic operation that takes Nil as an operand returns Nil.
+* `1 0 /` returns Nil (division by zero).
 
-### 3.7 Syntax constraints
-
-- All bracket pairs (`[`, `{`, `(`) must be balanced.
-- Code blocks (`{...}`, `(...)`) must be on a single line.
-- Each COND clause must occupy exactly one line.
-
-### 3.8 Word name normalization
-
-Word names are normalized to uppercase at runtime. `add` and `ADD` refer to the same word.
+Nil supports a basic three-valued check via `NIL?`, which pushes `1` if
+the top of the stack is Nil and `0` otherwise.
 
 ---
 
-## 4. Value Model
+## 5. Execution model
 
-### 4.1 Value types
+### 5.1 The data stack
 
-| Type | Description |
-|------|-------------|
-| Scalar | An exact rational number |
-| Vector | An ordered, indexable sequence of values (may be nested) |
-| Record | An ordered set of named fields (string keys) |
-| NIL | The absence of a value |
-| CodeBlock | An executable sequence of tokens |
-| ProcessHandle | A reference to a running child runtime |
-| SupervisorHandle | A reference to a supervisor |
+Execution maintains a single LIFO stack of values. Literals push onto
+the stack; words consume operands from the stack and push results back.
+There is no return stack: user-word calls are inlined by re-executing
+the stored body source.
 
-### 4.2 Scalar: exact rational arithmetic
-
-All numeric values are represented as exact fractions.
-
-Internal representation:
-- `Small(numerator: i64, denominator: i64)` for values within i64 range
-- `Big(numerator: BigInt, denominator: BigInt)` for larger values
-
-Normalization rules:
-- Always reduced to lowest terms via GCD.
-- Denominator is always positive.
-
-Numeric display is guided by the semantic plane (see Section 12) and does not affect the stored value.
-
-### 4.3 Vector
-
-An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: `-1` is the last element.
-
-#### 4.3.1 Internal representation classes
-
-A Vector value is internally represented in one of two classes:
-
-- **nested** — a tree of `Value` elements (`Vec<Value>`). Any element type may appear, including mixed types (Scalars, Vectors, Strings, NIL, etc.).
-- **dense** — a SIMD-oriented `DenseTensor` backed by Structure-of-Arrays numerator and denominator buffers, a shape, and a validity mask. Every valid lane is an exact small Fraction; an invalid lane represents NIL occupancy without rebuilding the dense representation into nested `Vec<Value>` form.
-
-The class is chosen at construction time. Observable semantics — `Display`, ordering, equality, NIL-ness, `SHAPE`, `LENGTH`, indexing, iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.
-
-Dense Tensor exactness rule:
-- Small fractions are stored as normalized `(i64 numerator, i64 denominator)` lanes.
-- Fractions that require BigInt storage remain exact values, but they are not admitted to the small-lane `DenseTensor` representation until a BigInt-capable SoA representation is introduced.
-- Implementations must not truncate, round, or otherwise approximate a BigInt-backed Fraction to fit a dense lane.
-
-**No-Rebuild Principle:** a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by tensor identity and lane index; they are not embedded in `DenseTensor`.
-
-Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions/NIL lanes yields the same lane sequence and validity as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
-
-This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see `docs/dev/virtual-tensor-unit-design.md`). It does not introduce approximate numeric types: all numeric leaves remain exact Fractions.
-
-### 4.4 Record
-
-A collection of named fields. Each field has a string key and an associated value. Field insertion order is preserved.
-
-### 4.5 NIL
-
-NIL represents the absence of a value. It is pushed by safe mode when an error is absorbed, and produced by operations that yield no meaningful result.
-
-#### 4.5.0 Diagnostic absence metadata
-
-NIL is a diagnostic absence value. NIL identity is separate from its reason, origin, recoverability, and diagnostic context. Surface display, equality, hashing, and serialization treat all NIL values uniformly unless a protocol explicitly asks for diagnostic metadata.
-
-For any NIL value:
-
-- `semanticKind` is `absence`
-- `shape` is `absence`
-- `capabilities` includes `diagnosable` and `nilPassthrough`
-- the human-readable display text `NIL` is non-canonical and must not be used for machine decisions
-
-NIL metadata is exposed as an optional structured `absence` object with these fields:
-
-| Field | Meaning | Machine-readable contract |
-|-------|---------|---------------------------|
-| `reason` | Direct reason the value became NIL | Optional lower camel case protocol string |
-| `origin` | Path by which the NIL was produced | Required lower camel case protocol string |
-| `recoverability` | UI/AI hint for next action | Required lower camel case protocol string |
-| `caughtCategory` | Original error category caught by `SAFE`, when applicable | Optional lower camel case protocol string |
-| `diagnosis` | Three-layer debug diagnosis | Optional structured object |
-
-`NIL?` checks only whether a value is absent. It must not branch on `absence.reason`. Reason-specific code must use explicit diagnostic accessors such as `NIL-REASON`, `NIL-ORIGIN`, `NIL-RECOVERABLE?`, or `NIL-DIAGNOSIS` when such words are available.
-
-The diagnostic object uses the existing three-layer model:
-
-| Diagnostic field | Meaning | Contract |
-|------------------|---------|----------|
-| `when` | phase where the event occurred | lower camel case protocol string |
-| `where.kind` | locus kind | lower camel case protocol string |
-| `where.word` / `where.module` / `where.dictionary` | optional locus details | strings, not enum names |
-| `why` | cause class | lower camel case protocol string |
-| `summary` | human-readable explanation | non-canonical; do not parse |
-| `evidence` | human-readable evidence list | non-canonical; do not parse |
-| `nextChecks` | suggested checks for UI/AI display | structured label/detail strings |
-
-SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = structureError`. Direct Bubble/NIL results use their own reason and are not wrapped as `safeCaught`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
-
-#### 4.5.1 NIL passthrough
-
-Operations classified as **NIL-passthrough** in Section 7 do not raise `StructureError` when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.
-
-NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.13). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL.
-
-The intent is that pipelines built with safe mode (`~`) propagate NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
-
-When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.
-
-### 4.6 CodeBlock
-
-An executable sequence of tokens. CodeBlocks are first-class values: they can be stored on the stack, passed to higher-order words, and executed with `EXEC`.
-
-### 4.7 ProcessHandle and SupervisorHandle
-
-References to child runtimes and supervisors respectively. Created by `SPAWN` and `SUPERVISE`. Used with the child runtime API (see Section 10).
-
----
-
-## 5. Stack
-
-### 5.1 Structure
-
-Ajisai maintains a single mutable stack of values. Execution proceeds by pushing and popping values. The stack is ordered; the most recently pushed value is the top.
-
-### 5.2 Two-plane architecture
-
-The runtime is divided into two planes:
-
-**Data plane**: Holds `ValueData` payloads. All arithmetic, comparison, and structural operations execute entirely on the data plane. The data plane contains no display or formatting metadata.
-
-**Semantic plane**: Holds display hints and presentation metadata keyed by stack position. Consulted only at explicit semantic boundaries: rendering, output operations, and module side effects.
-
-These planes are strictly separate. Semantic plane contents do not influence data plane computations.
-
-### 5.3 Execution step limit
-
-Each execution has a step budget. The default limit is 100,000 steps. Exceeding the limit raises `ExecutionLimitExceeded`. This is a runtime safety control, not a language semantic constraint.
-
----
-
-## 6. Modifiers
-
-Modifiers precede a word and alter its execution behavior. Multiple modifiers may be combined.
-
-### 6.1 Target modifiers
-
-| Canonical | Sugar | Behavior |
-|-----------|-------|----------|
-| `TOP` | `.` | The word operates on the top value(s) of the stack (default) |
-| `STAK` | `..` | The entire stack contents are treated as the operand |
-
-### 6.2 Consumption modifiers
-
-| Canonical | Sugar | Behavior |
-|-----------|-------|----------|
-| `EAT` | `,` | Operands are removed from the stack after the operation (default) |
-| `KEEP` | `,,` | Operands are retained; the result is also pushed |
-
-### 6.3 Safe mode modifier
-
-| Canonical | Sugar | Behavior |
-|-----------|-------|----------|
-| `SAFE` | `~` | If the operation raises an error, NIL is pushed instead of propagating the error |
-
-### 6.4 Modifier combinations
-
-All modifier combinations are explicit and mechanically testable. Combined forms such as `..,,` and `~..` are valid.
-
-### 6.5 Additional syntax forms
-
-All built-in words have English-word-based canonical names (see Section 7). The forms below are syntactic sugar that the tokenizer maps to the corresponding canonical word; either spelling is accepted in source code and behaves identically at runtime.
-
-| Canonical | Sugar | Behavior |
-|-----------|-------|----------|
-| `PIPE` | `==` | Visual pipeline separator; no runtime effect |
-| `OR-NIL` | `=>` | If the top of the stack is NIL, replace it with the next stack value |
-| `FORC` | `!` | Overrides protection checks when redefining or deleting words that have dependents |
-| `LOOKUP` | `?` | Display the definition of a word (see Section 7.8) |
-
----
-
-## 7. Built-in Words
-
-Ajisai vocabulary follows the rule: **Core is permanent, Module is detachable, User is editable.**
-
-Built-in words are predefined and cannot be redefined or deleted.
-
-- **Core words** belong to the Ajisai runtime itself. They are always available and cannot be deleted, hidden, unimported, or redefined.
-- **Module words** belong to a module dictionary. Their definitions are built in and cannot be redefined or destructively deleted, but their visibility in the current vocabulary is controlled with `IMPORT`, `IMPORT-ONLY`, `UNIMPORT`, and `UNIMPORT-ONLY`.
-- **User words** belong to a user dictionary. They are editable, and deletion or redefinition is controlled by dependency checks and the force modifier where applicable.
-
-Every built-in word has exactly one **canonical home**, either Core or a specific module. The canonical home determines where the implementation lives and, for module-canonical words, which module name `IMPORT` activates them under.
-
-Independent of canonical home, every built-in word has a set of **listings** identifying which dictionary views surface the word for browsing or documentation. The Core listing view and any module listing view are not necessarily disjoint: a word may be listed in both. Such a word is called a **boundary word**, recognising that it has both a semantic role (Core) and a capability role (module).
-
-Listings are presentation-only. A listing does not change name resolution, IMPORT semantics, or qualified-name resolution: bare names resolve through the Core vocabulary first and then through imported modules; `MODULE@WORD` resolves only to that module's canonical entries.
-
-Boundary classes:
-
-- **Core-only words** — canonical home Core; listed only in Core.
-- **Canonical Core + module-listed boundary words** — canonical home Core; additionally surfaced in one or more module or category listing views (e.g. `PRINT` in `IO`, `STR`/`NUM`/`BOOL` in the `CAST` category, `SHAPE`/`RANK` in the `TENSOR` category, `SPAWN`/`AWAIT` in the `RUNTIME` category).
-- **Canonical Module + core-listed boundary words** — canonical home in a module, additionally surfaced in the Core listing view (e.g. `SORT` whose canonical home is `ALGO`).
-- **Module-only words** — canonical home in a module; listed only under that module.
-
-`IMPORT`, `IMPORT-ONLY`, `UNIMPORT`, and `UNIMPORT-ONLY` are Canonical Core words and remain Core-only — they are not module-listed and are not affected by listings.
-
-Categories such as `CAST`, `TEXT`, `TENSOR`, and `RUNTIME` are documentation-only labels used to group Core words by capability surface. They are **not** modules, are not registered in `MODULE_SPECS`, and cannot be supplied to `IMPORT`.
-
-### 7.0 English-word-based naming
-
-All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+`, `-`, `*`, `/`, `%`, `=`, `<`, `<=`, `&`, `==`, `=>`, `?`, `!`, `.`, `..`, `,`, `,,`, `~`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
-
-| Canonical | Sugar | Canonical | Sugar |
-|-----------|-------|-----------|-------|
-| `ADD` | `+` | `TOP` | `.` |
-| `SUB` | `-` | `STAK` | `..` |
-| `MUL` | `*` | `EAT` | `,` |
-| `DIV` | `/` | `KEEP` | `,,` |
-| `MOD` | `%` | `SAFE` | `~` |
-| `EQ` | `=` | `FORC` | `!` |
-| `LT` | `<` | `PIPE` | `==` |
-| `LTE` | `<=` | `OR-NIL` | `=>` |
-| `AND` | `&` | `LOOKUP` | `?` |
-
-### 7.1 Vector operations
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `LENGTH` | — | Number of elements in a vector, or total count of all stack values |
-| `GET` | — | Retrieve element at a given index |
-| `INSERT` | — | Insert element at a given index |
-| `REPLACE` | — | Replace element at a given index |
-| `REMOVE` | — | Remove element at a given index |
-| `CONCAT` | — | Concatenate two or more vectors |
-| `REVERSE` | — | Reverse the order of elements |
-| `RANGE` | — | Generate a sequence of integers from start to end with optional step |
-| `TAKE` | — | Take the first N elements |
-| `SPLIT` | — | Split a vector into sub-vectors by given sizes |
-| `REORDER` | — | Reorder elements according to an index list; supports duplication and negative indices |
-| `COLLECT` | — | Gather all current stack values into a single vector |
-| `SORT` | — | Sort elements in ascending order (exact fraction comparison) |
-
-### 7.2 Tensor operations
-
-Tensor operations operate on nested vectors treated as multi-dimensional arrays.
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `SHAPE` | — | Return the size of each dimension as a vector |
-| `RANK` | — | Return the number of dimensions |
-| `RESHAPE` | — | Reshape to new dimension sizes |
-| `TRANSPOSE` | — | Transpose a 2D tensor |
-| `FILL` | — | Create a tensor of given shape filled with a value |
-
-Tensor operation implementations must follow the staged pipeline:
-1. Flatten input
-2. Compute shape, stride, and index metadata
-3. Transform indices or selections
-4. Rebuild output
-
-Ad hoc recursive shape mutation in intermediate stages is prohibited.
-
-### 7.3 Arithmetic
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `ADD` | `+` | Addition |
-| `SUB` | `-` | Subtraction |
-| `MUL` | `*` | Multiplication |
-| `DIV` | `/` | Exact rational division |
-| `MOD` | `%` | Remainder |
-| `FLOOR` | — | Floor (largest integer ≤ value) |
-| `CEIL` | — | Ceiling (smallest integer ≥ value) |
-| `ROUND` | — | Round to nearest integer |
-
-### 7.4 Comparison
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `LT` | `<` | Less than |
-| `LTE` | `<=` | Less than or equal |
-| `EQ` | `=` | Equal |
-
-Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint).
-
-### 7.5 Logic
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `AND` | `&` | Logical AND |
-| `OR` | — | Logical OR |
-| `NOT` | — | Logical NOT |
-| `TRUE` | — | Push boolean true |
-| `FALSE` | — | Push boolean false |
-| `NIL` | — | Push NIL |
-
-### 7.6 String and type conversion
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `STR` | — | Convert value to its string representation |
-| `NUM` | — | Parse a string as a number |
-| `BOOL` | — | Convert to boolean |
-| `CHR` | — | Convert a number to its Unicode character |
-| `CHARS` | — | Split a string into a vector of individual characters |
-| `JOIN` | — | Join a vector of strings, with optional separator |
-
-### 7.7 Control and higher-order words
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `MAP` | — | Apply a code block to each element, collecting results |
-| `FILTER` | — | Keep elements for which a predicate returns true |
-| `FOLD` | — | Reduce a sequence to a single value using an accumulator |
-| `UNFOLD` | — | Generate a sequence by repeatedly applying a generator block |
-| `ANY` | — | True if at least one element satisfies the predicate |
-| `ALL` | — | True if all elements satisfy the predicate |
-| `COUNT` | — | Count elements satisfying the predicate |
-| `SCAN` | — | Like FOLD but returns all intermediate accumulator values |
-| `COND` | — | Evaluate clauses separated by `$`; execute the first whose condition is true |
-| `IDLE` | — | No-op; does nothing |
-| `EXEC` | — | Execute a code block |
-| `EVAL` | — | Parse and execute a string as Ajisai code |
-
-### 7.8 User word dictionary
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `DEF` | — | Define a user word (see Section 8) |
-| `DEL` | — | Delete a user word (see Section 8) |
-| `LOOKUP` | `?` | Look up and display the definition of a word |
-
-### 7.9 IO and utilities
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `PRINT` | — | Output the top stack value |
-| `NOW` | — | Push the current timestamp |
-| `DATETIME` | — | Format a timestamp as a datetime string |
-| `TIMESTAMP` | — | Parse a datetime string to a timestamp |
-| `CSPRNG` | — | Push a cryptographically secure random number |
-| `HASH` | — | Compute a hash of the top stack value |
-
-### 7.10 Module loading
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `IMPORT` | — | Load all words from a module into the current scope |
-| `IMPORT-ONLY` | — | Load only the specified words from a module |
-
-### 7.11 Child runtime words
-
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `SPAWN` | — | Create and start a child runtime from a code block; push a ProcessHandle |
-| `AWAIT` | — | Wait for a child to finish; push `[status result-stack]` |
-| `STATUS` | — | Return the current state of a child runtime as a string |
-| `KILL` | — | Terminate a child runtime |
-| `MONITOR` | — | Mark a child runtime for monitoring |
-| `SUPERVISE` | — | Create a supervisor over a group of child runtimes |
-
-### 7.12 NIL-passthrough words
-
-The following built-in words follow the NIL passthrough rule defined in Section 4.5.1. If any operand they consume is NIL, the result is NIL and no error is raised.
-
-| Category | Words |
-|----------|-------|
-| Arithmetic | `ADD`, `SUB`, `MUL`, `DIV`, `MOD`, `FLOOR`, `CEIL`, `ROUND` |
-| Comparison | `LT`, `LTE`, `EQ` |
-| Logic | `AND`, `OR`, `NOT` (three-valued; see below) |
-
-`AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.
-
-Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), most conversion words (`STR`, `BOOL`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough. `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
-
----
-
-## 7.14 Coreword contract metadata
-
-Every Coreword (built-in or module-provided) has a machine-readable contract entry in the Coreword registry. The contract is the authoritative description of the word's input requirements, output guarantees, and runtime classification. Tests, documentation, and tooling consume this metadata; narrative text is non-canonical.
-
-A contract entry has the following fields, in addition to the existing identification (`name`, `category`), effect-classification fields (`purity`, `effects`, `deterministic`, `safe_preview`), and listing fields (`canonical_home`, `listed_in_core`, `listed_in_modules`, `listed_in_categories`):
-
-| Field | Domain | Meaning |
-|-------|--------|---------|
-| `partiality` | `Total` / `Partial` / `Projecting` | `Total`: the operation is defined on every well-shaped input. `Partial`: the operation has well-shaped inputs for which it raises an error. `Projecting`: the operation is total because it projects all failures onto NIL with reason. |
-| `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
-| `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
-
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
-
-Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
-
-The listing fields work as follows:
-
-| Field | Domain | Meaning |
-|-------|--------|---------|
-| `canonical_home` | `Core` / `Module(name)` | Where the canonical implementation lives. For module-canonical words this is also the only module that can resolve the word as `MODULE@WORD` and the only module whose `IMPORT` brings the word into bare scope. |
-| `listed_in_core` | `bool` | Whether the word appears in the Core listing view. Does not affect resolution. |
-| `listed_in_modules` | `[module_name]` | Module listing views in which the word appears. A canonical module word always has its own module here. Boundary listings (e.g. `PRINT` in `IO`) are presentation-only. |
-| `listed_in_categories` | `[category_label]` | Documentation-only category labels (e.g. `CAST`, `TEXT`, `TENSOR`, `RUNTIME`). Categories are not modules and cannot be `IMPORT`ed. |
-
-`IMPORT-ONLY` of a selector that is core-listed in the target module's view but not canonically owned by that module is a no-op: the word is already available as a Canonical Core word, so the selector is silently skipped with a single warning line. Selectors that match neither a canonical word nor a listing remain an error.
-
-A bare name may legitimately appear under more than one canonical home (for example core list `GET` and `JSON@GET`). In that case bare-name lookup resolves to the Canonical Core entry — matching the runtime's resolution order — while `MODULE@WORD` always reaches the module entry.
-
----
-
-## 8. User Words
-
-### 8.1 Definition syntax
+### 5.2 Word definition
 
 ```
-{ tokens... } 'NAME' DEF
-{ tokens... } 'NAME' 'description' DEF
+DEF NAME body…
 ```
 
-A code block followed by a name string defines a user word in the active dictionary. An optional description string may follow the name. Multiple consecutive code blocks on the stack are merged before definition. A vector may also serve as the definition body.
+`DEF` consumes the remainder of the current execution chunk as the body
+text of a new user word called `NAME` (uppercased). Calling `NAME`
+re-executes the body source in the current interpreter.
 
-### 8.2 Rules
+`DEF` overwrites any existing user word of the same name. Re-defining a
+core word is not permitted (the symbol resolves to the core word first).
 
-- User words are stored per active dictionary (namespace).
-- Built-in words cannot be redefined.
-- A user word that has active dependents requires the force modifier `!` to be redefined.
-- Dependencies are tracked automatically at definition time.
-
-### 8.3 Deletion syntax
+### 5.3 Word deletion
 
 ```
-'NAME' DEL
-'DICT@NAME' DEL
+DEL NAME
 ```
 
-Deletes a user word. The force modifier `!` is required if other words depend on the word being deleted.
+Removes a user word. Deleting an undefined or core word is a no-op.
 
-`DEL` never destroys module dictionaries or module words. To remove module words from the current vocabulary, use `UNIMPORT` or `UNIMPORT-ONLY`; the module dictionary remains cached as the definition source.
+### 5.4 Errors
 
-### 8.4 Recursion
+Errors are reported in three layers:
 
-User words may call themselves or other user words recursively. There is no hard-coded call-depth limit as a language semantic rule.
+| Layer       | Audience            | Example                                            |
+|-------------|---------------------|----------------------------------------------------|
+| `summary`   | End user (one line) | `Stack underflow at +`                             |
+| `detail`    | Experienced human   | `Word + requires 2 value(s) on the stack but…`     |
+| `diagnosis` | AI / tooling        | `Check the operands feeding +: push 1 more value…` |
 
-### 8.5 Naming conventions
-
-Word names follow action-object convention (e.g., `APPLY-GAIN`, `RESOLVE-PATH`). The runtime emits a warning for:
-
-- Ambiguous prefixes: `DO-`, `HANDLE-`, `PROCESS-`, `MANAGE-`, `UTIL-`, `HELPER-`
-- Ambiguous standalone names: `CALC`, `RUN`, `EXEC2`, `TEMP`, `MAIN`, `TEST`, `STUFF`, `THING`
-
-Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object names; short unambiguous names (6 characters or fewer).
+The GUI surfaces `summary`; deeper layers are exposed via the protocol
+surface (see §6) for AI assistance.
 
 ---
 
-## 9. Module System
+## 6. Protocol surface
 
-### 9.1 Available modules
+The WASM boundary exposes the following protocol-stable fields. They
+form the canonical machine-readable contract.
 
-| Module | Purpose |
-|--------|---------|
-| `MUSIC` | Audio sequencing and synthesis |
-| `JSON` | JSON parsing, generation, and manipulation |
-| `IO` | Standard input/output |
-| `TIME` | Wall-clock time and datetime conversion |
-| `CRYPTO` | Cryptographically secure random and hash |
-| `ALGO` | Sorting and other deterministic algorithms |
-| `MATH` | Square root and exact-rational interval arithmetic |
+### 6.1 Stack value
 
-### 9.2 Import and unimport syntax
-
-```
-'MODULE-NAME' IMPORT
-'MODULE-NAME' [ 'WORD1' 'WORD2' ] IMPORT-ONLY
-'MODULE-NAME' UNIMPORT
-'MODULE-NAME' [ 'WORD1' 'WORD2' ] UNIMPORT-ONLY
+```json
+{
+  "type": "number" | "nil",
+  "value": { "numerator": "string", "denominator": "string" } | "Nil",
+  "continuedFraction": "(a0 (a1 (a2)))" | "Nil",
+  "displayHint": "number" | "nil",
+  "semantics": {
+    "semanticKind": "number" | "absence",
+    "shape": "scalar" | "absence",
+    "capabilities": ["..."],
+    "origin": "literal"
+  }
+}
 ```
 
-`IMPORT` loads all public words from a module into the current vocabulary. `IMPORT-ONLY` loads only the specified module words or sample words.
+`value` is the reduced rational view (kept for backwards-compatible
+display); `continuedFraction` is the canonical nested form.
 
-`UNIMPORT` hides unreferenced imported words from the current vocabulary without deleting the module dictionary. If a user word references a module word or module sample word, `UNIMPORT` keeps that referenced item visible and shrinks the module import to an explicit partial-import state.
+### 6.2 Execute result
 
-`UNIMPORT-ONLY` hides only the specified module words or sample words. It fails if a selected item is referenced by a user word; use dictionary-level `UNIMPORT` when the desired operation is to clean up unused module imports while preserving referenced items.
+```json
+{
+  "status": "OK" | "ERROR",
+  "output": "string (optional)",
+  "message": "summary (only on ERROR)",
+  "detail":  "detail  (only on ERROR)",
+  "diagnosis": "diagnosis (only on ERROR)",
+  "error": true (only on ERROR)
+}
+```
 
-Selectors that name Core words merely listed in a module view are no-ops for `IMPORT-ONLY` and `UNIMPORT-ONLY`, because Core words are always available and cannot be imported or unimported through a module.
+### 6.3 Interpreter API
 
-### 9.3 Module-provided sample words
+The `AjisaiInterpreter` WASM class exposes:
 
-Modules may provide sample words for demonstration. Sample words are part of the module dictionary for import visibility: they can be introduced with `IMPORT` / `IMPORT-ONLY` and hidden with `UNIMPORT` / `UNIMPORT-ONLY`, but they are not destructively deleted with `DEL`.
+* `execute(code)` / `execute_step(code)` — run code, returning an
+  execute result.
+* `reset()` — clear stack and output buffer.
+* `collect_stack()` — return the current stack as protocol values.
+* `collect_user_words_info()` — return `[name, definition, description,
+  isShadow]` rows.
+* `collect_core_words_info()` — return `[name, hoverSummary,
+  hoverSyntax]` rows.
+* `collect_core_word_aliases_info()` — return aliases (`ADD`, `SUB`,
+  `MUL`, `DIV`).
+* `collect_input_helper_words_info()` — input-assist entries.
+* `lookup_word_definition(name)` — return the body text of a user word,
+  or `null`.
+* `remove_word(name)` — convenience wrapper around `DEL`.
+* `restore_user_words(words)` — bulk register `DEF`-equivalent
+  definitions for persistence.
 
----
-
-## 10. Child Runtime
-
-### 10.1 Overview
-
-A child runtime is an isolated interpreter instance spawned from a code block. At spawn time, the child receives a snapshot of the parent dictionary. The child does not share the parent's stack or dictionary during execution. Parent and child are isolated.
-
-### 10.2 Child states
-
-| State | Meaning |
-|-------|---------|
-| `running` | Currently executing |
-| `completed` | Finished normally |
-| `failed` | Terminated with an error |
-| `killed` | Terminated by `KILL` |
-| `timeout` | Step limit exceeded |
-
-### 10.3 SPAWN
-
-Accepts a code block from the stack. Starts the child runtime. Pushes a ProcessHandle.
-
-### 10.4 AWAIT
-
-Accepts a ProcessHandle. Blocks until the child finishes. Pushes `[status result-stack]` where `status` is a string and `result-stack` is a vector of the child's final stack values.
-
-### 10.5 STATUS
-
-Accepts a ProcessHandle. Returns the current state as a string without blocking.
-
-### 10.6 KILL
-
-Accepts a ProcessHandle. Terminates the child runtime immediately.
-
-### 10.7 MONITOR and SUPERVISE
-
-`MONITOR` marks a child runtime for observation. `SUPERVISE` creates a SupervisorHandle that manages a group of child runtimes.
+Module-related methods (`collect_imported_modules`,
+`collect_module_words_info`, …) return empty results in Phase 1 and
+are reserved for Phase 2.
 
 ---
 
-## 11. Error Model
+## 7. Core words (Phase 1)
 
-### 11.1 User-level error categories
-
-| Error | Trigger condition |
-|-------|-------------------|
-| `StackUnderflow` | Insufficient values on the stack for the operation |
-| `StructureError` | Value type does not match what the operation requires |
-| `UnknownWord` | Referenced word is not defined in any accessible dictionary |
-| `UnknownModule` | Referenced module is not available |
-| `DivisionByZero` | Divisor is zero |
-| `IndexOutOfBounds` | Index is outside the valid range of the vector |
-| `VectorLengthMismatch` | Operation requires equal-length vectors but lengths differ |
-| `ExecutionLimitExceeded` | Step budget exhausted |
-| `ModeUnsupported` | The modifier combination is not supported for this word |
-| `BuiltinProtection` | Attempt to redefine or delete a built-in word |
-| `CondExhausted` | COND expression has no matching clause |
-| `Custom` | Explicit error raised by user code |
-
-### 11.2 Bubble Rule
-
-The Bubble Rule is the user-level failure model for well-formed partial operations:
-
-> If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.
-
-In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`. `NilReason::SafeCaught` is reserved for actual errors caught by the `SAFE` (`~`) boundary; `SAFE` does not rewrap a direct Bubble/NIL produced by a well-formed operation.
-
-Initial Core words following this rule include:
-
-| Word | Bubble/NIL case | Error case |
-|------|-----------------|------------|
-| `DIV` / `/` | Division by zero (`NilReason::DivisionByZero`) | Non-numeric operands or malformed shapes |
-| `GET` | Valid vector target with an out-of-range index (`NilReason::IndexOutOfBounds`) | Non-vector target or non-numeric index |
-| `NUM` | Text cannot be parsed as a number (`NilReason::InvalidEncoding`) | Input shape is not convertible text |
-| `CHR` | Numeric code point is outside the valid Unicode scalar range (`NilReason::InvalidEncoding`) | Operand is not numeric, or numeric operand is not an integer |
-
-`OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
-
-### 11.3 Equal-value output
-
-Operations that produce a value equal to their input are successful. Equal-value output is not an error.
-
-### 11.3 Safe mode behavior
-
-`~` (`SAFE`) is the explicit projection operator for malformed-use errors that have not already become Bubble/NIL values. If the guarded word raises an error, the projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `stackUnderflow`, `unknownWord`, or `structureError`). The error itself does not propagate.
-
-Stack discipline: when `~`-guarded execution raises an error, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. When the guarded word succeeds by producing a direct Bubble/NIL, `SAFE` leaves that Bubble/NIL and the word's normal stack effect unchanged. The semantic plane is normalized to the new stack length.
-
-The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore use `OR-NIL` (`=>`) once at the end to supply a fallback value.
-
-`~` is **not** a generic exception swallower: the original error category and three-layer diagnosis are preserved on the resulting NIL for debugging, testing, and proof logging.
+| Word    | Stack effect            | Description                                |
+|---------|-------------------------|--------------------------------------------|
+| `+`     | `a b — (a+b)`           | Add two continued fractions.               |
+| `-`     | `a b — (a-b)`           | Subtract `b` from `a`.                     |
+| `*`     | `a b — (a*b)`           | Multiply two continued fractions.          |
+| `/`     | `a b — (a/b)` or Nil    | Divide, returning Nil on division by zero. |
+| `DUP`   | `a — a a`               | Duplicate the top.                         |
+| `DROP`  | `a —`                   | Discard the top.                           |
+| `SWAP`  | `a b — b a`             | Swap the top two items.                    |
+| `OVER`  | `a b — a b a`           | Copy the second item on top.               |
+| `NIL`   | `— Nil`                 | Push a Nil bubble.                         |
+| `NIL?`  | `x — (1|0)`             | Test for Nil.                              |
+| `.`     | `x —`                   | Append `x` to the output buffer.           |
+| `DEF`   | reserved head           | Define a user word (§5.2).                 |
+| `DEL`   | reserved head           | Delete a user word (§5.3).                 |
+| `ADD`/`SUB`/`MUL`/`DIV` | — | English aliases for `+`/`-`/`*`/`/`.       |
 
 ---
 
-## 12. Semantic Plane
+## 8. Maintained design properties
 
-### 12.1 Purpose
+These properties are preserved across the Phase 1 redesign and form the
+acceptance criteria for later phases:
 
-The semantic plane holds display hints for each stack position. It is separate from the data plane and does not influence computation.
-
-### 12.2 Display hints
-
-| Hint | Meaning |
-|------|---------|
-| `Auto` | Determine display from value type at render time |
-| `Number` | Display as a number |
-| `Interval` | Display a 2-element vector as the closed interval `[lo, hi]` |
-| `String` | Display as a string |
-| `Boolean` | Display as a boolean |
-| `DateTime` | Display as a formatted datetime |
-| `Nil` | Display as NIL |
-
-Display hints are applied only at explicit semantic boundaries: rendering, `PRINT`, and module-level output operations.
+* GUI layout and operability.
+* Input assistance (auto-complete of word names and punctuation).
+* GUI visualisation of internal state.
+* English-rooted words with symbolic sugar.
+* Semantic-plane separation of internal representation from display.
+* Three-layer error messages.
+* The water metaphor for value flow.
+* Nil as bubble (propagating absence).
+* Module system (Phase 2 target).
+* Nil-based three-valued logic.
+* DO-178B–style requirement-traceable test design.
+* `DEF` and `DEL` user-word management.
 
 ---
 
-## 13. Fractional-Dataflow Internal Invariants
+## 9. Discarded design properties
 
-### 13.1 Static Mass Conservation
+The following features from the legacy specification are deliberately
+removed without a backwards-compatibility shim:
 
-Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.
+* Operation-target / consumption modes.
+* `COND` and other Ajisai-specific control structures inherited from the
+  vector dialect.
+* The return stack (never introduced).
 
-The ordinary runtime must not maintain per-value `FlowToken` objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes.
-
-### 13.2 Bifurcation
-
-The `,,` (keep/bifurcation) modifier retains source context while also pushing the result. Its mass relationship is specified by the relevant Coreword Contract and is statically checked with the surrounding flow. Runtime execution only performs the value-level stack effects that the contract has already proven.
-
----
-
-## 14. AI-first Implementation Rules
-
-### 14.1 Mandatory
-
-- Prefer explicit, structurally searchable function and module names.
-- Keep Rust source files under 500 lines.
-- Keep control flow shallow and phase-separated.
-- Separate semantic changes from structural cleanup in change management.
-- Maintain single canonical implementations; do not allow dual-mode drift.
-- Source code comments are allowed when they clarify intent, invariants, traceability, or non-obvious behavior. When source code is changed, nearby comments must be reviewed and updated so they remain accurate. Comments that merely restate obvious code should be avoided.
-
-### 14.2 Advisory
-
-- Prefer small helper extraction for duplicated control scaffolding.
-- Prefer deterministic, low-ambiguity error classification.
-- Prefer mechanically enforceable tests over narrative documentation.
+Source files, examples, and tests targeting these features have been
+removed.
 
 ---
 
-## 15. Test Discipline
+## 10. Phase plan
 
-### 15.1 Per-Coreword contract coverage
+| Phase | Scope |
+|-------|-------|
+| 1 (this file) | Continued-fraction values, stack, four arithmetic ops, DEF/DEL, Nil, three-layer errors, GUI compatibility. |
+| 2  | Modules, tensors as continued-fraction coefficients, richer comparison and control words. |
+| 3  | Exact irrational numbers, AI-explainable diagnostics, expanded GUI affordances. |
 
-For each Coreword, the test suite must exercise:
-
-- inputs that satisfy `requires` (success path)
-- inputs that violate `requires` (failure path)
-- the documented `nil_policy` (NIL passthrough or NIL creation, as appropriate)
-- the documented `partiality` (every error category in the partial case; the projection target in the projecting case)
-- effect-boundary expectations from `purity` (e.g. effectful words must not be reachable in `safe_preview`)
-
-### 15.2 NIL reason coverage
-
-Every NIL-producing path must have at least one test that asserts both the surface NIL and the structured `absence` metadata. `SAFE`-projected NILs must additionally assert `absence.reason = safeCaught` and that the original error category survives in `absence.caughtCategory`. Tests must verify protocol strings, not Rust `Debug` output.
-
-### 15.3 MC/DC-style coverage for compound decisions
-
-Words whose behavior depends on more than one independent condition (e.g. `~ /` decides on left-operand validity, right-operand validity, right-operand zero-ness, NIL-passthrough applicability, and SAFE engagement) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
-
-### 15.4 Stack discipline under projection
-
-`SAFE`-guarded failures must restore the stack to the pre-call snapshot before pushing the projected NIL. Tests must verify the stack length, the semantic-plane length, and the absence of leaked partial intermediates.
-
----
-
-## 16. Conformance Checklist
-
-A change is conformant only if all of the following hold:
-
-1. It does not introduce a second design authority.
-2. It does not treat equal-value output as a runtime error.
-3. It does not impose hard-coded call-depth limits as language semantics.
-4. It preserves data-plane/semantic-plane separation.
-5. It keeps vector/tensor staged pipeline boundaries explicit.
-6. It improves or preserves AI-first structural clarity.
-7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
-8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
-9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.3).
-10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
+Each later phase must preserve the maintained design properties of §8.
