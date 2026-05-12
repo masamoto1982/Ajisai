@@ -238,6 +238,12 @@ export const TEST_CASES: TestCase[] = [
         expectError: true,
         category: 'Strings',
     },
+    {
+        name: "Doubled quote inside literal renders as single quote",
+        code: "'TE''ST' .",
+        expectedOutput: "'TE''ST'",
+        category: 'Strings',
+    },
 
     // Errors
     {

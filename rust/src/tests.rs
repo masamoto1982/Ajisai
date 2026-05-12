@@ -28,6 +28,9 @@
 //!  * REQ-STR-003: `.` prints a string literal as `'TEXT'`.
 //!  * REQ-STR-004: Strings round-trip multibyte UTF-8 content (e.g. ひらがな).
 //!  * REQ-STR-005: An unterminated string literal raises a three-layer error.
+//!  * REQ-STR-006: `''` inside a string literal lexes to a single `'`.
+//!  * REQ-STR-007: A string containing `'` re-escapes on display so the
+//!    rendered form is itself a valid Ajisai source literal.
 
 use num_bigint::BigInt;
 
@@ -367,4 +370,40 @@ fn req_str_005_unterminated_string_raises_three_layer_error() {
     assert!(err.summary.contains("Unterminated string"));
     assert!(!err.detail.is_empty());
     assert!(!err.diagnosis.is_empty());
+}
+
+#[test]
+fn req_str_006_doubled_quote_is_escape_for_single_quote() {
+    // `'TE''ST'` is one literal whose content is the 5 characters TE'ST.
+    let toks = tokenize("'TE''ST'").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit("TE'ST".into())]);
+
+    // `''''` is one literal whose content is a single `'`.
+    let toks = tokenize("''''").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit("'".into())]);
+
+    // `''` alone is the empty string literal.
+    let toks = tokenize("''").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit(String::new())]);
+
+    // Two adjacent literals separated by whitespace stay two tokens.
+    let toks = tokenize("'a' 'b'").expect("tokenize");
+    assert_eq!(
+        toks,
+        vec![
+            Token::StringLit("a".into()),
+            Token::StringLit("b".into()),
+        ]
+    );
+}
+
+#[test]
+fn req_str_007_display_re_escapes_inner_quote() {
+    let mut i = Interpreter::new();
+    i.execute("'TE''ST' .").unwrap();
+    assert_eq!(i.take_output(), "'TE''ST'");
+
+    // Round-trip: the rendered output should re-lex to the same content.
+    let toks = tokenize("'TE''ST'").expect("tokenize");
+    assert_eq!(toks, vec![Token::StringLit("TE'ST".into())]);
 }

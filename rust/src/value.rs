@@ -54,13 +54,19 @@ impl Value {
             Value::Tensor { shape, data, display_hint } => {
                 if display_hint.as_deref() == Some("string") && shape.len() == 1 {
                     if let Some(s) = decode_string_tensor(data) {
-                        return format!("'{}'", s);
+                        return format!("'{}'", escape_string_literal(&s));
                     }
                 }
                 format_tensor(shape, data)
             }
         }
     }
+}
+
+/// Re-escape inner `'` as `''` so the rendered form is itself a valid
+/// string literal in Ajisai source.
+fn escape_string_literal(s: &str) -> String {
+    s.replace('\'', "''")
 }
 
 fn decode_string_tensor(data: &[ContinuedFraction]) -> Option<String> {
