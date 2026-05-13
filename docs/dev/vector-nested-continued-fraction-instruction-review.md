@@ -1,5 +1,8 @@
 # Ajisai Vector ネスト連分数内部表現移行 指示書レビューと改訂版
 
+> **Status (2026-05-13): Superseded — non-canonical.**
+> SPECIFICATION.md §4.2 ("Scalar: exact-real continued-fraction arithmetic") is the canonical source for the continued-fraction representation, including lazy CF for irrationals, Gosper bihomographic arithmetic, the nested `( a0 ( a1 ... ))` serialization form, the comparison-budget Bubble/NIL rule, and the removal of `(...)` as a code-block delimiter (§3.1, §3.4). This document predates that decision and covered only finite-CF migration for rationals; treat it as historical context only. Where this document conflicts with SPECIFICATION.md, SPECIFICATION.md wins.
+
 ## 1. 結論
 
 提示された指示書の大きな方向性、すなわち **ユーザー表示と内部表現を分離し、丸め誤差のない有限数値表現を将来の周期連分数・Lazy 実数へ拡張できる形へ寄せる** という目的は妥当です。

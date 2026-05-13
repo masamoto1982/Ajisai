@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-04-29**
+Version: **2026-05-13**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -19,6 +19,8 @@ These layers compose. A change is conformant only if it preserves all of them.
 ## 1. Language Identity
 
 Ajisai is an **AI-first, vector-oriented, fractional-dataflow language**.
+
+Every numeric value is an **exact real**, represented internally as a (possibly lazy) **continued fraction**. Finite continued fractions cover the rationals; lazy infinite continued fractions cover the algebraic and transcendental irrationals admitted by the runtime (e.g. `SQRT`). All arithmetic is performed on the continued-fraction representation directly, without intermediate rounding. Surface numeric literals (Section 3.2) are convenience forms for the same underlying representation.
 
 Runtime stack:
 - Rust interpreter core
@@ -83,7 +85,7 @@ External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine
 | String | Single-quoted text `'...'` |
 | Symbol | Word name (all non-whitespace characters excluding reserved chars) |
 | `[` `]` | Vector boundaries |
-| `{` `}` or `(` `)` | Code block boundaries |
+| `{` `}` | Code block boundaries |
 | `==` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
 | `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
 | `>` | Syntactic sugar for `GT` |
@@ -102,11 +104,13 @@ External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine
 | Decimal | `3.14`, `.5`, `-1.0` |
 | Scientific notation | `1e5`, `1.5e-2`, `-3.0e4` |
 
-All numeric literals are parsed as exact rational numbers.
+All numeric literals are parsed as exact real numbers and stored internally as continued fractions (see Section 4.2). The surface literal forms above are convenience syntax: `42`, `42/1`, `42.0`, and `4.2e1` all produce the same internal value. Integer, fraction, decimal, and scientific-notation literals yield finite continued fractions (rationals); irrational continued fractions are produced by words such as `MATH@SQRT`, not by surface literals.
+
+The nested-parentheses form `( a0 ( a1 ( a2 ... )))` is the canonical serialization and AI-readable debug form for continued fractions (Section 4.2). It is not a source-code literal: Ajisai source uses the surface forms above, and the nested form appears only in display and serialization output under the `ContinuedFraction` display hint (Section 12.2).
 
 ### 3.3 String literals
 
-A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `(`, `)`, `#`, `=`, `~`, `$`).
+A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `#`, `=`, `~`, `$`).
 
 Any `'` that appears before a non-boundary character is a literal quote character in the string content.
 
@@ -121,7 +125,9 @@ Examples:
 
 ### 3.4 Code blocks
 
-A sequence of tokens enclosed in `{...}` or `(...)`. A code block must be written on a single line.
+A sequence of tokens enclosed in `{...}`. A code block must be written on a single line.
+
+`(` and `)` are not Ajisai syntactic characters. They are reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering `(` or `)` in source text is a tokenizer error.
 
 ### 3.5 Vectors
 
@@ -133,9 +139,10 @@ Inside a `COND` expression, clauses are separated by `$`. Each clause must occup
 
 ### 3.7 Syntax constraints
 
-- All bracket pairs (`[`, `{`, `(`) must be balanced.
-- Code blocks (`{...}`, `(...)`) must be on a single line.
+- All bracket pairs (`[`, `{`) must be balanced.
+- Code blocks (`{...}`) must be on a single line.
 - Each COND clause must occupy exactly one line.
+- The characters `(` and `)` are not valid in Ajisai source (Section 3.4).
 
 ### 3.8 Word name normalization
 
@@ -149,7 +156,7 @@ Word names are normalized to uppercase at runtime. `add` and `ADD` refer to the 
 
 | Type | Description |
 |------|-------------|
-| Scalar | An exact rational number |
+| Scalar | An exact real number, represented internally as a (possibly lazy) continued fraction |
 | Vector | An ordered, indexable sequence of values (may be nested) |
 | Record | An ordered set of named fields (string keys) |
 | NIL | The absence of a value |
@@ -157,19 +164,47 @@ Word names are normalized to uppercase at runtime. `add` and `ADD` refer to the 
 | ProcessHandle | A reference to a running child runtime |
 | SupervisorHandle | A reference to a supervisor |
 
-### 4.2 Scalar: exact rational arithmetic
+### 4.2 Scalar: exact-real continued-fraction arithmetic
 
-All numeric values are represented as exact fractions.
+All numeric values are exact reals represented as **continued fractions** (CF). A scalar is a sequence of integer partial quotients `[a0; a1, a2, ...]`, finite for rationals and lazy (potentially infinite) for irrationals.
 
-Internal representation:
-- `Small(numerator: i64, denominator: i64)` for values within i64 range
-- `Big(numerator: BigInt, denominator: BigInt)` for larger values
+#### 4.2.1 Canonical form
 
-Normalization rules:
-- Always reduced to lowest terms via GCD.
-- Denominator is always positive.
+A continued fraction is in canonical form when:
 
-Numeric display is guided by the semantic plane (see Section 12) and does not affect the stored value.
+1. `a0` is any integer.
+2. `a1, a2, ...` are strictly positive integers.
+3. If the sequence is finite and has length `n >= 2`, then the last partial quotient `a_{n-1}` is greater than `1` (no trailing `1`).
+4. The sequence terminates iff the value is rational.
+
+These rules give every real value a unique canonical CF, so equality of canonical CFs decides equality of values whenever the comparison terminates (Section 7.4).
+
+#### 4.2.2 Internal representation
+
+A scalar is internally one of the following representations. Which representation is used is not observable; only the canonical CF sequence and its value are.
+
+- **Rational** — a finite CF, stored equivalently as either a small `(i64, i64)` reduced fraction or a `(BigInt, BigInt)` reduced fraction. Partial quotients are generated on demand by floor-division Euclidean algorithm.
+- **AlgebraicSqrt** — `SQRT` of a non-negative rational. The CF expansion is eventually periodic (Lagrange's theorem) and produced lazily.
+- **Gosper** — an unevaluated bihomographic transform `(a x y + b x + c y + d) / (e x y + f x + g y + h)` of one or two operand CFs, used by arithmetic (Section 7.3). Partial quotients of the result are emitted as soon as the next quotient is unambiguously determined by the current Möbius coefficients.
+- **LazyCf** — any other lazy CF stream (reserved for future words; not produced by the Coreword set defined in this document).
+
+Möbius coefficients used by Gosper transforms are stored as arbitrary-precision integers (BigInt) at all times. Implementations must not use bounded-width coefficient storage that can overflow during normal evaluation.
+
+#### 4.2.3 Display and serialization
+
+The canonical AI-readable serialization of a scalar is the **nested right-associative** form:
+
+```
+( a0 ( a1 ( a2 ... ( a_{n-1} ) ... )))
+```
+
+with one integer per nesting level and one closing `)` per opening `(`. A lazy infinite CF is serialized by emitting partial quotients up to an implementation-defined display budget and terminating with the marker `...)` before the unproduced quotients' closing parens; the truncated display is non-canonical and must not be parsed back as an exact value.
+
+This nested form is **not** Ajisai source syntax (Section 3.4). It appears only in display and serialization output under the `ContinuedFraction` display hint (Section 12.2) and in AI-targeted diagnostics. Other display hints (e.g. `Number`) continue to render the surface forms of Section 3.2.
+
+#### 4.2.4 Equivalence of representations
+
+Two scalars are equal as values iff they produce the same canonical CF sequence. A `Rational` scalar and a `Gosper`/`AlgebraicSqrt` scalar may compare equal whenever their generated partial quotients agree at every position. The internal representation tag is not part of value identity and must not be branched on by Corewords or external consumers.
 
 ### 4.3 Vector
 
@@ -185,15 +220,15 @@ A Vector value is internally represented in one of two classes:
 The class is chosen at construction time. Observable semantics — `Display`, ordering, equality, NIL-ness, `SHAPE`, `LENGTH`, indexing, iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.
 
 Dense Tensor exactness rule:
-- Small fractions are stored as normalized `(i64 numerator, i64 denominator)` lanes.
-- Fractions that require BigInt storage remain exact values, but they are not admitted to the small-lane `DenseTensor` representation until a BigInt-capable SoA representation is introduced.
-- Implementations must not truncate, round, or otherwise approximate a BigInt-backed Fraction to fit a dense lane.
+- Lanes admit only scalars whose canonical CF (Section 4.2) is finite and whose equivalent reduced rational fits within `(i64 numerator, i64 denominator)`. These are stored in normalized form.
+- Scalars whose CF is infinite (irrational), or whose rational-equivalent requires BigInt storage, are exact values but are not admitted to the small-lane `DenseTensor` representation. They live in the nested `Vec<Value>` class until a CF-capable SoA representation is introduced.
+- Implementations must not truncate, round, or otherwise approximate a scalar to fit a dense lane. Any value that does not satisfy the lane admission rule causes the construction to fall back to the nested class.
 
 **No-Rebuild Principle:** a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by tensor identity and lane index; they are not embedded in `DenseTensor`.
 
 Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions/NIL lanes yields the same lane sequence and validity as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.
 
-This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see `docs/dev/virtual-tensor-unit-design.md`). It does not introduce approximate numeric types: all numeric leaves remain exact Fractions.
+This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see `docs/dev/virtual-tensor-unit-design.md`). It does not introduce approximate numeric types: all numeric leaves remain exact-real continued fractions (Section 4.2). The small-lane `DenseTensor` is an optimization for the rational sub-domain only; SIMD vectorization of CF arithmetic over lazy lanes is out of scope for this specification.
 
 ### 4.4 Record
 
@@ -414,11 +449,17 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited.
 | `ADD` | `+` | Addition |
 | `SUB` | `-` | Subtraction |
 | `MUL` | `*` | Multiplication |
-| `DIV` | `/` | Exact rational division |
+| `DIV` | `/` | Exact-real division |
 | `MOD` | `%` | Remainder |
 | `FLOOR` | — | Floor (largest integer ≤ value) |
 | `CEIL` | — | Ceiling (smallest integer ≥ value) |
 | `ROUND` | — | Round to nearest integer |
+
+Arithmetic on scalars is performed directly on the continued-fraction representation by **Gosper's bihomographic algorithm**: each operation forms a Möbius (for unary) or bihomographic (for binary) transform of its operands and emits partial quotients of the result as soon as the next quotient is unambiguously determined by the current coefficients. No intermediate value is materialized as an approximate real or as a truncated rational. Coefficients are BigInt at all times (Section 4.2.2).
+
+`FLOOR`, `CEIL`, and `ROUND` pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond `a0`.
+
+`MOD` is defined as `x - FLOOR(x / y) * y` and is computed by composing the underlying Gosper transforms. `DIV` by a value whose CF reduces to zero produces NIL with `reason = divisionByZero` (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with `reason = undecidable` (Section 7.4).
 
 ### 7.4 Comparison
 
@@ -431,11 +472,25 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited.
 | `EQ` | `=` | Equal |
 | `NEQ` | `<>` | Not equal |
 
-Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint).
+Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint), or NIL when the comparison is not decidable within the comparison budget (see below).
 
 The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`, `SAFE`).
 
 Under `STAK` mode, ordering comparisons describe a sequence property of the consumed values: `LT` true iff strictly increasing, `LTE` non-decreasing, `GT` strictly decreasing, `GTE` non-increasing, `EQ` all equal, `NEQ` all adjacent pairs unequal.
+
+#### 7.4.1 Decidability and comparison budget
+
+Comparison on continued fractions (Section 4.2) proceeds by emitting partial quotients of the two operands in parallel and stopping at the first index where they differ; the sign of the difference at that index determines the order (with the usual alternating-parity rule of CF comparison). For two finite CFs this always terminates. For lazy CFs, two distinct irrationals always differ at some finite index, but two equal irrationals never differ — the procedure does not terminate by itself.
+
+To preserve totality, every comparison operation runs under an implementation-defined **partial-quotient budget**. If the budget is exhausted before a difference is found:
+
+- the comparison produces NIL with `absence.reason = undecidable` and `absence.origin = comparisonBudget`;
+- under the Bubble Rule (Section 11.2), this NIL is not a `SAFE`-caught error and must not be wrapped with `caughtCategory`;
+- NIL-passthrough (Section 7.12) carries the reason through subsequent passthrough words so a pipeline-final `OR-NIL` can supply a fallback.
+
+The exhaustion-NIL outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison). The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
+
+`STAK`-mode ordering comparisons short-circuit on the first NIL-producing pair: the entire stack-mode result is NIL with the propagated reason, regardless of how many subsequent pairs would have decided.
 
 ### 7.5 Logic
 
@@ -541,7 +596,7 @@ A contract entry has the following fields, in addition to the existing identific
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
 
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
+`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors. Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting` with `nil_policy = CreatesNil` for the comparison-budget exhaustion case introduced in Section 7.4.1 (`reason = undecidable`), while remaining `Passthrough` for NIL operands per Section 7.12; both behaviors coexist because they are independent axes.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -710,10 +765,11 @@ Initial Core words following this rule include:
 
 | Word | Bubble/NIL case | Error case |
 |------|-----------------|------------|
-| `DIV` / `/` | Division by zero (`NilReason::DivisionByZero`) | Non-numeric operands or malformed shapes |
+| `DIV` / `/` | Division by zero (`NilReason::DivisionByZero`); divisor indistinguishable from zero within the comparison budget (`NilReason::Undecidable`) | Non-numeric operands or malformed shapes |
 | `GET` | Valid vector target with an out-of-range index (`NilReason::IndexOutOfBounds`) | Non-vector target or non-numeric index |
 | `NUM` | Text cannot be parsed as a number (`NilReason::InvalidEncoding`) | Input shape is not convertible text |
 | `CHR` | Numeric code point is outside the valid Unicode scalar range (`NilReason::InvalidEncoding`) | Operand is not numeric, or numeric operand is not an integer |
+| `EQ` / `NEQ` / `LT` / `LTE` / `GT` / `GTE` | Comparison budget exhausted on lazy continued fractions (`NilReason::Undecidable`, `absence.origin = comparisonBudget`; see Section 7.4.1) | Non-numeric operands or malformed shapes |
 
 `OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
 
@@ -744,7 +800,8 @@ The semantic plane holds display hints for each stack position. It is separate f
 | Hint | Meaning |
 |------|---------|
 | `Auto` | Determine display from value type at render time |
-| `Number` | Display as a number |
+| `Number` | Display as a number using the surface forms of Section 3.2 (integer, fraction, decimal) |
+| `ContinuedFraction` | Display a numeric scalar as the nested right-associative continued-fraction form `( a0 ( a1 ( a2 ... )))` (Section 4.2.3); lazy CFs render with a `...)` truncation marker |
 | `Interval` | Display a 2-element vector as the closed interval `[lo, hi]` |
 | `String` | Display as a string |
 | `Boolean` | Display as a boolean |
@@ -752,6 +809,8 @@ The semantic plane holds display hints for each stack position. It is separate f
 | `Nil` | Display as NIL |
 
 Display hints are applied only at explicit semantic boundaries: rendering, `PRINT`, and module-level output operations.
+
+The `ContinuedFraction` hint is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this hint; the `Number` hint may lose information for lazy irrationals.
 
 ---
 
@@ -828,3 +887,5 @@ A change is conformant only if all of the following hold:
 8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
 9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.3).
 10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
+11. Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion produces `NilReason::Undecidable` Bubble/NIL rather than an error or a non-deterministic answer (Section 7.4.1).
+12. Source text contains no `(` or `)` outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).
