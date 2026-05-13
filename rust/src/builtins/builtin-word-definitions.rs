@@ -19,6 +19,9 @@ pub enum BuiltinExecutorKey {
     Eq,
     Lt,
     Le,
+    Gt,
+    Gte,
+    Neq,
     Map,
     Filter,
     Fold,
@@ -1063,7 +1066,82 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             shorthand: Some("[ 1 ] [ 1 ] <="),
             result: Some("[ TRUE ]"),
         }],
-        related: &["EQ", "LT"],
+        related: &["EQ", "LT", "GT", "GTE", "NEQ"],
+        ..SPEC_DEFAULT
+    },
+    BuiltinSpec {
+        name: "GT",
+        category: "comparison",
+        hover_summary: "GT — test greater than",
+        hover_syntax: "2 1 >",
+        word_shape: WordShape::Fold,
+        detail_group: BuiltinDetailGroup::ArithmeticLogic,
+        executor_key: Some(BuiltinExecutorKey::Gt),
+        summary: "Test greater-than comparison.",
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "[ a ] [ b ] GT",
+            shorthand: Some("[ a ] [ b ] >"),
+            description: None,
+        }],
+        stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        behavior:
+            "Pops two numeric vectors and pushes the element-wise a > b.\nMirror of LT; provided as a primitive so a producer can emit the\nrelation directly instead of swapping operands or negating LTE.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "[ 2 ] [ 1 ] GT",
+            shorthand: Some("[ 2 ] [ 1 ] >"),
+            result: Some("[ TRUE ]"),
+        }],
+        related: &["EQ", "LT", "LTE", "GTE", "NEQ"],
+        ..SPEC_DEFAULT
+    },
+    BuiltinSpec {
+        name: "GTE",
+        category: "comparison",
+        hover_summary: "GTE — test greater than or equal",
+        hover_syntax: "1 1 >=",
+        word_shape: WordShape::Fold,
+        detail_group: BuiltinDetailGroup::ArithmeticLogic,
+        executor_key: Some(BuiltinExecutorKey::Gte),
+        summary: "Test greater-than-or-equal comparison.",
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "[ a ] [ b ] GTE",
+            shorthand: Some("[ a ] [ b ] >="),
+            description: None,
+        }],
+        stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        behavior:
+            "Pops two numeric vectors and pushes the element-wise a >= b.\nMirror of LTE.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "[ 1 ] [ 1 ] GTE",
+            shorthand: Some("[ 1 ] [ 1 ] >="),
+            result: Some("[ TRUE ]"),
+        }],
+        related: &["EQ", "LT", "LTE", "GT", "NEQ"],
+        ..SPEC_DEFAULT
+    },
+    BuiltinSpec {
+        name: "NEQ",
+        category: "comparison",
+        hover_summary: "NEQ — test inequality",
+        hover_syntax: "1 2 <>",
+        word_shape: WordShape::Fold,
+        detail_group: BuiltinDetailGroup::ArithmeticLogic,
+        executor_key: Some(BuiltinExecutorKey::Neq),
+        summary: "Test inequality of two values.",
+        syntax_forms: &[BuiltinSyntaxDoc {
+            canonical: "[ a ] [ b ] NEQ",
+            shorthand: Some("[ a ] [ b ] <>"),
+            description: None,
+        }],
+        stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        behavior:
+            "Pops two values and pushes TRUE iff they are not structurally\nequal. The exact negation of EQ.",
+        examples: &[BuiltinExampleDoc {
+            canonical: "[ 1 ] [ 2 ] NEQ",
+            shorthand: Some("[ 1 ] [ 2 ] <>"),
+            result: Some("[ TRUE ]"),
+        }],
+        related: &["EQ", "LT", "LTE", "GT", "GTE"],
         ..SPEC_DEFAULT
     },
 
@@ -2281,8 +2359,8 @@ mod tests {
     #[test]
     fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
         let forbidden = [
-            "+", "-", "*", "/", "%", "=", "<", "<=", ".", "..", ",", ",,", "~", "!", "'", "$", "?",
-            "==", "=>",
+            "+", "-", "*", "/", "%", "=", "<", "<=", ">", ">=", "<>", ".", "..", ",", ",,", "~",
+            "!", "'", "$", "?", "==", "=>",
         ];
 
         for spec in super::builtin_specs() {
@@ -2297,8 +2375,8 @@ mod tests {
     #[test]
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
-            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "LT", "LTE", "TOP", "STAK", "EAT", "KEEP",
-            "SAFE", "FORC", "LOOKUP", "PIPE", "OR-NIL",
+            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "TOP",
+            "STAK", "EAT", "KEEP", "SAFE", "FORC", "LOOKUP", "PIPE", "OR-NIL",
         ];
 
         for name in required {

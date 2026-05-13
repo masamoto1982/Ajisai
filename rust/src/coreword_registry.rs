@@ -441,7 +441,8 @@ fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<Bu
             meta.nil_policy = NilPolicy::Passthrough;
             meta.safety_level = SafetyLevel::B;
         }
-        Some(Eq) | Some(Lt) | Some(Le) | Some(And) | Some(Or) | Some(Not) => {
+        Some(Eq) | Some(Neq) | Some(Lt) | Some(Le) | Some(Gt) | Some(Gte) | Some(And)
+        | Some(Or) | Some(Not) => {
             meta.partiality = Partiality::Total;
             meta.nil_policy = NilPolicy::Passthrough;
             meta.safety_level = SafetyLevel::A;

@@ -84,7 +84,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         Add | Sub | Mul | Div | Mod | Floor | Ceil | Round => pure_trivial,
 
         // ── Pure comparison ───────────────────────────────────────────────
-        Eq | Lt | Le => pure_trivial,
+        Eq | Lt | Le | Gt | Gte | Neq => pure_trivial,
 
         // ── Pure logic ────────────────────────────────────────────────────
         And | Or | Not => pure_trivial,

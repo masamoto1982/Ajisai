@@ -164,39 +164,62 @@ where
     }
 }
 
+/// Three-valued interval comparison: `Some(true)` and `Some(false)` are
+/// decidable; `None` means the two intervals overlap in a way that depends on
+/// the unresolved precision of their endpoints. `definitely_true` and
+/// `definitely_false` encode the relation under test in terms of interval
+/// endpoints; they are independent so that callers can express LT/LTE/GT/GTE
+/// without re-deriving each truth table.
+fn interval_relation<F1, F2>(
+    interp: &mut Interpreter,
+    definitely_true: F1,
+    definitely_false: F2,
+) -> Option<Result<()>>
+where
+    F1: Fn(&crate::types::interval::Interval, &crate::types::interval::Interval) -> bool,
+    F2: Fn(&crate::types::interval::Interval, &crate::types::interval::Interval) -> bool,
+{
+    if interp.stack.len() < 2 {
+        return None;
+    }
+    let len = interp.stack.len();
+    let a = interp.stack[len - 2].clone();
+    let b = interp.stack[len - 1].clone();
+    let (ai, bi) = match (value_to_interval(&a), value_to_interval(&b)) {
+        (Some(ai), Some(bi)) => (ai, bi),
+        _ => return None,
+    };
+    let decided = if definitely_true(&ai, &bi) {
+        Some(true)
+    } else if definitely_false(&ai, &bi) {
+        Some(false)
+    } else {
+        None
+    };
+    Some(match decided {
+        Some(v) => {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            push_boolean_result(interp, v);
+            Ok(())
+        }
+        None => Err(AjisaiError::from(
+            "interval comparison is undecidable with current precision",
+        )),
+    })
+}
+
 pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop
         && nil_passthrough_binary(interp)
     {
         return Ok(());
     }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let len = interp.stack.len();
-        let a = interp.stack[len - 2].clone();
-        let b = interp.stack[len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            let result = if ai.hi.lt(&bi.lo) {
-                Some(true)
-            } else if ai.lo.ge(&bi.hi) {
-                Some(false)
-            } else {
-                None
-            };
-            match result {
-                Some(v) => {
-                    if interp.consumption_mode != ConsumptionMode::Keep {
-                        interp.stack.pop();
-                        interp.stack.pop();
-                    }
-                    push_boolean_result(interp, v);
-                    return Ok(());
-                }
-                None => {
-                    return Err(AjisaiError::from(
-                        "interval comparison is undecidable with current precision",
-                    ));
-                }
-            }
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        if let Some(res) = interval_relation(interp, |ai, bi| ai.hi.lt(&bi.lo), |ai, bi| ai.lo.ge(&bi.hi)) {
+            return res;
         }
     }
     apply_binary_comparison(interp, |a, b| a.lt(b), "<")
@@ -208,39 +231,80 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
     {
         return Ok(());
     }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let len = interp.stack.len();
-        let a = interp.stack[len - 2].clone();
-        let b = interp.stack[len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            let result = if ai.hi.le(&bi.lo) {
-                Some(true)
-            } else if ai.lo.gt(&bi.hi) {
-                Some(false)
-            } else {
-                None
-            };
-            match result {
-                Some(v) => {
-                    if interp.consumption_mode != ConsumptionMode::Keep {
-                        interp.stack.pop();
-                        interp.stack.pop();
-                    }
-                    push_boolean_result(interp, v);
-                    return Ok(());
-                }
-                None => {
-                    return Err(AjisaiError::from(
-                        "interval comparison is undecidable with current precision",
-                    ));
-                }
-            }
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        if let Some(res) = interval_relation(interp, |ai, bi| ai.hi.le(&bi.lo), |ai, bi| ai.lo.gt(&bi.hi)) {
+            return res;
         }
     }
     apply_binary_comparison(interp, |a, b| a.le(b), "<=")
 }
 
+pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        if let Some(res) = interval_relation(interp, |ai, bi| ai.lo.gt(&bi.hi), |ai, bi| ai.hi.le(&bi.lo)) {
+            return res;
+        }
+    }
+    apply_binary_comparison(interp, |a, b| a.gt(b), ">")
+}
+
+pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
+    if interp.operation_target_mode == OperationTargetMode::StackTop {
+        if let Some(res) = interval_relation(interp, |ai, bi| ai.lo.ge(&bi.hi), |ai, bi| ai.hi.lt(&bi.lo)) {
+            return res;
+        }
+    }
+    apply_binary_comparison(interp, |a, b| a.ge(b), ">=")
+}
+
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
+    apply_equality(interp, false)
+}
+
+pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
+    apply_equality(interp, true)
+}
+
+fn pairwise_eq(a_val: &Value, b_val: &Value) -> bool {
+    if a_val.data == b_val.data {
+        return true;
+    }
+    if let (Some(ai), Some(bi)) = (value_to_interval(a_val), value_to_interval(b_val)) {
+        if ai.is_exact() && bi.is_exact() {
+            return ai.lo == bi.lo;
+        }
+        return false;
+    }
+    match (&a_val.data, &b_val.data) {
+        (ValueData::Scalar(_), ValueData::Vector(children)) if children.len() == 1 => {
+            a_val.data == children[0].data
+        }
+        (ValueData::Vector(children), ValueData::Scalar(_)) if children.len() == 1 => {
+            children[0].data == b_val.data
+        }
+        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => b_val
+            .child(0)
+            .map(|c| a_val.data == c.data)
+            .unwrap_or(false),
+        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => a_val
+            .child(0)
+            .map(|c| c.data == b_val.data)
+            .unwrap_or(false),
+        _ => false,
+    }
+}
+
+fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop
         && nil_passthrough_binary(interp)
     {
@@ -266,45 +330,8 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let result: bool = if a_val.data == b_val.data {
-                true
-            } else {
-                if let (Some(ai), Some(bi)) = (value_to_interval(&a_val), value_to_interval(&b_val))
-                {
-                    if ai.is_exact() && bi.is_exact() {
-                        ai.lo == bi.lo
-                    } else {
-                        false
-                    }
-                } else {
-                    match (&a_val.data, &b_val.data) {
-                        (ValueData::Scalar(_), ValueData::Vector(children))
-                            if children.len() == 1 =>
-                        {
-                            a_val.data == children[0].data
-                        }
-                        (ValueData::Vector(children), ValueData::Scalar(_))
-                            if children.len() == 1 =>
-                        {
-                            children[0].data == b_val.data
-                        }
-                        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => {
-                            b_val
-                                .child(0)
-                                .map(|c| a_val.data == c.data)
-                                .unwrap_or(false)
-                        }
-                        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => {
-                            a_val
-                                .child(0)
-                                .map(|c| c.data == b_val.data)
-                                .unwrap_or(false)
-                        }
-                        _ => false,
-                    }
-                }
-            };
-            push_boolean_result(interp, result);
+            let eq: bool = pairwise_eq(&a_val, &b_val);
+            push_boolean_result(interp, if invert { !eq } else { eq });
             Ok(())
         }
 
@@ -334,8 +361,12 @@ pub fn op_eq(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let all_equal: bool = check_all_adjacent_equal(&items);
-            push_boolean_result(interp, all_equal);
+            let property: bool = if invert {
+                items.windows(2).all(|pair| !pairwise_eq(&pair[0], &pair[1]))
+            } else {
+                check_all_adjacent_equal(&items)
+            };
+            push_boolean_result(interp, property);
             Ok(())
         }
     }
