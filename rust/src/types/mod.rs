@@ -6,6 +6,7 @@ mod fraction_arithmetic;
 #[cfg(test)]
 #[path = "fraction-mcdc-tests.rs"]
 mod fraction_mcdc_tests;
+pub mod continued_fraction;
 pub mod interval;
 #[path = "value-operations.rs"]
 mod value_operations;
