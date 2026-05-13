@@ -1,43 +1,38 @@
 // Test: Nested Vector Bracket Normalization
-// Purpose: Verify that input bracket types are normalized and display shows depth-based brackets
-// Expected behavior:
-// - All input brackets ([], {}, ()) are treated the same internally
-// - Display shows brackets based on nesting depth:
-//   - Depth 0: [ ]
-//   - Depth 1: { }
-//   - Depth 2: ( )
-//   - Depth 3+: cycles back ([ ], { }, ( ), ...)
+// Purpose: Verify that vector input bracket types are normalized and display always uses [ ].
+// Notes (post SPECIFICATION.md 2026-05-13):
+// - The only valid vector bracket pair in Ajisai source is [ ].
+// - { } delimits a code block (Section 3.4).
+// - ( ) is not valid in Ajisai source (Section 3.4); it is reserved for the
+//   nested continued-fraction display form (Section 4.2.3).
+// - Display always renders vectors with [ ] regardless of nesting depth
+//   (see examples/nested-vector-brackets-sample-test.ajisai for the
+//   current display behavior).
 
-// Test 1: Different input brackets should be treated identically
+// Test 1: Vector with square brackets
 [ 1 2 3 ]
-{ 1 2 3 }
-( 1 2 3 )
-// All three vectors above should be internally identical
+// Expected display: [ 1 2 3 ]
 
-// Test 2: Nested vectors with square brackets
+// Test 2: Nested vectors
 [[ 1 2 ] [ 3 4 ]]
-// Expected display: [ { 1 2 } { 3 4 } ]
+// Expected display: [ [ 1 2 ] [ 3 4 ] ]
 
-// Test 3: Nested vectors with mixed brackets (all should normalize)
-[{ 1 2 } ( 3 4 )]
-// Expected display: [ { 1 2 } { 3 4 } ] (same as Test 2)
-
-// Test 4: Triple nesting
+// Test 3: Triple nesting
 [[[ 1 2 ]]]
-// Expected display: [ { ( 1 2 ) } ]
+// Expected display: [ [ [ 1 2 ] ] ]
 
-// Test 5: Quad nesting (should cycle back to square brackets)
+// Test 4: Quad nesting
 [[[[ 1 ]]]]
-// Expected display: [ { ( [ 1 ] ) } ]
+// Expected display: [ [ [ [ 1 ] ] ] ]
 
-// Test 6: Complex nested structure
+// Test 5: Complex nested structure
 [[ 1 [ 2 3 ] 4 ] [ 5 [ 6 7 ] 8 ]]
-// Expected display: [ { 1 ( 2 3 ) 4 } { 5 ( 6 7 ) 8 } ]
+// Expected display: [ [ 1 [ 2 3 ] 4 ] [ 5 [ 6 7 ] 8 ] ]
 
-// Test 7: Operations on nested vectors should preserve depth-based display
+// Test 6: Operations on nested vectors should preserve [ ] display
 [ 1 2 ] [ 3 4 ] 2 CONCAT
 // Expected display after CONCAT: [ 1 2 3 4 ]
 
-// Test 8: Deeply nested vectors created by operations
+// Test 7: Deeply nested vectors created by operations
 [ [ 1 ] ] [ [ 2 ] ] 2 CONCAT
-// Expected display after CONCAT: [ { 1 } { 2 } ]
+// Expected display after CONCAT: [ [ 1 ] [ 2 ] ]
