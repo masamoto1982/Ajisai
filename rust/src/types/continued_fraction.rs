@@ -380,6 +380,126 @@ impl ExactReal {
 }
 
 // =========================================================================
+// Comparison — partial-quotient budget per SPEC §7.4.1
+// =========================================================================
+
+/// Default partial-quotient budget for `cmp_with_budget`. SPEC §7.4.1
+/// says the budget itself is not part of observable semantics; it
+/// only has to be high enough that distinct rationals always decide.
+/// 256 partial quotients comfortably decides any rational pair
+/// representable on the platform while keeping pathological lazy-CF
+/// comparisons (e.g. two equal irrationals built via different
+/// Gosper transforms) from running unboundedly.
+pub const DEFAULT_COMPARISON_BUDGET: usize = 256;
+
+impl ExactReal {
+    /// Three-way comparison of CF values under a partial-quotient
+    /// budget.
+    ///
+    /// Returns `Some(Ordering::Less | Equal | Greater)` when the two
+    /// CF streams diverge within `budget` partial quotients or both
+    /// terminate naturally at the same index, applying the
+    /// alternating-parity rule (SPEC §4.2.4 + §7.4.1): at the first
+    /// index `i` where the two streams differ, the order is `a_i
+    /// vs b_i` for even `i` and `b_i vs a_i` for odd `i`.
+    ///
+    /// Returns `None` when the budget is exhausted without a
+    /// difference, when either operand is nil, or when either
+    /// operand's CF stream hits its internal safety budget
+    /// (`CfStep::Exhausted`) before the comparison resolves. The
+    /// `None` outcome is what the language-level Bubble Rule
+    /// projects to `NilReason::Undecidable` with `absence.origin =
+    /// comparisonBudget`.
+    pub fn cmp_with_budget(
+        &self,
+        other: &Self,
+        budget: usize,
+    ) -> Option<std::cmp::Ordering> {
+        use std::cmp::Ordering;
+        if self.is_nil() || other.is_nil() {
+            return None;
+        }
+        if budget == 0 {
+            return None;
+        }
+        let mut a = CfIter::from_exact_real(self);
+        let mut b = CfIter::from_exact_real(other);
+        for i in 0..budget {
+            let av = a.next_step();
+            let bv = b.next_step();
+            match (av, bv) {
+                (CfStep::Quotient(av), CfStep::Quotient(bv)) => {
+                    if av != bv {
+                        return Some(if i % 2 == 0 {
+                            av.cmp(&bv)
+                        } else {
+                            bv.cmp(&av)
+                        });
+                    }
+                }
+                (CfStep::Ended, CfStep::Ended) => return Some(Ordering::Equal),
+                (CfStep::Ended, CfStep::Quotient(_)) => {
+                    // self's CF terminated; treat its phantom term
+                    // at index i as +∞. Alternating-parity rule:
+                    // even i ⇒ phantom is greater ⇒ self > other;
+                    // odd i ⇒ phantom is less ⇒ self < other.
+                    return Some(if i % 2 == 0 {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Less
+                    });
+                }
+                (CfStep::Quotient(_), CfStep::Ended) => {
+                    return Some(if i % 2 == 0 {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    });
+                }
+                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => return None,
+            }
+        }
+        None
+    }
+
+    /// `self == other` under the partial-quotient budget. `None` on
+    /// budget exhaustion or nil per `cmp_with_budget`.
+    pub fn eq_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.cmp_with_budget(other, budget)
+            .map(|o| o == std::cmp::Ordering::Equal)
+    }
+
+    /// `self != other`. Same `None` semantics as `eq_with_budget`.
+    pub fn ne_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.eq_with_budget(other, budget).map(|eq| !eq)
+    }
+
+    /// `self < other`.
+    pub fn lt_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.cmp_with_budget(other, budget)
+            .map(|o| o == std::cmp::Ordering::Less)
+    }
+
+    /// `self <= other`.
+    pub fn le_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.cmp_with_budget(other, budget)
+            .map(|o| o != std::cmp::Ordering::Greater)
+    }
+
+    /// `self > other`.
+    pub fn gt_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.cmp_with_budget(other, budget)
+            .map(|o| o == std::cmp::Ordering::Greater)
+    }
+
+    /// `self >= other`.
+    pub fn ge_with_budget(&self, other: &Self, budget: usize) -> Option<bool> {
+        self.cmp_with_budget(other, budget)
+            .map(|o| o != std::cmp::Ordering::Less)
+    }
+}
+
+// =========================================================================
 // Möbius / bihomographic constructors
 // =========================================================================
 
@@ -520,8 +640,19 @@ struct CfIter {
 }
 
 enum CfState {
-    /// Stream exhausted; further `next_quotient` calls return `None`.
+    /// Stream legitimately ended (rational CF reached its final
+    /// canonical term, or a Möbius/bihomographic transform finished
+    /// expanding its rational tail). Further `next_quotient` calls
+    /// return `None`; `next_step` reports `Ended`.
     Empty,
+    /// Internal safety budget was hit without producing the next
+    /// partial quotient (degenerate Möbius / bihomographic state
+    /// whose corners refuse to agree, or pathological
+    /// limit-at-infinity). Further polls return `None`; `next_step`
+    /// reports `Exhausted` so the comparison-budget algorithm can
+    /// project to `NilReason::Undecidable` per SPEC §7.4.1 instead
+    /// of mistaking this for a finite-CF terminator.
+    Exhausted,
     /// Pre-computed canonical sequence (used for rationals and for
     /// the rational tail of a Möbius transform once its operand is
     /// exhausted).
@@ -640,17 +771,25 @@ impl CfIter {
     }
 
     fn next_quotient(&mut self) -> Option<BigInt> {
+        match self.next_step() {
+            CfStep::Quotient(q) => Some(q),
+            CfStep::Ended | CfStep::Exhausted => None,
+        }
+    }
+
+    fn next_step(&mut self) -> CfStep {
         loop {
             match &mut self.state {
-                CfState::Empty => return None,
+                CfState::Empty => return CfStep::Ended,
+                CfState::Exhausted => return CfStep::Exhausted,
                 CfState::Finite { canonical, pos } => {
                     if *pos < canonical.len() {
                         let q = canonical[*pos].clone();
                         *pos += 1;
-                        return Some(q);
+                        return CfStep::Quotient(q);
                     }
                     self.state = CfState::Empty;
-                    return None;
+                    return CfStep::Ended;
                 }
                 CfState::Sqrt {
                     big_d,
@@ -663,24 +802,43 @@ impl CfIter {
                     let next_q: BigInt = (&*big_d - &next_p * &next_p) / &*q_i;
                     *p_i = next_p;
                     *q_i = next_q;
-                    return Some(a_i);
+                    return CfStep::Quotient(a_i);
                 }
                 CfState::Mobius { .. } => {
                     if let Some(q) = step_mobius(&mut self.state) {
-                        return Some(q);
+                        return CfStep::Quotient(q);
                     }
-                    // step_mobius transitioned the state (either to
-                    // Finite for the rational-tail case, or returned
-                    // None to signal exhaustion). Re-dispatch.
+                    // step_mobius transitioned the state (Finite tail,
+                    // Empty for ended-normally, or Exhausted for
+                    // safety-budget hit). Re-dispatch.
                 }
                 CfState::Bihom { .. } => {
                     if let Some(q) = step_bihom(&mut self.state) {
-                        return Some(q);
+                        return CfStep::Quotient(q);
                     }
                 }
             }
         }
     }
+}
+
+/// Tri-state result of advancing a `CfIter` by one step.
+///
+/// `Ended` is reserved for legitimate termination of the CF (a
+/// finite rational reached its last canonical term, or a Gosper
+/// transform finished expanding its rational tail). `Exhausted`
+/// marks internal safety-budget exhaustion or a pathological
+/// limit-at-infinity — the value cannot be advanced further without
+/// expanding the implementation's iteration cap. The
+/// comparison-budget algorithm distinguishes them so it can
+/// correctly project the second case to NIL with `absence.reason =
+/// undecidable` per SPEC §7.4.1, rather than treating it as a
+/// finite-CF terminator that would apply the alternating-parity
+/// rule against an unrelated baseline.
+enum CfStep {
+    Quotient(BigInt),
+    Ended,
+    Exhausted,
 }
 
 /// Run the unary Gosper loop until it emits, transitions to a
@@ -725,9 +883,10 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
         if *x_done {
             // Operand exhausted and we still can't emit. The remaining
             // value is the constant a/c (treating x' = ∞). If c == 0
-            // the value is infinite — no further output is possible.
+            // the value is mathematically infinite — no CF expansion
+            // exists, so report exhaustion rather than a phantom end.
             if c.is_zero() {
-                *state = CfState::Empty;
+                *state = CfState::Exhausted;
                 return None;
             }
             let canonical = rational_partial_quotients(a.clone(), c.clone());
@@ -739,13 +898,13 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
         }
 
         if ingest_budget == 0 {
-            *state = CfState::Empty;
+            *state = CfState::Exhausted;
             return None;
         }
         ingest_budget -= 1;
 
-        match x.next_quotient() {
-            Some(p) => {
+        match x.next_step() {
+            CfStep::Quotient(p) => {
                 // Ingest p: (a, b, c, d) ← (a·p + b, a, c·p + d, c)
                 let new_a = &*a * &p + &*b;
                 let new_b = a.clone();
@@ -756,8 +915,13 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
                 *c = new_c;
                 *d = new_d;
             }
-            None => {
+            CfStep::Ended => {
                 *x_done = true;
+            }
+            CfStep::Exhausted => {
+                // Inner operand could not be advanced; propagate.
+                *state = CfState::Exhausted;
+                return None;
             }
         }
     }
@@ -794,7 +958,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
         // y. Symmetrically for y. If both, the value is a/e.
         if *x_done && *y_done {
             if e.is_zero() {
-                *state = CfState::Empty;
+                *state = CfState::Exhausted;
                 return None;
             }
             let canonical = rational_partial_quotients(a.clone(), e.clone());
@@ -879,7 +1043,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
         }
 
         if ingest_budget == 0 {
-            *state = CfState::Empty;
+            *state = CfState::Exhausted;
             return None;
         }
         ingest_budget -= 1;
@@ -903,8 +1067,8 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
             *y_consumed,
         );
         if ingest_x {
-            match x.next_quotient() {
-                Some(p) => {
+            match x.next_step() {
+                CfStep::Quotient(p) => {
                     // Ingest x: bihom in (x', y) where x = p + 1/x'
                     //   (a, b, c, d) ← (a·p + c, b·p + d, a, b)
                     //   (e, f, g, h) ← (e·p + g, f·p + h, e, f)
@@ -926,13 +1090,17 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *h = new_h;
                     *x_consumed += 1;
                 }
-                None => {
+                CfStep::Ended => {
                     *x_done = true;
+                }
+                CfStep::Exhausted => {
+                    *state = CfState::Exhausted;
+                    return None;
                 }
             }
         } else {
-            match y.next_quotient() {
-                Some(p) => {
+            match y.next_step() {
+                CfStep::Quotient(p) => {
                     // Ingest y: bihom in (x, y') where y = p + 1/y'
                     //   (a, b, c, d) ← (a·p + b, a, c·p + d, c)
                     //   (e, f, g, h) ← (e·p + f, e, g·p + h, g)
@@ -954,8 +1122,12 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *h = new_h;
                     *y_consumed += 1;
                 }
-                None => {
+                CfStep::Ended => {
                     *y_done = true;
+                }
+                CfStep::Exhausted => {
+                    *state = CfState::Exhausted;
+                    return None;
                 }
             }
         }
@@ -1684,5 +1856,322 @@ mod tests {
         // prove it without expansion: report false (conservative).
         let lazy_zero = sqrt_of(2, 1).sub(&sqrt_of(2, 1));
         assert!(!lazy_zero.is_structurally_zero());
+    }
+
+    // === Phase 5: comparison budget (SPEC §4.2.4, §7.4.1) ===
+
+    use std::cmp::Ordering;
+
+    const BUDGET: usize = DEFAULT_COMPARISON_BUDGET;
+
+    // -- rational vs rational --
+
+    #[test]
+    fn cmp_rational_equal_canonical_sequences() {
+        assert_eq!(
+            rational(1, 2).cmp_with_budget(&rational(1, 2), BUDGET),
+            Some(Ordering::Equal)
+        );
+        // 2/4 reduces to 1/2 via Fraction::new, so structurally
+        // identical CFs — equality is detected at the canonical-
+        // sequence level rather than via a budget burn-down.
+        assert_eq!(
+            rational(2, 4).cmp_with_budget(&rational(1, 2), BUDGET),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            rational(355, 113).cmp_with_budget(&rational(355, 113), BUDGET),
+            Some(Ordering::Equal)
+        );
+    }
+
+    #[test]
+    fn cmp_rational_orders_by_value() {
+        // 1/2 < 2/3 < 1 < 355/113
+        assert_eq!(
+            rational(1, 2).cmp_with_budget(&rational(2, 3), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            rational(2, 3).cmp_with_budget(&rational(1, 1), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            rational(1, 1).cmp_with_budget(&rational(355, 113), BUDGET),
+            Some(Ordering::Less)
+        );
+        // mirror: reverse orders flip
+        assert_eq!(
+            rational(2, 3).cmp_with_budget(&rational(1, 2), BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    #[test]
+    fn cmp_rational_handles_negative_values() {
+        // −3/2 = [−2; 2], 1/2 = [0; 2]; first differ at i=0
+        // ⇒ floor(−3/2) < floor(1/2) ⇒ Less.
+        assert_eq!(
+            rational(-3, 2).cmp_with_budget(&rational(1, 2), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            rational(-1, 2).cmp_with_budget(&rational(-3, 2), BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    #[test]
+    fn cmp_finite_vs_longer_prefix_applies_parity_rule() {
+        // [1] = 1, [1; 2] = 3/2.
+        //   At i=1, [1] has ended while [1; 2] has 2.
+        //   Odd index ⇒ phantom-∞ < 2 ⇒ [1] < [1; 2].
+        let one = rational(1, 1);
+        let three_halves = rational(3, 2);
+        assert_eq!(
+            one.cmp_with_budget(&three_halves, BUDGET),
+            Some(Ordering::Less)
+        );
+        // [1; 2] vs [1; 2, 3]: at i=2 (even) phantom-∞ > 3
+        //   ⇒ [1; 2] > [1; 2, 3].
+        let ten_sevenths = rational(10, 7); // [1; 2, 3]
+        assert_eq!(
+            three_halves.cmp_with_budget(&ten_sevenths, BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    // -- algebraic sqrt vs rational --
+
+    #[test]
+    fn cmp_sqrt_two_is_between_one_and_two() {
+        let s = sqrt_of(2, 1);
+        assert_eq!(
+            rational(1, 1).cmp_with_budget(&s, BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            s.cmp_with_budget(&rational(2, 1), BUDGET),
+            Some(Ordering::Less)
+        );
+    }
+
+    #[test]
+    fn cmp_sqrt_two_against_close_rationals() {
+        // √2 ≈ 1.41421356 — between 99/70 = 1.41428... and 41/29 = 1.41379...
+        let s = sqrt_of(2, 1);
+        assert_eq!(
+            s.cmp_with_budget(&rational(99, 70), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            s.cmp_with_budget(&rational(41, 29), BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    // -- algebraic sqrt vs algebraic sqrt --
+
+    #[test]
+    fn cmp_sqrt_two_less_than_sqrt_three() {
+        let two = sqrt_of(2, 1);
+        let three = sqrt_of(3, 1);
+        assert_eq!(
+            two.cmp_with_budget(&three, BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            three.cmp_with_budget(&two, BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    #[test]
+    fn cmp_equal_sqrt_two_is_undecidable_within_budget() {
+        // SPEC §7.4.1: "two equal irrationals never differ — the
+        // procedure does not terminate by itself." Two distinct
+        // AlgebraicSqrt values built from the same radicand expand
+        // identically forever; the comparison budget exhausts.
+        let a = sqrt_of(2, 1);
+        let b = sqrt_of(2, 1);
+        assert_eq!(a.cmp_with_budget(&b, 32), None);
+        assert_eq!(a.cmp_with_budget(&b, BUDGET), None);
+    }
+
+    // -- gosper vs everything --
+
+    #[test]
+    fn cmp_sqrt_two_plus_one_against_rationals() {
+        // √2 + 1 ≈ 2.4142 — between 2 and 3, and above 12/5 = 2.4.
+        let v = sqrt_of(2, 1).add(&rational(1, 1));
+        assert_eq!(
+            v.cmp_with_budget(&rational(2, 1), BUDGET),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            v.cmp_with_budget(&rational(3, 1), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            v.cmp_with_budget(&rational(12, 5), BUDGET),
+            Some(Ordering::Greater)
+        );
+    }
+
+    #[test]
+    fn cmp_sqrt_two_plus_sqrt_two_equals_sqrt_eight_at_emitted_prefix() {
+        // √2 + √2 (bihom) and √8 (algebraic sqrt) have the same CF
+        // [2; 1, 4, 1, 4, …]. The bihom can emit those quotients
+        // within its safety budget, so the comparison runs lockstep
+        // through Quotient/Quotient matches until either the
+        // outer budget exhausts or the bihom's internal budget hits.
+        // Either outcome is `None` (undecidable) — not Less/Greater.
+        let lhs = sqrt_of(2, 1).add(&sqrt_of(2, 1));
+        let rhs = sqrt_of(8, 1);
+        assert_eq!(lhs.cmp_with_budget(&rhs, BUDGET), None);
+    }
+
+    #[test]
+    fn cmp_sqrt_minus_self_against_zero_is_undecidable() {
+        // SPEC §7.4.1 exact case: √2 − √2 = 0, but the bihom cannot
+        // prove this from finite operand prefixes. The bihom hits
+        // its internal safety budget on the very first comparison
+        // step, surfaces as `CfStep::Exhausted`, and the comparison
+        // budget projects to None ⇒ NIL `undecidable`.
+        let lazy_zero = sqrt_of(2, 1).sub(&sqrt_of(2, 1));
+        let true_zero = rational(0, 1);
+        assert_eq!(
+            lazy_zero.cmp_with_budget(&true_zero, BUDGET),
+            None
+        );
+    }
+
+    // -- nil / zero-budget --
+
+    #[test]
+    fn cmp_with_nil_returns_none() {
+        let nil = ExactReal::Rational(Fraction::nil());
+        assert_eq!(nil.cmp_with_budget(&rational(1, 1), BUDGET), None);
+        assert_eq!(rational(1, 1).cmp_with_budget(&nil, BUDGET), None);
+        assert_eq!(nil.cmp_with_budget(&nil, BUDGET), None);
+    }
+
+    #[test]
+    fn cmp_with_zero_budget_returns_none() {
+        // Even equal rationals don't decide at budget 0 — the
+        // comparison loop runs zero iterations.
+        assert_eq!(rational(1, 2).cmp_with_budget(&rational(1, 2), 0), None);
+        assert_eq!(rational(1, 2).cmp_with_budget(&rational(1, 3), 0), None);
+    }
+
+    #[test]
+    fn cmp_small_budget_decides_easy_rationals() {
+        // 1/2 = [0; 2] and 1/3 = [0; 3] differ at index 1 (odd),
+        // so the alternating-parity rule flips the comparison:
+        // cmp(b_i, a_i) = cmp(3, 2) = Greater ⇒ 1/2 > 1/3. A
+        // budget of 2 partial quotients suffices.
+        assert_eq!(
+            rational(1, 2).cmp_with_budget(&rational(1, 3), 2),
+            Some(Ordering::Greater)
+        );
+    }
+
+    // -- boolean wrappers --
+
+    #[test]
+    fn eq_wrapper_mirrors_cmp() {
+        assert_eq!(
+            rational(1, 2).eq_with_budget(&rational(1, 2), BUDGET),
+            Some(true)
+        );
+        assert_eq!(
+            rational(1, 2).eq_with_budget(&rational(1, 3), BUDGET),
+            Some(false)
+        );
+        let nil = ExactReal::Rational(Fraction::nil());
+        assert_eq!(nil.eq_with_budget(&rational(1, 2), BUDGET), None);
+    }
+
+    #[test]
+    fn ne_wrapper_negates_eq() {
+        assert_eq!(
+            rational(1, 2).ne_with_budget(&rational(1, 2), BUDGET),
+            Some(false)
+        );
+        assert_eq!(
+            rational(1, 2).ne_with_budget(&rational(1, 3), BUDGET),
+            Some(true)
+        );
+        let nil = ExactReal::Rational(Fraction::nil());
+        assert_eq!(nil.ne_with_budget(&rational(1, 2), BUDGET), None);
+    }
+
+    #[test]
+    fn lt_le_gt_ge_wrappers_cover_strict_and_loose() {
+        let a = rational(1, 2);
+        let b = rational(2, 3);
+        let c = rational(1, 2);
+        assert_eq!(a.lt_with_budget(&b, BUDGET), Some(true));
+        assert_eq!(a.lt_with_budget(&c, BUDGET), Some(false));
+        assert_eq!(a.le_with_budget(&b, BUDGET), Some(true));
+        assert_eq!(a.le_with_budget(&c, BUDGET), Some(true));
+        assert_eq!(b.gt_with_budget(&a, BUDGET), Some(true));
+        assert_eq!(c.gt_with_budget(&a, BUDGET), Some(false));
+        assert_eq!(b.ge_with_budget(&a, BUDGET), Some(true));
+        assert_eq!(c.ge_with_budget(&a, BUDGET), Some(true));
+    }
+
+    #[test]
+    fn boolean_wrappers_propagate_undecidable_as_none() {
+        let a = sqrt_of(2, 1);
+        let b = sqrt_of(2, 1);
+        assert_eq!(a.eq_with_budget(&b, BUDGET), None);
+        assert_eq!(a.lt_with_budget(&b, BUDGET), None);
+        assert_eq!(a.le_with_budget(&b, BUDGET), None);
+        assert_eq!(a.gt_with_budget(&b, BUDGET), None);
+        assert_eq!(a.ge_with_budget(&b, BUDGET), None);
+        assert_eq!(a.ne_with_budget(&b, BUDGET), None);
+    }
+
+    #[test]
+    fn cmp_antisymmetric_on_decidable_pairs() {
+        // Antisymmetry: a.cmp(b) == b.cmp(a).reverse() whenever both
+        // resolve within the budget. Includes mixed rational / sqrt
+        // pairs where the values are strictly ordered.
+        let pairs = [
+            (rational(1, 2), rational(2, 3)),
+            (rational(355, 113), rational(22, 7)),
+            (sqrt_of(2, 1), rational(3, 2)),
+            (rational(7, 5), sqrt_of(2, 1)),
+            (sqrt_of(2, 1), sqrt_of(3, 1)),
+        ];
+        for (a, b) in &pairs {
+            let ab = a.cmp_with_budget(b, BUDGET).expect("decidable");
+            let ba = b.cmp_with_budget(a, BUDGET).expect("decidable");
+            assert_eq!(ab.reverse(), ba, "antisymmetry: {:?} vs {:?}", a, b);
+        }
+    }
+
+    #[test]
+    fn cmp_reflexive_for_finite_rationals() {
+        // Reflexivity holds for finite (rational) CFs: both streams
+        // emit the same canonical sequence then end, and the
+        // (Ended, Ended) branch returns Equal. Lazy values do NOT
+        // satisfy reflexivity through `cmp_with_budget` — see
+        // `cmp_equal_sqrt_two_is_undecidable_within_budget`.
+        for r in &[
+            rational(0, 1),
+            rational(1, 1),
+            rational(-7, 5),
+            rational(355, 113),
+            rational(-22, 7),
+        ] {
+            assert_eq!(
+                r.cmp_with_budget(r, BUDGET),
+                Some(Ordering::Equal),
+                "reflexivity: {:?}",
+                r
+            );
+        }
     }
 }
