@@ -33,7 +33,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == ':' {
-            return Err("':' (code block start) has been removed. Use '{' and '}' or '(' and ')' for code blocks.".to_string());
+            return Err("':' (code block start) has been removed. Use '{' and '}' for code blocks.".to_string());
+        }
+        if chars[i] == '(' || chars[i] == ')' {
+            return Err(format!(
+                "'{}' is not a valid Ajisai source character (Section 3.4). The nested continued-fraction form is a display/serialization artifact only; use '{{' and '}}' for code blocks.",
+                chars[i]
+            ));
         }
         if chars[i] == ';' {
             if i + 1 < chars.len() && chars[i + 1] == ';' {
@@ -186,8 +192,8 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
     match c {
         '[' => Some((Token::VectorStart, 1)),
         ']' => Some((Token::VectorEnd, 1)),
-        '{' | '(' => Some((Token::BlockStart, 1)),
-        '}' | ')' => Some((Token::BlockEnd, 1)),
+        '{' => Some((Token::BlockStart, 1)),
+        '}' => Some((Token::BlockEnd, 1)),
 
         '$' => Some((Token::CondClauseSep, 1)),
         '~' => Some((Token::SafeMode, 1)),
@@ -242,7 +248,7 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
         }
 
         match c {
-            '[' | '{' | '(' => stack.push(c),
+            '[' | '{' => stack.push(c),
             ']' => match stack.pop() {
                 Some('[') => {}
                 Some(open) => {
@@ -269,19 +275,6 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
                     return Err("Unexpected '}' without matching '{'".to_string());
                 }
             },
-            ')' => match stack.pop() {
-                Some('(') => {}
-                Some(open) => {
-                    return Err(format!(
-                        "Mismatched brackets: '{}' is closed by ')', expected '{}'",
-                        open,
-                        closing_bracket(open)
-                    ));
-                }
-                None => {
-                    return Err("Unexpected ')' without matching '('".to_string());
-                }
-            },
             _ => {}
         }
         i += 1;
@@ -302,7 +295,6 @@ fn closing_bracket(open: char) -> char {
     match open {
         '[' => ']',
         '{' => '}',
-        '(' => ')',
         _ => '?',
     }
 }

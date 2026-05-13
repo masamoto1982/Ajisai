@@ -408,19 +408,23 @@ mod tokenizer_regression_tests_2 {
 
 
     #[test]
-    fn test_mismatched_brace_paren() {
+    fn test_close_paren_rejected_after_brace() {
 
         let result = tokenize("{ [ 2 ] * )");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
-    fn test_mismatched_paren_brace() {
+    fn test_open_paren_rejected_before_brace_close() {
 
         let result = tokenize("( [ 2 ] * }");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
@@ -432,11 +436,13 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_mismatched_bracket_paren() {
+    fn test_close_paren_rejected_after_bracket() {
 
         let result = tokenize("[ 1 2 3 )");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Mismatched brackets"));
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
@@ -455,23 +461,29 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_matched_parens_ok() {
+    fn test_paren_rejected_at_top_level() {
 
         let result = tokenize("( [ 2 ] * )");
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
-    fn test_nested_mixed_brackets_ok() {
+    fn test_paren_rejected_in_nested_position() {
 
         let result = tokenize("{ ( [ 1 ] + ) }");
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
     fn test_mismatched_nested_brackets() {
 
-        let result = tokenize("{ ( [ 1 ] + } )");
+        let result = tokenize("{ [ 1 ] + ]");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Mismatched brackets"));
     }

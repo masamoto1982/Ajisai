@@ -313,49 +313,26 @@ mod tokenizer_regression_tests {
             ]
         );
 
-        let result3 = tokenize("( x y z )").unwrap();
-        assert_eq!(
-            result3,
-            vec![
-                Token::BlockStart,
-                Token::Symbol("x".into()),
-                Token::Symbol("y".into()),
-                Token::Symbol("z".into()),
-                Token::BlockEnd,
-            ]
-        );
+        let result3 = tokenize("( x y z )");
+        assert!(result3.is_err());
+        assert!(result3
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
-    fn test_mixed_bracket_styles() {
-        let result = tokenize("{ ( [ 1 ] ) }").unwrap();
-        assert_eq!(
-            result,
-            vec![
-                Token::BlockStart,
-                Token::BlockStart,
-                Token::VectorStart,
-                Token::Number("1".into()),
-                Token::VectorEnd,
-                Token::BlockEnd,
-                Token::BlockEnd,
-            ]
-        );
+    fn test_paren_rejected_in_block_position() {
+        let result = tokenize("{ ( [ 1 ] ) }");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
 
-        let result2 = tokenize("{ ( X ) ( Y ) }").unwrap();
-        assert_eq!(
-            result2,
-            vec![
-                Token::BlockStart,
-                Token::BlockStart,
-                Token::Symbol("X".into()),
-                Token::BlockEnd,
-                Token::BlockStart,
-                Token::Symbol("Y".into()),
-                Token::BlockEnd,
-                Token::BlockEnd,
-            ]
-        );
+        let result2 = tokenize("{ ( X ) ( Y ) }");
+        assert!(result2.is_err());
+        assert!(result2
+            .unwrap_err()
+            .contains("not a valid Ajisai source character"));
     }
 
     #[test]
