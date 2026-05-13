@@ -337,17 +337,54 @@ mod tokenizer_regression_tests_2 {
 
 
     #[test]
-    fn test_greater_than_error() {
+    fn test_greater_than_tokenizes_as_gt_alias() {
+        let result = tokenize("5 3 >").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Number("5".into()),
+                Token::Number("3".into()),
+                Token::Symbol(">".into()),
+            ]
+        );
+    }
 
-        let result = tokenize("[ 5 ] [ 3 ] >");
+    #[test]
+    fn test_greater_than_equal_tokenizes_as_gte_alias() {
+        let result = tokenize("5 3 >=").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Number("5".into()),
+                Token::Number("3".into()),
+                Token::Symbol(">=".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_not_equal_tokenizes_as_neq_alias() {
+        let result = tokenize("5 3 <>").unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Number("5".into()),
+                Token::Number("3".into()),
+                Token::Symbol("<>".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_double_chevron_still_rejected() {
+        let result = tokenize(">> [ 5 ]");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("removed"));
     }
 
     #[test]
-    fn test_greater_than_equal_error() {
-
-        let result = tokenize("[ 5 ] [ 3 ] >=");
+    fn test_triple_chevron_still_rejected() {
+        let result = tokenize(">>> [ 5 ]");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("removed"));
     }

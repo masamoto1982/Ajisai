@@ -86,6 +86,9 @@ External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine
 | `{` `}` or `(` `)` | Code block boundaries |
 | `==` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
 | `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
+| `>` | Syntactic sugar for `GT` |
+| `>=` | Syntactic sugar for `GTE` |
+| `<>` | Syntactic sugar for `NEQ` |
 | `$` | COND clause separator |
 | `~` | Syntactic sugar for `SAFE` (safe mode modifier) |
 | `#` | Line comment: all characters from `#` to end of line are ignored |
@@ -359,9 +362,12 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `DIV` | `/` | `KEEP` | `,,` |
 | `MOD` | `%` | `SAFE` | `~` |
 | `EQ` | `=` | `FORC` | `!` |
-| `LT` | `<` | `PIPE` | `==` |
-| `LTE` | `<=` | `OR-NIL` | `=>` |
-| `AND` | `&` | `LOOKUP` | `?` |
+| `NEQ` | `<>` | `PIPE` | `==` |
+| `LT` | `<` | `OR-NIL` | `=>` |
+| `LTE` | `<=` | `LOOKUP` | `?` |
+| `GT` | `>` | | |
+| `GTE` | `>=` | | |
+| `AND` | `&` | | |
 
 ### 7.1 Vector operations
 
@@ -420,9 +426,16 @@ Ad hoc recursive shape mutation in intermediate stages is prohibited.
 |-----------|-------|-------------|
 | `LT` | `<` | Less than |
 | `LTE` | `<=` | Less than or equal |
+| `GT` | `>` | Greater than |
+| `GTE` | `>=` | Greater than or equal |
 | `EQ` | `=` | Equal |
+| `NEQ` | `<>` | Not equal |
 
 Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint).
+
+The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`, `SAFE`).
+
+Under `STAK` mode, ordering comparisons describe a sequence property of the consumed values: `LT` true iff strictly increasing, `LTE` non-decreasing, `GT` strictly decreasing, `GTE` non-increasing, `EQ` all equal, `NEQ` all adjacent pairs unequal.
 
 ### 7.5 Logic
 
@@ -507,7 +520,7 @@ The following built-in words follow the NIL passthrough rule defined in Section 
 | Category | Words |
 |----------|-------|
 | Arithmetic | `ADD`, `SUB`, `MUL`, `DIV`, `MOD`, `FLOOR`, `CEIL`, `ROUND` |
-| Comparison | `LT`, `LTE`, `EQ` |
+| Comparison | `LT`, `LTE`, `GT`, `GTE`, `EQ`, `NEQ` |
 | Logic | `AND`, `OR`, `NOT` (three-valued; see below) |
 
 `AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.

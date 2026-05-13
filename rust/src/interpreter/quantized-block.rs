@@ -149,7 +149,7 @@ fn builtin_arity(name: &str) -> Option<(i32, i32)> {
         // Binary arithmetic
         "ADD" | "SUB" | "MUL" | "DIV" | "MOD" => Some((2, 1)),
         // Binary comparison
-        "LT" | "LTE" | "EQ" => Some((2, 1)),
+        "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" => Some((2, 1)),
         // Binary logical
         "AND" | "OR" => Some((2, 1)),
         // Unary arithmetic / math (ABS/NEG paired with FastUnaryMapKernel)

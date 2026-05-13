@@ -21,7 +21,9 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
             Some(DisplayHint::Number)
         }
-        "BOOL" | "LT" | "LTE" | "EQ" | "AND" | "OR" | "NOT" => Some(DisplayHint::Boolean),
+        "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT" => {
+            Some(DisplayHint::Boolean)
+        }
         "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
         | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" => {

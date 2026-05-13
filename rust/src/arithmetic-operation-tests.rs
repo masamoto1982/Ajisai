@@ -427,6 +427,12 @@ mod nil_passthrough_tests {
         assert!(interp.get_stack()[0].is_nil());
         let interp = run("NIL NIL =").await;
         assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL 3 >").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("3 NIL >=").await;
+        assert!(interp.get_stack()[0].is_nil());
+        let interp = run("NIL 3 <>").await;
+        assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
@@ -449,5 +455,209 @@ mod nil_passthrough_tests {
             "OR-NIL should have replaced NIL with the fallback; got {}",
             stack.last().unwrap()
         );
+    }
+}
+
+#[cfg(test)]
+mod ai_first_comparison_tests {
+    //! Tests for the AI-first comparison primitives GT, GTE, NEQ. These mirror
+    //! LT / LTE / EQ and exist so an automated producer can emit the relation
+    //! that matches its intent directly rather than rewriting it as a
+    //! negation or operand swap.
+
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn bool_of(interp: &Interpreter) -> bool {
+        // Boolean values are stored as Scalar(0|1) with a Boolean display
+        // hint; the underlying Display impl prints the scalar.
+        let v = &interp.get_stack()[0];
+        let s = format!("{}", v);
+        match s.as_str() {
+            "1" => true,
+            "0" => false,
+            other => panic!("expected boolean (0 or 1), got {}", other),
+        }
+    }
+
+    // ── canonical-name parity with LT/LTE/EQ ─────────────────────────────
+
+    #[tokio::test]
+    async fn gt_canonical_name_returns_true_when_strictly_greater() {
+        let interp = run("2 1 GT").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gt_returns_false_on_equal_values() {
+        let interp = run("1 1 GT").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gte_canonical_name_returns_true_on_equal_values() {
+        let interp = run("1 1 GTE").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gte_returns_false_when_strictly_less() {
+        let interp = run("0 1 GTE").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_canonical_name_returns_true_when_different() {
+        let interp = run("1 2 NEQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_returns_false_when_equal() {
+        let interp = run("3 3 NEQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    // ── symbol-alias parity ──────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn gt_symbol_alias_matches_canonical() {
+        let interp = run("5 3 >").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gte_symbol_alias_matches_canonical() {
+        let interp = run("3 3 >=").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_symbol_alias_matches_canonical() {
+        let interp = run("1 2 <>").await;
+        assert!(bool_of(&interp));
+    }
+
+    // ── exact rational comparison ────────────────────────────────────────
+
+    #[tokio::test]
+    async fn gt_compares_fractions_exactly() {
+        let interp = run("7/2 17/5 GT").await;
+        // 7/2 = 35/10, 17/5 = 34/10, so 7/2 > 17/5.
+        assert!(bool_of(&interp));
+    }
+
+    // ── NEQ structural equality on vectors ───────────────────────────────
+
+    #[tokio::test]
+    async fn neq_returns_false_for_structurally_equal_vectors() {
+        let interp = run("[ 1 2 3 ] [ 1 2 3 ] NEQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_returns_true_for_structurally_different_vectors() {
+        let interp = run("[ 1 2 3 ] [ 1 2 4 ] NEQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    // ── interval undecidability mirrors LT/LE ────────────────────────────
+
+    #[tokio::test]
+    async fn gt_on_disjoint_intervals_decides_true() {
+        let interp = run("3 4 INTERVAL 1 2 INTERVAL GT").await;
+        let s = format!("{}", interp.get_stack()[0]);
+        assert_eq!(s, "1");
+    }
+
+    #[tokio::test]
+    async fn gte_on_disjoint_intervals_decides_false() {
+        let interp = run("0 1 INTERVAL 2 3 INTERVAL GTE").await;
+        let s = format!("{}", interp.get_stack()[0]);
+        assert_eq!(s, "0");
+    }
+
+    #[tokio::test]
+    async fn gt_on_overlapping_intervals_is_undecidable() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("2 3 INTERVAL 2 4 INTERVAL GT").await;
+        assert!(result.is_err(), "overlapping intervals must be undecidable");
+    }
+
+    // ── NIL passthrough for the new ops (contract: nil_policy = Passthrough)
+
+    #[tokio::test]
+    async fn gt_with_nil_left_yields_nil() {
+        let interp = run("NIL 1 GT").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn gte_with_nil_right_yields_nil() {
+        let interp = run("1 NIL GTE").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn neq_with_two_nils_yields_nil() {
+        // NEQ is NIL-passthrough, so NIL NEQ NIL is NIL — *not* FALSE.
+        // (NIL is an absence value, not a member of an equivalence class.)
+        let interp = run("NIL NIL <>").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    // ── stack-mode sequence properties ───────────────────────────────────
+
+    #[tokio::test]
+    async fn gt_stack_mode_holds_for_strictly_decreasing_sequence() {
+        let interp = run("5 4 3 2 4 .. GT").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gt_stack_mode_false_when_not_strictly_decreasing() {
+        let interp = run("5 4 4 3 4 .. GT").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gte_stack_mode_holds_for_nonincreasing_sequence() {
+        let interp = run("5 4 4 3 4 .. GTE").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_stack_mode_holds_when_all_adjacent_pairs_differ() {
+        let interp = run("1 2 3 1 4 .. NEQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_stack_mode_false_when_two_adjacent_values_match() {
+        let interp = run("1 2 2 3 4 .. NEQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    // ── KEEP modifier preserves operands ─────────────────────────────────
+
+    #[tokio::test]
+    async fn gt_keep_mode_preserves_both_operands() {
+        let interp = run("2 1 ,, GT").await;
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
+    }
+
+    // ── SAFE projection preserves error category on malformed input ──────
+
+    #[tokio::test]
+    async fn gt_safe_mode_projects_structure_error_to_nil() {
+        // Comparing a code block against a number is malformed → SAFE catches it.
+        let interp = run("{ 1 } 1 ~ GT").await;
+        assert!(interp.get_stack().last().unwrap().is_nil());
     }
 }

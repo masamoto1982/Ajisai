@@ -82,6 +82,12 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 continue;
             }
 
+            if i + 1 < chars.len() && chars[i + 1] == '>' {
+                tokens.push(Token::Symbol("<>".into()));
+                i += 2;
+                continue;
+            }
+
             tokens.push(Token::Symbol("<".into()));
             i += 1;
             continue;
@@ -96,9 +102,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 return Err("'>>' (chevron branch) has been removed.".to_string());
             }
             if i + 1 < chars.len() && chars[i + 1] == '=' {
-                return Err("The '>=' operator has been removed. Use '<= NOT' or reverse operands with '<=' instead.".to_string());
+                tokens.push(Token::Symbol(">=".into()));
+                i += 2;
+                continue;
             }
-            return Err("The '>' operator has been removed. Use '< NOT' or reverse operands with '<' instead.".to_string());
+            tokens.push(Token::Symbol(">".into()));
+            i += 1;
+            continue;
         }
 
 

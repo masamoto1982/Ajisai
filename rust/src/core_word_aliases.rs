@@ -63,6 +63,24 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Compare less-than-or-equal",
     },
     CoreWordAlias {
+        alias: ">",
+        canonical: Some("GT"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare greater-than",
+    },
+    CoreWordAlias {
+        alias: ">=",
+        canonical: Some("GTE"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare greater-than-or-equal",
+    },
+    CoreWordAlias {
+        alias: "<>",
+        canonical: Some("NEQ"),
+        kind: CoreWordAliasKind::SymbolAlias,
+        summary: "Compare inequality",
+    },
+    CoreWordAlias {
         alias: "!",
         canonical: Some("FORC"),
         kind: CoreWordAliasKind::SymbolAlias,

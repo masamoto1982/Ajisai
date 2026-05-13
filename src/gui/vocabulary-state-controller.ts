@@ -56,7 +56,8 @@ export const formatDictionaryTabName = (pathName: string): string => {
 const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
     'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
     'NIL': 'nil', 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/',
-    'LT': '<', 'LTE': '<=', 'LE': '<=', 'GT': '>', 'GE': '>=', 'EQ': '=',
+    'LT': '<', 'LTE': '<=', 'LE': '<=', 'GT': '>', 'GTE': '>=', 'GE': '>=',
+    'EQ': '=', 'NEQ': '<>',
     'AND': 'and', 'OR': 'or', 'NOT': 'not',
 });
 
