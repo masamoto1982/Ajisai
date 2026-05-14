@@ -771,3 +771,189 @@ mod comparison_budget_infrastructure_tests {
         assert!(interp.get_stack()[0].is_nil());
     }
 }
+
+/// Phase 7 — EQ / NEQ Undecidable-NIL plumbing.
+///
+/// Phase 6 (PR #904) wired the `Undecidable` / `ComparisonBudget`
+/// projection through the ordering path (`LT` / `LTE` / `GT` /
+/// `GTE`) and explicitly left `EQ` / `NEQ` for Phase 7. This module
+/// pins the new dispatch shape:
+///
+/// 1. `pairwise_eq` is three-valued (`Option<bool>`): rational
+///    operands always decide; non-Rational `ExactReal` operands run
+///    through `ExactReal::eq_with_budget` and may surface `None`.
+/// 2. `apply_equality` projects `None` to the §7.4.1 Undecidable
+///    NIL via the existing `push_undecidable_nil` helper.
+/// 3. STAK-mode `EQ` / `NEQ` short-circuit on the first
+///    NIL-producing pair (SPEC §7.4).
+///
+/// We can't yet construct a non-Rational `ExactReal` scalar value
+/// from Ajisai source — `ValueData::Scalar` is still `Fraction`-
+/// backed — so these tests:
+///
+/// * regress the rational-operand fast path through EQ / NEQ for
+///   value equality, reduced-form equality, and structural fallback;
+/// * pin the dispatch helpers (`ExactReal::eq_with_budget`) so the
+///   non-Rational branch is exercised at the type-level boundary
+///   that `apply_equality` will route through once subsequent phases
+///   replace the scalar storage.
+#[cfg(test)]
+mod phase_seven_eq_budget_tests {
+    use crate::error::NilReason;
+    use crate::interpreter::Interpreter;
+    use crate::semantic::AbsenceOrigin;
+    use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
+    use crate::types::fraction::Fraction;
+    use num_bigint::BigInt;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn bool_of(interp: &Interpreter) -> bool {
+        let v = &interp.get_stack()[0];
+        let s = format!("{}", v);
+        match s.as_str() {
+            "1" => true,
+            "0" => false,
+            other => panic!("expected boolean (0 or 1), got {}", other),
+        }
+    }
+
+    // ── Regression: EQ / NEQ still decide on rationals ───────────────────
+
+    #[tokio::test]
+    async fn eq_decides_value_equal_reduced_rationals() {
+        let interp = run("2/4 1/2 EQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn eq_decides_unequal_rationals() {
+        let interp = run("1/2 2/3 EQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_decides_unequal_rationals() {
+        let interp = run("1/2 2/3 NEQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn neq_decides_equal_reduced_rationals() {
+        let interp = run("2/4 1/2 NEQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn eq_decides_large_rationals() {
+        let interp = run("355/113 355/113 EQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn eq_decides_negative_vs_positive() {
+        let interp = run("-1/2 1/2 EQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    // ── STAK-mode regression ─────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn stak_eq_all_equal_is_true() {
+        let interp = run("2/4 1/2 4/8 3 .. EQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn stak_eq_with_one_distinct_is_false() {
+        let interp = run("1/2 1/2 2/3 3 .. EQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn stak_neq_all_adjacent_unequal_is_true() {
+        let interp = run("1 2 3 4 4 .. NEQ").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn stak_neq_with_adjacent_duplicate_is_false() {
+        let interp = run("1 2 2 3 4 .. NEQ").await;
+        assert!(!bool_of(&interp));
+    }
+
+    // ── NIL passthrough is unchanged ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn eq_with_left_nil_passes_nil_through() {
+        let interp = run("NIL 1 EQ").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn neq_with_right_nil_passes_nil_through() {
+        let interp = run("1 NIL NEQ").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    // ── ExactReal-level dispatch boundary (Phase 7 hook) ─────────────────
+    //
+    // These cover the budgeted CF path that `pairwise_eq` /
+    // `scalar_pair_eq` routes through whenever at least one operand
+    // is non-Rational. `eq_with_budget` is exercised here so the
+    // dispatch boundary is pinned even before a runtime path can
+    // place such a value on the stack.
+
+    fn rational(n: i64, d: i64) -> ExactReal {
+        ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
+    }
+
+    #[test]
+    fn exact_real_eq_with_budget_decides_equal_rationals() {
+        assert_eq!(
+            rational(2, 4).eq_with_budget(&rational(1, 2), DEFAULT_COMPARISON_BUDGET),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn exact_real_eq_with_budget_decides_unequal_rationals() {
+        assert_eq!(
+            rational(1, 2).eq_with_budget(&rational(2, 3), DEFAULT_COMPARISON_BUDGET),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn exact_real_eq_with_budget_decides_rational_vs_algebraic_sqrt() {
+        // √2 is irrational; it can never equal 7/5 (or any rational).
+        // The CF streams diverge in fewer than `DEFAULT_COMPARISON_BUDGET`
+        // steps, so the result is decidable.
+        let sqrt_two =
+            ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
+                .expect("sqrt(2) constructible");
+        assert_eq!(
+            sqrt_two.eq_with_budget(&rational(7, 5), DEFAULT_COMPARISON_BUDGET),
+            Some(false)
+        );
+    }
+
+    // ── Undecidable-NIL helper still has the §7.4.1 origin ───────────────
+    //
+    // `apply_equality` projects the `None` branch through
+    // `push_undecidable_nil` — the same helper the ordering path
+    // already uses. The contract is identical, so any future EQ /
+    // NEQ Undecidable NIL surfaces the §7.4.1 metadata.
+
+    #[tokio::test]
+    async fn eq_undecidable_nil_carries_comparison_budget_origin() {
+        let v = crate::types::Value::nil_with_reason(NilReason::Undecidable);
+        let absence = v.absence_metadata().expect("nil carries absence");
+        assert_eq!(absence.reason, Some(NilReason::Undecidable));
+        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+    }
+}
