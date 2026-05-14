@@ -240,8 +240,10 @@ mod num_tests {
 
 #[cfg(test)]
 mod interval_tests {
+    use crate::error::NilReason;
     use crate::interpreter::interval_ops::value_to_interval;
     use crate::interpreter::Interpreter;
+    use crate::semantic::AbsenceOrigin;
     use crate::types::fraction::Fraction;
 
     #[tokio::test]
@@ -334,10 +336,15 @@ mod interval_tests {
         assert_eq!(format!("{}", interp.get_stack()[0]), "1");
 
         let mut interp_undetermined = Interpreter::new();
-        let result = interp_undetermined
+        interp_undetermined
             .execute("2 3 INTERVAL 3 4 INTERVAL <")
-            .await;
-        assert!(result.is_err());
+            .await
+            .unwrap();
+        let absence = interp_undetermined.get_stack()[0]
+            .absence_metadata()
+            .expect("overlapping interval comparison projects to NIL");
+        assert_eq!(absence.reason, Some(NilReason::Undecidable));
+        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
 
         let mut interp_eq = Interpreter::new();
         interp_eq
@@ -465,7 +472,9 @@ mod ai_first_comparison_tests {
     //! that matches its intent directly rather than rewriting it as a
     //! negation or operand swap.
 
+    use crate::error::NilReason;
     use crate::interpreter::Interpreter;
+    use crate::semantic::AbsenceOrigin;
 
     async fn run(source: &str) -> Interpreter {
         let mut interp = Interpreter::new();
@@ -583,10 +592,17 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn gt_on_overlapping_intervals_is_undecidable() {
+    async fn gt_on_overlapping_intervals_projects_undecidable_nil() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("2 3 INTERVAL 2 4 INTERVAL GT").await;
-        assert!(result.is_err(), "overlapping intervals must be undecidable");
+        interp
+            .execute("2 3 INTERVAL 2 4 INTERVAL GT")
+            .await
+            .unwrap();
+        let absence = interp.get_stack()[0]
+            .absence_metadata()
+            .expect("overlapping interval comparison projects to NIL");
+        assert_eq!(absence.reason, Some(NilReason::Undecidable));
+        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
     }
 
     // ── NIL passthrough for the new ops (contract: nil_policy = Passthrough)

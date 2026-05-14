@@ -60,6 +60,14 @@ impl Value {
     }
 
     #[inline]
+    pub fn nil_inheriting_absence_from(source: &Self) -> Self {
+        match source.normalized_absence_metadata() {
+            Some(absence) => Self::nil_with_absence(absence),
+            None => Self::nil(),
+        }
+    }
+
+    #[inline]
     pub fn nil_from_diagnosis(
         reason: NilReason,
         origin: AbsenceOrigin,
