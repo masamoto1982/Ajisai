@@ -198,15 +198,21 @@ pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
     if !interp.stack[stack_len - 1].is_nil() {
         return false;
     }
-    let inherited = interp.stack[stack_len - 1].nil_reason().cloned();
+    let inherited = Value::nil_inheriting_absence_from(&interp.stack[stack_len - 1]);
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
     }
-    interp.stack.push(match inherited {
-        Some(reason) => Value::nil_with_reason(reason),
-        None => Value::nil(),
-    });
+    interp.stack.push(inherited);
     true
+}
+
+pub(crate) fn nil_passthrough_value<'a>(
+    items: impl IntoIterator<Item = &'a Value>,
+) -> Option<Value> {
+    items
+        .into_iter()
+        .find(|v| v.is_nil())
+        .map(Value::nil_inheriting_absence_from)
 }
 
 pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
@@ -220,18 +226,15 @@ pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
         return false;
     }
     let inherited = if a_nil {
-        interp.stack[stack_len - 2].nil_reason().cloned()
+        Value::nil_inheriting_absence_from(&interp.stack[stack_len - 2])
     } else {
-        interp.stack[stack_len - 1].nil_reason().cloned()
+        Value::nil_inheriting_absence_from(&interp.stack[stack_len - 1])
     };
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
         interp.stack.pop();
     }
-    interp.stack.push(match inherited {
-        Some(reason) => Value::nil_with_reason(reason),
-        None => Value::nil(),
-    });
+    interp.stack.push(inherited);
     true
 }
 

@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, nil_passthrough_binary,
+    extract_integer_from_value, nil_passthrough_binary, nil_passthrough_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
@@ -61,7 +61,9 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
 /// this on the stack instead of raising an error, so subsequent
 /// NIL-passthrough words can continue the pipeline.
 fn push_undecidable_nil(interp: &mut Interpreter) {
-    interp.stack.push(Value::nil_with_reason(NilReason::Undecidable));
+    interp
+        .stack
+        .push(Value::nil_with_reason(NilReason::Undecidable));
     let stack_len = interp.stack.len();
     interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
@@ -81,11 +83,7 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
 /// routes through `ExactReal::cmp_with_budget` under the
 /// `DEFAULT_COMPARISON_BUDGET`; budget exhaustion surfaces as
 /// `Ok(None)` here.
-fn compare_scalar_pair(
-    a_val: &Value,
-    b_val: &Value,
-    kind: OrderingKind,
-) -> Result<Option<bool>> {
+fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Option<bool>> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
     Ok(match (a.as_rational(), b.as_rational()) {
@@ -243,8 +241,8 @@ fn apply_binary_comparison(
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            if items.iter().any(|v| v.is_nil()) {
-                interp.stack.push(Value::nil());
+            if let Some(nil) = nil_passthrough_value(&items) {
+                interp.stack.push(nil);
                 return Ok(());
             }
 
@@ -305,9 +303,14 @@ where
             push_boolean_result(interp, v);
             Ok(())
         }
-        None => Err(AjisaiError::from(
-            "interval comparison is undecidable with current precision",
-        )),
+        None => {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            push_undecidable_nil(interp);
+            Ok(())
+        }
     })
 }
 
@@ -318,7 +321,9 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) = interval_relation(interp, |ai, bi| ai.hi.lt(&bi.lo), |ai, bi| ai.lo.ge(&bi.hi)) {
+        if let Some(res) =
+            interval_relation(interp, |ai, bi| ai.hi.lt(&bi.lo), |ai, bi| ai.lo.ge(&bi.hi))
+        {
             return res;
         }
     }
@@ -332,7 +337,9 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) = interval_relation(interp, |ai, bi| ai.hi.le(&bi.lo), |ai, bi| ai.lo.gt(&bi.hi)) {
+        if let Some(res) =
+            interval_relation(interp, |ai, bi| ai.hi.le(&bi.lo), |ai, bi| ai.lo.gt(&bi.hi))
+        {
             return res;
         }
     }
@@ -346,7 +353,9 @@ pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) = interval_relation(interp, |ai, bi| ai.lo.gt(&bi.hi), |ai, bi| ai.hi.le(&bi.lo)) {
+        if let Some(res) =
+            interval_relation(interp, |ai, bi| ai.lo.gt(&bi.hi), |ai, bi| ai.hi.le(&bi.lo))
+        {
             return res;
         }
     }
@@ -360,7 +369,9 @@ pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) = interval_relation(interp, |ai, bi| ai.lo.ge(&bi.hi), |ai, bi| ai.hi.lt(&bi.lo)) {
+        if let Some(res) =
+            interval_relation(interp, |ai, bi| ai.lo.ge(&bi.hi), |ai, bi| ai.hi.lt(&bi.lo))
+        {
             return res;
         }
     }
@@ -485,8 +496,8 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            if items.iter().any(|v| v.is_nil()) {
-                interp.stack.push(Value::nil());
+            if let Some(nil) = nil_passthrough_value(&items) {
+                interp.stack.push(nil);
                 return Ok(());
             }
 

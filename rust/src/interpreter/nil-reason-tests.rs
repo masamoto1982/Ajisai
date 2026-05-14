@@ -1,5 +1,7 @@
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::Interpreter;
+use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
+use crate::types::Value;
 
 fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
     interp
@@ -80,6 +82,66 @@ async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
     );
     let reason = last_nil_reason(&interp).expect("reason must propagate through passthrough");
     assert_eq!(reason, NilReason::DivisionByZero);
+}
+
+#[tokio::test]
+async fn nil_passthrough_preserves_full_absence_metadata() {
+    let mut interp = Interpreter::new();
+    let nil = Value::nil_with_absence(AbsenceMetadata::with_reason(
+        NilReason::ExecutionFailure,
+        AbsenceOrigin::HostEnvironment,
+        Recoverability::Retryable,
+    ));
+    interp.update_stack(vec![nil, Value::from_int(10)]);
+
+    interp.execute("+").await.unwrap();
+
+    let absence = interp.get_stack()[0]
+        .absence_metadata()
+        .expect("passthrough NIL keeps absence metadata");
+    assert_eq!(absence.reason, Some(NilReason::ExecutionFailure));
+    assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
+    assert_eq!(absence.recoverability, Recoverability::Retryable);
+}
+
+#[tokio::test]
+async fn stak_comparison_nil_passthrough_preserves_full_absence_metadata() {
+    let mut interp = Interpreter::new();
+    let nil = Value::nil_with_absence(AbsenceMetadata::with_reason(
+        NilReason::InvalidEncoding,
+        AbsenceOrigin::HostEnvironment,
+        Recoverability::Retryable,
+    ));
+    interp.update_stack(vec![Value::from_int(1), nil, Value::from_int(3)]);
+
+    interp.execute("3 .. LT").await.unwrap();
+
+    let absence = interp.get_stack()[0]
+        .absence_metadata()
+        .expect("STAK NIL passthrough keeps absence metadata");
+    assert_eq!(absence.reason, Some(NilReason::InvalidEncoding));
+    assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
+    assert_eq!(absence.recoverability, Recoverability::Retryable);
+}
+
+#[tokio::test]
+async fn stak_equality_nil_passthrough_preserves_full_absence_metadata() {
+    let mut interp = Interpreter::new();
+    let nil = Value::nil_with_absence(AbsenceMetadata::with_reason(
+        NilReason::MissingField,
+        AbsenceOrigin::HostEnvironment,
+        Recoverability::Retryable,
+    ));
+    interp.update_stack(vec![Value::from_int(1), nil, Value::from_int(1)]);
+
+    interp.execute("3 .. EQ").await.unwrap();
+
+    let absence = interp.get_stack()[0]
+        .absence_metadata()
+        .expect("STAK EQ NIL passthrough keeps absence metadata");
+    assert_eq!(absence.reason, Some(NilReason::MissingField));
+    assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
+    assert_eq!(absence.recoverability, Recoverability::Retryable);
 }
 
 #[tokio::test]
