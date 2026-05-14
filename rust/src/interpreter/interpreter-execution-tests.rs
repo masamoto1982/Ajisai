@@ -198,6 +198,26 @@ ADDTEST
 }
 
 #[tokio::test]
+async fn top_level_numeric_literals_preserve_surface_style_on_stack() {
+    use crate::types::ValueData;
+    let cases = [("1", "1"), ("0.5", "0.5"), ("2/1", "2/1")];
+    for (program, expected) in cases {
+        let mut interp = crate::interpreter::Interpreter::new();
+        interp.execute(program).await.unwrap();
+        assert_eq!(interp.stack.len(), 1, "program: {program}");
+        let scalar = match &interp.stack[0].data {
+            ValueData::Scalar(f) => f,
+            other => panic!("expected scalar for {program}, got {:?}", other),
+        };
+        assert_eq!(
+            scalar.display_source(),
+            Some(expected),
+            "Surface literal style for `{program}` must be preserved as `{expected}`",
+        );
+    }
+}
+
+#[tokio::test]
 async fn comparison_words_return_scalar_booleans() {
     let cases = [("1 2 LT", true), ("2 2 LTE", true), ("2 1 LT", false), ("1 1 EQ", true), ("1 2 EQ", false)];
     for (program, expected) in cases {
