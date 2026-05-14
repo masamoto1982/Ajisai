@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::value_extraction_helpers::{
@@ -8,6 +8,29 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
 
+/// One of the four ordering comparisons. Carries the dispatch
+/// decision through the SCALAR-comparison helper so the helper can
+/// keep the Fraction fast path for the common case while leaving a
+/// hook for Phase 7's ExactReal `cmp_with_budget` path.
+#[derive(Debug, Clone, Copy)]
+enum OrderingKind {
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+impl OrderingKind {
+    fn apply_to_fraction(self, a: &Fraction, b: &Fraction) -> bool {
+        match self {
+            OrderingKind::Lt => a.lt(b),
+            OrderingKind::Le => a.le(b),
+            OrderingKind::Gt => a.gt(b),
+            OrderingKind::Ge => a.ge(b),
+        }
+    }
+}
+
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.stack.push(Value::from_bool(result));
     let stack_len = interp.stack.len();
@@ -15,6 +38,39 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp
         .semantic_registry
         .update_hint_at(stack_len - 1, DisplayHint::Boolean);
+}
+
+/// Push the SPEC §7.4.1 undecidable-NIL: reason = `Undecidable`,
+/// origin = `ComparisonBudget`. The Bubble Rule (SPEC §11.2) places
+/// this on the stack instead of raising an error, so subsequent
+/// NIL-passthrough words can continue the pipeline.
+fn push_undecidable_nil(interp: &mut Interpreter) {
+    interp.stack.push(Value::nil_with_reason(NilReason::Undecidable));
+    let stack_len = interp.stack.len();
+    interp.semantic_registry.normalize_to_stack_len(stack_len);
+    interp
+        .semantic_registry
+        .update_hint_at(stack_len - 1, DisplayHint::Nil);
+}
+
+/// Compare two scalar values under an ordering kind. Returns `Ok(Some(bool))`
+/// when the comparison decides, `Ok(None)` when the comparison budget
+/// exhausts (SPEC §7.4.1) — the caller projects `None` to an Undecidable
+/// NIL. Returns `Err(_)` for structurally-non-comparable operands.
+///
+/// Phase 6 implementation keeps the existing Fraction fast path
+/// because `ValueData::Scalar` is still `Fraction`-backed; the dispatch
+/// shape is in place so Phase 7 can route the non-Rational ExactReal
+/// case through `ExactReal::cmp_with_budget` without touching the
+/// caller-side code paths or the STAK-mode short-circuit.
+fn compare_scalar_pair(
+    a_val: &Value,
+    b_val: &Value,
+    kind: OrderingKind,
+) -> Result<Option<bool>> {
+    let af = extract_scalar_for_comparison(a_val)?;
+    let bf = extract_scalar_for_comparison(b_val)?;
+    Ok(Some(kind.apply_to_fraction(&af, &bf)))
 }
 
 fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
@@ -54,28 +110,32 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     }
 }
 
-fn check_all_adjacent_pairs<F>(items: &[Value], op: F) -> Result<bool>
-where
-    F: Fn(&Fraction, &Fraction) -> bool,
-{
+/// Check whether every adjacent pair in `items` satisfies `kind`.
+/// Returns `Ok(Some(bool))` when the property is decidable for every
+/// pair, `Ok(None)` when some pair triggers SPEC §7.4.1's comparison
+/// budget short-circuit. SPEC §7.4 requires the entire STAK-mode
+/// result to be NIL on the first NIL-producing pair regardless of
+/// later pairs.
+fn check_all_adjacent_pairs(items: &[Value], kind: OrderingKind) -> Result<Option<bool>> {
     for pair in items.windows(2) {
-        let a_scalar: Fraction = extract_scalar_for_comparison(&pair[0])?;
-        let b_scalar: Fraction = extract_scalar_for_comparison(&pair[1])?;
-        if !op(&a_scalar, &b_scalar) {
-            return Ok(false);
+        match compare_scalar_pair(&pair[0], &pair[1], kind)? {
+            Some(true) => continue,
+            Some(false) => return Ok(Some(false)),
+            None => return Ok(None),
         }
     }
-    Ok(true)
+    Ok(Some(true))
 }
 
 fn check_all_adjacent_equal(items: &[Value]) -> bool {
     items.windows(2).all(|pair| pair[0].data == pair[1].data)
 }
 
-fn apply_binary_comparison<F>(interp: &mut Interpreter, op: F, _op_name: &str) -> Result<()>
-where
-    F: Fn(&Fraction, &Fraction) -> bool,
-{
+fn apply_binary_comparison(
+    interp: &mut Interpreter,
+    kind: OrderingKind,
+    _op_name: &str,
+) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -95,8 +155,9 @@ where
                 (a_val, b_val)
             };
 
-            let a_scalar: Fraction = match extract_scalar_for_comparison(&a_val) {
-                Ok(f) => f,
+            match compare_scalar_pair(&a_val, &b_val, kind) {
+                Ok(Some(b)) => push_boolean_result(interp, b),
+                Ok(None) => push_undecidable_nil(interp),
                 Err(e) => {
                     if !is_keep_mode {
                         interp.stack.push(a_val);
@@ -104,20 +165,7 @@ where
                     }
                     return Err(e);
                 }
-            };
-            let b_scalar: Fraction = match extract_scalar_for_comparison(&b_val) {
-                Ok(f) => f,
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                    }
-                    return Err(e);
-                }
-            };
-
-            let result: bool = op(&a_scalar, &b_scalar);
-            push_boolean_result(interp, result);
+            }
             Ok(())
         }
 
@@ -147,8 +195,9 @@ where
                 return Ok(());
             }
 
-            let all_true: bool = match check_all_adjacent_pairs(&items, op) {
-                Ok(v) => v,
+            match check_all_adjacent_pairs(&items, kind) {
+                Ok(Some(decided)) => push_boolean_result(interp, decided),
+                Ok(None) => push_undecidable_nil(interp),
                 Err(e) => {
                     if !is_keep_mode {
                         interp.stack.extend(items);
@@ -156,9 +205,7 @@ where
                     interp.stack.push(count_val);
                     return Err(e);
                 }
-            };
-
-            push_boolean_result(interp, all_true);
+            }
             Ok(())
         }
     }
@@ -222,7 +269,7 @@ pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
             return res;
         }
     }
-    apply_binary_comparison(interp, |a, b| a.lt(b), "<")
+    apply_binary_comparison(interp, OrderingKind::Lt, "<")
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
@@ -236,7 +283,7 @@ pub fn op_le(interp: &mut Interpreter) -> Result<()> {
             return res;
         }
     }
-    apply_binary_comparison(interp, |a, b| a.le(b), "<=")
+    apply_binary_comparison(interp, OrderingKind::Le, "<=")
 }
 
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
@@ -250,7 +297,7 @@ pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
             return res;
         }
     }
-    apply_binary_comparison(interp, |a, b| a.gt(b), ">")
+    apply_binary_comparison(interp, OrderingKind::Gt, ">")
 }
 
 pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
@@ -264,7 +311,7 @@ pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
             return res;
         }
     }
-    apply_binary_comparison(interp, |a, b| a.ge(b), ">=")
+    apply_binary_comparison(interp, OrderingKind::Ge, ">=")
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {

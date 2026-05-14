@@ -39,3 +39,29 @@ fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
         "typoOrUnknownName"
     );
 }
+
+#[test]
+fn comparison_budget_undecidable_protocol_strings() {
+    // SPEC §7.4.1 requires the comparison-budget NIL to be tagged
+    // with `reason = "undecidable"` and `origin =
+    // "comparisonBudget"`. The runtime constructs this via
+    // `Value::nil_with_reason(NilReason::Undecidable)` and the
+    // origin is derived through `absence_origin_for_reason`.
+    assert_eq!(NilReason::Undecidable.as_protocol_str(), "undecidable");
+    assert_eq!(
+        AbsenceOrigin::ComparisonBudget.as_protocol_str(),
+        "comparisonBudget"
+    );
+}
+
+#[test]
+fn nil_with_reason_undecidable_routes_to_comparison_budget_origin() {
+    // `nil_with_reason` is the runtime's primary entry point for
+    // building reasoned NIL values. Verify the §7.4.1 reason/origin
+    // pairing is preserved end-to-end.
+    use crate::types::Value;
+    let v = Value::nil_with_reason(NilReason::Undecidable);
+    let absence = v.absence_metadata().expect("nil carries absence");
+    assert_eq!(absence.reason, Some(NilReason::Undecidable));
+    assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+}
