@@ -213,6 +213,9 @@ fn format_fraction(f: &Fraction) -> String {
     if f.is_nil() {
         return "NIL".to_string();
     }
+    if let Some(source) = f.display_source() {
+        return source.to_string();
+    }
     if f.is_integer() {
         f.numerator().to_string()
     } else {

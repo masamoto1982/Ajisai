@@ -74,6 +74,9 @@ export function formatFractionScientific(numerStr: string, denomStr: string): st
 
 
 export function formatFraction(frac: Fraction): string {
+    if (frac.displaySource) {
+        return frac.displaySource;
+    }
     const denomStr = String(frac.denominator);
     const numerStr = String(frac.numerator);
     return formatFractionScientific(numerStr, denomStr);
