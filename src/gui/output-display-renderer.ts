@@ -73,12 +73,18 @@ const parseFractionToNumber = (fraction: Record<string, unknown>): number | null
 const formatNumber = (value: unknown): string => {
     const fraction = checkFractionObject(value);
     if (!fraction) return '?';
+    if (typeof fraction.displaySource === 'string' && fraction.displaySource.length > 0) {
+        return fraction.displaySource;
+    }
     return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 
 const formatFraction = (frac: unknown): string => {
     const fraction = checkFractionObject(frac);
     if (!fraction) return '?';
+    if (typeof fraction.displaySource === 'string' && fraction.displaySource.length > 0) {
+        return fraction.displaySource;
+    }
     return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
 };
 

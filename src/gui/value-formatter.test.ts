@@ -7,6 +7,7 @@ import { describe, expect, test } from 'vitest';
 import {
     compareStack,
     compareValue,
+    formatFraction,
     formatFractionScientific,
 } from './value-formatter';
 import type { Fraction, Value } from '../wasm-interpreter-types';
@@ -243,5 +244,19 @@ describe('AQ-VER-004-D formatFractionScientific scientific-form conjunction', ()
         // bypasses the MC/DC table above.
         expect(formatFractionScientific('1234567890', '1')).toContain('e');
         expect(formatFractionScientific('5', '1')).toBe('5');
+    });
+});
+
+describe('formatFraction literal display source preservation', () => {
+    test.each([
+        ['1', frac(1, 1)],
+        ['0.5', frac(1, 2)],
+        ['2/1', frac(2, 1)],
+    ])('renders %s from displaySource instead of normalized fraction fields', (source, fraction) => {
+        expect(formatFraction({ ...fraction, displaySource: source })).toBe(source);
+    });
+
+    test('falls back to normalized numeric formatting when displaySource is absent', () => {
+        expect(formatFraction(frac(1, 2))).toBe('1/2');
     });
 });

@@ -47,6 +47,20 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
     val.is_vector()
 }
 
+fn fraction_display_source_from_js(num_obj: &js_sys::Object) -> Option<String> {
+    js_sys::Reflect::get(num_obj, &"displaySource".into())
+        .ok()
+        .and_then(|value| value.as_string())
+        .filter(|source| !source.is_empty())
+}
+
+fn apply_fraction_display_source(mut fraction: Fraction, num_obj: &js_sys::Object) -> Fraction {
+    if let Some(source) = fraction_display_source_from_js(num_obj) {
+        fraction = fraction.with_display_source(&source);
+    }
+    fraction
+}
+
 pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
@@ -67,9 +81,12 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 .map_err(|_| "No denominator".to_string())?
                 .as_string()
                 .ok_or("Denominator not string")?;
-            let fraction = Fraction::new(
-                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+            let fraction = apply_fraction_display_source(
+                Fraction::new(
+                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+                ),
+                &num_obj,
             );
             Ok(Value::from_fraction(fraction))
         }
@@ -83,9 +100,12 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 .map_err(|_| "No denominator".to_string())?
                 .as_string()
                 .ok_or("Denominator not string")?;
-            let fraction = Fraction::new(
-                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+            let fraction = apply_fraction_display_source(
+                Fraction::new(
+                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+                ),
+                &num_obj,
             );
             Ok(Value::from_datetime(fraction))
         }
@@ -126,9 +146,12 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                     .map_err(|_| "No denominator in tensor data".to_string())?
                     .as_string()
                     .ok_or("Denominator not string")?;
-                let fraction = Fraction::new(
-                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+                let fraction = apply_fraction_display_source(
+                    Fraction::new(
+                        BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                        BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
+                    ),
+                    &frac_obj,
                 );
                 fractions.push(fraction);
             }
@@ -238,6 +261,12 @@ fn value_semantics_to_js(value: &Value) -> JsValue {
     obj.into()
 }
 
+fn set_fraction_display_source_prop(obj: &js_sys::Object, fraction: &crate::types::fraction::Fraction) {
+    if let Some(source) = fraction.display_source() {
+        set_prop(obj, "displaySource", &source.into());
+    }
+}
+
 fn set_value_common_fields(obj: &js_sys::Object, value: &Value, hint: DisplayHint) {
     let hint_str: &str = match hint {
         DisplayHint::Auto => "auto",
@@ -284,6 +313,7 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>)
                     let num_obj = js_sys::Object::new();
                     set_prop(&num_obj, "numerator", &f.numerator().to_string().into());
                     set_prop(&num_obj, "denominator", &f.denominator().to_string().into());
+                    set_fraction_display_source_prop(&num_obj, f);
                     set_prop(&obj, "value", &num_obj.into());
                 }
             }
@@ -373,6 +403,7 @@ fn tensor_data_to_js_array(
                 &f.denominator().to_string().into(),
             )
             .unwrap();
+            set_fraction_display_source_prop(&num_obj, f);
             let elem = js_sys::Object::new();
             js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
@@ -463,6 +494,7 @@ pub(crate) fn arena_node_to_js(
                         &f.denominator().to_string().into(),
                     )
                     .unwrap();
+                    set_fraction_display_source_prop(&num_obj, f);
                     js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
                 }
             }
