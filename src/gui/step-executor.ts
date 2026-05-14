@@ -1,5 +1,7 @@
 
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import { annotateStackDisplaySources } from './display-source-annotator';
+import { setStackDisplayOverride } from './interpreter/interpreter-client';
 import type { AjisaiInterpreter, ExecuteResult } from '../wasm-interpreter-types';
 import {
     createExecutionSnapshot,
@@ -124,6 +126,10 @@ export const createStepExecutor = (
 
             const currentState = createExecutionSnapshot(interpreter);
             const result = await WORKER_MANAGER.execute(token, currentState);
+            const annotatedStack = result.stack
+                ? annotateStackDisplaySources(result.stack, token)
+                : null;
+            setStackDisplayOverride(annotatedStack);
 
             try {
                 syncInterpreterState(interpreter, result);
@@ -150,6 +156,7 @@ export const createStepExecutor = (
             }
 
         } catch (error) {
+            setStackDisplayOverride(null);
             resolveExecutionException('StepExecutor', error, showInfo, showError);
             reset();
         }

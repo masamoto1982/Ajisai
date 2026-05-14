@@ -1,4 +1,4 @@
-import type { AjisaiInterpreter } from '../../wasm-interpreter-types';
+import type { AjisaiInterpreter, Value } from '../../wasm-interpreter-types';
 
 function getOptionalInterpreter(): AjisaiInterpreter | null {
     return window.ajisaiInterpreter ?? null;
@@ -11,6 +11,16 @@ function getRequiredInterpreter(): AjisaiInterpreter {
     }
     return interpreter;
 }
+
+let stackDisplayOverride: Value[] | null = null;
+
+export const setStackDisplayOverride = (stack: Value[] | null): void => {
+    stackDisplayOverride = stack;
+};
+
+export const clearStackDisplayOverride = (): void => {
+    stackDisplayOverride = null;
+};
 
 export type InterpreterClient = {
     readonly getOptional: () => AjisaiInterpreter | null;
@@ -32,6 +42,6 @@ export function createInterpreterClient(): InterpreterClient {
         collectImportedModules: () => getRequiredInterpreter().collect_imported_modules(),
         collectModuleWordsInfo: (moduleName: string) => getRequiredInterpreter().collect_module_words_info(moduleName),
         collectModuleSampleWordsInfo: (moduleName: string) => getRequiredInterpreter().collect_module_sample_words_info(moduleName),
-        collectStack: () => getRequiredInterpreter().collect_stack()
+        collectStack: () => stackDisplayOverride ?? getRequiredInterpreter().collect_stack()
     };
 }

@@ -113,6 +113,7 @@ export interface ExecuteResult {
 export interface Fraction {
     numerator: string;
     denominator: string;
+    displaySource?: string;
 }
 
 export interface Value {

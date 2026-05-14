@@ -10,6 +10,11 @@ import {
     resolveExecutionException
 } from './interpreter-execution-utils';
 import { createStepExecutor, StepExecutor } from './step-executor';
+import { annotateStackDisplaySources } from './display-source-annotator';
+import {
+    clearStackDisplayOverride,
+    setStackDisplayOverride
+} from './interpreter/interpreter-client';
 import type { ViewMode } from './mobile-view-switcher';
 
 export interface ExecutionCallbacks {
@@ -128,6 +133,10 @@ export const createExecutionController = (
 
             const currentState = createExecutionSnapshot(interpreter);
             const result = await WORKER_MANAGER.execute(code, currentState);
+            const annotatedStack = result.stack
+                ? annotateStackDisplaySources(result.stack, code)
+                : null;
+            setStackDisplayOverride(annotatedStack);
 
             try {
                 syncInterpreterState(interpreter, result);
@@ -139,6 +148,7 @@ export const createExecutionController = (
             applyExecutionResult(result, code);
 
         } catch (error) {
+            clearStackDisplayOverride();
             resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
@@ -151,6 +161,7 @@ export const createExecutionController = (
             console.log('[ExecController] Executing full reset');
             stepExecutor.reset();
             await WORKER_MANAGER.resetAllWorkers();
+            clearStackDisplayOverride();
             const result = interpreter.reset();
 
             if (result.status === 'OK' && !result.error) {

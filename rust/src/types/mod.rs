@@ -19,13 +19,24 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct DenseTensor {
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
+    pub display_sources: Vec<Option<Arc<str>>>,
     pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub is_pure_integer: bool,
+}
+
+impl PartialEq for DenseTensor {
+    fn eq(&self, other: &Self) -> bool {
+        self.numerators == other.numerators
+            && self.denominators == other.denominators
+            && self.valid_mask == other.valid_mask
+            && self.shape == other.shape
+            && self.is_pure_integer == other.is_pure_integer
+    }
 }
 
 impl DenseTensor {
@@ -41,11 +52,14 @@ impl DenseTensor {
 
         let mut numerators = Vec::with_capacity(data.len());
         let mut denominators = Vec::with_capacity(data.len());
+        let mut display_sources = Vec::with_capacity(data.len());
         let mut is_pure_integer = true;
         for fraction in data {
+            let source = fraction.display_source.clone();
             let (numerator, denominator) = fraction.extract_i64_pair()?;
             numerators.push(numerator);
             denominators.push(denominator);
+            display_sources.push(source);
             is_pure_integer &= denominator == 1;
         }
 
@@ -61,6 +75,7 @@ impl DenseTensor {
         Some(Self {
             numerators,
             denominators,
+            display_sources,
             valid_mask,
             shape,
             is_pure_integer,
@@ -83,10 +98,12 @@ impl DenseTensor {
         if !self.is_valid(index) {
             return None;
         }
-        Some(Fraction::new(
+        let mut fraction = Fraction::new(
             self.numerators[index].into(),
             self.denominators[index].into(),
-        ))
+        );
+        fraction.display_source = self.display_sources.get(index).cloned().flatten();
+        Some(fraction)
     }
 
     pub fn fraction_or_nil(&self, index: usize) -> Fraction {
@@ -145,6 +162,7 @@ pub struct SparseTensor {
     pub indices: Vec<usize>,
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
+    pub display_sources: Vec<Option<Arc<str>>>,
     pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub len: usize,
@@ -169,12 +187,14 @@ impl SparseTensor {
         let mut indices = Vec::with_capacity(nonzero_count);
         let mut numerators = Vec::with_capacity(nonzero_count);
         let mut denominators = Vec::with_capacity(nonzero_count);
+        let mut display_sources = Vec::with_capacity(nonzero_count);
 
         for index in 0..dense.len() {
             if dense.numerators[index] != 0 {
                 indices.push(index);
                 numerators.push(dense.numerators[index]);
                 denominators.push(dense.denominators[index]);
+                display_sources.push(dense.display_sources.get(index).cloned().flatten());
             }
         }
 
@@ -191,6 +211,7 @@ impl SparseTensor {
             indices,
             numerators,
             denominators,
+            display_sources,
             valid_mask,
             shape: dense.shape.clone(),
             len: dense.len(),
@@ -201,15 +222,18 @@ impl SparseTensor {
     pub fn to_dense(&self) -> DenseTensor {
         let mut numerators = vec![0; self.len];
         let mut denominators = vec![1; self.len];
+        let mut display_sources = vec![None; self.len];
         for (entry, &index) in self.indices.iter().enumerate() {
             if index < self.len {
                 numerators[index] = self.numerators[entry];
                 denominators[index] = self.denominators[entry];
+                display_sources[index] = self.display_sources.get(entry).cloned().flatten();
             }
         }
         DenseTensor {
             numerators,
             denominators,
+            display_sources,
             valid_mask: self.valid_mask.clone(),
             shape: self.shape.clone(),
             is_pure_integer: self.is_pure_integer,
@@ -221,10 +245,12 @@ impl SparseTensor {
             return None;
         }
         let entry = self.indices.binary_search(&index).ok()?;
-        Some(Fraction::new(
+        let mut fraction = Fraction::new(
             self.numerators[entry].into(),
             self.denominators[entry].into(),
-        ))
+        );
+        fraction.display_source = self.display_sources.get(entry).cloned().flatten();
+        Some(fraction)
     }
 
     pub fn fraction_or_zero(&self, index: usize) -> Fraction {
