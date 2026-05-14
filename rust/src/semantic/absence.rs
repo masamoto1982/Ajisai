@@ -14,6 +14,10 @@ pub enum AbsenceOrigin {
     IndexOutOfBounds,
     UnknownWord,
     ExecutionFailure,
+    /// Continued-fraction comparison exhausted its partial-quotient
+    /// budget without resolving the order of the two operands per
+    /// SPEC §7.4.1. Used together with `NilReason::Undecidable`.
+    ComparisonBudget,
     HostEnvironment,
     Unknown,
 }

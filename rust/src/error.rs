@@ -13,6 +13,13 @@ pub enum NilReason {
     IndexOutOfBounds,
     UnknownWord,
     ExecutionFailure,
+    /// Comparison-budget exhaustion per SPEC §7.4.1: two lazy CFs
+    /// agreed on every emitted partial quotient up to the budget
+    /// without diverging, or one of the operands' CF streams reported
+    /// `CfStep::Exhausted`. The Bubble Rule projects this to NIL with
+    /// `absence.origin = comparisonBudget` rather than a SAFE-caught
+    /// error.
+    Undecidable,
     SafeCaught(Box<ErrorCategory>),
 }
 
@@ -80,6 +87,7 @@ impl NilReason {
             NilReason::IndexOutOfBounds => "indexOutOfBounds",
             NilReason::UnknownWord => "unknownWord",
             NilReason::ExecutionFailure => "executionFailure",
+            NilReason::Undecidable => "undecidable",
             NilReason::SafeCaught(_) => "safeCaught",
         }
     }

@@ -19,6 +19,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::IndexOutOfBounds => AbsenceOrigin::IndexOutOfBounds,
         NilReason::UnknownWord => AbsenceOrigin::UnknownWord,
         NilReason::ExecutionFailure => AbsenceOrigin::ExecutionFailure,
+        NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
         NilReason::SafeCaught(_) => AbsenceOrigin::SafeProjection,
         NilReason::DivisionByZero => AbsenceOrigin::SafeProjection,
     }

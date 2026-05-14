@@ -661,3 +661,113 @@ mod ai_first_comparison_tests {
         assert!(interp.get_stack().last().unwrap().is_nil());
     }
 }
+
+#[cfg(test)]
+mod comparison_budget_infrastructure_tests {
+    //! Phase 6 infrastructure for SPEC §7.4.1's partial-quotient
+    //! budget. Every Ajisai scalar currently on the stack is still
+    //! a `Fraction`, so the ordering ops always decide and never
+    //! project Undecidable. These tests pin the *current* behavior
+    //! against regression as the refactor lands, and assert that the
+    //! Undecidable / ComparisonBudget plumbing (NilReason +
+    //! AbsenceOrigin) is wired correctly so Phase 7's non-Rational
+    //! ExactReals will surface NIL with the right metadata when they
+    //! exhaust the budget.
+    use crate::error::NilReason;
+    use crate::interpreter::Interpreter;
+    use crate::semantic::AbsenceOrigin;
+    use crate::types::Value;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn bool_of(interp: &Interpreter) -> bool {
+        let v = &interp.get_stack()[0];
+        let s = format!("{}", v);
+        match s.as_str() {
+            "1" => true,
+            "0" => false,
+            other => panic!("expected boolean (0 or 1), got {}", other),
+        }
+    }
+
+    // ── Regression: every ordering decides on rational operands ──────────
+
+    #[tokio::test]
+    async fn lt_decides_on_rational_pair() {
+        let interp = run("1/2 2/3 LT").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn lte_decides_on_equal_reduced_rationals() {
+        let interp = run("2/4 1/2 LTE").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gt_decides_on_negative_left() {
+        let interp = run("-3/2 1/2 GT").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn gte_decides_on_large_rationals() {
+        let interp = run("355/113 22/7 GTE").await;
+        // 355/113 ≈ 3.14159292 < 22/7 ≈ 3.14285714 ⇒ GTE is false.
+        assert!(!bool_of(&interp));
+    }
+
+    // ── Regression: STAK-mode property checks still produce a single bool
+
+    #[tokio::test]
+    async fn stak_lt_monotonic_sequence_is_true() {
+        let interp = run("1 2 3 5 8 5 .. LT").await;
+        assert!(bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn stak_lt_non_monotonic_sequence_is_false() {
+        let interp = run("1 3 2 4 4 .. LT").await;
+        assert!(!bool_of(&interp));
+    }
+
+    #[tokio::test]
+    async fn stak_gte_non_increasing_sequence_is_true() {
+        let interp = run("5 5 3 1 0 5 .. GTE").await;
+        assert!(bool_of(&interp));
+    }
+
+    // ── NIL projection contract for the Undecidable case ─────────────────
+
+    #[tokio::test]
+    async fn undecidable_nil_carries_comparison_budget_origin() {
+        // We can't yet drive the comparison path into the Undecidable
+        // branch via runtime source (no non-Rational ExactReal scalar
+        // is constructable yet — Phase 7 introduces that), so this
+        // test pins the helper that the comparison.rs refactor calls:
+        // building NIL with reason `Undecidable` must yield the
+        // §7.4.1 origin `ComparisonBudget`.
+        let v = Value::nil_with_reason(NilReason::Undecidable);
+        let absence = v.absence_metadata().expect("nil carries absence");
+        assert_eq!(absence.reason, Some(NilReason::Undecidable));
+        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+    }
+
+    // ── NIL passthrough is unchanged ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn lt_with_left_nil_passes_nil_through() {
+        let interp = run("NIL 1 LT").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn lt_with_right_nil_passes_nil_through() {
+        let interp = run("1 NIL LT").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+}

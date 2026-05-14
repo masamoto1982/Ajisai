@@ -83,6 +83,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::IndexOutOfBounds => "indexOutOfBounds",
             AbsenceOrigin::UnknownWord => "unknownWord",
             AbsenceOrigin::ExecutionFailure => "executionFailure",
+            AbsenceOrigin::ComparisonBudget => "comparisonBudget",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::Unknown => "unknown",
         }

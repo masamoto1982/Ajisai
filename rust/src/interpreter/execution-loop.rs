@@ -51,7 +51,8 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::MissingField
         | NilReason::InvalidEncoding
         | NilReason::InvalidLens
-        | NilReason::ExecutionFailure => Some(ErrorCategory::Custom),
+        | NilReason::ExecutionFailure
+        | NilReason::Undecidable => Some(ErrorCategory::Custom),
     }
 }
 
