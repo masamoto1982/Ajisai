@@ -258,7 +258,7 @@ impl Fraction {
 
     pub fn floor(&self) -> Fraction {
         if self.is_integer() {
-            return self.clone();
+            return Fraction::from_repr(self.repr.clone());
         }
 
         match &self.repr {
@@ -283,7 +283,7 @@ impl Fraction {
 
     pub fn ceil(&self) -> Fraction {
         if self.is_integer() {
-            return self.clone();
+            return Fraction::from_repr(self.repr.clone());
         }
 
         match &self.repr {
@@ -309,7 +309,7 @@ impl Fraction {
 
     pub fn round(&self) -> Fraction {
         if self.is_integer() {
-            return self.clone();
+            return Fraction::from_repr(self.repr.clone());
         }
 
         if self.is_zero() {
