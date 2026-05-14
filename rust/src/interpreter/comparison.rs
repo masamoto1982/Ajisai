@@ -5,13 +5,15 @@ use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, nil_passthrough_binary,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
 use crate::types::{DisplayHint, Value, ValueData};
 
 /// One of the four ordering comparisons. Carries the dispatch
 /// decision through the SCALAR-comparison helper so the helper can
-/// keep the Fraction fast path for the common case while leaving a
-/// hook for Phase 7's ExactReal `cmp_with_budget` path.
+/// keep the Fraction fast path for both-Rational operands while
+/// routing any non-Rational ExactReal pair through
+/// `ExactReal::cmp_with_budget` (SPEC §7.4.1).
 #[derive(Debug, Clone, Copy)]
 enum OrderingKind {
     Lt,
@@ -28,6 +30,20 @@ impl OrderingKind {
             OrderingKind::Gt => a.gt(b),
             OrderingKind::Ge => a.ge(b),
         }
+    }
+
+    /// Apply the relation to a budgeted `ExactReal` three-way
+    /// comparison result. `None` propagates the budget-exhaustion
+    /// case unchanged so callers project it to the §7.4.1
+    /// Undecidable NIL.
+    fn apply_to_ordering(self, ord: Option<std::cmp::Ordering>) -> Option<bool> {
+        use std::cmp::Ordering;
+        ord.map(|o| match self {
+            OrderingKind::Lt => o == Ordering::Less,
+            OrderingKind::Le => o != Ordering::Greater,
+            OrderingKind::Gt => o == Ordering::Greater,
+            OrderingKind::Ge => o != Ordering::Less,
+        })
     }
 }
 
@@ -58,19 +74,38 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
 /// exhausts (SPEC §7.4.1) — the caller projects `None` to an Undecidable
 /// NIL. Returns `Err(_)` for structurally-non-comparable operands.
 ///
-/// Phase 6 implementation keeps the existing Fraction fast path
-/// because `ValueData::Scalar` is still `Fraction`-backed; the dispatch
-/// shape is in place so Phase 7 can route the non-Rational ExactReal
-/// case through `ExactReal::cmp_with_budget` without touching the
-/// caller-side code paths or the STAK-mode short-circuit.
+/// Both-Rational operands take the Fraction fast path (always
+/// decidable per SPEC §7.4.1: "the budget value itself is not part
+/// of observable semantics; it must be high enough that distinct
+/// rationals always decide"). Any non-Rational ExactReal operand
+/// routes through `ExactReal::cmp_with_budget` under the
+/// `DEFAULT_COMPARISON_BUDGET`; budget exhaustion surfaces as
+/// `Ok(None)` here.
 fn compare_scalar_pair(
     a_val: &Value,
     b_val: &Value,
     kind: OrderingKind,
 ) -> Result<Option<bool>> {
-    let af = extract_scalar_for_comparison(a_val)?;
-    let bf = extract_scalar_for_comparison(b_val)?;
-    Ok(Some(kind.apply_to_fraction(&af, &bf)))
+    let a = extract_exact_real_for_comparison(a_val)?;
+    let b = extract_exact_real_for_comparison(b_val)?;
+    Ok(match (a.as_rational(), b.as_rational()) {
+        (Some(af), Some(bf)) => Some(kind.apply_to_fraction(af, bf)),
+        _ => kind.apply_to_ordering(a.cmp_with_budget(&b, DEFAULT_COMPARISON_BUDGET)),
+    })
+}
+
+/// Extract an `ExactReal` view of a value's scalar content for
+/// comparison. Scalar (`Fraction`-backed) values lift to
+/// `ExactReal::Rational`; singleton Vector / Tensor values also
+/// project to their sole scalar. Non-scalar shapes and non-numeric
+/// kinds error. When a future migration replaces
+/// `ValueData::Scalar(Fraction)` with an `ExactReal`-backed
+/// representation, this helper is the single point that needs to
+/// surface the new variant, and `compare_scalar_pair` / `pairwise_eq`
+/// will route it through the budgeted CF path automatically.
+fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
+    let f = extract_scalar_for_comparison(val)?;
+    Ok(ExactReal::from_fraction(f))
 }
 
 fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
@@ -127,8 +162,26 @@ fn check_all_adjacent_pairs(items: &[Value], kind: OrderingKind) -> Result<Optio
     Ok(Some(true))
 }
 
-fn check_all_adjacent_equal(items: &[Value]) -> bool {
-    items.windows(2).all(|pair| pair[0].data == pair[1].data)
+/// Same three-valued discipline as `check_all_adjacent_pairs` for
+/// the EQ relation: `Some(true)` iff every adjacent pair decides
+/// equal, `Some(false)` on the first decidedly-unequal pair, `None`
+/// on the first §7.4.1 budget-exhausted pair (short-circuit per
+/// SPEC §7.4 STAK-mode short-circuit rule). `invert` flips the
+/// per-pair predicate to drive `NEQ`'s "all adjacent pairs unequal"
+/// semantics.
+fn check_all_adjacent_eq(items: &[Value], invert: bool) -> Option<bool> {
+    for pair in items.windows(2) {
+        match pairwise_eq(&pair[0], &pair[1]) {
+            Some(eq) => {
+                let pair_ok = if invert { !eq } else { eq };
+                if !pair_ok {
+                    return Some(false);
+                }
+            }
+            None => return None,
+        }
+    }
+    Some(true)
 }
 
 fn apply_binary_comparison(
@@ -322,32 +375,59 @@ pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
     apply_equality(interp, true)
 }
 
-fn pairwise_eq(a_val: &Value, b_val: &Value) -> bool {
+/// Three-valued pairwise equality matching the SPEC §7.4.1
+/// discipline: `Some(true)` / `Some(false)` for decidable pairs,
+/// `None` when budget exhaustion makes the comparison undecidable.
+/// `None` is only reachable for scalar pairs where at least one
+/// operand is a non-Rational `ExactReal`; the structural Vector /
+/// Tensor / Record paths and the singleton-projection paths always
+/// decide.
+fn pairwise_eq(a_val: &Value, b_val: &Value) -> Option<bool> {
     if a_val.data == b_val.data {
-        return true;
+        return Some(true);
     }
     if let (Some(ai), Some(bi)) = (value_to_interval(a_val), value_to_interval(b_val)) {
         if ai.is_exact() && bi.is_exact() {
-            return ai.lo == bi.lo;
+            return Some(ai.lo == bi.lo);
         }
-        return false;
+        return Some(false);
     }
     match (&a_val.data, &b_val.data) {
+        (ValueData::Scalar(_), ValueData::Scalar(_)) => scalar_pair_eq(a_val, b_val),
         (ValueData::Scalar(_), ValueData::Vector(children)) if children.len() == 1 => {
-            a_val.data == children[0].data
+            Some(a_val.data == children[0].data)
         }
         (ValueData::Vector(children), ValueData::Scalar(_)) if children.len() == 1 => {
-            children[0].data == b_val.data
+            Some(children[0].data == b_val.data)
         }
-        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => b_val
-            .child(0)
-            .map(|c| a_val.data == c.data)
-            .unwrap_or(false),
-        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => a_val
-            .child(0)
-            .map(|c| c.data == b_val.data)
-            .unwrap_or(false),
-        _ => false,
+        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => Some(
+            b_val
+                .child(0)
+                .map(|c| a_val.data == c.data)
+                .unwrap_or(false),
+        ),
+        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => Some(
+            a_val
+                .child(0)
+                .map(|c| c.data == b_val.data)
+                .unwrap_or(false),
+        ),
+        _ => Some(false),
+    }
+}
+
+/// Scalar–scalar equality routed through `ExactReal::eq_with_budget`
+/// (SPEC §7.4.1). Both-Rational operands decide via `Fraction`
+/// `PartialEq` — value equality on canonical reduced rationals.
+/// Anything mixing in a non-Rational `ExactReal` runs the budgeted
+/// CF expansion; budget exhaustion returns `None` and the caller
+/// projects it to the Undecidable NIL.
+fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> Option<bool> {
+    let a = extract_exact_real_for_comparison(a_val).ok()?;
+    let b = extract_exact_real_for_comparison(b_val).ok()?;
+    match (a.as_rational(), b.as_rational()) {
+        (Some(af), Some(bf)) => Some(af == bf),
+        _ => a.eq_with_budget(&b, DEFAULT_COMPARISON_BUDGET),
     }
 }
 
@@ -377,8 +457,10 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let eq: bool = pairwise_eq(&a_val, &b_val);
-            push_boolean_result(interp, if invert { !eq } else { eq });
+            match pairwise_eq(&a_val, &b_val) {
+                Some(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
+                None => push_undecidable_nil(interp),
+            }
             Ok(())
         }
 
@@ -408,12 +490,10 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
                 return Ok(());
             }
 
-            let property: bool = if invert {
-                items.windows(2).all(|pair| !pairwise_eq(&pair[0], &pair[1]))
-            } else {
-                check_all_adjacent_equal(&items)
-            };
-            push_boolean_result(interp, property);
+            match check_all_adjacent_eq(&items, invert) {
+                Some(decided) => push_boolean_result(interp, decided),
+                None => push_undecidable_nil(interp),
+            }
             Ok(())
         }
     }
