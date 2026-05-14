@@ -109,10 +109,12 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
         while i < tokens.len() {
             let token = &tokens[i];
             let op = match token {
-                Token::Number(n) => match crate::types::fraction::Fraction::from_str(n) {
-                    Ok(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
-                    Err(_) => CompiledOp::FallbackToken(token.clone()),
-                },
+                Token::Number(n) => {
+                    match crate::types::fraction::Fraction::parse_unreduced_from_str(n) {
+                        Ok(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
+                        Err(_) => CompiledOp::FallbackToken(token.clone()),
+                    }
+                }
                 Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
                 Token::BlockStart => {
                     if let Some((block, next_i)) = collect_code_block(&tokens, i) {

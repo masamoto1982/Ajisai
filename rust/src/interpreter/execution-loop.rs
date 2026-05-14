@@ -261,7 +261,8 @@ impl Interpreter {
         while i < execute_tokens.len() {
             match &execute_tokens[i] {
                 Token::Number(n) => {
-                    let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
+                    let frac =
+                        Fraction::parse_unreduced_from_str(n).map_err(AjisaiError::from)?;
                     self.stack.push(create_number_value(frac));
                     self.semantic_registry.push_hint(DisplayHint::Number);
                 }
