@@ -137,8 +137,11 @@ Construction and arithmetic:
 two `Algebraic`/`Rational` operands is always `Algebraic`/`Rational`,
 never `Gosper`.
 
-`AlgebraicSqrt { radicand }` becomes a degenerate single-term
-`Algebraic` and can be folded into it, or kept as a constructor shortcut.
+`AlgebraicSqrt { radicand }` is **folded into** `Algebraic` as a
+single-term value (see Decision 2, §9). `from_sqrt_rational` constructs
+an `Algebraic` directly; the `AlgebraicSqrt` variant is removed. This
+keeps one canonical representation for the algebraic domain — no value
+class has two competing internal forms (§14.1, no dual-mode drift).
 
 `Gosper` is retained unchanged. It is reached only when an operand is
 **not** in the algebraic domain — which the current Coreword set never
@@ -238,7 +241,13 @@ No protocol strings, no display forms, no Coreword names change.
    operand or marked as future-domain.
 
 Each phase is independently testable and separately reviewable; semantic
-changes are kept apart from structural cleanup (§14.1).
+changes are kept apart from structural cleanup (§14.1). However, Phases
+A–D ship as a **single conformance unit**: the §7.4.1 / §16 #11
+amendments are merged only once `+ − × ÷` and comparison all decide the
+algebraic domain. The spec guarantee "every algebraic-domain comparison
+is total" must never be advertised in a partial state where decidability
+depends on whether a `÷` appeared upstream (see Decision 1, §9).
+Phase E lands with that unit; individual commits may still be staged.
 
 ## 8. Conformance impact
 
@@ -249,15 +258,33 @@ changes are kept apart from structural cleanup (§14.1).
 | #11 CF arithmetic, no rounding | reinforced — algebraic path is exact, BigInt, no budget |
 | #1 single design authority | satisfied once §4.2/§7.4 amendments merge |
 
-## 9. Open questions for the user
+## 9. Resolved design decisions
 
-1. **`DIV` scope.** Phase C (field inversion) is the most involved part.
-   Acceptable to land Phases A, B, D first (so `√2−√2`, sums, products
-   decide) and treat algebraic `÷` as a follow-up, with `Gosper`
-   division remaining correct-but-budgeted in the interim?
-2. **`AlgebraicSqrt`.** Fold it into `Algebraic` as a single-term value
-   (cleaner, one representation), or keep it as a constructor shortcut
-   (smaller diff)?
-3. **Future transcendentals.** Confirm the intended long-term policy:
-   transcendental equality stays `Undecidable` + explicit `=>`, with no
-   silent approximate fallback ever. This proposal assumes yes.
+The three open questions were resolved on AI-first grounds (§14): an
+automated producer reasons reliably only about uniform, complete, and
+mechanically predictable guarantees.
+
+**Decision 1 — `DIV` is in scope; Phases A–D ship as one unit.**
+Algebraic `÷` (Phase C, field inversion) is included before the §7.4.1
+guarantee is amended. Shipping A/B/D first would make a value's
+decidability depend on its construction history — `√2−√2 == 0` decides
+but `(√2/√2) == 1` would not — which is precisely the non-mechanical,
+history-dependent behavior an AI agent cannot predict. The guarantee
+"every algebraic-domain comparison is total" must hold uniformly or not
+be claimed. Incremental commits are fine; partial *semantics* are not.
+
+**Decision 2 — `AlgebraicSqrt` is folded into `Algebraic`.**
+§14.1 mandates a single canonical implementation and forbids dual-mode
+drift. Two internal forms for the same value class (single-term
+`Algebraic` vs `AlgebraicSqrt`) would force every equality/arithmetic
+path to handle both. One representation gives one code path, one
+normal form, one structural equality test. The larger diff is accepted
+in exchange for structural uniformity.
+
+**Decision 3 — transcendental equality stays `Undecidable` + explicit
+`=>`; no silent approximate fallback, ever.**
+Confirmed. A silent epsilon fallback is non-deterministic and
+non-traceable; an AI agent must be able to mechanically predict and
+explain every outcome. `Undecidable` is an explicit, diagnosable signal
+and `=>` is an explicit, user-chosen recovery point. This is the same
+principle on which the original epsilon-fallback memo was rejected.
