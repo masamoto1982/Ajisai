@@ -29,6 +29,7 @@ export interface AjisaiInterpreter {
     // hover_syntax is the inline word-info preview (shortest useful invocation,
     // operands included). See docs/dev/three-layer-documentation-model.md §4.
     collect_core_words_info(): Array<[string, string, string]>;
+    collect_core_listed_words_info(): Array<[string, string, string]>;
     collect_core_word_aliases_info(): Array<[string, string, string, string]>;
     collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;

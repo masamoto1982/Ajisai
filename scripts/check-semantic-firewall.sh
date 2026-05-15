@@ -16,9 +16,9 @@ check_absent() {
   fi
 }
 
-# External payloads must not reintroduce legacy camelCase fields.
-check_absent "legacy nilReason external field" 'nilReason' rust/src src
-check_absent "legacy top-level errorCategory external field" 'errorCategory' rust/src src
+# External payloads must not expose disallowed camelCase fields.
+check_absent "nilReason external field" 'nilReason' rust/src src
+check_absent "top-level errorCategory external field" 'errorCategory' rust/src src
 
 # Machine-readable WASM/TS/AI-facing outputs must use protocol strings,
 # not Rust Debug formatting.

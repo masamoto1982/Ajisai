@@ -1054,7 +1054,7 @@ fn vtu_phase_iii_join_accepts_tensor_of_codepoints() {
 fn vtu_phase_iii_sort_accepts_tensor_input() {
     // [ 3 1 2 ] is a dense Tensor under Phase II producers. SORT must
     // accept it via the new boundary-helper code path.
-    let interp = run_code("[ 3 1 2 ] SORT");
+    let interp = run_code("'algo' IMPORT [ 3 1 2 ] SORT");
     let top = stack_top(&interp);
     assert_eq!(top.shape(), vec![3]);
     let collected: Vec<i64> = (0..top.len())

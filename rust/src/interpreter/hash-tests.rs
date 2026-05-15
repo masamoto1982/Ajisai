@@ -6,7 +6,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_rejects_stack_mode() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("'hello' .. HASH").await;
+        let result = interp.execute("'crypto' IMPORT 'hello' .. HASH").await;
         assert!(result.is_err(), "HASH should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -19,7 +19,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_string() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("'hello' HASH").await;
+        let result = interp.execute("'crypto' IMPORT 'hello' HASH").await;
         assert!(result.is_ok(), "HASH should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
@@ -34,10 +34,16 @@ mod tests {
     async fn test_hash_deterministic() {
         let mut interp = Interpreter::new();
 
-        interp.execute("'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 'hello' HASH")
+            .await
+            .unwrap();
         let hash1 = interp.stack.pop().unwrap();
 
-        interp.execute("'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 'hello' HASH")
+            .await
+            .unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
         assert_eq!(
@@ -50,10 +56,16 @@ mod tests {
     async fn test_hash_different_inputs() {
         let mut interp = Interpreter::new();
 
-        interp.execute("'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 'hello' HASH")
+            .await
+            .unwrap();
         let hash1 = interp.stack.pop().unwrap();
 
-        interp.execute("'world' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 'world' HASH")
+            .await
+            .unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
         assert_ne!(
@@ -65,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_vector() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 2 3 ] HASH").await;
+        let result = interp.execute("'crypto' IMPORT [ 1 2 3 ] HASH").await;
         assert!(
             result.is_ok(),
             "HASH on vector should succeed: {:?}",
@@ -78,10 +90,16 @@ mod tests {
     async fn test_hash_fraction_normalization() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ 1/2 ] HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ 1/2 ] HASH")
+            .await
+            .unwrap();
         let hash1 = interp.stack.pop().unwrap();
 
-        interp.execute("[ 2/4 ] HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ 2/4 ] HASH")
+            .await
+            .unwrap();
         let hash2 = interp.stack.pop().unwrap();
 
         assert_eq!(
@@ -94,7 +112,9 @@ mod tests {
     async fn test_hash_with_bit_specification() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 128 ] 'hello' HASH").await;
+        let result = interp
+            .execute("'crypto' IMPORT [ 128 ] 'hello' HASH")
+            .await;
         assert!(
             result.is_ok(),
             "HASH with bit spec should succeed: {:?}",
@@ -112,10 +132,16 @@ mod tests {
     async fn test_hash_boolean() {
         let mut interp = Interpreter::new();
 
-        interp.execute("[ TRUE ] HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ TRUE ] HASH")
+            .await
+            .unwrap();
         let hash_true = interp.stack.pop().unwrap();
 
-        interp.execute("[ FALSE ] HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ FALSE ] HASH")
+            .await
+            .unwrap();
         let hash_false = interp.stack.pop().unwrap();
 
         assert_ne!(
@@ -127,7 +153,9 @@ mod tests {
     #[tokio::test]
     async fn test_hash_nested_vector() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ [ 1 2 ] [ 3 4 ] ] HASH").await;
+        let result = interp
+            .execute("'crypto' IMPORT [ [ 1 2 ] [ 3 4 ] ] HASH")
+            .await;
         assert!(
             result.is_ok(),
             "HASH on nested vector should succeed: {:?}",
@@ -139,7 +167,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_empty_string() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("'' HASH").await;
+        let result = interp.execute("'crypto' IMPORT '' HASH").await;
         assert!(
             result.is_ok(),
             "HASH on empty string should succeed: {:?}",
@@ -151,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_nil() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("NIL HASH").await;
+        let result = interp.execute("'crypto' IMPORT NIL HASH").await;
         assert!(result.is_ok(), "NIL should be hashable: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
     }
@@ -159,7 +187,10 @@ mod tests {
     #[tokio::test]
     async fn test_hash_preserves_stack() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 1/2 ] 'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ 1/2 ] 'hello' HASH")
+            .await
+            .unwrap();
 
         assert_eq!(interp.stack.len(), 2);
     }
@@ -167,7 +198,10 @@ mod tests {
     #[tokio::test]
     async fn test_hash_bits_consumed() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 128 ] 'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ 128 ] 'hello' HASH")
+            .await
+            .unwrap();
 
         assert_eq!(interp.stack.len(), 1);
     }
@@ -175,14 +209,20 @@ mod tests {
     #[tokio::test]
     async fn test_hash_keep_mode_preserves_operand() {
         let mut interp = Interpreter::new();
-        interp.execute("'hello' ,, HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 'hello' ,, HASH")
+            .await
+            .unwrap();
         assert_eq!(interp.stack.len(), 2);
     }
 
     #[tokio::test]
     async fn test_hash_scalar_bits_supported() {
         let mut interp = Interpreter::new();
-        interp.execute("128 'hello' HASH").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT 128 'hello' HASH")
+            .await
+            .unwrap();
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -190,10 +230,14 @@ mod tests {
     async fn test_hash_invalid_bits() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 16 ] 'hello' HASH").await;
+        let result = interp
+            .execute("'crypto' IMPORT [ 16 ] 'hello' HASH")
+            .await;
         assert!(result.is_err(), "Bits < 32 should error");
 
-        let result = interp.execute("[ 2048 ] 'hello' HASH").await;
+        let result = interp
+            .execute("'crypto' IMPORT [ 2048 ] 'hello' HASH")
+            .await;
         assert!(result.is_err(), "Bits > 1024 should error");
     }
 
@@ -205,7 +249,10 @@ mod tests {
         let mut hashes = Vec::new();
 
         for input in inputs {
-            interp.execute(&format!("'{}' HASH", input)).await.unwrap();
+            interp
+                .execute(&format!("'crypto' IMPORT '{}' HASH", input))
+                .await
+                .unwrap();
             hashes.push(interp.stack.pop().unwrap());
         }
 

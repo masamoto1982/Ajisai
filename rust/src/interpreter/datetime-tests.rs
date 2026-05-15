@@ -6,7 +6,7 @@ mod tests {
     async fn test_now_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute(".. NOW").await;
+        let result = interp.execute("'time' IMPORT .. NOW").await;
         assert!(result.is_err(), "NOW should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -20,7 +20,9 @@ mod tests {
     async fn test_datetime_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 1732531200 ] 'LOCAL' .. DATETIME").await;
+        let result = interp
+            .execute("'time' IMPORT [ 1732531200 ] 'LOCAL' .. DATETIME")
+            .await;
         assert!(result.is_err(), "DATETIME should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -35,7 +37,7 @@ mod tests {
         let mut interp = Interpreter::new();
 
         let result = interp
-            .execute("[ [ 2024 11 25 14 0 0 ] ] 'LOCAL' .. TIMESTAMP")
+            .execute("'time' IMPORT [ [ 2024 11 25 14 0 0 ] ] 'LOCAL' .. TIMESTAMP")
             .await;
         assert!(result.is_err(), "TIMESTAMP should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();

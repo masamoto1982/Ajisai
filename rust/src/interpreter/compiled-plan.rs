@@ -31,8 +31,8 @@ pub enum CompiledOp {
     CallQualifiedWord { namespace: String, word: String },
     BeginGuardedBlock,
     LineBreak,
-    // FallbackToken is used for tokens that must preserve legacy runtime behavior:
-    // - runtime-sensitive directives / control markers (Pipeline, NilCoalesce, CondClauseSep, SafeMode)
+    // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
+    // - directives / control markers (Pipeline, NilCoalesce, CondClauseSep, SafeMode)
     // - unresolved symbols at compile time
     // - structural tokens we cannot lower safely in current pass (e.g. vectors)
     // - tokens that could alter semantic hint behavior in dynamic ways

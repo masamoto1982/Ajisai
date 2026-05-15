@@ -68,8 +68,6 @@ mod resolve_word;
 #[path = "execution-loop.rs"]
 mod execution_loop;
 
-#[path = "deprecated-core-aliases.rs"]
-mod deprecated_core_aliases;
 #[path = "execute-builtin.rs"]
 mod execute_builtin;
 
@@ -144,9 +142,6 @@ mod compiled_plan_tests;
 #[cfg(test)]
 #[path = "core-word-canonicalization-tests.rs"]
 mod core_word_canonicalization_tests;
-#[cfg(test)]
-#[path = "coreword-registry-import-compat-tests.rs"]
-mod coreword_registry_import_compat_tests;
 #[cfg(test)]
 #[path = "differential-tests.rs"]
 mod differential_tests;

@@ -290,16 +290,7 @@ impl Interpreter {
     }
 
     pub(crate) fn resolve_word(&self, name: &str) -> Option<Arc<WordDefinition>> {
-        self.resolve_word_entry_readonly(name)
-            .map(|(_, def)| def)
-            .or_else(|| {
-                super::deprecated_core_aliases::lookup_deprecated_core_alias(name).and_then(
-                    |alias| {
-                        self.resolve_word_entry_readonly(alias.replacement_qualified)
-                            .map(|(_, def)| def)
-                    },
-                )
-            })
+        self.resolve_word_entry_readonly(name).map(|(_, def)| def)
     }
 
     pub(crate) fn word_exists(&self, name: &str) -> bool {

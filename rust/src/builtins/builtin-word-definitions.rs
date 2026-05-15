@@ -2405,9 +2405,7 @@ mod tests {
             );
             assert!(!spec.examples.is_empty(), "{} has no examples", spec.name);
             assert!(
-                spec.stability == "stable"
-                    || spec.stability == "experimental"
-                    || spec.stability == "deprecated",
+                spec.stability == "stable" || spec.stability == "experimental",
                 "{} has invalid stability {}",
                 spec.name,
                 spec.stability

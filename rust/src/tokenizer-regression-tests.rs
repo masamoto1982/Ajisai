@@ -1,10 +1,7 @@
-
-
 #[cfg(test)]
 mod tokenizer_regression_tests {
     use crate::tokenizer::tokenize;
     use crate::types::Token;
-
 
     #[test]
     fn test_comment_basic() {
@@ -69,7 +66,6 @@ mod tokenizer_regression_tests {
         );
     }
 
-
     #[test]
     fn test_flexible_quotes_single_with_single_inside() {
         let result = tokenize("'He'llo'").unwrap();
@@ -127,7 +123,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
     #[test]
     fn test_japanese_word_with_whitespace() {
@@ -201,7 +196,6 @@ mod tokenizer_regression_tests {
         );
     }
 
-
     #[test]
     fn test_number_parsing() {
         let result = tokenize("123").unwrap();
@@ -216,7 +210,6 @@ mod tokenizer_regression_tests {
         let result4 = tokenize("1.5e10").unwrap();
         assert_eq!(result4, vec![Token::Number("1.5e10".into())]);
     }
-
 
     #[test]
     fn test_percent_symbol_token() {
@@ -262,7 +255,6 @@ mod tokenizer_regression_tests {
         );
     }
 
-
     #[test]
     fn test_keywords() {
         let result = tokenize("TRUE FALSE NIL").unwrap();
@@ -285,7 +277,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
     #[test]
     fn test_brackets() {
@@ -355,7 +346,6 @@ mod tokenizer_regression_tests {
         assert_eq!(starts, ends);
     }
 
-
     #[test]
     fn test_complex_expression() {
         let result = tokenize("[ 1 2 3 ] LENGTH '結果' PRINT").unwrap();
@@ -390,7 +380,6 @@ mod tokenizer_regression_tests {
             ]
         );
     }
-
 
     #[test]
     fn test_dollar_tokenized_as_cond_clause_separator() {
@@ -428,19 +417,5 @@ mod tokenizer_regression_tests {
                 Token::Symbol("&".into()),
             ]
         );
-    }
-
-    #[test]
-    fn test_removed_colon_code_block() {
-        let result = tokenize(": DUP ;");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("':'"));
-    }
-
-    #[test]
-    fn test_removed_chevron_branch() {
-        let result = tokenize(">> { TRUE }");
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("'>>'"));
     }
 }

@@ -1,4 +1,5 @@
 pub mod arena;
+pub mod continued_fraction;
 pub mod display;
 pub mod fraction;
 #[path = "fraction-arithmetic.rs"]
@@ -6,7 +7,6 @@ mod fraction_arithmetic;
 #[cfg(test)]
 #[path = "fraction-mcdc-tests.rs"]
 mod fraction_mcdc_tests;
-pub mod continued_fraction;
 pub mod interval;
 #[path = "value-operations.rs"]
 mod value_operations;
@@ -551,7 +551,6 @@ pub enum Stability {
     #[default]
     Stable,
     Experimental,
-    Deprecated,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
