@@ -106,7 +106,7 @@ pub enum KernelKind {
     FoldBinaryPure,
     /// Reserved for a future SCAN-specific kernel (accumulator-preserving).
     /// Currently SCAN uses `FoldBinaryPure` because the per-step binary op is
-    /// identical; this variant is retained only for forward compatibility.
+    /// identical.
     #[allow(dead_code)]
     ScanBinaryPure,
     GenericCompiled,
@@ -406,7 +406,7 @@ fn try_user_word_is_pure(
 ///   2. it contains no `LineBreak` or `SafeMode` token, and
 ///   3. no symbol token resolves, via the purity table, to an impure builtin.
 ///
-/// Clauses 1 and 2 are token-shape filters (legacy behavior). Clause 3 is the
+/// Clauses 1 and 2 are token-shape filters. Clause 3 is the
 /// Phase 1-C "classification-direct reference" gate: it pulls the static
 /// purity classification straight from `purity_by_name` so that explicit
 /// impure builtins (PRINT, EVAL, DEF, …) are rejected before quantization

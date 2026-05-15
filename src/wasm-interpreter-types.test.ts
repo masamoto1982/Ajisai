@@ -60,7 +60,7 @@ describe('Semantic Firewall protocol payload types', () => {
         expect(Object.hasOwn(value, ['error', 'Category'].join(''))).toBe(false);
     });
 
-    test('Error flow trace uses absence instead of legacy top-level fields', () => {
+    test('Error flow trace uses absence fields only', () => {
         const event: ErrorFlowTraceEvent = {
             kind: 'nilProduced',
             word: 'DIV',

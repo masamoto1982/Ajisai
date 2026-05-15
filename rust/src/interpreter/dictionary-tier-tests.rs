@@ -66,20 +66,6 @@ mod tests {
         assert_eq!(def.stability, Stability::Stable);
     }
 
-    #[tokio::test]
-    async fn deprecated_sort_alias_warns_and_matches_algo_sort() {
-        let mut interp = Interpreter::new();
-        interp.execute("[ 3 1 2 ] SORT").await.unwrap();
-        let warning = interp.collect_output();
-        assert!(warning.contains("Warning: 'SORT' is deprecated."));
-
-        let sort_from_alias = interp.stack.pop().unwrap();
-        interp.execute("'algo' IMPORT").await.unwrap();
-        interp.execute("[ 3 1 2 ] ALGO@SORT").await.unwrap();
-        let sort_qualified = interp.stack.pop().unwrap();
-        assert_eq!(sort_from_alias, sort_qualified);
-    }
-
     #[test]
     fn now_is_not_in_builtin_specs() {
         assert!(builtin_specs().iter().all(|s| s.name != "NOW"));
@@ -97,72 +83,6 @@ mod tests {
                 name
             );
         }
-    }
-
-    #[tokio::test]
-    async fn deprecated_sqrt_eps_alias_redirects_to_hyphen_form() {
-        let mut interp = Interpreter::new();
-        interp.execute("2 1/100 SQRT_EPS").await.unwrap();
-        let warning = interp.collect_output();
-        assert!(warning.contains("Warning: 'SQRT_EPS' is deprecated."));
-        assert!(warning.contains("MATH@SQRT-EPS"));
-
-        let from_alias = interp.stack.pop().unwrap();
-        interp.execute("'math' IMPORT").await.unwrap();
-        interp.execute("2 1/100 MATH@SQRT-EPS").await.unwrap();
-        let from_qualified = interp.stack.pop().unwrap();
-        assert_eq!(from_alias, from_qualified);
-    }
-
-    #[tokio::test]
-    async fn deprecated_is_exact_alias_redirects_to_hyphen_form() {
-        let mut interp = Interpreter::new();
-        interp.execute("4 IS_EXACT").await.unwrap();
-        let warning = interp.collect_output();
-        assert!(warning.contains("Warning: 'IS_EXACT' is deprecated."));
-        assert!(warning.contains("MATH@IS-EXACT"));
-
-        let from_alias = interp.stack.pop().unwrap();
-        interp.execute("'math' IMPORT").await.unwrap();
-        interp.execute("4 MATH@IS-EXACT").await.unwrap();
-        let from_qualified = interp.stack.pop().unwrap();
-        assert_eq!(from_alias, from_qualified);
-    }
-
-    #[tokio::test]
-    async fn deprecated_sqrt_alias_warns_and_matches_math_sqrt() {
-        let mut interp = Interpreter::new();
-        interp.execute("4 SQRT").await.unwrap();
-        let warning = interp.collect_output();
-        assert!(warning.contains("Warning: 'SQRT' is deprecated."));
-
-        let sqrt_from_alias = interp.stack.pop().unwrap();
-        interp.execute("'math' IMPORT").await.unwrap();
-        interp.execute("4 MATH@SQRT").await.unwrap();
-        let sqrt_qualified = interp.stack.pop().unwrap();
-        assert_eq!(sqrt_from_alias, sqrt_qualified);
-    }
-
-    #[tokio::test]
-    async fn imported_math_does_not_warn() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 4 SQRT 2 MATH@SQRT")
-            .await
-            .unwrap();
-        let out = interp.collect_output();
-        assert!(!out.contains("deprecated"));
-    }
-
-    #[tokio::test]
-    async fn imported_sort_and_qualified_sort_do_not_warn() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'algo' IMPORT [ 3 1 2 ] SORT [ 3 1 2 ] ALGO@SORT")
-            .await
-            .unwrap();
-        let out = interp.collect_output();
-        assert!(!out.contains("deprecated"));
     }
 
     #[test]

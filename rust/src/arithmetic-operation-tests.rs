@@ -249,38 +249,50 @@ mod interval_tests {
     #[tokio::test]
     async fn test_interval_creation_success_and_failure() {
         let mut interp = Interpreter::new();
-        interp.execute("1 2 INTERVAL").await.unwrap();
+        interp.execute("'math' IMPORT 1 2 INTERVAL").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(format!("{}", stack[0]), "[1, 2]");
 
         let mut interp_fail = Interpreter::new();
-        let result = interp_fail.execute("2 1 INTERVAL").await;
+        let result = interp_fail.execute("'math' IMPORT 2 1 INTERVAL").await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_interval_basic_arithmetic() {
         let mut interp = Interpreter::new();
-        interp.execute("1 2 INTERVAL 3 4 INTERVAL +").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL +")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[4, 6]");
 
         let mut interp = Interpreter::new();
-        interp.execute("1 2 INTERVAL 3 4 INTERVAL -").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL -")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[-3, -1]");
 
         let mut interp = Interpreter::new();
-        interp.execute("1 2 INTERVAL 3 4 INTERVAL *").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL *")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 8]");
 
         let mut interp = Interpreter::new();
         interp
-            .execute("-1 2 INTERVAL 3 4 INTERVAL *")
+            .execute("'math' IMPORT -1 2 INTERVAL 3 4 INTERVAL *")
             .await
             .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[-4, 8]");
 
         let mut interp = Interpreter::new();
-        interp.execute("2 4 INTERVAL 1 2 INTERVAL /").await.unwrap();
+        interp
+            .execute("'math' IMPORT 2 4 INTERVAL 1 2 INTERVAL /")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 4]");
     }
 
@@ -288,7 +300,7 @@ mod interval_tests {
     async fn test_interval_division_by_zero_interval_bubbles() {
         let mut interp = Interpreter::new();
         interp
-            .execute("1 2 INTERVAL -1 1 INTERVAL /")
+            .execute("'math' IMPORT 1 2 INTERVAL -1 1 INTERVAL /")
             .await
             .unwrap();
         assert!(interp.get_stack().last().unwrap().is_nil());
@@ -297,18 +309,18 @@ mod interval_tests {
     #[tokio::test]
     async fn test_sqrt_exact_cases() {
         let mut interp = Interpreter::new();
-        interp.execute("4 SQRT").await.unwrap();
+        interp.execute("'math' IMPORT 4 SQRT").await.unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "2");
 
         let mut interp = Interpreter::new();
-        interp.execute("9/16 SQRT").await.unwrap();
+        interp.execute("'math' IMPORT 9/16 SQRT").await.unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "3/4");
     }
 
     #[tokio::test]
     async fn test_sqrt_interval_soundness_and_eps() {
         let mut interp = Interpreter::new();
-        interp.execute("2 SQRT").await.unwrap();
+        interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
         let iv = value_to_interval(&interp.get_stack()[0]).expect("sqrt(2) must be interval");
         let two = Fraction::from(2);
         assert!(iv.lo.mul(&iv.lo).le(&two));
@@ -316,7 +328,10 @@ mod interval_tests {
         assert!(iv.lo.le(&iv.hi));
 
         let mut interp_eps = Interpreter::new();
-        interp_eps.execute("2 1/100 SQRT_EPS").await.unwrap();
+        interp_eps
+            .execute("'math' IMPORT 2 1/100 SQRT-EPS")
+            .await
+            .unwrap();
         let iv_eps =
             value_to_interval(&interp_eps.get_stack()[0]).expect("sqrt_eps(2) must be interval");
         assert!(iv_eps.width().le(&Fraction::new(1.into(), 100.into())));
@@ -325,19 +340,25 @@ mod interval_tests {
     #[tokio::test]
     async fn test_sqrt_interval_monotonicity() {
         let mut interp = Interpreter::new();
-        interp.execute("1 4 INTERVAL SQRT").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 4 INTERVAL SQRT")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 2]");
     }
 
     #[tokio::test]
     async fn test_interval_comparison_policy() {
         let mut interp = Interpreter::new();
-        interp.execute("1 2 INTERVAL 3 4 INTERVAL <").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL <")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "1");
 
         let mut interp_undetermined = Interpreter::new();
         interp_undetermined
-            .execute("2 3 INTERVAL 3 4 INTERVAL <")
+            .execute("'math' IMPORT 2 3 INTERVAL 3 4 INTERVAL <")
             .await
             .unwrap();
         let absence = interp_undetermined.get_stack()[0]
@@ -348,7 +369,7 @@ mod interval_tests {
 
         let mut interp_eq = Interpreter::new();
         interp_eq
-            .execute("1 5 INTERVAL 2 4 INTERVAL =")
+            .execute("'math' IMPORT 1 5 INTERVAL 2 4 INTERVAL =")
             .await
             .unwrap();
         assert_eq!(format!("{}", interp_eq.get_stack()[0]), "0");
@@ -357,11 +378,17 @@ mod interval_tests {
     #[tokio::test]
     async fn test_mixed_arithmetic() {
         let mut interp = Interpreter::new();
-        interp.execute("1 2 3 INTERVAL +").await.unwrap();
+        interp
+            .execute("'math' IMPORT 1 2 3 INTERVAL +")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 4]");
 
         let mut interp = Interpreter::new();
-        interp.execute("2 3 5 INTERVAL *").await.unwrap();
+        interp
+            .execute("'math' IMPORT 2 3 5 INTERVAL *")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "[6, 10]");
     }
 }
@@ -579,14 +606,14 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn gt_on_disjoint_intervals_decides_true() {
-        let interp = run("3 4 INTERVAL 1 2 INTERVAL GT").await;
+        let interp = run("'math' IMPORT 3 4 INTERVAL 1 2 INTERVAL GT").await;
         let s = format!("{}", interp.get_stack()[0]);
         assert_eq!(s, "1");
     }
 
     #[tokio::test]
     async fn gte_on_disjoint_intervals_decides_false() {
-        let interp = run("0 1 INTERVAL 2 3 INTERVAL GTE").await;
+        let interp = run("'math' IMPORT 0 1 INTERVAL 2 3 INTERVAL GTE").await;
         let s = format!("{}", interp.get_stack()[0]);
         assert_eq!(s, "0");
     }
@@ -595,7 +622,7 @@ mod ai_first_comparison_tests {
     async fn gt_on_overlapping_intervals_projects_undecidable_nil() {
         let mut interp = Interpreter::new();
         interp
-            .execute("2 3 INTERVAL 2 4 INTERVAL GT")
+            .execute("'math' IMPORT 2 3 INTERVAL 2 4 INTERVAL GT")
             .await
             .unwrap();
         let absence = interp.get_stack()[0]
