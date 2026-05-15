@@ -7,9 +7,9 @@
 
 # Ajisai
 
-Ajisai is an AI-first, vector-oriented, fractional-dataflow language.
+Ajisai is an AI-first, vector-oriented, continued-fraction-dataflow language.
 
-It is designed around one strict promise: **value integrity first**. Every numeric value stays exact, structure is explicit, and behavior is mechanically testable through clear contracts.
+It is designed around one strict promise: **value integrity first**. Every numeric value is an exact real backed by a finite or lazy continued fraction, structure is explicit, and behavior is mechanically testable through clear contracts.
 
 The name *Ajisai* comes from hydrangea, whose scientific meaning is often interpreted as a “water vessel.” This project uses water as its core metaphor for how values move through code.
 
@@ -20,13 +20,15 @@ The name *Ajisai* comes from hydrangea, whose scientific meaning is often interp
 
 ## Why Ajisai (as a water system)
 
-### 1) Exact fractions: water that never evaporates
+### 1) Continued fractions: water with an exact flow history
 
-In Ajisai, all numeric values are treated as exact rationals internally. No hidden floating-point drift, no silent rounding loss.
+Ajisai no longer models its numeric world as “everything is internally a fraction.” Every numeric value is now an **exact real represented internally as a continued fraction**. Finite continued fractions cover the rational values Ajisai has always handled exactly; lazy infinite continued fractions let the runtime represent admitted irrationals such as `MATH@SQRT` results without collapsing them into approximate floats.
 
-Like water that keeps the same volume no matter which channel it passes through, Ajisai values preserve exactness across operations.
+Surface numeric literals still look familiar — integers, fractions, decimals, and scientific notation — but they are convenience forms for the same continued-fraction representation. The canonical AI-readable serialization is the nested continued-fraction display form, not a source literal.
 
-Spec links: [§4.2 Scalar: exact rational arithmetic](SPECIFICATION.md#42-scalar-exact-rational-arithmetic), [§3.2 Numeric literal formats](SPECIFICATION.md#32-numeric-literal-formats)
+Like water that keeps both its volume and its channel history, Ajisai values preserve exactness while exposing a representation that can keep flowing beyond the rational sub-domain. Arithmetic operates on partial quotients directly, so operations do not detour through hidden floating-point approximations or truncated rationals.
+
+Spec links: [§4.2 Scalar: exact-real continued-fraction arithmetic](SPECIFICATION.md#42-scalar-exact-real-continued-fraction-arithmetic), [§3.2 Numeric literal formats](SPECIFICATION.md#32-numeric-literal-formats), [§12.2 Display hints](SPECIFICATION.md#122-display-hints)
 
 ### 2) Bubble/NIL: bubbles that keep the flow inspectable
 
