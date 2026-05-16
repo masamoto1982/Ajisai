@@ -22,9 +22,9 @@ The name *Ajisai* comes from hydrangea, whose scientific meaning is often interp
 
 ### 1) Continued fractions: water with an exact flow history
 
-Ajisai no longer models its numeric world as “everything is internally a fraction.” Every numeric value is now an **exact real represented internally as a continued fraction**. Finite continued fractions cover the rational values Ajisai has always handled exactly; lazy infinite continued fractions let the runtime represent admitted irrationals such as `MATH@SQRT` results without collapsing them into approximate floats.
+Every numeric value in Ajisai is an **exact real represented internally as a continued fraction**. Finite continued fractions cover rational values; lazy infinite continued fractions let the runtime represent admitted irrationals such as `MATH@SQRT` results without collapsing them into approximate floats.
 
-Surface numeric literals still look familiar — integers, fractions, decimals, and scientific notation — but they are convenience forms for the same continued-fraction representation. The canonical AI-readable serialization is the nested continued-fraction display form, not a source literal.
+Surface numeric literals use familiar forms — integers, fractions, decimals, and scientific notation — but they are convenience forms for the same continued-fraction representation. The canonical AI-readable serialization is the nested continued-fraction display form, not a source literal.
 
 Like water that keeps both its volume and its channel history, Ajisai values preserve exactness while exposing a representation that can keep flowing beyond the rational sub-domain. Arithmetic operates on partial quotients directly, so operations do not detour through hidden floating-point approximations or truncated rationals.
 
