@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::control_cond`.
+
 #[cfg(test)]
 mod tests {
     use crate::elastic::ElasticMode;

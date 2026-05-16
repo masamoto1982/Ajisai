@@ -1,3 +1,5 @@
+//! Test suite for `crate::elastic` fast-guarded execution.
+
 use crate::elastic::ElasticMode;
 use crate::interpreter::higher_order::{
     execute_hedged_fold_kernel, execute_hedged_map_kernel, execute_hedged_predicate_kernel,

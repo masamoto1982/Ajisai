@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::datetime`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

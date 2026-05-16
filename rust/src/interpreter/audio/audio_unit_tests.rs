@@ -1,4 +1,4 @@
-
+//! Unit test suite for `crate::interpreter::audio`.
 
 use super::build_audio_structure::build_audio_structure;
 use super::audio_types::{AudioStructure, PlayMode};

@@ -1,3 +1,5 @@
+//! Cross-cutting test suite: performance regression guards.
+
 use crate::interpreter::{Interpreter, RuntimeMetrics};
 use serde::Serialize;
 use std::fs::{create_dir_all, OpenOptions};

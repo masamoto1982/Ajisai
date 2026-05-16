@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::higher_order_fold`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

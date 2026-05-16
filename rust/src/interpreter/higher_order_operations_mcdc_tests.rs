@@ -1,3 +1,5 @@
+//! MC/DC test suite for `crate::interpreter::higher_order`.
+
 // AQ-VER-006: Interpreter execution-semantics MC/DC tests for QL-A boolean
 // decisions.
 //

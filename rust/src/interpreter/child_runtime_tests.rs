@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::child_runtime`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

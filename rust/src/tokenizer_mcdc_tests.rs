@@ -1,3 +1,5 @@
+//! MC/DC test suite for `crate::tokenizer`.
+
 // AQ-VER-002: tokenizer MC/DC tests for QL-B boolean decisions.
 //
 // Scope: `crate::tokenizer::tokenize` — boolean decisions whose

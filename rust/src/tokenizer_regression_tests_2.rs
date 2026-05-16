@@ -1,3 +1,5 @@
+//! Regression test suite for `crate::tokenizer` (continued).
+
 #[cfg(test)]
 mod tokenizer_regression_tests_2 {
     use crate::tokenizer::tokenize;

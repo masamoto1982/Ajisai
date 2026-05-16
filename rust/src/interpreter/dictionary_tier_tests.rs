@@ -1,3 +1,5 @@
+//! Test suite for dictionary tier classification.
+
 #[cfg(test)]
 mod tests {
     use crate::builtins::builtin_specs;

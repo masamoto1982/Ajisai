@@ -1,3 +1,5 @@
+//! Test suite for interpreter execution behavior.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

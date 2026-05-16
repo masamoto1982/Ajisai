@@ -1,3 +1,5 @@
+//! MC/DC test suite for `crate::types::fraction`.
+
 // AQ-VER-001: Fraction MC/DC tests for QL-A boolean decisions.
 //
 // Scope: numeric core (`Fraction`) — boolean decisions whose

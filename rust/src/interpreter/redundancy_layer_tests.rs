@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::redundancy_layer`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::execute_def::op_def_inner;

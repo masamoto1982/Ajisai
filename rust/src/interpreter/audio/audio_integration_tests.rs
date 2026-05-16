@@ -1,4 +1,4 @@
-
+//! Integration test suite for `crate::interpreter::audio`.
 
 use crate::interpreter::Interpreter;
 

@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::quantized_block`.
+
 use crate::interpreter::quantized_block::{
     is_quantizable_block, quantize_code_block, KernelKind, QuantizedArity, QuantizedPurity,
     VtuBackendCandidate, VtuSuitability,

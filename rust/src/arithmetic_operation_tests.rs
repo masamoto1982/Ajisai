@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::arithmetic`.
+
 #[cfg(test)]
 mod ceil_tests {
     use crate::interpreter::Interpreter;

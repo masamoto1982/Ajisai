@@ -1,4 +1,4 @@
-
+//! Test suite for `crate::interpreter::vector_ops`.
 
 use crate::interpreter::Interpreter;
 

@@ -1,3 +1,5 @@
+//! Test suite for tensor dimension-limit enforcement (`crate::interpreter::tensor_ops`).
+
 #[cfg(test)]
 mod dimension_limit_tests {
     use crate::interpreter::Interpreter;

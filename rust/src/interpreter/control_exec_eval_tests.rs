@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::control` (EXEC/EVAL).
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

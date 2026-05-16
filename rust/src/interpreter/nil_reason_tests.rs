@@ -1,3 +1,5 @@
+//! Test suite for NIL reason metadata.
+
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::Interpreter;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};

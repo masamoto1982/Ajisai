@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::json`.
+
 #[cfg(test)]
 mod json_io_tests {
     use crate::interpreter::Interpreter;

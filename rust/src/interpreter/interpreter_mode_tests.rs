@@ -1,3 +1,5 @@
+//! Test suite for interpreter modifier/target modes.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};

@@ -1,3 +1,5 @@
+//! Test suite for interpreter word-definition behavior.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

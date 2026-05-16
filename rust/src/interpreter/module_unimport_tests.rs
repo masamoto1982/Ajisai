@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::modules` unimport behavior.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

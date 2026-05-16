@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::tensor_ops`.
+
 #[cfg(test)]
 mod tensor_ops_integration_tests {
     use crate::interpreter::Interpreter;

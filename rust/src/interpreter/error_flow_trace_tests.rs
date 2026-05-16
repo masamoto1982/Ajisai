@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::error_flow_trace`.
+
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::error_flow_trace::ErrorFlowEventKind;
 use crate::interpreter::Interpreter;

@@ -1,3 +1,5 @@
+//! Test suite for `crate::elastic`.
+
 /// Elastic Engine — MVP test suite
 ///
 /// Covers:

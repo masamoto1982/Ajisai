@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::cast`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::cast::cast_conversions::{op_str, op_num, op_bool, op_chr};

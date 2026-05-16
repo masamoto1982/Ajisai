@@ -1,3 +1,5 @@
+//! Cross-cutting test suite: quantized vs. non-quantized execution differential.
+
 use crate::interpreter::Interpreter;
 use crate::types::Stack;
 

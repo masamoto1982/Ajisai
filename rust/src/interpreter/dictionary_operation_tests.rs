@@ -1,3 +1,5 @@
+//! Test suite for interpreter dictionary operations.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

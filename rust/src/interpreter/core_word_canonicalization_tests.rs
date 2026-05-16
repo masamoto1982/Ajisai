@@ -1,3 +1,5 @@
+//! Test suite for `crate::core_word_aliases` canonicalization.
+
 use crate::interpreter::Interpreter;
 
 async fn assert_same_stack(left_code: &str, right_code: &str) {

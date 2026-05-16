@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::compiled_plan`.
+
 use crate::interpreter::{compile_word_definition, is_plan_valid, CompiledOp, Interpreter};
 use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, WordDefinition};
 use std::collections::HashSet;

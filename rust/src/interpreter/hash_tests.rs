@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::hash`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;

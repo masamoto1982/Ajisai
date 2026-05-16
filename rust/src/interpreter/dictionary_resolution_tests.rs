@@ -1,3 +1,5 @@
+//! Test suite for `crate::interpreter::resolve_word`.
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
