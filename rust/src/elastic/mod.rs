@@ -25,7 +25,6 @@ pub use fallback_bridge::{FallbackBridge, FallbackLogEntry, FallbackReason};
 pub use purity_table::{infer_purity, purity_by_name, EvalCost, Purity, PurityInfo};
 
 #[cfg(test)]
-#[path = "elastic-engine-tests.rs"]
 mod elastic_engine_tests;
 
 pub use hedged_executor::validate_winner as validate_hedged_winner;

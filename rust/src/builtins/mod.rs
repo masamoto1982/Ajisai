@@ -1,6 +1,4 @@
-#[path = "builtin-word-definitions.rs"]
 mod builtin_word_definitions;
-#[path = "builtin-word-details.rs"]
 mod builtin_word_details;
 
 pub use builtin_word_definitions::{

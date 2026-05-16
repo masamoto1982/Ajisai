@@ -1,10 +1,7 @@
 
 
-#[path = "audio-types.rs"]
 mod audio_types;
-#[path = "execute-audio-commands.rs"]
 mod execute_audio_commands;
-#[path = "build-audio-structure.rs"]
 mod build_audio_structure;
 
 pub use audio_types::{
@@ -19,8 +16,6 @@ pub use execute_audio_commands::{
 pub(crate) use audio_types::lookup_play_mode;
 
 #[cfg(test)]
-#[path = "audio-unit-tests.rs"]
 mod audio_unit_tests;
 #[cfg(test)]
-#[path = "audio-integration-tests.rs"]
 mod audio_integration_tests;

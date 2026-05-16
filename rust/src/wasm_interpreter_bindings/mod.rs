@@ -2,13 +2,8 @@ use crate::interpreter::Interpreter;
 use crate::types::Token;
 use wasm_bindgen::prelude::*;
 
-#[path = "wasm-value-conversion.rs"]
 pub(crate) mod wasm_value_conversion;
-
-#[path = "wasm-interpreter-execution.rs"]
 mod wasm_interpreter_execution;
-
-#[path = "wasm-interpreter-state.rs"]
 mod wasm_interpreter_state;
 
 #[wasm_bindgen]
