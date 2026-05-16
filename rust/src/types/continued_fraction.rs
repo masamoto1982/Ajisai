@@ -2,6 +2,7 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
+use std::sync::Arc;
 
 // Safety bound on internal Gosper ingestion. The classical Gosper
 // transforms terminate (or emit) after a bounded number of input
@@ -24,8 +25,11 @@ pub enum ExactReal {
     /// Unevaluated Gosper transform of one or two operand CFs per
     /// SPEC §4.2.2. Constructed only by the arithmetic methods, which
     /// fold pure-rational operands through the `Fraction` fast path
-    /// instead of building a Gosper node.
-    Gosper(Box<Gosper>),
+    /// instead of building a Gosper node. Held behind an `Arc` so
+    /// that cloning an `ExactReal` — which the arithmetic methods do
+    /// for every operand they fold into a new transform — is O(1)
+    /// instead of a deep copy of the operand's Gosper tree.
+    Gosper(Arc<Gosper>),
 }
 
 /// Möbius (unary) or bihomographic (binary) Gosper state with BigInt
@@ -680,6 +684,57 @@ impl ExactReal {
         }
         best.map(|(h, k)| Fraction::new(h, k))
     }
+
+    /// Pre-period and period blocks of an `AlgebraicSqrt`'s canonical
+    /// continued fraction.
+    ///
+    /// By Lagrange's theorem the CF of a quadratic surd is eventually
+    /// periodic (SPEC §4.2.2). This walks the surd state `(P, Q)`
+    /// until it repeats and returns `(pre_period, period)`: the
+    /// partial quotients emitted before the cycle, and one full
+    /// cycle. The canonical CF is `pre_period` followed by `period`
+    /// repeated forever, so the pair is a finite exact description of
+    /// the otherwise-infinite expansion — and lets the N-th partial
+    /// quotient be read in O(1) by indexing into `period`.
+    ///
+    /// Returns `None` for any representation other than
+    /// `AlgebraicSqrt`, and (defensively) for a radicand whose period
+    /// exceeds the scan cap.
+    pub fn sqrt_cf_period(&self) -> Option<(Vec<BigInt>, Vec<BigInt>)> {
+        // A valid quadratic surd always cycles within a bounded
+        // number of states, but a pathologically large radicand could
+        // make the period impractically long; bail out rather than
+        // allocate without bound.
+        const PERIOD_SCAN_CAP: usize = 1 << 16;
+
+        let radicand = self.sqrt_radicand()?;
+        let p = radicand.numerator();
+        let q = radicand.denominator();
+        let big_d = &p * &q;
+        let sqrt_floor = big_d.sqrt();
+
+        let mut p_i = BigInt::zero();
+        let mut q_i = q;
+        let mut quotients: Vec<BigInt> = Vec::new();
+        let mut seen: Vec<(BigInt, BigInt)> = Vec::new();
+
+        for _ in 0..PERIOD_SCAN_CAP {
+            if let Some(start) =
+                seen.iter().position(|(sp, sq)| *sp == p_i && *sq == q_i)
+            {
+                let period = quotients.split_off(start);
+                return Some((quotients, period));
+            }
+            seen.push((p_i.clone(), q_i.clone()));
+            let a_i: BigInt = (&p_i + &sqrt_floor).div_floor(&q_i);
+            let next_p: BigInt = &a_i * &q_i - &p_i;
+            let next_q: BigInt = (&big_d - &next_p * &next_p) / &q_i;
+            quotients.push(a_i);
+            p_i = next_p;
+            q_i = next_q;
+        }
+        None
+    }
 }
 
 // =========================================================================
@@ -706,7 +761,7 @@ fn mobius_apply(a: BigInt, b: BigInt, c: BigInt, d: BigInt, x: ExactReal) -> Exa
         }
         return ExactReal::Rational(Fraction::new(num, den));
     }
-    ExactReal::Gosper(Box::new(Gosper::Mobius { a, b, c, d, x }))
+    ExactReal::Gosper(Arc::new(Gosper::Mobius { a, b, c, d, x }))
 }
 
 fn add_rational_to_lazy(r: &Fraction, lazy: ExactReal) -> ExactReal {
@@ -733,7 +788,7 @@ fn bihom_apply(
     x: ExactReal,
     y: ExactReal,
 ) -> ExactReal {
-    ExactReal::Gosper(Box::new(Gosper::Bihomographic {
+    ExactReal::Gosper(Arc::new(Gosper::Bihomographic {
         a,
         b,
         c,
@@ -1024,6 +1079,52 @@ enum CfStep {
     Exhausted,
 }
 
+/// Divide the four Möbius coefficients by their common GCD in place.
+///
+/// The value `(a·x + b) / (c·x + d)` is invariant under scaling every
+/// coefficient by the same nonzero factor, so this renormalization
+/// keeps coefficients small across repeated ingestion without
+/// changing the emitted partial quotients. Without it the
+/// coefficients grow multiplicatively with every absorbed quotient,
+/// inflating every subsequent BigInt operation.
+fn normalize_mobius(a: &mut BigInt, b: &mut BigInt, c: &mut BigInt, d: &mut BigInt) {
+    let common = a.gcd(b).gcd(&c.gcd(d));
+    if common.is_zero() || common.is_one() {
+        return;
+    }
+    *a = &*a / &common;
+    *b = &*b / &common;
+    *c = &*c / &common;
+    *d = &*d / &common;
+}
+
+/// Divide the eight bihomographic coefficients by their common GCD in
+/// place; see `normalize_mobius`.
+#[allow(clippy::too_many_arguments)]
+fn normalize_bihom(
+    a: &mut BigInt,
+    b: &mut BigInt,
+    c: &mut BigInt,
+    d: &mut BigInt,
+    e: &mut BigInt,
+    f: &mut BigInt,
+    g: &mut BigInt,
+    h: &mut BigInt,
+) {
+    let common = a.gcd(b).gcd(&c.gcd(d)).gcd(&e.gcd(f)).gcd(&g.gcd(h));
+    if common.is_zero() || common.is_one() {
+        return;
+    }
+    *a = &*a / &common;
+    *b = &*b / &common;
+    *c = &*c / &common;
+    *d = &*d / &common;
+    *e = &*e / &common;
+    *f = &*f / &common;
+    *g = &*g / &common;
+    *h = &*h / &common;
+}
+
 /// Run the unary Gosper loop until it emits, transitions to a
 /// rational tail, or exhausts the safety budget. Returns `Some(q)`
 /// when a partial quotient is emitted (state already updated); `None`
@@ -1097,6 +1198,7 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
                 *b = new_b;
                 *c = new_c;
                 *d = new_d;
+                normalize_mobius(a, b, c, d);
             }
             CfStep::Ended => {
                 *x_done = true;
@@ -1272,6 +1374,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *g = new_g;
                     *h = new_h;
                     *x_consumed += 1;
+                    normalize_bihom(a, b, c, d, e, f, g, h);
                 }
                 CfStep::Ended => {
                     *x_done = true;
@@ -1304,6 +1407,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *g = new_g;
                     *h = new_h;
                     *y_consumed += 1;
+                    normalize_bihom(a, b, c, d, e, f, g, h);
                 }
                 CfStep::Ended => {
                     *y_done = true;
@@ -2512,5 +2616,81 @@ mod tests {
         assert_eq!(rational(1, 2).best_rational_approximation(&bi(0)), None);
         let nil = ExactReal::Rational(Fraction::nil());
         assert_eq!(nil.best_rational_approximation(&bi(10)), None);
+    }
+
+    // === Phase 7: Gosper renormalization, sqrt period, Arc clone ===
+
+    #[test]
+    fn deep_mobius_chain_expands_correctly_under_normalization() {
+        // A left-deep chain of Möbius transforms stresses coefficient
+        // growth; GCD renormalization must not change the emitted CF.
+        // ((√2 + 1) + 1) + 1 = √2 + 3 = [4; 2, 2, 2, …].
+        let v = sqrt_of(2, 1)
+            .add(&rational(1, 1))
+            .add(&rational(1, 1))
+            .add(&rational(1, 1));
+        assert_eq!(v.partial_quotients_bounded(6), terms(&[4, 2, 2, 2, 2, 2]));
+    }
+
+    #[test]
+    fn sqrt_cf_period_known_values() {
+        assert_eq!(
+            sqrt_of(2, 1).sqrt_cf_period(),
+            Some((terms(&[1]), terms(&[2])))
+        );
+        assert_eq!(
+            sqrt_of(3, 1).sqrt_cf_period(),
+            Some((terms(&[1]), terms(&[1, 2])))
+        );
+        assert_eq!(
+            sqrt_of(7, 1).sqrt_cf_period(),
+            Some((terms(&[2]), terms(&[1, 1, 1, 4])))
+        );
+    }
+
+    #[test]
+    fn sqrt_cf_period_reconstructs_streamed_expansion() {
+        for (num, den) in [(2, 1), (3, 1), (7, 1), (13, 1), (2, 3), (1, 2)] {
+            let v = sqrt_of(num, den);
+            let (pre, period) = v.sqrt_cf_period().expect("algebraic sqrt");
+            assert!(!period.is_empty(), "period must be non-empty");
+            let n = 24;
+            let mut rebuilt: Vec<BigInt> = pre.clone();
+            while rebuilt.len() < n {
+                rebuilt.extend(period.iter().cloned());
+            }
+            rebuilt.truncate(n);
+            assert_eq!(
+                rebuilt,
+                v.partial_quotients_bounded(n),
+                "period reconstruction for √({num}/{den})"
+            );
+        }
+    }
+
+    #[test]
+    fn sqrt_cf_period_none_for_non_sqrt_representations() {
+        assert_eq!(rational(3, 2).sqrt_cf_period(), None);
+        // A perfect-square radicand collapses to Rational, not
+        // AlgebraicSqrt.
+        let perfect =
+            ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
+        assert_eq!(perfect.sqrt_cf_period(), None);
+        // A Gosper value is not an AlgebraicSqrt either.
+        let gosper = sqrt_of(2, 1).add(&rational(1, 1));
+        assert_eq!(gosper.sqrt_cf_period(), None);
+    }
+
+    #[test]
+    fn gosper_value_clone_preserves_equality_and_expansion() {
+        // After the Arc migration, cloning a Gosper-backed value is a
+        // refcount bump; it must still behave as a deep-equal copy.
+        let v = sqrt_of(2, 1).add(&sqrt_of(3, 1));
+        let cloned = v.clone();
+        assert_eq!(v, cloned);
+        assert_eq!(
+            v.partial_quotients_bounded(10),
+            cloned.partial_quotients_bounded(10)
+        );
     }
 }
