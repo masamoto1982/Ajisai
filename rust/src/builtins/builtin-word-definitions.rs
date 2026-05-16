@@ -1,3 +1,5 @@
+use crate::coreword_registry::{NilPolicy, Partiality, SafetyLevel, WordPurity};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum BuiltinDetailGroup {
@@ -136,13 +138,23 @@ pub struct BuiltinSpec {
     pub side_effects: &'static [&'static str],
     pub modifier_interaction: Option<&'static str>,
     pub related: &'static [&'static str],
-    /// Must agree with the §7.14 contract metadata in
-    /// `coreword_registry::apply_contract_overrides`. The mapping is:
+    /// Must agree with the `safety_level` field below. The mapping is:
     ///   safety_level A or B  -> "stable"
     ///   safety_level C or D  -> "experimental"
     ///   safety_level Quarantined -> "experimental"
     /// A consistency test asserts this invariant.
     pub stability: &'static str,
+
+    // §7.14 contract metadata. Canonical per-word source of truth; the
+    // coreword registry reads these directly. `effects` is non-empty only
+    // for Observable / Effectful words.
+    pub purity: WordPurity,
+    pub effects: &'static [&'static str],
+    pub deterministic: bool,
+    pub safe_preview: bool,
+    pub partiality: Partiality,
+    pub nil_policy: NilPolicy,
+    pub safety_level: SafetyLevel,
 }
 
 const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
@@ -164,6 +176,13 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     modifier_interaction: None,
     related: &[],
     stability: "stable",
+    purity: WordPurity::Pure,
+    effects: &[],
+    deterministic: true,
+    safe_preview: true,
+    partiality: Partiality::Total,
+    nil_policy: NilPolicy::Passthrough,
+    safety_level: SafetyLevel::A,
 };
 
 const BUILTIN_SPECS: &[BuiltinSpec] = &[
@@ -195,6 +214,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         side_effects: &["Sets the next-word target mode."],
         related: &["STAK", "EAT", "KEEP", "SAFE"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -224,6 +244,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         side_effects: &["Sets the next-word target mode."],
         related: &["TOP", "EAT", "KEEP", "SAFE"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -251,6 +272,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         side_effects: &["Sets the next-word consumption mode."],
         related: &["KEEP", "TOP", "STAK"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -278,6 +300,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         side_effects: &["Sets the next-word consumption mode."],
         related: &["EAT", "TOP", "STAK"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -306,6 +329,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         side_effects: &["Enables safe mode for the next word."],
         related: &["FORC", "OR-NIL"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
 
@@ -337,6 +361,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Produces a Bubble/NIL when the index is out of range.\nRaises StructureError when the target is not indexable or the index is not numeric.",
         ),
         related: &["INSERT", "REPLACE", "REMOVE", "SAFE"],
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -366,6 +393,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Out-of-range index raises IndexOutOfBounds."),
         related: &["REPLACE", "REMOVE", "GET"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -393,6 +423,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Out-of-range index raises IndexOutOfBounds."),
         related: &["INSERT", "REMOVE", "GET"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -420,6 +453,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Out-of-range index raises IndexOutOfBounds."),
         related: &["INSERT", "REPLACE", "TAKE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -446,6 +482,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["SHAPE", "RANK"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -472,6 +511,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("|n| larger than length raises IndexOutOfBounds."),
         related: &["SPLIT", "REVERSE", "LENGTH"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -500,6 +542,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Sum of sizes exceeding length raises ShapeMismatch.",
         ),
         related: &["TAKE", "CONCAT", "REORDER"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -525,6 +570,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["SPLIT", "TAKE", "REVERSE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -551,6 +599,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["REORDER", "RANGE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -581,6 +632,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Non-integer or NIL operand raises RejectsNil.",
         ),
         related: &["REVERSE", "MAP"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -607,6 +661,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Out-of-range index raises IndexOutOfBounds."),
         related: &["GET", "SHAPE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -632,6 +689,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Insufficient stack depth raises StackUnderflow."),
         related: &["RANGE", "FILL"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
 
@@ -657,6 +717,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ TRUE ]"),
         }],
         related: &["FALSE", "NIL", "AND", "OR"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -680,6 +741,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ FALSE ]"),
         }],
         related: &["TRUE", "NIL", "NOT"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -707,6 +769,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ NIL ]"),
         }],
         related: &["TRUE", "FALSE", "OR-NIL", "SAFE"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
 
@@ -737,6 +800,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Non-string operand raises TypeError.\nNIL operand raises RejectsNil.",
         ),
         related: &["JOIN", "STR"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -763,6 +829,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Non-string element raises TypeError."),
         related: &["CHARS", "STR"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -791,6 +860,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Produces a Bubble/NIL when text cannot be parsed as a number.\nRaises StructureError when the input shape is not convertible text.",
         ),
         related: &["STR", "BOOL", "OR-NIL"],
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -817,6 +889,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["NUM", "BOOL", "CHR"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -843,6 +918,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["TRUE", "FALSE", "NOT"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -872,6 +950,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Produces a Bubble/NIL when the code point is invalid.\nRaises StructureError when the operand is not numeric.",
         ),
         related: &["CHARS", "STR"],
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
 
@@ -992,6 +1073,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Produces a Bubble/NIL on division by zero.\nRaises StructureError when operands are not numeric.",
         ),
         related: &["ADD", "SUB", "MUL", "MOD"],
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1248,6 +1332,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("(no change)"),
         }],
         related: &["COND"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1278,6 +1363,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("No matching clause raises NoMatch."),
         related: &["IDLE", "MAP", "EXEC"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
 
@@ -1306,6 +1394,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ 2 4 6 ]"),
         }],
         related: &["MAP", "FILTER"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1340,6 +1429,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             },
         ],
         related: &["SAFE", "NIL"],
+        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
     },
 
@@ -1368,6 +1458,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Block failure propagates unless SAFE is active."),
         related: &["FILTER", "FOLD", "SCAN"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1397,6 +1490,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Predicate must return a boolean; otherwise TypeError.",
         ),
         related: &["MAP", "ANY", "ALL"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1423,6 +1519,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ 10 ]"),
         }],
         related: &["SCAN", "MAP"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1452,6 +1551,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Block must return a 2-vector or NIL; otherwise TypeError.",
         ),
         related: &["FOLD", "SCAN"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1477,6 +1579,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ TRUE ]"),
         }],
         related: &["ALL", "FILTER"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1502,6 +1607,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ TRUE ]"),
         }],
         related: &["ANY", "FILTER"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1527,6 +1635,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ 1 ]"),
         }],
         related: &["ANY", "ALL", "FILTER"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1552,6 +1663,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ 1 3 6 10 ]"),
         }],
         related: &["FOLD", "MAP"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
 
@@ -1583,6 +1697,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["STR"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["console-write"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::PreservesReason,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
 
@@ -1614,6 +1735,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         side_effects: &["None at runtime; DEF-time rewrite marker only."],
         stability: "stable",
         modifier_interaction: None,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1645,6 +1769,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["DEL", "FORC", "LOOKUP"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-write", "dictionary-register"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1676,6 +1807,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["DEF", "FORC"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-delete"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1704,6 +1842,12 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         side_effects: &["Modifies the editor text area."],
         related: &["DEF", "DEL"],
         stability: "experimental",
+        purity: WordPurity::Observable,
+        effects: &["dictionary-read"],
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::C,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1738,6 +1882,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["DEF", "DEL", "SAFE"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["interpreter-mode-write"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
 
@@ -1766,6 +1917,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["RANK", "RESHAPE", "TRANSPOSE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1792,6 +1946,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("NIL operand raises RejectsNil."),
         related: &["SHAPE", "RESHAPE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1821,6 +1978,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Total elements must match the shape product; otherwise\nShapeMismatch.",
         ),
         related: &["SHAPE", "TRANSPOSE", "FILL"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1846,6 +2006,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ [ 1 3 ] [ 2 4 ] ]"),
         }],
         related: &["SHAPE", "RESHAPE"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -1871,6 +2034,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             result: Some("[ [ 0 0 ] [ 0 0 ] ]"),
         }],
         related: &["RESHAPE", "RANGE", "COLLECT"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
 
@@ -1899,6 +2065,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         }],
         failure: Some("Modulo by zero raises DivisionByZero."),
         related: &["DIV", "ADD"],
+        partiality: Partiality::Partial,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2003,6 +2171,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "Inner failures propagate as the originating error.",
         ),
         related: &["EVAL", "DEF"],
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2032,6 +2203,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["EXEC", "DEF"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["code-execution"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
 
@@ -2062,6 +2240,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["IMPORT-ONLY", "DEF"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-import"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2090,6 +2275,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["IMPORT"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-import-only"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
 
@@ -2119,6 +2311,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["IMPORT", "IMPORT-ONLY", "UNIMPORT-ONLY"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-unimport"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2147,6 +2346,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["IMPORT", "IMPORT-ONLY", "UNIMPORT"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["dictionary-unimport-only"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
     },
 
@@ -2179,6 +2385,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
             "AWAIT", "STATUS", "KILL", "MONITOR", "SUPERVISE",
         ],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2209,6 +2422,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["SPAWN", "STATUS", "KILL"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2238,6 +2458,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["SPAWN", "AWAIT", "KILL"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2266,6 +2493,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["SPAWN", "AWAIT", "STATUS"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2294,6 +2528,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["SPAWN", "SUPERVISE"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
     BuiltinSpec {
@@ -2322,6 +2563,13 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ],
         related: &["SPAWN", "MONITOR"],
         stability: "experimental",
+        purity: WordPurity::Effectful,
+        effects: &["runtime-control"],
+        deterministic: false,
+        safe_preview: false,
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::Quarantined,
         ..SPEC_DEFAULT
     },
 ];
