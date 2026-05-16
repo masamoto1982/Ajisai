@@ -184,7 +184,7 @@ fn apply_module_to_core_listings(meta: &mut CorewordMetadata) {
     }
 }
 
-pub fn get_builtin_word_registry() -> Vec<CorewordMetadata> {
+fn build_builtin_word_registry() -> Vec<CorewordMetadata> {
     let mut registry: Vec<CorewordMetadata> = builtin_specs()
         .iter()
         .map(core_word_metadata_from_spec)
@@ -198,6 +198,13 @@ pub fn get_builtin_word_registry() -> Vec<CorewordMetadata> {
     }
     registry.extend(module_entries);
     registry
+}
+
+/// The complete built-in word registry. Built once on first access and
+/// cached for the process lifetime.
+pub fn get_builtin_word_registry() -> &'static [CorewordMetadata] {
+    static REGISTRY: std::sync::OnceLock<Vec<CorewordMetadata>> = std::sync::OnceLock::new();
+    REGISTRY.get_or_init(build_builtin_word_registry)
 }
 
 /// Metadata lookup with namespace-aware disambiguation.
@@ -214,9 +221,12 @@ pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     let registry = get_builtin_word_registry();
 
     if let Some((module, word)) = upper.split_once('@') {
-        return registry.into_iter().find(|m| {
-            m.name == word && m.canonical_module().map(|cm| cm == module).unwrap_or(false)
-        });
+        return registry
+            .iter()
+            .find(|m| {
+                m.name == word && m.canonical_module().map(|cm| cm == module).unwrap_or(false)
+            })
+            .cloned();
     }
 
     if let Some(core) = registry
@@ -225,7 +235,7 @@ pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     {
         return Some(core.clone());
     }
-    registry.into_iter().find(|m| m.name == upper)
+    registry.iter().find(|m| m.name == upper).cloned()
 }
 
 /// Alias of `get_coreword_metadata`. Use this in new code; the registry
@@ -237,15 +247,17 @@ pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
 pub fn get_words_by_category(category: &str) -> Vec<CorewordMetadata> {
     let needle = category.to_lowercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.category == needle)
+        .cloned()
         .collect()
 }
 
 pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.purity == purity)
+        .cloned()
         .collect()
 }
 
@@ -253,8 +265,9 @@ pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
 /// boundary words).
 pub fn get_core_listed_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.listed_in_core)
+        .cloned()
         .collect()
 }
 
@@ -263,13 +276,14 @@ pub fn get_core_listed_words() -> Vec<CorewordMetadata> {
 pub fn get_module_listed_words(module_name: &str) -> Vec<CorewordMetadata> {
     let needle = module_name.to_uppercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| {
             word.canonical_module()
                 .map(|m| m == needle)
                 .unwrap_or(false)
                 || word.listed_in_modules.iter().any(|m| *m == needle)
         })
+        .cloned()
         .collect()
 }
 
@@ -279,15 +293,17 @@ pub fn get_module_listed_words(module_name: &str) -> Vec<CorewordMetadata> {
 pub fn get_category_listed_words(category: &str) -> Vec<CorewordMetadata> {
     let needle = category.to_uppercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.listed_in_categories.iter().any(|c| *c == needle))
+        .cloned()
         .collect()
 }
 
 pub fn get_canonical_core_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.is_canonical_core())
+        .cloned()
         .collect()
 }
 
@@ -296,19 +312,21 @@ pub fn get_canonical_core_words() -> Vec<CorewordMetadata> {
 pub fn get_canonical_module_words(module_name: Option<&str>) -> Vec<CorewordMetadata> {
     let needle = module_name.map(|m| m.to_uppercase());
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| match (&needle, word.canonical_module()) {
             (Some(n), Some(m)) => n == m,
             (None, Some(_)) => true,
             _ => false,
         })
+        .cloned()
         .collect()
 }
 
 pub fn get_boundary_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.is_boundary_word())
+        .cloned()
         .collect()
 }
 
