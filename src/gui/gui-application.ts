@@ -54,7 +54,18 @@ export interface GUI {
     readonly extractExecutionController: () => ExecutionController;
 }
 
+// The full word list only changes when the vocabulary changes (after an
+// execution). Without this cache the whole set — including several WASM
+// round-trips per imported module — was rebuilt on every keystroke.
+let autocompleteWordsCache: string[] | null = null;
+
+const invalidateAutocompleteCache = (): void => {
+    autocompleteWordsCache = null;
+};
+
 const collectAutocompleteWords = (): string[] => {
+    if (autocompleteWordsCache) return autocompleteWordsCache;
+
     const interpreter = INTERPRETER_CLIENT.getOptional();
     if (!interpreter) return [];
 
@@ -88,7 +99,8 @@ const collectAutocompleteWords = (): string[] => {
     } catch {  }
 
     const allWords: Set<string> = new Set([...coreWords, ...userWords, ...moduleWords]);
-    return Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
+    autocompleteWordsCache = Array.from(allWords).sort((a: string, b: string) => a.localeCompare(b));
+    return autocompleteWordsCache;
 };
 
 export const createGUI = (): GUI => {
@@ -129,6 +141,8 @@ export const createGUI = (): GUI => {
 
     const updateAllDisplays = (): void => {
         if (!INTERPRETER_CLIENT.getOptional()) return;
+
+        invalidateAutocompleteCache();
 
         try {
             display.renderStack(INTERPRETER_CLIENT.collectStack());

@@ -215,6 +215,7 @@ export const createModuleTabManager = (
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
             const prefix = `${moduleSheet.moduleName}@`;
 
+            const fragment = document.createDocumentFragment();
             matched.forEach(wordData => {
                 const name = wordData[0];
                 const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
@@ -242,8 +243,9 @@ Right-click to unimport this word.`;
                     }])
                 );
 
-                wordsDisplay.appendChild(button);
+                fragment.appendChild(button);
             });
+            wordsDisplay.appendChild(fragment);
 
             if (searchFilter && matched.length === 0) {
                 wordsDisplay.classList.add('is-empty');

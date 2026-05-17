@@ -142,8 +142,9 @@ export const createEditor = (
     };
 
     const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
-        const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
-        const paddingTop = parseFloat(getComputedStyle(el).paddingTop) || 0;
+        const style = getComputedStyle(el);
+        const lineHeight = parseFloat(style.lineHeight) || 20;
+        const paddingTop = parseFloat(style.paddingTop) || 0;
         const text = el.value.substring(0, el.selectionStart);
         const lines = text.split('\n');
         const lineIndex = lines.length - 1;
