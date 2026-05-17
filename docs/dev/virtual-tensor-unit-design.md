@@ -96,9 +96,8 @@ verbs like `energy_saved`.
 
 ## Phase II — Dense Vector representation (in progress)
 
-Phase II is now under way. See `docs/dev/vtu-phase-ii-handover.md` for the
-multi-PR plan. The first concrete change is a parallel `Tensor` variant
-on `ValueData`:
+Phase II is now under way. The first concrete change is a parallel
+`Tensor` variant on `ValueData`:
 
 - `Vector(Rc<Vec<Value>>)` remains the **nested** form — used for mixed-type
   vectors and any tree-shaped data.
