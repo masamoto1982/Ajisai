@@ -13,7 +13,7 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
+                    if (0..=0x10FFFF).contains(&n) {
                         char::from_u32(n as u32)
                     } else {
                         None
@@ -24,7 +24,7 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..
-            } => children.iter().flat_map(|c| collect_chars(c)).collect(),
+            } => children.iter().flat_map(collect_chars).collect(),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .filter_map(|f| {
@@ -59,11 +59,14 @@ fn is_string_like(val: &Value) -> bool {
     fn check_codepoints(val: &Value) -> bool {
         match &val.data {
             ValueData::Nil => false,
-            ValueData::Scalar(f) => f.to_i64().map(|n| n >= 0 && n <= 0x10FFFF).unwrap_or(false),
+            ValueData::Scalar(f) => f
+                .to_i64()
+                .map(|n| (0..=0x10FFFF).contains(&n))
+                .unwrap_or(false),
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..
-            } => children.iter().all(|c| check_codepoints(c)),
+            } => children.iter().all(check_codepoints),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .all(|f| f.to_i64().map(|n| (0..=0x10FFFF).contains(&n)).unwrap_or(false)),

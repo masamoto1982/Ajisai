@@ -14,25 +14,18 @@ pub(crate) struct UserWordData {
     pub(crate) description: Option<String>,
 }
 
-pub(crate) fn bracket_chars_for_depth(depth: usize) -> (char, char) {
-    let _ = depth;
-    ('[', ']')
-}
-
+#[cfg(test)]
 pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
-    fn build_level(shape: &[usize], depth: usize) -> String {
-        let (open, close) = bracket_chars_for_depth(depth);
+    fn build_level(shape: &[usize]) -> String {
         if shape.len() == 1 {
-            let empty = format!("{} {}", open, close);
-            (0..shape[0])
-                .map(|_| empty.as_str())
+            let empty = "[ ]";
+            std::iter::repeat_n(empty, shape[0])
                 .collect::<Vec<_>>()
                 .join(" ")
         } else {
-            let inner = build_level(&shape[1..], depth + 1);
-            let one_element = format!("{} {} {}", open, inner, close);
-            (0..shape[0])
-                .map(|_| one_element.as_str())
+            let inner = build_level(&shape[1..]);
+            let one_element = format!("[ {} ]", inner);
+            std::iter::repeat_n(one_element.as_str(), shape[0])
                 .collect::<Vec<_>>()
                 .join(" ")
         }
@@ -40,11 +33,7 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
     if shape.is_empty() {
         return "[ ]".to_string();
     }
-    build_level(shape, 0)
-}
-
-pub(crate) fn is_vector_value(val: &Value) -> bool {
-    val.is_vector()
+    build_level(shape)
 }
 
 fn fraction_display_source_from_js(num_obj: &js_sys::Object) -> Option<String> {
