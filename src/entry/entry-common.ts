@@ -53,11 +53,12 @@ export async function initializeApplication(): Promise<void> {
         console.error('[Main] Application startup failed:', error);
         const outputDisplay = document.getElementById('output-display');
         if (outputDisplay) {
-            outputDisplay.innerHTML = `
-                <span style="color: #dc3545; font-weight: bold;">
-                    Application startup failed: ${(error as Error).message}
-                </span>
-            `;
+            outputDisplay.innerHTML = '';
+            const errorSpan = document.createElement('span');
+            errorSpan.style.color = '#dc3545';
+            errorSpan.style.fontWeight = 'bold';
+            errorSpan.textContent = `Application startup failed: ${(error as Error).message}`;
+            outputDisplay.appendChild(errorSpan);
         }
     }
 }
