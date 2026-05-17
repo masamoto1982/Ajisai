@@ -212,9 +212,13 @@ export class WorkerManager {
     }
 
     private processQueue(): void {
-        const availableWorker = this.workers.find(w => !w.busy);
-        const nextTask = this.taskQueue.shift();
-        if (availableWorker && nextTask) {
+        // Drain as many queued tasks as there are idle workers. Assigning only
+        // one task per call serialized hedged execution: the two strategies
+        // were queued together but ran one after another instead of racing.
+        while (this.taskQueue.length > 0) {
+            const availableWorker = this.workers.find(w => !w.busy);
+            if (!availableWorker) break;
+            const nextTask = this.taskQueue.shift()!;
             this.assignTaskToWorker(availableWorker, nextTask);
         }
     }
