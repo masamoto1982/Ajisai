@@ -22,7 +22,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
+                    if (0..=0x10FFFF).contains(&n) {
                         char::from_u32(n as u32)
                     } else {
                         None
@@ -33,7 +33,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..
-            } => children.iter().flat_map(|c| collect_chars(c)).collect(),
+            } => children.iter().flat_map(collect_chars).collect(),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .filter_map(|f| {

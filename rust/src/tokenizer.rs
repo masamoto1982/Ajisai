@@ -380,10 +380,6 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     QuoteParseResult::Unclosed
 }
 
-fn is_delimiter(c: char) -> bool {
-    c.is_whitespace() || is_special_char(c)
-}
-
 fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace() || (is_special_char(c) && c != '\'')
 }

@@ -15,7 +15,7 @@ fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
 
     let denom_bits = denominator.bits() as usize;
     let total_bits = denom_bits + 64;
-    let bytes = (total_bits + 7) / 8;
+    let bytes = total_bits.div_ceil(8);
 
     let mut buf = vec![0u8; bytes];
     getrandom::getrandom(&mut buf).map_err(|e| {

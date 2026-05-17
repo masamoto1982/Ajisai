@@ -96,7 +96,7 @@ fn collect_cond_pairs_from_stack(
         return Ok(pairs);
     }
 
-    if collected_blocks.len() % 2 != 0 {
+    if !collected_blocks.len().is_multiple_of(2) {
         return Err(AjisaiError::from(format!(
             "COND: expected even number of code blocks (guard/body pairs), got {}",
             collected_blocks.len()

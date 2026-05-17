@@ -43,7 +43,7 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool 
             return false
         }
     };
-    children.iter().all(|child| check_char_scalar(child))
+    children.iter().all(check_char_scalar)
 }
 
 fn check_char_scalar(child: &Value) -> bool {
@@ -58,7 +58,7 @@ fn check_char_scalar(child: &Value) -> bool {
         }
     };
     let n: i64 = match f.to_i64() {
-        Some(n) if n >= 0 && n <= 0x10FFFF => n,
+        Some(n) if (0..=0x10FFFF).contains(&n) => n,
         Some(_) => return false,
         None => return false,
     };
@@ -163,12 +163,13 @@ pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {
 pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
     let f: &Fraction = val.as_scalar()?;
     let code: i64 = f.to_i64()?;
-    if code < 0 || code > 0x10FFFF {
+    if !(0..=0x10FFFF).contains(&code) {
         return None;
     }
     char::from_u32(code as u32)
 }
 
+#[cfg(test)]
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
     format_value_to_string_repr_with_hint(value, DisplayHint::Auto)
 }
