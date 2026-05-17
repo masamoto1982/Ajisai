@@ -184,6 +184,36 @@ export const createVocabularyManager = (
     let searchFilter = '';
     let cachedUserWords: Array<[string, string, string | null, boolean]> = [];
     let selectedDictionary = 'DEMO';
+    // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
+    // sorting them on every search keystroke was pure waste.
+    let sortedCoreWordsCache: unknown[][] | null = null;
+
+    const getSortedCoreWords = (): unknown[][] => {
+        if (sortedCoreWordsCache) return sortedCoreWordsCache;
+
+        const coreWords = window.ajisaiInterpreter.collect_core_listed_words_info();
+        const filtered = coreWords.filter(
+            wd =>
+                Array.isArray(wd)
+                && typeof wd[0] === 'string'
+                && isCanonicalCoreWordName(wd[0])
+        );
+
+        const droppedCount = coreWords.length - filtered.length;
+        if (droppedCount > 0) {
+            console.info(`[Vocabulary] Filtered out ${droppedCount} non-canonical core word entries from WASM payload.`);
+        }
+
+        sortedCoreWordsCache = [...filtered].sort((a, b) =>
+            compareWordName(a[0] as string, b[0] as string)
+        );
+        return sortedCoreWordsCache;
+    };
+
+    const selectDictionaryWords = (): WordInfo[] =>
+        cachedUserWords
+            .map(createWordInfoFromTuple)
+            .filter(word => word.dictionary === selectedDictionary);
 
     const deleteWord = async (wordName: string, forceDelete: boolean): Promise<boolean> => {
         const deleteCode = forceDelete
@@ -224,35 +254,16 @@ export const createVocabularyManager = (
     };
 
     const renderBuiltInWordsSorted = (
-        container: HTMLElement,
-        coreWords: unknown[][]
+        container: HTMLElement
     ): void => {
         clearElement(container);
         container.classList.remove('is-empty');
 
-
-        const filtered = coreWords.filter(
-            (wd): wd is unknown[] =>
-                Array.isArray(wd)
-                && typeof wd[0] === 'string'
-                && isCanonicalCoreWordName(wd[0])
-        );
-
-        const droppedCount = coreWords.length - filtered.length;
-        if (droppedCount > 0) {
-            console.info(`[Vocabulary] Filtered out ${droppedCount} non-canonical core word entries from WASM payload.`);
-        }
-
-        const sorted = [...filtered].sort((a, b) =>
-            compareWordName(a[0] as string, b[0] as string)
-        );
-
-
-        const matched = sorted.filter(wd =>
+        const matched = getSortedCoreWords().filter(wd =>
             checkWordMatchesFilter(wd[0] as string, searchFilter)
         );
 
-
+        const fragment = document.createDocumentFragment();
         matched.forEach(wordData => {
             const name = wordData[0] as string;
             const description = (wordData[1] as string) || name;
@@ -266,8 +277,9 @@ export const createVocabularyManager = (
                 () => { resetWordInfoDisplay(elements.builtInWordInfo); }
             );
 
-            container.appendChild(button);
+            fragment.appendChild(button);
         });
+        container.appendChild(fragment);
 
         if (searchFilter && matched.length === 0) {
             container.classList.add('is-empty');
@@ -292,6 +304,7 @@ export const createVocabularyManager = (
             compareWordName(a.name, b.name)
         );
 
+        const fragment = document.createDocumentFragment();
         sortedFiltered.forEach(wordInfo => {
             const className = wordInfo.protected
                 ? 'word-button dependency'
@@ -315,8 +328,9 @@ export const createVocabularyManager = (
                 (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}@${wordInfo.name}`)
             );
 
-            container.appendChild(button);
+            fragment.appendChild(button);
         });
+        container.appendChild(fragment);
 
 
         if (searchFilter && words.length > 0 && filteredWords.length === 0) {
@@ -338,8 +352,7 @@ export const createVocabularyManager = (
         if (!window.ajisaiInterpreter) return;
 
         try {
-            const coreWords = window.ajisaiInterpreter.collect_core_listed_words_info();
-            renderBuiltInWordsSorted(elements.builtInWordsDisplay, coreWords);
+            renderBuiltInWordsSorted(elements.builtInWordsDisplay);
         } catch (error) {
             console.error('Failed to render core words:', error);
         }
@@ -362,16 +375,14 @@ export const createVocabularyManager = (
             selectedDictionary = dictionaries.includes('DEMO') ? 'DEMO' : (dictionaries[0] || 'DEMO');
         }
         elements.userDictionarySelect.value = selectedDictionary;
-        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderUserWordButtons(elements.userWordsDisplay, words);
+        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
     };
 
     const updateSearchFilter = (filter: string): void => {
         searchFilter = filter.trim();
 
         renderBuiltInWords();
-        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderUserWordButtons(elements.userWordsDisplay, words);
+        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
     };
 
     const setSelectedDictionary = (dictionary: string): void => {
@@ -380,14 +391,12 @@ export const createVocabularyManager = (
         if (!optionExists) return;
         selectedDictionary = dictionary;
         elements.userDictionarySelect.value = dictionary;
-        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderUserWordButtons(elements.userWordsDisplay, words);
+        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
     };
 
     elements.userDictionarySelect.addEventListener('change', () => {
         selectedDictionary = elements.userDictionarySelect.value;
-        const words = cachedUserWords.map(createWordInfoFromTuple).filter(word => word.dictionary === selectedDictionary);
-        renderUserWordButtons(elements.userWordsDisplay, words);
+        renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());
         void onSaveState?.();
     });
 
