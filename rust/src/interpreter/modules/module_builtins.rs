@@ -498,48 +498,8 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
 ];
 
-const MUSIC_SAMPLES: &[SampleWord] = &[
-    SampleWord {
-        name: "C4",
-        definition: "264",
-        description: "純正律 C4 / ド (264Hz)",
-    },
-    SampleWord {
-        name: "D4",
-        definition: "C4 9 * 8 /",
-        description: "純正律 D4 / レ (297Hz)",
-    },
-    SampleWord {
-        name: "E4",
-        definition: "C4 5 * 4 /",
-        description: "純正律 E4 / ミ (330Hz)",
-    },
-    SampleWord {
-        name: "F4",
-        definition: "C4 4 * 3 /",
-        description: "純正律 F4 / ファ (352Hz)",
-    },
-    SampleWord {
-        name: "G4",
-        definition: "C4 3 * 2 /",
-        description: "純正律 G4 / ソ (396Hz)",
-    },
-    SampleWord {
-        name: "A4",
-        definition: "C4 5 * 3 /",
-        description: "純正律 A4 / ラ (440Hz)",
-    },
-    SampleWord {
-        name: "B4",
-        definition: "C4 15 * 8 /",
-        description: "純正律 B4 / シ (495Hz)",
-    },
-    SampleWord {
-        name: "C5",
-        definition: "C4 2 *",
-        description: "純正律 C5 / 高いド (528Hz)",
-    },
-];
+const MUSIC_SAMPLES: &[SampleWord] = &[];
+
 
 pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {

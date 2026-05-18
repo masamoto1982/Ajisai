@@ -76,7 +76,6 @@ pub(crate) fn build_audio_structure(
         return Ok(AudioStructure::Rest { duration: 1.0 });
     }
 
-
     if is_string_value(value) {
         let s = value_as_string(value).unwrap_or_default();
         output.push_str(&s);
