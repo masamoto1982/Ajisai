@@ -537,6 +537,14 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> Interpretation {
         Some("truthValue") => Interpretation::TruthValue,
         Some("timestamp") => Interpretation::Timestamp,
         Some("nil") => Interpretation::Nil,
+        // Legacy role names from snapshots persisted before the
+        // interpretation-role redesign. Accepted so a saved stack restored
+        // after an upgrade keeps its roles (a saved string would otherwise
+        // restore as an Unassigned codepoint vector).
+        Some("number") => Interpretation::RawNumber,
+        Some("string") => Interpretation::Text,
+        Some("boolean") => Interpretation::TruthValue,
+        Some("datetime") => Interpretation::Timestamp,
         _ => Interpretation::Unassigned,
     }
 }
