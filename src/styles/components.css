@@ -220,10 +220,11 @@
     inset: 0;
     pointer-events: none;
     z-index: 1;
+    opacity: 0.4;
     background: linear-gradient(225deg in oklch,
-        var(--editor-accent) 0%,
-        var(--editor-accent) 22%,
-        var(--editor-accent-fade) 32%);
+        var(--editor-accent-red) 0%,
+        40%,
+        var(--editor-accent-blue) 100%);
 }
 
 
