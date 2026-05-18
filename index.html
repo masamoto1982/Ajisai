@@ -20,7 +20,7 @@
 <body data-active-area="input">
     <a href="#code-input" class="skip-link">Skip to main content</a>
     <div class="container">
-        <header role="banner">
+        <header>
             <div class="app-header-top">
                 <div class="app-brand-meta">
                     <a href="https://masamoto1982.github.io/Ajisai/" class="app-brand-block" aria-label="Ajisai">
@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div class="header-actions">
-                <a href="docs/index.html" class="btn-secondary" target="_blank">
+                <a href="docs/index.html" class="btn-secondary" target="_blank" rel="noopener noreferrer">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M9 9h6v6M15 9l-6 6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
                     </svg>
@@ -82,12 +82,12 @@
                         <option value="output">Output</option>
                     </select>
                 </div>
-                <section id="output-panel" class="output-area" role="region" aria-label="Output" tabindex="0" hidden>
+                <section id="output-panel" class="output-area" aria-label="Output" tabindex="0" hidden>
                     <h2 class="visually-hidden">Output</h2>
                     <div id="output-display" class="display-area" aria-live="polite" aria-atomic="false"></div>
                     <button id="copy-output-btn" class="btn-primary" type="button" aria-label="Copy output to clipboard">Copy</button>
                 </section>
-                <section id="input-panel" class="input-area" role="region" aria-label="Input" tabindex="0">
+                <section id="input-panel" class="input-area" aria-label="Input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
                     <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
                     <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
@@ -108,12 +108,12 @@
                         <button id="dictionary-search-clear-btn" type="button" class="inline-clear-btn vocabulary-search-clear-btn" aria-label="Clear search">&times;</button>
                     </div>
                 </div>
-                <section id="stack-panel" class="stack-area" role="region" aria-label="Stack" tabindex="0">
+                <section id="stack-panel" class="stack-area" aria-label="Stack" tabindex="0">
                     <h2 class="visually-hidden">Stack</h2>
                     <div id="stack-display" class="state-display" aria-live="polite" aria-atomic="false"></div>
                 </section>
 
-                <section id="dictionary-panel" class="dictionary-area" role="region" aria-label="Dictionary" tabindex="0" hidden>
+                <section id="dictionary-panel" class="dictionary-area" aria-label="Dictionary" tabindex="0" hidden>
                     <h2 class="visually-hidden">Dictionary</h2>
                     <label for="dictionary-sheet-select" class="visually-hidden">Select dictionary</label>
                     <select id="dictionary-sheet-select" class="dictionary-sheet-select">

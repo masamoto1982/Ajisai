@@ -1,6 +1,5 @@
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
-import { pipe } from './functional-result-helpers';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -286,42 +285,34 @@ const formatValue = (item: Value, depth: number): string => {
 };
 
 
-const extractAudioCommands = (output: string): string[] =>
-    output.split('\n')
-        .filter(line => line.startsWith('AUDIO:'))
-        .map(line => line.substring(6));
+interface ParsedOutput {
+    readonly audio: readonly string[];
+    readonly config: readonly string[];
+    readonly effect: readonly string[];
+    readonly jsonExport: readonly string[];
+    /** Output lines with all special command lines removed, joined by newlines. */
+    readonly program: string;
+}
 
-const extractConfigCommands = (output: string): string[] =>
-    output.split('\n')
-        .filter(line => line.startsWith('CONFIG:'))
-        .map(line => line.substring(7));
+// Single pass over the output: previously each command category re-split the
+// same string, costing 5-6 full scans per render.
+const parseOutputCommands = (output: string): ParsedOutput => {
+    const audio: string[] = [];
+    const config: string[] = [];
+    const effect: string[] = [];
+    const jsonExport: string[] = [];
+    const programLines: string[] = [];
 
-const extractEffectCommands = (output: string): string[] =>
-    output.split('\n')
-        .filter(line => line.startsWith('EFFECT:'))
-        .map(line => line.substring(7));
+    for (const line of output.split('\n')) {
+        if (line.startsWith('AUDIO:')) audio.push(line.substring(6));
+        else if (line.startsWith('CONFIG:')) config.push(line.substring(7));
+        else if (line.startsWith('EFFECT:')) effect.push(line.substring(7));
+        else if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
+        else programLines.push(line);
+    }
 
-const extractJsonExportCommands = (output: string): string[] =>
-    output.split('\n')
-        .filter(line => line.startsWith('JSONEXPORT:'))
-        .map(line => line.substring(11));
-
-const checkIsSpecialCommand = (line: string): boolean =>
-    line.startsWith('AUDIO:') || line.startsWith('CONFIG:') ||
-    line.startsWith('EFFECT:') || line.startsWith('JSONEXPORT:');
-
-const removeSpecialCommandLines = (output: string): string =>
-    output.split('\n')
-        .filter(line => !checkIsSpecialCommand(line))
-        .join('\n');
-
-const formatExecutionOutput = (result: ExecuteResult): { debug: string; program: string } => ({
-    debug: (result.debugOutput || '').trim(),
-    program: pipe(
-        (result.output || '').trim(),
-        removeSpecialCommandLines
-    )
-});
+    return { audio, config, effect, jsonExport, program: programLines.join('\n') };
+};
 
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
     typeof error === 'string'
@@ -343,8 +334,8 @@ const appendToElement = (parent: HTMLElement, child: HTMLElement): void => {
     parent.appendChild(child);
 };
 
-const applyEffectCommands = (output: string): void => {
-    extractEffectCommands(output).forEach(commandStr => {
+const applyEffectCommands = (commands: readonly string[]): void => {
+    commands.forEach(commandStr => {
         try {
             const effect = JSON.parse(commandStr);
             if (effect.gain !== undefined) {
@@ -359,8 +350,8 @@ const applyEffectCommands = (output: string): void => {
     });
 };
 
-const applyConfigCommands = (output: string): void => {
-    extractConfigCommands(output).forEach(commandStr => {
+const applyConfigCommands = (commands: readonly string[]): void => {
+    commands.forEach(commandStr => {
         try {
             const config = JSON.parse(commandStr);
             if (config.slot_duration !== undefined) {
@@ -373,11 +364,11 @@ const applyConfigCommands = (output: string): void => {
     });
 };
 
-const executeAudioCommands = (output: string): void => {
-    applyEffectCommands(output);
-    applyConfigCommands(output);
+const executeAudioCommands = (parsed: ParsedOutput): void => {
+    applyEffectCommands(parsed.effect);
+    applyConfigCommands(parsed.config);
 
-    extractAudioCommands(output).forEach(commandStr => {
+    parsed.audio.forEach(commandStr => {
         try {
             const audioCommand = JSON.parse(commandStr);
             AUDIO_ENGINE.playAudioCommand(audioCommand).catch(console.error);
@@ -409,8 +400,8 @@ const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement =
     return a;
 };
 
-const renderJsonExportLinks = (output: string, outputDisplay: HTMLElement): void => {
-    extractJsonExportCommands(output).forEach(jsonCompact => {
+const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisplay: HTMLElement): void => {
+    jsonExportCommands.forEach(jsonCompact => {
         const link = createJsonDownloadLinkElement(jsonCompact);
         appendToElement(outputDisplay, document.createElement('br'));
         appendToElement(outputDisplay, link);
@@ -432,9 +423,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderExecutionResult = (result: ExecuteResult): void => {
-        const { debug, program } = formatExecutionOutput(result);
-        const rawOutput = result.output || '';
-        executeAudioCommands(rawOutput);
+        const parsed = parseOutputCommands(result.output || '');
+        executeAudioCommands(parsed);
+
+        const debug = (result.debugOutput || '').trim();
+        const program = parsed.program.trim();
 
         mainOutput = `${debug}\n${program}`;
         clearElement(elements.outputDisplay);
@@ -451,17 +444,17 @@ export const createDisplay = (elements: DisplayElements): Display => {
             appendSpan(program, '#4DC4FF');
         }
 
-        renderJsonExportLinks(rawOutput, elements.outputDisplay);
+        renderJsonExportLinks(parsed.jsonExport, elements.outputDisplay);
 
-        if (!debug && !program && !extractJsonExportCommands(rawOutput).length && result.status === 'OK') {
+        if (!debug && !program && parsed.jsonExport.length === 0 && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
     };
 
     const appendExecutionResult = (result: ExecuteResult): void => {
-        const programOutput = (result.output || '').trim();
-        executeAudioCommands(programOutput);
-        const filteredOutput = removeSpecialCommandLines(programOutput);
+        const parsed = parseOutputCommands(result.output || '');
+        executeAudioCommands(parsed);
+        const filteredOutput = parsed.program.trim();
 
         if (filteredOutput) {
             appendSpan(filteredOutput, '#4DC4FF');
@@ -469,12 +462,12 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderOutput = (text: string): void => {
-        executeAudioCommands(text);
-        const filteredText = removeSpecialCommandLines(text);
+        const parsed = parseOutputCommands(text);
+        executeAudioCommands(parsed);
 
-        mainOutput = filteredText;
+        mainOutput = parsed.program;
         clearElement(elements.outputDisplay);
-        appendSpan(filteredText, '#4DC4FF');
+        appendSpan(parsed.program, '#4DC4FF');
     };
 
     const renderError = (error: Error | { message?: string } | string): void => {

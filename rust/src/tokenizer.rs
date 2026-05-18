@@ -6,10 +6,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut i = 0;
 
     while i < chars.len() {
-
         if chars[i].is_whitespace() {
             if chars[i] == '\n' {
-
                 if tokens.last() != Some(&Token::LineBreak) {
                     tokens.push(Token::LineBreak);
                 }
@@ -17,7 +15,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             i += 1;
             continue;
         }
-
 
         if chars[i] == '#' {
             let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
@@ -32,9 +29,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        if chars[i] == ':' {
-            return Err("':' (code block start) has been removed. Use '{' and '}' for code blocks.".to_string());
-        }
         if chars[i] == '(' || chars[i] == ')' {
             return Err(format!(
                 "'{}' is not a valid Ajisai source character (Section 3.4). The nested continued-fraction form is a display/serialization artifact only; use '{{' and '}}' for code blocks.",
@@ -59,9 +53,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-
         if chars[i] == '=' {
-
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Pipeline);
                 i += 2;
@@ -79,9 +71,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-
         if chars[i] == '<' {
-
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Symbol("<=".into()));
                 i += 2;
@@ -99,14 +89,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-
         if chars[i] == '>' {
-            if i + 2 < chars.len() && chars[i + 1] == '>' && chars[i + 2] == '>' {
-                return Err("'>>>' (chevron default) has been removed.".to_string());
-            }
-            if i + 1 < chars.len() && chars[i + 1] == '>' {
-                return Err("'>>' (chevron branch) has been removed.".to_string());
-            }
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Symbol(">=".into()));
                 i += 2;
@@ -116,7 +99,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             i += 1;
             continue;
         }
-
 
         match parse_string_from_quote(&chars[i..]) {
             QuoteParseResult::StringSuccess(token, consumed) => {
@@ -128,11 +110,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 let quote_char = chars[i];
                 return Err(format!("Unclosed literal starting with {}", quote_char));
             }
-            QuoteParseResult::NotQuote => {
-
-            }
+            QuoteParseResult::NotQuote => {}
         }
-
 
         let start = i;
         while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
@@ -140,12 +119,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if i == start {
-
             return Err(format!("Unexpected character: {}", chars[i]));
         }
 
         let token_str: String = chars[start..i].iter().collect();
-
 
         if let Some(token) = parse_keyword_from_string(&token_str) {
             tokens.push(token);
@@ -159,16 +136,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-
         if let Some(token) = parse_number_from_string(&token_str) {
             tokens.push(token);
             continue;
         }
 
-
         tokens.push(Token::Symbol(token_str.into()));
     }
-
 
     if tokens.last() == Some(&Token::LineBreak) {
         tokens.pop();
@@ -179,7 +153,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     check_cond_clause_per_line_constraint(&tokens)?;
     Ok(tokens)
 }
-
 
 fn is_special_char(c: char) -> bool {
     matches!(
@@ -231,7 +204,6 @@ fn check_bracket_matching(input: &str) -> Result<(), String> {
 
         if c == '\'' {
             if in_string {
-
                 if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
                     in_string = false;
                 }
@@ -345,7 +317,9 @@ fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String>
                 if has_clause_sep {
                     cond_clause_blocks_in_line += 1;
                     if cond_clause_blocks_in_line > 1 {
-                        return Err("COND: $ clauses must be written one clause per line".to_string());
+                        return Err(
+                            "COND: $ clauses must be written one clause per line".to_string()
+                        );
                     }
                 }
 
@@ -360,9 +334,7 @@ fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String>
     Ok(())
 }
 
-
 enum QuoteParseResult {
-
     StringSuccess(Token, usize),
 
     Unclosed,
@@ -383,7 +355,6 @@ fn parse_string_from_quote(chars: &[char]) -> QuoteParseResult {
     }
 }
 
-
 fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() || chars[0] != '\'' {
         return QuoteParseResult::NotQuote;
@@ -392,14 +363,11 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
     let mut string = String::new();
     let mut i = 1;
 
-
     while i < chars.len() {
         if chars[i] == '\'' {
-
             if i + 1 >= chars.len() || is_string_close_delimiter(chars[i + 1]) {
                 return QuoteParseResult::StringSuccess(Token::String(string.into()), i + 1);
             } else {
-
                 string.push(chars[i]);
                 i += 1;
             }
@@ -409,19 +377,12 @@ fn parse_token_from_string_literal(chars: &[char]) -> QuoteParseResult {
         }
     }
 
-
     QuoteParseResult::Unclosed
-}
-
-
-fn is_delimiter(c: char) -> bool {
-    c.is_whitespace() || is_special_char(c)
 }
 
 fn is_string_close_delimiter(c: char) -> bool {
     c.is_whitespace() || (is_special_char(c) && c != '\'')
 }
-
 
 fn parse_keyword_from_string(s: &str) -> Option<Token> {
     match s {
@@ -461,9 +422,7 @@ fn split_compound_modifier(s: &str) -> Option<Vec<String>> {
     }
 }
 
-
 fn parse_number_from_string(s: &str) -> Option<Token> {
-
     if s.is_empty() {
         return None;
     }
@@ -471,19 +430,15 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
     let chars: Vec<char> = s.chars().collect();
     let mut i = 0;
 
-
     if chars[i] == '-' || chars[i] == '+' {
         if chars.len() == 1 {
-
             return None;
         }
         if !chars[i + 1].is_ascii_digit() {
-
             return None;
         }
         i += 1;
     }
-
 
     if i >= chars.len() || !chars[i].is_ascii_digit() {
         return None;
@@ -491,35 +446,27 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
 
     let start = i;
 
-
     while i < chars.len() && chars[i].is_ascii_digit() {
         i += 1;
     }
-
 
     if i < chars.len() && chars[i] == '/' {
         let _slash_pos = i;
         i += 1;
 
-
         if i >= chars.len() || !chars[i].is_ascii_digit() {
-
-
             return None;
         }
         while i < chars.len() && chars[i].is_ascii_digit() {
             i += 1;
         }
 
-
         if i == chars.len() {
             return Some(Token::Number(s.into()));
         } else {
-
             return None;
         }
     }
-
 
     let mut has_dot = false;
     if i < chars.len() && chars[i] == '.' {
@@ -530,14 +477,12 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         }
     }
 
-
     if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
         i += 1;
         if i < chars.len() && (chars[i] == '-' || chars[i] == '+') {
             i += 1;
         }
         if i >= chars.len() || !chars[i].is_ascii_digit() {
-
             return None;
         }
         while i < chars.len() && chars[i].is_ascii_digit() {
@@ -545,17 +490,13 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         }
     }
 
-
     if i == start && !has_dot {
-
         return None;
     }
-
 
     if i == chars.len() {
         Some(Token::Number(s.into()))
     } else {
-
         None
     }
 }

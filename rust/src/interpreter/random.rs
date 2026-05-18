@@ -1,5 +1,3 @@
-
-
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
@@ -8,9 +6,7 @@ use crate::types::Value;
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, ToPrimitive};
 
-
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
-
 
 fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     if *denominator <= BigInt::one() {
@@ -19,7 +15,7 @@ fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
 
     let denom_bits = denominator.bits() as usize;
     let total_bits = denom_bits + 64;
-    let bytes = (total_bits + 7) / 8;
+    let bytes = total_bits.div_ceil(8);
 
     let mut buf = vec![0u8; bytes];
     getrandom::getrandom(&mut buf).map_err(|e| {
@@ -29,7 +25,6 @@ fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     let random_value = BigInt::from_bytes_le(Sign::Plus, &buf);
     Ok(&random_value % denominator)
 }
-
 
 fn extract_positive_integer_from_value(val: &Value) -> Option<BigInt> {
     let tensor = FlatTensor::from_value(val).ok()?;
@@ -59,7 +54,9 @@ fn parse_csprng_args_in_keep_mode(interp: &Interpreter) -> Result<(BigInt, usize
     };
 
     if interp.stack.len() >= 2 {
-        if let Some(second_int) = extract_positive_integer_from_value(&interp.stack[interp.stack.len() - 2]) {
+        if let Some(second_int) =
+            extract_positive_integer_from_value(&interp.stack[interp.stack.len() - 2])
+        {
             let count = first_int
                 .to_usize()
                 .ok_or_else(|| AjisaiError::from("CSPRNG: count too large"))?;
@@ -73,9 +70,7 @@ fn parse_csprng_args_in_keep_mode(interp: &Interpreter) -> Result<(BigInt, usize
     Ok((default_denom, count))
 }
 
-
 pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
-
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
             word: "CSPRNG".into(),
@@ -106,33 +101,26 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
     let default_denom = BigInt::from(1u64 << DEFAULT_DENOMINATOR_BITS);
-
 
     if interp.stack.is_empty() {
         return Ok((default_denom, 1));
     }
-
 
     let top = interp
         .stack
         .last()
         .ok_or_else(|| AjisaiError::from("CSPRNG requires stack value"))?;
 
-
     let Some(first_int) = extract_positive_integer_from_value(top) else {
         return Ok((default_denom, 1));
     };
 
-
     interp.stack.pop();
-
 
     if let Some(second) = interp.stack.last() {
         if let Some(second_int) = extract_positive_integer_from_value(second) {
-
             interp.stack.pop();
             let count = first_int
                 .to_usize()
@@ -140,7 +128,6 @@ fn parse_csprng_args(interp: &mut Interpreter) -> Result<(BigInt, usize)> {
             return Ok((second_int, count));
         }
     }
-
 
     let count = first_int
         .to_usize()
@@ -156,7 +143,7 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_rejects_stack_mode() {
         let mut interp = Interpreter::new();
-        let result = interp.execute(".. CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT .. CSPRNG").await;
         assert!(result.is_err(), "CSPRNG should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -169,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_generates_single_value() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT CSPRNG").await;
         assert!(result.is_ok(), "CSPRNG should succeed: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
 
@@ -181,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_generates_multiple_values() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 5 ] CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT [ 5 ] CSPRNG").await;
         assert!(
             result.is_ok(),
             "CSPRNG with count should succeed: {:?}",
@@ -198,7 +185,7 @@ mod tests {
     async fn test_csprng_with_denominator() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 6 ] [ 3 ] CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT [ 6 ] [ 3 ] CSPRNG").await;
         assert!(
             result.is_ok(),
             "CSPRNG with denominator should succeed: {:?}",
@@ -215,7 +202,7 @@ mod tests {
     async fn test_csprng_preserves_non_integer_on_stack() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 1/2 ] CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT [ 1/2 ] CSPRNG").await;
         assert!(result.is_ok());
 
         assert_eq!(interp.stack.len(), 2);
@@ -224,14 +211,17 @@ mod tests {
     #[tokio::test]
     async fn test_csprng_keep_mode_preserves_operand() {
         let mut interp = Interpreter::new();
-        interp.execute("[ 5 ] ,, CSPRNG").await.unwrap();
+        interp
+            .execute("'crypto' IMPORT [ 5 ] ,, CSPRNG")
+            .await
+            .unwrap();
         assert_eq!(interp.stack.len(), 2);
     }
 
     #[tokio::test]
     async fn test_csprng_scalar_args_supported() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("6 3 CSPRNG").await;
+        let result = interp.execute("'crypto' IMPORT 6 3 CSPRNG").await;
         assert!(result.is_ok());
         assert_eq!(interp.stack.len(), 1);
     }
@@ -240,7 +230,9 @@ mod tests {
     async fn test_csprng_small_denominator_efficiency() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ 2 ] [ 50 ] CSPRNG").await;
+        let result = interp
+            .execute("'crypto' IMPORT [ 2 ] [ 50 ] CSPRNG")
+            .await;
         assert!(result.is_ok());
 
         let val = &interp.stack[0];

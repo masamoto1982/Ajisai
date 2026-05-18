@@ -1,11 +1,9 @@
-#[path = "builtin-word-definitions.rs"]
 mod builtin_word_definitions;
-#[path = "builtin-word-details.rs"]
 mod builtin_word_details;
 
 pub use builtin_word_definitions::{
     builtin_specs, collect_core_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,
-    WordShape,
+    BuiltinSpec, WordShape,
 };
 pub use builtin_word_details::lookup_builtin_detail;
 

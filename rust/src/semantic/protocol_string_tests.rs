@@ -1,3 +1,5 @@
+//! Test suite for `crate::semantic::protocol`.
+
 use super::{AbsenceOrigin, Capability, Recoverability, SemanticKind, ValueOrigin, ValueShape};
 use crate::error::{ErrorCategory, NilReason};
 use crate::interpreter::debug_diagnosis::{CauseClass, ErrorLocusKind, ErrorPhase};

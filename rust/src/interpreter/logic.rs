@@ -74,7 +74,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
         OperationTargetMode::Stack => {
-            let source: Vec<Value> = interp.stack.iter().cloned().collect();
+            let source: Vec<Value> = interp.stack.to_vec();
             let mut results: Vec<Value> = Vec::with_capacity(source.len());
             for value in &source {
                 results.push(compute_inverted_value(value, Some(&mut interp.runtime_metrics))?);

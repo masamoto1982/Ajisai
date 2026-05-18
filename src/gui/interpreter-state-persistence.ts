@@ -136,7 +136,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         showError?.(new Error('Failed to initialize database. Changes will not be saved.'));
     };
 
-    const saveCurrentState = async (): Promise<void> => {
+    const SAVE_DEBOUNCE_MS = 400;
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingSave: Promise<void> | null = null;
+    let resolvePendingSave: (() => void) | null = null;
+
+    const performSave = async (): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
         if (!dbInitialized) {
             console.warn('Database not initialized, skipping state save.');
@@ -151,6 +156,38 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             console.error('Failed to auto-save state:', error);
         }
     };
+
+    // Auto-save fires after every execution, word edit and dictionary switch.
+    // Debouncing coalesces bursts of those operations into a single snapshot
+    // + IndexedDB write. The snapshot is taken when the timer fires, so the
+    // most recent interpreter state is always the one persisted.
+    const flushPendingSave = (): void => {
+        if (!saveTimer) return;
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        const resolve = resolvePendingSave;
+        pendingSave = null;
+        resolvePendingSave = null;
+        void performSave().finally(() => resolve?.());
+    };
+
+    const saveCurrentState = (): Promise<void> => {
+        if (!pendingSave) {
+            pendingSave = new Promise<void>(resolve => { resolvePendingSave = resolve; });
+        }
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(flushPendingSave, SAVE_DEBOUNCE_MS);
+        return pendingSave;
+    };
+
+    // A debounced save would otherwise be lost if the tab is hidden or closed
+    // within the debounce window, so flush it immediately on those events.
+    if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') flushPendingSave();
+        });
+        window.addEventListener('pagehide', flushPendingSave);
+    }
 
     const loadDemoWords = async (): Promise<void> => {
         try {

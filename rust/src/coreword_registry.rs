@@ -1,4 +1,4 @@
-use crate::builtins::{builtin_specs, BuiltinExecutorKey};
+use crate::builtins::builtin_specs;
 use crate::interpreter::modules::module_word_metadata_entries;
 use serde::Serialize;
 #[cfg(test)]
@@ -61,10 +61,6 @@ pub struct CorewordMetadata {
     pub effects: Vec<String>,
     pub deterministic: bool,
     pub safe_preview: bool,
-    /// Derived alias of `canonical_home` for backward compatibility. When
-    /// `canonical_home == Module(m)`, this carries `Some(m)`. New code should
-    /// read `canonical_home` directly.
-    pub formerly_module: Option<String>,
     pub partiality: Partiality,
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
@@ -188,10 +184,10 @@ fn apply_module_to_core_listings(meta: &mut CorewordMetadata) {
     }
 }
 
-pub fn get_builtin_word_registry() -> Vec<CorewordMetadata> {
+fn build_builtin_word_registry() -> Vec<CorewordMetadata> {
     let mut registry: Vec<CorewordMetadata> = builtin_specs()
         .iter()
-        .map(|spec| core_word_metadata(spec.name, spec.category, spec.executor_key))
+        .map(core_word_metadata_from_spec)
         .collect();
     for meta in registry.iter_mut() {
         apply_core_boundary_listings(meta);
@@ -202,6 +198,13 @@ pub fn get_builtin_word_registry() -> Vec<CorewordMetadata> {
     }
     registry.extend(module_entries);
     registry
+}
+
+/// The complete built-in word registry. Built once on first access and
+/// cached for the process lifetime.
+pub fn get_builtin_word_registry() -> &'static [CorewordMetadata] {
+    static REGISTRY: std::sync::OnceLock<Vec<CorewordMetadata>> = std::sync::OnceLock::new();
+    REGISTRY.get_or_init(build_builtin_word_registry)
 }
 
 /// Metadata lookup with namespace-aware disambiguation.
@@ -218,12 +221,12 @@ pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     let registry = get_builtin_word_registry();
 
     if let Some((module, word)) = upper.split_once('@') {
-        return registry.into_iter().find(|m| {
-            m.name == word
-                && m.canonical_module()
-                    .map(|cm| cm == module)
-                    .unwrap_or(false)
-        });
+        return registry
+            .iter()
+            .find(|m| {
+                m.name == word && m.canonical_module().map(|cm| cm == module).unwrap_or(false)
+            })
+            .cloned();
     }
 
     if let Some(core) = registry
@@ -232,7 +235,7 @@ pub fn get_coreword_metadata(name: &str) -> Option<CorewordMetadata> {
     {
         return Some(core.clone());
     }
-    registry.into_iter().find(|m| m.name == upper)
+    registry.iter().find(|m| m.name == upper).cloned()
 }
 
 /// Alias of `get_coreword_metadata`. Use this in new code; the registry
@@ -244,15 +247,17 @@ pub fn get_builtin_word_metadata(name: &str) -> Option<CorewordMetadata> {
 pub fn get_words_by_category(category: &str) -> Vec<CorewordMetadata> {
     let needle = category.to_lowercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.category == needle)
+        .cloned()
         .collect()
 }
 
 pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.purity == purity)
+        .cloned()
         .collect()
 }
 
@@ -260,8 +265,9 @@ pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
 /// boundary words).
 pub fn get_core_listed_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.listed_in_core)
+        .cloned()
         .collect()
 }
 
@@ -270,11 +276,14 @@ pub fn get_core_listed_words() -> Vec<CorewordMetadata> {
 pub fn get_module_listed_words(module_name: &str) -> Vec<CorewordMetadata> {
     let needle = module_name.to_uppercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| {
-            word.canonical_module().map(|m| m == needle).unwrap_or(false)
+            word.canonical_module()
+                .map(|m| m == needle)
+                .unwrap_or(false)
                 || word.listed_in_modules.iter().any(|m| *m == needle)
         })
+        .cloned()
         .collect()
 }
 
@@ -284,15 +293,17 @@ pub fn get_module_listed_words(module_name: &str) -> Vec<CorewordMetadata> {
 pub fn get_category_listed_words(category: &str) -> Vec<CorewordMetadata> {
     let needle = category.to_uppercase();
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.listed_in_categories.iter().any(|c| *c == needle))
+        .cloned()
         .collect()
 }
 
 pub fn get_canonical_core_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.is_canonical_core())
+        .cloned()
         .collect()
 }
 
@@ -301,19 +312,21 @@ pub fn get_canonical_core_words() -> Vec<CorewordMetadata> {
 pub fn get_canonical_module_words(module_name: Option<&str>) -> Vec<CorewordMetadata> {
     let needle = module_name.map(|m| m.to_uppercase());
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| match (&needle, word.canonical_module()) {
             (Some(n), Some(m)) => n == m,
             (None, Some(_)) => true,
             _ => false,
         })
+        .cloned()
         .collect()
 }
 
 pub fn get_boundary_words() -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
-        .into_iter()
+        .iter()
         .filter(|word| word.is_boundary_word())
+        .cloned()
         .collect()
 }
 
@@ -327,7 +340,11 @@ pub fn is_listing_only_for_module(word_name: &str, module_name: &str) -> bool {
     let Some(meta) = get_coreword_metadata(&upper) else {
         return false;
     };
-    if meta.canonical_module().map(|m| m == module_upper).unwrap_or(false) {
+    if meta
+        .canonical_module()
+        .map(|m| m == module_upper)
+        .unwrap_or(false)
+    {
         return false;
     }
     meta.listed_in_modules.iter().any(|m| *m == module_upper)
@@ -365,7 +382,10 @@ fn collect_namespace_overlapping_names(registry: &[CorewordMetadata]) -> Vec<Str
     use std::collections::BTreeMap;
     let mut by_name: BTreeMap<&str, Vec<&CanonicalHome>> = BTreeMap::new();
     for word in registry {
-        by_name.entry(&word.name).or_default().push(&word.canonical_home);
+        by_name
+            .entry(&word.name)
+            .or_default()
+            .push(&word.canonical_home);
     }
     by_name
         .into_iter()
@@ -387,141 +407,21 @@ impl std::hash::Hash for CanonicalHome {
     }
 }
 
-fn core_word_metadata(
-    name: &str,
-    category: &str,
-    executor_key: Option<BuiltinExecutorKey>,
-) -> CorewordMetadata {
-    let mut meta = match executor_key {
-        Some(BuiltinExecutorKey::Print) => effectful(name, category, &["console-write"]),
-        Some(BuiltinExecutorKey::Def) => {
-            effectful(name, category, &["dictionary-write", "dictionary-register"])
-        }
-        Some(BuiltinExecutorKey::Del) => effectful(name, category, &["dictionary-delete"]),
-        Some(BuiltinExecutorKey::Import) => effectful(name, category, &["dictionary-import"]),
-        Some(BuiltinExecutorKey::ImportOnly) => {
-            effectful(name, category, &["dictionary-import-only"])
-        }
-        Some(BuiltinExecutorKey::Unimport) => effectful(name, category, &["dictionary-unimport"]),
-        Some(BuiltinExecutorKey::UnimportOnly) => {
-            effectful(name, category, &["dictionary-unimport-only"])
-        }
-        Some(BuiltinExecutorKey::Force) => effectful(name, category, &["interpreter-mode-write"]),
-        Some(BuiltinExecutorKey::Eval) => effectful(name, category, &["code-execution"]),
-        Some(BuiltinExecutorKey::Spawn)
-        | Some(BuiltinExecutorKey::Await)
-        | Some(BuiltinExecutorKey::Status)
-        | Some(BuiltinExecutorKey::Kill)
-        | Some(BuiltinExecutorKey::Monitor)
-        | Some(BuiltinExecutorKey::Supervise) => effectful(name, category, &["runtime-control"]),
-        Some(BuiltinExecutorKey::Lookup) => {
-            observable(name, category, &["dictionary-read"], Some(true))
-        }
-        _ => pure(name, category),
-    };
-    apply_contract_overrides(&mut meta, executor_key);
-    meta
-}
-
-fn apply_contract_overrides(meta: &mut CorewordMetadata, executor_key: Option<BuiltinExecutorKey>) {
-    use BuiltinExecutorKey::*;
-    match executor_key {
-        Some(Add) | Some(Sub) | Some(Mul) | Some(Floor) | Some(Ceil) | Some(Round) => {
-            meta.partiality = Partiality::Total;
-            meta.nil_policy = NilPolicy::Passthrough;
-            meta.safety_level = SafetyLevel::A;
-        }
-        Some(Div) => {
-            meta.partiality = Partiality::Projecting;
-            meta.nil_policy = NilPolicy::CreatesNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Mod) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::Passthrough;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Eq) | Some(Neq) | Some(Lt) | Some(Le) | Some(Gt) | Some(Gte) | Some(And)
-        | Some(Or) | Some(Not) => {
-            meta.partiality = Partiality::Total;
-            meta.nil_policy = NilPolicy::Passthrough;
-            meta.safety_level = SafetyLevel::A;
-        }
-        Some(Get) => {
-            meta.partiality = Partiality::Projecting;
-            meta.nil_policy = NilPolicy::CreatesNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Insert) | Some(Replace) | Some(Remove) | Some(Take) | Some(Split) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Length) | Some(Concat) | Some(Reverse) | Some(Range) | Some(Reorder)
-        | Some(Collect) | Some(Shape) | Some(Rank) | Some(Reshape) | Some(Transpose)
-        | Some(Fill) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(True) | Some(False) | Some(Nil) | Some(Idle) => {
-            meta.partiality = Partiality::Total;
-            meta.nil_policy = NilPolicy::PreservesReason;
-            meta.safety_level = SafetyLevel::A;
-        }
-        Some(Precompute) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Num) | Some(Chr) => {
-            meta.partiality = Partiality::Projecting;
-            meta.nil_policy = NilPolicy::CreatesNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Str) | Some(Bool) | Some(Chars) | Some(Join) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Map) | Some(Filter) | Some(Fold) | Some(Unfold) | Some(Any) | Some(All)
-        | Some(Count) | Some(Scan) | Some(Cond) | Some(Exec) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::B;
-        }
-        Some(Eval) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::D;
-        }
-        Some(Print) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::PreservesReason;
-            meta.safety_level = SafetyLevel::D;
-        }
-        Some(Def) | Some(Del) | Some(Import) | Some(ImportOnly) | Some(Unimport)
-        | Some(UnimportOnly) | Some(Force) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::D;
-        }
-        Some(Lookup) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::C;
-        }
-        Some(Spawn) | Some(Await) | Some(Status) | Some(Kill) | Some(Monitor)
-        | Some(Supervise) => {
-            meta.partiality = Partiality::Partial;
-            meta.nil_policy = NilPolicy::RejectsNil;
-            meta.safety_level = SafetyLevel::Quarantined;
-        }
-        None => {
-            meta.partiality = Partiality::Total;
-            meta.nil_policy = NilPolicy::PreservesReason;
-            meta.safety_level = SafetyLevel::A;
-        }
+fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> CorewordMetadata {
+    CorewordMetadata {
+        name: spec.name.to_string(),
+        category: spec.category.to_lowercase(),
+        purity: spec.purity,
+        effects: spec.effects.iter().map(|e| e.to_string()).collect(),
+        deterministic: spec.deterministic,
+        safe_preview: spec.safe_preview,
+        partiality: spec.partiality,
+        nil_policy: spec.nil_policy,
+        safety_level: spec.safety_level,
+        canonical_home: CanonicalHome::Core,
+        listed_in_core: true,
+        listed_in_modules: Vec::new(),
+        listed_in_categories: Vec::new(),
     }
 }
 
@@ -533,7 +433,6 @@ pub(crate) fn pure(name: &str, category: &str) -> CorewordMetadata {
         effects: vec![],
         deterministic: true,
         safe_preview: true,
-        formerly_module: None,
         partiality: Partiality::Total,
         nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::A,
@@ -557,7 +456,6 @@ pub(crate) fn observable(
         effects: effects.iter().map(|x| x.to_string()).collect(),
         deterministic: deterministic_override.unwrap_or(false),
         safe_preview: false,
-        formerly_module: None,
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::C,
@@ -576,7 +474,6 @@ pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> Corewor
         effects: effects.iter().map(|x| x.to_string()).collect(),
         deterministic: false,
         safe_preview: false,
-        formerly_module: None,
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::D,
@@ -825,8 +722,8 @@ mod tests {
     #[test]
     fn aq_ver_contract_e_builtin_spec_stability_matches_safety_level() {
         // Three-layer documentation model §5.3: stability label must agree
-        // with the §7.14 contract metadata produced by
-        // `apply_contract_overrides`. The mapping is:
+        // with the §7.14 contract metadata declared on each `BuiltinSpec`.
+        // The mapping is:
         //   safety_level A or B          -> "stable"
         //   safety_level C, D, or
         //   Quarantined                  -> "experimental"
@@ -837,9 +734,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("{} must be in registry", spec.name));
             let expected = match meta.safety_level {
                 SafetyLevel::A | SafetyLevel::B => "stable",
-                SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined => {
-                    "experimental"
-                }
+                SafetyLevel::C | SafetyLevel::D | SafetyLevel::Quarantined => "experimental",
             };
             assert_eq!(
                 spec.stability, expected,
@@ -898,16 +793,16 @@ mod tests {
                 resolved.canonical_home
             );
             // The qualified form must reach the module entry instead.
-            if let Some(module_entry) = registry.iter().find(|m| {
-                m.name == name && matches!(m.canonical_home, CanonicalHome::Module(_))
-            }) {
+            if let Some(module_entry) = registry
+                .iter()
+                .find(|m| m.name == name && matches!(m.canonical_home, CanonicalHome::Module(_)))
+            {
                 let module_name = module_entry
                     .canonical_module()
                     .expect("module entry must have canonical_module");
                 let qualified = format!("{}@{}", module_name, name);
-                let qualified_resolved = get_coreword_metadata(&qualified).unwrap_or_else(|| {
-                    panic!("{} must resolve via qualified lookup", qualified)
-                });
+                let qualified_resolved = get_coreword_metadata(&qualified)
+                    .unwrap_or_else(|| panic!("{} must resolve via qualified lookup", qualified));
                 assert_eq!(
                     qualified_resolved.canonical_home,
                     CanonicalHome::Module(module_name.to_string()),
@@ -947,26 +842,6 @@ mod tests {
                 canonical,
                 word.listed_in_modules
             );
-        }
-    }
-
-    #[test]
-    fn aq_ver_listing_e_formerly_module_mirrors_canonical_home() {
-        for word in get_builtin_word_registry() {
-            match &word.canonical_home {
-                CanonicalHome::Core => assert!(
-                    word.formerly_module.is_none(),
-                    "{} is canonical core; formerly_module must be None",
-                    word.name
-                ),
-                CanonicalHome::Module(m) => assert_eq!(
-                    word.formerly_module.as_deref(),
-                    Some(m.as_str()),
-                    "{} formerly_module must mirror canonical home {}",
-                    word.name,
-                    m
-                ),
-            }
         }
     }
 
@@ -1034,9 +909,29 @@ mod tests {
     #[test]
     fn aq_ver_listing_j_known_boundary_words_classified() {
         let expected = [
-            "PRINT", "STR", "NUM", "BOOL", "CHR", "CHARS", "JOIN", "MOD", "FLOOR", "CEIL",
-            "ROUND", "SHAPE", "RANK", "RESHAPE", "TRANSPOSE", "FILL", "SPAWN", "AWAIT", "STATUS",
-            "KILL", "MONITOR", "SUPERVISE", "SORT",
+            "PRINT",
+            "STR",
+            "NUM",
+            "BOOL",
+            "CHR",
+            "CHARS",
+            "JOIN",
+            "MOD",
+            "FLOOR",
+            "CEIL",
+            "ROUND",
+            "SHAPE",
+            "RANK",
+            "RESHAPE",
+            "TRANSPOSE",
+            "FILL",
+            "SPAWN",
+            "AWAIT",
+            "STATUS",
+            "KILL",
+            "MONITOR",
+            "SUPERVISE",
+            "SORT",
         ];
         let boundary_names: Vec<String> =
             get_boundary_words().into_iter().map(|w| w.name).collect();
@@ -1063,7 +958,10 @@ mod tests {
 
     #[test]
     fn aq_ver_listing_l_module_view_includes_canonical_and_boundary() {
-        let io_view: Vec<String> = get_module_listed_words("IO").into_iter().map(|w| w.name).collect();
+        let io_view: Vec<String> = get_module_listed_words("IO")
+            .into_iter()
+            .map(|w| w.name)
+            .collect();
         assert!(
             io_view.iter().any(|n| n == "PRINT"),
             "IO view must include the boundary word PRINT (got: {:?})",
@@ -1100,7 +998,6 @@ mod tests {
                 "{} returned by get_canonical_core_words must be canonical core",
                 word.name
             );
-            assert!(word.formerly_module.is_none());
         }
     }
 }

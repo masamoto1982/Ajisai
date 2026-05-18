@@ -88,6 +88,7 @@ export const createWordButtonElement = (
     onContextMenu?: (event: MouseEvent) => void
 ): HTMLButtonElement => {
     const button = document.createElement('button');
+    button.type = 'button';
     button.textContent = text;
     button.className = className;
     button.title = title;

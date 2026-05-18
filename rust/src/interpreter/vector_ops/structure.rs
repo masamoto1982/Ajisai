@@ -72,7 +72,7 @@ fn parse_range_args(args_val: &Value) -> Result<(i64, i64, i64)> {
     }
 
     let n = args_val.len();
-    if n < 2 || n > 3 {
+    if !(2..=3).contains(&n) {
         return Err(AjisaiError::from(
             "RANGE requires [start end] or [start end step]",
         ));

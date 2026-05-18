@@ -8,15 +8,10 @@ mod hedged;
 mod map;
 mod runners;
 
-pub(crate) use common::{
-    execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
-};
-pub(crate) use hedged::{
-    execute_hedged_fold_kernel, execute_hedged_map_kernel, execute_hedged_predicate_kernel,
-};
-pub(crate) use runners::{
-    execute_quantized_fold_kernel, execute_quantized_map_kernel, execute_quantized_predicate_kernel,
-};
+pub(crate) use common::{execute_executable_code, extract_executable_code, ExecutableCode};
+pub(crate) use hedged::execute_hedged_fold_kernel;
+#[cfg(test)]
+pub(crate) use hedged::{execute_hedged_map_kernel, execute_hedged_predicate_kernel};
 
 pub use all::op_all;
 pub use any::op_any;

@@ -2,6 +2,7 @@ use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
+use std::sync::Arc;
 
 // Safety bound on internal Gosper ingestion. The classical Gosper
 // transforms terminate (or emit) after a bounded number of input
@@ -24,8 +25,11 @@ pub enum ExactReal {
     /// Unevaluated Gosper transform of one or two operand CFs per
     /// SPEC §4.2.2. Constructed only by the arithmetic methods, which
     /// fold pure-rational operands through the `Fraction` fast path
-    /// instead of building a Gosper node.
-    Gosper(Box<Gosper>),
+    /// instead of building a Gosper node. Held behind an `Arc` so
+    /// that cloning an `ExactReal` — which the arithmetic methods do
+    /// for every operand they fold into a new transform — is O(1)
+    /// instead of a deep copy of the operand's Gosper tree.
+    Gosper(Arc<Gosper>),
 }
 
 /// Möbius (unary) or bihomographic (binary) Gosper state with BigInt
@@ -392,6 +396,23 @@ impl ExactReal {
 /// Gosper transforms) from running unboundedly.
 pub const DEFAULT_COMPARISON_BUDGET: usize = 256;
 
+/// Three-way comparison of √`radicand` against the rational `q`,
+/// yielding the ordering of √`radicand` relative to `q`.
+///
+/// `radicand` is the positive, non-perfect-square rational stored by
+/// an `AlgebraicSqrt`, so √`radicand` is a positive irrational and is
+/// never equal to the rational `q`. The result is exact and computed
+/// in O(1): a non-positive `q` is below the positive root, and for a
+/// positive `q` the order follows from `radicand` vs `q²` because
+/// squaring is increasing on the non-negative reals.
+fn cmp_sqrt_vs_rational(radicand: &Fraction, q: &Fraction) -> std::cmp::Ordering {
+    if !q.numerator().is_positive() {
+        // q <= 0 < √radicand.
+        return std::cmp::Ordering::Greater;
+    }
+    radicand.cmp(&q.mul(q))
+}
+
 impl ExactReal {
     /// Three-way comparison of CF values under a partial-quotient
     /// budget.
@@ -421,6 +442,27 @@ impl ExactReal {
         }
         if budget == 0 {
             return None;
+        }
+        // Algebraic short-circuits (SPEC §4.2.4): a comparison whose
+        // operands are only `Rational` and `AlgebraicSqrt` is decided
+        // exactly in O(1) from the operands' algebraic structure,
+        // without streaming partial quotients. This avoids the
+        // budget-length CF expansion and, crucially, lets two equal
+        // irrational square roots decide `Equal` instead of running
+        // their never-diverging CF streams to budget exhaustion.
+        match (self, other) {
+            (Self::AlgebraicSqrt { radicand: r }, Self::AlgebraicSqrt { radicand: s }) => {
+                // √ is strictly increasing on the non-negative
+                // rationals, so √r vs √s is decided by r vs s.
+                return Some(r.cmp(s));
+            }
+            (Self::AlgebraicSqrt { radicand: r }, Self::Rational(q)) => {
+                return Some(cmp_sqrt_vs_rational(r, q));
+            }
+            (Self::Rational(q), Self::AlgebraicSqrt { radicand: r }) => {
+                return Some(cmp_sqrt_vs_rational(r, q).reverse());
+            }
+            _ => {}
         }
         let mut a = CfIter::from_exact_real(self);
         let mut b = CfIter::from_exact_real(other);
@@ -500,6 +542,202 @@ impl ExactReal {
 }
 
 // =========================================================================
+// CF-native rounding and rational approximation
+// =========================================================================
+
+impl ExactReal {
+    /// Floor: the greatest integer not exceeding the value.
+    ///
+    /// For a canonical continued fraction `[a0; a1, a2, …]` the floor
+    /// is exactly the first partial quotient `a0`: when the CF has a
+    /// tail the fractional part `1/[a1; a2, …]` lies strictly in
+    /// `(0, 1)`, and when it does not the value already equals `a0`.
+    /// This holds for every representation — `Rational`,
+    /// `AlgebraicSqrt`, and `Gosper` — so the floor even of an
+    /// irrational costs a single partial-quotient pull.
+    ///
+    /// Returns `None` when the value is nil, or when a lazy CF stream
+    /// exhausts its internal safety budget before `a0` is fixed
+    /// (SPEC §7.4.1 `undecidable`).
+    pub fn floor(&self) -> Option<ExactReal> {
+        if self.is_nil() {
+            return None;
+        }
+        let mut iter = CfIter::from_exact_real(self);
+        match iter.next_step() {
+            CfStep::Quotient(a0) => Some(ExactReal::from_bigint(a0)),
+            CfStep::Ended | CfStep::Exhausted => None,
+        }
+    }
+
+    /// Ceiling: the least integer not below the value.
+    ///
+    /// Equal to `a0` when the value is an integer (the CF is the
+    /// single term `[a0]`) and to `a0 + 1` otherwise, since a present
+    /// CF tail forces the fractional part into `(0, 1)`.
+    ///
+    /// Returns `None` on nil or safety-budget exhaustion, like `floor`.
+    pub fn ceil(&self) -> Option<ExactReal> {
+        if self.is_nil() {
+            return None;
+        }
+        let mut iter = CfIter::from_exact_real(self);
+        let a0 = match iter.next_step() {
+            CfStep::Quotient(q) => q,
+            CfStep::Ended | CfStep::Exhausted => return None,
+        };
+        match iter.next_step() {
+            CfStep::Ended => Some(ExactReal::from_bigint(a0)),
+            CfStep::Quotient(_) => Some(ExactReal::from_bigint(a0 + BigInt::one())),
+            CfStep::Exhausted => None,
+        }
+    }
+
+    /// Round to the nearest integer, ties away from zero (matching
+    /// `Fraction::round`).
+    ///
+    /// With `[a0; a1, …]` the fractional part is `f = 1/r` where
+    /// `r = [a1; a2, …]`. Then `f < 1/2 ⇔ r > 2`, `f = 1/2 ⇔ r = 2`
+    /// (the CF is exactly `[a0; 2]`), and `f > 1/2 ⇔ r < 2 ⇔ a1 = 1`.
+    /// At a tie the value is the half-integer `a0 + 1/2`; rounding
+    /// away from zero picks `a0 + 1` when `a0 >= 0` and `a0` when
+    /// `a0 < 0`. At most three partial quotients are pulled.
+    ///
+    /// Returns `None` on nil or safety-budget exhaustion.
+    pub fn round(&self) -> Option<ExactReal> {
+        if self.is_nil() {
+            return None;
+        }
+        let mut iter = CfIter::from_exact_real(self);
+        let a0 = match iter.next_step() {
+            CfStep::Quotient(q) => q,
+            CfStep::Ended | CfStep::Exhausted => return None,
+        };
+        let a1 = match iter.next_step() {
+            CfStep::Ended => return Some(ExactReal::from_bigint(a0)),
+            CfStep::Quotient(q) => q,
+            CfStep::Exhausted => return None,
+        };
+        let rounded = match a1.cmp(&BigInt::from(2)) {
+            // a1 = 1 ⇒ r < 2 ⇒ f > 1/2.
+            std::cmp::Ordering::Less => a0 + BigInt::one(),
+            // a1 >= 3 ⇒ r > 2 ⇒ f < 1/2.
+            std::cmp::Ordering::Greater => a0,
+            // a1 = 2 ⇒ r > 2 if the CF continues, r = 2 (a tie) if it
+            // ends here.
+            std::cmp::Ordering::Equal => match iter.next_step() {
+                CfStep::Quotient(_) => a0,
+                CfStep::Ended => {
+                    if a0.is_negative() {
+                        a0
+                    } else {
+                        a0 + BigInt::one()
+                    }
+                }
+                CfStep::Exhausted => return None,
+            },
+        };
+        Some(ExactReal::from_bigint(rounded))
+    }
+
+    /// Best rational approximation within a denominator bound.
+    ///
+    /// Streams the canonical partial quotients and returns the
+    /// principal convergent whose denominator is the largest not
+    /// exceeding `max_denominator`. Every principal convergent is a
+    /// best rational approximation in the strong sense — no rational
+    /// with an equal or smaller denominator is strictly closer to the
+    /// value — so the result is the closest such convergent the bound
+    /// admits. For a `Rational` value whose own denominator already
+    /// fits the bound the result is the value itself.
+    ///
+    /// Returns `None` when `max_denominator < 1`, when the value is
+    /// nil, or when a lazy CF stream exhausts before any convergent
+    /// is produced.
+    pub fn best_rational_approximation(
+        &self,
+        max_denominator: &BigInt,
+    ) -> Option<Fraction> {
+        if max_denominator < &BigInt::one() {
+            return None;
+        }
+        if self.is_nil() {
+            return None;
+        }
+        let mut iter = CfIter::from_exact_real(self);
+        // Convergent recurrence with the standard seed
+        // h_{-1}/k_{-1} = 1/0 and h_{-2}/k_{-2} = 0/1.
+        let mut h_prev2 = BigInt::zero();
+        let mut h_prev1 = BigInt::one();
+        let mut k_prev2 = BigInt::one();
+        let mut k_prev1 = BigInt::zero();
+        let mut best: Option<(BigInt, BigInt)> = None;
+        while let CfStep::Quotient(a) = iter.next_step() {
+            let h = &a * &h_prev1 + &h_prev2;
+            let k = &a * &k_prev1 + &k_prev2;
+            if &k > max_denominator {
+                break;
+            }
+            h_prev2 = std::mem::replace(&mut h_prev1, h.clone());
+            k_prev2 = std::mem::replace(&mut k_prev1, k.clone());
+            best = Some((h, k));
+        }
+        best.map(|(h, k)| Fraction::new(h, k))
+    }
+
+    /// Pre-period and period blocks of an `AlgebraicSqrt`'s canonical
+    /// continued fraction.
+    ///
+    /// By Lagrange's theorem the CF of a quadratic surd is eventually
+    /// periodic (SPEC §4.2.2). This walks the surd state `(P, Q)`
+    /// until it repeats and returns `(pre_period, period)`: the
+    /// partial quotients emitted before the cycle, and one full
+    /// cycle. The canonical CF is `pre_period` followed by `period`
+    /// repeated forever, so the pair is a finite exact description of
+    /// the otherwise-infinite expansion — and lets the N-th partial
+    /// quotient be read in O(1) by indexing into `period`.
+    ///
+    /// Returns `None` for any representation other than
+    /// `AlgebraicSqrt`, and (defensively) for a radicand whose period
+    /// exceeds the scan cap.
+    pub fn sqrt_cf_period(&self) -> Option<(Vec<BigInt>, Vec<BigInt>)> {
+        // A valid quadratic surd always cycles within a bounded
+        // number of states, but a pathologically large radicand could
+        // make the period impractically long; bail out rather than
+        // allocate without bound.
+        const PERIOD_SCAN_CAP: usize = 1 << 16;
+
+        let radicand = self.sqrt_radicand()?;
+        let p = radicand.numerator();
+        let q = radicand.denominator();
+        let big_d = &p * &q;
+        let sqrt_floor = big_d.sqrt();
+
+        let mut p_i = BigInt::zero();
+        let mut q_i = q;
+        let mut quotients: Vec<BigInt> = Vec::new();
+        let mut seen: Vec<(BigInt, BigInt)> = Vec::new();
+
+        for _ in 0..PERIOD_SCAN_CAP {
+            if let Some(start) =
+                seen.iter().position(|(sp, sq)| *sp == p_i && *sq == q_i)
+            {
+                let period = quotients.split_off(start);
+                return Some((quotients, period));
+            }
+            seen.push((p_i.clone(), q_i.clone()));
+            let a_i: BigInt = (&p_i + &sqrt_floor).div_floor(&q_i);
+            let next_p: BigInt = &a_i * &q_i - &p_i;
+            let next_q: BigInt = (&big_d - &next_p * &next_p) / &q_i;
+            quotients.push(a_i);
+            p_i = next_p;
+            q_i = next_q;
+        }
+        None
+    }
+}
+
+// =========================================================================
 // Möbius / bihomographic constructors
 // =========================================================================
 
@@ -523,7 +761,7 @@ fn mobius_apply(a: BigInt, b: BigInt, c: BigInt, d: BigInt, x: ExactReal) -> Exa
         }
         return ExactReal::Rational(Fraction::new(num, den));
     }
-    ExactReal::Gosper(Box::new(Gosper::Mobius { a, b, c, d, x }))
+    ExactReal::Gosper(Arc::new(Gosper::Mobius { a, b, c, d, x }))
 }
 
 fn add_rational_to_lazy(r: &Fraction, lazy: ExactReal) -> ExactReal {
@@ -550,7 +788,7 @@ fn bihom_apply(
     x: ExactReal,
     y: ExactReal,
 ) -> ExactReal {
-    ExactReal::Gosper(Box::new(Gosper::Bihomographic {
+    ExactReal::Gosper(Arc::new(Gosper::Bihomographic {
         a,
         b,
         c,
@@ -841,6 +1079,52 @@ enum CfStep {
     Exhausted,
 }
 
+/// Divide the four Möbius coefficients by their common GCD in place.
+///
+/// The value `(a·x + b) / (c·x + d)` is invariant under scaling every
+/// coefficient by the same nonzero factor, so this renormalization
+/// keeps coefficients small across repeated ingestion without
+/// changing the emitted partial quotients. Without it the
+/// coefficients grow multiplicatively with every absorbed quotient,
+/// inflating every subsequent BigInt operation.
+fn normalize_mobius(a: &mut BigInt, b: &mut BigInt, c: &mut BigInt, d: &mut BigInt) {
+    let common = a.gcd(b).gcd(&c.gcd(d));
+    if common.is_zero() || common.is_one() {
+        return;
+    }
+    *a = &*a / &common;
+    *b = &*b / &common;
+    *c = &*c / &common;
+    *d = &*d / &common;
+}
+
+/// Divide the eight bihomographic coefficients by their common GCD in
+/// place; see `normalize_mobius`.
+#[allow(clippy::too_many_arguments)]
+fn normalize_bihom(
+    a: &mut BigInt,
+    b: &mut BigInt,
+    c: &mut BigInt,
+    d: &mut BigInt,
+    e: &mut BigInt,
+    f: &mut BigInt,
+    g: &mut BigInt,
+    h: &mut BigInt,
+) {
+    let common = a.gcd(b).gcd(&c.gcd(d)).gcd(&e.gcd(f)).gcd(&g.gcd(h));
+    if common.is_zero() || common.is_one() {
+        return;
+    }
+    *a = &*a / &common;
+    *b = &*b / &common;
+    *c = &*c / &common;
+    *d = &*d / &common;
+    *e = &*e / &common;
+    *f = &*f / &common;
+    *g = &*g / &common;
+    *h = &*h / &common;
+}
+
 /// Run the unary Gosper loop until it emits, transitions to a
 /// rational tail, or exhausts the safety budget. Returns `Some(q)`
 /// when a partial quotient is emitted (state already updated); `None`
@@ -914,6 +1198,7 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
                 *b = new_b;
                 *c = new_c;
                 *d = new_d;
+                normalize_mobius(a, b, c, d);
             }
             CfStep::Ended => {
                 *x_done = true;
@@ -1089,6 +1374,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *g = new_g;
                     *h = new_h;
                     *x_consumed += 1;
+                    normalize_bihom(a, b, c, d, e, f, g, h);
                 }
                 CfStep::Ended => {
                     *x_done = true;
@@ -1121,6 +1407,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                     *g = new_g;
                     *h = new_h;
                     *y_consumed += 1;
+                    normalize_bihom(a, b, c, d, e, f, g, h);
                 }
                 CfStep::Ended => {
                     *y_done = true;
@@ -1987,15 +2274,66 @@ mod tests {
     }
 
     #[test]
-    fn cmp_equal_sqrt_two_is_undecidable_within_budget() {
-        // SPEC §7.4.1: "two equal irrationals never differ — the
-        // procedure does not terminate by itself." Two distinct
-        // AlgebraicSqrt values built from the same radicand expand
-        // identically forever; the comparison budget exhausts.
+    fn cmp_equal_sqrt_two_decides_equal() {
+        // Two AlgebraicSqrt values built from the same radicand are
+        // equal. The algebraic short-circuit decides this in O(1)
+        // from the radicands rather than streaming the never-
+        // diverging CFs to budget exhaustion. It needs no budget
+        // headroom beyond the budget-0 guard.
         let a = sqrt_of(2, 1);
         let b = sqrt_of(2, 1);
-        assert_eq!(a.cmp_with_budget(&b, 32), None);
-        assert_eq!(a.cmp_with_budget(&b, BUDGET), None);
+        assert_eq!(a.cmp_with_budget(&b, 1), Some(Ordering::Equal));
+        assert_eq!(a.cmp_with_budget(&b, BUDGET), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn cmp_distinct_sqrts_decide_from_radicands() {
+        // √(2/3) < √2 < √8, each decided in O(1) from the radicands.
+        assert_eq!(
+            sqrt_of(2, 3).cmp_with_budget(&sqrt_of(2, 1), BUDGET),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            sqrt_of(8, 1).cmp_with_budget(&sqrt_of(2, 1), BUDGET),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            sqrt_of(7, 1).cmp_with_budget(&sqrt_of(7, 1), 1),
+            Some(Ordering::Equal)
+        );
+    }
+
+    #[test]
+    fn cmp_sqrt_against_non_positive_rationals() {
+        let s = sqrt_of(2, 1);
+        assert_eq!(
+            s.cmp_with_budget(&rational(0, 1), BUDGET),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            s.cmp_with_budget(&rational(-5, 1), BUDGET),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            rational(-5, 1).cmp_with_budget(&s, BUDGET),
+            Some(Ordering::Less)
+        );
+    }
+
+    #[test]
+    fn eq_equal_sqrts_resolves_decidably() {
+        assert_eq!(
+            sqrt_of(2, 1).eq_with_budget(&sqrt_of(2, 1), BUDGET),
+            Some(true)
+        );
+        assert_eq!(
+            sqrt_of(2, 1).ne_with_budget(&sqrt_of(2, 1), BUDGET),
+            Some(false)
+        );
+        assert_eq!(
+            sqrt_of(2, 1).eq_with_budget(&sqrt_of(3, 1), BUDGET),
+            Some(false)
+        );
     }
 
     // -- gosper vs everything --
@@ -2123,8 +2461,12 @@ mod tests {
 
     #[test]
     fn boolean_wrappers_propagate_undecidable_as_none() {
-        let a = sqrt_of(2, 1);
-        let b = sqrt_of(2, 1);
+        // A lazy Gosper zero (√2 − √2) compared against true zero
+        // cannot be resolved within the budget — no algebraic
+        // short-circuit applies to a Gosper operand — so every
+        // boolean wrapper surfaces `None`.
+        let a = sqrt_of(2, 1).sub(&sqrt_of(2, 1));
+        let b = rational(0, 1);
         assert_eq!(a.eq_with_budget(&b, BUDGET), None);
         assert_eq!(a.lt_with_budget(&b, BUDGET), None);
         assert_eq!(a.le_with_budget(&b, BUDGET), None);
@@ -2156,9 +2498,9 @@ mod tests {
     fn cmp_reflexive_for_finite_rationals() {
         // Reflexivity holds for finite (rational) CFs: both streams
         // emit the same canonical sequence then end, and the
-        // (Ended, Ended) branch returns Equal. Lazy values do NOT
-        // satisfy reflexivity through `cmp_with_budget` — see
-        // `cmp_equal_sqrt_two_is_undecidable_within_budget`.
+        // (Ended, Ended) branch returns Equal. Equal `AlgebraicSqrt`
+        // values are likewise reflexive via the algebraic
+        // short-circuit — see `cmp_equal_sqrt_two_decides_equal`.
         for r in &[
             rational(0, 1),
             rational(1, 1),
@@ -2173,5 +2515,182 @@ mod tests {
                 r
             );
         }
+    }
+
+    // === Phase 6: CF-native rounding and rational approximation ===
+
+    fn frac(num: i64, den: i64) -> Fraction {
+        Fraction::new(bi(num), bi(den))
+    }
+
+    #[test]
+    fn floor_of_rationals_is_first_partial_quotient() {
+        assert_eq!(rational(7, 2).floor(), Some(rational(3, 1)));
+        assert_eq!(rational(-7, 2).floor(), Some(rational(-4, 1)));
+        assert_eq!(rational(5, 1).floor(), Some(rational(5, 1)));
+        assert_eq!(rational(0, 1).floor(), Some(rational(0, 1)));
+    }
+
+    #[test]
+    fn ceil_of_rationals() {
+        assert_eq!(rational(7, 2).ceil(), Some(rational(4, 1)));
+        assert_eq!(rational(-7, 2).ceil(), Some(rational(-3, 1)));
+        assert_eq!(rational(5, 1).ceil(), Some(rational(5, 1)));
+        assert_eq!(rational(0, 1).ceil(), Some(rational(0, 1)));
+    }
+
+    #[test]
+    fn round_of_rationals_ties_away_from_zero() {
+        // Ties (half-integers): away from zero.
+        assert_eq!(rational(1, 2).round(), Some(rational(1, 1)));
+        assert_eq!(rational(-1, 2).round(), Some(rational(-1, 1)));
+        assert_eq!(rational(5, 2).round(), Some(rational(3, 1)));
+        assert_eq!(rational(-5, 2).round(), Some(rational(-3, 1)));
+        // Non-ties.
+        assert_eq!(rational(7, 3).round(), Some(rational(2, 1))); // 2.33…
+        assert_eq!(rational(8, 3).round(), Some(rational(3, 1))); // 2.66…
+        assert_eq!(rational(4, 1).round(), Some(rational(4, 1)));
+    }
+
+    #[test]
+    fn floor_ceil_round_of_algebraic_sqrt() {
+        // √2 ≈ 1.41421.
+        let s2 = sqrt_of(2, 1);
+        assert_eq!(s2.floor(), Some(rational(1, 1)));
+        assert_eq!(s2.ceil(), Some(rational(2, 1)));
+        assert_eq!(s2.round(), Some(rational(1, 1)));
+        // √7 ≈ 2.64575.
+        let s7 = sqrt_of(7, 1);
+        assert_eq!(s7.floor(), Some(rational(2, 1)));
+        assert_eq!(s7.ceil(), Some(rational(3, 1)));
+        assert_eq!(s7.round(), Some(rational(3, 1)));
+    }
+
+    #[test]
+    fn floor_ceil_round_of_gosper_value() {
+        // √2 + 1 ≈ 2.41421, held as a lazy Möbius Gosper.
+        let v = sqrt_of(2, 1).add(&rational(1, 1));
+        assert_eq!(v.floor(), Some(rational(2, 1)));
+        assert_eq!(v.ceil(), Some(rational(3, 1)));
+        assert_eq!(v.round(), Some(rational(2, 1)));
+    }
+
+    #[test]
+    fn rounding_of_nil_returns_none() {
+        let nil = ExactReal::Rational(Fraction::nil());
+        assert_eq!(nil.floor(), None);
+        assert_eq!(nil.ceil(), None);
+        assert_eq!(nil.round(), None);
+    }
+
+    #[test]
+    fn best_rational_approximation_of_rational() {
+        // 355/113 = [3; 7, 16]; principal convergents are 3, 22/7,
+        // 355/113.
+        let v = rational(355, 113);
+        assert_eq!(v.best_rational_approximation(&bi(6)), Some(frac(3, 1)));
+        assert_eq!(v.best_rational_approximation(&bi(50)), Some(frac(22, 7)));
+        assert_eq!(
+            v.best_rational_approximation(&bi(200)),
+            Some(frac(355, 113))
+        );
+    }
+
+    #[test]
+    fn best_rational_approximation_of_sqrt_two() {
+        // √2 = [1; 2, 2, 2, …]; convergent denominators 1, 2, 5, 12,
+        // 29, 70, 169, …
+        let s = sqrt_of(2, 1);
+        assert_eq!(s.best_rational_approximation(&bi(1)), Some(frac(1, 1)));
+        assert_eq!(s.best_rational_approximation(&bi(10)), Some(frac(7, 5)));
+        assert_eq!(s.best_rational_approximation(&bi(100)), Some(frac(99, 70)));
+        assert_eq!(s.best_rational_approximation(&bi(168)), Some(frac(99, 70)));
+        assert_eq!(
+            s.best_rational_approximation(&bi(169)),
+            Some(frac(239, 169))
+        );
+    }
+
+    #[test]
+    fn best_rational_approximation_rejects_bad_bound_and_nil() {
+        assert_eq!(rational(1, 2).best_rational_approximation(&bi(0)), None);
+        let nil = ExactReal::Rational(Fraction::nil());
+        assert_eq!(nil.best_rational_approximation(&bi(10)), None);
+    }
+
+    // === Phase 7: Gosper renormalization, sqrt period, Arc clone ===
+
+    #[test]
+    fn deep_mobius_chain_expands_correctly_under_normalization() {
+        // A left-deep chain of Möbius transforms stresses coefficient
+        // growth; GCD renormalization must not change the emitted CF.
+        // ((√2 + 1) + 1) + 1 = √2 + 3 = [4; 2, 2, 2, …].
+        let v = sqrt_of(2, 1)
+            .add(&rational(1, 1))
+            .add(&rational(1, 1))
+            .add(&rational(1, 1));
+        assert_eq!(v.partial_quotients_bounded(6), terms(&[4, 2, 2, 2, 2, 2]));
+    }
+
+    #[test]
+    fn sqrt_cf_period_known_values() {
+        assert_eq!(
+            sqrt_of(2, 1).sqrt_cf_period(),
+            Some((terms(&[1]), terms(&[2])))
+        );
+        assert_eq!(
+            sqrt_of(3, 1).sqrt_cf_period(),
+            Some((terms(&[1]), terms(&[1, 2])))
+        );
+        assert_eq!(
+            sqrt_of(7, 1).sqrt_cf_period(),
+            Some((terms(&[2]), terms(&[1, 1, 1, 4])))
+        );
+    }
+
+    #[test]
+    fn sqrt_cf_period_reconstructs_streamed_expansion() {
+        for (num, den) in [(2, 1), (3, 1), (7, 1), (13, 1), (2, 3), (1, 2)] {
+            let v = sqrt_of(num, den);
+            let (pre, period) = v.sqrt_cf_period().expect("algebraic sqrt");
+            assert!(!period.is_empty(), "period must be non-empty");
+            let n = 24;
+            let mut rebuilt: Vec<BigInt> = pre.clone();
+            while rebuilt.len() < n {
+                rebuilt.extend(period.iter().cloned());
+            }
+            rebuilt.truncate(n);
+            assert_eq!(
+                rebuilt,
+                v.partial_quotients_bounded(n),
+                "period reconstruction for √({num}/{den})"
+            );
+        }
+    }
+
+    #[test]
+    fn sqrt_cf_period_none_for_non_sqrt_representations() {
+        assert_eq!(rational(3, 2).sqrt_cf_period(), None);
+        // A perfect-square radicand collapses to Rational, not
+        // AlgebraicSqrt.
+        let perfect =
+            ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
+        assert_eq!(perfect.sqrt_cf_period(), None);
+        // A Gosper value is not an AlgebraicSqrt either.
+        let gosper = sqrt_of(2, 1).add(&rational(1, 1));
+        assert_eq!(gosper.sqrt_cf_period(), None);
+    }
+
+    #[test]
+    fn gosper_value_clone_preserves_equality_and_expansion() {
+        // After the Arc migration, cloning a Gosper-backed value is a
+        // refcount bump; it must still behave as a deep-equal copy.
+        let v = sqrt_of(2, 1).add(&sqrt_of(3, 1));
+        let cloned = v.clone();
+        assert_eq!(v, cloned);
+        assert_eq!(
+            v.partial_quotients_bounded(10),
+            cloned.partial_quotients_bounded(10)
+        );
     }
 }

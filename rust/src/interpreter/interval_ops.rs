@@ -167,7 +167,7 @@ pub(crate) fn op_sqrt_eps(interp: &mut Interpreter) -> Result<()> {
 
 fn sqrt_interval_with_eps(interval: Interval, eps: Fraction) -> Result<Interval> {
     if interval.hi.lt(&Fraction::from(0)) {
-        return Err(AjisaiError::from("sqrt of negative value"));
+        Err(AjisaiError::from("sqrt of negative value"))
     } else if interval.lo.lt(&Fraction::from(0)) {
         let hi = sqrt_value_to_interval(&interval.hi, &eps)?;
         Ok(Interval::new(Fraction::from(0), hi.hi)?)

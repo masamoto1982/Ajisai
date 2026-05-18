@@ -612,7 +612,6 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 metadata.deterministic = word.deterministic;
                 metadata.safe_preview = word.safe_preview;
                 metadata.canonical_home = CanonicalHome::Module(spec.name.to_string());
-                metadata.formerly_module = Some(spec.name.to_string());
                 metadata.listed_in_core = false;
                 metadata.listed_in_modules = vec![spec.name.to_string()];
                 metadata.listed_in_categories = Vec::new();

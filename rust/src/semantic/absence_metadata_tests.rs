@@ -1,3 +1,5 @@
+//! Test suite for `crate::semantic::absence`.
+
 use crate::error::{ErrorCategory, NilReason};
 use crate::semantic::{AbsenceOrigin, Recoverability, SemanticKind, ValueShape};
 use crate::types::Value;

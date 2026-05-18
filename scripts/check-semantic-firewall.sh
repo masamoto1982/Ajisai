@@ -16,22 +16,22 @@ check_absent() {
   fi
 }
 
-# External payloads must not reintroduce legacy camelCase fields.
-check_absent "legacy nilReason external field" 'nilReason' rust/src src
-check_absent "legacy top-level errorCategory external field" 'errorCategory' rust/src src
+# External payloads must not expose disallowed camelCase fields.
+check_absent "nilReason external field" 'nilReason' rust/src src
+check_absent "top-level errorCategory external field" 'errorCategory' rust/src src
 
 # Machine-readable WASM/TS/AI-facing outputs must use protocol strings,
 # not Rust Debug formatting.
 check_absent \
   'Debug formatting in external protocol payload code' \
   'format!\("\{:\?' \
-  rust/src/wasm-interpreter-state.rs rust/src/interpreter/debug-diagnosis.rs src
+  rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs rust/src/interpreter/debug_diagnosis.rs src
 
 # TypeScript and the WASM boundary must not depend on Rust Debug variant names.
 check_absent \
   'Rust Debug-derived protocol literals in TS/WASM boundary' \
   'DivisionByZero|SafeCaught|ExecuteWord|ParseStructure|ResolveWord' \
-  src rust/src/wasm-interpreter-state.rs
+  src rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs
 
 if [[ "$failed" -ne 0 ]]; then
   echo "[semantic-firewall] residue checks failed" >&2

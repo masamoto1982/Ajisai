@@ -276,7 +276,7 @@ fn bench_interpreter_sort(c: &mut Criterion) {
     c.bench_function("interp_sort", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("[ 5 3 8 1 9 2 7 4 10 6 ] SORT")).unwrap();
+            rt.block_on(interp.execute("'algo' IMPORT [ 5 3 8 1 9 2 7 4 10 6 ] SORT")).unwrap();
             black_box(&interp);
         })
     });
@@ -289,7 +289,7 @@ fn bench_interpreter_word_lookup_overhead(c: &mut Criterion) {
         b.iter(|| {
             let mut interp = Interpreter::new();
             rt.block_on(interp.execute(
-                "[ 3 1 2 ] SORT == ,, LENGTH"
+                "'algo' IMPORT [ 3 1 2 ] SORT == ,, LENGTH"
             )).unwrap();
             black_box(&interp);
         })
