@@ -283,7 +283,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_sample_words_in_vector_literal_play() {
+    async fn test_numeric_vector_literal_play_after_music_sample_reset() {
 
 
         let mut interp = Interpreter::new();
@@ -291,10 +291,10 @@ mod tests {
         let _ = interp.collect_output();
 
 
-        let result = interp.execute("[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY").await;
+        let result = interp.execute("[ 264 297 330 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
             result.is_ok(),
-            "[ C4 D4 E4 ] MUSIC@SEQ MUSIC@PLAY should succeed: {:?}",
+            "[ 264 297 330 ] MUSIC@SEQ MUSIC@PLAY should succeed: {:?}",
             result.err()
         );
 
@@ -375,6 +375,10 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
+        interp.execute("{ 264 } 'C4' DEF").await.unwrap();
+        interp.execute("{ 330 } 'E4' DEF").await.unwrap();
+        interp.execute("{ 396 } 'G4' DEF").await.unwrap();
+        let _ = interp.collect_output();
 
         let result = interp
             .execute("[ [ C4 E4 G4 ] ] MUSIC@SIM MUSIC@PLAY")
@@ -424,23 +428,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_def_with_module_collision_warns() {
+    async fn test_def_without_music_sample_collision_warning() {
 
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
         let result = interp.execute("{ [ 999 ] } 'C4' DEF").await;
-        assert!(result.is_ok(), "DEF should succeed even with module collision: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DEF should succeed after MUSIC sample dictionary reset: {:?}",
+            result.err()
+        );
         let output = interp.collect_output();
-        assert!(output.contains("Warning"),
-            "Should warn about the collision: {}", output);
-        assert!(output.contains("MUSIC@C4"),
-            "Warning should mention MUSIC@C4: {}", output);
+        assert!(
+            !output.contains("MUSIC@C4"),
+            "No MUSIC@C4 collision should be reported after sample reset: {}",
+            output
+        );
     }
 
     #[tokio::test]
-    async fn test_import_keeps_user_word_qualified() {
+    async fn test_import_keeps_user_word_unambiguous_after_music_sample_reset() {
 
         let mut interp = Interpreter::new();
 
@@ -452,47 +461,61 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
 
-        assert!(interp.user_words.contains_key("C4"),
-            "User word C4 should remain in DEMO after IMPORT");
-        assert!(output.contains("Warning"),
-            "Should warn about the conflict: {}", output);
+        assert!(
+            interp.user_words.contains_key("C4"),
+            "User word C4 should remain in DEMO after IMPORT"
+        );
+        assert!(
+            !output.contains("MUSIC@C4"),
+            "MUSIC has no C4 sample after reset, so no conflict warning is expected: {}",
+            output
+        );
 
 
         let result = interp.execute("C4").await;
-        assert!(result.is_err(), "C4 should be ambiguous");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Ambiguous"),
-            "Expected ambiguity error, got: {}", err_msg);
-
-
-        let result = interp.execute("DEMO@C4").await;
-        assert!(result.is_ok(), "Qualified DEMO@C4 should work: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "C4 should resolve to the user word after MUSIC sample reset: {:?}",
+            result.err()
+        );
         if let Some(val) = interp.stack.last() {
             let scalar_owned = val.as_scalar().cloned().or_else(|| {
                 val.child(0).and_then(|c| c.as_scalar().cloned())
             });
-            let scalar = scalar_owned.expect("DEMO@C4 should resolve to a numeric value");
-            assert_eq!(scalar.to_i64().unwrap(), 999,
-                "DEMO@C4 should remain the user-defined value");
+            let scalar = scalar_owned.expect("C4 should resolve to a numeric value");
+            assert_eq!(
+                scalar.to_i64().unwrap(),
+                999,
+                "C4 should remain the user-defined value"
+            );
         }
 
 
         let result = interp.execute("MUSIC@C4").await;
-        assert!(result.is_ok(), "Qualified MUSIC@C4 should work: {:?}", result.err());
+        assert!(
+            result.is_err(),
+            "Qualified MUSIC@C4 should not exist after sample reset"
+        );
     }
 
     #[tokio::test]
-    async fn test_module_word_resolves_without_conflict() {
+    async fn test_music_sample_dictionary_is_reset() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("C4").await;
-        assert!(result.is_ok(), "C4 should work: {:?}", result.err());
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264,
-                "C4 should be 264 (module sample)");
-        }
+        let result = interp.execute("MUSIC@C4").await;
+        assert!(
+            result.is_err(),
+            "MUSIC@C4 should not exist after resetting sample words"
+        );
+
+        let result = interp.execute("MUSIC@SEQ").await;
+        assert!(
+            result.is_ok(),
+            "MUSIC built-in words should remain available: {:?}",
+            result.err()
+        );
     }
 
     #[tokio::test]

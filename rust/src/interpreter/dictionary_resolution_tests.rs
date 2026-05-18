@@ -100,15 +100,12 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("MUSIC@C4").await;
+        let result = interp.execute("MUSIC@SEQ").await;
         assert!(
             result.is_ok(),
-            "MUSIC@C4 should resolve: {:?}",
+            "MUSIC@SEQ should resolve: {:?}",
             result.err()
         );
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
-        }
     }
 
     #[tokio::test]
@@ -118,15 +115,12 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("DICT@MUSIC@C4").await;
+        let result = interp.execute("DICT@MUSIC@SEQ").await;
         assert!(
             result.is_ok(),
-            "DICT@MUSIC@C4 should resolve: {:?}",
+            "DICT@MUSIC@SEQ should resolve: {:?}",
             result.err()
         );
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
-        }
     }
 
     #[tokio::test]
@@ -164,15 +158,12 @@ mod tests {
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
-        let result = interp.execute("music@c4").await;
+        let result = interp.execute("music@seq").await;
         assert!(
             result.is_ok(),
-            "music@c4 should resolve (case insensitive): {:?}",
+            "music@seq should resolve (case insensitive): {:?}",
             result.err()
         );
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
-        }
     }
 
     #[tokio::test]
@@ -193,65 +184,57 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ambiguous_word_error() {
+    async fn test_user_word_short_name_wins_without_music_sample_collision() {
 
         let mut interp = Interpreter::new();
-        interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
+        interp.execute("{ [ 999 ] } 'SEQ' DEF").await.unwrap();
         let _ = interp.collect_output();
 
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
 
 
-        let result = interp.execute("C4").await;
-        assert!(result.is_err(), "C4 should be ambiguous");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("Ambiguous"),
-            "Expected ambiguity error, got: {}",
-            err_msg
-        );
-        assert!(
-            err_msg.contains("MUSIC@C4"),
-            "Should mention MUSIC@C4: {}",
-            err_msg
-        );
-        assert!(
-            err_msg.contains("DEMO@C4"),
-            "Should mention DEMO@C4: {}",
-            err_msg
-        );
-    }
-
-    #[tokio::test]
-    async fn test_ambiguous_resolved_by_qualified_path() {
-
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
-        let _ = interp.collect_output();
-
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-
-
-        let result = interp.execute("MUSIC@C4").await;
+        let result = interp.execute("SEQ").await;
         assert!(
             result.is_ok(),
-            "MUSIC@C4 should resolve: {:?}",
+            "SEQ should resolve to the user word when MUSIC has no SEQ sample: {:?}",
             result.err()
         );
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
-        }
-
-
-        let result = interp.execute("DEMO@C4").await;
-        assert!(result.is_ok(), "DEMO@C4 should resolve: {:?}", result.err());
         if let Some(val) = interp.stack.last() {
             let scalar_owned = val.as_scalar().cloned().or_else(|| {
                 val.child(0).and_then(|c| c.as_scalar().cloned())
             });
-            let scalar = scalar_owned.expect("DEMO@C4 should be numeric");
+            let scalar = scalar_owned.expect("SEQ should resolve to a numeric user word");
+            assert_eq!(scalar.to_i64().unwrap(), 999);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_qualified_module_and_user_paths_resolve_after_sample_reset() {
+
+        let mut interp = Interpreter::new();
+        interp.execute("{ [ 999 ] } 'SEQ' DEF").await.unwrap();
+        let _ = interp.collect_output();
+
+        interp.execute("'music' IMPORT").await.unwrap();
+        let _ = interp.collect_output();
+
+
+        let result = interp.execute("MUSIC@SEQ").await;
+        assert!(
+            result.is_ok(),
+            "MUSIC@SEQ should resolve: {:?}",
+            result.err()
+        );
+
+
+        let result = interp.execute("DEMO@SEQ").await;
+        assert!(result.is_ok(), "DEMO@SEQ should resolve: {:?}", result.err());
+        if let Some(val) = interp.stack.last() {
+            let scalar_owned = val.as_scalar().cloned().or_else(|| {
+                val.child(0).and_then(|c| c.as_scalar().cloned())
+            });
+            let scalar = scalar_owned.expect("DEMO@SEQ should be numeric");
             assert_eq!(scalar.to_i64().unwrap(), 999);
         }
     }
