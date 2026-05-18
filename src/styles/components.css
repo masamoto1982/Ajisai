@@ -206,10 +206,31 @@
 #clear-btn {
     top: 0.5rem;
     right: 0.5rem;
+    z-index: 2;
+    color: var(--code-text);
 }
 
 #code-input:placeholder-shown ~ #clear-btn {
     display: none;
+}
+
+#input-panel::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4.5rem;
+    height: 4.5rem;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle at top right in oklch,
+        var(--editor-accent) 0%,
+        var(--editor-accent-fade) 70%);
+    transition: opacity 0.15s ease;
+}
+
+#input-panel:has(#code-input:placeholder-shown)::after {
+    opacity: 0;
 }
 
 
