@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{DisplayHint, Token, Value};
+use crate::types::{Interpretation, Token, Value};
 
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
     let pairs: Vec<(Vec<Token>, Vec<Token>)> = collect_cond_pairs_from_stack(interp)?;
@@ -145,14 +145,14 @@ fn evaluate_guard_isolated(
     value: &Value,
 ) -> Result<bool> {
     let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
-    let saved_hints: Vec<DisplayHint> = interp.semantic_registry.stack_hints.clone();
+    let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_safe_mode: bool = interp.safe_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
     interp.stack.push(value.clone());
-    interp.semantic_registry.push_hint(DisplayHint::Auto);
+    interp.semantic_registry.push_hint(Interpretation::Unassigned);
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
     interp.safe_mode = false;
@@ -215,7 +215,7 @@ fn evaluate_guard_greedy(
 fn restore_cond_eval_state(
     interp: &mut Interpreter,
     saved_stack: Vec<Value>,
-    saved_hints: Vec<DisplayHint>,
+    saved_hints: Vec<Interpretation>,
     saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
     saved_safe_mode: bool,
@@ -296,19 +296,19 @@ fn evaluate_guard_hedged_prefetch<'a>(
 
 fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Value) -> Result<()> {
     let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
-    let saved_hints: Vec<DisplayHint> = interp.semantic_registry.stack_hints.clone();
+    let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_safe_mode: bool = interp.safe_mode;
 
     interp.stack.push(value.clone());
-    interp.semantic_registry.stack_hints = vec![DisplayHint::Auto];
+    interp.semantic_registry.stack_hints = vec![Interpretation::Unassigned];
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
     interp.safe_mode = false;
 
     let execution_result: Result<usize> = interp.execute_section_core(body_tokens, 0);
-    let body_result_hint: DisplayHint = interp.semantic_registry.pop_hint();
+    let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
     let body_result_value: Option<Value> = interp.stack.pop();
 
     interp.stack = saved_stack;

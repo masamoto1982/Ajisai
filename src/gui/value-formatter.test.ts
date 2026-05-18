@@ -247,16 +247,13 @@ describe('AQ-VER-004-D formatFractionScientific scientific-form conjunction', ()
     });
 });
 
-describe('formatFraction literal display source preservation', () => {
+describe('formatFraction canonical numeric rendering', () => {
     test.each([
-        ['1', frac(1, 1)],
-        ['0.5', frac(1, 2)],
-        ['2/1', frac(2, 1)],
-    ])('renders %s from displaySource instead of normalized fraction fields', (source, fraction) => {
-        expect(formatFraction({ ...fraction, displaySource: source })).toBe(source);
-    });
-
-    test('falls back to normalized numeric formatting when displaySource is absent', () => {
-        expect(formatFraction(frac(1, 2))).toBe('1/2');
+        [frac(1, 1), '1/1'],
+        [frac(1, 2), '1/2'],
+        [frac(2, 1), '2/1'],
+        [frac(12, 25), '12/25'],
+    ])('renders %o as canonical numerator/denominator', (fraction: Fraction, expected: string) => {
+        expect(formatFraction(fraction)).toBe(expected);
     });
 });

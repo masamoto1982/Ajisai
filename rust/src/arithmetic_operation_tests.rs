@@ -12,7 +12,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 3 ]", "CEIL(7/3) should be 3");
+        assert_eq!(result, "[ 3/1 ]", "CEIL(7/3) should be 3");
     }
 
     #[tokio::test]
@@ -23,7 +23,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2 ]", "CEIL(-7/3) should be -2");
+        assert_eq!(result, "[ -2/1 ]", "CEIL(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -34,7 +34,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 2 ]", "CEIL(6/3) should be 2");
+        assert_eq!(result, "[ 2/1 ]", "CEIL(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -45,7 +45,7 @@ mod ceil_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2 ]", "CEIL(-6/3) should be -2");
+        assert_eq!(result, "[ -2/1 ]", "CEIL(-6/3) should be -2");
     }
 
     #[tokio::test]
@@ -83,7 +83,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 2 ]", "ROUND(7/3) should be 2");
+        assert_eq!(result, "[ 2/1 ]", "ROUND(7/3) should be 2");
     }
 
     #[tokio::test]
@@ -94,7 +94,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 3 ]", "ROUND(5/2) should be 3");
+        assert_eq!(result, "[ 3/1 ]", "ROUND(5/2) should be 3");
     }
 
     #[tokio::test]
@@ -105,7 +105,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 3 ]", "ROUND(8/3) should be 3");
+        assert_eq!(result, "[ 3/1 ]", "ROUND(8/3) should be 3");
     }
 
     #[tokio::test]
@@ -116,7 +116,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2 ]", "ROUND(-7/3) should be -2");
+        assert_eq!(result, "[ -2/1 ]", "ROUND(-7/3) should be -2");
     }
 
     #[tokio::test]
@@ -127,7 +127,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -3 ]", "ROUND(-5/2) should be -3");
+        assert_eq!(result, "[ -3/1 ]", "ROUND(-5/2) should be -3");
     }
 
     #[tokio::test]
@@ -138,7 +138,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -3 ]", "ROUND(-8/3) should be -3");
+        assert_eq!(result, "[ -3/1 ]", "ROUND(-8/3) should be -3");
     }
 
     #[tokio::test]
@@ -149,7 +149,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 2 ]", "ROUND(6/3) should be 2");
+        assert_eq!(result, "[ 2/1 ]", "ROUND(6/3) should be 2");
     }
 
     #[tokio::test]
@@ -160,7 +160,7 @@ mod round_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ -2 ]", "ROUND(-6/3) should be -2");
+        assert_eq!(result, "[ -2/1 ]", "ROUND(-6/3) should be -2");
     }
 
     #[tokio::test]
@@ -253,7 +253,7 @@ mod interval_tests {
         let mut interp = Interpreter::new();
         interp.execute("'math' IMPORT 1 2 INTERVAL").await.unwrap();
         let stack = interp.get_stack();
-        assert_eq!(format!("{}", stack[0]), "[1, 2]");
+        assert_eq!(format!("{}", stack[0]), "[1/1, 2/1]");
 
         let mut interp_fail = Interpreter::new();
         let result = interp_fail.execute("'math' IMPORT 2 1 INTERVAL").await;
@@ -267,35 +267,35 @@ mod interval_tests {
             .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL +")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[4, 6]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[4/1, 6/1]");
 
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL -")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[-3, -1]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[-3/1, -1/1]");
 
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL *")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 8]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[3/1, 8/1]");
 
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT -1 2 INTERVAL 3 4 INTERVAL *")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[-4, 8]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[-4/1, 8/1]");
 
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 2 4 INTERVAL 1 2 INTERVAL /")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 4]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[1/1, 4/1]");
     }
 
     #[tokio::test]
@@ -312,7 +312,7 @@ mod interval_tests {
     async fn test_sqrt_exact_cases() {
         let mut interp = Interpreter::new();
         interp.execute("'math' IMPORT 4 SQRT").await.unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "2");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "2/1");
 
         let mut interp = Interpreter::new();
         interp.execute("'math' IMPORT 9/16 SQRT").await.unwrap();
@@ -346,7 +346,7 @@ mod interval_tests {
             .execute("'math' IMPORT 1 4 INTERVAL SQRT")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[1, 2]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[1/1, 2/1]");
     }
 
     #[tokio::test]
@@ -356,7 +356,7 @@ mod interval_tests {
             .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL <")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "1");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
 
         let mut interp_undetermined = Interpreter::new();
         interp_undetermined
@@ -374,7 +374,7 @@ mod interval_tests {
             .execute("'math' IMPORT 1 5 INTERVAL 2 4 INTERVAL =")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "0");
+        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "0/1");
     }
 
     #[tokio::test]
@@ -384,14 +384,14 @@ mod interval_tests {
             .execute("'math' IMPORT 1 2 3 INTERVAL +")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[3, 4]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[3/1, 4/1]");
 
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 2 3 5 INTERVAL *")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[6, 10]");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "[6/1, 10/1]");
     }
 }
 
@@ -517,8 +517,8 @@ mod ai_first_comparison_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" => true,
-            "0" => false,
+            "1" | "1/1" => true,
+            "0" | "0/1" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }
@@ -610,14 +610,14 @@ mod ai_first_comparison_tests {
     async fn gt_on_disjoint_intervals_decides_true() {
         let interp = run("'math' IMPORT 3 4 INTERVAL 1 2 INTERVAL GT").await;
         let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "1");
+        assert_eq!(s, "1/1");
     }
 
     #[tokio::test]
     async fn gte_on_disjoint_intervals_decides_false() {
         let interp = run("'math' IMPORT 0 1 INTERVAL 2 3 INTERVAL GTE").await;
         let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "0");
+        assert_eq!(s, "0/1");
     }
 
     #[tokio::test]
@@ -733,8 +733,8 @@ mod comparison_budget_infrastructure_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" => true,
-            "0" => false,
+            "1" | "1/1" => true,
+            "0" | "0/1" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }
@@ -861,8 +861,8 @@ mod phase_seven_eq_budget_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" => true,
-            "0" => false,
+            "1" | "1/1" => true,
+            "0" | "0/1" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }

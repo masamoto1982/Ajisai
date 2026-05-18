@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{DenseTensor, DisplayHint, Value, ValueData};
+use super::{DenseTensor, Interpretation, Value, ValueData};
 use std::fmt;
 
 impl fmt::Display for Value {
@@ -8,21 +8,24 @@ impl fmt::Display for Value {
     }
 }
 
-pub fn format_with_hint(value: &Value, hint: DisplayHint) -> String {
+pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     match hint {
-        DisplayHint::Nil => {
+        Interpretation::Nil => {
             if matches!(value.data, ValueData::Nil) {
                 "NIL".to_string()
             } else {
                 format_value_recursive(&value.data, 0)
             }
         }
-        DisplayHint::Auto => format_value_auto(value),
-        DisplayHint::Number => format_value_recursive(&value.data, 0),
-        DisplayHint::Interval => format_as_interval(value),
-        DisplayHint::String => format_as_string(&value.data),
-        DisplayHint::Boolean => format_as_boolean(&value.data),
-        DisplayHint::DateTime => format_as_datetime(&value.data),
+        // Unassigned renders the value in its raw structural form. The
+        // runtime never re-guesses a richer meaning (e.g. "string-like")
+        // at render time; interpretation is decided once, at construction.
+        Interpretation::Unassigned => format_value_recursive(&value.data, 0),
+        Interpretation::RawNumber => format_value_recursive(&value.data, 0),
+        Interpretation::Interval => format_as_interval(value),
+        Interpretation::Text => format_as_string(&value.data),
+        Interpretation::TruthValue => format_as_boolean(&value.data),
+        Interpretation::Timestamp => format_as_datetime(&value.data),
     }
 }
 
@@ -48,66 +51,6 @@ fn format_as_interval(value: &Value) -> String {
         }
         _ => format_value_recursive(&value.data, 0),
     }
-}
-
-fn format_value_auto(value: &Value) -> String {
-    match &value.data {
-        ValueData::Nil => "NIL".to_string(),
-        ValueData::Scalar(f) => format_fraction(f),
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-            // NOTE: string-like 推論は Auto hint の表示 fallback でのみ使用すること。
-            if !v.is_empty() && is_string_like(v) {
-                return format_as_string(&value.data);
-            }
-            format_value_recursive(&value.data, 0)
-        }
-        ValueData::Tensor { data, shape } => {
-            if shape.len() == 1 && !data.is_empty() && is_fraction_string_like(data) {
-                return format_as_string(&value.data);
-            }
-            format_value_recursive(&value.data, 0)
-        }
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
-    }
-}
-
-fn is_fraction_string_like(data: &DenseTensor) -> bool {
-    data.iter().all(|f| {
-        f.is_integer()
-            && f.to_i64().is_some_and(|n| {
-                (0..=0x10FFFF).contains(&n)
-                    && char::from_u32(n as u32)
-                        .is_some_and(|c| !c.is_control() || c == '\n' || c == '\r' || c == '\t')
-            })
-    })
-}
-
-/// Returns whether every element can be interpreted as a printable Unicode code point.
-/// This heuristic must be used only for DisplayHint::Auto fallback formatting.
-pub fn is_string_like(values: &[Value]) -> bool {
-    values.iter().all(|v| {
-        if let ValueData::Scalar(f) = &v.data {
-            f.is_integer() && {
-                if let Some(n) = f.to_i64() {
-                    if n >= 0 && n <= 0x10FFFF {
-                        if let Some(c) = char::from_u32(n as u32) {
-                            !c.is_control() || c == '\n' || c == '\r' || c == '\t'
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
-        } else {
-            false
-        }
-    })
 }
 
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
@@ -209,18 +152,15 @@ fn format_code_block(tokens: &[super::Token]) -> String {
     token_strs.join(" ")
 }
 
+/// Canonical numeric rendering: every number is shown as a reduced
+/// `numerator/denominator`, integers included (`3` -> `3/1`). There is no
+/// decimal surface form and no per-value style — the display is uniform
+/// and matches the exact-real internal model.
 fn format_fraction(f: &Fraction) -> String {
     if f.is_nil() {
         return "NIL".to_string();
     }
-    if let Some(source) = f.display_source() {
-        return source.to_string();
-    }
-    if f.is_integer() {
-        f.numerator().to_string()
-    } else {
-        format!("{}/{}", f.numerator(), f.denominator())
-    }
+    format!("{}/{}", f.numerator(), f.denominator())
 }
 
 fn format_as_string(data: &ValueData) -> String {
@@ -366,13 +306,7 @@ fn format_as_boolean(data: &ValueData) -> String {
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Scalar(f) => {
-            if f.is_integer() {
-                format!("@{}", f.numerator())
-            } else {
-                format!("@{}/{}", f.numerator(), f.denominator())
-            }
-        }
+        ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
             format_value_recursive(data, 0)
         }

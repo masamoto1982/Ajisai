@@ -3,7 +3,7 @@ use super::hedged::execute_hedged_map_kernel;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{DisplayHint, Token, Value};
+use crate::types::{Interpretation, Token, Value};
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -128,10 +128,10 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         match execute_executable_code(interp, &executable) {
                             Ok(_) => match interp.stack.pop() {
                                 Some(result_val) => {
-                                    let result_hint: DisplayHint =
+                                    let result_hint: Interpretation =
                                         interp.semantic_registry.pop_hint();
-                                    let is_string_result = result_hint == DisplayHint::String
-                                        || result_val.hint == DisplayHint::String;
+                                    let is_string_result = result_hint == Interpretation::Text
+                                        || result_val.hint == Interpretation::Text;
                                     if is_vector_value(&result_val)
                                         && result_val.len() == 1
                                         && !is_string_result

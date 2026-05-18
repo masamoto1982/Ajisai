@@ -114,13 +114,27 @@ export interface ExecuteResult {
 export interface Fraction {
     numerator: string;
     denominator: string;
-    displaySource?: string;
 }
+
+/**
+ * Semantic interpretation role attached to a value. This is the meaning
+ * the runtime assigned, not a formatting switch — rendering is derived
+ * from (data, role). `unassigned` means no role was assigned and the
+ * value is shown structurally with no heuristic guessing.
+ */
+export type Interpretation =
+    | 'unassigned'
+    | 'rawNumber'
+    | 'interval'
+    | 'text'
+    | 'truthValue'
+    | 'timestamp'
+    | 'nil';
 
 export interface Value {
     type: string;
     value: any | Fraction | Value[];
-    displayHint?: 'auto' | 'number' | 'string' | 'boolean' | 'datetime' | 'nil';
+    displayHint?: Interpretation;
     semantics?: ProtocolValueSemantics;
 }
 

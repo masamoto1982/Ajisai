@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, ExecutionLine, Token, Value};
+use crate::types::{Interpretation, ExecutionLine, Token, Value};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
@@ -10,24 +10,24 @@ use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::SemanticRegistry;
 
 fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
-    let hint: Option<DisplayHint> = match word {
-        "STR" | "CHR" | "JOIN" => Some(DisplayHint::String),
+    let hint: Option<Interpretation> = match word {
+        "STR" | "CHR" | "JOIN" => Some(Interpretation::Text),
         "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
-            Some(DisplayHint::Number)
+            Some(Interpretation::RawNumber)
         }
         "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
-            Some(DisplayHint::Interval)
+            Some(Interpretation::Interval)
         }
         "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
-            Some(DisplayHint::Number)
+            Some(Interpretation::RawNumber)
         }
         "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT" => {
-            Some(DisplayHint::Boolean)
+            Some(Interpretation::TruthValue)
         }
-        "NOW" | "DATETIME" | "TIMESTAMP" => Some(DisplayHint::DateTime),
+        "NOW" | "DATETIME" | "TIMESTAMP" => Some(Interpretation::Timestamp),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
         | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" => {
-            Some(DisplayHint::Auto)
+            Some(Interpretation::Unassigned)
         }
         _ => None,
     };
@@ -114,7 +114,7 @@ impl Interpreter {
         &mut self,
         tokens: &[Token],
         start_index: usize,
-    ) -> Result<(Vec<Value>, usize, DisplayHint)> {
+    ) -> Result<(Vec<Value>, usize, Interpretation)> {
         self.collect_vector_with_depth(tokens, start_index, 1)
     }
 
@@ -123,7 +123,7 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
         depth: usize,
-    ) -> Result<(Vec<Value>, usize, DisplayHint)> {
+    ) -> Result<(Vec<Value>, usize, Interpretation)> {
         if !matches!(&tokens[start_index], Token::VectorStart) {
             return Err(AjisaiError::from("Expected vector start"));
         }
@@ -157,20 +157,20 @@ impl Interpreter {
                     i += consumed;
                 }
                 Token::VectorEnd => {
-                    let element_hint: DisplayHint = if has_other {
-                        DisplayHint::Auto
+                    let element_hint: Interpretation = if has_other {
+                        Interpretation::Unassigned
                     } else if has_bool && !has_number {
-                        DisplayHint::Boolean
+                        Interpretation::TruthValue
                     } else if has_number && !has_bool {
-                        DisplayHint::Number
+                        Interpretation::RawNumber
                     } else {
-                        DisplayHint::Auto
+                        Interpretation::Unassigned
                     };
                     return Ok((values, i - start_index + 1, element_hint));
                 }
                 Token::Number(n) => {
                     values.push(Value::from_number(
-                        Fraction::parse_unreduced_from_str(n).map_err(AjisaiError::from)?,
+                        Fraction::from_str(n).map_err(AjisaiError::from)?,
                     ));
                     has_number = true;
                     i += 1;
@@ -261,14 +261,13 @@ impl Interpreter {
         while i < execute_tokens.len() {
             match &execute_tokens[i] {
                 Token::Number(n) => {
-                    let frac =
-                        Fraction::parse_unreduced_from_str(n).map_err(AjisaiError::from)?;
+                    let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
                     self.stack.push(create_number_value(frac));
-                    self.semantic_registry.push_hint(DisplayHint::Number);
+                    self.semantic_registry.push_hint(Interpretation::RawNumber);
                 }
                 Token::String(s) => {
                     self.stack.push(Value::from_string(s));
-                    self.semantic_registry.push_hint(DisplayHint::String);
+                    self.semantic_registry.push_hint(Interpretation::Text);
                 }
                 Token::VectorStart => {
                     let (values, consumed, element_hint) =
@@ -310,7 +309,7 @@ impl Interpreter {
                     }
 
                     self.stack.push(Value::from_code_block(block_tokens));
-                    self.semantic_registry.push_hint(DisplayHint::Auto);
+                    self.semantic_registry.push_hint(Interpretation::Unassigned);
                     i = j;
                     continue;
                 }

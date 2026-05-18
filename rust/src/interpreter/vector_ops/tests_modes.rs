@@ -237,7 +237,7 @@ async fn test_print_keep_mode() {
         "PRINT in keep mode should preserve value on stack"
     );
     assert!(
-        interp.output_buffer.contains("*"),
+        interp.output_buffer.contains("42/1"),
         "PRINT should output the value, got: {}",
         interp.output_buffer
     );

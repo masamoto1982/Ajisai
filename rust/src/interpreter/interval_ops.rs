@@ -4,12 +4,12 @@ use crate::types::fraction::Fraction;
 use crate::types::interval::{
     default_sqrt_eps, exact_rational_sqrt, sqrt_rational_interval, Interval,
 };
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 
 pub(crate) fn value_to_interval(value: &Value) -> Option<Interval> {
     match (&value.data, value.hint) {
         (ValueData::Scalar(f), _) => Some(Interval::from_scalar(f.clone())),
-        (ValueData::Vector(v), DisplayHint::Interval) if v.len() == 2 => {
+        (ValueData::Vector(v), Interpretation::Interval) if v.len() == 2 => {
             let lo = v[0].as_scalar()?.clone();
             let hi = v[1].as_scalar()?.clone();
             Interval::new(lo, hi).ok()
@@ -55,7 +55,7 @@ pub(crate) fn op_interval(interp: &mut Interpreter) -> Result<()> {
         .clone();
     let interval = Interval::new(lo, hi)?;
     interp.stack.push(Value::from_interval(interval));
-    interp.semantic_registry.push_hint(DisplayHint::Interval);
+    interp.semantic_registry.push_hint(Interpretation::Interval);
     Ok(())
 }
 
@@ -87,7 +87,7 @@ pub(crate) fn op_is_exact(interp: &mut Interpreter) -> Result<()> {
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("IS_EXACT: expected Number or Interval"))?;
     interp.stack.push(Value::from_bool(interval.is_exact()));
-    interp.semantic_registry.push_hint(DisplayHint::Boolean);
+    interp.semantic_registry.push_hint(Interpretation::TruthValue);
     Ok(())
 }
 
@@ -112,7 +112,7 @@ where
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("interval accessor: expected Number or Interval"))?;
     interp.stack.push(Value::from_fraction(f(interval)));
-    interp.semantic_registry.push_hint(DisplayHint::Number);
+    interp.semantic_registry.push_hint(Interpretation::RawNumber);
     Ok(())
 }
 
@@ -134,9 +134,9 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 
     let result = sqrt_interval_with_eps(interval, default_sqrt_eps())?;
     let out_hint = if result.is_exact() {
-        DisplayHint::Number
+        Interpretation::RawNumber
     } else {
-        DisplayHint::Interval
+        Interpretation::Interval
     };
     interp.stack.push(interval_to_value(result));
     interp.semantic_registry.push_hint(out_hint);
@@ -156,9 +156,9 @@ pub(crate) fn op_sqrt_eps(interp: &mut Interpreter) -> Result<()> {
         .clone();
     let result = sqrt_interval_with_eps(interval, eps)?;
     let out_hint = if result.is_exact() {
-        DisplayHint::Number
+        Interpretation::RawNumber
     } else {
-        DisplayHint::Interval
+        Interpretation::Interval
     };
     interp.stack.push(interval_to_value(result));
     interp.semantic_registry.push_hint(out_hint);

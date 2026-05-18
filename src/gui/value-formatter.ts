@@ -73,13 +73,10 @@ export function formatFractionScientific(numerStr: string, denomStr: string): st
 }
 
 
+// Canonical numeric rendering: every number is a reduced
+// numerator/denominator, integers included (`3` -> `3/1`).
 export function formatFraction(frac: Fraction): string {
-    if (frac.displaySource) {
-        return frac.displaySource;
-    }
-    const denomStr = String(frac.denominator);
-    const numerStr = String(frac.numerator);
-    return formatFractionScientific(numerStr, denomStr);
+    return `${frac.numerator}/${frac.denominator}`;
 }
 
 
@@ -87,9 +84,6 @@ export function formatValueSimple(value: Value): string {
     switch (value.type) {
         case 'number': {
             const frac = value.value as Fraction;
-            if (frac.denominator === '1') {
-                return frac.numerator;
-            }
             return `${frac.numerator}/${frac.denominator}`;
         }
         case 'string':

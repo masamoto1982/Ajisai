@@ -1,22 +1,22 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 
 pub(crate) fn is_string_value(val: &Value) -> bool {
-    is_string_value_with_hint(val, DisplayHint::Auto)
+    is_string_value_with_hint(val, Interpretation::Unassigned)
 }
 
-pub(crate) fn is_string_value_with_hint(val: &Value, hint: DisplayHint) -> bool {
+pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bool {
     match hint {
-        DisplayHint::Number
-        | DisplayHint::Interval
-        | DisplayHint::Boolean
-        | DisplayHint::DateTime
-        | DisplayHint::Nil => {
+        Interpretation::RawNumber
+        | Interpretation::Interval
+        | Interpretation::TruthValue
+        | Interpretation::Timestamp
+        | Interpretation::Nil => {
             return false;
         }
-        DisplayHint::String | DisplayHint::Auto => {}
+        Interpretation::Text | Interpretation::Unassigned => {}
     }
     let children: &Vec<Value> = match &val.data {
         ValueData::Vector(v) if !v.is_empty() => v,
@@ -82,13 +82,13 @@ pub(crate) fn is_datetime_value(_val: &Value) -> bool {
 
 pub(crate) fn apply_unary_cast(
     interp: &mut Interpreter,
-    convert: fn(&Value, DisplayHint) -> Result<Value>,
+    convert: fn(&Value, Interpretation) -> Result<Value>,
 ) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let hint: DisplayHint = interp.semantic_registry.lookup_last_hint();
+            let hint: Interpretation = interp.semantic_registry.lookup_last_hint();
             let value: Value = if is_keep_mode {
                 interp
                     .stack
@@ -119,7 +119,7 @@ pub(crate) fn apply_unary_cast(
 
             if is_keep_mode {
                 let originals: Vec<Value> = interp.stack.to_vec();
-                let hints: Vec<DisplayHint> = (0..originals.len())
+                let hints: Vec<Interpretation> = (0..originals.len())
                     .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
                     .collect();
                 let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
@@ -130,7 +130,7 @@ pub(crate) fn apply_unary_cast(
                 Ok(())
             } else {
                 let originals: Vec<Value> = interp.stack.drain(..).collect();
-                let hints: Vec<DisplayHint> = (0..originals.len())
+                let hints: Vec<Interpretation> = (0..originals.len())
                     .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
                     .collect();
                 let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
@@ -171,10 +171,10 @@ pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
 
 #[cfg(test)]
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
-    format_value_to_string_repr_with_hint(value, DisplayHint::Auto)
+    format_value_to_string_repr_with_hint(value, Interpretation::Unassigned)
 }
 
-pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: DisplayHint) -> String {
+pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpretation) -> String {
     if value.is_nil() {
         return "NIL".to_string();
     }

@@ -1,11 +1,11 @@
 use crate::interpreter::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{DisplayHint, Value};
+use crate::types::{Interpretation, Value};
 
 #[derive(Debug, Clone)]
 pub struct HedgedSnapshot {
     pub stack: Vec<Value>,
-    pub display_hints: Vec<DisplayHint>,
+    pub display_hints: Vec<Interpretation>,
     pub operation_target_mode: OperationTargetMode,
     pub consumption_mode: ConsumptionMode,
     pub safe_mode: bool,

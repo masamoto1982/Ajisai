@@ -1,6 +1,6 @@
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value};
+use crate::types::{Interpretation, Value};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -36,20 +36,6 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
     build_level(shape)
 }
 
-fn fraction_display_source_from_js(num_obj: &js_sys::Object) -> Option<String> {
-    js_sys::Reflect::get(num_obj, &"displaySource".into())
-        .ok()
-        .and_then(|value| value.as_string())
-        .filter(|source| !source.is_empty())
-}
-
-fn apply_fraction_display_source(mut fraction: Fraction, num_obj: &js_sys::Object) -> Fraction {
-    if let Some(source) = fraction_display_source_from_js(num_obj) {
-        fraction = fraction.with_display_source(&source);
-    }
-    fraction
-}
-
 pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
@@ -70,12 +56,9 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 .map_err(|_| "No denominator".to_string())?
                 .as_string()
                 .ok_or("Denominator not string")?;
-            let fraction = apply_fraction_display_source(
-                Fraction::new(
-                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-                ),
-                &num_obj,
+            let fraction = Fraction::new(
+                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
             );
             Ok(Value::from_fraction(fraction))
         }
@@ -89,12 +72,9 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                 .map_err(|_| "No denominator".to_string())?
                 .as_string()
                 .ok_or("Denominator not string")?;
-            let fraction = apply_fraction_display_source(
-                Fraction::new(
-                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-                ),
-                &num_obj,
+            let fraction = Fraction::new(
+                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
             );
             Ok(Value::from_datetime(fraction))
         }
@@ -135,12 +115,9 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
                     .map_err(|_| "No denominator in tensor data".to_string())?
                     .as_string()
                     .ok_or("Denominator not string")?;
-                let fraction = apply_fraction_display_source(
-                    Fraction::new(
-                        BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                        BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-                    ),
-                    &frac_obj,
+                let fraction = Fraction::new(
+                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
+                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
                 );
                 fractions.push(fraction);
             }
@@ -250,27 +227,24 @@ fn value_semantics_to_js(value: &Value) -> JsValue {
     obj.into()
 }
 
-fn set_fraction_display_source_prop(obj: &js_sys::Object, fraction: &crate::types::fraction::Fraction) {
-    if let Some(source) = fraction.display_source() {
-        set_prop(obj, "displaySource", &source.into());
+fn interpretation_protocol_str(hint: Interpretation) -> &'static str {
+    match hint {
+        Interpretation::Unassigned => "unassigned",
+        Interpretation::RawNumber => "rawNumber",
+        Interpretation::Interval => "interval",
+        Interpretation::Text => "text",
+        Interpretation::TruthValue => "truthValue",
+        Interpretation::Timestamp => "timestamp",
+        Interpretation::Nil => "nil",
     }
 }
 
-fn set_value_common_fields(obj: &js_sys::Object, value: &Value, hint: DisplayHint) {
-    let hint_str: &str = match hint {
-        DisplayHint::Auto => "auto",
-        DisplayHint::Number => "number",
-        DisplayHint::Interval => "interval",
-        DisplayHint::String => "string",
-        DisplayHint::Boolean => "boolean",
-        DisplayHint::DateTime => "datetime",
-        DisplayHint::Nil => "nil",
-    };
-    set_prop(obj, "displayHint", &hint_str.into());
+fn set_value_common_fields(obj: &js_sys::Object, value: &Value, hint: Interpretation) {
+    set_prop(obj, "displayHint", &interpretation_protocol_str(hint).into());
     set_prop(obj, "semantics", &value_semantics_to_js(value));
 }
 
-pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>) -> JsValue {
+pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretation>) -> JsValue {
     let obj = js_sys::Object::new();
     let effective_hint = external_hint_opt.unwrap_or(value.hint);
     set_value_common_fields(&obj, value, effective_hint);
@@ -282,9 +256,9 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>)
         }
         crate::types::ValueData::Scalar(f) => {
             let scalar_type = match effective_hint {
-                DisplayHint::Boolean => "boolean",
-                DisplayHint::DateTime => "datetime",
-                DisplayHint::String => "string",
+                Interpretation::TruthValue => "boolean",
+                Interpretation::Timestamp => "datetime",
+                Interpretation::Text => "string",
                 _ => "number",
             };
             set_prop(&obj, "type", &scalar_type.into());
@@ -302,13 +276,12 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>)
                     let num_obj = js_sys::Object::new();
                     set_prop(&num_obj, "numerator", &f.numerator().to_string().into());
                     set_prop(&num_obj, "denominator", &f.denominator().to_string().into());
-                    set_fraction_display_source_prop(&num_obj, f);
                     set_prop(&obj, "value", &num_obj.into());
                 }
             }
         }
         crate::types::ValueData::Vector(children) => {
-            if effective_hint == DisplayHint::String {
+            if effective_hint == Interpretation::Text {
                 let text = children
                     .iter()
                     .filter_map(|child| match &child.data {
@@ -322,7 +295,7 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>)
                 set_prop(&obj, "value", &text.into());
             } else {
                 let child_hint = match effective_hint {
-                    DisplayHint::Boolean => Some(DisplayHint::Boolean),
+                    Interpretation::TruthValue => Some(Interpretation::TruthValue),
                     _ => None,
                 };
                 let js_array = js_sys::Array::new();
@@ -334,7 +307,7 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<DisplayHint>)
             }
         }
         crate::types::ValueData::Tensor { data, shape } => {
-            if effective_hint == DisplayHint::String && shape.len() <= 1 {
+            if effective_hint == Interpretation::Text && shape.len() <= 1 {
                 let text: String = data
                     .iter()
                     .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
@@ -392,11 +365,10 @@ fn tensor_data_to_js_array(
                 &f.denominator().to_string().into(),
             )
             .unwrap();
-            set_fraction_display_source_prop(&num_obj, f);
             let elem = js_sys::Object::new();
             js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
-            js_sys::Reflect::set(&elem, &"displayHint".into(), &"number".into()).unwrap();
+            js_sys::Reflect::set(&elem, &"displayHint".into(), &"rawNumber".into()).unwrap();
             let element_value = Value::from_fraction(f.clone());
             js_sys::Reflect::set(
                 &elem,
@@ -415,7 +387,7 @@ fn tensor_data_to_js_array(
             let elem = js_sys::Object::new();
             js_sys::Reflect::set(&elem, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &inner).unwrap();
-            js_sys::Reflect::set(&elem, &"displayHint".into(), &"auto".into()).unwrap();
+            js_sys::Reflect::set(&elem, &"displayHint".into(), &"unassigned".into()).unwrap();
             arr.push(&elem);
         }
     }
@@ -426,22 +398,14 @@ fn tensor_data_to_js_array(
 pub(crate) fn arena_node_to_js(
     arena: &ValueArena,
     root_id: NodeId,
-    external_hint_opt: Option<DisplayHint>,
+    external_hint_opt: Option<Interpretation>,
 ) -> JsValue {
     let obj = js_sys::Object::new();
     // external_hint_opt が無い場合は必ず Arena 側の hint を参照する。
     // 子ノード再帰では None を渡し、各 NodeId の明示 hint を尊重する。
     let effective_hint = resolve_effective_hint(arena, root_id, external_hint_opt);
 
-    let hint_str: &str = match effective_hint {
-        DisplayHint::Auto => "auto",
-        DisplayHint::Number => "number",
-        DisplayHint::Interval => "interval",
-        DisplayHint::String => "string",
-        DisplayHint::Boolean => "boolean",
-        DisplayHint::DateTime => "datetime",
-        DisplayHint::Nil => "nil",
-    };
+    let hint_str: &str = interpretation_protocol_str(effective_hint);
     js_sys::Reflect::set(&obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
     match arena.kind(root_id) {
@@ -451,9 +415,9 @@ pub(crate) fn arena_node_to_js(
         }
         NodeKind::Scalar(f) => {
             let scalar_type = match effective_hint {
-                DisplayHint::Boolean => "boolean",
-                DisplayHint::DateTime => "datetime",
-                DisplayHint::String => "string",
+                Interpretation::TruthValue => "boolean",
+                Interpretation::Timestamp => "datetime",
+                Interpretation::Text => "string",
                 _ => "number",
             };
             js_sys::Reflect::set(&obj, &"type".into(), &scalar_type.into()).unwrap();
@@ -483,13 +447,12 @@ pub(crate) fn arena_node_to_js(
                         &f.denominator().to_string().into(),
                     )
                     .unwrap();
-                    set_fraction_display_source_prop(&num_obj, f);
                     js_sys::Reflect::set(&obj, &"value".into(), &num_obj).unwrap();
                 }
             }
         }
         NodeKind::Vector { children } => {
-            if effective_hint == DisplayHint::String {
+            if effective_hint == Interpretation::Text {
                 let text = children
                     .iter()
                     .filter_map(|child| match arena.kind(*child) {
@@ -502,8 +465,8 @@ pub(crate) fn arena_node_to_js(
                 js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
             } else {
-                let child_external: Option<DisplayHint> = match effective_hint {
-                    DisplayHint::Boolean => Some(DisplayHint::Boolean),
+                let child_external: Option<Interpretation> = match effective_hint {
+                    Interpretation::TruthValue => Some(Interpretation::TruthValue),
                     _ => None,
                 };
                 let js_array = js_sys::Array::new();
@@ -517,7 +480,7 @@ pub(crate) fn arena_node_to_js(
         NodeKind::Tensor { data, shape } => {
             // Hydrate a dense Tensor at the WASM boundary so the GUI/TS layer
             // can keep treating values uniformly as nested Vectors.
-            if effective_hint == DisplayHint::String && shape.len() <= 1 {
+            if effective_hint == Interpretation::Text && shape.len() <= 1 {
                 let text: String = data
                     .iter()
                     .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
@@ -559,22 +522,30 @@ pub(crate) fn arena_node_to_js(
 fn resolve_effective_hint(
     arena: &ValueArena,
     root_id: NodeId,
-    external_hint_opt: Option<DisplayHint>,
-) -> DisplayHint {
+    external_hint_opt: Option<Interpretation>,
+) -> Interpretation {
     external_hint_opt.unwrap_or_else(|| arena.hint(root_id))
 }
 
-pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
+pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> Interpretation {
     let obj = js_sys::Object::from(js_val.clone());
     let hint_js = js_sys::Reflect::get(&obj, &"displayHint".into()).unwrap_or(JsValue::UNDEFINED);
     match hint_js.as_string().as_deref() {
-        Some("number") => DisplayHint::Number,
-        Some("interval") => DisplayHint::Interval,
-        Some("string") => DisplayHint::String,
-        Some("boolean") => DisplayHint::Boolean,
-        Some("datetime") => DisplayHint::DateTime,
-        Some("nil") => DisplayHint::Nil,
-        _ => DisplayHint::Auto,
+        Some("rawNumber") => Interpretation::RawNumber,
+        Some("interval") => Interpretation::Interval,
+        Some("text") => Interpretation::Text,
+        Some("truthValue") => Interpretation::TruthValue,
+        Some("timestamp") => Interpretation::Timestamp,
+        Some("nil") => Interpretation::Nil,
+        // Legacy role names from snapshots persisted before the
+        // interpretation-role redesign. Accepted so a saved stack restored
+        // after an upgrade keeps its roles (a saved string would otherwise
+        // restore as an Unassigned codepoint vector).
+        Some("number") => Interpretation::RawNumber,
+        Some("string") => Interpretation::Text,
+        Some("boolean") => Interpretation::TruthValue,
+        Some("datetime") => Interpretation::Timestamp,
+        _ => Interpretation::Unassigned,
     }
 }
 
@@ -582,7 +553,7 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> DisplayHint {
 mod test_input_helper {
     use super::{build_bracket_structure_from_shape, resolve_effective_hint};
     use crate::types::arena::ValueArena;
-    use crate::types::DisplayHint;
+    use crate::types::Interpretation;
 
     #[test]
     fn test_build_bracket_structure_from_shape() {
@@ -630,11 +601,11 @@ mod test_input_helper {
         let id = arena.alloc_string("AB");
         assert_eq!(
             resolve_effective_hint(&arena, id, None),
-            DisplayHint::String
+            Interpretation::Text
         );
         assert_eq!(
-            resolve_effective_hint(&arena, id, Some(DisplayHint::Number)),
-            DisplayHint::Number
+            resolve_effective_hint(&arena, id, Some(Interpretation::RawNumber)),
+            Interpretation::RawNumber
         );
     }
 }
@@ -655,7 +626,7 @@ mod test_input_helper {
 mod mcdc_tests {
     use super::{build_bracket_structure_from_shape, resolve_effective_hint};
     use crate::types::arena::ValueArena;
-    use crate::types::DisplayHint;
+    use crate::types::Interpretation;
 
     // AQ-VER-003-A
     // DUT: `resolve_effective_hint`
@@ -674,20 +645,20 @@ mod mcdc_tests {
         #[test]
         fn row1_some_external_is_returned_verbatim() {
             let mut arena = ValueArena::new();
-            let id = arena.alloc_nil(DisplayHint::Number);
+            let id = arena.alloc_nil(Interpretation::RawNumber);
             assert_eq!(
-                resolve_effective_hint(&arena, id, Some(DisplayHint::Boolean)),
-                DisplayHint::Boolean,
+                resolve_effective_hint(&arena, id, Some(Interpretation::TruthValue)),
+                Interpretation::TruthValue,
             );
         }
 
         #[test]
         fn row2_none_falls_back_to_arena_hint() {
             let mut arena = ValueArena::new();
-            let id = arena.alloc_nil(DisplayHint::DateTime);
+            let id = arena.alloc_nil(Interpretation::Timestamp);
             assert_eq!(
                 resolve_effective_hint(&arena, id, None),
-                DisplayHint::DateTime,
+                Interpretation::Timestamp,
             );
         }
 
@@ -696,10 +667,10 @@ mod mcdc_tests {
             // Guards against a regression where the fallback arm is
             // evaluated eagerly and overwrites the external value.
             let mut arena = ValueArena::new();
-            let id = arena.alloc_nil(DisplayHint::Number);
+            let id = arena.alloc_nil(Interpretation::RawNumber);
             assert_eq!(
-                resolve_effective_hint(&arena, id, Some(DisplayHint::String)),
-                DisplayHint::String,
+                resolve_effective_hint(&arena, id, Some(Interpretation::Text)),
+                Interpretation::Text,
             );
         }
     }

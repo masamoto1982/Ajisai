@@ -62,8 +62,8 @@ async fn safe_successful_bubble_uses_normal_word_stack_effect() {
         3,
         "SAFE only restores the stack when the guarded word raises an error"
     );
-    assert_eq!(format!("{}", stack[0]), "1");
-    assert_eq!(format!("{}", stack[1]), "2");
+    assert_eq!(format!("{}", stack[0]), "1/1");
+    assert_eq!(format!("{}", stack[1]), "2/1");
     assert!(stack[2].is_nil());
     assert_eq!(stack[2].nil_reason(), Some(&NilReason::DivisionByZero));
 }
@@ -169,7 +169,7 @@ async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
         !stack.last().unwrap().is_nil(),
         "top should not be NIL after OR-NIL fallback"
     );
-    assert_eq!(format!("{}", stack.last().unwrap()), "42");
+    assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
 
 mod mcdc_safe_division {
@@ -212,7 +212,7 @@ mod mcdc_safe_division {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(!stack[0].is_nil());
-        assert_eq!(format!("{}", stack[0]), "5");
+        assert_eq!(format!("{}", stack[0]), "5/1");
         assert!(stack[0].nil_reason().is_none());
     }
 }
@@ -232,7 +232,7 @@ async fn bubble_rule_division_by_zero_recovers_with_or_nil() {
     interp.execute("10 0 / => 99").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
-    assert_eq!(format!("{}", top), "99");
+    assert_eq!(format!("{}", top), "99/1");
 }
 
 #[tokio::test]
@@ -250,7 +250,7 @@ async fn bubble_rule_get_out_of_range_recovers_with_or_nil() {
     interp.execute("[ 10 20 ] [ 99 ] GET => 0").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
-    assert_eq!(format!("{}", top), "0");
+    assert_eq!(format!("{}", top), "0/1");
 }
 
 #[tokio::test]
@@ -275,7 +275,7 @@ async fn bubble_rule_num_parse_failure_has_direct_reason_and_fallback() {
 
     let mut interp = Interpreter::new();
     interp.execute("'abc' NUM => 0").await.unwrap();
-    assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0");
+    assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
 }
 
 #[tokio::test]

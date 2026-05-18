@@ -13,7 +13,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "42");
+        assert_eq!(result, "42/1");
     }
 
     #[tokio::test]
@@ -45,7 +45,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "1");
+        assert_eq!(result, "1/1");
     }
 
     #[tokio::test]
@@ -56,7 +56,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "0");
+        assert_eq!(result, "0/1");
     }
 
     #[tokio::test]
@@ -99,7 +99,7 @@ mod json_io_tests {
         let original = format!("{}", stack[0]);
         assert_eq!(original, "'42'");
         let parsed = format!("{}", stack[1]);
-        assert_eq!(parsed, "42");
+        assert_eq!(parsed, "42/1");
     }
 
 
@@ -241,7 +241,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "42");
+        assert_eq!(result, "42/1");
     }
 
 
@@ -295,7 +295,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "'c'");
+        assert_eq!(result, "[ 99/1 ]");
     }
 
     #[tokio::test]
@@ -371,19 +371,19 @@ mod json_io_tests {
         interp.execute("'key0' JSON@GET").await.unwrap();
         let stack = interp.get_stack();
         let result = format!("{}", stack.last().unwrap());
-        assert_eq!(result, "0");
+        assert_eq!(result, "0/1");
 
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
         interp.execute("'key30' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
-        assert_eq!(result, "300");
+        assert_eq!(result, "300/1");
 
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
         interp.execute("'key59' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
-        assert_eq!(result, "590");
+        assert_eq!(result, "590/1");
 
         interp.stack.clear();
         interp.execute(&code).await.unwrap();
@@ -402,7 +402,7 @@ mod json_io_tests {
             .unwrap();
         interp.execute("'c' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
-        assert_eq!(result, "3");
+        assert_eq!(result, "3/1");
 
         interp.stack.clear();
         interp
@@ -411,7 +411,7 @@ mod json_io_tests {
             .unwrap();
         interp.execute("'a' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
-        assert_eq!(result, "99");
+        assert_eq!(result, "99/1");
 
         interp.stack.clear();
         interp
@@ -420,7 +420,7 @@ mod json_io_tests {
             .unwrap();
         interp.execute("'b' JSON@GET").await.unwrap();
         let result = format!("{}", interp.get_stack().last().unwrap());
-        assert_eq!(result, "2");
+        assert_eq!(result, "2/1");
     }
 
     #[tokio::test]

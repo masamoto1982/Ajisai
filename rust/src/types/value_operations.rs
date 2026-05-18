@@ -1,6 +1,6 @@
 use super::fraction::Fraction;
 use super::interval::Interval;
-use super::{DenseTensor, DisplayHint, Token, Value, ValueData};
+use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use crate::error::NilReason;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::semantic::{
@@ -35,7 +35,7 @@ impl Value {
     pub fn nil_literal() -> Self {
         Self {
             data: ValueData::Nil,
-            hint: DisplayHint::Nil,
+            hint: Interpretation::Nil,
             absence: Some(AbsenceMetadata::literal()),
         }
     }
@@ -44,7 +44,7 @@ impl Value {
     pub fn nil_with_absence(absence: AbsenceMetadata) -> Self {
         Self {
             data: ValueData::Nil,
-            hint: DisplayHint::Nil,
+            hint: Interpretation::Nil,
             absence: Some(absence),
         }
     }
@@ -129,7 +129,7 @@ impl Value {
     pub fn from_fraction(f: Fraction) -> Self {
         Self {
             data: ValueData::Scalar(f),
-            hint: DisplayHint::Number,
+            hint: Interpretation::RawNumber,
             absence: None,
         }
     }
@@ -138,7 +138,7 @@ impl Value {
     pub fn from_int(n: i64) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(n)),
-            hint: DisplayHint::Number,
+            hint: Interpretation::RawNumber,
             absence: None,
         }
     }
@@ -147,7 +147,7 @@ impl Value {
     pub fn from_bool(b: bool) -> Self {
         Self {
             data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
-            hint: DisplayHint::Number,
+            hint: Interpretation::RawNumber,
             absence: None,
         }
     }
@@ -162,7 +162,7 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(children)),
-            hint: DisplayHint::String,
+            hint: Interpretation::Text,
             absence: None,
         }
     }
@@ -175,13 +175,13 @@ impl Value {
     pub fn from_children(children: Vec<Value>) -> Self {
         Self {
             data: ValueData::Vector(Rc::new(children)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
 
     #[inline]
-    pub fn from_children_with_hint(children: Vec<Value>, hint: DisplayHint) -> Self {
+    pub fn from_children_with_hint(children: Vec<Value>, hint: Interpretation) -> Self {
         Self {
             data: ValueData::Vector(Rc::new(children)),
             hint,
@@ -195,12 +195,12 @@ impl Value {
         }
         Self {
             data: ValueData::Vector(Rc::new(values)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
 
-    pub fn from_vector_with_hint(values: Vec<Value>, hint: DisplayHint) -> Self {
+    pub fn from_vector_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
         if values.is_empty() {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
@@ -223,7 +223,7 @@ impl Value {
                 Value::from_fraction(interval.lo),
                 Value::from_fraction(interval.hi),
             ])),
-            hint: DisplayHint::Interval,
+            hint: Interpretation::Interval,
             absence: None,
         }
     }
@@ -232,7 +232,7 @@ impl Value {
     pub fn from_datetime(f: Fraction) -> Self {
         Self {
             data: ValueData::Scalar(f),
-            hint: DisplayHint::DateTime,
+            hint: Interpretation::Timestamp,
             absence: None,
         }
     }
@@ -771,7 +771,7 @@ impl Value {
     pub fn from_code_block(tokens: Vec<Token>) -> Self {
         Self {
             data: ValueData::CodeBlock(tokens),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
@@ -779,7 +779,7 @@ impl Value {
     pub fn from_process_handle(id: u64) -> Self {
         Self {
             data: ValueData::ProcessHandle(id),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
@@ -794,21 +794,21 @@ impl Value {
     pub fn from_supervisor_handle(id: u64) -> Self {
         Self {
             data: ValueData::SupervisorHandle(id),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
 
-    pub fn resolve_default_hint(&self) -> DisplayHint {
+    pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
-            ValueData::Nil => DisplayHint::Nil,
-            ValueData::Scalar(_) => DisplayHint::Number,
+            ValueData::Nil => Interpretation::Nil,
+            ValueData::Scalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
-                DisplayHint::Auto
+                Interpretation::Unassigned
             }
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => DisplayHint::Auto,
+            | ValueData::SupervisorHandle(_) => Interpretation::Unassigned,
         }
     }
 
@@ -827,7 +827,7 @@ impl Value {
         let Some(tensor) = DenseTensor::from_fractions(data.clone(), resolved_shape.clone()) else {
             return Self::from_vector_with_hint(
                 tensor_fractions_to_nested_values(&data, &resolved_shape),
-                DisplayHint::Auto,
+                Interpretation::Unassigned,
             );
         };
         Self {
@@ -835,7 +835,7 @@ impl Value {
                 data: Rc::new(tensor),
                 shape: Rc::new(resolved_shape),
             },
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }
     }
@@ -846,11 +846,11 @@ impl Value {
     ///
     /// The `String` display hint suppresses promotion at every level so that
     /// codepoint-based strings retain their nested representation.
-    pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: DisplayHint) -> Self {
+    pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
         if values.is_empty() {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
-        if hint == DisplayHint::String {
+        if hint == Interpretation::Text {
             return Self {
                 data: ValueData::Vector(Rc::new(values)),
                 hint,
@@ -877,9 +877,9 @@ impl Value {
     }
 
     /// Convenience wrapper around [`from_vector_promoted_with_hint`] using
-    /// `DisplayHint::Auto`.
+    /// `Interpretation::Unassigned`.
     pub fn from_vector_promoted(values: Vec<Value>) -> Self {
-        Self::from_vector_promoted_with_hint(values, DisplayHint::Auto)
+        Self::from_vector_promoted_with_hint(values, Interpretation::Unassigned)
     }
 }
 
@@ -930,7 +930,7 @@ fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) -> Option<Val
 }
 
 fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
-    if v.hint == DisplayHint::String {
+    if v.hint == Interpretation::Text {
         return None;
     }
     match &v.data {
@@ -1179,12 +1179,12 @@ mod vtu_tensor_tests {
             vec![Fraction::from(1), Fraction::from(2), Fraction::from(3)],
             vec![3],
         );
-        dense.hint = DisplayHint::Number;
+        dense.hint = Interpretation::RawNumber;
         let hydrated = dense.ensure_hydrated();
         match hydrated {
             Cow::Owned(v) => {
                 assert!(matches!(v.data, ValueData::Vector(_)));
-                assert_eq!(v.hint, DisplayHint::Number);
+                assert_eq!(v.hint, Interpretation::RawNumber);
                 assert_eq!(v.len(), 3);
             }
             Cow::Borrowed(_) => panic!("Tensor should hydrate into an owned Vector"),

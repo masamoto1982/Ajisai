@@ -1,7 +1,7 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
 use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
-use crate::types::{DisplayHint, Token, Value};
+use crate::types::{Interpretation, Token, Value};
 
 use super::compiled_plan::{
     arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback,
@@ -192,17 +192,17 @@ impl Interpreter {
             BuiltinExecutorKey::Not => logic::op_not(self),
             BuiltinExecutorKey::True => {
                 self.stack.push(Value::from_bool(true));
-                self.semantic_registry.push_hint(DisplayHint::Boolean);
+                self.semantic_registry.push_hint(Interpretation::TruthValue);
                 Ok(())
             }
             BuiltinExecutorKey::False => {
                 self.stack.push(Value::from_bool(false));
-                self.semantic_registry.push_hint(DisplayHint::Boolean);
+                self.semantic_registry.push_hint(Interpretation::TruthValue);
                 Ok(())
             }
             BuiltinExecutorKey::Nil => {
                 self.stack.push(Value::nil());
-                self.semantic_registry.push_hint(DisplayHint::Nil);
+                self.semantic_registry.push_hint(Interpretation::Nil);
                 Ok(())
             }
             BuiltinExecutorKey::Idle => Ok(()),

@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 use std::rc::Rc;
 
 #[inline]
@@ -195,7 +195,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         if data.len() == 1 {
             return Value {
                 data: ValueData::Scalar(data[0].clone()),
-                hint: DisplayHint::Number,
+                hint: Interpretation::RawNumber,
                 absence: None,
             };
         }
@@ -213,7 +213,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .collect();
         return Value {
             data: ValueData::Vector(Rc::new(children)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         };
     }
@@ -232,7 +232,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 
     Value {
         data: ValueData::Vector(Rc::new(children)),
-        hint: DisplayHint::Auto,
+        hint: Interpretation::Unassigned,
         absence: None,
     }
 }

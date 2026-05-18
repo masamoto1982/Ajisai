@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{DisplayHint, SemanticRegistry, Stack, Token, Value, WordDefinition};
+use crate::types::{Interpretation, SemanticRegistry, Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -500,14 +500,14 @@ impl Interpreter {
             .normalize_to_stack_len(self.stack.len());
     }
 
-    pub fn update_stack_with_hints(&mut self, stack: Stack, hints: Vec<DisplayHint>) {
+    pub fn update_stack_with_hints(&mut self, stack: Stack, hints: Vec<Interpretation>) {
         self.stack = stack;
         self.semantic_registry.stack_hints = hints;
         self.semantic_registry
             .normalize_to_stack_len(self.stack.len());
     }
 
-    pub fn collect_stack_hints(&self) -> &[DisplayHint] {
+    pub fn collect_stack_hints(&self) -> &[Interpretation] {
         &self.semantic_registry.stack_hints
     }
 }

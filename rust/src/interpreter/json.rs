@@ -3,7 +3,7 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::arena::{
     arena_node_to_json, arena_to_value, json_to_arena_node, value_to_arena, ValueArena,
 };
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -168,7 +168,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.push(Value {
             data: ValueData::Vector(Rc::new(keys)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         });
     }
@@ -228,7 +228,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                                 kv[0].clone(),
                                 new_value.clone(),
                             ])),
-                            hint: DisplayHint::Auto,
+                            hint: Interpretation::Unassigned,
                             absence: None,
                         });
                         continue;
@@ -242,7 +242,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
                 data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
-                hint: DisplayHint::Auto,
+                hint: Interpretation::Unassigned,
                 absence: None,
             });
         }
@@ -264,7 +264,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 pairs: Rc::new(new_pairs),
                 index: new_index,
             },
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         });
     } else {
@@ -272,12 +272,12 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         index.insert(key_str.clone(), 0);
         let pairs = Rc::new(vec![Value {
             data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         }]);
         interp.stack.push(Value {
             data: ValueData::Record { pairs, index },
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         });
     }

@@ -1,5 +1,5 @@
 use super::fraction::Fraction;
-use super::{DenseTensor, DisplayHint, Token, Value, ValueData};
+use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ pub enum NodeKind {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ValueArena {
     pub nodes: Vec<NodeKind>,
-    pub hints: Vec<DisplayHint>,
+    pub hints: Vec<Interpretation>,
 }
 
 impl ValueArena {
@@ -38,18 +38,18 @@ impl ValueArena {
         Self::default()
     }
 
-    fn alloc_node(&mut self, kind: NodeKind, hint: DisplayHint) -> NodeId {
+    fn alloc_node(&mut self, kind: NodeKind, hint: Interpretation) -> NodeId {
         let id = self.nodes.len() as NodeId;
         self.nodes.push(kind);
         self.hints.push(hint);
         id
     }
 
-    pub fn alloc_scalar(&mut self, fraction: Fraction, hint: DisplayHint) -> NodeId {
+    pub fn alloc_scalar(&mut self, fraction: Fraction, hint: Interpretation) -> NodeId {
         self.alloc_node(NodeKind::Scalar(fraction), hint)
     }
 
-    pub fn alloc_vector(&mut self, children: Vec<NodeId>, hint: DisplayHint) -> NodeId {
+    pub fn alloc_vector(&mut self, children: Vec<NodeId>, hint: Interpretation) -> NodeId {
         self.alloc_node(NodeKind::Vector { children }, hint)
     }
 
@@ -57,7 +57,7 @@ impl ValueArena {
         &mut self,
         data: Vec<Fraction>,
         shape: Vec<usize>,
-        hint: DisplayHint,
+        hint: Interpretation,
     ) -> NodeId {
         self.alloc_node(NodeKind::Tensor { data, shape }, hint)
     }
@@ -66,7 +66,7 @@ impl ValueArena {
         &mut self,
         pairs: Vec<NodeId>,
         index: HashMap<String, usize>,
-        hint: DisplayHint,
+        hint: Interpretation,
     ) -> NodeId {
         self.alloc_node(NodeKind::Record { pairs, index }, hint)
     }
@@ -74,17 +74,17 @@ impl ValueArena {
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
         let mut children = Vec::with_capacity(value.chars().count());
         for ch in value.chars() {
-            let scalar = self.alloc_scalar(Fraction::from(ch as u32 as i64), DisplayHint::Number);
+            let scalar = self.alloc_scalar(Fraction::from(ch as u32 as i64), Interpretation::RawNumber);
             children.push(scalar);
         }
         if children.is_empty() {
-            self.alloc_node(NodeKind::Nil, DisplayHint::String)
+            self.alloc_node(NodeKind::Nil, Interpretation::Text)
         } else {
-            self.alloc_vector(children, DisplayHint::String)
+            self.alloc_vector(children, Interpretation::Text)
         }
     }
 
-    pub fn alloc_nil(&mut self, hint: DisplayHint) -> NodeId {
+    pub fn alloc_nil(&mut self, hint: Interpretation) -> NodeId {
         self.alloc_node(NodeKind::Nil, hint)
     }
 
@@ -92,11 +92,11 @@ impl ValueArena {
         &self.nodes[id as usize]
     }
 
-    pub fn hint(&self, id: NodeId) -> DisplayHint {
+    pub fn hint(&self, id: NodeId) -> Interpretation {
         self.hints
             .get(id as usize)
             .copied()
-            .unwrap_or(DisplayHint::Auto)
+            .unwrap_or(Interpretation::Unassigned)
     }
 
     pub fn children(&self, id: NodeId) -> &[NodeId] {
@@ -163,8 +163,8 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
             NodeKind::Scalar(f) => Value {
                 data: ValueData::Scalar(f.clone()),
                 hint: match arena.hint(id) {
-                    DisplayHint::DateTime => DisplayHint::DateTime,
-                    _ => DisplayHint::Number,
+                    Interpretation::Timestamp => Interpretation::Timestamp,
+                    _ => Interpretation::RawNumber,
                 },
                 absence: None,
             },
@@ -227,17 +227,17 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
 
 pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<NodeId, String> {
     match json {
-        JsonValue::Null => Ok(arena.alloc_nil(DisplayHint::Nil)),
+        JsonValue::Null => Ok(arena.alloc_nil(Interpretation::Nil)),
         JsonValue::Bool(v) => Ok(arena.alloc_scalar(
             Fraction::from(if v { 1_i64 } else { 0_i64 }),
-            DisplayHint::Boolean,
+            Interpretation::TruthValue,
         )),
         JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(arena.alloc_scalar(Fraction::from(i), DisplayHint::Number))
+                Ok(arena.alloc_scalar(Fraction::from(i), Interpretation::RawNumber))
             } else if let Some(f) = n.as_f64() {
                 let frac = Fraction::from_str(&f.to_string()).map_err(|e| e.to_string())?;
-                Ok(arena.alloc_scalar(frac, DisplayHint::Number))
+                Ok(arena.alloc_scalar(frac, Interpretation::RawNumber))
             } else {
                 Err("unsupported json number".to_string())
             }
@@ -245,17 +245,17 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
         JsonValue::String(s) => Ok(arena.alloc_string(&s)),
         JsonValue::Array(items) => {
             if items.is_empty() {
-                return Ok(arena.alloc_nil(DisplayHint::Auto));
+                return Ok(arena.alloc_nil(Interpretation::Unassigned));
             }
             let children = items
                 .into_iter()
                 .map(|item| json_to_arena_node(arena, item))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(arena.alloc_vector(children, DisplayHint::Auto))
+            Ok(arena.alloc_vector(children, Interpretation::Unassigned))
         }
         JsonValue::Object(map) => {
             if map.is_empty() {
-                return Ok(arena.alloc_nil(DisplayHint::Auto));
+                return Ok(arena.alloc_nil(Interpretation::Unassigned));
             }
             let mut pairs = Vec::with_capacity(map.len());
             let mut index = HashMap::with_capacity(map.len());
@@ -263,10 +263,10 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
                 index.insert(key.clone(), pairs.len());
                 let key_id = arena.alloc_string(&key);
                 let value_id = json_to_arena_node(arena, value)?;
-                let pair_id = arena.alloc_vector(vec![key_id, value_id], DisplayHint::Auto);
+                let pair_id = arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
                 pairs.push(pair_id);
             }
-            Ok(arena.alloc_record(pairs, index, DisplayHint::Auto))
+            Ok(arena.alloc_record(pairs, index, Interpretation::Unassigned))
         }
     }
 }
@@ -275,7 +275,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
     match arena.kind(root) {
         NodeKind::Nil => JsonValue::Null,
         NodeKind::Scalar(frac) => {
-            if arena.hint(root) == DisplayHint::Boolean {
+            if arena.hint(root) == Interpretation::TruthValue {
                 return JsonValue::Bool(!frac.is_zero());
             }
             if frac.is_integer() {
@@ -293,7 +293,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::Null
         }
         NodeKind::Vector { children } => {
-            if arena.hint(root) == DisplayHint::String {
+            if arena.hint(root) == Interpretation::Text {
                 let mut buf = String::new();
                 for child in children {
                     if let NodeKind::Scalar(codepoint) = arena.kind(*child) {
@@ -353,8 +353,8 @@ fn fraction_to_json(frac: &Fraction) -> JsonValue {
     JsonValue::Null
 }
 
-fn tensor_to_json(hint: DisplayHint, data: &[Fraction], shape: &[usize]) -> JsonValue {
-    if hint == DisplayHint::String && (shape.is_empty() || shape.len() == 1) {
+fn tensor_to_json(hint: Interpretation, data: &[Fraction], shape: &[usize]) -> JsonValue {
+    if hint == Interpretation::Text && (shape.is_empty() || shape.len() == 1) {
         let mut buf = String::new();
         for codepoint in data {
             if let Some(n) = codepoint.to_i64() {
@@ -389,10 +389,10 @@ mod tests {
     fn value_arena_string_allocation_uses_string_hint() {
         let mut arena = ValueArena::new();
         let root = arena.alloc_string("Aj");
-        assert_eq!(arena.hint(root), DisplayHint::String);
+        assert_eq!(arena.hint(root), Interpretation::Text);
         assert_eq!(arena.children(root).len(), 2);
         for child in arena.children(root) {
-            assert_eq!(arena.hint(*child), DisplayHint::Number);
+            assert_eq!(arena.hint(*child), Interpretation::RawNumber);
         }
     }
 
@@ -452,7 +452,7 @@ mod tests {
     fn two_element_numeric_vector_stays_number_hint() {
         let value = Value::from_children(vec![Value::from_int(65), Value::from_int(66)]);
         let (arena, root) = value_to_arena(&value);
-        assert_ne!(arena.hint(root), DisplayHint::String);
+        assert_ne!(arena.hint(root), Interpretation::Text);
     }
 
     #[test]
@@ -468,10 +468,10 @@ mod tests {
             let children = arena.children(current);
             if depth < 14 {
                 assert_eq!(children.len(), 1, "depth {depth}: expected one child");
-                assert_ne!(arena.hint(current), DisplayHint::String);
+                assert_ne!(arena.hint(current), Interpretation::Text);
                 current = children[0];
             } else {
-                assert_ne!(arena.hint(current), DisplayHint::String);
+                assert_ne!(arena.hint(current), Interpretation::Text);
             }
         }
     }
@@ -501,7 +501,7 @@ mod tests {
                 if all_plain_ints && !children.is_empty() {
                     assert_ne!(
                         arena.hint(id),
-                        DisplayHint::String,
+                        Interpretation::Text,
                         "node {id} incorrectly string"
                     );
                 }
@@ -513,7 +513,7 @@ mod tests {
     fn explicit_string_literal_retains_string_hint() {
         let mut arena = ValueArena::new();
         let root = arena.alloc_string("AB");
-        assert_eq!(arena.hint(root), DisplayHint::String);
+        assert_eq!(arena.hint(root), Interpretation::Text);
     }
 
     #[test]

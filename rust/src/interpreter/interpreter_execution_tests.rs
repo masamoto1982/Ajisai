@@ -200,21 +200,28 @@ ADDTEST
 }
 
 #[tokio::test]
-async fn top_level_numeric_literals_preserve_surface_style_on_stack() {
-    use crate::types::ValueData;
-    let cases = [("1", "1"), ("0.5", "0.5"), ("2/1", "2/1")];
+async fn numbers_render_as_canonical_fractions_on_stack() {
+    use crate::types::display::format_with_hint;
+    use crate::types::Interpretation;
+    // Every number renders as a reduced numerator/denominator, integers
+    // included. Surface literal style is not retained; `0.6 0.8 *` and any
+    // mixed-style arithmetic therefore display uniformly.
+    let cases = [
+        ("1", "1/1"),
+        ("0.5", "1/2"),
+        ("2/1", "2/1"),
+        ("4/2", "2/1"),
+        ("0.6 0.8 *", "12/25"),
+        ("3 4 +", "7/1"),
+    ];
     for (program, expected) in cases {
         let mut interp = crate::interpreter::Interpreter::new();
         interp.execute(program).await.unwrap();
         assert_eq!(interp.stack.len(), 1, "program: {program}");
-        let scalar = match &interp.stack[0].data {
-            ValueData::Scalar(f) => f,
-            other => panic!("expected scalar for {program}, got {:?}", other),
-        };
+        let rendered = format_with_hint(&interp.stack[0], Interpretation::RawNumber);
         assert_eq!(
-            scalar.display_source(),
-            Some(expected),
-            "Surface literal style for `{program}` must be preserved as `{expected}`",
+            rendered, expected,
+            "`{program}` must render as canonical `{expected}`",
         );
     }
 }

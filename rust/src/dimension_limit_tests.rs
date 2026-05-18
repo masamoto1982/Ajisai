@@ -23,7 +23,7 @@ mod dimension_limit_tests {
     async fn test_dimension_4_visible_succeeds() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        let result = interp.execute("[ [ [ [ 1 ] ] ] ]").await;
+        let result = interp.execute("[ [ [ [ 1/1 ] ] ] ]").await;
         assert!(
             result.is_ok(),
             "4 visible dimensions should succeed with new limit"
@@ -43,7 +43,7 @@ mod dimension_limit_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         let result = interp
-            .execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]")
+            .execute("[ [ [ [ [ [ [ [ [ 1/1 ] ] ] ] ] ] ] ] ]")
             .await;
         assert!(
             result.is_ok(),
@@ -109,7 +109,7 @@ mod dimension_limit_tests {
             "2D outermost should be [ ], got: {}",
             result
         );
-        assert!(result.contains("[ 1 2 ]"), "2D inner should use [ ], got: {}", result);
+        assert!(result.contains("[ 1/1 2/1 ]"), "2D inner should use [ ], got: {}", result);
     }
 
     #[tokio::test]
@@ -136,7 +136,7 @@ mod dimension_limit_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute("[ [ [ 1 ] [ 2 ] [ 3 ] ] [ [ 4 ] [ 5 ] [ 6 ] ] ]")
+            .execute("[ [ [ 1/1 ] [ 2/1 ] [ 3/1 ] ] [ [ 4/1 ] [ 5/1 ] [ 6/1 ] ] ]")
             .await
             .unwrap();
         let stack = interp.get_stack();
@@ -152,7 +152,7 @@ mod dimension_limit_tests {
             result
         );
         assert_eq!(
-            result, "[ [ [ 1 ] [ 2 ] [ 3 ] ] [ [ 4 ] [ 5 ] [ 6 ] ] ]",
+            result, "[ [ [ 1/1 ] [ 2/1 ] [ 3/1 ] ] [ [ 4/1 ] [ 5/1 ] [ 6/1 ] ] ]",
             "Expected 3D structure"
         );
     }
@@ -161,11 +161,11 @@ mod dimension_limit_tests {
     async fn test_bracket_display_4d() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
-        interp.execute("[ [ [ [ 1 ] ] ] ]").await.unwrap();
+        interp.execute("[ [ [ [ 1/1 ] ] ] ]").await.unwrap();
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert_eq!(
-            result, "[ [ [ [ 1 ] ] ] ]",
+            result, "[ [ [ [ 1/1 ] ] ] ]",
             "4D should keep [ ] brackets: {}",
             result
         );
@@ -176,13 +176,13 @@ mod dimension_limit_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp
-            .execute("[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]")
+            .execute("[ [ [ [ [ [ [ [ [ 1/1 ] ] ] ] ] ] ] ] ]")
             .await
             .unwrap();
         let stack = interp.get_stack();
         let result = format!("{}", stack[0]);
         assert_eq!(
-            result, "[ [ [ [ [ [ [ [ [ 1 ] ] ] ] ] ] ] ] ]",
+            result, "[ [ [ [ [ [ [ [ [ 1/1 ] ] ] ] ] ] ] ] ]",
             "9D unified [ ] display: {}",
             result
         );

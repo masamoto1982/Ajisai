@@ -17,7 +17,7 @@ pub(crate) fn check_in_place_candidate(value: &Value) -> InPlaceJudgment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{DisplayHint, ValueData};
+    use crate::types::{Interpretation, ValueData};
     use std::rc::Rc;
 
     fn scalar(n: i64) -> Value {
@@ -47,12 +47,12 @@ mod tests {
         let children = Rc::new(vec![scalar(1), scalar(2)]);
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         };
         let _v2 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         };
 
@@ -64,7 +64,7 @@ mod tests {
         let children = Rc::new(vec![scalar(1), scalar(2)]);
         let v1 = Value {
             data: ValueData::Vector(Rc::clone(&children)),
-            hint: DisplayHint::Auto,
+            hint: Interpretation::Unassigned,
             absence: None,
         };
 

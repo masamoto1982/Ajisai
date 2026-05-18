@@ -2,7 +2,6 @@ use num_bigint::BigInt;
 use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;
 use std::str::FromStr;
-use std::sync::Arc;
 
 #[inline]
 pub(crate) fn compute_gcd_i64(mut a: i64, mut b: i64) -> i64 {
@@ -44,24 +43,12 @@ pub(crate) enum FractionRepr {
 #[derive(Debug, Clone)]
 pub struct Fraction {
     pub(crate) repr: FractionRepr,
-    pub(crate) display_source: Option<Arc<str>>,
 }
 
 impl Fraction {
     #[inline]
     pub(crate) fn from_repr(repr: FractionRepr) -> Self {
-        Fraction { repr, display_source: None }
-    }
-
-    #[inline]
-    pub fn display_source(&self) -> Option<&str> {
-        self.display_source.as_deref()
-    }
-
-    #[inline]
-    pub fn with_display_source(mut self, source: &str) -> Self {
-        self.display_source = Some(Arc::from(source));
-        self
+        Fraction { repr }
     }
 }
 
@@ -93,7 +80,7 @@ impl Eq for Fraction {}
 impl Fraction {
     #[inline]
     pub fn nil() -> Self {
-        Fraction { repr: FractionRepr::Small(0, 0), display_source: None }
+        Fraction { repr: FractionRepr::Small(0, 0) }
     }
 
     #[inline]
@@ -114,7 +101,7 @@ impl Fraction {
         if denominator.is_zero() { panic!("Division by zero"); }
 
         if numerator.is_zero() {
-            return Fraction { repr: FractionRepr::Small(0, 1), display_source: None };
+            return Fraction { repr: FractionRepr::Small(0, 1) };
         }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
@@ -125,7 +112,7 @@ impl Fraction {
                 num = -num;
                 den = -den;
             }
-            return Fraction { repr: FractionRepr::Small(num, den), display_source: None };
+            return Fraction { repr: FractionRepr::Small(num, den) };
         }
 
         let common: BigInt = numerator.gcd(&denominator);
@@ -161,9 +148,9 @@ impl Fraction {
     #[inline]
     pub(crate) fn from_bigint_pair(numerator: BigInt, denominator: BigInt) -> Self {
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
-            return Fraction { repr: FractionRepr::Small(n, d), display_source: None };
+            return Fraction { repr: FractionRepr::Small(n, d) };
         }
-        Fraction { repr: FractionRepr::Big { numerator, denominator }, display_source: None }
+        Fraction { repr: FractionRepr::Big { numerator, denominator } }
     }
 
     #[inline]
@@ -279,14 +266,13 @@ impl Fraction {
         if n >= i64::MIN as i128 && n <= i64::MAX as i128
             && d >= 0 && d <= i64::MAX as i128
         {
-            return Fraction { repr: FractionRepr::Small(n as i64, d as i64), display_source: None };
+            return Fraction { repr: FractionRepr::Small(n as i64, d as i64) };
         }
         Fraction {
             repr: FractionRepr::Big {
                 numerator: create_bigint_from_i128(n),
                 denominator: create_bigint_from_i128(d),
             },
-            display_source: None,
         }
     }
 
@@ -326,28 +312,12 @@ impl Fraction {
             let num: BigInt = BigInt::from_str(s).map_err(|e| e.to_string())?;
 
             if let Some(n) = num.to_i64() {
-                return Ok(Fraction { repr: FractionRepr::Small(n, 1), display_source: None });
+                return Ok(Fraction { repr: FractionRepr::Small(n, 1) });
             }
-            Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() }, display_source: None })
+            Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() } })
         }
     }
 
-
-    pub fn parse_unreduced_from_str(s: &str) -> std::result::Result<Self, String> {
-        if s.is_empty() { return Err("Empty string".to_string()); }
-
-        if s.contains(|c: char| c == 'e' || c == 'E') {
-            return Self::from_str(s).map(|f| f.with_display_source(s));
-        }
-
-        if let Some(pos) = s.find('/') {
-            let num: BigInt = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
-            let den: BigInt = BigInt::from_str(&s[pos+1..]).map_err(|e| e.to_string())?;
-            return Ok(Self::create_unreduced(num, den).with_display_source(s));
-        }
-
-        Self::from_str(s).map(|f| f.with_display_source(s))
-    }
 
     #[inline]
     pub fn lt(&self, other: &Fraction) -> bool {
@@ -443,14 +413,14 @@ impl ToPrimitive for Fraction {
 impl From<i64> for Fraction {
     #[inline]
     fn from(n: i64) -> Self {
-        Fraction { repr: FractionRepr::Small(n, 1), display_source: None }
+        Fraction { repr: FractionRepr::Small(n, 1) }
     }
 }
 
 impl From<i32> for Fraction {
     #[inline]
     fn from(n: i32) -> Self {
-        Fraction { repr: FractionRepr::Small(n as i64, 1), display_source: None }
+        Fraction { repr: FractionRepr::Small(n as i64, 1) }
     }
 }
 
@@ -474,23 +444,24 @@ impl std::fmt::Display for Fraction {
 
 
 #[cfg(test)]
-mod display_source_tests {
+mod literal_parsing_tests {
     use super::Fraction;
 
     #[test]
-    fn parsed_literal_display_source_preserves_surface_number_style() {
-        for source in ["1", "0.5", "2/1"] {
-            let fraction = Fraction::parse_unreduced_from_str(source).expect("literal parses");
-            assert_eq!(fraction.display_source(), Some(source));
-        }
+    fn literals_parse_to_reduced_canonical_fractions() {
+        // Surface forms are convenience syntax; all reduce to the same
+        // canonical exact-real value. No surface style is retained.
+        assert_eq!(Fraction::from_str("0.5").unwrap(), Fraction::from_str("1/2").unwrap());
+        assert_eq!(Fraction::from_str("2/1").unwrap(), Fraction::from_str("2").unwrap());
+        assert_eq!(Fraction::from_str("4/2").unwrap(), Fraction::from_str("2").unwrap());
+        assert!(Fraction::from_str("2/1").unwrap().is_integer());
     }
 
     #[test]
-    fn arithmetic_results_drop_literal_display_source() {
-        let left = Fraction::parse_unreduced_from_str("0.5").expect("literal parses");
-        let right = Fraction::parse_unreduced_from_str("0.5").expect("literal parses");
+    fn arithmetic_results_are_canonical() {
+        let left = Fraction::from_str("0.5").expect("literal parses");
+        let right = Fraction::from_str("0.5").expect("literal parses");
         let sum = left.add(&right);
-        assert_eq!(sum.display_source(), None);
         assert_eq!(sum.to_string(), "1");
     }
 }

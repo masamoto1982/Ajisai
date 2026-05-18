@@ -12,7 +12,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 3 ]");
+        assert_eq!(result, "[ 3/1 ]");
     }
 
     #[tokio::test]
@@ -26,7 +26,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 2 3 ]");
+        assert_eq!(result, "[ 2/1 3/1 ]");
     }
 
     #[tokio::test]
@@ -37,9 +37,9 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 2);
         let original = format!("{}", stack[0]);
-        assert_eq!(original, "[ 1 2 3 ]");
+        assert_eq!(original, "[ 1/1 2/1 3/1 ]");
         let shape = format!("{}", stack[1]);
-        assert_eq!(shape, "[ 3 ]");
+        assert_eq!(shape, "[ 3/1 ]");
     }
 
     #[tokio::test]
@@ -50,7 +50,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "1");
+        assert_eq!(result, "1/1");
     }
 
     #[tokio::test]
@@ -61,7 +61,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "2");
+        assert_eq!(result, "2/1");
     }
 
     #[tokio::test]
@@ -75,7 +75,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 1 2 3 ] [ 4 5 6 ] ]");
+        assert_eq!(result, "[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]");
     }
 
     #[tokio::test]
@@ -89,7 +89,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]");
+        assert_eq!(result, "[ [ 1/1 2/1 ] [ 3/1 4/1 ] [ 5/1 6/1 ] ]");
     }
 
     #[tokio::test]
@@ -103,7 +103,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 1 4 ] [ 2 5 ] [ 3 6 ] ]");
+        assert_eq!(result, "[ [ 1/1 4/1 ] [ 2/1 5/1 ] [ 3/1 6/1 ] ]");
     }
 
     #[tokio::test]
@@ -114,7 +114,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ 0 0 0 ]");
+        assert_eq!(result, "[ 0/1 0/1 0/1 ]");
     }
 
     #[tokio::test]
@@ -125,7 +125,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 5 5 5 ] [ 5 5 5 ] ]");
+        assert_eq!(result, "[ [ 5/1 5/1 5/1 ] [ 5/1 5/1 5/1 ] ]");
     }
 
     #[tokio::test]
@@ -139,7 +139,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 11 22 33 ] [ 14 25 36 ] ]");
+        assert_eq!(result, "[ [ 11/1 22/1 33/1 ] [ 14/1 25/1 36/1 ] ]");
     }
 
     #[tokio::test]
@@ -153,7 +153,7 @@ mod tensor_ops_integration_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "[ [ 101 102 103 ] [ 204 205 206 ] ]");
+        assert_eq!(result, "[ [ 101/1 102/1 103/1 ] [ 204/1 205/1 206/1 ] ]");
     }
 
     #[tokio::test]
@@ -174,7 +174,7 @@ mod tensor_ops_integration_tests {
         alias_interp.execute("[ 7 ] [ 3 ] %").await.unwrap();
         let alias_result = format!("{}", alias_interp.get_stack().last().unwrap());
 
-        assert_eq!(mod_result, "[ 1 ]");
+        assert_eq!(mod_result, "[ 1/1 ]");
         assert_eq!(alias_result, mod_result);
     }
 
@@ -320,11 +320,11 @@ mod sparse_tensor_fast_path_integration_tests {
             .await
             .unwrap();
         let result = interp.get_stack().last().unwrap();
-        assert_eq!(format!("{}", result.child(5).unwrap()), "3");
+        assert_eq!(format!("{}", result.child(5).unwrap()), "3/1");
         assert_eq!(format!("{}", result.child(40).unwrap()), "-10/3");
         for index in 0..64 {
             if index != 5 && index != 40 {
-                assert_eq!(format!("{}", result.child(index).unwrap()), "0");
+                assert_eq!(format!("{}", result.child(index).unwrap()), "0/1");
             }
         }
     }
@@ -338,11 +338,11 @@ mod sparse_tensor_fast_path_integration_tests {
             .await
             .unwrap();
         let result = interp.get_stack().last().unwrap();
-        assert_eq!(format!("{}", result.child(5).unwrap()), "3");
+        assert_eq!(format!("{}", result.child(5).unwrap()), "3/1");
         assert_eq!(format!("{}", result.child(40).unwrap()), "-10/3");
         for index in 0..64 {
             if index != 5 && index != 40 {
-                assert_eq!(format!("{}", result.child(index).unwrap()), "0");
+                assert_eq!(format!("{}", result.child(index).unwrap()), "0/1");
             }
         }
     }

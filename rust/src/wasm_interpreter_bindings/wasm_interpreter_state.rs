@@ -63,7 +63,7 @@ impl AjisaiInterpreter {
             let hint = hints
                 .get(i)
                 .copied()
-                .unwrap_or(crate::types::DisplayHint::Auto);
+                .unwrap_or(crate::types::Interpretation::Unassigned);
             js_array.push(&value_to_js(value, Some(hint)));
         }
         js_array.into()
@@ -333,7 +333,7 @@ impl AjisaiInterpreter {
     pub fn restore_stack(&mut self, stack_js: JsValue) -> Result<(), String> {
         let js_array = js_sys::Array::from(&stack_js);
         let mut stack = Vec::new();
-        let mut hints: Vec<crate::types::DisplayHint> = Vec::new();
+        let mut hints: Vec<crate::types::Interpretation> = Vec::new();
         for i in 0..js_array.length() {
             let item = js_array.get(i);
             stack.push(js_value_to_value(item.clone())?);
