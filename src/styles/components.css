@@ -176,7 +176,7 @@
 }
 
 #code-input::placeholder {
-    color: var(--gradient-purple-blue);
+    color: #ffffff;
 }
 
 
@@ -375,7 +375,7 @@
 }
 
 .vocabulary-search-input::placeholder {
-    color: var(--gradient-purple-blue);
+    color: #ffffff;
 }
 
 .vocabulary-search-clear-btn {
