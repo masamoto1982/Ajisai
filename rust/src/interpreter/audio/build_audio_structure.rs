@@ -69,11 +69,42 @@ pub(crate) fn build_audio_structure(
 
     let envelope: Option<Envelope> = None;
     let waveform = WaveformType::default();
-    let is_chord = false;
 
 
     if value.is_nil() {
         return Ok(AudioStructure::Rest { duration: 1.0 });
+    }
+
+    if let Some(group) = super::music_group::parse_group(value) {
+        let group_children: Vec<AudioStructure> = group
+            .children
+            .iter()
+            .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter(
+                |s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()),
+            )
+            .collect();
+
+        let group_mode = match group.mode {
+            super::music_group::GroupMode::Sequential => PlayMode::Sequential,
+            super::music_group::GroupMode::Simultaneous
+            | super::music_group::GroupMode::Chord => PlayMode::Simultaneous,
+        };
+
+        return match group_mode {
+            PlayMode::Sequential => Ok(AudioStructure::Seq {
+                children: group_children,
+                envelope,
+                waveform,
+            }),
+            PlayMode::Simultaneous => Ok(AudioStructure::Sim {
+                children: group_children,
+                envelope,
+                waveform,
+            }),
+        };
     }
 
     if is_string_value(value) {
@@ -105,13 +136,7 @@ pub(crate) fn build_audio_structure(
                 .collect();
 
 
-            let effective_mode = if is_chord {
-                PlayMode::Simultaneous
-            } else {
-                mode
-            };
-
-            return match effective_mode {
+            return match mode {
                 PlayMode::Sequential => Ok(AudioStructure::Seq {
                     children: audio_children,
                     envelope,

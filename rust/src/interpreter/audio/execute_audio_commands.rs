@@ -1,6 +1,7 @@
 
 
 use super::audio_types::{update_play_mode, PlayMode, WaveformType};
+use super::music_group::{explain_value, make_group, operand_children, GroupMode};
 use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::types::fraction::Fraction;
@@ -148,14 +149,58 @@ pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
 }
 
 
+/// Build an explicit sequential music group from a vector.
+pub fn op_seq_group(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Sequential, "generic", "SEQ-GROUP")
+}
+
+
+/// Build an explicit simultaneous music group from a vector.
+pub fn op_sim_group(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Simultaneous, "generic", "SIM-GROUP")
+}
+
+
+/// Build an explicit chord group (simultaneous playback) from a vector.
 pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Chord, "chord", "CHORD")
+}
+
+
+fn build_group(
+    interp: &mut Interpreter,
+    mode: GroupMode,
+    role: &str,
+    word: &str,
+) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
+    let children = match operand_children(&val, word) {
+        Ok(children) => children,
+        Err(e) => {
+            interp.stack.push(val);
+            return Err(e);
+        }
+    };
 
-    if !val.is_vector() {
-        return Err(AjisaiError::from("CHORD requires a vector"));
+    let provenance = format!("explicit:MUSIC@{}", word);
+    interp
+        .stack
+        .push(make_group(mode, role, &provenance, children));
+    Ok(())
+}
+
+
+/// Explain how a value would be interpreted by MUSIC@PLAY.
+pub fn op_explain(interp: &mut Interpreter) -> Result<()> {
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+
+    let explanation = explain_value(&val);
+    if !interp.output_buffer.is_empty() && !interp.output_buffer.ends_with('\n') {
+        interp.output_buffer.push('\n');
     }
-
+    interp.output_buffer.push_str(&explanation);
+    interp.output_buffer.push('\n');
 
     interp.stack.push(val);
     Ok(())
