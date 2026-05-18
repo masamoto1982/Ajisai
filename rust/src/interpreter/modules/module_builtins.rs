@@ -148,15 +148,51 @@ const MUSIC_WORDS: &[ModuleWord] = &[
         Capabilities::IO
     ),
     module_word!(
+        "SEQ-GROUP",
+        "Build an explicit sequential music group from a vector",
+        audio::op_seq_group,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        true,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "SIM-GROUP",
+        "Build an explicit simultaneous music group from a vector",
+        audio::op_sim_group,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        true,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
         "CHORD",
-        "Mark vector as chord (simultaneous)",
+        "Build an explicit chord group (simultaneous) from a vector",
         audio::op_chord,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        true,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "EXPLAIN",
+        "Explain how MUSIC@PLAY would interpret a value",
+        audio::op_explain,
         WordPurity::Effectful,
-        &["audio-control"],
+        &["audio-output"],
+        true,
         false,
-        false,
-        false,
-        Stability::Stable,
+        true,
+        Stability::Experimental,
         Capabilities::IO
     ),
     module_word!(

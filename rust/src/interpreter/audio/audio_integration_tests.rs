@@ -331,6 +331,183 @@ async fn test_sine_is_default_not_serialized() {
 }
 
 #[tokio::test]
+async fn test_seq_group_builds_sequential_structure() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 ] MUSIC@SEQ-GROUP MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "SEQ-GROUP MUSIC@PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+    assert!(
+        output.contains("\"type\":\"seq\""),
+        "SEQ-GROUP should produce a seq structure: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_sim_group_builds_simultaneous_structure() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 ] MUSIC@SIM-GROUP MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "SIM-GROUP MUSIC@PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+    assert!(
+        output.contains("\"type\":\"sim\""),
+        "SIM-GROUP should produce a sim structure: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_chord_builds_simultaneous_group() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 660 ] MUSIC@CHORD MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "CHORD MUSIC@PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"sim\""),
+        "CHORD should produce a sim structure: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_seq_group_rejects_empty_vector() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("440 MUSIC@SEQ-GROUP").await;
+    assert!(result.is_err(), "SEQ-GROUP on a scalar should fail");
+}
+
+#[tokio::test]
+async fn test_raw_vector_legacy_playback_preserved() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("[ 440 550 ] MUSIC@PLAY").await;
+    assert!(
+        result.is_ok(),
+        "Legacy raw vector playback should still succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+}
+
+#[tokio::test]
+async fn test_explain_describes_explicit_group() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 ] MUSIC@SEQ-GROUP MUSIC@EXPLAIN")
+        .await;
+    assert!(
+        result.is_ok(),
+        "SEQ-GROUP MUSIC@EXPLAIN should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("Sequential group"),
+        "EXPLAIN should describe a sequential group: {}",
+        output
+    );
+    assert!(
+        output.contains("explicit MUSIC@SEQ-GROUP"),
+        "EXPLAIN should report explicit provenance: {}",
+        output
+    );
+    assert!(
+        output.contains("Playback boundary"),
+        "EXPLAIN should describe the playback boundary: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_explain_describes_chord_group() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 660 ] MUSIC@CHORD MUSIC@EXPLAIN")
+        .await;
+    assert!(
+        result.is_ok(),
+        "CHORD MUSIC@EXPLAIN should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("Chord group"),
+        "EXPLAIN should describe a chord group: {}",
+        output
+    );
+    assert!(
+        output.contains("explicit MUSIC@CHORD"),
+        "EXPLAIN should report chord provenance: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_explain_describes_raw_vector_ambiguity() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("[ 440 550 ] MUSIC@EXPLAIN").await;
+    assert!(
+        result.is_ok(),
+        "Raw vector MUSIC@EXPLAIN should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("Raw Vector"),
+        "EXPLAIN should flag a raw vector: {}",
+        output
+    );
+    assert!(
+        output.contains("MUSIC@SEQ-GROUP"),
+        "EXPLAIN should suggest explicit constructors: {}",
+        output
+    );
+}
+
+#[tokio::test]
 async fn test_combined_chord_adsr_waveform() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
