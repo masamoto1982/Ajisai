@@ -214,13 +214,14 @@
     display: none;
 }
 
-#input-panel::after {
+#input-panel::after,
+.search-wrapper::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
+    mix-blend-mode: lighten;
     z-index: 1;
-    opacity: 0.4;
     background: linear-gradient(225deg in oklch,
         var(--editor-accent-red) 0%,
         40%,
@@ -381,6 +382,8 @@
     right: 0.25rem;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 2;
+    color: var(--code-text);
 }
 
 .vocabulary-search-input:placeholder-shown ~ .vocabulary-search-clear-btn {
