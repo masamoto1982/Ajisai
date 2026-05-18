@@ -184,12 +184,12 @@ mod tests {
 
     use crate::elastic::cache_manager::CacheManager;
     use crate::types::fraction::Fraction;
-    use crate::types::{DisplayHint, Value, ValueData};
+    use crate::types::{Interpretation, Value, ValueData};
 
     fn scalar_value(n: i64) -> Value {
         Value {
             data: ValueData::Scalar(Fraction::from(n)),
-            hint: DisplayHint::Number,
+            hint: Interpretation::RawNumber,
             absence: None,
         }
     }

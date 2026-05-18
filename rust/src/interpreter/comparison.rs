@@ -7,7 +7,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 
 /// One of the four ordering comparisons. Carries the dispatch
 /// decision through the SCALAR-comparison helper so the helper can
@@ -53,7 +53,7 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
         .semantic_registry
-        .update_hint_at(stack_len - 1, DisplayHint::Boolean);
+        .update_hint_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 /// Push the SPEC §7.4.1 undecidable-NIL: reason = `Undecidable`,
@@ -68,7 +68,7 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
     interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
         .semantic_registry
-        .update_hint_at(stack_len - 1, DisplayHint::Nil);
+        .update_hint_at(stack_len - 1, Interpretation::Nil);
 }
 
 /// Compare two scalar values under an ordering kind. Returns `Ok(Some(bool))`

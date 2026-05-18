@@ -10,7 +10,7 @@ use crate::elastic::{
 use crate::error::Result;
 use crate::interpreter::quantized_block::QuantizedBlock;
 use crate::interpreter::Interpreter;
-use crate::types::{DisplayHint, Token, Value};
+use crate::types::{Interpretation, Token, Value};
 
 pub(super) fn hedged_mode(mode: ElasticMode) -> bool {
     matches!(mode, ElasticMode::HedgedSafe | ElasticMode::HedgedTrace)
@@ -45,7 +45,7 @@ fn trace_hedged(interp: &Interpreter, msg: &str) {
 }
 
 fn normalize_map_kernel_result(value: Value) -> Value {
-    if value.hint == DisplayHint::String {
+    if value.hint == Interpretation::Text {
         return value;
     }
     if value.len() == 1 {

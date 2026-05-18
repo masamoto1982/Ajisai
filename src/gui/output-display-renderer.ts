@@ -1,6 +1,5 @@
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
-import { formatFractionScientific } from './value-formatter';
 import { pipe } from './functional-result-helpers';
 
 export interface DisplayElements {
@@ -70,22 +69,18 @@ const parseFractionToNumber = (fraction: Record<string, unknown>): number | null
     return denominator === 1 ? numerator : Math.floor(numerator / denominator);
 };
 
+// Canonical numeric rendering: every number is a reduced
+// numerator/denominator, integers included (`3` -> `3/1`).
 const formatNumber = (value: unknown): string => {
     const fraction = checkFractionObject(value);
     if (!fraction) return '?';
-    if (typeof fraction.displaySource === 'string' && fraction.displaySource.length > 0) {
-        return fraction.displaySource;
-    }
-    return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
+    return `${fraction.numerator}/${fraction.denominator}`;
 };
 
 const formatFraction = (frac: unknown): string => {
     const fraction = checkFractionObject(frac);
     if (!fraction) return '?';
-    if (typeof fraction.displaySource === 'string' && fraction.displaySource.length > 0) {
-        return fraction.displaySource;
-    }
-    return formatFractionScientific(String(fraction.numerator), String(fraction.denominator));
+    return `${fraction.numerator}/${fraction.denominator}`;
 };
 
 const formatDateTime = (value: unknown): string => {
@@ -146,7 +141,7 @@ const formatTensorRecursive = (shape: number[], data: unknown[], depth: number, 
 
     if (shape.length === 1) {
         if (data.length === 0) return `${open}${close}`;
-        if (displayHint === 'string') {
+        if (displayHint === 'text') {
             const str = deserializeBytesToString(data);
             return `'${str}'`;
         }
@@ -225,7 +220,7 @@ const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
             }
 
             if (tensorShape.length === 1) {
-                if ((tensor.displayHint ?? '').toLowerCase() === 'string') {
+                if ((tensor.displayHint ?? '').toLowerCase() === 'text') {
                     tensorNode.append(deserializeBytesToString(tensorData));
                 } else {
                     tensorNode.appendChild(createBracketSpan('[', tensorDepth));

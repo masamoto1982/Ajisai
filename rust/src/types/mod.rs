@@ -23,7 +23,6 @@ use std::sync::Arc;
 pub struct DenseTensor {
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
-    pub display_sources: Vec<Option<Arc<str>>>,
     pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub is_pure_integer: bool,
@@ -52,14 +51,11 @@ impl DenseTensor {
 
         let mut numerators = Vec::with_capacity(data.len());
         let mut denominators = Vec::with_capacity(data.len());
-        let mut display_sources = Vec::with_capacity(data.len());
         let mut is_pure_integer = true;
         for fraction in data {
-            let source = fraction.display_source.clone();
             let (numerator, denominator) = fraction.extract_i64_pair()?;
             numerators.push(numerator);
             denominators.push(denominator);
-            display_sources.push(source);
             is_pure_integer &= denominator == 1;
         }
 
@@ -75,7 +71,6 @@ impl DenseTensor {
         Some(Self {
             numerators,
             denominators,
-            display_sources,
             valid_mask,
             shape,
             is_pure_integer,
@@ -98,12 +93,10 @@ impl DenseTensor {
         if !self.is_valid(index) {
             return None;
         }
-        let mut fraction = Fraction::new(
+        Some(Fraction::new(
             self.numerators[index].into(),
             self.denominators[index].into(),
-        );
-        fraction.display_source = self.display_sources.get(index).cloned().flatten();
-        Some(fraction)
+        ))
     }
 
     pub fn fraction_or_nil(&self, index: usize) -> Fraction {
@@ -162,7 +155,6 @@ pub struct SparseTensor {
     pub indices: Vec<usize>,
     pub numerators: Vec<i64>,
     pub denominators: Vec<i64>,
-    pub display_sources: Vec<Option<Arc<str>>>,
     pub valid_mask: Vec<u64>,
     pub shape: Vec<usize>,
     pub len: usize,
@@ -187,14 +179,12 @@ impl SparseTensor {
         let mut indices = Vec::with_capacity(nonzero_count);
         let mut numerators = Vec::with_capacity(nonzero_count);
         let mut denominators = Vec::with_capacity(nonzero_count);
-        let mut display_sources = Vec::with_capacity(nonzero_count);
 
         for index in 0..dense.len() {
             if dense.numerators[index] != 0 {
                 indices.push(index);
                 numerators.push(dense.numerators[index]);
                 denominators.push(dense.denominators[index]);
-                display_sources.push(dense.display_sources.get(index).cloned().flatten());
             }
         }
 
@@ -211,7 +201,6 @@ impl SparseTensor {
             indices,
             numerators,
             denominators,
-            display_sources,
             valid_mask,
             shape: dense.shape.clone(),
             len: dense.len(),
@@ -222,18 +211,15 @@ impl SparseTensor {
     pub fn to_dense(&self) -> DenseTensor {
         let mut numerators = vec![0; self.len];
         let mut denominators = vec![1; self.len];
-        let mut display_sources = vec![None; self.len];
         for (entry, &index) in self.indices.iter().enumerate() {
             if index < self.len {
                 numerators[index] = self.numerators[entry];
                 denominators[index] = self.denominators[entry];
-                display_sources[index] = self.display_sources.get(entry).cloned().flatten();
             }
         }
         DenseTensor {
             numerators,
             denominators,
-            display_sources,
             valid_mask: self.valid_mask.clone(),
             shape: self.shape.clone(),
             is_pure_integer: self.is_pure_integer,
@@ -245,12 +231,10 @@ impl SparseTensor {
             return None;
         }
         let entry = self.indices.binary_search(&index).ok()?;
-        let mut fraction = Fraction::new(
+        Some(Fraction::new(
             self.numerators[entry].into(),
             self.denominators[entry].into(),
-        );
-        fraction.display_source = self.display_sources.get(entry).cloned().flatten();
-        Some(fraction)
+        ))
     }
 
     pub fn fraction_or_zero(&self, index: usize) -> Fraction {
@@ -300,15 +284,26 @@ impl Clone for Box<dyn ValueExt> {
     }
 }
 
+/// Semantic interpretation role assigned to a stack value. This is the
+/// meaning the runtime attaches to a value, not a formatting switch:
+/// rendering for humans and AI is derived from (data, role).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub enum DisplayHint {
+pub enum Interpretation {
+    /// Role not yet assigned. Rendered structurally with no heuristic
+    /// re-guessing — the runtime never infers meaning at render time.
     #[default]
-    Auto,
-    Number,
+    Unassigned,
+    /// A plain exact-real number.
+    RawNumber,
+    /// A 2-element vector interpreted as a closed interval.
     Interval,
-    String,
-    Boolean,
-    DateTime,
+    /// A codepoint sequence interpreted as text.
+    Text,
+    /// A scalar interpreted as a truth value.
+    TruthValue,
+    /// An integer interpreted as a timestamp.
+    Timestamp,
+    /// A diagnostic absence value.
     Nil,
 }
 
@@ -425,7 +420,7 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
 #[derive(Debug, Clone)]
 pub struct Value {
     pub data: ValueData,
-    pub hint: DisplayHint,
+    pub hint: Interpretation,
     pub absence: Option<AbsenceMetadata>,
 }
 
@@ -436,8 +431,8 @@ impl PartialEq for Value {
 }
 
 pub struct SemanticRegistry {
-    pub stack_hints: Vec<DisplayHint>,
-    pub flow_hints: HashMap<u64, DisplayHint>,
+    pub stack_hints: Vec<Interpretation>,
+    pub flow_hints: HashMap<u64, Interpretation>,
     pub flow_extensions: HashMap<u64, Box<dyn ValueExt>>,
 }
 
@@ -460,32 +455,32 @@ impl SemanticRegistry {
         }
     }
 
-    pub fn push_hint(&mut self, hint: DisplayHint) {
+    pub fn push_hint(&mut self, hint: Interpretation) {
         self.stack_hints.push(hint);
     }
 
-    pub fn pop_hint(&mut self) -> DisplayHint {
-        self.stack_hints.pop().unwrap_or(DisplayHint::Auto)
+    pub fn pop_hint(&mut self) -> Interpretation {
+        self.stack_hints.pop().unwrap_or(Interpretation::Unassigned)
     }
 
-    pub fn lookup_hint_at(&self, index: usize) -> DisplayHint {
+    pub fn lookup_hint_at(&self, index: usize) -> Interpretation {
         self.stack_hints
             .get(index)
             .copied()
-            .unwrap_or(DisplayHint::Auto)
+            .unwrap_or(Interpretation::Unassigned)
     }
 
-    pub fn update_hint_at(&mut self, index: usize, hint: DisplayHint) {
+    pub fn update_hint_at(&mut self, index: usize, hint: Interpretation) {
         if index < self.stack_hints.len() {
             self.stack_hints[index] = hint;
         }
     }
 
-    pub fn lookup_last_hint(&self) -> DisplayHint {
+    pub fn lookup_last_hint(&self) -> Interpretation {
         self.stack_hints
             .last()
             .copied()
-            .unwrap_or(DisplayHint::Auto)
+            .unwrap_or(Interpretation::Unassigned)
     }
 
     pub fn truncate(&mut self, len: usize) {
@@ -502,17 +497,17 @@ impl SemanticRegistry {
 
     pub fn normalize_to_stack_len(&mut self, stack_len: usize) {
         while self.stack_hints.len() < stack_len {
-            self.stack_hints.push(DisplayHint::Auto);
+            self.stack_hints.push(Interpretation::Unassigned);
         }
         self.stack_hints.truncate(stack_len);
     }
 
-    pub fn collect_last_hints(&mut self, count: usize) -> Vec<DisplayHint> {
+    pub fn collect_last_hints(&mut self, count: usize) -> Vec<Interpretation> {
         let start = self.stack_hints.len().saturating_sub(count);
         self.stack_hints.drain(start..).collect()
     }
 
-    pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = DisplayHint>) {
+    pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = Interpretation>) {
         self.stack_hints.extend(hints);
     }
 }

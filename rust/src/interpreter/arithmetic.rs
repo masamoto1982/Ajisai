@@ -8,7 +8,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, SparseTensor, Value, ValueData};
+use crate::types::{Interpretation, SparseTensor, Value, ValueData};
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
@@ -368,7 +368,7 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         if stack_len >= 2 {
             let left_hint = interp.semantic_registry.lookup_hint_at(stack_len - 2);
             let right_hint = interp.semantic_registry.lookup_hint_at(stack_len - 1);
-            if matches!(left_hint, DisplayHint::String) || matches!(right_hint, DisplayHint::String)
+            if matches!(left_hint, Interpretation::Text) || matches!(right_hint, Interpretation::Text)
             {
                 return Err(AjisaiError::create_structure_error("number", "string"));
             }

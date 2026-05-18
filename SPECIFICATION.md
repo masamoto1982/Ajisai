@@ -106,7 +106,7 @@ External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine
 
 All numeric literals are parsed as exact real numbers and stored internally as continued fractions (see Section 4.2). The surface literal forms above are convenience syntax: `42`, `42/1`, `42.0`, and `4.2e1` all produce the same internal value. Integer, fraction, decimal, and scientific-notation literals yield finite continued fractions (rationals); irrational continued fractions are produced by words such as `MATH@SQRT`, not by surface literals.
 
-The nested-parentheses form `( a0 ( a1 ( a2 ... )))` is the canonical serialization and AI-readable debug form for continued fractions (Section 4.2). It is not a source-code literal: Ajisai source uses the surface forms above, and the nested form appears only in display and serialization output under the `ContinuedFraction` display hint (Section 12.2).
+The nested-parentheses form `( a0 ( a1 ( a2 ... )))` is the canonical serialization and AI-readable debug form for continued fractions (Section 4.2). It is not a source-code literal: Ajisai source uses the surface forms above, and the nested form appears only in display and serialization output under the `ContinuedFraction` interpretation role (Section 12.2).
 
 ### 3.3 String literals
 
@@ -200,7 +200,7 @@ The canonical AI-readable serialization of a scalar is the **nested right-associ
 
 with one integer per nesting level and one closing `)` per opening `(`. A lazy infinite CF is serialized by emitting partial quotients up to an implementation-defined display budget and terminating with the marker `...)` before the unproduced quotients' closing parens; the truncated display is non-canonical and must not be parsed back as an exact value.
 
-This nested form is **not** Ajisai source syntax (Section 3.4). It appears only in display and serialization output under the `ContinuedFraction` display hint (Section 12.2) and in AI-targeted diagnostics. Other display hints (e.g. `Number`) continue to render the surface forms of Section 3.2.
+This nested form is **not** Ajisai source syntax (Section 3.4). It appears only in display and serialization output under the `ContinuedFraction` interpretation role (Section 12.2) and in AI-targeted diagnostics. Under the `RawNumber` role a rational scalar renders as a reduced `numerator/denominator` (Section 12.2); the surface literal style of Section 3.2 is convenience input syntax only and is not retained for display.
 
 #### 4.2.4 Equivalence of representations
 
@@ -307,7 +307,7 @@ The runtime is divided into two planes:
 
 **Data plane**: Holds `ValueData` payloads. All arithmetic, comparison, and structural operations execute entirely on the data plane. The data plane contains no display or formatting metadata.
 
-**Semantic plane**: Holds display hints and presentation metadata keyed by stack position. Consulted only at explicit semantic boundaries: rendering, output operations, and module side effects.
+**Semantic plane**: Holds interpretation roles and presentation metadata keyed by stack position. Consulted only at explicit semantic boundaries: rendering, output operations, and module side effects.
 
 These planes are strictly separate. Semantic plane contents do not influence data plane computations.
 
@@ -472,7 +472,7 @@ Arithmetic on scalars is performed directly on the continued-fraction representa
 | `EQ` | `=` | Equal |
 | `NEQ` | `<>` | Not equal |
 
-Comparisons return a boolean (true/false encoded as Scalar with Boolean display hint), or NIL when the comparison is not decidable within the comparison budget (see below).
+Comparisons return a boolean (true/false encoded as Scalar with the `TruthValue` interpretation role), or NIL when the comparison is not decidable within the comparison budget (see below).
 
 The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`, `SAFE`).
 
@@ -793,24 +793,24 @@ The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded o
 
 ### 12.1 Purpose
 
-The semantic plane holds display hints for each stack position. It is separate from the data plane and does not influence computation.
+The semantic plane holds an **interpretation role** for each stack position. A role is the meaning the runtime assigned to a value, not a formatting switch: rendering for both humans and AI is a pure function of `(data, role)`. The semantic plane is separate from the data plane and does not influence computation.
 
-### 12.2 Display hints
+### 12.2 Interpretation roles
 
-| Hint | Meaning |
+| Role | Meaning |
 |------|---------|
-| `Auto` | Determine display from value type at render time |
-| `Number` | Display as a number using the surface forms of Section 3.2 (integer, fraction, decimal) |
+| `Unassigned` | No role has been assigned. The value is rendered in its raw structural form. The runtime never infers a richer meaning (such as "string-like") at render time; interpretation is decided once, at construction. |
+| `RawNumber` | A plain number. A rational scalar renders as a reduced `numerator/denominator`, integers included (`3` renders as `3/1`). There is no decimal surface form and no per-value style: the display is uniform and matches the exact-real internal model. |
 | `ContinuedFraction` | Display a numeric scalar as the nested right-associative continued-fraction form `( a0 ( a1 ( a2 ... )))` (Section 4.2.3); lazy CFs render with a `...)` truncation marker |
-| `Interval` | Display a 2-element vector as the closed interval `[lo, hi]` |
-| `String` | Display as a string |
-| `Boolean` | Display as a boolean |
-| `DateTime` | Display as a formatted datetime |
-| `Nil` | Display as NIL |
+| `Interval` | A 2-element vector interpreted as the closed interval `[lo, hi]` |
+| `Text` | A codepoint sequence interpreted as text |
+| `TruthValue` | A scalar interpreted as a truth value |
+| `Timestamp` | An integer interpreted as a formatted datetime |
+| `Nil` | A diagnostic absence value, displayed as `NIL` |
 
-Display hints are applied only at explicit semantic boundaries: rendering, `PRINT`, and module-level output operations.
+Interpretation roles are applied only at explicit semantic boundaries: rendering, `PRINT`, and module-level output operations. A value's role and the surface style of any literal that produced it are independent: surface literal forms (Section 3.2) are convenience input syntax and are never retained as display state. Two values are displayed identically whenever their data and role are equal.
 
-The `ContinuedFraction` hint is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this hint; the `Number` hint may lose information for lazy irrationals.
+The `ContinuedFraction` role is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this role; the `RawNumber` role may lose information for lazy irrationals.
 
 ---
 

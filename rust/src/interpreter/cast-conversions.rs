@@ -7,9 +7,9 @@ use crate::interpreter::value_extraction_helpers::{create_number_value, value_as
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
-use crate::types::{DisplayHint, Value};
+use crate::types::{Interpretation, Value};
 
-fn convert_value_to_string(val: &Value, hint: DisplayHint) -> Result<Value> {
+fn convert_value_to_string(val: &Value, hint: Interpretation) -> Result<Value> {
     if val.is_nil() {
         return Ok(Value::nil());
     }
@@ -33,7 +33,7 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
-fn convert_value_to_number(val: &Value, hint: DisplayHint) -> Result<Value> {
+fn convert_value_to_number(val: &Value, hint: Interpretation) -> Result<Value> {
     if is_string_value_with_hint(val, hint) {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
@@ -64,7 +64,7 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_number)
 }
 
-fn convert_value_to_boolean(val: &Value, hint: DisplayHint) -> Result<Value> {
+fn convert_value_to_boolean(val: &Value, hint: Interpretation) -> Result<Value> {
     if is_boolean_value(val) {
         return Ok(val.clone());
     }
@@ -104,7 +104,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let hint: DisplayHint = interp.semantic_registry.lookup_last_hint();
+    let hint: Interpretation = interp.semantic_registry.lookup_last_hint();
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
@@ -139,7 +139,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     Err(AjisaiError::from("NIL: expected String input"))
 }
 
-fn convert_codepoint_to_char(val: &Value, hint: DisplayHint) -> Result<Value> {
+fn convert_codepoint_to_char(val: &Value, hint: Interpretation) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             if let Some(code) = f.to_i64() {

@@ -6,7 +6,7 @@ use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{Interpreter, OperationTargetMode};
-use crate::types::{DisplayHint, Token, Value};
+use crate::types::{Interpretation, Token, Value};
 
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -64,7 +64,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
-            let saved_hints: Vec<DisplayHint> =
+            let saved_hints: Vec<Interpretation> =
                 std::mem::take(&mut interp.semantic_registry.stack_hints);
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;

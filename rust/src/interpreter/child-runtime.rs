@@ -1,5 +1,5 @@
 use crate::error::AjisaiError;
-use crate::types::{DisplayHint, Value};
+use crate::types::{Interpretation, Value};
 
 use super::interpreter_core::{
     ChildRuntime, ChildState, ExitReason, RuntimeDictionarySnapshot,
@@ -69,7 +69,7 @@ impl Interpreter {
             },
         );
         self.stack.push(Value::from_process_handle(id));
-        self.semantic_registry.push_hint(DisplayHint::Auto);
+        self.semantic_registry.push_hint(Interpretation::Unassigned);
         Ok(())
     }
 
@@ -91,7 +91,7 @@ impl Interpreter {
             ChildState::Timeout => "timeout",
         };
         self.stack.push(Value::from_string(status));
-        self.semantic_registry.push_hint(DisplayHint::String);
+        self.semantic_registry.push_hint(Interpretation::Text);
         Ok(())
     }
 
@@ -109,7 +109,7 @@ impl Interpreter {
         child.exit_reason = Some(ExitReason::Killed);
         child.result_snapshot = Some(Self::build_exit_result(ExitReason::Killed, None));
         self.stack.push(Value::from_string("killed"));
-        self.semantic_registry.push_hint(DisplayHint::String);
+        self.semantic_registry.push_hint(Interpretation::Text);
         Ok(())
     }
 
@@ -176,7 +176,7 @@ impl Interpreter {
         }
         self.child_runtimes.insert(id, child);
         self.stack.push(Value::from_vector(result));
-        self.semantic_registry.push_hint(DisplayHint::Auto);
+        self.semantic_registry.push_hint(Interpretation::Unassigned);
         Ok(())
     }
 
@@ -192,7 +192,7 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::from("Unknown process handle"))?;
         child.monitored = true;
         self.stack.push(Value::from_process_handle(id));
-        self.semantic_registry.push_hint(DisplayHint::Auto);
+        self.semantic_registry.push_hint(Interpretation::Unassigned);
         Ok(())
     }
 
@@ -231,7 +231,7 @@ impl Interpreter {
 
             if ok {
                 self.stack.push(Value::from_vector(result));
-                self.semantic_registry.push_hint(DisplayHint::Auto);
+                self.semantic_registry.push_hint(Interpretation::Unassigned);
                 return Ok(());
             }
             if attempt >= max_restarts {
@@ -239,7 +239,7 @@ impl Interpreter {
                     Value::from_string("failed"),
                     Value::from_vector(vec![]),
                 ]));
-                self.semantic_registry.push_hint(DisplayHint::Auto);
+                self.semantic_registry.push_hint(Interpretation::Unassigned);
                 return Ok(());
             }
             self.bump_execution_epoch();
