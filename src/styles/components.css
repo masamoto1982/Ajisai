@@ -217,20 +217,13 @@
 #input-panel::after {
     content: "";
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 4.5rem;
-    height: 4.5rem;
+    inset: 0;
     pointer-events: none;
     z-index: 1;
-    background: radial-gradient(circle at top right in oklch,
+    background: linear-gradient(225deg in oklch,
         var(--editor-accent) 0%,
-        var(--editor-accent-fade) 70%);
-    transition: opacity 0.15s ease;
-}
-
-#input-panel:has(#code-input:placeholder-shown)::after {
-    opacity: 0;
+        var(--editor-accent) 22%,
+        var(--editor-accent-fade) 32%);
 }
 
 
