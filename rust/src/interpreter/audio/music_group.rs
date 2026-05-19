@@ -4,15 +4,13 @@
 //! AI tooling can explain *why* a nested structure plays a certain way, rather
 //! than guessing musical meaning from a raw nested vector.
 
+use super::music_values::{make_record, record_field};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::types::{Interpretation, Value, ValueData};
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub(crate) const GROUP_KIND: &str = "music.group";
-
-const FIELD_KEYS: [&str; 5] = ["kind", "mode", "role", "provenance", "children"];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum GroupMode {
@@ -46,18 +44,6 @@ pub(crate) struct MusicGroup {
     pub children: Vec<Value>,
 }
 
-fn plain_vector(children: Vec<Value>) -> Value {
-    Value {
-        data: ValueData::Vector(Rc::new(children)),
-        hint: Interpretation::Unassigned,
-        absence: None,
-    }
-}
-
-fn record_pair(key: &str, value: Value) -> Value {
-    plain_vector(vec![Value::from_string(key), value])
-}
-
 /// Build a `music.group` record value with explicit provenance.
 pub(crate) fn make_group(
     mode: GroupMode,
@@ -65,39 +51,18 @@ pub(crate) fn make_group(
     provenance: &str,
     children: Vec<Value>,
 ) -> Value {
-    let pairs = vec![
-        record_pair("kind", Value::from_string(GROUP_KIND)),
-        record_pair("mode", Value::from_string(mode.as_str())),
-        record_pair("role", Value::from_string(role)),
-        record_pair("provenance", Value::from_string(provenance)),
-        record_pair("children", plain_vector(children)),
-    ];
-    let mut index = HashMap::new();
-    for (i, key) in FIELD_KEYS.iter().enumerate() {
-        index.insert((*key).to_string(), i);
-    }
-    Value {
-        data: ValueData::Record {
-            pairs: Rc::new(pairs),
-            index,
-        },
+    let children_value = Value {
+        data: ValueData::Vector(Rc::new(children)),
         hint: Interpretation::Unassigned,
         absence: None,
-    }
-}
-
-fn record_field<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
-    if let ValueData::Record { pairs, index } = &value.data {
-        let pos = *index.get(key)?;
-        if let Some(pair) = pairs.get(pos) {
-            if let ValueData::Vector(kv) = &pair.data {
-                if kv.len() == 2 {
-                    return Some(&kv[1]);
-                }
-            }
-        }
-    }
-    None
+    };
+    make_record(vec![
+        ("kind", Value::from_string(GROUP_KIND)),
+        ("mode", Value::from_string(mode.as_str())),
+        ("role", Value::from_string(role)),
+        ("provenance", Value::from_string(provenance)),
+        ("children", children_value),
+    ])
 }
 
 /// Report whether `value` is a `music.group` record.
@@ -186,6 +151,10 @@ pub(crate) fn explain_value(value: &Value) -> String {
             boundary
         ));
         return s;
+    }
+
+    if let Some(leaf) = super::music_values::describe_leaf(value) {
+        return leaf;
     }
 
     if matches!(value.data, ValueData::Vector(_) | ValueData::Tensor { .. }) {

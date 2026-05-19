@@ -75,6 +75,39 @@ pub(crate) fn build_audio_structure(
         return Ok(AudioStructure::Rest { duration: 1.0 });
     }
 
+    if let Some(kind) = super::music_values::record_kind(value) {
+        match kind.as_str() {
+            super::music_values::NOTE_KIND => {
+                return note_to_structure(value, envelope, waveform, output);
+            }
+            super::music_values::REST_KIND => {
+                let duration = super::music_values::record_field(value, "duration")
+                    .and_then(super::music_values::resolve_duration_seconds)
+                    .ok_or_else(|| AjisaiError::from("Invalid music.rest: missing duration"))?;
+                if duration <= 0.0 {
+                    return Err(AjisaiError::from("Rest duration must be positive"));
+                }
+                return Ok(AudioStructure::Rest { duration });
+            }
+            super::music_values::PITCH_KIND => {
+                let frequency = super::music_values::resolve_pitch_hz(value)
+                    .ok_or_else(|| AjisaiError::from("Invalid music.pitch"))?;
+                return tone_or_rest(frequency, 1.0, envelope, waveform, output);
+            }
+            super::music_values::DURATION_KIND => {
+                return Err(AjisaiError::from(
+                    "A music.duration is not directly playable; pair it with a pitch via MUSIC@NOTE",
+                ));
+            }
+            super::music_values::TUNING_KIND => {
+                return Err(AjisaiError::from(
+                    "A music.tuning is not directly playable; obtain a pitch with MUSIC@STEP",
+                ));
+            }
+            _ => {}
+        }
+    }
+
     if let Some(group) = super::music_group::parse_group(value) {
         let group_children: Vec<AudioStructure> = group
             .children
@@ -187,6 +220,49 @@ pub(crate) fn build_audio_structure(
         envelope: None,
         waveform: WaveformType::Sine,
     })
+}
+
+
+fn tone_or_rest(
+    frequency: f64,
+    duration: f64,
+    envelope: Option<Envelope>,
+    waveform: WaveformType,
+    output: &mut String,
+) -> Result<AudioStructure> {
+    if duration <= 0.0 {
+        return Err(AjisaiError::from("Duration must be positive"));
+    }
+    if frequency < 0.0 {
+        return Err(AjisaiError::from("Frequency must be non-negative"));
+    }
+    if frequency == 0.0 {
+        return Ok(AudioStructure::Rest { duration });
+    }
+    check_audible_range(frequency, output);
+    Ok(AudioStructure::Tone {
+        frequency,
+        duration,
+        envelope,
+        waveform,
+    })
+}
+
+
+fn note_to_structure(
+    note: &Value,
+    envelope: Option<Envelope>,
+    waveform: WaveformType,
+    output: &mut String,
+) -> Result<AudioStructure> {
+    let pitch = super::music_values::record_field(note, "pitch")
+        .ok_or_else(|| AjisaiError::from("Invalid music.note: missing pitch"))?;
+    let frequency = super::music_values::resolve_pitch_hz(pitch)
+        .ok_or_else(|| AjisaiError::from("Invalid music.note: unresolvable pitch"))?;
+    let duration = super::music_values::record_field(note, "duration")
+        .and_then(super::music_values::resolve_duration_seconds)
+        .ok_or_else(|| AjisaiError::from("Invalid music.note: unresolvable duration"))?;
+    tone_or_rest(frequency, duration, envelope, waveform, output)
 }
 
 

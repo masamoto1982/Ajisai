@@ -2,8 +2,14 @@
 
 use super::audio_types::{update_play_mode, PlayMode, WaveformType};
 use super::music_group::{explain_value, make_group, operand_children, GroupMode};
+use super::music_values::{
+    make_duration, make_edo_pitch, make_hz_pitch, make_note, make_rest, make_tuning, parse_ratio,
+    record_kind, tuning_components, DURATION_KIND, PITCH_KIND,
+};
 use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
+use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::{ConsumptionMode, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
@@ -149,6 +155,65 @@ pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
 }
 
 
+/// Reject the whole-stack operation target mode for value constructors, which
+/// only have a well-defined effect on a fixed number of stack-top operands.
+fn reject_stack_mode(interp: &Interpreter, word: &str) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
+        return Err(AjisaiError::ModeUnsupported {
+            word: word.into(),
+            mode: "Stack".into(),
+        });
+    }
+    Ok(())
+}
+
+
+/// Clone the top `count` operands (stack order) without consuming them, so a
+/// constructor can validate before committing.
+fn peek_operands(interp: &Interpreter, count: usize) -> Result<Vec<Value>> {
+    let len = interp.stack.len();
+    if len < count {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    Ok(interp.stack[len - count..].to_vec())
+}
+
+
+/// Consume the operands (only in `Consume` mode) and push the constructed value.
+fn consume_and_push(interp: &mut Interpreter, count: usize, result: Value) {
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        let len = interp.stack.len();
+        let _ = interp.stack.drain(len - count..);
+    }
+    interp.stack.push(result);
+}
+
+
+fn require_scalar(value: &Value, message: &str) -> Result<Fraction> {
+    value
+        .as_scalar()
+        .cloned()
+        .ok_or_else(|| AjisaiError::from(message))
+}
+
+
+fn require_positive_divisions(value: &Value, word: &str) -> Result<i64> {
+    let divisions = extract_integer_from_value(value).map_err(|_| {
+        AjisaiError::from(format!(
+            "MUSIC@{} divisions must be a positive integer",
+            word
+        ))
+    })?;
+    if divisions < 1 {
+        return Err(AjisaiError::from(format!(
+            "MUSIC@{} divisions must be a positive integer",
+            word
+        )));
+    }
+    Ok(divisions)
+}
+
+
 /// Build an explicit sequential music group from a vector.
 pub fn op_seq_group(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "generic", "SEQ-GROUP")
@@ -173,36 +238,211 @@ fn build_group(
     role: &str,
     word: &str,
 ) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    let children = match operand_children(&val, word) {
-        Ok(children) => children,
-        Err(e) => {
-            interp.stack.push(val);
-            return Err(e);
-        }
-    };
-
+    reject_stack_mode(interp, word)?;
+    let operands = peek_operands(interp, 1)?;
+    let children = operand_children(&operands[0], word)?;
     let provenance = format!("explicit:MUSIC@{}", word);
-    interp
-        .stack
-        .push(make_group(mode, role, &provenance, children));
+    consume_and_push(interp, 1, make_group(mode, role, &provenance, children));
     Ok(())
 }
 
 
-/// Explain how a value would be interpreted by MUSIC@PLAY.
-pub fn op_explain(interp: &mut Interpreter) -> Result<()> {
-    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+/// Build a `music.pitch` from a direct frequency in Hz. The frequency is kept
+/// as an exact rational, so just-intonation ratios survive losslessly.
+pub fn op_hz(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "HZ")?;
+    let operands = peek_operands(interp, 1)?;
 
-    let explanation = explain_value(&val);
+    let hz = require_scalar(
+        &operands[0],
+        "MUSIC@HZ requires a number (frequency in Hz)",
+    )?;
+    let approx = hz
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@HZ frequency is too large"))?;
+    if approx < 0.0 {
+        return Err(AjisaiError::from(
+            "MUSIC@HZ frequency must be non-negative",
+        ));
+    }
+
+    consume_and_push(interp, 1, make_hz_pitch(hz, "explicit:MUSIC@HZ"));
+    Ok(())
+}
+
+
+/// Build a `music.duration` from a number of seconds.
+pub fn op_dur(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "DUR")?;
+    let operands = peek_operands(interp, 1)?;
+
+    let seconds = require_scalar(
+        &operands[0],
+        "MUSIC@DUR requires a number (duration in seconds)",
+    )?;
+    let approx = seconds
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@DUR duration is too large"))?;
+    if approx <= 0.0 {
+        return Err(AjisaiError::from("MUSIC@DUR duration must be positive"));
+    }
+
+    consume_and_push(interp, 1, make_duration(seconds, "explicit:MUSIC@DUR"));
+    Ok(())
+}
+
+
+/// Combine a `music.pitch` and a `music.duration` into a `music.note`.
+pub fn op_note(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "NOTE")?;
+    let operands = peek_operands(interp, 2)?;
+
+    if record_kind(&operands[0]).as_deref() != Some(PITCH_KIND) {
+        return Err(AjisaiError::from(
+            "MUSIC@NOTE expects a music.pitch (use MUSIC@HZ or MUSIC@STEP) as the first operand",
+        ));
+    }
+    if record_kind(&operands[1]).as_deref() != Some(DURATION_KIND) {
+        return Err(AjisaiError::from(
+            "MUSIC@NOTE expects a music.duration (use MUSIC@DUR) as the second operand",
+        ));
+    }
+
+    let note = make_note(
+        operands[0].clone(),
+        operands[1].clone(),
+        "explicit:MUSIC@NOTE",
+    );
+    consume_and_push(interp, 2, note);
+    Ok(())
+}
+
+
+/// Build a `music.rest` from a `music.duration`.
+pub fn op_rest(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "REST")?;
+    let operands = peek_operands(interp, 1)?;
+
+    if record_kind(&operands[0]).as_deref() != Some(DURATION_KIND) {
+        return Err(AjisaiError::from(
+            "MUSIC@REST expects a music.duration (use MUSIC@DUR)",
+        ));
+    }
+
+    let rest = make_rest(operands[0].clone(), "explicit:MUSIC@REST");
+    consume_and_push(interp, 1, rest);
+    Ok(())
+}
+
+
+/// Build a `music.tuning` for equal division of the octave (EDO).
+pub fn op_edo(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "EDO")?;
+    let operands = peek_operands(interp, 2)?;
+
+    let reference = require_scalar(
+        &operands[0],
+        "MUSIC@EDO requires a reference frequency as the first operand",
+    )?;
+    let reference_hz = reference
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@EDO reference frequency is too large"))?;
+    if reference_hz <= 0.0 {
+        return Err(AjisaiError::from(
+            "MUSIC@EDO reference frequency must be positive",
+        ));
+    }
+
+    let divisions = require_positive_divisions(&operands[1], "EDO")?;
+
+    let tuning = make_tuning(
+        reference,
+        (Fraction::from(2), Fraction::from(1)),
+        divisions,
+        "explicit:MUSIC@EDO",
+    );
+    consume_and_push(interp, 2, tuning);
+    Ok(())
+}
+
+
+/// Build a `music.tuning` for equal division of an arbitrary ratio (EDR),
+/// supporting non-octave tunings such as the Bohlen-Pierce tritave (3/1).
+pub fn op_edr(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "EDR")?;
+    let operands = peek_operands(interp, 3)?;
+
+    let reference = require_scalar(
+        &operands[0],
+        "MUSIC@EDR requires a reference frequency as the first operand",
+    )?;
+    let reference_hz = reference
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@EDR reference frequency is too large"))?;
+    if reference_hz <= 0.0 {
+        return Err(AjisaiError::from(
+            "MUSIC@EDR reference frequency must be positive",
+        ));
+    }
+
+    let (num, den) = parse_ratio(&operands[1]).ok_or_else(|| {
+        AjisaiError::from(
+            "MUSIC@EDR equave must be a ratio: a number or a [ num den ] vector",
+        )
+    })?;
+    let num_f = num
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@EDR equave is too large"))?;
+    let den_f = den
+        .to_f64()
+        .ok_or_else(|| AjisaiError::from("MUSIC@EDR equave is too large"))?;
+    if num_f <= 0.0 || den_f <= 0.0 {
+        return Err(AjisaiError::from(
+            "MUSIC@EDR equave components must be positive",
+        ));
+    }
+
+    let divisions = require_positive_divisions(&operands[2], "EDR")?;
+
+    let tuning = make_tuning(reference, (num, den), divisions, "explicit:MUSIC@EDR");
+    consume_and_push(interp, 3, tuning);
+    Ok(())
+}
+
+
+/// Resolve a step within a `music.tuning` into a `music.pitch`.
+pub fn op_step(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "STEP")?;
+    let operands = peek_operands(interp, 2)?;
+
+    let (reference, equave, divisions) = tuning_components(&operands[0]).ok_or_else(|| {
+        AjisaiError::from(
+            "MUSIC@STEP expects a music.tuning (use MUSIC@EDO or MUSIC@EDR) as the first operand",
+        )
+    })?;
+
+    let step = extract_integer_from_value(&operands[1])
+        .map_err(|_| AjisaiError::from("MUSIC@STEP step index must be an integer"))?;
+
+    let pitch = make_edo_pitch(reference, equave, divisions, step, "explicit:MUSIC@STEP");
+    consume_and_push(interp, 2, pitch);
+    Ok(())
+}
+
+
+/// Explain how a value would be interpreted by MUSIC@PLAY. Diagnostic only:
+/// the inspected value is always left on the stack.
+pub fn op_explain(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "EXPLAIN")?;
+    let operands = peek_operands(interp, 1)?;
+
+    let explanation = explain_value(&operands[0]);
     if !interp.output_buffer.is_empty() && !interp.output_buffer.ends_with('\n') {
         interp.output_buffer.push('\n');
     }
     interp.output_buffer.push_str(&explanation);
     interp.output_buffer.push('\n');
 
-    interp.stack.push(val);
     Ok(())
 }
 
