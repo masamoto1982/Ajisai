@@ -26,6 +26,9 @@ export class AjisaiInterpreter {
     collect_imported_modules(): any;
     collect_input_helper_words_info(): any;
     collect_module_sample_words_info(module_name: string): any;
+    /**
+     * Tuple shape: `(name, description)`.
+     */
     collect_module_words_info(module_name: string): any;
     collect_stack(): any;
     collect_user_words_info(): any;
@@ -80,8 +83,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h5d0e415c658b5598: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h168756633bc0765f: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h3f6c7788c2478463: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__hb521fcce36d621a7: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
