@@ -136,6 +136,11 @@ export const createGUI = (): GUI => {
         switchDictionarySheet(elements.dictionaryArea, sheetId);
     };
 
+    const selectDictionarySheet = (sheetId: string): void => {
+        elements.dictionarySheetSelect.value = sheetId;
+        elements.dictionarySheetSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
     // The parent selectors (.area-selector-right / .area-selector-mobile) are already
     // hidden at the off-breakpoint by CSS. This JS control is for the in-breakpoint case:
     // within a single breakpoint the selector stays visible across all right/mobile modes,
@@ -161,8 +166,7 @@ export const createGUI = (): GUI => {
             || (mobile.isMobile() && layoutState.currentMode !== 'dictionary')) {
             layoutController.setArea('dictionary');
         }
-        elements.dictionarySheetSelect.value = sheetId;
-        doSwitchDictionarySheet(sheetId);
+        selectDictionarySheet(sheetId);
     };
 
     const updateAllDisplays = (executedCode?: string): void => {
@@ -341,8 +345,7 @@ export const createGUI = (): GUI => {
         if (restored.activeDictionarySheet) {
             const targetSheetEl = document.getElementById(`dictionary-sheet-${restored.activeDictionarySheet}`);
             if (targetSheetEl) {
-                elements.dictionarySheetSelect.value = restored.activeDictionarySheet;
-                doSwitchDictionarySheet(restored.activeDictionarySheet);
+                selectDictionarySheet(restored.activeDictionarySheet);
             }
         }
 
