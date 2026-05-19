@@ -268,6 +268,66 @@ const MUSIC_WORDS: &[ModuleWord] = &[
         Capabilities::PURE
     ),
     module_word!(
+        "VOICE",
+        "Build a music group with the role of a single melodic voice",
+        audio::op_voice,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "TRACK",
+        "Build a music group with the role of an instrument track",
+        audio::op_track,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "MEASURE",
+        "Build a music group with the role of a measure (bar)",
+        audio::op_measure,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "PHRASE",
+        "Build a music group with the role of a phrase",
+        audio::op_phrase,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "WITH-TUNING",
+        "Bind a tuning over a body so bare integers become tuning steps",
+        audio::op_with_tuning,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
         "EXPLAIN",
         "Explain how MUSIC@PLAY would interpret a value",
         audio::op_explain,

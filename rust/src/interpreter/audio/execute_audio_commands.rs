@@ -3,8 +3,8 @@
 use super::audio_types::{update_play_mode, PlayMode, WaveformType};
 use super::music_group::{explain_value, make_group, operand_children, GroupMode};
 use super::music_values::{
-    make_duration, make_edo_pitch, make_hz_pitch, make_note, make_rest, make_tuning, parse_ratio,
-    record_kind, tuning_components, DURATION_KIND, PITCH_KIND,
+    make_duration, make_edo_pitch, make_hz_pitch, make_note, make_rest, make_scope, make_tuning,
+    parse_ratio, record_kind, tuning_components, DURATION_KIND, PITCH_KIND, TUNING_KIND,
 };
 use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
@@ -232,6 +232,30 @@ pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
 }
 
 
+/// Build a music group with the role of a single melodic voice.
+pub fn op_voice(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Sequential, "voice", "VOICE")
+}
+
+
+/// Build a music group with the role of an instrument track.
+pub fn op_track(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Sequential, "track", "TRACK")
+}
+
+
+/// Build a music group with the role of a measure (bar).
+pub fn op_measure(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Sequential, "measure", "MEASURE")
+}
+
+
+/// Build a music group with the role of a phrase.
+pub fn op_phrase(interp: &mut Interpreter) -> Result<()> {
+    build_group(interp, GroupMode::Sequential, "phrase", "PHRASE")
+}
+
+
 fn build_group(
     interp: &mut Interpreter,
     mode: GroupMode,
@@ -426,6 +450,33 @@ pub fn op_step(interp: &mut Interpreter) -> Result<()> {
 
     let pitch = make_edo_pitch(reference, equave, divisions, step, "explicit:MUSIC@STEP");
     consume_and_push(interp, 2, pitch);
+    Ok(())
+}
+
+
+/// Bind a tuning over a body of musical content. Inside the resulting scope
+/// bare integers are interpreted as steps of the tuning at MUSIC@PLAY time.
+pub fn op_with_tuning(interp: &mut Interpreter) -> Result<()> {
+    reject_stack_mode(interp, "WITH-TUNING")?;
+    let operands = peek_operands(interp, 2)?;
+
+    if record_kind(&operands[0]).as_deref() != Some(TUNING_KIND) {
+        return Err(AjisaiError::from(
+            "MUSIC@WITH-TUNING expects a music.tuning (use MUSIC@EDO or MUSIC@EDR) as the first operand",
+        ));
+    }
+    if operands[1].is_nil() {
+        return Err(AjisaiError::from(
+            "MUSIC@WITH-TUNING requires a non-empty body as the second operand",
+        ));
+    }
+
+    let scope = make_scope(
+        operands[0].clone(),
+        operands[1].clone(),
+        "explicit:MUSIC@WITH-TUNING",
+    );
+    consume_and_push(interp, 2, scope);
     Ok(())
 }
 

@@ -40,6 +40,7 @@ impl GroupMode {
 
 pub(crate) struct MusicGroup {
     pub mode: GroupMode,
+    pub role: String,
     pub provenance: String,
     pub children: Vec<Value>,
 }
@@ -79,6 +80,9 @@ pub(crate) fn parse_group(value: &Value) -> Option<MusicGroup> {
         return None;
     }
     let mode = GroupMode::from_str(&record_field(value, "mode").and_then(value_as_string)?)?;
+    let role = record_field(value, "role")
+        .and_then(value_as_string)
+        .unwrap_or_else(|| "generic".to_string());
     let provenance = record_field(value, "provenance")
         .and_then(value_as_string)
         .unwrap_or_else(|| "unknown".to_string());
@@ -88,6 +92,7 @@ pub(crate) fn parse_group(value: &Value) -> Option<MusicGroup> {
     };
     Some(MusicGroup {
         mode,
+        role,
         provenance,
         children,
     })
@@ -130,10 +135,22 @@ pub(crate) fn operand_children(value: &Value, word: &str) -> Result<Vec<Value>> 
 /// Produce a human/AI readable explanation of a value's musical interpretation.
 pub(crate) fn explain_value(value: &Value) -> String {
     if let Some(group) = parse_group(value) {
-        let (label, boundary, simultaneous) = match group.mode {
-            GroupMode::Sequential => ("Sequential group", "AudioStructure::Seq", false),
-            GroupMode::Simultaneous => ("Simultaneous group", "AudioStructure::Sim", true),
-            GroupMode::Chord => ("Chord group", "AudioStructure::Sim", true),
+        let boundary = match group.mode {
+            GroupMode::Sequential => "AudioStructure::Seq",
+            GroupMode::Simultaneous | GroupMode::Chord => "AudioStructure::Sim",
+        };
+        let simultaneous = !matches!(group.mode, GroupMode::Sequential);
+        let label = match group.role.as_str() {
+            "voice" => "Voice group",
+            "track" => "Track group",
+            "measure" => "Measure group",
+            "phrase" => "Phrase group",
+            "chord" => "Chord group",
+            _ => match group.mode {
+                GroupMode::Sequential => "Sequential group",
+                GroupMode::Simultaneous => "Simultaneous group",
+                GroupMode::Chord => "Chord group",
+            },
         };
         let provenance = group
             .provenance

@@ -42,9 +42,26 @@ const HIDDEN_AUTOCOMPLETE_ALIASES: ReadonlySet<string> = new Set([
     '.', ',', "'", '"',
 ]);
 
+// Matches a module import: a single-quoted module name, an optional selector
+// vector (for IMPORT-ONLY), and the IMPORT / IMPORT-ONLY word. Deliberately
+// does not match UNIMPORT / UNIMPORT-ONLY (no word boundary before IMPORT).
+const MODULE_IMPORT_PATTERN = /'([^']+)'\s*(?:\[[^\]]*\]\s*)?(?:IMPORT-ONLY|IMPORT)\b/gi;
+
+// Returns the (upper-cased) name of the last module imported by `code`, or
+// null when the code performs no import.
+const extractImportedModuleName = (code: string): string | null => {
+    MODULE_IMPORT_PATTERN.lastIndex = 0;
+    let lastModule: string | null = null;
+    let match: RegExpExecArray | null;
+    while ((match = MODULE_IMPORT_PATTERN.exec(code)) !== null) {
+        lastModule = match[1]!.toUpperCase();
+    }
+    return lastModule;
+};
+
 export interface GUI {
     readonly init: () => Promise<void>;
-    readonly updateAllDisplays: () => void;
+    readonly updateAllDisplays: (executedCode?: string) => void;
     readonly extractElements: () => GUIElements;
     readonly extractDisplay: () => Display;
     readonly extractEditor: () => Editor;
@@ -139,7 +156,16 @@ export const createGUI = (): GUI => {
     });
 
 
-    const updateAllDisplays = (): void => {
+    const revealDictionarySheet = (sheetId: string): void => {
+        if (layoutState.currentRightMode !== 'dictionary'
+            || (mobile.isMobile() && layoutState.currentMode !== 'dictionary')) {
+            layoutController.setArea('dictionary');
+        }
+        elements.dictionarySheetSelect.value = sheetId;
+        doSwitchDictionarySheet(sheetId);
+    };
+
+    const updateAllDisplays = (executedCode?: string): void => {
         if (!INTERPRETER_CLIENT.getOptional()) return;
 
         invalidateAutocompleteCache();
@@ -151,12 +177,17 @@ export const createGUI = (): GUI => {
             const newSheetIds: string[] = moduleTabManager.syncModuleTabs();
 
             if (newSheetIds.length > 0) {
-                const lastSheetId: string = newSheetIds[newSheetIds.length - 1]!;
-                if (layoutState.currentRightMode !== 'dictionary' || (mobile.isMobile() && layoutState.currentMode !== 'dictionary')) {
-                    layoutController.setArea('dictionary');
+                // A module was imported for the first time: reveal its new tab.
+                revealDictionarySheet(newSheetIds[newSheetIds.length - 1]!);
+            } else if (executedCode) {
+                // Re-importing an already-tabbed module (e.g. one restored on
+                // reload) creates no new tab, but the user still expects the
+                // right pane to switch to that module's dictionary.
+                const importedModule = extractImportedModuleName(executedCode);
+                if (importedModule
+                    && moduleTabManager.lookupModuleArea(`module-${importedModule}`)) {
+                    revealDictionarySheet(`module-${importedModule}`);
                 }
-                elements.dictionarySheetSelect.value = lastSheetId;
-                doSwitchDictionarySheet(lastSheetId);
             }
 
             updateHighlights(elements, elements.codeInput.value);

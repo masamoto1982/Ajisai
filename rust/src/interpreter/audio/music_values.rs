@@ -27,6 +27,7 @@ pub(crate) const DURATION_KIND: &str = "music.duration";
 pub(crate) const NOTE_KIND: &str = "music.note";
 pub(crate) const REST_KIND: &str = "music.rest";
 pub(crate) const TUNING_KIND: &str = "music.tuning";
+pub(crate) const SCOPE_KIND: &str = "music.scope";
 
 fn plain_vector(children: Vec<Value>) -> Value {
     Value {
@@ -176,6 +177,17 @@ pub(crate) fn make_tuning(
     ])
 }
 
+/// Build a `music.scope` that binds a tuning over a body of musical content.
+pub(crate) fn make_scope(tuning: Value, body: Value, provenance: &str) -> Value {
+    make_record(vec![
+        ("kind", Value::from_string(SCOPE_KIND)),
+        ("scope_kind", Value::from_string("tuning")),
+        ("tuning", tuning),
+        ("body", body),
+        ("provenance", Value::from_string(provenance)),
+    ])
+}
+
 /// Extract `(reference_hz, equave, divisions)` from a `music.tuning`.
 pub(crate) fn tuning_components(value: &Value) -> Option<(Fraction, (Fraction, Fraction), i64)> {
     if record_kind(value).as_deref() != Some(TUNING_KIND) {
@@ -219,6 +231,18 @@ pub(crate) fn resolve_duration_seconds(value: &Value) -> Option<f64> {
         return None;
     }
     record_scalar(value, "seconds")?.to_f64()
+}
+
+/// Resolve `step` within `tuning` (a `music.tuning`) to a frequency in Hz.
+pub(crate) fn resolve_step_hz(tuning: &Value, step: f64) -> Option<f64> {
+    let (reference, (num, den), divisions) = tuning_components(tuning)?;
+    let reference = reference.to_f64()?;
+    let num = num.to_f64()?;
+    let den = den.to_f64()?;
+    if divisions == 0 || den == 0.0 || num <= 0.0 {
+        return None;
+    }
+    Some(reference * (num / den).powf(step / divisions as f64))
 }
 
 /// Produce an `MUSIC@EXPLAIN` description for a Layer 0 value, if applicable.
@@ -271,6 +295,18 @@ pub(crate) fn describe_leaf(value: &Value) -> Option<String> {
              use MUSIC@STEP to obtain a pitch.",
             record_string(value, "divisions").unwrap_or_default()
         )),
+        SCOPE_KIND => {
+            let divisions = record_field(value, "tuning")
+                .and_then(tuning_components)
+                .map(|(_, _, d)| d.to_string())
+                .unwrap_or_else(|| "?".to_string());
+            Some(format!(
+                "Tuning scope: bare integers inside are read as steps of a \
+                 {}-division tuning (numerator = step, denominator = duration). \
+                 Explicit notes and pitches resolve as usual.",
+                divisions
+            ))
+        }
         _ => None,
     }
 }

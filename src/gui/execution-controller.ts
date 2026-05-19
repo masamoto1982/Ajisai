@@ -20,7 +20,7 @@ export interface ExecutionCallbacks {
     readonly showInfo: (text: string, append: boolean) => void;
     readonly showError: (error: Error | string) => void;
     readonly showExecutionResult: (result: ExecuteResult) => void;
-    readonly updateDisplays: () => void;
+    readonly updateDisplays: (executedCode?: string) => void;
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: ViewMode) => void;
@@ -142,7 +142,7 @@ export const createExecutionController = (
             resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
-        updateDisplays();
+        updateDisplays(code);
         await saveState();
     };
 
