@@ -10,6 +10,7 @@ import {
     renderWordInfo,
     resetWordInfoDisplay,
 } from './dictionary-element-builders';
+import { createDictionarySheetPicker, DictionarySheetPicker } from './dictionary-sheet-picker';
 import { formatDictionaryTabName } from './vocabulary-state-controller';
 
 const AVAILABLE_MODULE_NAMES: readonly string[] = [
@@ -118,6 +119,7 @@ export const createModuleTabManager = (
     const sheets: ModuleSheet[] = [];
     let searchFilter = '';
     const contextMenu = createContextMenuElement();
+    let dictionarySheetPicker: DictionarySheetPicker | null = null;
 
     const hideContextMenu = (): void => {
         contextMenu.hidden = true;
@@ -178,6 +180,13 @@ export const createModuleTabManager = (
         );
     };
 
+    dictionarySheetPicker = createDictionarySheetPicker({
+        selectEl,
+        onSelectSheet: (sheetId: string) => options.onSheetChange(sheetId),
+        onImportModule: importModule,
+        onUnimportModule: unimportModule,
+    });
+
     const createOptionElement = (
         moduleName: string,
         sheetId: string,
@@ -190,8 +199,10 @@ export const createModuleTabManager = (
         option.dataset.moduleState = state;
         if (state === 'available') {
             option.className = 'module-option available-module-option';
-            option.title = `${moduleName} is available. Select it and right-click this selector to import.`;
-            option.style.opacity = '0.58';
+            option.title = `${moduleName} is available. Right-click this entry to import.`;
+        } else {
+            option.className = 'module-option imported-module-option';
+            option.title = `${moduleName} is imported. Right-click this entry to unimport.`;
         }
         return option;
     };
@@ -202,7 +213,7 @@ export const createModuleTabManager = (
         sheet.id = `dictionary-sheet-${sheetId}`;
         sheet.hidden = true;
         sheet.appendChild(createEmptyWordsElement(
-            `${moduleName} is available but not imported. Select this module in the dictionary selector and right-click the selector to import it.`
+            `${moduleName} is available but not imported. Right-click the ${moduleName} entry in the dictionary picker to import it.`
         ));
         return sheet;
     };
@@ -371,6 +382,7 @@ export const createModuleTabManager = (
             for (const sheet of sheets) {
                 renderModuleWords(sheet);
             }
+            dictionarySheetPicker?.refresh();
         } catch (error) {
             console.error('Failed to sync module sheets:', error);
         }
@@ -384,6 +396,7 @@ export const createModuleTabManager = (
             sheet.sheetEl.remove();
         }
         sheets.length = 0;
+        dictionarySheetPicker?.refresh();
     };
 
     const lookupModuleSheet = (sheetId: string): HTMLElement | null => {
@@ -399,27 +412,6 @@ export const createModuleTabManager = (
             renderModuleWords(sheet);
         }
     };
-
-    selectEl.addEventListener('contextmenu', (event) => {
-        const selectedOption = selectEl.selectedOptions[0];
-        const selectedModuleName = selectedOption?.dataset.moduleName;
-        const selectedState = selectedOption?.dataset.moduleState as ModuleSheetState | undefined;
-        if (!selectedModuleName || !selectedState) return;
-
-        event.preventDefault();
-        if (selectedState === 'available') {
-            renderContextMenu(contextMenu, event, [{
-                label: `Import this module (${selectedModuleName})`,
-                onClick: () => importModule(selectedModuleName),
-            }]);
-            return;
-        }
-
-        renderContextMenu(contextMenu, event, [{
-            label: `Unimport this module (${selectedModuleName})`,
-            onClick: () => unimportModule(selectedModuleName),
-        }]);
-    });
 
     return {
         syncModuleTabs,
