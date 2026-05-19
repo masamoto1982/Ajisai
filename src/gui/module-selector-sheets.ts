@@ -12,11 +12,24 @@ import {
 } from './dictionary-element-builders';
 import { formatDictionaryTabName } from './vocabulary-state-controller';
 
+const AVAILABLE_MODULE_NAMES: readonly string[] = [
+    'MUSIC',
+    'JSON',
+    'IO',
+    'TIME',
+    'CRYPTO',
+    'ALGO',
+    'MATH',
+];
+
+type ModuleSheetState = 'imported' | 'available';
+
 export interface ModuleSheet {
     readonly moduleName: string;
     readonly sheetId: string;
     readonly optionEl: HTMLOptionElement;
     readonly sheetEl: HTMLElement;
+    readonly state: ModuleSheetState;
 }
 
 export interface ModuleTabManager {
@@ -113,7 +126,11 @@ export const createModuleTabManager = (
     document.addEventListener('click', hideContextMenu);
     window.addEventListener('blur', hideContextMenu);
 
-    const runUnimportCode = async (code: string, successMessage: string): Promise<void> => {
+    const runModuleMutationCode = async (
+        code: string,
+        successMessage: string,
+        failurePrefix: string
+    ): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
         try {
             const result = await window.ajisaiInterpreter.execute(code);
@@ -127,34 +144,70 @@ export const createModuleTabManager = (
             await onSaveState?.();
             showInfo?.(successMessage, true);
         } catch (error) {
-            const message = `Failed to unimport module item: ${error}`;
+            const message = `${failurePrefix}: ${error}`;
             showInfo?.(message, true);
             alert(message);
         }
     };
 
+    const importModule = (moduleName: string): void => {
+        const quotedModule = quoteAjisaiString(moduleName);
+        void runModuleMutationCode(
+            `'${quotedModule}' IMPORT`,
+            `Imported ${moduleName}`,
+            'Failed to import module'
+        );
+    };
+
     const unimportModule = (moduleName: string): void => {
         const quotedModule = quoteAjisaiString(moduleName);
-        void runUnimportCode(`'${quotedModule}' UNIMPORT`, `Unimported unused words from ${moduleName}`);
+        void runModuleMutationCode(
+            `'${quotedModule}' UNIMPORT`,
+            `Unimported unused words from ${moduleName}`,
+            'Failed to unimport module item'
+        );
     };
 
     const unimportModuleWord = (moduleName: string, shortName: string): void => {
         const quotedModule = quoteAjisaiString(moduleName);
         const quotedWord = quoteAjisaiString(shortName);
-        void runUnimportCode(
+        void runModuleMutationCode(
             `'${quotedModule}' [ '${quotedWord}' ] UNIMPORT-ONLY`,
-            `Unimported ${moduleName}@${shortName}`
+            `Unimported ${moduleName}@${shortName}`,
+            'Failed to unimport module item'
         );
     };
 
-    const createOptionElement = (moduleName: string, sheetId: string): HTMLOptionElement => {
+    const createOptionElement = (
+        moduleName: string,
+        sheetId: string,
+        state: ModuleSheetState
+    ): HTMLOptionElement => {
         const option = document.createElement('option');
         option.value = sheetId;
         option.textContent = formatDictionaryTabName(moduleName);
+        option.dataset.moduleName = moduleName;
+        option.dataset.moduleState = state;
+        if (state === 'available') {
+            option.className = 'module-option available-module-option';
+            option.title = `${moduleName} is available. Select it and right-click this selector to import.`;
+            option.style.opacity = '0.58';
+        }
         return option;
     };
 
-    const createSheetElement = (sheetId: string, moduleName: string): HTMLElement => {
+    const createAvailableSheetElement = (sheetId: string, moduleName: string): HTMLElement => {
+        const sheet = document.createElement('div');
+        sheet.className = 'dictionary-sheet module-sheet module-sheet-available';
+        sheet.id = `dictionary-sheet-${sheetId}`;
+        sheet.hidden = true;
+        sheet.appendChild(createEmptyWordsElement(
+            `${moduleName} is available but not imported. Select this module in the dictionary selector and right-click the selector to import it.`
+        ));
+        return sheet;
+    };
+
+    const createImportedSheetElement = (sheetId: string, moduleName: string): HTMLElement => {
         const sheet = document.createElement('div');
         sheet.className = 'dictionary-sheet';
         sheet.id = `dictionary-sheet-${sheetId}`;
@@ -197,7 +250,16 @@ export const createModuleTabManager = (
         return sheet;
     };
 
+    const createSheetElement = (
+        sheetId: string,
+        moduleName: string,
+        state: ModuleSheetState
+    ): HTMLElement => state === 'imported'
+        ? createImportedSheetElement(sheetId, moduleName)
+        : createAvailableSheetElement(sheetId, moduleName);
+
     const renderModuleWords = (moduleSheet: ModuleSheet): void => {
+        if (moduleSheet.state !== 'imported') return;
         if (!window.ajisaiInterpreter) return;
 
         const wordsDisplay = moduleSheet.sheetEl.querySelector('.module-words-display');
@@ -220,13 +282,8 @@ export const createModuleTabManager = (
                 const name = wordData[0];
                 const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
                 const description = wordData[1] || name;
-                const moduleTitle = `${shortName}
-Built-in word from module ${moduleSheet.moduleName}.
-Right-click to unimport this word.`;
-                const moduleInfo = `${description}
-
-Built-in word from module ${moduleSheet.moduleName}.
-Right-click to unimport this word.`;
+                const moduleTitle = `${shortName}\nBuilt-in word from module ${moduleSheet.moduleName}.\nRight-click to unimport this word.`;
+                const moduleInfo = `${description}\n\nBuilt-in word from module ${moduleSheet.moduleName}.\nRight-click to unimport this word.`;
                 const button = createWordButtonElement(
                     shortName,
                     moduleTitle,
@@ -268,6 +325,12 @@ Right-click to unimport this word.`;
     const findSheet = (moduleName: string): ModuleSheet | undefined =>
         sheets.find(s => s.moduleName === moduleName);
 
+    const removeSheet = (sheet: ModuleSheet, index: number): void => {
+        sheet.optionEl.remove();
+        sheet.sheetEl.remove();
+        sheets.splice(index, 1);
+    };
+
     const syncModuleTabs = (): string[] => {
         if (!window.ajisaiInterpreter) return [];
 
@@ -276,27 +339,31 @@ Right-click to unimport this word.`;
         try {
             const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
             const importedSet = new Set(importedModules);
+            const knownModules = new Set([...AVAILABLE_MODULE_NAMES, ...importedModules]);
 
             for (let i = sheets.length - 1; i >= 0; i--) {
                 const sheet = sheets[i]!;
-                if (!importedSet.has(sheet.moduleName)) {
-                    sheet.optionEl.remove();
-                    sheet.sheetEl.remove();
-                    sheets.splice(i, 1);
+                const shouldBeImported = importedSet.has(sheet.moduleName);
+                const desiredState: ModuleSheetState = shouldBeImported ? 'imported' : 'available';
+                if (!knownModules.has(sheet.moduleName) || sheet.state !== desiredState) {
+                    removeSheet(sheet, i);
                 }
             }
 
-            for (const moduleName of importedModules) {
-                if (!findSheet(moduleName)) {
-                    const sheetId = `module-${moduleName}`;
-                    const optionEl = createOptionElement(moduleName, sheetId);
-                    const sheetEl = createSheetElement(sheetId, moduleName);
+            for (const moduleName of knownModules) {
+                if (findSheet(moduleName)) continue;
 
-                    selectEl.appendChild(optionEl);
-                    sheetContainerEl.appendChild(sheetEl);
+                const state: ModuleSheetState = importedSet.has(moduleName) ? 'imported' : 'available';
+                const sheetId = `${state === 'imported' ? 'module' : 'module-available'}-${moduleName}`;
+                const optionEl = createOptionElement(moduleName, sheetId, state);
+                const sheetEl = createSheetElement(sheetId, moduleName, state);
 
-                    const moduleSheet: ModuleSheet = { moduleName, sheetId, optionEl, sheetEl };
-                    sheets.push(moduleSheet);
+                selectEl.appendChild(optionEl);
+                sheetContainerEl.appendChild(sheetEl);
+
+                const moduleSheet: ModuleSheet = { moduleName, sheetId, optionEl, sheetEl, state };
+                sheets.push(moduleSheet);
+                if (state === 'imported') {
                     newSheetIds.push(sheetId);
                 }
             }
@@ -334,12 +401,23 @@ Right-click to unimport this word.`;
     };
 
     selectEl.addEventListener('contextmenu', (event) => {
-        const activeSheet = sheets.find(sheet => sheet.sheetId === selectEl.value);
-        if (!activeSheet) return;
+        const selectedOption = selectEl.selectedOptions[0];
+        const selectedModuleName = selectedOption?.dataset.moduleName;
+        const selectedState = selectedOption?.dataset.moduleState as ModuleSheetState | undefined;
+        if (!selectedModuleName || !selectedState) return;
+
         event.preventDefault();
+        if (selectedState === 'available') {
+            renderContextMenu(contextMenu, event, [{
+                label: `Import this module (${selectedModuleName})`,
+                onClick: () => importModule(selectedModuleName),
+            }]);
+            return;
+        }
+
         renderContextMenu(contextMenu, event, [{
-            label: `Unimport this module (${activeSheet.moduleName})`,
-            onClick: () => unimportModule(activeSheet.moduleName),
+            label: `Unimport this module (${selectedModuleName})`,
+            onClick: () => unimportModule(selectedModuleName),
         }]);
     });
 
