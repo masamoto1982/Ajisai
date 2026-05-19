@@ -5,8 +5,8 @@ use super::audio_types::{
 };
 use super::super::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{is_string_value, is_vector_value, value_as_string};
-use crate::types::Value;
+use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_string};
+use crate::types::{Value, ValueData};
 use num_traits::ToPrimitive;
 
 
@@ -65,11 +65,21 @@ pub(crate) fn build_audio_structure(
     mode: PlayMode,
     output: &mut String,
 ) -> Result<AudioStructure> {
+    build_audio_structure_ctx(value, mode, output, None)
+}
 
 
+/// `tuning`, when set, marks an active `MUSIC@WITH-TUNING` scope: bare scalars
+/// are read as steps of that tuning (numerator = step, denominator = duration)
+/// and vectors are treated as musical sequences rather than lyrics text.
+fn build_audio_structure_ctx(
+    value: &Value,
+    mode: PlayMode,
+    output: &mut String,
+    tuning: Option<&Value>,
+) -> Result<AudioStructure> {
     let envelope: Option<Envelope> = None;
     let waveform = WaveformType::default();
-
 
     if value.is_nil() {
         return Ok(AudioStructure::Rest { duration: 1.0 });
@@ -94,6 +104,13 @@ pub(crate) fn build_audio_structure(
                     .ok_or_else(|| AjisaiError::from("Invalid music.pitch"))?;
                 return tone_or_rest(frequency, 1.0, envelope, waveform, output);
             }
+            super::music_values::SCOPE_KIND => {
+                let scope_tuning = super::music_values::record_field(value, "tuning")
+                    .ok_or_else(|| AjisaiError::from("Invalid music.scope: missing tuning"))?;
+                let body = super::music_values::record_field(value, "body")
+                    .ok_or_else(|| AjisaiError::from("Invalid music.scope: missing body"))?;
+                return build_audio_structure_ctx(body, mode, output, Some(scope_tuning));
+            }
             super::music_values::DURATION_KIND => {
                 return Err(AjisaiError::from(
                     "A music.duration is not directly playable; pair it with a pitch via MUSIC@NOTE",
@@ -112,7 +129,7 @@ pub(crate) fn build_audio_structure(
         let group_children: Vec<AudioStructure> = group
             .children
             .iter()
-            .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
+            .map(|e| build_audio_structure_ctx(e, PlayMode::Sequential, output, tuning))
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .filter(
@@ -120,19 +137,14 @@ pub(crate) fn build_audio_structure(
             )
             .collect();
 
-        let group_mode = match group.mode {
-            super::music_group::GroupMode::Sequential => PlayMode::Sequential,
-            super::music_group::GroupMode::Simultaneous
-            | super::music_group::GroupMode::Chord => PlayMode::Simultaneous,
-        };
-
-        return match group_mode {
-            PlayMode::Sequential => Ok(AudioStructure::Seq {
+        return match group.mode {
+            super::music_group::GroupMode::Sequential => Ok(AudioStructure::Seq {
                 children: group_children,
                 envelope,
                 waveform,
             }),
-            PlayMode::Simultaneous => Ok(AudioStructure::Sim {
+            super::music_group::GroupMode::Simultaneous
+            | super::music_group::GroupMode::Chord => Ok(AudioStructure::Sim {
                 children: group_children,
                 envelope,
                 waveform,
@@ -140,7 +152,9 @@ pub(crate) fn build_audio_structure(
         };
     }
 
-    if is_string_value(value) {
+    // Outside a tuning scope a bare vector is treated as lyrics text; inside a
+    // scope it is an explicit musical sequence and skips this branch.
+    if tuning.is_none() && is_string_value(value) {
         let s = value_as_string(value).unwrap_or_default();
         output.push_str(&s);
         output.push('\n');
@@ -151,69 +165,55 @@ pub(crate) fn build_audio_structure(
         });
     }
 
-
-    if is_vector_value(value) {
-        if let Some(children) = value.as_vector() {
-            if children.is_empty() {
-                return Err(AjisaiError::from("Empty vector not allowed"));
-            }
-
-            let audio_children: Vec<AudioStructure> = children
-                .iter()
-                .map(|e| build_audio_structure(e, PlayMode::Sequential, output))
-                .collect::<Result<Vec<_>>>()?
-                .into_iter()
-                .filter(
-                    |s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()),
-                )
-                .collect();
-
-
-            return match mode {
-                PlayMode::Sequential => Ok(AudioStructure::Seq {
-                    children: audio_children,
-                    envelope,
-                    waveform,
-                }),
-                PlayMode::Simultaneous => Ok(AudioStructure::Sim {
-                    children: audio_children,
-                    envelope,
-                    waveform,
-                }),
-            };
+    if matches!(value.data, ValueData::Vector(_) | ValueData::Tensor { .. }) {
+        let len = value.len();
+        if len == 0 {
+            return Err(AjisaiError::from("Empty vector not allowed"));
         }
+
+        let audio_children: Vec<AudioStructure> = (0..len)
+            .filter_map(|i| value.child(i))
+            .map(|child| build_audio_structure_ctx(&child, PlayMode::Sequential, output, tuning))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()))
+            .collect();
+
+        return match mode {
+            PlayMode::Sequential => Ok(AudioStructure::Seq {
+                children: audio_children,
+                envelope,
+                waveform,
+            }),
+            PlayMode::Simultaneous => Ok(AudioStructure::Sim {
+                children: audio_children,
+                envelope,
+                waveform,
+            }),
+        };
     }
 
-
     if let Some(frac) = value.as_scalar() {
-        let freq = frac
-            .numerator()
-            .to_f64()
-            .ok_or_else(|| AjisaiError::from("Frequency too large"))?;
         let dur = frac
             .denominator()
             .to_f64()
             .ok_or_else(|| AjisaiError::from("Duration too large"))?;
 
-        if dur <= 0.0 {
-            return Err(AjisaiError::from("Duration must be positive"));
-        }
-
-        if freq == 0.0 {
-            return Ok(AudioStructure::Rest { duration: dur });
-        } else if freq > 0.0 {
-            check_audible_range(freq, output);
-            return Ok(AudioStructure::Tone {
-                frequency: freq,
-                duration: dur,
-                envelope,
-                waveform,
-            });
+        let frequency = if let Some(tuning_value) = tuning {
+            let step = frac
+                .numerator()
+                .to_f64()
+                .ok_or_else(|| AjisaiError::from("Step index too large"))?;
+            super::music_values::resolve_step_hz(tuning_value, step)
+                .ok_or_else(|| AjisaiError::from("Invalid music.tuning in scope"))?
         } else {
-            return Err(AjisaiError::from("Frequency must be non-negative"));
-        }
-    }
+            frac.numerator()
+                .to_f64()
+                .ok_or_else(|| AjisaiError::from("Frequency too large"))?
+        };
 
+        return tone_or_rest(frequency, dur, envelope, waveform, output);
+    }
 
     Ok(AudioStructure::Seq {
         children: vec![],

@@ -12,8 +12,9 @@ pub use audio_types::{
 pub use build_audio_structure::op_play;
 pub use execute_audio_commands::{
     op_adsr, op_chord, op_dur, op_edo, op_edr, op_explain, op_fx_reset, op_gain, op_gain_reset,
-    op_hz, op_note, op_pan, op_pan_reset, op_rest, op_saw, op_seq, op_seq_group, op_sim,
-    op_sim_group, op_sine, op_slot, op_square, op_step, op_tri,
+    op_hz, op_measure, op_note, op_pan, op_pan_reset, op_phrase, op_rest, op_saw, op_seq,
+    op_seq_group, op_sim, op_sim_group, op_sine, op_slot, op_square, op_step, op_track, op_tri,
+    op_voice, op_with_tuning,
 };
 
 pub(crate) use audio_types::lookup_play_mode;

@@ -745,3 +745,157 @@ async fn test_explain_describes_pitch_and_note() {
         note_output
     );
 }
+
+#[tokio::test]
+async fn test_raw_tensor_vector_plays_all_children() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("[ 440 550 660 ] MUSIC@PLAY").await;
+    assert!(result.is_ok(), "Raw vector PLAY should succeed: {:?}", result);
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"frequency\":440")
+            && output.contains("\"frequency\":550")
+            && output.contains("\"frequency\":660"),
+        "A raw numeric vector should play every element: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_voice_group_explains_as_voice() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("[ 440 550 ] MUSIC@VOICE MUSIC@PLAY")
+        .await;
+    assert!(result.is_ok(), "VOICE PLAY should succeed: {:?}", result);
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"seq\""),
+        "A voice should play as a sequence: {}",
+        output
+    );
+
+    let mut interp2 = Interpreter::new();
+    interp2.execute("'music' IMPORT").await.unwrap();
+    interp2
+        .execute("[ 440 550 ] MUSIC@VOICE MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    let explain = interp2.collect_output();
+    assert!(
+        explain.contains("Voice group") && explain.contains("explicit MUSIC@VOICE"),
+        "EXPLAIN should describe a voice group: {}",
+        explain
+    );
+}
+
+#[tokio::test]
+async fn test_measure_and_phrase_groups() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    interp
+        .execute("[ 440 550 ] MUSIC@MEASURE MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    assert!(
+        interp.collect_output().contains("Measure group"),
+        "EXPLAIN should describe a measure group"
+    );
+
+    interp
+        .execute("[ 440 550 ] MUSIC@PHRASE MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    assert!(
+        interp.collect_output().contains("Phrase group"),
+        "EXPLAIN should describe a phrase group"
+    );
+
+    interp
+        .execute("[ 440 550 ] MUSIC@TRACK MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    assert!(
+        interp.collect_output().contains("Track group"),
+        "EXPLAIN should describe a track group"
+    );
+}
+
+#[tokio::test]
+async fn test_with_tuning_resolves_bare_integers_as_steps() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // Step 0 of 12-EDO anchored at 440 Hz is exactly 440 Hz; step 12 is the
+    // octave above. Bare integers in the scope are read as tuning steps.
+    let result = interp
+        .execute("440 12 MUSIC@EDO [ 0 12 ] MUSIC@WITH-TUNING MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "WITH-TUNING PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+    assert!(
+        output.contains("\"frequency\":440"),
+        "Step 0 should resolve to exactly the 440 Hz reference: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_with_tuning_plays_a_full_scale() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("440 12 MUSIC@EDO [ 0 2 4 5 7 9 11 12 ] MUSIC@WITH-TUNING MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "WITH-TUNING scale PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    let tones = output.matches("\"type\":\"tone\"").count();
+    assert_eq!(tones, 8, "An 8-step scale should yield 8 tones: {}", output);
+}
+
+#[tokio::test]
+async fn test_with_tuning_rejects_non_tuning_operand() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("[ 0 2 4 ] [ 0 2 4 ] MUSIC@WITH-TUNING").await;
+    assert!(
+        result.is_err(),
+        "WITH-TUNING without a music.tuning operand should fail"
+    );
+}
+
+#[tokio::test]
+async fn test_explain_describes_tuning_scope() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    interp
+        .execute("440 12 MUSIC@EDO [ 0 2 4 ] MUSIC@WITH-TUNING MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    let output = interp.collect_output();
+    assert!(
+        output.contains("Tuning scope"),
+        "EXPLAIN should describe a tuning scope: {}",
+        output
+    );
+}
