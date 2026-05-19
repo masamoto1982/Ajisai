@@ -526,3 +526,222 @@ async fn test_combined_chord_adsr_waveform() {
         "Should contain AUDIO command"
     );
 }
+
+#[tokio::test]
+async fn test_hz_dur_note_plays_as_tone() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("440 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "HZ/DUR/NOTE/PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
+    assert!(
+        output.contains("\"type\":\"tone\""),
+        "A note should lower to a tone: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_just_intonation_pitch_is_exact() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // 1980/3 reduces to exactly 660 Hz - a just-intonation perfect fifth
+    // above 440 Hz (ratio 3/2), carried as an exact rational.
+    let result = interp
+        .execute("1980/3 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Just-intonation pitch should play: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"frequency\":660"),
+        "1980/3 should resolve to exactly 660 Hz: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_rest_plays_as_rest() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute("1 MUSIC@DUR MUSIC@REST MUSIC@PLAY")
+        .await;
+    assert!(result.is_ok(), "REST/PLAY should succeed: {:?}", result);
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"rest\""),
+        "A music.rest should lower to a rest: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_edo_step_plays_as_tone() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // Step 12 of 12-EDO anchored at 440 Hz is one octave up (880 Hz).
+    let result = interp
+        .execute("440 12 MUSIC@EDO 12 MUSIC@STEP 1 MUSIC@DUR MUSIC@NOTE MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "EDO/STEP/NOTE/PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"tone\""),
+        "An EDO step should lower to a tone: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_edr_non_octave_tuning_plays() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // 13 equal divisions of the 3/1 tritave (Bohlen-Pierce).
+    let result = interp
+        .execute("440 [ 3 1 ] 13 MUSIC@EDR 13 MUSIC@STEP 1 MUSIC@DUR MUSIC@NOTE MUSIC@PLAY")
+        .await;
+    assert!(
+        result.is_ok(),
+        "EDR/STEP/NOTE/PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"tone\""),
+        "A non-octave EDR step should lower to a tone: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_edr_rejects_fractional_divisions() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("440 [ 3 1 ] 13/2 MUSIC@EDR").await;
+    assert!(
+        result.is_err(),
+        "EDR with non-integer divisions should fail"
+    );
+}
+
+#[tokio::test]
+async fn test_note_rejects_raw_scalars() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp.execute("440 1 MUSIC@NOTE").await;
+    assert!(
+        result.is_err(),
+        "NOTE on raw scalars (not music.pitch/music.duration) should fail"
+    );
+}
+
+#[tokio::test]
+async fn test_hz_respects_keep_mode() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // ,, is the KEEP modifier: the operand must remain on the stack.
+    let result = interp.execute("440 ,, MUSIC@HZ").await;
+    assert!(result.is_ok(), "HZ in KEEP mode should succeed: {:?}", result);
+
+    assert_eq!(
+        interp.get_stack().len(),
+        2,
+        "KEEP mode should leave the operand and push the pitch"
+    );
+}
+
+#[tokio::test]
+async fn test_hz_rejects_stack_target_mode() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    // .. is the whole-stack target modifier, unsupported by constructors.
+    let result = interp.execute("440 .. MUSIC@HZ").await;
+    assert!(
+        result.is_err(),
+        "HZ should reject the whole-stack target mode"
+    );
+}
+
+#[tokio::test]
+async fn test_notes_combine_under_stack_play() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    let result = interp
+        .execute(
+            "440 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE \
+             550 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE .. MUSIC@PLAY",
+        )
+        .await;
+    assert!(
+        result.is_ok(),
+        "Two notes under .. MUSIC@PLAY should succeed: {:?}",
+        result
+    );
+
+    let output = interp.collect_output();
+    assert!(
+        output.contains("\"type\":\"seq\"") && output.contains("\"type\":\"tone\""),
+        "Stacked notes should combine into a sequence of tones: {}",
+        output
+    );
+}
+
+#[tokio::test]
+async fn test_explain_describes_pitch_and_note() {
+    let mut interp = Interpreter::new();
+    interp.execute("'music' IMPORT").await.unwrap();
+
+    interp
+        .execute("440 MUSIC@HZ MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    let pitch_output = interp.collect_output();
+    assert!(
+        pitch_output.contains("Pitch:"),
+        "EXPLAIN should describe a pitch: {}",
+        pitch_output
+    );
+
+    let mut interp2 = Interpreter::new();
+    interp2.execute("'music' IMPORT").await.unwrap();
+    interp2
+        .execute("440 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE MUSIC@EXPLAIN")
+        .await
+        .unwrap();
+    let note_output = interp2.collect_output();
+    assert!(
+        note_output.contains("Note:"),
+        "EXPLAIN should describe a note: {}",
+        note_output
+    );
+}
