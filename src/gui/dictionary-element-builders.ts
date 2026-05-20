@@ -113,7 +113,6 @@ export const createWordButtonElement = (
     removeBtn.className = 'word-button-remove';
     removeBtn.textContent = '−';
     removeBtn.setAttribute('aria-label', onRemove.label);
-    removeBtn.title = onRemove.label;
     if (onHover) removeBtn.addEventListener('mouseenter', onHover);
     if (onLeave) removeBtn.addEventListener('mouseleave', onLeave);
     removeBtn.addEventListener('click', (e) => {
