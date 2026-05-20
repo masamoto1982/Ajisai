@@ -79,7 +79,7 @@ select:focus-visible {
 
 
 header {
-    background: linear-gradient(in oklch to right, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 50%, var(--gradient-purple-red) 100%);
+    background: #fff;
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
@@ -170,7 +170,7 @@ header h1 a {
 
 
 footer {
-    background: linear-gradient(in oklch to right, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 50%, var(--gradient-purple-blue) 100%);
+    background: #fff;
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
@@ -257,6 +257,7 @@ footer a:hover {
 .words-display {
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
+    border: var(--border-main);
 }
 
 
