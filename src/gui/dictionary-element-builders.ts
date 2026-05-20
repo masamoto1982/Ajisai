@@ -78,6 +78,11 @@ export const registerBackgroundClickListeners = (
     }
 };
 
+export interface WordButtonRemoveOption {
+    readonly label: string;
+    readonly onClick: () => void;
+}
+
 export const createWordButtonElement = (
     text: string,
     title: string,
@@ -85,8 +90,8 @@ export const createWordButtonElement = (
     onClick: () => void,
     onHover?: () => void,
     onLeave?: () => void,
-    onContextMenu?: (event: MouseEvent) => void
-): HTMLButtonElement => {
+    onRemove?: WordButtonRemoveOption
+): HTMLElement => {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = text;
@@ -96,12 +101,26 @@ export const createWordButtonElement = (
 
     if (onHover) button.addEventListener('mouseenter', onHover);
     if (onLeave) button.addEventListener('mouseleave', onLeave);
-    if (onContextMenu) {
-        button.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            onContextMenu(e);
-        });
-    }
 
-    return button;
+    if (!onRemove) return button;
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'word-button-cell';
+    wrapper.appendChild(button);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'word-button-remove';
+    removeBtn.textContent = '−';
+    removeBtn.setAttribute('aria-label', onRemove.label);
+    removeBtn.title = onRemove.label;
+    if (onHover) removeBtn.addEventListener('mouseenter', onHover);
+    if (onLeave) removeBtn.addEventListener('mouseleave', onLeave);
+    removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onRemove.onClick();
+    });
+    wrapper.appendChild(removeBtn);
+
+    return wrapper;
 };

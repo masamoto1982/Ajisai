@@ -91,88 +91,11 @@ const isCanonicalCoreWordName = (name: string): boolean => /^[A-Z][A-Z0-9-]*$/.t
 
 const DEPENDENCY_DELETE_ERROR = 'Cannot delete';
 
-const createDeleteContextMenuElement = (
-    onDelete: () => void
-): HTMLDivElement => {
-    const menu = document.createElement('div');
-    menu.hidden = true;
-    Object.assign(menu.style, {
-        position: 'fixed',
-        zIndex: '1000',
-        minWidth: '7rem',
-        padding: '0.125rem',
-        backgroundColor: '#ffffff',
-        border: '1px solid #c0c0c0',
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-    } satisfies Partial<CSSStyleDeclaration>);
-
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.textContent = 'Delete';
-    Object.assign(deleteButton.style, {
-        display: 'block',
-        width: '100%',
-        padding: '0.375rem 0.75rem',
-        backgroundColor: 'transparent',
-        color: '#000000',
-        border: 'none',
-        textAlign: 'left',
-        cursor: 'pointer'
-    } satisfies Partial<CSSStyleDeclaration>);
-    deleteButton.addEventListener('mouseenter', () => {
-        deleteButton.style.backgroundColor = '#e8e8e8';
-    });
-    deleteButton.addEventListener('mouseleave', () => {
-        deleteButton.style.backgroundColor = 'transparent';
-    });
-    deleteButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        onDelete();
-    });
-
-    menu.appendChild(deleteButton);
-    document.body.appendChild(menu);
-
-    return menu;
-};
-
 export const createVocabularyManager = (
     elements: VocabularyElements,
     callbacks: VocabularyCallbacks
 ): VocabularyManager => {
     const { onWordClick, onBackgroundClick, onBackgroundDoubleClick, onUpdateDisplays, onSaveState, showInfo } = callbacks;
-    const deleteContextMenu = createDeleteContextMenuElement(() => {
-        if (!activeContextWordName) {
-            return;
-        }
-
-        const selectedWordName = activeContextWordName;
-        hideDeleteContextMenu();
-        void confirmAndDeleteWord(selectedWordName);
-    });
-    let activeContextWordName: string | null = null;
-
-    const hideDeleteContextMenu = (): void => {
-        deleteContextMenu.hidden = true;
-        activeContextWordName = null;
-    };
-
-    const renderDeleteContextMenu = (event: MouseEvent, wordName: string): void => {
-        activeContextWordName = wordName;
-        deleteContextMenu.hidden = false;
-        deleteContextMenu.style.left = `${event.clientX}px`;
-        deleteContextMenu.style.top = `${event.clientY}px`;
-    };
-
-    document.addEventListener('click', () => {
-        hideDeleteContextMenu();
-    });
-    document.addEventListener('contextmenu', (event) => {
-        if (!(event.target instanceof HTMLElement) || !event.target.closest('.word-button')) {
-            hideDeleteContextMenu();
-        }
-    });
-    window.addEventListener('blur', hideDeleteContextMenu);
 
     [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);
@@ -325,7 +248,10 @@ export const createVocabularyManager = (
                     );
                 },
                 () => { resetWordInfoDisplay(elements.userWordInfo); },
-                (event) => renderDeleteContextMenu(event, `${wordInfo.dictionary}@${wordInfo.name}`)
+                {
+                    label: `Delete ${wordInfo.name}`,
+                    onClick: () => { void confirmAndDeleteWord(`${wordInfo.dictionary}@${wordInfo.name}`); },
+                }
             );
 
             fragment.appendChild(button);
