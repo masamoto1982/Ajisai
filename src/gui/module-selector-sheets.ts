@@ -152,13 +152,9 @@ export const createModuleTabManager = (
         option.textContent = formatDictionaryTabName(moduleName);
         option.dataset.moduleName = moduleName;
         option.dataset.moduleState = state;
-        if (state === 'available') {
-            option.className = 'module-option available-module-option';
-            option.title = `${moduleName} is available. Use the + button in the dictionary picker to import.`;
-        } else {
-            option.className = 'module-option imported-module-option';
-            option.title = `${moduleName} is imported. Use the − button in the dictionary picker to unimport.`;
-        }
+        option.className = state === 'available'
+            ? 'module-option available-module-option'
+            : 'module-option imported-module-option';
         return option;
     };
 

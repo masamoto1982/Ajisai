@@ -69,7 +69,6 @@ export const createDictionarySheetPicker = (
         const state = selected?.dataset.moduleState ?? 'base';
         trigger.textContent = label;
         trigger.dataset.moduleState = state;
-        trigger.title = selected?.title || label;
 
         for (const item of list.querySelectorAll<HTMLElement>('.dictionary-sheet-picker-item')) {
             const isSelected = item.dataset.sheetId === selectEl.value;
@@ -121,7 +120,6 @@ export const createDictionarySheetPicker = (
             item.className = 'dictionary-sheet-picker-item';
             item.dataset.sheetId = option.value;
             item.dataset.moduleState = option.dataset.moduleState ?? 'base';
-            item.title = option.title || option.textContent || '';
             item.setAttribute('role', 'option');
             item.tabIndex = 0;
 
