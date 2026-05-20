@@ -212,7 +212,6 @@ footer a:hover {
     font-weight: 500;
     background: #000;
     color: #fff;
-    border: var(--border-main);
     transition: background-color 0.2s ease;
 }
 
@@ -224,7 +223,6 @@ footer a:hover {
 .btn-secondary {
     background: var(--color-light);
     color: var(--color-text);
-    border: var(--border-main);
     transition: background-color 0.2s ease;
 }
 

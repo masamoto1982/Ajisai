@@ -14,7 +14,6 @@
     gap: 0;
     padding: 0;
     min-height: 0;
-    border: 1px solid var(--color-border-strong, #999);
     background: #fff;
 }
 
@@ -29,7 +28,6 @@
     font-family: var(--font-stack-mono);
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
-    border: 1px solid var(--color-border-strong, #999);
     background: #fff;
     color: var(--color-text);
     width: 100%;
@@ -87,7 +85,10 @@
     min-height: 0;
     padding: 0.75rem;
     overflow: hidden;
-    background: transparent;
+    background: linear-gradient(225deg in oklch,
+        var(--gradient-purple-red) 0%,
+        40%,
+        var(--gradient-purple-blue) 100%);
     position: relative;
 }
 
@@ -97,7 +98,6 @@
 
 
 #editor-panel {
-    border-right: 1px solid var(--color-border-strong, #999);
 }
 
 
@@ -210,14 +210,12 @@
     max-height: 220px;
     overflow-y: auto;
     background: #fff;
-    border: var(--border-main);
     z-index: 20;
 }
 
 .editor-suggestion-item {
     width: 100%;
     border: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     background: transparent;
     text-align: left;
     padding: 0.45rem 0.6rem;
@@ -249,14 +247,12 @@
     width: auto;
     min-height: 2.25rem;
     padding: 0.35rem 0;
-    border: 1px solid rgba(0, 0, 0, 0.08);
     text-align: center;
     font-size: 1rem;
     line-height: 1;
 }
 
 .editor-suggestions--symbols .editor-suggestion-item:last-child {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 
@@ -353,7 +349,6 @@
     min-width: 12rem;
     padding: 0.125rem;
     background: #fff;
-    border: var(--border-main);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
