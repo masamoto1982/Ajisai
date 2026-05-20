@@ -15,7 +15,7 @@
     padding: 0;
     min-height: 0;
     border: 1px solid var(--color-border-strong, #999);
-    background: var(--gradient-child, #fff);
+    background: #fff;
 }
 
 
@@ -30,23 +30,10 @@
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--color-border-strong, #999);
-    border-radius: 3px;
-    background: var(--gradient-child, #fff);
+    background: #fff;
     color: var(--color-text);
     width: 100%;
     cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.area-selector select:hover,
-.area-selector select:focus,
-.area-selector select:focus-visible,
-.dictionary-sheet-select:hover,
-.dictionary-sheet-select:focus,
-.dictionary-sheet-select:focus-visible {
-    outline: none;
-    box-shadow: none;
-    background: var(--gradient-parent, #e4e1ec);
 }
 
 
@@ -214,20 +201,6 @@
     display: none;
 }
 
-#input-panel::after,
-.search-wrapper::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    mix-blend-mode: lighten;
-    z-index: 1;
-    background: linear-gradient(225deg in oklch,
-        var(--editor-accent-red) 0%,
-        40%,
-        var(--editor-accent-blue) 100%);
-}
-
 
 .editor-suggestions {
     position: absolute;
@@ -236,10 +209,8 @@
     max-width: calc(100% - 1rem);
     max-height: 220px;
     overflow-y: auto;
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(4px);
+    background: #fff;
     border: var(--border-main);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     z-index: 20;
 }
 
@@ -312,22 +283,6 @@
     white-space: pre-wrap;
 }
 
-#output-display::-webkit-scrollbar {
-    width: 10px;
-}
-
-#output-display::-webkit-scrollbar-track {
-    background: var(--color-light);
-}
-
-#output-display::-webkit-scrollbar-thumb {
-    background: var(--color-medium);
-    border-radius: 5px;
-}
-
-#output-display::-webkit-scrollbar-thumb:hover {
-    background: var(--color-secondary);
-}
 
 
 .stack-area {
@@ -459,8 +414,6 @@
     align-items: flex-start;
     align-content: flex-start;
     overflow-y: auto;
-    background-color: rgba(0, 0, 0, 0.06);
-    border-radius: 6px;
     padding: 4px;
     cursor: pointer;
 }
@@ -524,7 +477,6 @@
     gap: 0.5rem;
     min-height: 0;
     width: 100%;
-    background: var(--gradient-child);
     overflow: hidden;
 }
 
@@ -540,75 +492,38 @@
 .word-button {
     margin: 2px;
     padding: 0.2rem 0.4rem;
-    background-color: rgba(255, 255, 255, 0.5);
+    background: #fff;
     color: var(--color-text);
     border: var(--border-main);
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
     font-weight: 400;
     cursor: pointer;
-    border-radius: 4px;
-}
-
-.word-button:hover {
-    background: var(--color-light);
 }
 
 
 .word-button.core {
     border-color: var(--color-core);
-    background: #fff;
     color: var(--color-core);
-    box-shadow: 0 2px 0 var(--color-medium);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.word-button.core:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--color-medium);
 }
 
 
 .word-button.dependency {
     border-color: var(--color-dependency);
-    background: #fff;
     color: var(--color-dependency);
-    box-shadow: 0 2px 0 var(--color-medium);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.word-button.dependency:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--color-medium);
 }
 
 
 .word-button.non-dependency {
     border-color: var(--color-non-dependency);
-    background: #fff;
     color: var(--color-non-dependency);
-    box-shadow: 0 2px 0 var(--color-medium);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.word-button.non-dependency:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--color-medium);
 }
 
 
 /* Module words are built-ins too: keep the same visual treatment as Core words. */
 .word-button.module {
     border-color: var(--color-core);
-    background: #fff;
     color: var(--color-core);
-    box-shadow: 0 2px 0 var(--color-medium);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.word-button.module:hover {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 var(--color-medium);
 }
 
 
@@ -660,7 +575,6 @@
     background-color: #DDDDDD;
     font-weight: bold;
     padding: 2px 5px;
-    border-radius: 4px;
 }
 
 
@@ -668,7 +582,6 @@
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: #DDDDDD;
     padding: 2px 5px;
-    border-radius: 4px;
 }
 
 
