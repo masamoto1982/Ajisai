@@ -102,7 +102,6 @@ export const createDictionarySheetPicker = (
             ? `Import this module (${moduleName})`
             : `Unimport this module (${moduleName})`;
         button.setAttribute('aria-label', label);
-        button.title = label;
         button.addEventListener('click', (event) => {
             event.stopPropagation();
             hideList();
