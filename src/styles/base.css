@@ -14,7 +14,7 @@ body {
 
 body {
     font-family: var(--font-stack-primary);
-    background: var(--gradient-background);
+    background: #fff;
     color: var(--color-text);
     line-height: 1.6;
 }
@@ -22,7 +22,6 @@ body {
 a {
     color: var(--color-primary);
     text-decoration: none;
-    transition: color 0.3s;
 }
 
 a:hover {
@@ -34,14 +33,11 @@ a:hover {
     position: absolute;
     top: -40px;
     left: 0;
-    background: var(--color-primary);
+    background: #000;
     color: #fff;
     padding: 8px 16px;
     z-index: 1000;
     text-decoration: none;
-    font-weight: 500;
-    border-radius: 0 0 var(--radius-main) 0;
-    transition: top 0.2s;
 }
 
 .skip-link:focus {
@@ -72,7 +68,6 @@ textarea:focus-visible,
 select:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 
@@ -91,6 +86,7 @@ header {
     align-items: stretch;
     gap: 0.5rem;
     flex-shrink: 0;
+    color: var(--header-text);
 }
 
 .app-header-top {
@@ -215,9 +211,8 @@ footer a:hover {
 
 .btn-primary {
     font-weight: 500;
-    background: var(--color-primary);
+    background: #000;
     color: #fff;
-    border: var(--border-main);
     transition: background-color 0.2s ease;
 }
 
@@ -229,7 +224,6 @@ footer a:hover {
 .btn-secondary {
     background: var(--color-light);
     color: var(--color-text);
-    border: var(--border-main);
     transition: background-color 0.2s ease;
 }
 
@@ -260,7 +254,8 @@ footer a:hover {
 }
 
 .display-area,
-.state-display {
+.state-display,
+.words-display {
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
 }
