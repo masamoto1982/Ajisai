@@ -49,43 +49,6 @@ export interface ModuleActionConfig {
 }
 
 
-type ContextMenuAction = {
-    readonly label: string;
-    readonly onClick: () => void;
-    readonly disabled?: boolean;
-};
-
-const createContextMenuElement = (): HTMLDivElement => {
-    const menu = document.createElement('div');
-    menu.hidden = true;
-    menu.className = 'context-menu module-context-menu';
-    document.body.appendChild(menu);
-    return menu;
-};
-
-const renderContextMenu = (
-    menu: HTMLDivElement,
-    event: MouseEvent,
-    actions: readonly ContextMenuAction[]
-): void => {
-    menu.innerHTML = '';
-    for (const action of actions) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = action.label;
-        button.disabled = Boolean(action.disabled);
-        button.addEventListener('click', (clickEvent) => {
-            clickEvent.stopPropagation();
-            menu.hidden = true;
-            if (!action.disabled) action.onClick();
-        });
-        menu.appendChild(button);
-    }
-    menu.hidden = false;
-    menu.style.left = `${event.clientX}px`;
-    menu.style.top = `${event.clientY}px`;
-};
-
 const quoteAjisaiString = (value: string): string => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 export interface ModuleTabManagerOptions {
@@ -118,15 +81,7 @@ export const createModuleTabManager = (
 
     const sheets: ModuleSheet[] = [];
     let searchFilter = '';
-    const contextMenu = createContextMenuElement();
     let dictionarySheetPicker: DictionarySheetPicker | null = null;
-
-    const hideContextMenu = (): void => {
-        contextMenu.hidden = true;
-    };
-
-    document.addEventListener('click', hideContextMenu);
-    window.addEventListener('blur', hideContextMenu);
 
     const runModuleMutationCode = async (
         code: string,
@@ -199,10 +154,10 @@ export const createModuleTabManager = (
         option.dataset.moduleState = state;
         if (state === 'available') {
             option.className = 'module-option available-module-option';
-            option.title = `${moduleName} is available. Right-click this entry to import.`;
+            option.title = `${moduleName} is available. Use the + button in the dictionary picker to import.`;
         } else {
             option.className = 'module-option imported-module-option';
-            option.title = `${moduleName} is imported. Right-click this entry to unimport.`;
+            option.title = `${moduleName} is imported. Use the − button in the dictionary picker to unimport.`;
         }
         return option;
     };
@@ -213,7 +168,7 @@ export const createModuleTabManager = (
         sheet.id = `dictionary-sheet-${sheetId}`;
         sheet.hidden = true;
         sheet.appendChild(createEmptyWordsElement(
-            `${moduleName} is available but not imported. Right-click the ${moduleName} entry in the dictionary picker to import it.`
+            `${moduleName} is available but not imported. Use the + button beside the ${moduleName} entry in the dictionary picker to import it.`
         ));
         return sheet;
     };
@@ -233,14 +188,6 @@ export const createModuleTabManager = (
         wordsDisplay.className = 'words-display module-words-display';
         sheet.appendChild(wordsDisplay);
         registerBackgroundClickListeners(wordsDisplay, onBackgroundClick, onBackgroundDoubleClick);
-        wordsDisplay.addEventListener('contextmenu', (event) => {
-            if ((event.target as HTMLElement).closest('.word-button')) return;
-            event.preventDefault();
-            renderContextMenu(contextMenu, event, [{
-                label: `Unimport this module (${moduleName})`,
-                onClick: () => unimportModule(moduleName),
-            }]);
-        });
 
         const actions = options.moduleActions?.[moduleName];
         if (actions) {
@@ -293,8 +240,8 @@ export const createModuleTabManager = (
                 const name = wordData[0];
                 const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
                 const description = wordData[1] || name;
-                const moduleTitle = `${shortName}\nBuilt-in word from module ${moduleSheet.moduleName}.\nRight-click to unimport this word.`;
-                const moduleInfo = `${description}\n\nBuilt-in word from module ${moduleSheet.moduleName}.\nRight-click to unimport this word.`;
+                const moduleTitle = `${shortName}\nBuilt-in word from module ${moduleSheet.moduleName}.\nClick − to unimport this word.`;
+                const moduleInfo = `${description}\n\nBuilt-in word from module ${moduleSheet.moduleName}.\nClick − to unimport this word.`;
                 const button = createWordButtonElement(
                     shortName,
                     moduleTitle,
@@ -302,13 +249,10 @@ export const createModuleTabManager = (
                     () => onWordClick(shortName),
                     () => { renderWordInfo(wordInfo as HTMLElement, moduleInfo); },
                     () => { resetWordInfoDisplay(wordInfo as HTMLElement); },
-                    (event) => renderContextMenu(contextMenu, event, [{
+                    {
                         label: `Unimport ${moduleSheet.moduleName}@${shortName}`,
                         onClick: () => unimportModuleWord(moduleSheet.moduleName, shortName),
-                    }, {
-                        label: `Unimport this module (${moduleSheet.moduleName})`,
-                        onClick: () => unimportModule(moduleSheet.moduleName),
-                    }])
+                    }
                 );
 
                 fragment.appendChild(button);
