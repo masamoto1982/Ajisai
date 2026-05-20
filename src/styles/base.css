@@ -255,9 +255,11 @@ footer a:hover {
 }
 
 .display-area,
-.state-display {
+.state-display,
+.words-display {
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
+    border: var(--border-main);
 }
 
 
