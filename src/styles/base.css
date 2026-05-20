@@ -14,7 +14,7 @@ body {
 
 body {
     font-family: var(--font-stack-primary);
-    background: var(--gradient-background);
+    background: #fff;
     color: var(--color-text);
     line-height: 1.6;
 }
@@ -22,7 +22,6 @@ body {
 a {
     color: var(--color-primary);
     text-decoration: none;
-    transition: color 0.3s;
 }
 
 a:hover {
@@ -34,14 +33,11 @@ a:hover {
     position: absolute;
     top: -40px;
     left: 0;
-    background: var(--color-primary);
+    background: #000;
     color: #fff;
     padding: 8px 16px;
     z-index: 1000;
     text-decoration: none;
-    font-weight: 500;
-    border-radius: 0 0 var(--radius-main) 0;
-    transition: top 0.2s;
 }
 
 .skip-link:focus {
@@ -72,7 +68,6 @@ textarea:focus-visible,
 select:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 
@@ -84,7 +79,7 @@ select:focus-visible {
 
 
 header {
-    background: linear-gradient(in oklch to right, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 50%, var(--gradient-purple-red) 100%);
+    background: #fff;
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
@@ -165,35 +160,35 @@ header h1 {
 }
 
 header h1 a {
-    color: var(--header-text);
+    color: var(--color-text);
 }
 
 .version {
     font-size: 0.875rem;
-    color: var(--header-text-secondary);
+    color: var(--color-text-light);
 }
 
 
 footer {
-    background: linear-gradient(in oklch to right, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 50%, var(--gradient-purple-blue) 100%);
+    background: #fff;
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 2rem;
     flex-shrink: 0;
-    color: var(--header-text);
+    color: var(--color-text);
     font-size: 0.875rem;
     text-align: center;
 }
 
 footer a {
-    color: var(--header-text-secondary);
+    color: var(--color-text-light);
     text-decoration: none;
 }
 
 footer a:hover {
-    color: var(--header-text);
+    color: var(--color-text);
 }
 
 
@@ -215,7 +210,7 @@ footer a:hover {
 
 .btn-primary {
     font-weight: 500;
-    background: var(--color-primary);
+    background: #000;
     color: #fff;
     border: var(--border-main);
     transition: background-color 0.2s ease;
@@ -260,9 +255,11 @@ footer a:hover {
 }
 
 .display-area,
-.state-display {
+.state-display,
+.words-display {
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
+    border: var(--border-main);
 }
 
 
