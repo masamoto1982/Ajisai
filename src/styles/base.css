@@ -29,20 +29,32 @@ a:hover {
 }
 
 
+/* Visually hidden until focused: clip to a 1px box rather than translating a
+ * painted black box off-screen, which left a sub-pixel sliver at the top-left. */
 .skip-link {
     position: absolute;
     top: 0;
     left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
     background: #000;
     color: #fff;
     padding: 8px 16px;
     z-index: 1000;
     text-decoration: none;
-    transform: translateY(-100%);
 }
 
 .skip-link:focus {
-    transform: translateY(0);
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
     outline: 2px solid var(--color-secondary);
     outline-offset: 2px;
 }
