@@ -79,7 +79,8 @@ select:focus-visible {
 
 
 header {
-    background: #fff;
+    background: linear-gradient(90deg, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 50%, var(--gradient-purple-red) 100%);
+    background: linear-gradient(in oklch to right, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 50%, var(--gradient-purple-red) 100%);
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
@@ -171,7 +172,8 @@ header h1 a {
 
 
 footer {
-    background: #fff;
+    background: linear-gradient(90deg, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 50%, var(--gradient-purple-blue) 100%);
+    background: linear-gradient(in oklch to right, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 50%, var(--gradient-purple-blue) 100%);
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
