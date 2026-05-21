@@ -395,7 +395,7 @@ const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement =
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    a.className = 'json-download-link';
+    a.className = 'btn';
     a.textContent = `Download: ${filename}`;
     return a;
 };

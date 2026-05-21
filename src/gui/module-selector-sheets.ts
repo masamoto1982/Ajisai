@@ -185,7 +185,7 @@ export const createModuleTabManager = (
             for (const action of actions) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = `header-btn ${action.className}`;
+                btn.className = action.className;
                 btn.setAttribute('aria-label', action.ariaLabel);
                 btn.textContent = action.label;
                 btn.addEventListener('click', action.onClick);

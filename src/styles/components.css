@@ -258,21 +258,6 @@
 }
 
 
-.json-download-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 2.125rem;
-    padding: 0.5rem 1rem;
-    text-decoration: none;
-    cursor: pointer;
-    font-family: var(--font-stack-mono);
-    font-size: 0.875rem;
-    line-height: 1.2;
-    border-radius: var(--radius-main);
-}
-
-
 #output-display {
     flex: 1;
     min-height: 0;
