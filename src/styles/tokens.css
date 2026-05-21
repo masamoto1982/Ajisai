@@ -3,6 +3,8 @@
     --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
 
     --radius-main: 2px;
+    --radius-button: 6px;
+    --radius-word-button: 4px;
     --col-left-flex: 1;
     --col-right-flex: 1;
 
