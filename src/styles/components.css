@@ -597,6 +597,10 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.75rem 0.75rem 0;
+        background: linear-gradient(225deg in oklch,
+            #ffffff 0%,
+            40%,
+            #b3b3b3 100%);
     }
 
     .area-selector-mobile select {
