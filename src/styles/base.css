@@ -162,12 +162,12 @@ header h1 {
 }
 
 header h1 a {
-    color: var(--header-text);
+    color: var(--color-text);
 }
 
 .version {
     font-size: 0.875rem;
-    color: var(--header-text-secondary);
+    color: var(--color-text-light);
 }
 
 
@@ -180,18 +180,18 @@ footer {
     justify-content: center;
     gap: 2rem;
     flex-shrink: 0;
-    color: var(--header-text);
+    color: var(--color-text);
     font-size: 0.875rem;
     text-align: center;
 }
 
 footer a {
-    color: var(--header-text-secondary);
+    color: var(--color-text-light);
     text-decoration: none;
 }
 
 footer a:hover {
-    color: var(--header-text);
+    color: var(--color-text);
 }
 
 
@@ -301,6 +301,7 @@ header .btn-secondary:hover {
 .words-display {
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.75rem;
+    border: var(--border-main);
 }
 
 
