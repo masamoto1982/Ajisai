@@ -63,33 +63,9 @@ export async function initializeApplication(): Promise<void> {
     }
 }
 
-export function setupLogoTouchQR(): void {
-    const logoSwap = document.querySelector<HTMLElement>('.logo-swap');
-    if (!logoSwap) return;
-
-    let hideTimer: ReturnType<typeof setTimeout> | null = null;
-
-    logoSwap.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-
-        if (hideTimer !== null) {
-            clearTimeout(hideTimer);
-            hideTimer = null;
-        }
-
-        logoSwap.classList.add('qr-active');
-
-        hideTimer = setTimeout(() => {
-            logoSwap.classList.remove('qr-active');
-            hideTimer = null;
-        }, 3000);
-    }, { passive: false });
-}
-
 export function bootstrapApplication(): void {
     getPlatform().runtime.onReady(() => {
         setBuildVersionLabel();
-        setupLogoTouchQR();
         void initializeApplication();
     });
 }
