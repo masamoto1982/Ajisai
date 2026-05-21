@@ -188,7 +188,7 @@ footer a:hover {
     font-weight: 500;
     line-height: 1.2;
     border: var(--border-main);
-    border-radius: var(--radius-main);
+    border-radius: var(--radius-button);
     cursor: pointer;
     text-decoration: none;
     color: var(--color-text);
