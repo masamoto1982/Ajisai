@@ -186,7 +186,7 @@
     background-color: oklch(78.7% 0.1 340);
     background: linear-gradient(to top right in oklch, var(--grad-bl) 0%, var(--grad-tr) 100%);
     color: var(--input-text);
-    animation: hydrangea-tr 60s linear infinite, hydrangea-bl 60s linear infinite;
+    animation: hydrangea-tr 180s linear infinite, hydrangea-bl 180s linear infinite;
 }
 
 #code-input:focus {
@@ -328,7 +328,7 @@
     color: var(--input-text);
     min-width: 120px;
     max-width: 200px;
-    animation: hydrangea-tr 60s linear infinite, hydrangea-bl 60s linear infinite;
+    animation: hydrangea-tr 180s linear infinite, hydrangea-bl 180s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
