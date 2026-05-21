@@ -19,9 +19,6 @@
     --color-light: #f8f9fa;
     --color-medium: #eaecf0;
 
-    --input-gradient: linear-gradient(to top right in oklch,
-        var(--grad-bl) 0%,
-        var(--grad-tr) 100%);
     --input-text: oklch(38% 0.06 305);
     --input-placeholder: oklch(58% 0.028 305);
 
