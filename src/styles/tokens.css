@@ -19,9 +19,11 @@
     --color-light: #f8f9fa;
     --color-medium: #eaecf0;
 
-    --code-bg: #393544;
-    --code-text: #f8f8f2;
-    --code-comment: #a69dbf;
+    --input-gradient: linear-gradient(to top right in oklch,
+        oklch(78.68% 0.091 305) 0%,
+        oklch(78.78% 0.109 4.54) 100%);
+    --input-text: oklch(38% 0.06 305);
+    --input-placeholder: oklch(58% 0.028 305);
 
     --color-core: #E65100;
     --color-dependency: #E69500;

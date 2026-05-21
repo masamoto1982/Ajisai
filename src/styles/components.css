@@ -152,8 +152,9 @@
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: var(--code-bg);
-    color: var(--code-text);
+    background-color: oklch(78.7% 0.1 340);
+    background: var(--input-gradient);
+    color: var(--input-text);
 }
 
 #code-input:focus {
@@ -161,7 +162,7 @@
 }
 
 #code-input::placeholder {
-    color: #ffffff;
+    color: var(--input-placeholder);
 }
 
 
@@ -172,7 +173,7 @@
     padding: 0;
     border: none;
     background: none;
-    color: var(--code-comment);
+    color: var(--input-text);
     font-size: 1.15rem;
     line-height: 1;
     cursor: pointer;
@@ -192,7 +193,7 @@
     top: 0.5rem;
     right: 0.5rem;
     z-index: 2;
-    color: var(--code-text);
+    color: var(--input-text);
 }
 
 #code-input:placeholder-shown ~ #clear-btn {
@@ -290,8 +291,9 @@
     border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
-    background-color: var(--code-bg);
-    color: var(--code-text);
+    background-color: oklch(78.7% 0.1 340);
+    background: var(--input-gradient);
+    color: var(--input-text);
     min-width: 120px;
     max-width: 200px;
 }
@@ -301,7 +303,7 @@
 }
 
 .vocabulary-search-input::placeholder {
-    color: #ffffff;
+    color: var(--input-placeholder);
 }
 
 .vocabulary-search-clear-btn {
@@ -309,7 +311,7 @@
     top: 50%;
     transform: translateY(-50%);
     z-index: 2;
-    color: var(--code-text);
+    color: var(--input-text);
 }
 
 .vocabulary-search-input:placeholder-shown ~ .vocabulary-search-clear-btn {
