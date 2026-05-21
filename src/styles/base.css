@@ -80,15 +80,15 @@ select:focus-visible {
 
 
 header {
-    background: linear-gradient(45deg, #ffffff 0%, #b3b3b3 100%);
-    background: linear-gradient(45deg in oklch, #ffffff 0%, #b3b3b3 100%);
+    background: #fff;
+    border-bottom: var(--border-main);
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
     flex-shrink: 0;
-    color: var(--header-text);
+    color: var(--color-text);
 }
 
 .app-header-top {
@@ -157,7 +157,7 @@ header {
 
 header h1 {
     font-size: 1.5rem;
-    color: var(--heading-h1);
+    color: var(--color-text);
     font-weight: 500;
     margin: 0;
 }
@@ -173,8 +173,8 @@ header h1 a {
 
 
 footer {
-    background: linear-gradient(45deg, #ffffff 0%, #b3b3b3 100%);
-    background: linear-gradient(45deg in oklch, #ffffff 0%, #b3b3b3 100%);
+    background: #fff;
+    border-top: var(--border-main);
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
@@ -211,20 +211,17 @@ footer a:hover {
     font-size: 0.875rem;
     font-weight: 500;
     line-height: 1.2;
-    border: none;
+    border: var(--border-main);
     border-radius: var(--radius-main);
     cursor: pointer;
     text-decoration: none;
-    color: var(--header-text);
-    background: linear-gradient(45deg, #ffffff 0%, #b3b3b3 100%);
-    background: linear-gradient(45deg in oklch, #ffffff 0%, #b3b3b3 100%);
-    transition: background 0.2s ease;
+    color: var(--color-text);
+    background: #fff;
 }
 
 .btn:hover {
-    background: linear-gradient(45deg, #b3b3b3 0%, #ffffff 100%);
-    background: linear-gradient(45deg in oklch, #b3b3b3 0%, #ffffff 100%);
-    color: var(--header-text);
+    background: var(--color-light);
+    color: var(--color-text);
 }
 
 #test-btn svg {
@@ -252,7 +249,7 @@ footer a:hover {
 .display-area,
 .state-display,
 .words-display {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: #fff;
     padding: 0.75rem;
     border: var(--border-main);
 }
