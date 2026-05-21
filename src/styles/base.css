@@ -251,6 +251,25 @@ header .btn-secondary:hover {
         var(--gradient-purple-red) 100%);
 }
 
+#copy-output-btn,
+#export-btn,
+#import-btn,
+.json-download-link {
+    border: none;
+    background: linear-gradient(45deg, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 100%);
+    background: linear-gradient(45deg in oklch, var(--gradient-purple-red) 0%, var(--gradient-purple-blue) 100%);
+    color: var(--header-text);
+}
+
+#copy-output-btn:hover,
+#export-btn:hover,
+#import-btn:hover,
+.json-download-link:hover {
+    background: linear-gradient(45deg, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 100%);
+    background: linear-gradient(45deg in oklch, var(--gradient-purple-blue) 0%, var(--gradient-purple-red) 100%);
+    color: var(--header-text);
+}
+
 #test-btn svg {
     width: 16px;
     height: 16px;
