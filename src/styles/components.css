@@ -142,37 +142,6 @@
 }
 
 
-/* "七変化": the editor and search inputs share a hydrangea gradient whose two
- * diagonal endpoints slowly cycle through four hydrangea hues. The endpoints
- * are offset in the cycle so the pair is always two distinct colors. */
-@property --grad-tr {
-    syntax: "<color>";
-    inherits: false;
-    initial-value: oklch(78.78% 0.109 4.54);
-}
-
-@property --grad-bl {
-    syntax: "<color>";
-    inherits: false;
-    initial-value: oklch(78.68% 0.091 305);
-}
-
-@keyframes hydrangea-tr {
-    0%   { --grad-tr: oklch(78.78% 0.109 4.54); }
-    25%  { --grad-tr: oklch(80.17% 0.091 258.88); }
-    50%  { --grad-tr: oklch(88.77% 0.096 147.71); }
-    75%  { --grad-tr: oklch(78.68% 0.091 305); }
-    100% { --grad-tr: oklch(78.78% 0.109 4.54); }
-}
-
-@keyframes hydrangea-bl {
-    0%   { --grad-bl: oklch(88.77% 0.096 147.71); }
-    25%  { --grad-bl: oklch(78.68% 0.091 305); }
-    50%  { --grad-bl: oklch(78.78% 0.109 4.54); }
-    75%  { --grad-bl: oklch(80.17% 0.091 258.88); }
-    100% { --grad-bl: oklch(88.77% 0.096 147.71); }
-}
-
 #code-input {
     width: 100%;
     min-height: 0;
@@ -183,10 +152,8 @@
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: oklch(78.7% 0.1 340);
-    background: linear-gradient(to top right in oklch, var(--grad-bl) 0%, var(--grad-tr) 100%);
+    background-color: var(--color-light);
     color: var(--input-text);
-    animation: hydrangea-tr 180s linear infinite, hydrangea-bl 180s linear infinite;
 }
 
 #code-input:focus {
@@ -323,19 +290,10 @@
     border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
-    background-color: oklch(78.7% 0.1 340);
-    background: linear-gradient(to top right in oklch, var(--grad-bl) 0%, var(--grad-tr) 100%);
+    background-color: var(--color-light);
     color: var(--input-text);
     min-width: 120px;
     max-width: 200px;
-    animation: hydrangea-tr 180s linear infinite, hydrangea-bl 180s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #code-input,
-    .vocabulary-search-input {
-        animation: none;
-    }
 }
 
 .vocabulary-search-input:focus {
