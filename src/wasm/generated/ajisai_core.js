@@ -15,6 +15,12 @@ export class AjisaiInterpreter {
         wasm.ajisaiinterpreter_clear_io_output_buffer(this.__wbg_ptr);
     }
     /**
+     * Clear all injected serial receive buffers and disconnected flags.
+     */
+    clear_serial_inboxes() {
+        wasm.ajisaiinterpreter_clear_serial_inboxes(this.__wbg_ptr);
+    }
+    /**
      * @returns {any}
      */
     collect_builtin_word_registry() {
@@ -191,6 +197,16 @@ export class AjisaiInterpreter {
         const ret = wasm.ajisaiinterpreter_lookup_word_definition(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
+    /**
+     * Mark a serial port as disconnected by the host. Once its inbox is empty,
+     * `SERIAL@READ` projects `NilReason::PortDisconnected`.
+     * @param {string} port_id
+     */
+    mark_serial_disconnected(port_id) {
+        const ptr0 = passStringToWasm0(port_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.ajisaiinterpreter_mark_serial_disconnected(this.__wbg_ptr, ptr0, len0);
+    }
     constructor() {
         const ret = wasm.ajisaiinterpreter_new();
         this.__wbg_ptr = ret;
@@ -264,6 +280,20 @@ export class AjisaiInterpreter {
         const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         wasm.ajisaiinterpreter_update_input_buffer(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * Inject the host-received bytes for a serial port (Section 9.4). Replaces
+     * any buffer previously set for this port id and clears the port's
+     * disconnected flag. `SERIAL@READ` drains this buffer.
+     * @param {string} port_id
+     * @param {Uint8Array} bytes
+     */
+    update_serial_inbox(port_id, bytes) {
+        const ptr0 = passStringToWasm0(port_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.ajisaiinterpreter_update_serial_inbox(this.__wbg_ptr, ptr0, len0, ptr1, len1);
     }
 }
 if (Symbol.dispose) AjisaiInterpreter.prototype[Symbol.dispose] = AjisaiInterpreter.prototype.free;
@@ -472,7 +502,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return wasm_bindgen__convert__closures_____invoke__hb521fcce36d621a7(a, state0.b, arg0, arg1);
+                        return wasm_bindgen__convert__closures_____invoke__hb0a6d841f6717d79(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -579,8 +609,8 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 124, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h3f6c7788c2478463);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 135, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h5f2766d43789c7b4);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -614,15 +644,15 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h3f6c7788c2478463(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h3f6c7788c2478463(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h5f2766d43789c7b4(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h5f2766d43789c7b4(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__hb521fcce36d621a7(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hb521fcce36d621a7(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__hb0a6d841f6717d79(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hb0a6d841f6717d79(arg0, arg1, arg2, arg3);
 }
 
 const AjisaiInterpreterFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -768,6 +798,13 @@ function makeMutClosure(arg0, arg1, f) {
     };
     CLOSURE_DTORS.register(real, state, state);
     return real;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {

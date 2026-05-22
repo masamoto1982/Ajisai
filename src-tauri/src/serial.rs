@@ -25,7 +25,7 @@ struct OpenPort {
 
 /// Tauri-managed state holding every open port keyed by its device name.
 #[derive(Default)]
-pub struct SerialState(pub Mutex<HashMap<String, OpenPort>>);
+pub struct SerialState(Mutex<HashMap<String, OpenPort>>);
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

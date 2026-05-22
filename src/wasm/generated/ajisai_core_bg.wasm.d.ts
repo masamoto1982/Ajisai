@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
 export const ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
+export const ajisaiinterpreter_clear_serial_inboxes: (a: number) => void;
 export const ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;
 export const ajisaiinterpreter_collect_core_listed_words_info: (a: number) => any;
 export const ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
@@ -22,6 +23,7 @@ export const ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number,
 export const ajisaiinterpreter_get_execution_mode: (a: number) => [number, number];
 export const ajisaiinterpreter_is_safe_preview_word: (a: number, b: number, c: number) => number;
 export const ajisaiinterpreter_lookup_word_definition: (a: number, b: number, c: number) => any;
+export const ajisaiinterpreter_mark_serial_disconnected: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_new: () => number;
 export const ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
 export const ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
@@ -31,8 +33,9 @@ export const ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, nu
 export const ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
 export const ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
-export const wasm_bindgen__convert__closures_____invoke__h3f6c7788c2478463: (a: number, b: number, c: any) => [number, number];
-export const wasm_bindgen__convert__closures_____invoke__hb521fcce36d621a7: (a: number, b: number, c: any, d: any) => void;
+export const ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
+export const wasm_bindgen__convert__closures_____invoke__h5f2766d43789c7b4: (a: number, b: number, c: any) => [number, number];
+export const wasm_bindgen__convert__closures_____invoke__hb0a6d841f6717d79: (a: number, b: number, c: any, d: any) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;
