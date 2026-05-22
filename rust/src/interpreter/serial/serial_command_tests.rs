@@ -92,3 +92,28 @@ async fn open_underflow_errors() {
     let (result, _) = run("SERIAL@OPEN").await;
     assert!(result.is_err(), "OPEN with empty stack must underflow");
 }
+
+// Conformance with SPECIFICATION.md §9.4 / §7.14: every SERIAL word is an
+// effectful, partial, NIL-rejecting, safety-D hardware word that is never
+// deterministic or safe-preview eligible.
+#[test]
+fn serial_words_have_effectful_hardware_contract() {
+    use crate::coreword_registry::{
+        get_canonical_module_words, NilPolicy, Partiality, SafetyLevel, WordPurity,
+    };
+
+    let words = get_canonical_module_words(Some("SERIAL"));
+    let names: Vec<&str> = words.iter().map(|w| w.name.as_str()).collect();
+    for expected in ["LIST-PORTS", "OPEN", "CONFIGURE", "WRITE", "FLUSH", "CLOSE"] {
+        assert!(names.contains(&expected), "SERIAL should expose {expected}");
+    }
+
+    for w in &words {
+        assert_eq!(w.purity, WordPurity::Effectful, "{} purity", w.name);
+        assert_eq!(w.partiality, Partiality::Partial, "{} partiality", w.name);
+        assert_eq!(w.nil_policy, NilPolicy::RejectsNil, "{} nil_policy", w.name);
+        assert_eq!(w.safety_level, SafetyLevel::D, "{} safety_level", w.name);
+        assert!(!w.deterministic, "{} must be non-deterministic", w.name);
+        assert!(!w.safe_preview, "{} must not be safe-preview", w.name);
+    }
+}

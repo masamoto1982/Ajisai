@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-13**
+Version: **2026-05-22**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -672,6 +672,7 @@ Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object 
 | `CRYPTO` | Cryptographically secure random and hash |
 | `ALGO` | Sorting and other deterministic algorithms |
 | `MATH` | Square root and exact-rational interval arithmetic |
+| `SERIAL` | Host-mediated serial port output |
 
 ### 9.2 Import and unimport syntax
 
@@ -693,6 +694,27 @@ Selectors that name Core words merely listed in a module view are no-ops for `IM
 ### 9.3 Module-provided sample words
 
 Modules may provide sample words for demonstration. Sample words are part of the module dictionary for import visibility: they can be introduced with `IMPORT` / `IMPORT-ONLY` and hidden with `UNIMPORT` / `UNIMPORT-ONLY`, but they are not destructively deleted with `DEL`.
+
+### 9.4 SERIAL module (host-mediated serial output)
+
+The `SERIAL` module exposes a serial port to Ajisai programs. Serial access is a property of the host environment, not of the runtime: the runtime never opens, writes, or closes a port itself. Each `SERIAL` word is effectful and produces a single host command at the IO/semantic boundary (Section 5.2); the host environment consumes that command and performs the actual port operation. The serial transport itself (a browser Web Serial implementation, a native serial backend, or none) is a host capability outside this specification. The absence of a serial-capable host is an environment condition, not a language semantic error.
+
+A serial connection is identified by an **opaque port-id text value** that the host environment assigns when the user grants access. Programs treat the port id as a connection handle and thread it along the stack. The port id is `Text`; the runtime does not interpret its contents.
+
+The module provides the following words:
+
+| Word | Stack effect | Description |
+|------|--------------|-------------|
+| `LIST-PORTS` | `--` | Request host enumeration of available ports |
+| `OPEN` | `port-id -- port-id` | Open the named port; the port id remains on the stack as the connection handle |
+| `CONFIGURE` | `port-id baud-rate -- port-id` | Set the baud rate of an open port |
+| `WRITE` | `port-id bytes -- port-id` | Send a byte vector (each element an integer `0`–`255`) to an open port |
+| `FLUSH` | `port-id -- port-id` | Flush the port's outgoing data |
+| `CLOSE` | `port-id --` | Close the port and release the connection |
+
+Contract classification (Section 7.14): every `SERIAL` word has `purity = Effectful`, `deterministic = false`, `safe_preview = false`, `partiality = Partial`, `nil_policy = RejectsNil`, and `safety_level = D`. Because they drive external hardware, `SERIAL` words are never eligible for speculative reordering, caching, or `safe_preview` execution.
+
+Misuse raises an error rather than producing Bubble/NIL (Section 11.2 "malformed use → error"): a non-text port id, a byte outside `0`–`255`, a non-positive baud rate, or a missing operand raises `StructureError` or `StackUnderflow`. The host-side outcome of a well-formed command (for example a device that is physically disconnected) is reported through the host environment and does not change the runtime stack effect of the word.
 
 ---
 
