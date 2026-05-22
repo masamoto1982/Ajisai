@@ -1,5 +1,6 @@
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
+import { getPlatform } from '../platform';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -290,6 +291,7 @@ interface ParsedOutput {
     readonly config: readonly string[];
     readonly effect: readonly string[];
     readonly jsonExport: readonly string[];
+    readonly serial: readonly string[];
     /** Output lines with all special command lines removed, joined by newlines. */
     readonly program: string;
 }
@@ -301,6 +303,7 @@ const parseOutputCommands = (output: string): ParsedOutput => {
     const config: string[] = [];
     const effect: string[] = [];
     const jsonExport: string[] = [];
+    const serial: string[] = [];
     const programLines: string[] = [];
 
     for (const line of output.split('\n')) {
@@ -308,10 +311,11 @@ const parseOutputCommands = (output: string): ParsedOutput => {
         else if (line.startsWith('CONFIG:')) config.push(line.substring(7));
         else if (line.startsWith('EFFECT:')) effect.push(line.substring(7));
         else if (line.startsWith('JSONEXPORT:')) jsonExport.push(line.substring(11));
+        else if (line.startsWith('SERIAL:')) serial.push(line.substring(7));
         else programLines.push(line);
     }
 
-    return { audio, config, effect, jsonExport, program: programLines.join('\n') };
+    return { audio, config, effect, jsonExport, serial, program: programLines.join('\n') };
 };
 
 const formatErrorMessage = (error: Error | { message?: string } | string): string =>
@@ -364,9 +368,59 @@ const applyConfigCommands = (commands: readonly string[]): void => {
     });
 };
 
-const executeAudioCommands = (parsed: ParsedOutput): void => {
+interface SerialCommand {
+    readonly op: string;
+    readonly portId?: string;
+    readonly baudRate?: number;
+    readonly bytes?: number[];
+}
+
+const applySerialCommands = (commands: readonly string[]): void => {
+    if (commands.length === 0) return;
+    const serial = getPlatform().serial;
+    const guard = (op: string, p: Promise<unknown>): void => {
+        p.catch(err => console.error(`Serial command '${op}' failed:`, err));
+    };
+
+    commands.forEach(commandStr => {
+        let cmd: SerialCommand;
+        try {
+            cmd = JSON.parse(commandStr);
+        } catch {
+            console.error('Failed to parse SERIAL command:', commandStr);
+            return;
+        }
+        switch (cmd.op) {
+            case 'listPorts':
+                guard('listPorts', serial.listPorts().then(ports => {
+                    console.log('Serial ports:', ports);
+                }));
+                break;
+            case 'open':
+                guard('open', serial.open(cmd.portId ?? ''));
+                break;
+            case 'configure':
+                guard('configure', serial.configure(cmd.portId ?? '', { baudRate: cmd.baudRate ?? 0 }));
+                break;
+            case 'write':
+                guard('write', serial.write(cmd.portId ?? '', Uint8Array.from(cmd.bytes ?? [])));
+                break;
+            case 'flush':
+                guard('flush', serial.flush(cmd.portId ?? ''));
+                break;
+            case 'close':
+                guard('close', serial.close(cmd.portId ?? ''));
+                break;
+            default:
+                console.error('Unknown SERIAL op:', cmd.op);
+        }
+    });
+};
+
+const executeHostCommands = (parsed: ParsedOutput): void => {
     applyEffectCommands(parsed.effect);
     applyConfigCommands(parsed.config);
+    applySerialCommands(parsed.serial);
 
     parsed.audio.forEach(commandStr => {
         try {
@@ -424,7 +478,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const renderExecutionResult = (result: ExecuteResult): void => {
         const parsed = parseOutputCommands(result.output || '');
-        executeAudioCommands(parsed);
+        executeHostCommands(parsed);
 
         const debug = (result.debugOutput || '').trim();
         const program = parsed.program.trim();
@@ -453,7 +507,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const appendExecutionResult = (result: ExecuteResult): void => {
         const parsed = parseOutputCommands(result.output || '');
-        executeAudioCommands(parsed);
+        executeHostCommands(parsed);
         const filteredOutput = parsed.program.trim();
 
         if (filteredOutput) {
@@ -463,7 +517,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
 
     const renderOutput = (text: string): void => {
         const parsed = parseOutputCommands(text);
-        executeAudioCommands(parsed);
+        executeHostCommands(parsed);
 
         mainOutput = parsed.program;
         clearElement(elements.outputDisplay);

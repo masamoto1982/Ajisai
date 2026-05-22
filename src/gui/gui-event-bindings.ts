@@ -1,4 +1,5 @@
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
+import { getPlatform } from '../platform';
 import type { Display } from './output-display-renderer';
 import type { Editor } from './code-input-editor';
 import type { MobileHandler, ViewMode } from './mobile-view-switcher';
@@ -157,6 +158,27 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     elements.exportBtn?.addEventListener('click', () => persistence.exportUserWords());
     elements.importBtn?.addEventListener('click', () => persistence.importUserWords());
+
+    {
+        const serialBtn = elements.serialConnectBtn;
+        const serial = getPlatform().serial;
+        if (serialBtn && serial.available) {
+            serialBtn.hidden = false;
+            serialBtn.addEventListener('click', async () => {
+                // requestAccess() must run inside this user gesture (Web Serial).
+                try {
+                    const info = await serial.requestAccess();
+                    if (info) {
+                        display.renderInfo(`Serial port connected as '${info.portId}'.`, true);
+                    } else {
+                        display.renderInfo('No serial port was selected.', true);
+                    }
+                } catch (error) {
+                    display.renderError(error as Error);
+                }
+            });
+        }
+    }
 
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && e.shiftKey) {

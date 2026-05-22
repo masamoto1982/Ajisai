@@ -32,6 +32,7 @@ export interface GUIElements {
     readonly mobileDictionarySearch: HTMLInputElement;
     readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
+    readonly serialConnectBtn: HTMLButtonElement | null;
 }
 
 type ElementConstructor<T extends HTMLElement> = {
@@ -51,6 +52,14 @@ function requireElementById<T extends HTMLElement>(id: string, expectedConstruct
     }
 
     return element as T;
+}
+
+function optionalElementById<T extends HTMLElement>(id: string, expectedConstructor: ElementConstructor<T>): T | null {
+    const element = document.getElementById(id);
+    if (!element) {
+        return null;
+    }
+    return element instanceof expectedConstructor ? (element as T) : null;
 }
 
 function requireElementBySelector<T extends HTMLElement>(selector: string, expectedConstructor: ElementConstructor<T>): T {
@@ -96,7 +105,8 @@ export const cacheElements = (): GUIElements => ({
     mobilePanelDictionarySearch: requireElementById('mobile-panel-dictionary-search', HTMLElement),
     mobileDictionarySearch: requireElementById('mobile-dictionary-search', HTMLInputElement),
     mobileDictionarySearchClearBtn: requireElementById('mobile-dictionary-search-clear-btn', HTMLButtonElement),
-    copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement)
+    copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement),
+    serialConnectBtn: optionalElementById('serial-connect-btn', HTMLButtonElement)
 });
 
 export const extractDisplayElements = (elements: GUIElements): DisplayElements => ({
