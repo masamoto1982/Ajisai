@@ -34,6 +34,13 @@
     color: var(--color-text);
     width: 100%;
     cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.area-selector select:focus,
+.dictionary-sheet-select:focus {
+    outline: none;
+    background: var(--color-light);
 }
 
 
