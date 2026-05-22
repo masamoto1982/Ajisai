@@ -1,7 +1,10 @@
-//! Phase-1 contract tests for the `SERIAL` module. Hardware is never exercised;
-//! these assert the emitted `SERIAL:` command lines and the misuse error paths.
+//! Contract tests for the `SERIAL` module. Hardware is never exercised; these
+//! assert the emitted `SERIAL:` command lines (outbound), the host-injected
+//! receive-buffer behavior of `READ` (inbound), and the misuse error paths.
 
+use crate::error::NilReason;
 use crate::interpreter::Interpreter;
+use crate::semantic::AbsenceOrigin;
 
 async fn run(code: &str) -> (Result<(), crate::error::AjisaiError>, String) {
     let mut interp = Interpreter::new();
@@ -104,16 +107,98 @@ fn serial_words_have_effectful_hardware_contract() {
 
     let words = get_canonical_module_words(Some("SERIAL"));
     let names: Vec<&str> = words.iter().map(|w| w.name.as_str()).collect();
-    for expected in ["LIST-PORTS", "OPEN", "CONFIGURE", "WRITE", "FLUSH", "CLOSE"] {
+    for expected in [
+        "LIST-PORTS",
+        "OPEN",
+        "CONFIGURE",
+        "WRITE",
+        "READ",
+        "FLUSH",
+        "CLOSE",
+    ] {
         assert!(names.contains(&expected), "SERIAL should expose {expected}");
     }
 
     for w in &words {
         assert_eq!(w.purity, WordPurity::Effectful, "{} purity", w.name);
-        assert_eq!(w.partiality, Partiality::Partial, "{} partiality", w.name);
-        assert_eq!(w.nil_policy, NilPolicy::RejectsNil, "{} nil_policy", w.name);
         assert_eq!(w.safety_level, SafetyLevel::D, "{} safety_level", w.name);
         assert!(!w.deterministic, "{} must be non-deterministic", w.name);
         assert!(!w.safe_preview, "{} must not be safe-preview", w.name);
+        if w.name == "READ" {
+            // READ projects the no-data / disconnected condition onto Bubble/NIL.
+            assert_eq!(w.partiality, Partiality::Projecting, "READ partiality");
+            assert_eq!(w.nil_policy, NilPolicy::CreatesNil, "READ nil_policy");
+        } else {
+            assert_eq!(w.partiality, Partiality::Partial, "{} partiality", w.name);
+            assert_eq!(w.nil_policy, NilPolicy::RejectsNil, "{} nil_policy", w.name);
+        }
     }
+}
+
+#[tokio::test]
+async fn read_returns_injected_bytes() {
+    let mut interp = Interpreter::new();
+    interp.execute("'serial' IMPORT").await.unwrap();
+    interp
+        .serial_inbox
+        .insert("p1".to_string(), vec![65, 66, 67]);
+    interp.execute("'p1' SERIAL@READ").await.unwrap();
+    let stack = interp.get_stack();
+    let top = stack.last().expect("READ pushes a result");
+    assert!(
+        !top.is_nil(),
+        "READ with buffered data returns a byte vector"
+    );
+    assert_eq!(top.len(), 3, "all three injected bytes are returned");
+}
+
+#[tokio::test]
+async fn read_no_data_projects_nodata_bubble() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("'serial' IMPORT 'p1' SERIAL@READ")
+        .await
+        .unwrap();
+    let stack = interp.get_stack();
+    let absence = stack
+        .last()
+        .unwrap()
+        .absence_metadata()
+        .expect("no buffered data projects NIL");
+    assert_eq!(absence.reason, Some(NilReason::NoData));
+    assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
+}
+
+#[tokio::test]
+async fn read_disconnected_projects_portdisconnected_bubble() {
+    let mut interp = Interpreter::new();
+    interp.execute("'serial' IMPORT").await.unwrap();
+    interp.serial_disconnected.insert("p1".to_string());
+    interp.execute("'p1' SERIAL@READ").await.unwrap();
+    let stack = interp.get_stack();
+    let absence = stack
+        .last()
+        .unwrap()
+        .absence_metadata()
+        .expect("a disconnected port with no data projects NIL");
+    assert_eq!(absence.reason, Some(NilReason::PortDisconnected));
+    assert_eq!(absence.origin, AbsenceOrigin::HostEnvironment);
+}
+
+#[tokio::test]
+async fn read_drains_inbox_so_second_read_is_nodata() {
+    let mut interp = Interpreter::new();
+    interp.execute("'serial' IMPORT").await.unwrap();
+    interp.serial_inbox.insert("p1".to_string(), vec![1, 2]);
+    interp
+        .execute("'p1' SERIAL@READ 'p1' SERIAL@READ")
+        .await
+        .unwrap();
+    let stack = interp.get_stack();
+    let absence = stack
+        .last()
+        .unwrap()
+        .absence_metadata()
+        .expect("the second READ finds a drained inbox and projects NIL");
+    assert_eq!(absence.reason, Some(NilReason::NoData));
 }

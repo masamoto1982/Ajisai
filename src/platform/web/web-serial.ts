@@ -1,4 +1,4 @@
-import type { SerialAdapter, SerialPortInfo } from '../platform-adapter';
+import type { SerialAdapter, SerialInboxData, SerialPortInfo } from '../platform-adapter';
 
 // Minimal local declarations for the W3C Web Serial API so the build does not
 // depend on the surrounding TS DOM lib shipping these types yet.
@@ -6,6 +6,7 @@ interface WebSerialPort {
     open(options: { baudRate: number }): Promise<void>;
     close(): Promise<void>;
     readonly writable: WritableStream<Uint8Array> | null;
+    readonly readable: ReadableStream<Uint8Array> | null;
     getInfo?(): { usbVendorId?: number; usbProductId?: number };
 }
 
@@ -25,6 +26,11 @@ interface GrantedPort {
     baudRate: number;
     opened: boolean;
     writer: WritableStreamDefaultWriter<Uint8Array> | null;
+    reader: ReadableStreamDefaultReader<Uint8Array> | null;
+    /** Bytes received since the last drain. */
+    rx: number[];
+    /** Set when the RX loop ends unexpectedly (device unplugged / stream error). */
+    disconnected: boolean;
 }
 
 /**
@@ -57,10 +63,48 @@ export class WebSerialAdapter implements SerialAdapter {
             port,
             baudRate: DEFAULT_BAUD_RATE,
             opened: false,
-            writer: null
+            writer: null,
+            reader: null,
+            rx: [],
+            disconnected: false
         };
         this.ports.push(entry);
         return entry;
+    }
+
+    // Continuously drain the port's readable stream into the rx buffer. Runs
+    // until the reader is cancelled (on close/reopen) or the stream errors,
+    // which is treated as a host-side disconnect.
+    private startReadLoop(entry: GrantedPort): void {
+        const readable = entry.port.readable;
+        if (!readable || entry.reader) return;
+        const reader = readable.getReader();
+        entry.reader = reader;
+        entry.disconnected = false;
+        void (async () => {
+            try {
+                for (;;) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) {
+                        for (const b of value) entry.rx.push(b);
+                    }
+                }
+            } catch {
+                entry.disconnected = true;
+            } finally {
+                try { reader.releaseLock(); } catch { /* ignore */ }
+                if (entry.reader === reader) entry.reader = null;
+            }
+        })();
+    }
+
+    private async stopReadLoop(entry: GrantedPort): Promise<void> {
+        const reader = entry.reader;
+        if (!reader) return;
+        entry.reader = null;
+        try { await reader.cancel(); } catch { /* ignore */ }
+        try { reader.releaseLock(); } catch { /* ignore */ }
     }
 
     private require(portId: string): GrantedPort {
@@ -92,6 +136,7 @@ export class WebSerialAdapter implements SerialAdapter {
     }
 
     private async reopen(entry: GrantedPort): Promise<void> {
+        await this.stopReadLoop(entry);
         if (entry.writer) {
             try { entry.writer.releaseLock(); } catch { /* ignore */ }
             entry.writer = null;
@@ -102,6 +147,7 @@ export class WebSerialAdapter implements SerialAdapter {
         }
         await entry.port.open({ baudRate: entry.baudRate });
         entry.opened = true;
+        this.startReadLoop(entry);
     }
 
     open(portId: string): Promise<void> {
@@ -111,6 +157,7 @@ export class WebSerialAdapter implements SerialAdapter {
                 await entry.port.open({ baudRate: entry.baudRate });
                 entry.opened = true;
             }
+            this.startReadLoop(entry);
         });
     }
 
@@ -141,6 +188,7 @@ export class WebSerialAdapter implements SerialAdapter {
                 entry.writer = writable.getWriter();
             }
             await entry.writer.write(bytes);
+            this.startReadLoop(entry);
         });
     }
 
@@ -151,15 +199,28 @@ export class WebSerialAdapter implements SerialAdapter {
         });
     }
 
-    drainInbox(_portId: string): Uint8Array {
-        // Phase 2: a per-port RX reader loop will fill a buffer drained here and
-        // injected into the next execution snapshot. Phase 1 is send-only.
-        return new Uint8Array(0);
+    drainInbox(portId: string): Uint8Array {
+        const entry = this.ports.find(p => p.id === portId);
+        if (!entry || entry.rx.length === 0) return new Uint8Array(0);
+        const bytes = Uint8Array.from(entry.rx);
+        entry.rx = [];
+        return bytes;
+    }
+
+    drainAllInboxes(): SerialInboxData[] {
+        return this.ports
+            .filter(entry => entry.opened || entry.rx.length > 0 || entry.disconnected)
+            .map(entry => {
+                const bytes = entry.rx;
+                entry.rx = [];
+                return { portId: entry.id, bytes, disconnected: entry.disconnected };
+            });
     }
 
     close(portId: string): Promise<void> {
         return this.enqueue(async () => {
             const entry = this.require(portId);
+            await this.stopReadLoop(entry);
             if (entry.writer) {
                 try { entry.writer.releaseLock(); } catch { /* ignore */ }
                 entry.writer = null;

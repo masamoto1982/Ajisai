@@ -72,6 +72,13 @@ export interface SerialPortInfo {
     readonly label?: string;
 }
 
+/** Received bytes drained from one port, plus its host-reported connection state. */
+export interface SerialInboxData {
+    readonly portId: string;
+    readonly bytes: number[];
+    readonly disconnected: boolean;
+}
+
 /**
  * Host serial-port capability. The interpreter core never calls this directly;
  * it emits `SERIAL:` commands that the output dispatcher forwards here. The
@@ -92,8 +99,10 @@ export interface SerialAdapter {
     configure(portId: string, options: { readonly baudRate: number }): Promise<void>;
     write(portId: string, bytes: Uint8Array): Promise<void>;
     flush(portId: string): Promise<void>;
-    /** Phase 2: received bytes since the last drain. Phase 1 returns empty. */
+    /** Received bytes for one port since the last drain. */
     drainInbox(portId: string): Uint8Array;
+    /** Drain every open port's received bytes, for injection into a run's snapshot. */
+    drainAllInboxes(): SerialInboxData[];
     close(portId: string): Promise<void>;
 }
 

@@ -161,7 +161,7 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
         // Serial I/O drives external hardware: always impure, order-sensitive,
         // and never eligible for speculative reordering or caching.
         "SERIAL@LIST-PORTS" | "SERIAL@OPEN" | "SERIAL@CONFIGURE" | "SERIAL@WRITE"
-        | "SERIAL@FLUSH" | "SERIAL@CLOSE" => Some(PurityInfo {
+        | "SERIAL@READ" | "SERIAL@FLUSH" | "SERIAL@CLOSE" => Some(PurityInfo {
             purity: Purity::Impure,
             cost: EvalCost::Heavy,
             order_sensitive: true,

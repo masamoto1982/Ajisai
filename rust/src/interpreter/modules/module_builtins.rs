@@ -1,5 +1,7 @@
 use crate::builtins::WordShape;
-use crate::coreword_registry::{self, CanonicalHome, CorewordMetadata, WordPurity};
+use crate::coreword_registry::{
+    self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordPurity,
+};
 use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, serial, sort};
 use crate::types::{Capabilities, Stability};
 
@@ -728,6 +730,18 @@ const SERIAL_WORDS: &[ModuleWord] = &[
         Capabilities::IO
     ),
     module_word!(
+        "READ",
+        "Drain received bytes from an open serial port; Bubble/NIL when none",
+        serial::op_read,
+        WordPurity::Effectful,
+        &["serial-read"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
         "FLUSH",
         "Flush the outgoing buffer of an open serial port",
         serial::op_flush,
@@ -834,6 +848,13 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 metadata.listed_in_core = false;
                 metadata.listed_in_modules = vec![spec.name.to_string()];
                 metadata.listed_in_categories = Vec::new();
+                // SERIAL@READ projects the no-data / disconnected condition onto
+                // Bubble/NIL (Section 9.4), so it is Projecting/CreatesNil rather
+                // than the effectful default of Partial/RejectsNil.
+                if spec.name == "SERIAL" && word.short_name == "READ" {
+                    metadata.partiality = Partiality::Projecting;
+                    metadata.nil_policy = NilPolicy::CreatesNil;
+                }
                 metadata
             })
         })
