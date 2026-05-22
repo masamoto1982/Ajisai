@@ -146,7 +146,7 @@
     width: 100%;
     min-height: 0;
     padding: 0.75rem;
-    border: none;
+    border: var(--border-main);
     font-family: var(--font-stack-mono);
     font-size: 0.95rem;
     resize: none;
@@ -154,10 +154,12 @@
     line-height: 1.5;
     background-color: var(--color-light);
     color: var(--input-text);
+    transition: background-color 0.15s ease;
 }
 
 #code-input:focus {
     outline: none;
+    background-color: var(--color-medium);
 }
 
 #code-input::placeholder {
@@ -286,7 +288,7 @@
 
 .vocabulary-search-input {
     padding: 0.25rem 1.75rem 0.25rem 0.5rem;
-    border: none;
+    border: var(--border-main);
     border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
@@ -294,10 +296,12 @@
     color: var(--input-text);
     min-width: 120px;
     max-width: 200px;
+    transition: background-color 0.15s ease;
 }
 
 .vocabulary-search-input:focus {
     outline: none;
+    background-color: var(--color-medium);
 }
 
 .vocabulary-search-input::placeholder {
