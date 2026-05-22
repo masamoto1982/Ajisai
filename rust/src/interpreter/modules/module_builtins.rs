@@ -1,6 +1,6 @@
 use crate::builtins::WordShape;
 use crate::coreword_registry::{self, CanonicalHome, CorewordMetadata, WordPurity};
-use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, sort};
+use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, serial, sort};
 use crate::types::{Capabilities, Stability};
 
 use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
@@ -678,6 +678,81 @@ const MATH_WORDS: &[ModuleWord] = &[
     ),
 ];
 
+const SERIAL_WORDS: &[ModuleWord] = &[
+    module_word!(
+        "LIST-PORTS",
+        "Ask the host to enumerate available serial ports",
+        serial::op_list_ports,
+        WordPurity::Effectful,
+        &["serial-query"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
+        "OPEN",
+        "Open a serial port by id; leaves the port-id handle on the stack",
+        serial::op_open,
+        WordPurity::Effectful,
+        &["serial-control"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
+        "CONFIGURE",
+        "Set the baud rate of an open serial port",
+        serial::op_configure,
+        WordPurity::Effectful,
+        &["serial-control"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
+        "WRITE",
+        "Write a byte vector to an open serial port",
+        serial::op_write,
+        WordPurity::Effectful,
+        &["serial-write"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
+        "FLUSH",
+        "Flush the outgoing buffer of an open serial port",
+        serial::op_flush,
+        WordPurity::Effectful,
+        &["serial-control"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+    module_word!(
+        "CLOSE",
+        "Close an open serial port",
+        serial::op_close,
+        WordPurity::Effectful,
+        &["serial-control"],
+        false,
+        false,
+        false,
+        Stability::Experimental,
+        Capabilities::IO
+    ),
+];
+
 const MUSIC_SAMPLES: &[SampleWord] = &[];
 
 
@@ -715,6 +790,11 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {
         name: "MATH",
         words: MATH_WORDS,
+        sample_words: &[],
+    },
+    ModuleSpec {
+        name: "SERIAL",
+        words: SERIAL_WORDS,
         sample_words: &[],
     },
 ];

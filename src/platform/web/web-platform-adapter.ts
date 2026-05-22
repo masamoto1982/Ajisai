@@ -1,6 +1,7 @@
 import type { PlatformAdapter } from '../platform-adapter';
 import webPersistence from './web-persistence';
 import { WebFileIO } from './web-file-io';
+import { WebSerialAdapter } from './web-serial';
 
 declare const __AJISAI_CHANGE_NOTE__: string;
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
@@ -9,6 +10,7 @@ declare const __AJISAI_BUILD_TIMESTAMP__: string;
 export const WEB_PLATFORM_ADAPTER: PlatformAdapter = {
     persistence: webPersistence,
     fileIO: new WebFileIO(),
+    serial: new WebSerialAdapter(),
     runtime: {
         kind: 'web',
         version: __AJISAI_CHANGE_NOTE__,

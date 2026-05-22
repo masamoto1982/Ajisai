@@ -30,6 +30,7 @@ pub mod random;
 pub mod redundancy_layer;
 mod resolve_cache;
 mod shadow_validation;
+pub mod serial;
 pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;

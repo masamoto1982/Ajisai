@@ -1,6 +1,7 @@
 import type { PlatformAdapter } from '../platform-adapter';
 import { TauriFileIO } from './tauri-file-io';
 import { TauriPersistence } from './tauri-persistence';
+import { TauriSerialAdapter } from './tauri-serial';
 
 declare const __AJISAI_CHANGE_NOTE__: string;
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
@@ -8,6 +9,7 @@ declare const __AJISAI_BUILD_TIMESTAMP__: string;
 export const TAURI_PLATFORM_ADAPTER: PlatformAdapter = {
     persistence: new TauriPersistence(),
     fileIO: new TauriFileIO(),
+    serial: new TauriSerialAdapter(),
     runtime: {
         kind: 'tauri',
         version: __AJISAI_CHANGE_NOTE__,
