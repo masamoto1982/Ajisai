@@ -2,9 +2,18 @@
 import {
     applyInterpreterSnapshot,
     createInterpreterSnapshot,
-    type InterpreterSnapshot
+    type InterpreterSnapshot,
+    type SerialInboxEntry
 } from '../workers/interpreter-snapshot';
+import { getPlatform } from '../platform';
 import type { AjisaiInterpreter, ExecuteResult, UserWord } from '../wasm-interpreter-types';
+
+// Drain any host-received serial bytes so this run's SERIAL@READ sees the data
+// that arrived since the previous run. Returns undefined when nothing is open.
+const collectSerialInbox = (): SerialInboxEntry[] | undefined => {
+    const entries = getPlatform().serial.drainAllInboxes();
+    return entries.length > 0 ? entries : undefined;
+};
 
 const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
@@ -21,7 +30,8 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         stack: interpreter.collect_stack(),
         userWords: collectUserWords(interpreter),
         importedModules: interpreter.collect_imported_modules(),
-        executionMode: interpreter.get_execution_mode()
+        executionMode: interpreter.get_execution_mode(),
+        serialInbox: collectSerialInbox()
     });
 
 export const syncInterpreterState = (

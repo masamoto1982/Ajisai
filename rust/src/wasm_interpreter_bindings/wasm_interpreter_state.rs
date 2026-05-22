@@ -349,6 +349,29 @@ impl AjisaiInterpreter {
         self.interpreter.input_buffer = text;
     }
 
+    /// Inject the host-received bytes for a serial port (Section 9.4). Replaces
+    /// any buffer previously set for this port id and clears the port's
+    /// disconnected flag. `SERIAL@READ` drains this buffer.
+    #[wasm_bindgen]
+    pub fn update_serial_inbox(&mut self, port_id: String, bytes: Vec<u8>) {
+        self.interpreter.serial_disconnected.remove(&port_id);
+        self.interpreter.serial_inbox.insert(port_id, bytes);
+    }
+
+    /// Mark a serial port as disconnected by the host. Once its inbox is empty,
+    /// `SERIAL@READ` projects `NilReason::PortDisconnected`.
+    #[wasm_bindgen]
+    pub fn mark_serial_disconnected(&mut self, port_id: String) {
+        self.interpreter.serial_disconnected.insert(port_id);
+    }
+
+    /// Clear all injected serial receive buffers and disconnected flags.
+    #[wasm_bindgen]
+    pub fn clear_serial_inboxes(&mut self) {
+        self.interpreter.serial_inbox.clear();
+        self.interpreter.serial_disconnected.clear();
+    }
+
     #[wasm_bindgen]
     pub fn extract_io_output_buffer(&self) -> String {
         self.interpreter.io_output_buffer.clone()

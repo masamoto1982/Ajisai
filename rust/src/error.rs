@@ -20,6 +20,12 @@ pub enum NilReason {
     /// `absence.origin = comparisonBudget` rather than a SAFE-caught
     /// error.
     Undecidable,
+    /// A host-mediated read (`SERIAL@READ`) found no buffered data. The Bubble
+    /// Rule projects this to NIL with `absence.origin = hostEnvironment`.
+    NoData,
+    /// A host-mediated port was reported disconnected with no remaining
+    /// buffered data. Projected to NIL with `absence.origin = hostEnvironment`.
+    PortDisconnected,
     SafeCaught(Box<ErrorCategory>),
 }
 
@@ -88,6 +94,8 @@ impl NilReason {
             NilReason::UnknownWord => "unknownWord",
             NilReason::ExecutionFailure => "executionFailure",
             NilReason::Undecidable => "undecidable",
+            NilReason::NoData => "noData",
+            NilReason::PortDisconnected => "portDisconnected",
             NilReason::SafeCaught(_) => "safeCaught",
         }
     }

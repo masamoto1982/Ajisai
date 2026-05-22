@@ -6,8 +6,10 @@
 //! can be threaded through a pipeline.
 
 use super::super::Interpreter;
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, value_as_string};
+use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 use serde_json::json;
 
@@ -134,5 +136,35 @@ pub fn op_close(interp: &mut Interpreter) -> Result<()> {
     let handle = pop(interp)?;
     let id = require_port_id(&handle)?;
     emit(interp, json!({ "op": "close", "portId": id }));
+    Ok(())
+}
+
+/// `handle -- bytes` : drain the host-injected receive buffer for the port,
+/// returning a byte vector. With no buffered data this projects a Bubble/NIL:
+/// `portDisconnected` if the host reported the port gone, otherwise `noData`.
+pub fn op_read(interp: &mut Interpreter) -> Result<()> {
+    let handle = pop(interp)?;
+    let id = require_port_id(&handle)?;
+
+    let bytes = interp.serial_inbox.remove(&id).unwrap_or_default();
+    if !bytes.is_empty() {
+        let elements: Vec<Value> = bytes
+            .into_iter()
+            .map(|b| Value::from_fraction(Fraction::from(b as i64)))
+            .collect();
+        interp.stack.push(Value::from_vector(elements));
+    } else if interp.serial_disconnected.contains(&id) {
+        interp.stack.push(Value::bubble_with_reason(
+            NilReason::PortDisconnected,
+            AbsenceOrigin::HostEnvironment,
+            Recoverability::Fatal,
+        ));
+    } else {
+        interp.stack.push(Value::bubble_with_reason(
+            NilReason::NoData,
+            AbsenceOrigin::HostEnvironment,
+            Recoverability::Retryable,
+        ));
+    }
     Ok(())
 }

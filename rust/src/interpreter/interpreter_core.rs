@@ -216,6 +216,14 @@ pub struct Interpreter {
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 
+    /// Host-injected serial receive buffers, keyed by opaque port id. Filled
+    /// before execution from the platform serial adapter (Section 9.4); drained
+    /// by `SERIAL@READ`.
+    pub(crate) serial_inbox: HashMap<String, Vec<u8>>,
+    /// Port ids the host has reported disconnected. `SERIAL@READ` projects this
+    /// to `NilReason::PortDisconnected` once the inbox for the port is empty.
+    pub(crate) serial_disconnected: HashSet<String>,
+
     pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
@@ -270,6 +278,8 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             input_buffer: String::new(),
             io_output_buffer: String::new(),
+            serial_inbox: HashMap::new(),
+            serial_disconnected: HashSet::new(),
             module_vocabulary: HashMap::new(),
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,

@@ -1,4 +1,4 @@
-import type { SerialAdapter, SerialPortInfo } from '../platform-adapter';
+import type { SerialAdapter, SerialInboxData, SerialPortInfo } from '../platform-adapter';
 
 /**
  * Tauri serial backend — typed stub (Phase 3).
@@ -43,6 +43,10 @@ export class TauriSerialAdapter implements SerialAdapter {
 
     drainInbox(_portId: string): Uint8Array {
         return new Uint8Array(0);
+    }
+
+    drainAllInboxes(): SerialInboxData[] {
+        return [];
     }
 
     async close(_portId: string): Promise<void> {

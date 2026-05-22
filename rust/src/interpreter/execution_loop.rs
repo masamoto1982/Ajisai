@@ -52,7 +52,9 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::InvalidEncoding
         | NilReason::InvalidLens
         | NilReason::ExecutionFailure
-        | NilReason::Undecidable => Some(ErrorCategory::Custom),
+        | NilReason::Undecidable
+        | NilReason::NoData
+        | NilReason::PortDisconnected => Some(ErrorCategory::Custom),
     }
 }
 
