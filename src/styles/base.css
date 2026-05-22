@@ -91,8 +91,67 @@ select:focus-visible {
 }
 
 
+/* "移ろい": header and footer share a slowly shifting OKLCH gradient. Each of
+ * the two gradient endpoints rotates its hue around the full colour wheel, so
+ * warm and cool tones flow into one another with no seam — hue 360 is hue 0,
+ * so the cycle never visibly "restarts". The endpoints counter-rotate at
+ * different periods and a slower wave drifts the lightness, so the pair's
+ * relationship keeps changing and the combined motion has no obvious repeat. */
+@property --mv-h1 {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 20;
+}
+
+@property --mv-h2 {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 230;
+}
+
+@property --mv-l {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: 87%;
+}
+
+@keyframes mv-hue1 {
+    from { --mv-h1: 20; }
+    to   { --mv-h1: 380; }
+}
+
+@keyframes mv-hue2 {
+    from { --mv-h2: 590; }
+    to   { --mv-h2: 230; }
+}
+
+@keyframes mv-light {
+    0%   { --mv-l: 87%; }
+    50%  { --mv-l: 92%; }
+    100% { --mv-l: 87%; }
+}
+
+header,
+footer {
+    background: linear-gradient(
+        to right in oklch,
+        oklch(var(--mv-l) 0.1 var(--mv-h1)) 0%,
+        oklch(var(--mv-l) 0.09 var(--mv-h2)) 100%
+    );
+    animation:
+        mv-hue1 240s linear infinite,
+        mv-hue2 300s linear infinite,
+        mv-light 170s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    header,
+    footer {
+        animation: none;
+    }
+}
+
 header {
-    background: #fff;
     border-bottom: var(--border-main);
     padding: 1rem 2rem;
     display: flex;
@@ -149,7 +208,6 @@ header h1 a {
 
 
 footer {
-    background: #fff;
     border-top: var(--border-main);
     padding: 0.75rem 2rem;
     display: flex;
