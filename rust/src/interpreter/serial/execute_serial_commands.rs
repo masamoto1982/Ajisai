@@ -9,7 +9,6 @@ use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, value_as_string};
 use crate::types::{Value, ValueData};
-use num_traits::ToPrimitive;
 use serde_json::json;
 
 fn pop(interp: &mut Interpreter) -> Result<Value> {
@@ -45,7 +44,10 @@ fn extract_bytes(val: &Value) -> Result<Vec<u8>> {
     let mut bytes = Vec::with_capacity(fractions.len());
     for f in fractions {
         if !f.is_integer() {
-            return Err(AjisaiError::create_structure_error("integer byte 0-255", "fraction"));
+            return Err(AjisaiError::create_structure_error(
+                "integer byte 0-255",
+                "fraction",
+            ));
         }
         let n = f
             .to_i64()
@@ -96,7 +98,10 @@ pub fn op_configure(interp: &mut Interpreter) -> Result<()> {
     if baud <= 0 {
         return Err(AjisaiError::from("Serial baud rate must be positive"));
     }
-    emit(interp, json!({ "op": "configure", "portId": id, "baudRate": baud }));
+    emit(
+        interp,
+        json!({ "op": "configure", "portId": id, "baudRate": baud }),
+    );
     interp.stack.push(handle);
     Ok(())
 }
@@ -107,7 +112,10 @@ pub fn op_write(interp: &mut Interpreter) -> Result<()> {
     let handle = pop(interp)?;
     let id = require_port_id(&handle)?;
     let bytes = extract_bytes(&payload)?;
-    emit(interp, json!({ "op": "write", "portId": id, "bytes": bytes }));
+    emit(
+        interp,
+        json!({ "op": "write", "portId": id, "bytes": bytes }),
+    );
     interp.stack.push(handle);
     Ok(())
 }

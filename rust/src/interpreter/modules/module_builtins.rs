@@ -755,7 +755,6 @@ const SERIAL_WORDS: &[ModuleWord] = &[
 
 const MUSIC_SAMPLES: &[SampleWord] = &[];
 
-
 pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {
         name: "MUSIC",
