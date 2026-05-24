@@ -36,6 +36,35 @@ pub fn restore_module(interp: &mut Interpreter, module_name: &str) -> bool {
     module_import_execution::restore_module(interp, module_name)
 }
 
+pub(crate) use module_builtins::CatalogWord;
+
+/// All importable module names, in specification order.
+pub fn available_module_names() -> Vec<&'static str> {
+    module_builtins::available_module_names()
+}
+
+/// Full word + sample catalog for a module, regardless of import state.
+pub fn module_catalog_words(module_name: &str) -> Option<Vec<CatalogWord>> {
+    module_builtins::module_catalog_words(module_name)
+}
+
+/// Restore a precise (possibly partial) import state for one module.
+pub fn restore_import_entry(
+    interp: &mut Interpreter,
+    module_name: &str,
+    import_all_public: bool,
+    words: Vec<String>,
+    samples: Vec<String>,
+) -> bool {
+    module_import_execution::restore_import_entry(
+        interp,
+        module_name,
+        import_all_public,
+        words,
+        samples,
+    )
+}
+
 pub(crate) fn is_known_module(module_name: &str) -> bool {
     let upper = module_name.to_uppercase();
     module_builtins::MODULE_SPECS

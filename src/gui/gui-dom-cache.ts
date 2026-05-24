@@ -1,6 +1,7 @@
 import type { DisplayElements } from './output-display-renderer';
 import type { VocabularyElements } from './vocabulary-state-controller';
 import type { MobileElements } from './mobile-view-switcher';
+import type { DictionarySheetSelectElement } from './dictionary-sheet-selector';
 
 export interface GUIElements {
     readonly codeInput: HTMLTextAreaElement;
@@ -17,7 +18,7 @@ export interface GUIElements {
     readonly userDictionarySelect: HTMLSelectElement;
     readonly dictionarySearch: HTMLInputElement;
     readonly dictionarySearchClearBtn: HTMLButtonElement;
-    readonly dictionarySheetSelect: HTMLSelectElement;
+    readonly dictionarySheetSelect: DictionarySheetSelectElement;
     readonly inputArea: HTMLElement;
     readonly outputArea: HTMLElement;
     readonly stackArea: HTMLElement;
@@ -91,7 +92,9 @@ export const cacheElements = (): GUIElements => ({
     userDictionarySelect: requireElementById('user-dictionary-select', HTMLSelectElement),
     dictionarySearch: requireElementById('dictionary-search', HTMLInputElement),
     dictionarySearchClearBtn: requireElementById('dictionary-search-clear-btn', HTMLButtonElement),
-    dictionarySheetSelect: requireElementById('dictionary-sheet-select', HTMLSelectElement),
+    // A custom selector component installs a `value` accessor on this element
+    // at init time, so it satisfies DictionarySheetSelectElement at runtime.
+    dictionarySheetSelect: requireElementById('dictionary-sheet-select', HTMLElement) as DictionarySheetSelectElement,
     inputArea: requireElementBySelector('.input-area', HTMLElement),
     outputArea: requireElementBySelector('.output-area', HTMLElement),
     stackArea: requireElementBySelector('.stack-area', HTMLElement),

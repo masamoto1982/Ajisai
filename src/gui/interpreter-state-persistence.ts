@@ -1,6 +1,6 @@
 
 
-import type { AjisaiInterpreter, Value, UserWord } from '../wasm-interpreter-types';
+import type { AjisaiInterpreter, Value, UserWord, ImportStateEntry } from '../wasm-interpreter-types';
 import { DEMO_USER_WORDS, DEMO_WORDS_VERSION } from './demo-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
@@ -9,6 +9,9 @@ export interface InterpreterState {
     readonly stack: Value[];
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
+    // Detailed per-module import state. Preferred over `importedModules` on
+    // restore so partial imports (IMPORT-ONLY / UNIMPORT-ONLY) survive reload.
+    readonly importState?: ImportStateEntry[];
     readonly demoWordsVersion?: number;
     readonly activeDictionarySheet?: string;
     readonly activeUserDictionary?: string;
@@ -75,6 +78,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
         stack: interpreter.collect_stack(),
         userWords,
         importedModules: interpreter.collect_imported_modules(),
+        importState: interpreter.collect_import_state(),
         demoWordsVersion: DEMO_WORDS_VERSION,
         activeDictionarySheet: selections.activeDictionarySheet,
         activeUserDictionary: selections.activeUserDictionary
@@ -217,7 +221,11 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
                 }
-                if (state.importedModules && state.importedModules.length > 0) {
+                // Prefer the detailed import state (preserves partial imports);
+                // fall back to the legacy module-name list for older snapshots.
+                if (state.importState && state.importState.length > 0) {
+                    window.ajisaiInterpreter.restore_import_state(state.importState);
+                } else if (state.importedModules && state.importedModules.length > 0) {
                     window.ajisaiInterpreter.restore_imported_modules(state.importedModules);
                 }
 

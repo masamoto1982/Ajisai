@@ -9,6 +9,12 @@ export class AjisaiInterpreter {
      * Clear all injected serial receive buffers and disconnected flags.
      */
     clear_serial_inboxes(): void;
+    /**
+     * All importable module names, in specification order. Drives the GUI's
+     * module selector, which pre-lists every module (active or not) so an
+     * inactive module can be surfaced greyed-out and toggled with IMPORT.
+     */
+    collect_available_modules(): any;
     collect_builtin_word_registry(): any;
     /**
      * Returns Core-listed words (canonical core + Canonical Module words
@@ -27,8 +33,22 @@ export class AjisaiInterpreter {
     collect_dictionary_dependencies(): any;
     collect_error_flow_trace(): any;
     collect_hedged_trace(): any;
+    /**
+     * Detailed import state for persistence. Tuple shape:
+     * `(module, importAllPublic: bool, words: string[], samples: string[])`.
+     * Captures partial imports (IMPORT-ONLY / UNIMPORT-ONLY results) that
+     * `collect_imported_modules` (module names only) cannot represent.
+     */
+    collect_import_state(): any;
     collect_imported_modules(): any;
     collect_input_helper_words_info(): any;
+    /**
+     * Full word + sample catalog for a module, regardless of import state.
+     * Tuple shape: `(shortName, description, imported: bool, isSample: bool)`.
+     * `imported` reflects the live import table so the GUI can render active
+     * words normally and inactive words greyed-out within the same sheet.
+     */
+    collect_module_catalog_words_info(module_name: string): any;
     collect_module_sample_words_info(module_name: string): any;
     /**
      * Tuple shape: `(name, description)`.
@@ -51,6 +71,12 @@ export class AjisaiInterpreter {
     push_json_string(json_string: string): any;
     remove_word(name: string): void;
     reset(): any;
+    /**
+     * Restore a detailed import state previously captured by
+     * `collect_import_state`. Reinstates partial imports exactly, unlike
+     * `restore_imported_modules` which forces a full IMPORT per module.
+     */
+    restore_import_state(state_js: any): void;
     restore_imported_modules(modules_js: any): void;
     restore_stack(stack_js: any): void;
     restore_user_words(words_js: any): void;
@@ -71,6 +97,7 @@ export interface InitOutput {
     readonly __wbg_ajisaiinterpreter_free: (a: number, b: number) => void;
     readonly ajisaiinterpreter_clear_io_output_buffer: (a: number) => void;
     readonly ajisaiinterpreter_clear_serial_inboxes: (a: number) => void;
+    readonly ajisaiinterpreter_collect_available_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_builtin_word_registry: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_listed_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_core_word_aliases_info: (a: number) => any;
@@ -78,8 +105,10 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
     readonly ajisaiinterpreter_collect_error_flow_trace: (a: number) => any;
     readonly ajisaiinterpreter_collect_hedged_trace: (a: number) => any;
+    readonly ajisaiinterpreter_collect_import_state: (a: number) => any;
     readonly ajisaiinterpreter_collect_imported_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
+    readonly ajisaiinterpreter_collect_module_catalog_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_module_sample_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
@@ -95,14 +124,15 @@ export interface InitOutput {
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
+    readonly ajisaiinterpreter_restore_import_state: (a: number, b: any) => void;
     readonly ajisaiinterpreter_restore_imported_modules: (a: number, b: any) => void;
     readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h5f2766d43789c7b4: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__hb0a6d841f6717d79: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h7eb304f5618ba118: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h00a25bd0b22d07fb: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

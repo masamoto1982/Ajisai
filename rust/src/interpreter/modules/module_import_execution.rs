@@ -446,3 +446,30 @@ pub(super) fn restore_module(interp: &mut Interpreter, module_name: &str) -> boo
     let upper = module_name.to_uppercase();
     import_all_public(interp, &upper).is_ok()
 }
+
+/// Restore a precise import state for one module (used by GUI persistence).
+/// Unlike `restore_module`, this reinstates a partial import (the exact
+/// `imported_words` / `imported_samples` sets produced by IMPORT-ONLY /
+/// UNIMPORT-ONLY) rather than forcing a full IMPORT. Returns false when the
+/// module name is unknown.
+pub(super) fn restore_import_entry(
+    interp: &mut Interpreter,
+    module_name: &str,
+    import_all_public: bool,
+    words: Vec<String>,
+    samples: Vec<String>,
+) -> bool {
+    let upper = module_name.to_uppercase();
+    if ensure_module_dictionary(interp, &upper).is_err() {
+        return false;
+    }
+    let entry = ImportedModule {
+        import_all_public,
+        imported_words: words.into_iter().map(|w| w.to_uppercase()).collect(),
+        imported_samples: samples.into_iter().map(|s| s.to_uppercase()).collect(),
+    };
+    interp.import_table.modules.insert(upper, entry);
+    interp.bump_module_epoch();
+    let _ = interp.rebuild_dependencies();
+    true
+}

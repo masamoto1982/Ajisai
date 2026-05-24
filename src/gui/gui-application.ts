@@ -3,6 +3,7 @@ import { createVocabularyManager, VocabularyManager } from './vocabulary-state-c
 import { createEditor, Editor } from './code-input-editor';
 import { createMobileHandler, MobileHandler } from './mobile-view-switcher';
 import { createModuleTabManager, ModuleTabManager } from './module-selector-sheets';
+import { createDictionarySheetSelector } from './dictionary-sheet-selector';
 import { createPersistence, Persistence } from './interpreter-state-persistence';
 import { createExecutionController, ExecutionController } from './execution-controller';
 import { WORKER_MANAGER } from '../workers/execution-worker-manager';
@@ -174,15 +175,12 @@ export const createGUI = (): GUI => {
             display.renderStack(INTERPRETER_CLIENT.collectStack());
             vocabulary.updateUserWords(INTERPRETER_CLIENT.collectUserWordsInfo());
 
-            const newSheetIds: string[] = moduleTabManager.syncModuleTabs();
+            moduleTabManager.syncModuleTabs();
 
-            if (newSheetIds.length > 0) {
-                // A module was imported for the first time: reveal its new tab.
-                revealDictionarySheet(newSheetIds[newSheetIds.length - 1]!);
-            } else if (executedCode) {
-                // Re-importing an already-tabbed module (e.g. one restored on
-                // reload) creates no new tab, but the user still expects the
-                // right pane to switch to that module's dictionary.
+            if (executedCode) {
+                // Importing a module (by typed code) switches the right pane to
+                // that module's dictionary. Sheets for every module already
+                // exist, so this is purely a navigation convenience.
                 const importedModule = extractImportedModuleName(executedCode);
                 if (importedModule
                     && moduleTabManager.lookupModuleArea(`module-${importedModule}`)) {
@@ -220,8 +218,12 @@ export const createGUI = (): GUI => {
         display.init();
         updateEditorPlaceholder(elements, mobile);
 
+        const dictionarySheetSelector = createDictionarySheetSelector(elements.dictionarySheetSelect, {
+            onToggleModule: (name: string, active: boolean) => moduleTabManager.toggleModule(name, active),
+        });
+
         moduleTabManager = createModuleTabManager({
-            selectEl: elements.dictionarySheetSelect,
+            selector: dictionarySheetSelector,
             sheetContainerEl: elements.dictionaryArea,
             onWordClick: (word: string) => {
                 if (!mobile.isMobile()) {
@@ -238,15 +240,10 @@ export const createGUI = (): GUI => {
                     editor.removeLastWord();
                 }
             },
-            onSheetChange: (sheetId: string) => doSwitchDictionarySheet(sheetId),
-            onSearchInput: (filter: string) => {
-                elements.dictionarySearch.value = filter;
-                vocabulary.updateSearchFilter(filter);
-                moduleTabManager.updateSearchFilter(filter);
-            },
             onUpdateDisplays: () => updateAllDisplays(),
             onSaveState: () => persistence.saveCurrentState(),
             showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
+            revealSheet: (sheetId: string) => revealDictionarySheet(sheetId),
             moduleActions: {
                 IO: [{
                     label: 'JSON',

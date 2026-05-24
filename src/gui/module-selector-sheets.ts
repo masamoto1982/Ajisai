@@ -11,20 +11,20 @@ import {
     resetWordInfoDisplay,
 } from './dictionary-element-builders';
 import { formatDictionaryTabName } from './vocabulary-state-controller';
+import type { DictionarySheetSelector, SelectorEntry } from './dictionary-sheet-selector';
 
 export interface ModuleSheet {
     readonly moduleName: string;
     readonly sheetId: string;
-    readonly optionEl: HTMLOptionElement;
     readonly sheetEl: HTMLElement;
 }
 
 export interface ModuleTabManager {
-    readonly syncModuleTabs: () => string[];
-    readonly clearModuleTabs: () => void;
+    readonly syncModuleTabs: () => void;
     readonly lookupModuleArea: (sheetId: string) => HTMLElement | null;
     readonly collectSheets: () => ModuleSheet[];
     readonly updateSearchFilter: (filter: string) => void;
+    readonly toggleModule: (moduleName: string, currentlyActive: boolean) => void;
 }
 
 export interface ModuleActionConfig {
@@ -75,16 +75,15 @@ const renderContextMenu = (
 const quoteAjisaiString = (value: string): string => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 export interface ModuleTabManagerOptions {
-    readonly selectEl: HTMLSelectElement;
+    readonly selector: DictionarySheetSelector;
     readonly sheetContainerEl: HTMLElement;
     readonly onWordClick: (word: string) => void;
     readonly onBackgroundClick: () => void;
     readonly onBackgroundDoubleClick: () => void;
-    readonly onSheetChange: (sheetId: string) => void;
-    readonly onSearchInput: (filter: string) => void;
     readonly onUpdateDisplays?: () => void;
     readonly onSaveState?: () => Promise<void>;
     readonly showInfo?: (msg: string, clear: boolean) => void;
+    readonly revealSheet?: (sheetId: string) => void;
     readonly moduleActions?: Record<string, readonly ModuleActionConfig[]>;
 }
 
@@ -92,7 +91,7 @@ export const createModuleTabManager = (
     options: ModuleTabManagerOptions
 ): ModuleTabManager => {
     const {
-        selectEl,
+        selector,
         sheetContainerEl,
         onWordClick,
         onBackgroundClick,
@@ -100,6 +99,7 @@ export const createModuleTabManager = (
         onUpdateDisplays,
         onSaveState,
         showInfo,
+        revealSheet,
     } = options;
 
     const sheets: ModuleSheet[] = [];
@@ -113,7 +113,10 @@ export const createModuleTabManager = (
     document.addEventListener('click', hideContextMenu);
     window.addEventListener('blur', hideContextMenu);
 
-    const runUnimportCode = async (code: string, successMessage: string): Promise<void> => {
+    // Activation toggles are intentionally implemented as real IMPORT /
+    // UNIMPORT / IMPORT-ONLY / UNIMPORT-ONLY executions so the GUI gesture is
+    // semantically identical to typing the word (SPECIFICATION.md §9.2).
+    const runModuleCode = async (code: string, successMessage: string): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
         try {
             const result = await window.ajisaiInterpreter.execute(code);
@@ -127,31 +130,47 @@ export const createModuleTabManager = (
             await onSaveState?.();
             showInfo?.(successMessage, true);
         } catch (error) {
-            const message = `Failed to unimport module item: ${error}`;
+            const message = `Failed to update module state: ${error}`;
             showInfo?.(message, true);
             alert(message);
         }
     };
 
+    const importModule = (moduleName: string): void => {
+        const quoted = quoteAjisaiString(moduleName);
+        void runModuleCode(`'${quoted}' IMPORT`, `Imported ${moduleName}`);
+    };
+
     const unimportModule = (moduleName: string): void => {
+        const quoted = quoteAjisaiString(moduleName);
+        void runModuleCode(`'${quoted}' UNIMPORT`, `Unimported unused words from ${moduleName}`);
+    };
+
+    const importModuleWord = (moduleName: string, shortName: string): void => {
         const quotedModule = quoteAjisaiString(moduleName);
-        void runUnimportCode(`'${quotedModule}' UNIMPORT`, `Unimported unused words from ${moduleName}`);
+        const quotedWord = quoteAjisaiString(shortName);
+        void runModuleCode(
+            `'${quotedModule}' [ '${quotedWord}' ] IMPORT-ONLY`,
+            `Imported ${moduleName}@${shortName}`
+        );
     };
 
     const unimportModuleWord = (moduleName: string, shortName: string): void => {
         const quotedModule = quoteAjisaiString(moduleName);
         const quotedWord = quoteAjisaiString(shortName);
-        void runUnimportCode(
+        void runModuleCode(
             `'${quotedModule}' [ '${quotedWord}' ] UNIMPORT-ONLY`,
             `Unimported ${moduleName}@${shortName}`
         );
     };
 
-    const createOptionElement = (moduleName: string, sheetId: string): HTMLOptionElement => {
-        const option = document.createElement('option');
-        option.value = sheetId;
-        option.textContent = formatDictionaryTabName(moduleName);
-        return option;
+    const toggleModule = (moduleName: string, currentlyActive: boolean): void => {
+        if (currentlyActive) {
+            unimportModule(moduleName);
+        } else {
+            importModule(moduleName);
+        }
+        revealSheet?.(`module-${moduleName}`);
     };
 
     const createSheetElement = (sheetId: string, moduleName: string): HTMLElement => {
@@ -172,9 +191,13 @@ export const createModuleTabManager = (
         wordsDisplay.addEventListener('contextmenu', (event) => {
             if ((event.target as HTMLElement).closest('.word-button')) return;
             event.preventDefault();
-            renderContextMenu(contextMenu, event, [{
+            const active = isModuleActive(moduleName);
+            renderContextMenu(contextMenu, event, [active ? {
                 label: `Unimport this module (${moduleName})`,
                 onClick: () => unimportModule(moduleName),
+            } : {
+                label: `Import this module (${moduleName})`,
+                onClick: () => importModule(moduleName),
             }]);
         });
 
@@ -197,6 +220,11 @@ export const createModuleTabManager = (
         return sheet;
     };
 
+    const isModuleActive = (moduleName: string): boolean => {
+        if (!window.ajisaiInterpreter) return false;
+        return window.ajisaiInterpreter.collect_imported_modules().includes(moduleName);
+    };
+
     const renderModuleWords = (moduleSheet: ModuleSheet): void => {
         if (!window.ajisaiInterpreter) return;
 
@@ -208,39 +236,57 @@ export const createModuleTabManager = (
         resetWordInfoDisplay(wordInfo as HTMLElement);
 
         try {
-            const moduleWords: Array<[string, string | null]> =
-                window.ajisaiInterpreter.collect_module_words_info(moduleSheet.moduleName);
+            // Full catalog (active + inactive) so inactive words render greyed
+            // and can be activated with a long-press, not just the imported set.
+            const catalog: Array<[string, string, boolean, boolean]> =
+                window.ajisaiInterpreter.collect_module_catalog_words_info(moduleSheet.moduleName);
 
-            const sorted = [...moduleWords].sort((a, b) => compareWordName(a[0], b[0]));
+            const sorted = [...catalog].sort((a, b) => compareWordName(a[0], b[0]));
             const matched = sorted.filter(wd => checkWordMatchesFilter(wd[0], searchFilter));
-            const prefix = `${moduleSheet.moduleName}@`;
 
             const fragment = document.createDocumentFragment();
             matched.forEach(wordData => {
-                const name = wordData[0];
-                const shortName = name.startsWith(prefix) ? name.slice(prefix.length) : name;
-                const description = wordData[1] || name;
+                const shortName = wordData[0];
+                const description = wordData[1] || shortName;
+                const imported = wordData[2];
+                const stateLine = imported
+                    ? 'Long-press to unimport this word.'
+                    : 'Inactive. Long-press to import this word.';
                 const moduleTitle = `${shortName}
 Built-in word from module ${moduleSheet.moduleName}.
-Right-click to unimport this word.`;
+${stateLine}`;
                 const moduleInfo = `${description}
 
 Built-in word from module ${moduleSheet.moduleName}.
-Right-click to unimport this word.`;
+${stateLine}`;
+                const className = `word-button core module${imported ? '' : ' is-inactive'}`;
                 const button = createWordButtonElement(
                     shortName,
                     moduleTitle,
-                    `word-button core module`,
+                    className,
                     () => onWordClick(shortName),
                     () => { renderWordInfo(wordInfo as HTMLElement, moduleInfo); },
                     () => { resetWordInfoDisplay(wordInfo as HTMLElement); },
-                    (event) => renderContextMenu(contextMenu, event, [{
+                    (event) => renderContextMenu(contextMenu, event, imported ? [{
                         label: `Unimport ${moduleSheet.moduleName}@${shortName}`,
                         onClick: () => unimportModuleWord(moduleSheet.moduleName, shortName),
                     }, {
                         label: `Unimport this module (${moduleSheet.moduleName})`,
                         onClick: () => unimportModule(moduleSheet.moduleName),
-                    }])
+                    }] : [{
+                        label: `Import ${moduleSheet.moduleName}@${shortName}`,
+                        onClick: () => importModuleWord(moduleSheet.moduleName, shortName),
+                    }, {
+                        label: `Import this module (${moduleSheet.moduleName})`,
+                        onClick: () => importModule(moduleSheet.moduleName),
+                    }]),
+                    () => {
+                        if (imported) {
+                            unimportModuleWord(moduleSheet.moduleName, shortName);
+                        } else {
+                            importModuleWord(moduleSheet.moduleName, shortName);
+                        }
+                    }
                 );
 
                 fragment.appendChild(button);
@@ -268,55 +314,51 @@ Right-click to unimport this word.`;
     const findSheet = (moduleName: string): ModuleSheet | undefined =>
         sheets.find(s => s.moduleName === moduleName);
 
-    const syncModuleTabs = (): string[] => {
-        if (!window.ajisaiInterpreter) return [];
+    const buildSelectorEntries = (moduleNames: string[]): SelectorEntry[] => {
+        const importedSet = new Set(
+            window.ajisaiInterpreter?.collect_imported_modules() ?? []
+        );
+        const entries: SelectorEntry[] = [
+            { sheetId: 'core', label: formatDictionaryTabName('CORE'), kind: 'core' },
+            { sheetId: 'user', label: formatDictionaryTabName('USER'), kind: 'user' },
+        ];
+        for (const moduleName of moduleNames) {
+            entries.push({
+                sheetId: `module-${moduleName}`,
+                label: formatDictionaryTabName(moduleName),
+                kind: 'module',
+                moduleName,
+                active: importedSet.has(moduleName),
+            });
+        }
+        return entries;
+    };
 
-        const newSheetIds: string[] = [];
+    const syncModuleTabs = (): void => {
+        if (!window.ajisaiInterpreter) return;
 
         try {
-            const importedModules: string[] = window.ajisaiInterpreter.collect_imported_modules();
-            const importedSet = new Set(importedModules);
+            // Every importable module gets a persistent sheet so inactive
+            // candidates are browsable and toggleable, not just imported ones.
+            const available: string[] = window.ajisaiInterpreter.collect_available_modules();
 
-            for (let i = sheets.length - 1; i >= 0; i--) {
-                const sheet = sheets[i]!;
-                if (!importedSet.has(sheet.moduleName)) {
-                    sheet.optionEl.remove();
-                    sheet.sheetEl.remove();
-                    sheets.splice(i, 1);
-                }
-            }
-
-            for (const moduleName of importedModules) {
+            for (const moduleName of available) {
                 if (!findSheet(moduleName)) {
                     const sheetId = `module-${moduleName}`;
-                    const optionEl = createOptionElement(moduleName, sheetId);
                     const sheetEl = createSheetElement(sheetId, moduleName);
-
-                    selectEl.appendChild(optionEl);
                     sheetContainerEl.appendChild(sheetEl);
-
-                    const moduleSheet: ModuleSheet = { moduleName, sheetId, optionEl, sheetEl };
-                    sheets.push(moduleSheet);
-                    newSheetIds.push(sheetId);
+                    sheets.push({ moduleName, sheetId, sheetEl });
                 }
             }
 
             for (const sheet of sheets) {
                 renderModuleWords(sheet);
             }
+
+            selector.setEntries(buildSelectorEntries(available));
         } catch (error) {
             console.error('Failed to sync module sheets:', error);
         }
-
-        return newSheetIds;
-    };
-
-    const clearModuleTabs = (): void => {
-        for (const sheet of sheets) {
-            sheet.optionEl.remove();
-            sheet.sheetEl.remove();
-        }
-        sheets.length = 0;
     };
 
     const lookupModuleSheet = (sheetId: string): HTMLElement | null => {
@@ -333,21 +375,11 @@ Right-click to unimport this word.`;
         }
     };
 
-    selectEl.addEventListener('contextmenu', (event) => {
-        const activeSheet = sheets.find(sheet => sheet.sheetId === selectEl.value);
-        if (!activeSheet) return;
-        event.preventDefault();
-        renderContextMenu(contextMenu, event, [{
-            label: `Unimport this module (${activeSheet.moduleName})`,
-            onClick: () => unimportModule(activeSheet.moduleName),
-        }]);
-    });
-
     return {
         syncModuleTabs,
-        clearModuleTabs,
         lookupModuleArea: lookupModuleSheet,
         collectSheets,
         updateSearchFilter,
+        toggleModule,
     };
 };

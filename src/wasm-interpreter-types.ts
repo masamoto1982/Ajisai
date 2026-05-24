@@ -11,6 +11,9 @@ export interface AjisaiInterpreterClass {
     new(): AjisaiInterpreter;
 }
 
+/** Detailed per-module import state: [module, importAllPublic, words, samples]. */
+export type ImportStateEntry = [string, boolean, string[], string[]];
+
 export interface UserWord {
     dictionary?: string | null;
     name: string;
@@ -38,10 +41,18 @@ export interface AjisaiInterpreter {
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
     collect_imported_modules(): string[];
+    collect_available_modules(): string[];
     collect_module_words_info(module_name: string): Array<[string, string | null]>;
+    // Tuple shape: [shortName, description, imported, isSample]. Returns the
+    // full module catalog (active + inactive words) regardless of import state.
+    collect_module_catalog_words_info(module_name: string): Array<[string, string, boolean, boolean]>;
     collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
     collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;
+    // Tuple shape: [module, importAllPublic, words, samples]. Captures partial
+    // imports (IMPORT-ONLY / UNIMPORT-ONLY) that module-name lists cannot.
+    collect_import_state(): ImportStateEntry[];
+    restore_import_state(state: ImportStateEntry[]): void;
     set_execution_mode(mode: ExecutionMode): void;
     get_execution_mode(): ExecutionMode;
     collect_hedged_trace(): string[];
