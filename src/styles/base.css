@@ -91,22 +91,26 @@ select:focus-visible {
 }
 
 
-/* "移ろい": header and footer share a slowly shifting OKLCH gradient. Each of
- * the two gradient endpoints rotates its hue around the full colour wheel, so
- * warm and cool tones flow into one another with no seam — hue 360 is hue 0,
- * so the cycle never visibly "restarts". The endpoints counter-rotate at
- * different periods and a slower wave drifts the lightness, so the pair's
- * relationship keeps changing and the combined motion has no obvious repeat. */
-@property --mv-h1 {
+/* "移ろい": header and footer share a slowly shifting OKLCH gradient. A single
+ * base hue rotates uniformly around the full colour wheel (hue 380 is hue 20,
+ * so the cycle never visibly restarts), and the second endpoint co-rotates at a
+ * fixed offset (--mv-gap) so the pair turns together like a hue-rotate. Because
+ * both stops share one rotation, the gradient's internal OKLCH interpolation
+ * keeps a constant direction and never flips — the old counter-rotation let the
+ * angular gap cross 180°, which flipped the shorter-arc interpolation and made
+ * the mid-tones jump across the wheel. The gap itself breathes within (0,180)
+ * and a slower wave drifts the lightness, so the pair's relationship still
+ * keeps changing without ever crossing the interpolation seam. */
+@property --mv-h {
     syntax: "<number>";
     inherits: false;
     initial-value: 20;
 }
 
-@property --mv-h2 {
+@property --mv-gap {
     syntax: "<number>";
     inherits: false;
-    initial-value: 230;
+    initial-value: 135;
 }
 
 @property --mv-l {
@@ -115,14 +119,15 @@ select:focus-visible {
     initial-value: 87%;
 }
 
-@keyframes mv-hue1 {
-    from { --mv-h1: 20; }
-    to   { --mv-h1: 380; }
+@keyframes mv-hue {
+    from { --mv-h: 20; }
+    to   { --mv-h: 380; }
 }
 
-@keyframes mv-hue2 {
-    from { --mv-h2: 590; }
-    to   { --mv-h2: 230; }
+@keyframes mv-gap {
+    0%   { --mv-gap: 110; }
+    50%  { --mv-gap: 160; }
+    100% { --mv-gap: 110; }
 }
 
 @keyframes mv-light {
@@ -135,12 +140,12 @@ header,
 footer {
     background: linear-gradient(
         to right in oklch,
-        oklch(var(--mv-l) 0.1 var(--mv-h1)) 0%,
-        oklch(var(--mv-l) 0.09 var(--mv-h2)) 100%
+        oklch(var(--mv-l) 0.1 var(--mv-h)) 0%,
+        oklch(var(--mv-l) 0.09 calc(var(--mv-h) + var(--mv-gap))) 100%
     );
     animation:
-        mv-hue1 240s linear infinite,
-        mv-hue2 300s linear infinite,
+        mv-hue 240s linear infinite,
+        mv-gap 190s ease-in-out infinite,
         mv-light 170s ease-in-out infinite;
 }
 
