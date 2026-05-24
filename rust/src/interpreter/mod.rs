@@ -78,6 +78,8 @@ mod interpreter_mode_tests;
 #[cfg(test)]
 mod module_unimport_tests;
 #[cfg(test)]
+mod module_catalog_tests;
+#[cfg(test)]
 mod nil_reason_tests;
 
 pub use interpreter_core::*;

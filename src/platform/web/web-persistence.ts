@@ -17,6 +17,7 @@ interface InterpreterState {
     stack: unknown;
     userWords: unknown;
     importedModules?: unknown;
+    importState?: unknown;
     demoWordsVersion?: number;
     activeDictionarySheet?: string;
     activeUserDictionary?: string;
@@ -159,6 +160,7 @@ class WebPersistence implements Persistence {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
                 userWords: (result.userWords ?? result.customWords) as InterpreterStateSnapshot['userWords'],
                 importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
+                importState: result.importState as InterpreterStateSnapshot['importState'],
                 demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion,
                 activeDictionarySheet: result.activeDictionarySheet,
                 activeUserDictionary: result.activeUserDictionary

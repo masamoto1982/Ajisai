@@ -1,9 +1,10 @@
-import type { UserWord, Value } from '../wasm-interpreter-types';
+import type { UserWord, Value, ImportStateEntry } from '../wasm-interpreter-types';
 
 export interface InterpreterStateSnapshot {
     readonly stack: Value[];
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
+    readonly importState?: ImportStateEntry[];
     readonly demoWordsVersion?: number;
     readonly activeDictionarySheet?: string;
     readonly activeUserDictionary?: string;
@@ -26,6 +27,7 @@ export interface ExportData {
         readonly stack: unknown;
         readonly userWords: unknown;
         readonly importedModules?: unknown;
+        readonly importState?: unknown;
         readonly demoWordsVersion?: number;
         readonly activeDictionarySheet?: string;
         readonly activeUserDictionary?: string;

@@ -11,6 +11,17 @@ use crate::types::arena::{arena_to_value, json_to_arena_node, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
+fn js_string_array(value: &JsValue) -> Vec<String> {
+    let arr = js_sys::Array::from(value);
+    let mut out = Vec::with_capacity(arr.length() as usize);
+    for i in 0..arr.length() {
+        if let Some(s) = arr.get(i).as_string() {
+            out.push(s);
+        }
+    }
+    out
+}
+
 fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     let obj = js_sys::Object::new();
 
@@ -200,6 +211,102 @@ impl AjisaiInterpreter {
             arr.push(&JsValue::from_str(name));
         }
         arr.into()
+    }
+
+    /// All importable module names, in specification order. Drives the GUI's
+    /// module selector, which pre-lists every module (active or not) so an
+    /// inactive module can be surfaced greyed-out and toggled with IMPORT.
+    #[wasm_bindgen]
+    pub fn collect_available_modules(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for name in interpreter::modules::available_module_names() {
+            arr.push(&JsValue::from_str(name));
+        }
+        arr.into()
+    }
+
+    /// Full word + sample catalog for a module, regardless of import state.
+    /// Tuple shape: `(shortName, description, imported: bool, isSample: bool)`.
+    /// `imported` reflects the live import table so the GUI can render active
+    /// words normally and inactive words greyed-out within the same sheet.
+    #[wasm_bindgen]
+    pub fn collect_module_catalog_words_info(&self, module_name: &str) -> JsValue {
+        let upper = module_name.to_uppercase();
+        let arr = js_sys::Array::new();
+        let Some(catalog) = interpreter::modules::module_catalog_words(&upper) else {
+            return arr.into();
+        };
+        let imported = self.interpreter.import_table.modules.get(&upper);
+        for word in catalog {
+            let short_upper = word.short_name.to_uppercase();
+            let is_imported = imported.map_or(false, |entry| {
+                if entry.import_all_public {
+                    return true;
+                }
+                if word.is_sample {
+                    entry.imported_samples.contains(&short_upper)
+                } else {
+                    entry.imported_words.contains(&short_upper)
+                }
+            });
+            let item = js_sys::Array::new();
+            item.push(&JsValue::from_str(word.short_name));
+            item.push(&JsValue::from_str(word.description));
+            item.push(&is_imported.into());
+            item.push(&word.is_sample.into());
+            arr.push(&item);
+        }
+        arr.into()
+    }
+
+    /// Detailed import state for persistence. Tuple shape:
+    /// `(module, importAllPublic: bool, words: string[], samples: string[])`.
+    /// Captures partial imports (IMPORT-ONLY / UNIMPORT-ONLY results) that
+    /// `collect_imported_modules` (module names only) cannot represent.
+    #[wasm_bindgen]
+    pub fn collect_import_state(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for (name, entry) in &self.interpreter.import_table.modules {
+            let item = js_sys::Array::new();
+            item.push(&JsValue::from_str(name));
+            item.push(&entry.import_all_public.into());
+            let words = js_sys::Array::new();
+            for w in &entry.imported_words {
+                words.push(&JsValue::from_str(w));
+            }
+            item.push(&words.into());
+            let samples = js_sys::Array::new();
+            for s in &entry.imported_samples {
+                samples.push(&JsValue::from_str(s));
+            }
+            item.push(&samples.into());
+            arr.push(&item);
+        }
+        arr.into()
+    }
+
+    /// Restore a detailed import state previously captured by
+    /// `collect_import_state`. Reinstates partial imports exactly, unlike
+    /// `restore_imported_modules` which forces a full IMPORT per module.
+    #[wasm_bindgen]
+    pub fn restore_import_state(&mut self, state_js: JsValue) {
+        let arr = js_sys::Array::from(&state_js);
+        for i in 0..arr.length() {
+            let entry = js_sys::Array::from(&arr.get(i));
+            let Some(module) = entry.get(0).as_string() else {
+                continue;
+            };
+            let import_all_public = entry.get(1).as_bool().unwrap_or(false);
+            let words = js_string_array(&entry.get(2));
+            let samples = js_string_array(&entry.get(3));
+            interpreter::modules::restore_import_entry(
+                &mut self.interpreter,
+                &module,
+                import_all_public,
+                words,
+                samples,
+            );
+        }
     }
 
     #[wasm_bindgen]
