@@ -1,6 +1,6 @@
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -239,110 +239,231 @@ fn interpretation_protocol_str(hint: Interpretation) -> &'static str {
     }
 }
 
-fn set_value_common_fields(obj: &js_sys::Object, value: &Value, hint: Interpretation) {
-    set_prop(obj, "displayHint", &interpretation_protocol_str(hint).into());
-    set_prop(obj, "semantics", &value_semantics_to_js(value));
+/// Pure, side-effect-free description of the JS protocol object the GUI
+/// consumes for a stack value: its `type`, `value`, and `displayHint`,
+/// plus the value to derive the `semantics` block from. Extracting this
+/// mapping out of the `JsValue` glue lets the entire (Value, hint) ->
+/// protocol decision be unit / MC/DC / property tested natively
+/// (AQ-REQ-003), with `protocol_to_js` reduced to a mechanical shim.
+/// Regression target: a promoted dense boolean tensor must serialize its
+/// leaves as booleans, not numbers.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ProtocolNode {
+    pub(crate) type_str: &'static str,
+    pub(crate) value: ProtocolValue,
+    pub(crate) display_hint: Interpretation,
+    /// Source value for the `semantics` block, or `None` for the interior
+    /// nodes of a multi-dimensional tensor, which carry no `semantics`.
+    pub(crate) semantics: Option<Value>,
 }
 
-pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretation>) -> JsValue {
-    let obj = js_sys::Object::new();
-    let effective_hint = external_hint_opt.unwrap_or(value.hint);
-    set_value_common_fields(&obj, value, effective_hint);
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum ProtocolValue {
+    Null,
+    Bool(bool),
+    Text(String),
+    Number {
+        numerator: String,
+        denominator: String,
+    },
+    Children(Vec<ProtocolNode>),
+    Handle(u64),
+}
 
-    match &value.data {
-        crate::types::ValueData::Nil => {
-            set_prop(&obj, "type", &"nil".into());
-            set_prop(&obj, "value", &JsValue::NULL);
-        }
-        crate::types::ValueData::Scalar(f) => {
-            let scalar_type = match effective_hint {
-                Interpretation::TruthValue => "boolean",
-                Interpretation::Timestamp => "datetime",
-                Interpretation::Text => "string",
-                _ => "number",
-            };
-            set_prop(&obj, "type", &scalar_type.into());
-            match scalar_type {
-                "boolean" => set_prop(&obj, "value", &(!f.is_zero()).into()),
-                "string" => {
-                    let as_char = f
-                        .to_i64()
-                        .and_then(|n| char::from_u32(n as u32))
-                        .map(|c| c.to_string())
-                        .unwrap_or_default();
-                    set_prop(&obj, "value", &as_char.into());
-                }
-                _ => {
-                    let num_obj = js_sys::Object::new();
-                    set_prop(&num_obj, "numerator", &f.numerator().to_string().into());
-                    set_prop(&num_obj, "denominator", &f.denominator().to_string().into());
-                    set_prop(&obj, "value", &num_obj.into());
-                }
-            }
-        }
-        crate::types::ValueData::Vector(children) => {
-            if effective_hint == Interpretation::Text {
-                let text = children
-                    .iter()
-                    .filter_map(|child| match &child.data {
-                        crate::types::ValueData::Scalar(codepoint) => {
-                            codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
-                        }
-                        _ => None,
-                    })
-                    .collect::<String>();
-                set_prop(&obj, "type", &"string".into());
-                set_prop(&obj, "value", &text.into());
-            } else {
-                let child_hint = match effective_hint {
-                    Interpretation::TruthValue => Some(Interpretation::TruthValue),
-                    _ => None,
+fn number_protocol_value(f: &Fraction) -> ProtocolValue {
+    ProtocolValue::Number {
+        numerator: f.numerator().to_string(),
+        denominator: f.denominator().to_string(),
+    }
+}
+
+fn scalar_codepoint_string(f: &Fraction) -> String {
+    f.to_i64()
+        .and_then(|n| char::from_u32(n as u32))
+        .map(|c| c.to_string())
+        .unwrap_or_default()
+}
+
+/// Map a scalar fraction to its (type, value) under an interpretation role.
+/// `datetime` keeps the numerator/denominator value shape, matching the
+/// historical wire format.
+fn scalar_to_protocol(f: &Fraction, effective: Interpretation) -> (&'static str, ProtocolValue) {
+    match effective {
+        Interpretation::TruthValue => ("boolean", ProtocolValue::Bool(!f.is_zero())),
+        Interpretation::Timestamp => ("datetime", number_protocol_value(f)),
+        Interpretation::Text => ("string", ProtocolValue::Text(scalar_codepoint_string(f))),
+        _ => ("number", number_protocol_value(f)),
+    }
+}
+
+/// Flatten a dense tensor into protocol leaves. Mirrors the Vector path:
+/// only the `TruthValue` role propagates to leaves (booleans), all other
+/// roles render numbers. Interior nodes of rank >= 2 carry no `semantics`.
+fn tensor_to_protocol(
+    data: &[Fraction],
+    shape: &[usize],
+    leaf_hint: Interpretation,
+) -> Vec<ProtocolNode> {
+    let leaves_are_bool = leaf_hint == Interpretation::TruthValue;
+    if shape.is_empty() || shape.len() == 1 {
+        data.iter()
+            .map(|f| {
+                let (type_str, value, hint) = if leaves_are_bool {
+                    (
+                        "boolean",
+                        ProtocolValue::Bool(!f.is_zero()),
+                        Interpretation::TruthValue,
+                    )
+                } else {
+                    (
+                        "number",
+                        number_protocol_value(f),
+                        Interpretation::RawNumber,
+                    )
                 };
-                let js_array = js_sys::Array::new();
-                for child in children.iter() {
-                    js_array.push(&value_to_js(child, child_hint));
+                ProtocolNode {
+                    type_str,
+                    value,
+                    display_hint: hint,
+                    semantics: Some(Value::from_fraction(f.clone())),
                 }
-                set_prop(&obj, "type", &"vector".into());
-                set_prop(&obj, "value", &js_array.into());
+            })
+            .collect()
+    } else {
+        let outer = shape[0];
+        let rest = &shape[1..];
+        let stride: usize = rest.iter().product();
+        let interior_hint = if leaves_are_bool {
+            Interpretation::TruthValue
+        } else {
+            Interpretation::Unassigned
+        };
+        (0..outer)
+            .map(|i| ProtocolNode {
+                type_str: "vector",
+                value: ProtocolValue::Children(tensor_to_protocol(
+                    &data[i * stride..(i + 1) * stride],
+                    rest,
+                    leaf_hint,
+                )),
+                display_hint: interior_hint,
+                semantics: None,
+            })
+            .collect()
+    }
+}
+
+fn vector_codepoint_text(children: &[Value]) -> String {
+    children
+        .iter()
+        .filter_map(|child| match &child.data {
+            ValueData::Scalar(codepoint) => {
+                codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// The complete, pure (Value, external hint) -> protocol mapping. This is
+/// the single source of truth for the WASM value wire format and the unit
+/// of native verification for the serialization boundary.
+pub(crate) fn value_to_protocol(
+    value: &Value,
+    external_hint_opt: Option<Interpretation>,
+) -> ProtocolNode {
+    let effective = external_hint_opt.unwrap_or(value.hint);
+    let (type_str, protocol_value) = match &value.data {
+        ValueData::Nil => ("nil", ProtocolValue::Null),
+        ValueData::Scalar(f) => scalar_to_protocol(f, effective),
+        ValueData::Vector(children) => {
+            if effective == Interpretation::Text {
+                (
+                    "string",
+                    ProtocolValue::Text(vector_codepoint_text(children)),
+                )
+            } else {
+                let child_hint = if effective == Interpretation::TruthValue {
+                    Some(Interpretation::TruthValue)
+                } else {
+                    None
+                };
+                let kids = children
+                    .iter()
+                    .map(|c| value_to_protocol(c, child_hint))
+                    .collect();
+                ("vector", ProtocolValue::Children(kids))
             }
         }
-        crate::types::ValueData::Tensor { data, shape } => {
-            if effective_hint == Interpretation::Text && shape.len() <= 1 {
+        ValueData::Tensor { data, shape } => {
+            if effective == Interpretation::Text && shape.len() <= 1 {
                 let text: String = data
                     .iter()
                     .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
                     .collect();
-                set_prop(&obj, "type", &"string".into());
-                set_prop(&obj, "value", &text.into());
+                ("string", ProtocolValue::Text(text))
             } else {
-                let tensor_values = data.to_fractions();
-                let js_array = tensor_data_to_js_array(&tensor_values, shape, effective_hint);
-                set_prop(&obj, "type", &"vector".into());
-                set_prop(&obj, "value", &js_array.into());
+                let kids = tensor_to_protocol(&data.to_fractions(), shape, effective);
+                ("vector", ProtocolValue::Children(kids))
             }
         }
-        crate::types::ValueData::Record { pairs, .. } => {
-            let js_array = js_sys::Array::new();
-            for pair in pairs.iter() {
-                js_array.push(&value_to_js(pair, None));
+        ValueData::Record { pairs, .. } => {
+            let kids = pairs.iter().map(|p| value_to_protocol(p, None)).collect();
+            ("vector", ProtocolValue::Children(kids))
+        }
+        ValueData::CodeBlock(_) => ("nil", ProtocolValue::Null),
+        ValueData::ProcessHandle(id) => ("process_handle", ProtocolValue::Handle(*id)),
+        ValueData::SupervisorHandle(id) => ("supervisor_handle", ProtocolValue::Handle(*id)),
+    };
+    ProtocolNode {
+        type_str,
+        value: protocol_value,
+        display_hint: effective,
+        semantics: Some(value.clone()),
+    }
+}
+
+/// Mechanical shim: render a `ProtocolNode` into the `JsValue` the GUI
+/// receives. Carries no decision logic — every behavioral choice lives in
+/// `value_to_protocol`, which is verified natively.
+fn protocol_to_js(node: &ProtocolNode) -> JsValue {
+    let obj = js_sys::Object::new();
+    set_prop(
+        &obj,
+        "displayHint",
+        &interpretation_protocol_str(node.display_hint).into(),
+    );
+    if let Some(source) = &node.semantics {
+        set_prop(&obj, "semantics", &value_semantics_to_js(source));
+    }
+    set_prop(&obj, "type", &node.type_str.into());
+    match &node.value {
+        ProtocolValue::Null => set_prop(&obj, "value", &JsValue::NULL),
+        ProtocolValue::Bool(b) => set_prop(&obj, "value", &(*b).into()),
+        ProtocolValue::Text(s) => set_prop(&obj, "value", &s.clone().into()),
+        ProtocolValue::Number {
+            numerator,
+            denominator,
+        } => {
+            let num_obj = js_sys::Object::new();
+            set_prop(&num_obj, "numerator", &numerator.clone().into());
+            set_prop(&num_obj, "denominator", &denominator.clone().into());
+            set_prop(&obj, "value", &num_obj.into());
+        }
+        ProtocolValue::Children(kids) => {
+            let arr = js_sys::Array::new();
+            for kid in kids {
+                arr.push(&protocol_to_js(kid));
             }
-            set_prop(&obj, "type", &"vector".into());
-            set_prop(&obj, "value", &js_array.into());
+            set_prop(&obj, "value", &arr.into());
         }
-        crate::types::ValueData::CodeBlock(_) => {
-            set_prop(&obj, "type", &"nil".into());
-            set_prop(&obj, "value", &JsValue::NULL);
-        }
-        crate::types::ValueData::ProcessHandle(id) => {
-            set_prop(&obj, "type", &"process_handle".into());
-            set_prop(&obj, "value", &(*id as f64).into());
-        }
-        crate::types::ValueData::SupervisorHandle(id) => {
-            set_prop(&obj, "type", &"supervisor_handle".into());
-            set_prop(&obj, "value", &(*id as f64).into());
-        }
+        ProtocolValue::Handle(id) => set_prop(&obj, "value", &(*id as f64).into()),
     }
     obj.into()
+}
+
+pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretation>) -> JsValue {
+    protocol_to_js(&value_to_protocol(value, external_hint_opt))
 }
 
 fn tensor_data_to_js_array(
@@ -739,6 +860,298 @@ mod mcdc_tests {
                 6,
                 "leaf count must equal the product of non-head dims"
             );
+        }
+    }
+}
+
+// AQ-VER-003-C: native verification of the pure serialization mapping
+// `value_to_protocol`. The historical WASM boundary left the (Value, hint)
+// -> wire-format decision untested (only `cargo check --target wasm32`),
+// which allowed a promoted boolean tensor to serialize as numbers. These
+// tests pin the type/value/displayHint decision for every ValueData kind,
+// the four scalar interpretation arms, the Vector/Tensor text projections,
+// the TruthValue leaf propagation through promoted tensors (the regression),
+// and the external-vs-value hint precedence.
+//
+// Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-003.
+#[cfg(test)]
+mod protocol_mcdc_tests {
+    use super::{value_to_protocol, ProtocolNode, ProtocolValue};
+    use crate::types::fraction::Fraction;
+    use crate::types::{DenseTensor, Interpretation, Value, ValueData};
+    use std::rc::Rc;
+
+    fn frac(n: i64) -> Fraction {
+        Fraction::from(n)
+    }
+
+    fn scalar(n: i64) -> Value {
+        Value::from_fraction(frac(n))
+    }
+
+    fn with_hint(mut v: Value, hint: Interpretation) -> Value {
+        v.hint = hint;
+        v
+    }
+
+    fn vector(children: Vec<Value>) -> Value {
+        Value::from_children(children)
+    }
+
+    fn tensor(nums: &[i64], shape: &[usize]) -> Value {
+        let fracs: Vec<Fraction> = nums.iter().map(|n| frac(*n)).collect();
+        let dense = DenseTensor::from_fractions(fracs, shape.to_vec())
+            .expect("rectangular tensor for test");
+        Value {
+            data: ValueData::Tensor {
+                data: Rc::new(dense),
+                shape: Rc::new(shape.to_vec()),
+            },
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
+    }
+
+    fn num(numerator: &str, denominator: &str) -> ProtocolValue {
+        ProtocolValue::Number {
+            numerator: numerator.to_string(),
+            denominator: denominator.to_string(),
+        }
+    }
+
+    fn children_of(node: &ProtocolNode) -> &[ProtocolNode] {
+        match &node.value {
+            ProtocolValue::Children(kids) => kids,
+            other => panic!("expected Children, got {:?}", other),
+        }
+    }
+
+    // --- scalar interpretation arms (MC/DC on the 4-way match) ---
+
+    #[test]
+    fn scalar_default_hint_is_number() {
+        let node = value_to_protocol(&scalar(7), None);
+        assert_eq!(node.type_str, "number");
+        assert_eq!(node.value, num("7", "1"));
+        assert_eq!(node.display_hint, Interpretation::RawNumber);
+    }
+
+    #[test]
+    fn scalar_truthvalue_is_boolean() {
+        let node = value_to_protocol(&scalar(1), Some(Interpretation::TruthValue));
+        assert_eq!(node.type_str, "boolean");
+        assert_eq!(node.value, ProtocolValue::Bool(true));
+        let zero = value_to_protocol(&scalar(0), Some(Interpretation::TruthValue));
+        assert_eq!(zero.value, ProtocolValue::Bool(false));
+    }
+
+    #[test]
+    fn scalar_timestamp_is_datetime_with_number_value() {
+        let node = value_to_protocol(&scalar(123), Some(Interpretation::Timestamp));
+        assert_eq!(node.type_str, "datetime");
+        assert_eq!(node.value, num("123", "1"));
+    }
+
+    #[test]
+    fn scalar_text_is_string_codepoint() {
+        // 65 -> 'A'
+        let node = value_to_protocol(&scalar(65), Some(Interpretation::Text));
+        assert_eq!(node.type_str, "string");
+        assert_eq!(node.value, ProtocolValue::Text("A".to_string()));
+    }
+
+    // --- hint precedence: external Some wins, None falls back to value.hint ---
+
+    #[test]
+    fn external_hint_overrides_value_hint() {
+        let v = with_hint(scalar(1), Interpretation::RawNumber);
+        let node = value_to_protocol(&v, Some(Interpretation::TruthValue));
+        assert_eq!(node.type_str, "boolean");
+    }
+
+    #[test]
+    fn absent_external_hint_falls_back_to_value_hint() {
+        let v = with_hint(scalar(1), Interpretation::TruthValue);
+        let node = value_to_protocol(&v, None);
+        assert_eq!(node.type_str, "boolean");
+    }
+
+    // --- Vector branch: structural vs Text projection vs TruthValue children ---
+
+    #[test]
+    fn vector_structural_renders_number_children() {
+        let node = value_to_protocol(&vector(vec![scalar(1), scalar(2)]), None);
+        assert_eq!(node.type_str, "vector");
+        let kids = children_of(&node);
+        assert_eq!(kids.len(), 2);
+        assert_eq!(kids[0].type_str, "number");
+        assert_eq!(kids[1].value, num("2", "1"));
+    }
+
+    #[test]
+    fn vector_truthvalue_propagates_to_children() {
+        let node = value_to_protocol(
+            &vector(vec![scalar(1), scalar(0)]),
+            Some(Interpretation::TruthValue),
+        );
+        let kids = children_of(&node);
+        assert_eq!(kids[0].type_str, "boolean");
+        assert_eq!(kids[0].value, ProtocolValue::Bool(true));
+        assert_eq!(kids[1].value, ProtocolValue::Bool(false));
+        assert_eq!(kids[0].display_hint, Interpretation::TruthValue);
+    }
+
+    #[test]
+    fn vector_text_projects_to_string() {
+        // 'A','B' codepoints
+        let node = value_to_protocol(
+            &vector(vec![scalar(65), scalar(66)]),
+            Some(Interpretation::Text),
+        );
+        assert_eq!(node.type_str, "string");
+        assert_eq!(node.value, ProtocolValue::Text("AB".to_string()));
+    }
+
+    // --- Tensor branch: the regression that motivated this layer ---
+
+    #[test]
+    fn tensor_1d_default_renders_numbers() {
+        let node = value_to_protocol(&tensor(&[1, 2, 3], &[3]), None);
+        let kids = children_of(&node);
+        assert_eq!(kids.len(), 3);
+        assert!(kids.iter().all(|k| k.type_str == "number"));
+        assert_eq!(kids[2].value, num("3", "1"));
+    }
+
+    #[test]
+    fn tensor_1d_truthvalue_renders_booleans() {
+        // Regression: a promoted dense boolean vector ([ TRUE ], AND/OR/NOT
+        // results) must serialize its leaves as booleans, not 1/1 numbers.
+        let node = value_to_protocol(&tensor(&[1, 0, 1], &[3]), Some(Interpretation::TruthValue));
+        assert_eq!(node.type_str, "vector");
+        let kids = children_of(&node);
+        assert_eq!(kids[0].value, ProtocolValue::Bool(true));
+        assert_eq!(kids[1].value, ProtocolValue::Bool(false));
+        assert_eq!(kids[2].value, ProtocolValue::Bool(true));
+        assert!(kids.iter().all(|k| k.type_str == "boolean"));
+        assert!(kids
+            .iter()
+            .all(|k| k.display_hint == Interpretation::TruthValue));
+    }
+
+    #[test]
+    fn tensor_2d_numbers_nest_with_unassigned_interior_hint() {
+        let node = value_to_protocol(&tensor(&[1, 2, 3, 4], &[2, 2]), None);
+        let rows = children_of(&node);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].type_str, "vector");
+        assert_eq!(rows[0].display_hint, Interpretation::Unassigned);
+        assert!(
+            rows[0].semantics.is_none(),
+            "interior tensor nodes carry no semantics"
+        );
+        let leaves = children_of(&rows[0]);
+        assert_eq!(leaves[0].value, num("1", "1"));
+        assert_eq!(leaves[1].value, num("2", "1"));
+    }
+
+    #[test]
+    fn tensor_2d_truthvalue_nests_booleans() {
+        let node = value_to_protocol(
+            &tensor(&[1, 0, 0, 1], &[2, 2]),
+            Some(Interpretation::TruthValue),
+        );
+        let rows = children_of(&node);
+        assert_eq!(rows[0].display_hint, Interpretation::TruthValue);
+        let leaves = children_of(&rows[1]);
+        assert_eq!(leaves[0].value, ProtocolValue::Bool(false));
+        assert_eq!(leaves[1].value, ProtocolValue::Bool(true));
+    }
+
+    #[test]
+    fn tensor_1d_text_projects_to_string() {
+        let node = value_to_protocol(&tensor(&[72, 105], &[2]), Some(Interpretation::Text));
+        assert_eq!(node.type_str, "string");
+        assert_eq!(node.value, ProtocolValue::Text("Hi".to_string()));
+    }
+
+    // --- remaining ValueData kinds ---
+
+    #[test]
+    fn nil_and_handles() {
+        assert_eq!(value_to_protocol(&Value::nil(), None).type_str, "nil");
+        assert_eq!(
+            value_to_protocol(&Value::from_process_handle(7), None).value,
+            ProtocolValue::Handle(7)
+        );
+        assert_eq!(
+            value_to_protocol(&Value::from_supervisor_handle(9), None).type_str,
+            "supervisor_handle"
+        );
+    }
+
+    #[test]
+    fn top_level_node_always_carries_semantics() {
+        assert!(value_to_protocol(&scalar(1), None).semantics.is_some());
+        assert!(value_to_protocol(&tensor(&[1, 2], &[2]), None)
+            .semantics
+            .is_some());
+    }
+}
+
+#[cfg(test)]
+mod protocol_property_tests {
+    use super::{value_to_protocol, ProtocolValue};
+    use crate::types::fraction::Fraction;
+    use crate::types::{DenseTensor, Interpretation, Value, ValueData};
+    use proptest::prelude::*;
+    use std::rc::Rc;
+
+    fn tensor_1d(nums: &[i64]) -> Value {
+        let fracs: Vec<Fraction> = nums.iter().map(|n| Fraction::from(*n)).collect();
+        let len = fracs.len();
+        let dense = DenseTensor::from_fractions(fracs, vec![len]).expect("1d tensor");
+        Value {
+            data: ValueData::Tensor {
+                data: Rc::new(dense),
+                shape: Rc::new(vec![len]),
+            },
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
+    }
+
+    proptest! {
+        // TruthValue role => every leaf is a boolean whose truth equals
+        // (element != 0); never a number. Drives broad input coverage of
+        // the tensor leaf decision beyond the hand-picked MC/DC rows.
+        #[test]
+        fn truthvalue_tensor_leaves_are_boolean(nums in proptest::collection::vec(-5i64..5, 1..12)) {
+            let node = value_to_protocol(&tensor_1d(&nums), Some(Interpretation::TruthValue));
+            let kids = match node.value {
+                ProtocolValue::Children(k) => k,
+                other => panic!("expected Children, got {:?}", other),
+            };
+            prop_assert_eq!(kids.len(), nums.len());
+            for (kid, n) in kids.iter().zip(nums.iter()) {
+                prop_assert_eq!(kid.type_str, "boolean");
+                prop_assert_eq!(&kid.value, &ProtocolValue::Bool(*n != 0));
+            }
+        }
+
+        // Default (numeric) role => every leaf is a number, never a boolean.
+        #[test]
+        fn default_tensor_leaves_are_number(nums in proptest::collection::vec(-5i64..5, 1..12)) {
+            let node = value_to_protocol(&tensor_1d(&nums), None);
+            let kids = match node.value {
+                ProtocolValue::Children(k) => k,
+                other => panic!("expected Children, got {:?}", other),
+            };
+            for kid in &kids {
+                prop_assert_eq!(kid.type_str, "number");
+                let is_number = matches!(kid.value, ProtocolValue::Number { .. });
+                prop_assert!(is_number);
+            }
         }
     }
 }
