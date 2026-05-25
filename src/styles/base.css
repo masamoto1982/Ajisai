@@ -263,11 +263,6 @@ footer a:hover {
     color: var(--color-text);
 }
 
-#test-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
 .header-actions {
     width: 100%;
     display: flex;

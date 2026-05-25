@@ -103,7 +103,7 @@ function bindLayoutEvents(context: GuiEventBindingContext): void {
 }
 
 function bindInteractionEvents(context: GuiEventBindingContext): void {
-    const { elements, vocabulary, moduleTabManager, editor, mobile, layoutState, switchArea, display, persistence, executionController, updateAllDisplays } = context;
+    const { elements, vocabulary, moduleTabManager, editor, mobile, layoutState, switchArea, display, persistence, executionController } = context;
     const applySearchFilter = (filter: string): void => {
         elements.dictionarySearch.value = filter;
         elements.mobileDictionarySearch.value = filter;
@@ -125,17 +125,6 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
     elements.clearBtn.addEventListener('click', () => editor.clear());
-
-    elements.testBtn?.addEventListener('click', async () => {
-        switchArea('output');
-        const { createTestRunner } = await import('./gui-test-runner');
-        const testRunner = createTestRunner({
-            showInfo: (text: string, append: boolean) => display.renderInfo(text, append),
-            showError: (error: Error | string) => display.renderError(error),
-            updateDisplays: updateAllDisplays
-        });
-        testRunner.runAllTests();
-    });
 
     elements.outputArea.addEventListener('dblclick', (e: MouseEvent) => {
         if ((e.target as HTMLElement).closest('button, a')) return;
