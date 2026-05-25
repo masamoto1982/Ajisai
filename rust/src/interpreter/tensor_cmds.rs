@@ -206,7 +206,7 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
 
 fn apply_unary_math<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
 where
-    F: Fn(&Fraction) -> Fraction,
+    F: Fn(&Fraction) -> Fraction + Copy,
 {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {
