@@ -266,9 +266,9 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
             shape.extend(first);
             Some(shape)
         }
-        ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            None
+        }
     }
 }
 

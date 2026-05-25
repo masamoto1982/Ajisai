@@ -403,9 +403,9 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             nested_vector_shape(items)
         }
-        ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            None
+        }
     }
 }
 

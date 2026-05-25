@@ -1103,10 +1103,7 @@ mod ragged_equality_tests {
     #[test]
     fn ragged_vector_not_equal_to_dense_tensor() {
         // Dense tensor [1 2] must not equal ragged nested vector [[1] 2].
-        let dense = Value::from_tensor(
-            vec![1i64.into(), 2i64.into()],
-            vec![2],
-        );
+        let dense = Value::from_tensor(vec![1i64.into(), 2i64.into()], vec![2]);
         let ragged = Value::from_children(vec![
             Value::from_children(vec![Value::from_int(1)]),
             Value::from_int(2),
