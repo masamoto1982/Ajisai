@@ -361,7 +361,13 @@ impl PartialEq for ValueData {
 }
 
 fn tensor_eq_vector(data: &DenseTensor, shape: &[usize], v: &[Value]) -> bool {
-    let nested_shape = nested_vector_shape(v);
+    // A dense tensor is always rectangular, so a ragged nested vector (no
+    // well-defined rectangular shape) can never equal one. `nested_vector_shape`
+    // returns `None` for ragged structures, which fails the comparison here
+    // rather than colliding with the dense shape via a count-only fallback.
+    let Some(nested_shape) = nested_vector_shape(v) else {
+        return false;
+    };
     if nested_shape != shape {
         return false;
     }
@@ -369,18 +375,37 @@ fn tensor_eq_vector(data: &DenseTensor, shape: &[usize], v: &[Value]) -> bool {
     nested_flatten_matches(v, data, &mut idx) && idx == data.len()
 }
 
-fn nested_vector_shape(v: &[Value]) -> Vec<usize> {
+/// The rectangular shape of a nested vector, or `None` when the structure is
+/// ragged (sibling elements with differing shapes, or mixed scalar/vector
+/// siblings). Used only for dense-tensor equality, which requires a
+/// rectangular counterpart.
+fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
     if v.is_empty() {
-        return vec![0];
+        return Some(vec![0]);
     }
-    let first_shape = v[0].shape();
-    let all_same = v.iter().skip(1).all(|c| c.shape() == first_shape);
-    if all_same && !first_shape.is_empty() {
-        let mut s = vec![v.len()];
-        s.extend(first_shape);
-        s
-    } else {
-        vec![v.len()]
+    let first_shape = element_rect_shape(&v[0])?;
+    for child in v.iter().skip(1) {
+        if element_rect_shape(child)? != first_shape {
+            return None;
+        }
+    }
+    let mut s = vec![v.len()];
+    s.extend(first_shape);
+    Some(s)
+}
+
+/// Rectangular shape of a single value, or `None` for non-numeric leaves or
+/// ragged sub-structures.
+fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
+    match &value.data {
+        ValueData::Scalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Tensor { shape, .. } => Some((**shape).clone()),
+        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+            nested_vector_shape(items)
+        }
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            None
+        }
     }
 }
 

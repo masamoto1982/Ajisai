@@ -1002,3 +1002,126 @@ mod phase_seven_eq_budget_tests {
         assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
     }
 }
+
+#[cfg(test)]
+mod ragged_broadcast_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn eval(code: &str) -> String {
+        let mut interp = Interpreter::new();
+        interp.execute(code).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "expected single result for: {code}");
+        format!("{}", stack[0])
+    }
+
+    #[tokio::test]
+    async fn test_scalar_mul_over_mixed_nested_vector() {
+        let result = eval("[ 10 [ 1 2 3 ] 10 ] 10 *").await;
+        assert_eq!(result, "[ 100/1 [ 10/1 20/1 30/1 ] 100/1 ]");
+    }
+
+    #[tokio::test]
+    async fn test_scalar_mul_left_operand() {
+        let result = eval("10 [ 10 [ 1 2 3 ] 10 ] *").await;
+        assert_eq!(result, "[ 100/1 [ 10/1 20/1 30/1 ] 100/1 ]");
+    }
+
+    #[tokio::test]
+    async fn test_scalar_add_over_mixed_nested_vector() {
+        let result = eval("[ 1 [ 2 3 ] 4 ] 10 +").await;
+        assert_eq!(result, "[ 11/1 [ 12/1 13/1 ] 14/1 ]");
+    }
+
+    #[tokio::test]
+    async fn test_deeply_nested_ragged() {
+        let result = eval("[ 1 [ 2 [ 3 4 ] ] ] 2 *").await;
+        assert_eq!(result, "[ 2/1 [ 4/1 [ 6/1 8/1 ] ] ]");
+    }
+
+    #[tokio::test]
+    async fn test_elementwise_ragged_same_structure() {
+        let result = eval("[ 1 [ 2 3 ] ] [ 10 [ 20 30 ] ] *").await;
+        assert_eq!(result, "[ 10/1 [ 40/1 90/1 ] ]");
+    }
+
+    #[tokio::test]
+    async fn test_ragged_length_mismatch_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ 1 [ 2 3 ] ] [ 10 [ 20 30 40 ] ] *").await;
+        assert!(result.is_err(), "mismatched nested lengths should error");
+    }
+
+    #[tokio::test]
+    async fn test_regular_nested_still_works() {
+        let result = eval("[ [ 1 2 ] [ 3 4 ] ] 10 *").await;
+        assert_eq!(result, "[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]");
+    }
+
+    #[tokio::test]
+    async fn test_singleton_vector_sibling_preserved() {
+        let result = eval("[ [ 1 ] 2 ] 10 *").await;
+        assert_eq!(result, "[ [ 10/1 ] 20/1 ]");
+    }
+}
+
+#[cfg(test)]
+mod ragged_unary_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn eval(code: &str) -> String {
+        let mut interp = Interpreter::new();
+        interp.execute(code).await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "expected single result for: {code}");
+        format!("{}", stack[0])
+    }
+
+    #[tokio::test]
+    async fn test_floor_over_mixed_nested_vector() {
+        let result = eval("[ 7/2 [ 5/2 9/4 ] 3/2 ] FLOOR").await;
+        assert_eq!(result, "[ 3/1 [ 2/1 2/1 ] 1/1 ]");
+    }
+
+    #[tokio::test]
+    async fn test_not_over_mixed_nested_vector() {
+        let result = eval("[ 0 [ 1 0 ] 5 ] NOT").await;
+        assert_eq!(result, "[ 1/1 [ 0/1 1/1 ] 0/1 ]");
+    }
+
+    #[tokio::test]
+    async fn test_mod_over_mixed_nested_vector() {
+        let result = eval("[ 10 [ 7 8 ] 9 ] 3 %").await;
+        assert_eq!(result, "[ 1/1 [ 1/1 2/1 ] 0/1 ]");
+    }
+}
+
+#[cfg(test)]
+mod ragged_equality_tests {
+    use crate::types::Value;
+
+    #[test]
+    fn ragged_vector_not_equal_to_dense_tensor() {
+        // Dense tensor [1 2] must not equal ragged nested vector [[1] 2].
+        let dense = Value::from_tensor(vec![1i64.into(), 2i64.into()], vec![2]);
+        let ragged = Value::from_children(vec![
+            Value::from_children(vec![Value::from_int(1)]),
+            Value::from_int(2),
+        ]);
+        assert_ne!(dense, ragged);
+        assert_ne!(ragged, dense);
+    }
+
+    #[test]
+    fn matching_nested_vector_equals_dense_tensor() {
+        let dense = Value::from_tensor(
+            vec![1i64.into(), 2i64.into(), 3i64.into(), 4i64.into()],
+            vec![2, 2],
+        );
+        let nested = Value::from_children(vec![
+            Value::from_children(vec![Value::from_int(1), Value::from_int(2)]),
+            Value::from_children(vec![Value::from_int(3), Value::from_int(4)]),
+        ]);
+        assert_eq!(dense, nested);
+    }
+}

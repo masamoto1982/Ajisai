@@ -237,6 +237,124 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
     }
 }
 
+/// The rectangular tensor shape of `value`, or `None` when the value cannot
+/// be faithfully represented as a flat tensor.
+///
+/// A value is rectangular when every leaf is a numeric scalar (or NIL lane)
+/// and all sibling sub-vectors share an identical shape. Ragged structures —
+/// mixed scalar/vector siblings (e.g. `[ 10 [ 1 2 3 ] 10 ]`) or sub-vectors
+/// of differing shape — return `None`. Such values must be broadcast
+/// structurally (see [`apply_recursive_broadcast`]) rather than flattened,
+/// because `shape()` collapses them to a top-level count that disagrees with
+/// the recursively flattened element count.
+fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
+    match &value.data {
+        ValueData::Scalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Tensor { shape, .. } => Some((**shape).clone()),
+        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+            if items.is_empty() {
+                return Some(vec![0]);
+            }
+            let first: Vec<usize> = rectangular_shape(&items[0])?;
+            for item in items.iter().skip(1) {
+                if rectangular_shape(item)? != first {
+                    return None;
+                }
+            }
+            let mut shape = Vec::with_capacity(first.len() + 1);
+            shape.push(items.len());
+            shape.extend(first);
+            Some(shape)
+        }
+        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
+            None
+        }
+    }
+}
+
+/// One level of children for a value, or `None` for a leaf (scalar/NIL) or a
+/// non-broadcastable value. Dense tensors are decomposed into their outermost
+/// rows so that recursive broadcasting treats them like nested vectors.
+fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
+    match &value.data {
+        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+            Some(items.as_ref().clone())
+        }
+        ValueData::Tensor { data, shape } => {
+            let nested = build_nested_value(&data.to_fractions(), shape);
+            match nested.data {
+                ValueData::Vector(items) => Some(items.as_ref().clone()),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// The numeric leaf fraction of a value (scalar or NIL lane), or `None` when
+/// the value is not a numeric leaf.
+fn broadcast_leaf(value: &Value) -> Option<Fraction> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(f.clone()),
+        ValueData::Nil => Some(Fraction::nil()),
+        _ => None,
+    }
+}
+
+/// Structural element-wise broadcast for ragged or nested values.
+///
+/// Mirrors NumPy-style scalar broadcasting but follows the actual value tree
+/// instead of a flattened tensor, so it stays correct when scalars and
+/// vectors are mixed as siblings or sub-vectors have differing shapes. A
+/// scalar paired with a vector is broadcast across every element; two vectors
+/// of equal length combine element-wise; unequal lengths raise
+/// `VectorLengthMismatch`. The leaf operation is the same `op` used by the
+/// flat path, so NIL-lane handling is identical.
+fn apply_recursive_broadcast<F>(a: &Value, b: &Value, op: F) -> Result<Value>
+where
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
+{
+    match (broadcast_children(a), broadcast_children(b)) {
+        (None, None) => {
+            let (Some(fa), Some(fb)) = (broadcast_leaf(a), broadcast_leaf(b)) else {
+                return Err(AjisaiError::create_structure_error(
+                    "number or vector",
+                    "non-numeric value",
+                ));
+            };
+            Ok(Value::from_fraction(op(&fa, &fb)?))
+        }
+        (Some(children), None) => {
+            let out: Vec<Value> = children
+                .iter()
+                .map(|child| apply_recursive_broadcast(child, b, op))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+        (None, Some(children)) => {
+            let out: Vec<Value> = children
+                .iter()
+                .map(|child| apply_recursive_broadcast(a, child, op))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+        (Some(a_children), Some(b_children)) => {
+            if a_children.len() != b_children.len() {
+                return Err(AjisaiError::VectorLengthMismatch {
+                    len1: a_children.len(),
+                    len2: b_children.len(),
+                });
+            }
+            let out: Vec<Value> = a_children
+                .iter()
+                .zip(b_children.iter())
+                .map(|(x, y)| apply_recursive_broadcast(x, y, op))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+    }
+}
+
 /// Metrics-aware tensor broadcast.
 ///
 /// When `metrics` is `Some`, observational VTU counters are incremented at
@@ -254,6 +372,13 @@ where
 {
     if a.is_nil() || b.is_nil() {
         return Err(AjisaiError::from("Cannot broadcast NIL values"));
+    }
+
+    // Ragged or nested-mixed structures (e.g. `[ 10 [ 1 2 3 ] 10 ]`) cannot be
+    // flattened to a single tensor whose shape matches its element count, so
+    // they are broadcast structurally by following the value tree.
+    if rectangular_shape(a).is_none() || rectangular_shape(b).is_none() {
+        return apply_recursive_broadcast(a, b, op);
     }
 
     let tensor_a = FlatTensor::from_value(a)?;
@@ -311,6 +436,34 @@ where
     Ok(out_tensor.to_value())
 }
 
+/// Structural element-wise unary map for ragged or nested values, mirroring
+/// [`apply_recursive_broadcast`]. Follows the value tree instead of a
+/// flattened tensor so it stays correct when scalars and vectors are mixed as
+/// siblings.
+fn apply_recursive_unary<F>(val: &Value, op: F) -> Result<Value>
+where
+    F: Fn(&Fraction) -> Fraction + Copy,
+{
+    match broadcast_children(val) {
+        Some(children) => {
+            let out: Vec<Value> = children
+                .iter()
+                .map(|child| apply_recursive_unary(child, op))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+        None => {
+            let Some(f) = broadcast_leaf(val) else {
+                return Err(AjisaiError::create_structure_error(
+                    "number or vector",
+                    "non-numeric value",
+                ));
+            };
+            Ok(Value::from_fraction(op(&f)))
+        }
+    }
+}
+
 /// Metrics-aware unary flat tensor operation. See
 /// [`apply_binary_broadcast_with_metrics`] for the metrics contract.
 pub(crate) fn apply_unary_flat_with_metrics<F>(
@@ -319,8 +472,14 @@ pub(crate) fn apply_unary_flat_with_metrics<F>(
     mut metrics: Option<&mut RuntimeMetrics>,
 ) -> Result<Value>
 where
-    F: Fn(&Fraction) -> Fraction,
+    F: Fn(&Fraction) -> Fraction + Copy,
 {
+    // Ragged or nested-mixed structures cannot be flattened to a tensor whose
+    // shape matches its element count, so map over the value tree directly.
+    if rectangular_shape(val).is_none() {
+        return apply_recursive_unary(val, op);
+    }
+
     let tensor = FlatTensor::from_value(val)?;
     let element_count = tensor.data.len();
     record_flatten(&mut metrics, element_count);
