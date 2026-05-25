@@ -6,7 +6,6 @@ import type { DictionarySheetSelectElement } from './dictionary-sheet-selector';
 export interface GUIElements {
     readonly codeInput: HTMLTextAreaElement;
     readonly clearBtn: HTMLButtonElement;
-    readonly testBtn: HTMLButtonElement;
     readonly exportBtn: HTMLButtonElement;
     readonly importBtn: HTMLButtonElement;
     readonly outputDisplay: HTMLElement;
@@ -80,7 +79,6 @@ function requireElementBySelector<T extends HTMLElement>(selector: string, expec
 export const cacheElements = (): GUIElements => ({
     codeInput: requireElementById('code-input', HTMLTextAreaElement),
     clearBtn: requireElementById('clear-btn', HTMLButtonElement),
-    testBtn: requireElementById('test-btn', HTMLButtonElement),
     exportBtn: requireElementById('export-btn', HTMLButtonElement),
     importBtn: requireElementById('import-btn', HTMLButtonElement),
     outputDisplay: requireElementById('output-display', HTMLElement),
