@@ -123,9 +123,9 @@ export const TEST_CASES: TestCase[] = [
         category: "Arithmetic"
     },
     {
-        name: "Division by zero - error",
+        name: "Division by zero - yields NIL",
         code: "[ 1 ] [ 0 ] /",
-        expectError: true,
+        expectedStack: [createNil()],
         category: "Arithmetic"
     },
     {
@@ -157,43 +157,43 @@ export const TEST_CASES: TestCase[] = [
     {
         name: "Less than - true",
         code: "[ 3 ] [ 5 ] <",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
     {
         name: "Less than - false",
         code: "[ 5 ] [ 3 ] <",
-        expectedStack: [createVector([createBoolean(false)])],
+        expectedStack: [createBoolean(false)],
         category: "Comparison"
     },
     {
         name: "Greater than (via <= NOT)",
         code: "[ 5 ] [ 3 ] <= NOT",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
     {
         name: "Less than or equal",
         code: "[ 3 ] [ 3 ] <=",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
     {
         name: "Greater than or equal (via < NOT)",
         code: "[ 3 ] [ 3 ] < NOT",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
     {
         name: "Equal - numbers",
         code: "[ 5 ] [ 5 ] =",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
     {
         name: "Equal - fraction auto-reduction",
         code: "[ 1/2 ] [ 2/4 ] =",
-        expectedStack: [createVector([createBoolean(true)])],
+        expectedStack: [createBoolean(true)],
         category: "Comparison"
     },
 
@@ -599,10 +599,13 @@ export const TEST_CASES: TestCase[] = [
         category: "Error Cases"
     },
     {
-        name: "Error - index out of bounds",
+        name: "GET - index out of bounds yields NIL",
         code: "[ 1 2 3 ] [ 10 ] GET",
-        expectError: true,
-        category: "Error Cases"
+        expectedStack: [
+            createVector([createNumber('1'), createNumber('2'), createNumber('3')]),
+            createNil()
+        ],
+        category: "Vector Operations"
     },
     {
 
@@ -621,7 +624,7 @@ export const TEST_CASES: TestCase[] = [
     {
 
         name: "Sort already sorted succeeds",
-        code: "[ 1 2 3 ] SORT",
+        code: "'ALGO' IMPORT [ 1 2 3 ] SORT",
         expectedStack: [createVector([createNumber('1'), createNumber('2'), createNumber('3')])],
         category: "Vector Operations"
     }
