@@ -316,7 +316,7 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretatio
                 set_prop(&obj, "value", &text.into());
             } else {
                 let tensor_values = data.to_fractions();
-                let js_array = tensor_data_to_js_array(&tensor_values, shape);
+                let js_array = tensor_data_to_js_array(&tensor_values, shape, effective_hint);
                 set_prop(&obj, "type", &"vector".into());
                 set_prop(&obj, "value", &js_array.into());
             }
@@ -348,27 +348,39 @@ pub(crate) fn value_to_js(value: &Value, external_hint_opt: Option<Interpretatio
 fn tensor_data_to_js_array(
     data: &[crate::types::fraction::Fraction],
     shape: &[usize],
+    leaf_hint: Interpretation,
 ) -> js_sys::Array {
+    // Mirror the Vector serialization path: only the TruthValue role is
+    // propagated to leaves (numbers otherwise). A promoted dense boolean
+    // vector must render its elements as booleans, matching the Display
+    // path's `format_as_boolean`.
+    let leaves_are_bool = leaf_hint == Interpretation::TruthValue;
     let arr = js_sys::Array::new();
     if shape.is_empty() || shape.len() == 1 {
         for f in data {
-            let num_obj = js_sys::Object::new();
-            js_sys::Reflect::set(
-                &num_obj,
-                &"numerator".into(),
-                &f.numerator().to_string().into(),
-            )
-            .unwrap();
-            js_sys::Reflect::set(
-                &num_obj,
-                &"denominator".into(),
-                &f.denominator().to_string().into(),
-            )
-            .unwrap();
             let elem = js_sys::Object::new();
-            js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
-            js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
-            js_sys::Reflect::set(&elem, &"displayHint".into(), &"rawNumber".into()).unwrap();
+            if leaves_are_bool {
+                js_sys::Reflect::set(&elem, &"type".into(), &"boolean".into()).unwrap();
+                js_sys::Reflect::set(&elem, &"value".into(), &(!f.is_zero()).into()).unwrap();
+                js_sys::Reflect::set(&elem, &"displayHint".into(), &"truthValue".into()).unwrap();
+            } else {
+                let num_obj = js_sys::Object::new();
+                js_sys::Reflect::set(
+                    &num_obj,
+                    &"numerator".into(),
+                    &f.numerator().to_string().into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(
+                    &num_obj,
+                    &"denominator".into(),
+                    &f.denominator().to_string().into(),
+                )
+                .unwrap();
+                js_sys::Reflect::set(&elem, &"type".into(), &"number".into()).unwrap();
+                js_sys::Reflect::set(&elem, &"value".into(), &num_obj).unwrap();
+                js_sys::Reflect::set(&elem, &"displayHint".into(), &"rawNumber".into()).unwrap();
+            }
             let element_value = Value::from_fraction(f.clone());
             js_sys::Reflect::set(
                 &elem,
@@ -382,12 +394,18 @@ fn tensor_data_to_js_array(
         let outer = shape[0];
         let rest = &shape[1..];
         let stride: usize = rest.iter().product();
+        let inner_hint_str = if leaves_are_bool {
+            "truthValue"
+        } else {
+            "unassigned"
+        };
         for i in 0..outer {
-            let inner = tensor_data_to_js_array(&data[i * stride..(i + 1) * stride], rest);
+            let inner =
+                tensor_data_to_js_array(&data[i * stride..(i + 1) * stride], rest, leaf_hint);
             let elem = js_sys::Object::new();
             js_sys::Reflect::set(&elem, &"type".into(), &"vector".into()).unwrap();
             js_sys::Reflect::set(&elem, &"value".into(), &inner).unwrap();
-            js_sys::Reflect::set(&elem, &"displayHint".into(), &"unassigned".into()).unwrap();
+            js_sys::Reflect::set(&elem, &"displayHint".into(), &inner_hint_str.into()).unwrap();
             arr.push(&elem);
         }
     }
@@ -488,7 +506,7 @@ pub(crate) fn arena_node_to_js(
                 js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
             } else {
-                let js_array = tensor_data_to_js_array(data, shape);
+                let js_array = tensor_data_to_js_array(data, shape, effective_hint);
                 js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
                 js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
             }
