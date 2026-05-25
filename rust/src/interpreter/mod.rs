@@ -66,6 +66,8 @@ mod error_flow_trace_tests;
 #[cfg(test)]
 mod hash_tests;
 #[cfg(test)]
+mod nil_conformance_tests;
+#[cfg(test)]
 mod higher_order_fold_tests;
 #[cfg(test)]
 mod higher_order_operations_mcdc_tests;
