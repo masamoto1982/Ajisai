@@ -33,3 +33,4 @@ Thumbs.db
 # Temporarily allow pkg files
 !js/pkg/
 !js/pkg/**
+rust/wasm-tests/target/

@@ -157,3 +157,30 @@ jobs:
 
       - name: Run Vitest MC/DC tests
         run: npm test
+
+  wasm-boundary-tests:
+    name: WASM Boundary Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (with wasm target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      # Drives the real wasm-bindgen boundary (AjisaiInterpreter -> collect_stack)
+      # in Node. Lives in a standalone crate so the main package's proptest
+      # dev-dep (which does not build for wasm32) never enters the graph.
+      - name: Run WASM boundary tests
+        working-directory: rust/wasm-tests
+        run: wasm-pack test --node
