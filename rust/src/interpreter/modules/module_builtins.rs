@@ -900,3 +900,33 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::MODULE_SPECS;
+
+    // The word-info area renders a module word's `description` on a single
+    // line (CSS nowrap + ellipsis). A multi-line description overflows and
+    // gets clipped, so descriptions must stay single-line.
+    #[test]
+    fn module_descriptions_are_single_line() {
+        for module in MODULE_SPECS {
+            for word in module.words {
+                assert!(
+                    !word.description.contains('\n'),
+                    "module {} word {} has a multi-line description",
+                    module.name,
+                    word.short_name
+                );
+            }
+            for sample in module.sample_words {
+                assert!(
+                    !sample.description.contains('\n'),
+                    "module {} sample {} has a multi-line description",
+                    module.name,
+                    sample.name
+                );
+            }
+        }
+    }
+}
