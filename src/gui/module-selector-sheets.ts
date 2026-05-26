@@ -255,17 +255,13 @@ export const createModuleTabManager = (
                 const moduleTitle = `${shortName}
 Built-in word from module ${moduleSheet.moduleName}.
 ${stateLine}`;
-                const moduleInfo = `${description}
-
-Built-in word from module ${moduleSheet.moduleName}.
-${stateLine}`;
                 const className = `word-button core module${imported ? '' : ' is-inactive'}`;
                 const button = createWordButtonElement(
                     shortName,
                     moduleTitle,
                     className,
                     () => onWordClick(shortName),
-                    () => { renderWordInfo(wordInfo as HTMLElement, moduleInfo); },
+                    () => { renderWordInfo(wordInfo as HTMLElement, description); },
                     () => { resetWordInfoDisplay(wordInfo as HTMLElement); },
                     (event) => renderContextMenu(contextMenu, event, imported ? [{
                         label: `Unimport ${moduleSheet.moduleName}@${shortName}`,
