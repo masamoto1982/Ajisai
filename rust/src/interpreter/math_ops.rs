@@ -1,10 +1,22 @@
-use crate::error::{AjisaiError, Result};
+use num_bigint::BigInt;
+use num_integer::Integer;
+use num_traits::Zero;
+
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
-    extract_operands, nil_passthrough_binary, nil_passthrough_unary, push_result,
+    extract_bigint_from_value, extract_operands, nil_passthrough_binary, nil_passthrough_unary,
+    push_result,
 };
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
+
+/// Runtime safety bound on `POW` exponent magnitude, analogous to the
+/// execution step budget (SPEC §5.3). It prevents a single well-formed
+/// `POW` from materializing an astronomically large exact rational and
+/// exhausting memory; it is not a language-level semantic constraint.
+const MAX_POW_EXPONENT: i64 = 1_000_000;
 
 fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
@@ -103,4 +115,136 @@ pub(crate) fn op_min(interp: &mut Interpreter) -> Result<()> {
 
 pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
     apply_binary(interp, "MAX", |a, b| if a.ge(&b) { a } else { b })
+}
+
+fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
+    if interp.consumption_mode != ConsumptionMode::Keep {
+        interp.stack.extend(operands);
+    }
+}
+
+fn pow_fraction(base: &Fraction, mut exp: u64) -> Fraction {
+    let mut result = Fraction::from(1);
+    let mut b = base.clone();
+    while exp > 0 {
+        if exp & 1 == 1 {
+            result = result.mul(&b);
+        }
+        exp >>= 1;
+        if exp > 0 {
+            b = b.mul(&b);
+        }
+    }
+    result
+}
+
+/// `base exp -- result`. Integer-exponent exact power. A non-integer or
+/// non-numeric operand is malformed use and raises an error (cf. `CHR`).
+/// `0` raised to a negative exponent is a well-formed domain miss and
+/// projects to Bubble/NIL with `reason = divisionByZero` (Bubble Rule).
+pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
+    require_stack_top(interp, "POW")?;
+    if nil_passthrough_binary(interp) {
+        return Ok(());
+    }
+    let operands = extract_operands(interp, 2)?;
+    let base = match extract_scalar(&operands[0], "POW") {
+        Ok(b) => b,
+        Err(e) => {
+            restore_operands(interp, operands);
+            return Err(e);
+        }
+    };
+    let exp = match extract_bigint_from_value(&operands[1]) {
+        Ok(e) => e,
+        Err(_) => {
+            restore_operands(interp, operands);
+            return Err(AjisaiError::from("POW: exponent must be an integer"));
+        }
+    };
+    let exp_i64: i64 = match (&exp).try_into() {
+        Ok(n) => n,
+        Err(_) => {
+            restore_operands(interp, operands);
+            return Err(AjisaiError::from(
+                "POW: exponent magnitude exceeds the supported bound",
+            ));
+        }
+    };
+    if exp_i64.abs() > MAX_POW_EXPONENT {
+        restore_operands(interp, operands);
+        return Err(AjisaiError::from(
+            "POW: exponent magnitude exceeds the supported bound",
+        ));
+    }
+
+    let result = if exp_i64 == 0 {
+        Value::from_fraction(Fraction::from(1))
+    } else if exp_i64 > 0 {
+        Value::from_fraction(pow_fraction(&base, exp_i64 as u64))
+    } else if base.is_zero() {
+        Value::bubble_with_reason(
+            NilReason::DivisionByZero,
+            AbsenceOrigin::ExecutionFailure,
+            Recoverability::Recoverable,
+        )
+    } else {
+        let positive = pow_fraction(&base, exp_i64.unsigned_abs());
+        Value::from_fraction(Fraction::new(positive.denominator(), positive.numerator()))
+    };
+    let is_bubble = result.is_nil();
+    push_result(interp, result);
+    if !is_bubble {
+        interp
+            .semantic_registry
+            .push_hint(Interpretation::RawNumber);
+    }
+    Ok(())
+}
+
+fn apply_integer_binary<F>(interp: &mut Interpreter, word: &str, op: F) -> Result<()>
+where
+    F: Fn(&BigInt, &BigInt) -> BigInt,
+{
+    require_stack_top(interp, word)?;
+    if nil_passthrough_binary(interp) {
+        return Ok(());
+    }
+    let operands = extract_operands(interp, 2)?;
+    let parsed = (
+        extract_bigint_from_value(&operands[0]),
+        extract_bigint_from_value(&operands[1]),
+    );
+    let (a, b) = match parsed {
+        (Ok(a), Ok(b)) => (a, b),
+        _ => {
+            restore_operands(interp, operands);
+            return Err(AjisaiError::from(format!(
+                "{}: expected two integers",
+                word
+            )));
+        }
+    };
+    push_result(
+        interp,
+        Value::from_fraction(Fraction::new(op(&a, &b), BigInt::from(1))),
+    );
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::RawNumber);
+    Ok(())
+}
+
+pub(crate) fn op_gcd(interp: &mut Interpreter) -> Result<()> {
+    apply_integer_binary(interp, "GCD", |a, b| a.gcd(b))
+}
+
+pub(crate) fn op_lcm(interp: &mut Interpreter) -> Result<()> {
+    apply_integer_binary(interp, "LCM", |a, b| {
+        if a.is_zero() || b.is_zero() {
+            BigInt::from(0)
+        } else {
+            a.lcm(b)
+        }
+    })
 }

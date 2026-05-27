@@ -97,6 +97,86 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pow_positive_exponent() {
+        assert_eq!(top_i64("'math' IMPORT 2 10 POW").await, 1024);
+        assert_eq!(top_i64("'math' IMPORT 5 0 POW").await, 1);
+        assert_eq!(top_i64("'math' IMPORT -3 3 POW").await, -27);
+    }
+
+    #[tokio::test]
+    async fn pow_negative_exponent_is_reciprocal() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 2 -2 POW")
+            .await
+            .expect("should succeed");
+        let scalar = interp.stack[0].as_scalar().expect("scalar");
+        assert_eq!(scalar.numerator().to_string(), "1");
+        assert_eq!(scalar.denominator().to_string(), "4");
+    }
+
+    #[tokio::test]
+    async fn pow_zero_to_negative_is_bubble() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 0 -1 POW")
+            .await
+            .expect("0^negative should be a well-formed Bubble, not an error");
+        assert_eq!(interp.stack.len(), 1);
+        assert!(interp.stack[0].is_nil(), "0^negative should project to NIL");
+    }
+
+    #[tokio::test]
+    async fn pow_non_integer_exponent_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("'math' IMPORT 2 1/2 POW").await;
+        assert!(result.is_err(), "non-integer exponent is malformed use");
+    }
+
+    #[tokio::test]
+    async fn pow_huge_exponent_is_bounded() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("'math' IMPORT 2 2000000 POW").await;
+        assert!(result.is_err(), "exponent past the safety bound errors");
+    }
+
+    #[tokio::test]
+    async fn pow_nil_passes_through() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT NIL 2 POW")
+            .await
+            .expect("NIL passthrough should not error");
+        assert!(interp.stack[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn gcd_and_lcm_basic() {
+        assert_eq!(top_i64("'math' IMPORT 12 18 GCD").await, 6);
+        assert_eq!(top_i64("'math' IMPORT -12 18 GCD").await, 6);
+        assert_eq!(top_i64("'math' IMPORT 0 0 GCD").await, 0);
+        assert_eq!(top_i64("'math' IMPORT 4 6 LCM").await, 12);
+        assert_eq!(top_i64("'math' IMPORT 0 5 LCM").await, 0);
+    }
+
+    #[tokio::test]
+    async fn gcd_non_integer_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("'math' IMPORT 3/2 6 GCD").await;
+        assert!(result.is_err(), "GCD of a non-integer is malformed use");
+    }
+
+    #[tokio::test]
+    async fn lcm_nil_passes_through() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 4 NIL LCM")
+            .await
+            .expect("NIL passthrough should not error");
+        assert!(interp.stack[0].is_nil());
+    }
+
+    #[tokio::test]
     async fn keep_mode_retains_operands() {
         let mut interp = Interpreter::new();
         interp

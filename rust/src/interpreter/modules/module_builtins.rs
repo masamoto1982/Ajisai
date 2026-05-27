@@ -745,6 +745,45 @@ const MATH_WORDS: &[ModuleWord] = &[
         Stability::Stable,
         Capabilities::PURE
     ),
+    module_word!(
+        "POW",
+        WordShape::Form,
+        "Integer-exponent exact power: base exp -- base^exp.",
+        math_ops::op_pow,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "GCD",
+        WordShape::Form,
+        "Greatest common divisor of two integers.",
+        math_ops::op_gcd,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "LCM",
+        WordShape::Form,
+        "Least common multiple of two integers.",
+        math_ops::op_lcm,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
 ];
 
 const SERIAL_WORDS: &[ModuleWord] = &[
@@ -928,6 +967,25 @@ pub(crate) fn module_word_description(module_name: &str, short_name: &str) -> Op
         .map(|w| w.description)
 }
 
+/// Per-word contract overrides for module words whose `partiality` /
+/// `nil_policy` differ from the purity-class default produced by
+/// `coreword_registry::{pure,observable,effectful}`.
+fn contract_override(module: &str, word: &str) -> Option<(Partiality, NilPolicy)> {
+    match (module, word) {
+        // SERIAL@READ projects the no-data / disconnected condition onto
+        // Bubble/NIL (Section 9.4), so it is Projecting/CreatesNil rather
+        // than the effectful default of Partial/RejectsNil.
+        ("SERIAL", "READ") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
+        // MATH@POW projects 0 raised to a negative exponent onto Bubble/NIL
+        // (reason = divisionByZero) while erroring on malformed use.
+        ("MATH", "POW") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
+        // MATH@GCD / MATH@LCM raise an error on non-integer numeric inputs
+        // (malformed use, cf. CHR) and pass NIL operands through.
+        ("MATH", "GCD") | ("MATH", "LCM") => Some((Partiality::Partial, NilPolicy::Passthrough)),
+        _ => None,
+    }
+}
+
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
     MODULE_SPECS
         .iter()
@@ -955,12 +1013,11 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 metadata.listed_in_core = false;
                 metadata.listed_in_modules = vec![spec.name.to_string()];
                 metadata.listed_in_categories = Vec::new();
-                // SERIAL@READ projects the no-data / disconnected condition onto
-                // Bubble/NIL (Section 9.4), so it is Projecting/CreatesNil rather
-                // than the effectful default of Partial/RejectsNil.
-                if spec.name == "SERIAL" && word.short_name == "READ" {
-                    metadata.partiality = Partiality::Projecting;
-                    metadata.nil_policy = NilPolicy::CreatesNil;
+                if let Some((partiality, nil_policy)) =
+                    contract_override(spec.name, word.short_name)
+                {
+                    metadata.partiality = partiality;
+                    metadata.nil_policy = nil_policy;
                 }
                 metadata
             })
