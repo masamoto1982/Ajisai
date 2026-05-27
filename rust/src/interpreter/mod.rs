@@ -37,6 +37,8 @@ pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
 pub mod tensor_ops;
+pub mod time_calendar;
+pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_exec;
 pub mod vector_ops;
