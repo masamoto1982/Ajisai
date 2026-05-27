@@ -51,6 +51,23 @@ pub fn iso_weekday(y: i64, m: i64, d: i64) -> i64 {
     (days_from_civil(y, m, d) + 3).rem_euclid(7) + 1
 }
 
+/// Number of days in a civil month, leap years included.
+pub fn days_in_month(y: i64, m: i64) -> i64 {
+    let (ny, nm) = if m == 12 { (y + 1, 1) } else { (y, m + 1) };
+    days_from_civil(ny, nm, 1) - days_from_civil(y, m, 1)
+}
+
+/// Add `n` whole months to a civil date, clamping the day to the last day of
+/// the target month (e.g. Jan 31 + 1 month -> Feb 28/29). The `12 * years`
+/// case yields year arithmetic with the same end-of-month clamping.
+pub fn add_months_civil(y: i64, m: i64, d: i64, n: i64) -> (i64, i64, i64) {
+    let total = (m - 1) + n;
+    let new_year = y + total.div_euclid(12);
+    let new_month = total.rem_euclid(12) + 1;
+    let clamped_day = d.min(days_in_month(new_year, new_month));
+    (new_year, new_month, clamped_day)
+}
+
 /// A timezone offset in hours east of UTC, converted to an exact number of
 /// seconds. `+9` (Asia/Tokyo) -> `32400`, `+5.5` (India) -> `19800`.
 pub fn offset_seconds(offset_hours: &Fraction) -> Fraction {
@@ -136,5 +153,22 @@ mod tests {
     fn known_weekdays() {
         assert_eq!(iso_weekday(2024, 11, 25), 1); // Monday
         assert_eq!(iso_weekday(2000, 1, 1), 6); // Saturday
+    }
+
+    #[test]
+    fn month_lengths_and_leap() {
+        assert_eq!(days_in_month(2024, 2), 29); // leap
+        assert_eq!(days_in_month(2023, 2), 28);
+        assert_eq!(days_in_month(2024, 1), 31);
+        assert_eq!(days_in_month(2024, 4), 30);
+    }
+
+    #[test]
+    fn add_months_clamps_to_month_end() {
+        assert_eq!(add_months_civil(2024, 1, 31, 1), (2024, 2, 29)); // leap Feb
+        assert_eq!(add_months_civil(2023, 1, 31, 1), (2023, 2, 28));
+        assert_eq!(add_months_civil(2024, 12, 15, 1), (2025, 1, 15)); // year rollover
+        assert_eq!(add_months_civil(2024, 3, 15, -4), (2023, 11, 15)); // backward
+        assert_eq!(add_months_civil(2024, 2, 29, 12), (2025, 2, 28)); // +1 year clamps
     }
 }

@@ -8,12 +8,19 @@
 //! - DATE (civil): `[year month day]`.
 //! - TIME (civil): `[hour minute second]` (second exact).
 
-use crate::error::{AjisaiError, Result};
+use num_bigint::BigInt;
+
+use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::cast::cast_value_helpers::is_string_value_with_hint;
 use crate::interpreter::time_calendar::{
-    civil_from_days, civil_to_instant, days_from_civil, instant_to_civil, iso_weekday, Civil,
+    add_months_civil, civil_from_days, civil_to_instant, days_from_civil, instant_to_civil,
+    iso_weekday, Civil,
 };
-use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
+use crate::interpreter::value_extraction_helpers::{
+    extract_operands, push_result, value_as_string,
+};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
 
@@ -328,5 +335,145 @@ pub fn op_format(interp: &mut Interpreter) -> Result<()> {
         Ok(Value::from_string(&text))
     })?;
     interp.semantic_registry.push_hint(Interpretation::Text);
+    Ok(())
+}
+
+/// Shared body for ADD-MONTHS / ADD-YEARS: shift the date part by `months`,
+/// clamping to the target month end, and preserve any time-of-day fields.
+fn shift_months(interp: &mut Interpreter, word: &str, months_per_unit: i64) -> Result<()> {
+    require_stack_top(interp, word)?;
+    let operands = extract_operands(interp, 2)?;
+    let result = (|| {
+        let components = civil_components(&operands[0], word, &[3, 6])?;
+        let units = integer_field(&operands[1], word, "amount")?;
+        let y = integer_field(&components[0], word, "year")?;
+        let m = integer_field(&components[1], word, "month")?;
+        let d = integer_field(&components[2], word, "day")?;
+        let (ny, nm, nd) = add_months_civil(y, m, d, units * months_per_unit);
+        let mut out = vec![
+            Value::from_int(ny),
+            Value::from_int(nm),
+            Value::from_int(nd),
+        ];
+        for elem in components.iter().skip(3) {
+            out.push(elem.clone());
+        }
+        Ok(Value::from_vector(out))
+    })();
+    match result {
+        Ok(value) => {
+            interp.stack.push(value);
+            Ok(())
+        }
+        Err(e) => {
+            restore(interp, operands);
+            Err(e)
+        }
+    }
+}
+
+/// `date|datetime n -- date|datetime`. Add `n` months, clamping the day to the
+/// target month's last day (Jan 31 + 1 -> Feb 28/29).
+pub fn op_add_months(interp: &mut Interpreter) -> Result<()> {
+    shift_months(interp, "ADD-MONTHS", 1)
+}
+
+/// `date|datetime n -- date|datetime`. Add `n` years, clamping Feb 29 to
+/// Feb 28 in non-leap target years.
+pub fn op_add_years(interp: &mut Interpreter) -> Result<()> {
+    shift_months(interp, "ADD-YEARS", 12)
+}
+
+// --- Parsing ---------------------------------------------------------------
+
+/// Parse an ISO-8601 civil string into `[Y M D h m s]`. Accepts a bare date
+/// `YYYY-MM-DD` (time defaults to `00:00:00`) or a datetime with a `T` or
+/// space separator and optional fractional seconds. Returns `None` for any
+/// shape or out-of-range field it cannot interpret.
+fn parse_iso_civil(text: &str) -> Option<Civil> {
+    let text = text.trim();
+    let (date_part, time_part) = match text.split_once(['T', ' ']) {
+        Some((d, t)) => (d, Some(t)),
+        None => (text, None),
+    };
+
+    let mut date_fields = date_part.split('-');
+    let year: i64 = date_fields.next()?.parse().ok()?;
+    let month: i64 = date_fields.next()?.parse().ok()?;
+    let day: i64 = date_fields.next()?.parse().ok()?;
+    if date_fields.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+
+    let (hour, minute, second) = match time_part {
+        None => (0, 0, Fraction::from(0)),
+        Some(t) => {
+            let mut time_fields = t.split(':');
+            let hour: i64 = time_fields.next()?.parse().ok()?;
+            let minute: i64 = time_fields.next()?.parse().ok()?;
+            let second = parse_second(time_fields.next()?)?;
+            if time_fields.next().is_some()
+                || !(0..=23).contains(&hour)
+                || !(0..=59).contains(&minute)
+            {
+                return None;
+            }
+            (hour, minute, second)
+        }
+    };
+
+    Some(Civil {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+    })
+}
+
+/// Parse a second field `ss` or `ss.fff` into an exact rational in `[0, 61)`.
+fn parse_second(field: &str) -> Option<Fraction> {
+    let (int_part, frac_part) = match field.split_once('.') {
+        Some((i, f)) => (i, Some(f)),
+        None => (field, None),
+    };
+    let secs: i64 = int_part.parse().ok()?;
+    if !(0..=60).contains(&secs) {
+        return None;
+    }
+    let mut value = Fraction::from(secs);
+    if let Some(frac) = frac_part {
+        if frac.is_empty() || !frac.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        let numerator: BigInt = frac.parse().ok()?;
+        let denominator = BigInt::from(10).pow(frac.len() as u32);
+        value = value.add(&Fraction::new(numerator, denominator));
+    }
+    Some(value)
+}
+
+/// `text -- datetime`. Parse an ISO-8601 civil string. Non-text input is
+/// malformed use and raises an error (cf. `NUM`); a well-formed string that is
+/// not a valid ISO civil value projects to Bubble/NIL (`reason =
+/// invalidEncoding`).
+pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
+    require_stack_top(interp, "PARSE")?;
+    let hint = interp.semantic_registry.lookup_last_hint();
+    let operands = extract_operands(interp, 1)?;
+    if !is_string_value_with_hint(&operands[0], hint) {
+        restore(interp, operands);
+        return Err(AjisaiError::from("PARSE: expected an ISO-8601 text value"));
+    }
+    let text = value_as_string(&operands[0]).unwrap_or_default();
+    match parse_iso_civil(&text) {
+        Some(civil) => interp.stack.push(datetime_value(&civil)),
+        None => interp.stack.push(Value::bubble_with_reason(
+            NilReason::InvalidEncoding,
+            AbsenceOrigin::InvalidEncoding,
+            Recoverability::Recoverable,
+        )),
+    }
     Ok(())
 }

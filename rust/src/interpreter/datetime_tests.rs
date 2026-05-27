@@ -156,6 +156,86 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn add_months_clamps_and_rolls_over() {
+        assert_eq!(ints("[ 2024 1 31 ] 1 ADD-MONTHS").await, vec![2024, 2, 29]);
+        assert_eq!(ints("[ 2023 1 31 ] 1 ADD-MONTHS").await, vec![2023, 2, 28]);
+        assert_eq!(ints("[ 2024 12 15 ] 1 ADD-MONTHS").await, vec![2025, 1, 15]);
+        // time-of-day preserved on a datetime
+        assert_eq!(
+            ints("[ 2024 1 31 9 30 0 ] 1 ADD-MONTHS").await,
+            vec![2024, 2, 29, 9, 30, 0]
+        );
+    }
+
+    #[tokio::test]
+    async fn add_years_clamps_leap_day() {
+        assert_eq!(ints("[ 2024 2 29 ] 1 ADD-YEARS").await, vec![2025, 2, 28]);
+        assert_eq!(ints("[ 2020 2 29 ] 4 ADD-YEARS").await, vec![2024, 2, 29]);
+    }
+
+    #[tokio::test]
+    async fn parse_iso_date_and_datetime() {
+        assert_eq!(
+            ints("'2024-11-25' PARSE-ISO").await,
+            vec![2024, 11, 25, 0, 0, 0]
+        );
+        assert_eq!(
+            ints("'2024-11-25T14:30:05' PARSE-ISO").await,
+            vec![2024, 11, 25, 14, 30, 5]
+        );
+        // space separator is also accepted
+        assert_eq!(
+            ints("'2024-11-25 14:30:05' PARSE-ISO").await,
+            vec![2024, 11, 25, 14, 30, 5]
+        );
+    }
+
+    #[tokio::test]
+    async fn parse_fractional_second_is_exact() {
+        assert_eq!(civil("'1970-01-01T00:00:00.5' PARSE-ISO").await[5], (1, 2));
+    }
+
+    #[tokio::test]
+    async fn parse_roundtrips_with_format() {
+        assert_eq!(
+            text("'2024-11-25T14:30:05' PARSE-ISO FORMAT").await,
+            "'2024-11-25T14:30:05'"
+        );
+    }
+
+    #[tokio::test]
+    async fn parse_invalid_text_is_bubble() {
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'time' IMPORT 'not-a-date' PARSE-ISO")
+            .await
+            .expect("unparseable text is a Bubble, not an error");
+        assert!(interp.stack[0].is_nil());
+        // a fallback datetime can be supplied with OR-NIL
+        let mut interp2 = Interpreter::new();
+        interp2
+            .execute("'time' IMPORT [ 1970 1 1 0 0 0 ] '13-99' PARSE-ISO =>")
+            .await
+            .expect("should succeed");
+        assert_eq!(
+            interp2.stack[0]
+                .as_vector_view()
+                .unwrap()
+                .iter()
+                .map(|e| e.as_scalar().unwrap().to_i64().unwrap())
+                .collect::<Vec<_>>(),
+            vec![1970, 1, 1, 0, 0, 0]
+        );
+    }
+
+    #[tokio::test]
+    async fn parse_non_text_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("'time' IMPORT 42 PARSE-ISO").await;
+        assert!(result.is_err(), "PARSE of a number is malformed use");
+    }
+
+    #[tokio::test]
     async fn datetime_rejects_stack_mode() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'time' IMPORT 0 0 .. DATETIME").await;
