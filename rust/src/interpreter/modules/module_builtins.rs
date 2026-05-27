@@ -467,6 +467,54 @@ const JSON_WORDS: &[ModuleWord] = &[
         Capabilities::PURE
     ),
     module_word!(
+        "HAS",
+        "True if a JSON object contains the given key",
+        json::op_json_has,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "VALUES",
+        "Get all values from a JSON object",
+        json::op_json_values,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "MERGE",
+        "Merge two JSON objects; right-hand keys win on conflict",
+        json::op_json_merge,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "DELETE",
+        "Remove a key from a JSON object",
+        json::op_json_delete,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
         "EXPORT",
         "Export stack top as JSON file download",
         json::op_json_export,

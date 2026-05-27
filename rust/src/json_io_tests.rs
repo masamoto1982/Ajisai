@@ -4,7 +4,6 @@
 mod json_io_tests {
     use crate::interpreter::Interpreter;
 
-
     #[tokio::test]
     async fn test_parse_integer() {
         let mut interp = Interpreter::new();
@@ -102,7 +101,6 @@ mod json_io_tests {
         assert_eq!(parsed, "42/1");
     }
 
-
     #[tokio::test]
     async fn test_stringify_integer() {
         let mut interp = Interpreter::new();
@@ -158,7 +156,6 @@ mod json_io_tests {
         assert_eq!(result, "'[1,2,3]'");
     }
 
-
     #[tokio::test]
     async fn test_input_empty() {
         let mut interp = Interpreter::new();
@@ -202,7 +199,6 @@ mod json_io_tests {
         assert!(!interp.io_output_buffer.is_empty());
     }
 
-
     #[tokio::test]
     async fn test_json_get_existing_key() {
         let mut interp = Interpreter::new();
@@ -244,7 +240,6 @@ mod json_io_tests {
         assert_eq!(result, "42/1");
     }
 
-
     #[tokio::test]
     async fn test_json_keys() {
         let mut interp = Interpreter::new();
@@ -268,7 +263,6 @@ mod json_io_tests {
         assert_eq!(stack.len(), 1);
         assert!(stack[0].is_nil());
     }
-
 
     #[tokio::test]
     async fn test_json_set_new_key() {
@@ -309,7 +303,6 @@ mod json_io_tests {
         assert_eq!(stack[0].len(), 1);
     }
 
-
     #[tokio::test]
     async fn test_parse_stringify_roundtrip_number() {
         let mut interp = Interpreter::new();
@@ -338,7 +331,6 @@ mod json_io_tests {
         assert_eq!(result, "'[1,2,3]'");
     }
 
-
     #[tokio::test]
     async fn test_input_parse_process_stringify_output() {
         let mut interp = Interpreter::new();
@@ -352,7 +344,6 @@ mod json_io_tests {
         assert_eq!(stack.len(), 0);
         assert_eq!(interp.io_output_buffer, "'[2,4,6]'");
     }
-
 
     #[tokio::test]
     async fn test_json_get_large_object() {
@@ -446,5 +437,107 @@ mod json_io_tests {
         assert!(result.contains("alpha"));
         assert!(result.contains("beta"));
         assert!(result.contains("gamma"));
+    }
+
+    #[tokio::test]
+    async fn test_json_has_present_and_absent() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+
+        interp
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@HAS"#)
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
+
+        interp.stack.clear();
+        interp
+            .execute(r#"'{"a": 1}' JSON@PARSE 'missing' JSON@HAS"#)
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
+    }
+
+    #[tokio::test]
+    async fn test_json_has_non_object_is_false() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("42 'a' JSON@HAS").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
+    }
+
+    #[tokio::test]
+    async fn test_json_values() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp
+            .execute(r#"'{"a": 10, "b": 20}' JSON@PARSE JSON@VALUES"#)
+            .await
+            .unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert!(stack[0].is_vector());
+        assert_eq!(stack[0].len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_json_values_non_object_is_nil() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("42 JSON@VALUES").await.unwrap();
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn test_json_merge_overlay_wins() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE '{"b": 99, "c": 3}' JSON@PARSE JSON@MERGE"#)
+            .await
+            .unwrap();
+        // b overridden to 99, c added, a preserved
+        interp.execute("'b' JSON@GET").await.unwrap();
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "99/1");
+
+        interp.stack.clear();
+        interp
+            .execute(
+                r#"'{"a": 1, "b": 2}' JSON@PARSE '{"b": 99, "c": 3}' JSON@PARSE JSON@MERGE 'a' JSON@GET"#,
+            )
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "1/1");
+    }
+
+    #[tokio::test]
+    async fn test_json_delete_removes_key() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@DELETE 'a' JSON@HAS"#)
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
+
+        interp.stack.clear();
+        interp
+            .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@DELETE 'b' JSON@HAS"#)
+            .await
+            .unwrap();
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "1/1");
+    }
+
+    #[tokio::test]
+    async fn test_json_delete_missing_key_is_unchanged() {
+        let mut interp = Interpreter::new();
+        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp
+            .execute(r#"'{"a": 1}' JSON@PARSE 'zzz' JSON@DELETE JSON@KEYS"#)
+            .await
+            .unwrap();
+        let stack = interp.get_stack();
+        assert!(stack.last().unwrap().is_vector());
+        assert_eq!(stack.last().unwrap().len(), 1);
     }
 }
