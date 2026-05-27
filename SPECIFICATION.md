@@ -544,9 +544,9 @@ The exhaustion-NIL outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`
 | Canonical | Sugar | Description |
 |-----------|-------|-------------|
 | `PRINT` | — | Output the top stack value |
-| `NOW` | — | Push the current timestamp |
-| `DATETIME` | — | Format a timestamp as a datetime string |
-| `TIMESTAMP` | — | Parse a datetime string to a timestamp |
+| `NOW` | — | Push the current instant (exact seconds since the Unix epoch) |
+| `DATETIME` | — | Render an instant as a timezone-free civil datetime at a UTC offset |
+| `TIMESTAMP` | — | Resolve a timezone-free civil datetime to an instant at a UTC offset |
 | `CSPRNG` | — | Push a cryptographically secure random number |
 | `HASH` | — | Compute a hash of the top stack value |
 
@@ -668,7 +668,7 @@ Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object 
 | `MUSIC` | Audio sequencing and synthesis |
 | `JSON` | JSON parsing, generation, and manipulation |
 | `IO` | Standard input/output |
-| `TIME` | Wall-clock time and datetime conversion |
+| `TIME` | Exact, timezone-free date/time values (instant / datetime / date / time); timezone is supplied only at instant↔civil conversion as a UTC offset in hours |
 | `CRYPTO` | Cryptographically secure random and hash |
 | `ALGO` | Sorting and other deterministic algorithms |
 | `MATH` | Square root, exact-rational interval arithmetic, and scalar utilities (`ABS`, `NEG`, `SIGN`, `MIN`, `MAX`, `POW`, `GCD`, `LCM`) |

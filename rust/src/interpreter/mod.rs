@@ -1,3 +1,4 @@
+pub mod algo_ops;
 pub mod arithmetic;
 pub mod audio;
 pub mod cast;
@@ -36,6 +37,8 @@ pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
 pub mod tensor_ops;
+pub mod time_calendar;
+pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_exec;
 pub mod vector_ops;
@@ -64,6 +67,8 @@ mod dictionary_resolution_tests;
 mod dictionary_tier_tests;
 #[cfg(test)]
 mod error_flow_trace_tests;
+#[cfg(test)]
+mod algo_ops_tests;
 #[cfg(test)]
 mod hash_tests;
 #[cfg(test)]

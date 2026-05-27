@@ -24,7 +24,7 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT" => {
             Some(Interpretation::TruthValue)
         }
-        "NOW" | "DATETIME" | "TIMESTAMP" => Some(Interpretation::Timestamp),
+        "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
         | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" => {
             Some(Interpretation::Unassigned)

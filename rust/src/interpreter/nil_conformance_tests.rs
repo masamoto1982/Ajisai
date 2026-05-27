@@ -194,7 +194,7 @@ async fn three_valued_or() {
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
 /// reason; malformed use raises an ordinary error. `READ` is host/serial
 /// dependent (needs a port) so only its registry presence is asserted.
-const PROJECTING_WORDS: &[&str] = &["CHR", "DIV", "GET", "NUM", "POW", "READ"];
+const PROJECTING_WORDS: &[&str] = &["CHR", "DIV", "GET", "INDEX-OF", "NUM", "POW", "READ"];
 
 #[test]
 fn projecting_word_set_matches_registry() {
@@ -245,6 +245,14 @@ async fn bubble_creation_well_formed_domain_miss() {
     assert_eq!(
         reason_of(stack.last().unwrap()),
         Some(NilReason::DivisionByZero)
+    );
+
+    // value absent from a valid vector: well-formed search miss
+    let stack = run_ok("'algo' IMPORT [ 1 2 3 ] 9 INDEX-OF").await;
+    assert!(is_nil(stack.last().unwrap()));
+    assert_eq!(
+        reason_of(stack.last().unwrap()),
+        Some(NilReason::MissingField)
     );
 }
 
