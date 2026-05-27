@@ -22,6 +22,7 @@ pub mod interval_ops;
 pub mod io;
 pub mod json;
 pub mod logic;
+pub mod math_ops;
 pub mod modules;
 pub(crate) mod naming_convention_checker;
 pub(crate) mod optimization_hooks;
@@ -65,6 +66,8 @@ mod dictionary_tier_tests;
 mod error_flow_trace_tests;
 #[cfg(test)]
 mod hash_tests;
+#[cfg(test)]
+mod math_ops_tests;
 #[cfg(test)]
 mod nil_conformance_tests;
 #[cfg(test)]

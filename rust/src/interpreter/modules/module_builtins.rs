@@ -2,7 +2,9 @@ use crate::builtins::WordShape;
 use crate::coreword_registry::{
     self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordPurity,
 };
-use crate::interpreter::{audio, datetime, hash, interval_ops, json, random, serial, sort};
+use crate::interpreter::{
+    audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort,
+};
 use crate::types::{Capabilities, Stability};
 
 use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
@@ -670,6 +672,71 @@ const MATH_WORDS: &[ModuleWord] = &[
         WordShape::Map,
         "True for exact number or degenerate interval.",
         interval_ops::op_is_exact,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "ABS",
+        WordShape::Map,
+        "Absolute value of a number.",
+        math_ops::op_abs,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "NEG",
+        WordShape::Map,
+        "Negate a number.",
+        math_ops::op_neg,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "SIGN",
+        WordShape::Map,
+        "Sign of a number: -1, 0, or 1.",
+        math_ops::op_sign,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "MIN",
+        WordShape::Form,
+        "Smaller of two numbers.",
+        math_ops::op_min,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "MAX",
+        WordShape::Form,
+        "Larger of two numbers.",
+        math_ops::op_max,
         WordPurity::Pure,
         &[],
         true,
