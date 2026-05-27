@@ -1,3 +1,4 @@
+pub mod algo_ops;
 pub mod arithmetic;
 pub mod audio;
 pub mod cast;
@@ -64,6 +65,8 @@ mod dictionary_resolution_tests;
 mod dictionary_tier_tests;
 #[cfg(test)]
 mod error_flow_trace_tests;
+#[cfg(test)]
+mod algo_ops_tests;
 #[cfg(test)]
 mod hash_tests;
 #[cfg(test)]

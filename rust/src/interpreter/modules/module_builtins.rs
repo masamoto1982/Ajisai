@@ -3,7 +3,7 @@ use crate::coreword_registry::{
     self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordPurity,
 };
 use crate::interpreter::{
-    audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort,
+    algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort,
 };
 use crate::types::{Capabilities, Stability};
 
@@ -622,19 +622,60 @@ const CRYPTO_WORDS: &[ModuleWord] = &[
     ),
 ];
 
-const ALGO_WORDS: &[ModuleWord] = &[module_word!(
-    "SORT",
-    WordShape::Form,
-    "Sort vector elements in ascending order",
-    sort::op_sort,
-    WordPurity::Pure,
-    &[],
-    true,
-    true,
-    false,
-    Stability::Stable,
-    Capabilities::PURE
-)];
+const ALGO_WORDS: &[ModuleWord] = &[
+    module_word!(
+        "SORT",
+        WordShape::Form,
+        "Sort vector elements in ascending order",
+        sort::op_sort,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "UNIQUE",
+        WordShape::Form,
+        "Remove duplicate elements, preserving first-occurrence order",
+        algo_ops::op_unique,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "CONTAINS",
+        WordShape::Form,
+        "True if a vector contains an element equal to the given value",
+        algo_ops::op_contains,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "INDEX-OF",
+        WordShape::Form,
+        "Index of the first element equal to the value; Bubble/NIL if absent",
+        algo_ops::op_index_of,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::PURE
+    ),
+];
 
 const MATH_WORDS: &[ModuleWord] = &[
     module_word!(
@@ -1030,6 +1071,9 @@ fn contract_override(module: &str, word: &str) -> Option<(Partiality, NilPolicy)
         // MATH@GCD / MATH@LCM raise an error on non-integer numeric inputs
         // (malformed use, cf. CHR) and pass NIL operands through.
         ("MATH", "GCD") | ("MATH", "LCM") => Some((Partiality::Partial, NilPolicy::Passthrough)),
+        // ALGO@INDEX-OF projects a well-formed miss (value absent from a
+        // valid vector) onto Bubble/NIL with reason = missingField.
+        ("ALGO", "INDEX-OF") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
         _ => None,
     }
 }
