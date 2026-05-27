@@ -42,7 +42,9 @@ where
         }
     };
     push_result(interp, Value::from_fraction(op(scalar)));
-    interp.semantic_registry.push_hint(Interpretation::RawNumber);
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::RawNumber);
     Ok(())
 }
 
@@ -69,7 +71,9 @@ where
         }
     };
     push_result(interp, Value::from_fraction(op(a, b)));
-    interp.semantic_registry.push_hint(Interpretation::RawNumber);
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::RawNumber);
     Ok(())
 }
 

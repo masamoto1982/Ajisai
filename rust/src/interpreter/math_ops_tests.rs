@@ -6,7 +6,10 @@ mod tests {
 
     async fn top_i64(program: &str) -> i64 {
         let mut interp = Interpreter::new();
-        interp.execute(program).await.expect("program should succeed");
+        interp
+            .execute(program)
+            .await
+            .expect("program should succeed");
         assert_eq!(interp.stack.len(), 1, "program: {program}");
         interp.stack[0]
             .as_scalar()
@@ -79,7 +82,10 @@ mod tests {
     async fn non_number_input_errors() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'math' IMPORT 'hello' ABS").await;
-        assert!(result.is_err(), "ABS of text should be a malformed-use error");
+        assert!(
+            result.is_err(),
+            "ABS of text should be a malformed-use error"
+        );
     }
 
     #[tokio::test]
