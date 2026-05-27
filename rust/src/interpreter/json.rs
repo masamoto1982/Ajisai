@@ -299,6 +299,172 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// Borrow the `[key, value]` pairs of a JSON object. Both the canonical
+/// `Record` form and a raw vector-of-pairs are accepted; anything else
+/// (scalar, NIL, code block, ...) is not an object and yields `None`.
+fn object_pairs(val: &Value) -> Option<&[Value]> {
+    match &val.data {
+        ValueData::Record { pairs, .. } => Some(pairs.as_slice()),
+        ValueData::Vector(v) => Some(v.as_slice()),
+        _ => None,
+    }
+}
+
+fn pair_key(pair: &Value) -> Option<String> {
+    if let ValueData::Vector(kv) = &pair.data {
+        if kv.len() == 2 {
+            return Some(extract_string_content_from_value(&kv[0]));
+        }
+    }
+    None
+}
+
+/// Build a canonical `Record` from a list of `[key, value]` pairs, deriving
+/// the key index from the final pair order.
+fn build_record(pairs: Vec<Value>) -> Value {
+    let mut index: HashMap<String, usize> = HashMap::new();
+    for (i, pair) in pairs.iter().enumerate() {
+        if let Some(k) = pair_key(pair) {
+            index.insert(k, i);
+        }
+    }
+    Value {
+        data: ValueData::Record {
+            pairs: Rc::new(pairs),
+            index,
+        },
+        hint: Interpretation::Unassigned,
+        absence: None,
+    }
+}
+
+pub fn op_json_has(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    let key_val = extract_stack_value(interp, is_keep, 0)?;
+    let obj_val = if is_keep {
+        extract_stack_value(interp, true, 1)?
+    } else {
+        extract_stack_value(interp, false, 0)?
+    };
+
+    let key_str = extract_string_content_from_value(&key_val);
+    let found = object_pairs(&obj_val).is_some_and(|pairs| {
+        pairs
+            .iter()
+            .any(|pair| pair_key(pair).as_deref() == Some(key_str.as_str()))
+    });
+
+    interp.stack.push(Value::from_bool(found));
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::TruthValue);
+    Ok(())
+}
+
+pub fn op_json_values(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    let obj_val = extract_stack_value(interp, is_keep, 0)?;
+
+    let Some(pairs) = object_pairs(&obj_val) else {
+        interp.stack.push(Value::nil());
+        return Ok(());
+    };
+
+    let mut values = Vec::new();
+    for pair in pairs {
+        if let ValueData::Vector(kv) = &pair.data {
+            if kv.len() == 2 {
+                values.push(kv[1].clone());
+            }
+        }
+    }
+
+    if values.is_empty() {
+        interp.stack.push(Value::nil());
+    } else {
+        interp.stack.push(Value {
+            data: ValueData::Vector(Rc::new(values)),
+            hint: Interpretation::Unassigned,
+            absence: None,
+        });
+    }
+    Ok(())
+}
+
+pub fn op_json_merge(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    let overlay_val = extract_stack_value(interp, is_keep, 0)?;
+    let base_val = if is_keep {
+        extract_stack_value(interp, true, 1)?
+    } else {
+        extract_stack_value(interp, false, 0)?
+    };
+
+    let mut merged: Vec<Value> = Vec::new();
+    let mut position: HashMap<String, usize> = HashMap::new();
+
+    for source in [&base_val, &overlay_val] {
+        let Some(pairs) = object_pairs(source) else {
+            continue;
+        };
+        for pair in pairs {
+            let Some(key) = pair_key(pair) else {
+                continue;
+            };
+            if let Some(&idx) = position.get(&key) {
+                merged[idx] = pair.clone();
+            } else {
+                position.insert(key, merged.len());
+                merged.push(pair.clone());
+            }
+        }
+    }
+
+    interp.stack.push(build_record(merged));
+    Ok(())
+}
+
+pub fn op_json_delete(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    let key_val = extract_stack_value(interp, is_keep, 0)?;
+    let obj_val = if is_keep {
+        extract_stack_value(interp, true, 1)?
+    } else {
+        extract_stack_value(interp, false, 0)?
+    };
+
+    let key_str = extract_string_content_from_value(&key_val);
+    let Some(pairs) = object_pairs(&obj_val) else {
+        interp.stack.push(Value::nil());
+        return Ok(());
+    };
+
+    let kept: Vec<Value> = pairs
+        .iter()
+        .filter(|pair| pair_key(pair).as_deref() != Some(key_str.as_str()))
+        .cloned()
+        .collect();
+
+    interp.stack.push(build_record(kept));
+    Ok(())
+}
+
 fn extract_string_content_from_value(val: &Value) -> String {
     if let Some(view) = val.as_vector_view() {
         if view.iter().all(|c| matches!(c.data, ValueData::Scalar(_))) {
