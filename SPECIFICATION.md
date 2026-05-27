@@ -671,7 +671,7 @@ Acceptable forms: `IS-*` and `HAS-*` predicates; hyphen-separated action-object 
 | `TIME` | Wall-clock time and datetime conversion |
 | `CRYPTO` | Cryptographically secure random and hash |
 | `ALGO` | Sorting and other deterministic algorithms |
-| `MATH` | Square root, exact-rational interval arithmetic, and scalar utilities (`ABS`, `NEG`, `SIGN`, `MIN`, `MAX`) |
+| `MATH` | Square root, exact-rational interval arithmetic, and scalar utilities (`ABS`, `NEG`, `SIGN`, `MIN`, `MAX`, `POW`, `GCD`, `LCM`) |
 | `SERIAL` | Host-mediated serial port output |
 
 ### 9.2 Import and unimport syntax
