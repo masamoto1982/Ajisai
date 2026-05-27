@@ -736,6 +736,42 @@ const TIME_WORDS: &[ModuleWord] = &[
         Stability::Stable,
         Capabilities::TIME
     ),
+    module_word!(
+        "PARSE-ISO",
+        "Parse an ISO-8601 civil string into a datetime; Bubble/NIL if invalid",
+        time_ops::op_parse,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::TIME
+    ),
+    module_word!(
+        "ADD-MONTHS",
+        "Add N months to a date/datetime, clamping to the month end",
+        time_ops::op_add_months,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::TIME
+    ),
+    module_word!(
+        "ADD-YEARS",
+        "Add N years to a date/datetime, clamping Feb 29 in non-leap years",
+        time_ops::op_add_years,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Stable,
+        Capabilities::TIME
+    ),
 ];
 
 const CRYPTO_WORDS: &[ModuleWord] = &[
@@ -1218,6 +1254,9 @@ fn contract_override(module: &str, word: &str) -> Option<(Partiality, NilPolicy)
         // ALGO@INDEX-OF projects a well-formed miss (value absent from a
         // valid vector) onto Bubble/NIL with reason = missingField.
         ("ALGO", "INDEX-OF") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
+        // TIME@PARSE-ISO projects an unparseable-but-well-formed text value
+        // onto Bubble/NIL with reason = invalidEncoding (cf. NUM).
+        ("TIME", "PARSE-ISO") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
         _ => None,
     }
 }
