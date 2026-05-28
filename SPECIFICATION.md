@@ -513,6 +513,18 @@ The exhaustion-NIL outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`
 | `CHR` | — | Convert a number to its Unicode character |
 | `CHARS` | — | Split a string into a vector of individual characters |
 | `JOIN` | — | Join a vector of strings, with optional separator |
+| `TRIM` | — | Strip whitespace from both ends of a string |
+| `TRIM-LEFT` | — | Strip leading whitespace |
+| `TRIM-RIGHT` | — | Strip trailing whitespace |
+| `TOKENIZE` | — | Split a string by a separator into a vector of substrings |
+| `SUBSTITUTE` | — | Replace every occurrence of a substring with another |
+| `STARTS-WITH?` | — | True if the string begins with the given prefix |
+| `ENDS-WITH?` | — | True if the string ends with the given suffix |
+
+`TRIM` / `TRIM-LEFT` / `TRIM-RIGHT` / `TOKENIZE` / `SUBSTITUTE` /
+`STARTS-WITH?` / `ENDS-WITH?` are Canonical Core words also listed in the
+`TEXT` documentation category alongside `CHR` / `CHARS` / `JOIN`. The
+listing is presentation-only and does not introduce a `TEXT` module.
 
 ### 7.7 Control and higher-order words
 

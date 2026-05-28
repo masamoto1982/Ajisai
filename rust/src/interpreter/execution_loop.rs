@@ -11,7 +11,9 @@ use crate::types::SemanticRegistry;
 
 fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     let hint: Option<Interpretation> = match word {
-        "STR" | "CHR" | "JOIN" => Some(Interpretation::Text),
+        "STR" | "CHR" | "JOIN" | "TRIM" | "TRIM-LEFT" | "TRIM-RIGHT" | "SUBSTITUTE" => {
+            Some(Interpretation::Text)
+        }
         "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
             Some(Interpretation::RawNumber)
         }
@@ -21,12 +23,11 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "LOWER" | "UPPER" | "WIDTH" | "MATH@LOWER" | "MATH@UPPER" | "MATH@WIDTH" => {
             Some(Interpretation::RawNumber)
         }
-        "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT" => {
-            Some(Interpretation::TruthValue)
-        }
+        "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT"
+        | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
         "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
-        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" => {
+        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE" => {
             Some(Interpretation::Unassigned)
         }
         _ => None,
