@@ -821,6 +821,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test equality of two values.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -836,6 +839,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test less-than comparison.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -851,6 +857,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test less-than-or-equal comparison.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -866,6 +875,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test greater-than comparison.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -881,6 +893,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test greater-than-or-equal comparison.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -896,6 +911,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Comparison primitive: Test inequality of two values.",
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
 

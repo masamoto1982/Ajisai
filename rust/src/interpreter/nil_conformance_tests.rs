@@ -72,12 +72,10 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("FLOOR", NilClass::UnaryNil),
     ("CEIL", NilClass::UnaryNil),
     ("ROUND", NilClass::UnaryNil),
-    ("LT", NilClass::BinaryBlanket),
-    ("LTE", NilClass::BinaryBlanket),
-    ("GT", NilClass::BinaryBlanket),
-    ("GTE", NilClass::BinaryBlanket),
-    ("EQ", NilClass::BinaryBlanket),
-    ("NEQ", NilClass::BinaryBlanket),
+    // Comparison words (EQ/NEQ/LT/LTE/GT/GTE) are Projecting/CreatesNil
+    // per SPEC §7.14 (comparison-budget exhaustion can produce Undecidable
+    // NIL). They are covered by the projecting_word_set_matches_registry
+    // and bubble_creation_comparison_nil_input probes below.
     ("NOT", NilClass::UnaryNil),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
@@ -197,8 +195,14 @@ async fn three_valued_or() {
 const PROJECTING_WORDS: &[&str] = &[
     "CHR",
     "DIV",
+    "EQ",
     "GET",
+    "GT",
+    "GTE",
     "INDEX-OF",
+    "LT",
+    "LTE",
+    "NEQ",
     "NUM",
     "PARSE-ISO",
     "POW",
@@ -271,6 +275,27 @@ async fn bubble_creation_well_formed_domain_miss() {
         reason_of(stack.last().unwrap()),
         Some(NilReason::InvalidEncoding)
     );
+}
+
+#[tokio::test]
+async fn bubble_creation_comparison_nil_input() {
+    // Comparison words are Projecting/CreatesNil (SPEC §7.14). A NIL operand
+    // propagates as NIL output via the Bubble Rule (SPEC §4.5.1, §11.2).
+    for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+        for code in [
+            format!("NIL 1 {name}"),
+            format!("1 NIL {name}"),
+            format!("NIL NIL {name}"),
+        ] {
+            let stack = run_ok(&code).await;
+            assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+            assert!(
+                is_nil(&stack[0]),
+                "`{code}` must produce NIL, got {:?}",
+                stack[0]
+            );
+        }
+    }
 }
 
 #[tokio::test]

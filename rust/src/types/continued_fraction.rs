@@ -2693,4 +2693,81 @@ mod tests {
             cloned.partial_quotients_bounded(10)
         );
     }
+
+    // -----------------------------------------------------------------
+    // cmp_with_budget reachability — verifies that the AlgebraicSqrt and
+    // Gosper branches inside cmp_with_budget are live and return correct
+    // results. This guards against the path being inadvertently dead-coded
+    // before ValueData::Scalar is migrated to ExactReal (SPEC §7.4.1).
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn cmp_with_budget_sqrt_vs_sqrt_same_radicand_is_equal() {
+        let a = sqrt_of(2, 1);
+        let b = sqrt_of(2, 1);
+        assert_eq!(
+            a.cmp_with_budget(&b, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Equal),
+            "√2 == √2 must decide Equal"
+        );
+    }
+
+    #[test]
+    fn cmp_with_budget_sqrt_vs_sqrt_different_radicands_decide_correctly() {
+        let sqrt2 = sqrt_of(2, 1);
+        let sqrt3 = sqrt_of(3, 1);
+        assert_eq!(
+            sqrt2.cmp_with_budget(&sqrt3, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Less),
+            "√2 < √3 must decide Less"
+        );
+        assert_eq!(
+            sqrt3.cmp_with_budget(&sqrt2, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Greater),
+            "√3 > √2 must decide Greater"
+        );
+    }
+
+    #[test]
+    fn cmp_with_budget_sqrt_vs_rational_decides_correctly() {
+        // √2 ≈ 1.414, so √2 > 1 and √2 < 2.
+        let sqrt2 = sqrt_of(2, 1);
+        let one = rational(1, 1);
+        let two = rational(2, 1);
+        assert_eq!(
+            sqrt2.cmp_with_budget(&one, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Greater),
+            "√2 > 1 must decide Greater"
+        );
+        assert_eq!(
+            sqrt2.cmp_with_budget(&two, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Less),
+            "√2 < 2 must decide Less"
+        );
+    }
+
+    #[test]
+    fn cmp_with_budget_zero_budget_returns_none() {
+        // Budget of 0 must always yield None (undecidable) regardless of
+        // operand type, confirming the budget-exhaustion path is reachable.
+        let sqrt2 = sqrt_of(2, 1);
+        let sqrt3 = sqrt_of(3, 1);
+        assert_eq!(
+            sqrt2.cmp_with_budget(&sqrt3, 0),
+            None,
+            "zero budget must yield None"
+        );
+    }
+
+    #[test]
+    fn cmp_with_budget_gosper_vs_rational_decides_correctly() {
+        // √2 + 0 via Gosper add — exercises the Gosper CF streaming path.
+        let gosper_sqrt2 = sqrt_of(2, 1).add(&rational(0, 1));
+        let one = rational(1, 1);
+        assert_eq!(
+            gosper_sqrt2.cmp_with_budget(&one, DEFAULT_COMPARISON_BUDGET),
+            Some(std::cmp::Ordering::Greater),
+            "Gosper(√2 + 0) > 1 must decide Greater"
+        );
+    }
 }

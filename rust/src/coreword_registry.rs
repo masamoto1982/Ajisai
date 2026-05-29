@@ -711,6 +711,36 @@ mod tests {
     }
 
     #[test]
+    fn aq_ver_contract_f_comparison_words_create_nil_under_undecidable() {
+        // SPEC §7.14 line 611 and §9.4 table require all six comparison
+        // primitives to be Projecting/CreatesNil/B — matching DIV — because
+        // the comparison-budget exhaustion path (§7.4.1) can produce an
+        // Undecidable NIL instead of a boolean.
+        for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+            let meta = get_coreword_metadata(name)
+                .unwrap_or_else(|| panic!("{} must be in registry", name));
+            assert_eq!(
+                meta.partiality,
+                Partiality::Projecting,
+                "{} must be Projecting (SPEC §7.14)",
+                name
+            );
+            assert_eq!(
+                meta.nil_policy,
+                NilPolicy::CreatesNil,
+                "{} must be CreatesNil (SPEC §7.14)",
+                name
+            );
+            assert_eq!(
+                meta.safety_level,
+                SafetyLevel::B,
+                "{} must be SafetyLevel B (SPEC §9.4)",
+                name
+            );
+        }
+    }
+
+    #[test]
     fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
         let registry = get_builtin_word_registry();
         for word in registry
