@@ -1240,13 +1240,9 @@ pub(crate) fn module_word_description(module_name: &str, short_name: &str) -> Op
 /// qualified `MODULE@WORD` name (e.g. `"JSON@PARSE"`). Returns `None` if
 /// the word does not exist.
 ///
-/// Until the module-word 4-section content authoring is complete (see
-/// the follow-up PR planned in the three-layer documentation migration),
-/// `Summary` reuses the existing `description`, `Role` is synthesized
-/// from the module name + description, and `Stack Effect` is a
-/// placeholder. A test in this module guards the structural invariant
-/// (every entry produces all four sections) but content is not yet
-/// asserted.
+/// `Category / Summary / Role / Stack Effect` come from the authored
+/// table in `super::module_word_docs`. Category is derived from the
+/// module name; the other three are looked up by `(module, short_name)`.
 pub(crate) fn lookup_module_word_detail(name: &str) -> Option<String> {
     let upper = name.to_uppercase();
     let (module_name, short_name) = upper.split_once('@')?;
@@ -1257,21 +1253,15 @@ pub(crate) fn lookup_module_word_detail(name: &str) -> Option<String> {
         Stability::Experimental => "experimental",
     };
     let category = module.name.to_lowercase();
-    let summary = word.description;
-    let role = format!(
-        "{} module word: {}",
-        module.name,
-        word.description.trim_end_matches('.')
-    );
-    let stack_effect = "see source / SPECIFICATION.md (placeholder)";
+    let doc = super::module_word_docs::lookup_module_word_doc(module.name, word.short_name)?;
     Some(crate::builtins::render_four_section(
         "",
         &format!("{}@{}", module.name, word.short_name),
         stability_str,
         &category,
-        summary,
-        &role,
-        stack_effect,
+        doc.summary,
+        doc.role,
+        doc.stack_effect,
     ))
 }
 
@@ -1342,6 +1332,75 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
 #[cfg(test)]
 mod tests {
     use super::MODULE_SPECS;
+
+    #[test]
+    fn every_module_word_has_authored_four_section_doc() {
+        if let Err(msg) = super::super::module_word_docs::assert_every_word_has_doc(MODULE_SPECS) {
+            panic!("{}", msg);
+        }
+    }
+
+    #[test]
+    fn every_module_word_lookup_contains_all_four_sections() {
+        for module in MODULE_SPECS {
+            for word in module.words {
+                let qualified = format!("{}@{}", module.name, word.short_name);
+                let body = super::lookup_module_word_detail(&qualified)
+                    .unwrap_or_else(|| panic!("{} produced no body", qualified));
+                for section in ["Category:", "Summary:", "Role:", "Stack Effect:"] {
+                    assert!(
+                        body.contains(section),
+                        "{} LOOKUP body missing section {}:\n{}",
+                        qualified,
+                        section,
+                        body
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_module_word_stack_effect_grammar() {
+        for module in MODULE_SPECS {
+            for word in module.words {
+                let doc = super::super::module_word_docs::lookup_module_word_doc(
+                    module.name,
+                    word.short_name,
+                )
+                .expect("doc lookup");
+                let s = doc.stack_effect;
+                let is_literal_no_op = s == "no values popped or pushed";
+                if is_literal_no_op {
+                    continue;
+                }
+                assert!(
+                    s.contains("->"),
+                    "{}@{} stack_effect missing '->' arrow: {:?}",
+                    module.name,
+                    word.short_name,
+                    s
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_module_word_doc_is_ascii() {
+        for module in MODULE_SPECS {
+            for word in module.words {
+                let doc = super::super::module_word_docs::lookup_module_word_doc(
+                    module.name,
+                    word.short_name,
+                )
+                .expect("doc lookup");
+                let q = format!("{}@{}", module.name, word.short_name);
+                assert!(doc.summary.is_ascii(), "{} summary not ASCII", q);
+                assert!(doc.role.is_ascii(), "{} role not ASCII", q);
+                assert!(doc.stack_effect.is_ascii(), "{} stack_effect not ASCII", q);
+            }
+        }
+    }
 
     // The word-info area renders a module word's `description` on a single
     // line (CSS nowrap + ellipsis). A multi-line description overflows and
