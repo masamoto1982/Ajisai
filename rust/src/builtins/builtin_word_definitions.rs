@@ -53,6 +53,7 @@ pub enum BuiltinExecutorKey {
     Unimport,
     UnimportOnly,
     Force,
+    ToCf,
     Print,
     Insert,
     Replace,
@@ -505,6 +506,20 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         },
 
     // === Cast ===
+    BuiltinSpec {
+
+        name: ">CF",
+        category: "conversion",
+        hover_summary: ">CF — tag value for continued-fraction serialization",
+        hover_syntax: "2 MATH@SQRT >CF",
+        word_shape: WordShape::Map,
+        detail_group: BuiltinDetailGroup::StringCast,
+        executor_key: Some(BuiltinExecutorKey::ToCf),
+        summary: "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        role: "Conversion modifier: request the ContinuedFraction display/serialization role.",
+        stack_effect: "[ x ] -> [ x ]",
+        ..SPEC_DEFAULT
+        },
     BuiltinSpec {
 
         name: "CHARS",

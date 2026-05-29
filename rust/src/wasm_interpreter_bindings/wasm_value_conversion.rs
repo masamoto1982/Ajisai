@@ -236,6 +236,7 @@ fn interpretation_protocol_str(hint: Interpretation) -> &'static str {
         Interpretation::TruthValue => "truthValue",
         Interpretation::Timestamp => "timestamp",
         Interpretation::Nil => "nil",
+        Interpretation::ContinuedFraction => "continuedFraction",
     }
 }
 
@@ -373,6 +374,20 @@ pub(crate) fn value_to_protocol(
     external_hint_opt: Option<Interpretation>,
 ) -> ProtocolNode {
     let effective = external_hint_opt.unwrap_or(value.hint);
+    // The ContinuedFraction role serializes numeric scalars as the canonical
+    // nested-form string (SPEC §12.2), not a lossy rational approximation.
+    if effective == Interpretation::ContinuedFraction
+        && matches!(value.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
+    {
+        return ProtocolNode {
+            type_str: "string",
+            value: ProtocolValue::Text(
+                crate::types::display::format_as_continued_fraction(value),
+            ),
+            display_hint: effective,
+            semantics: None,
+        };
+    }
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::ExactScalar(er) => {

@@ -10,6 +10,7 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
 pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bool {
     match hint {
         Interpretation::RawNumber
+        | Interpretation::ContinuedFraction
         | Interpretation::Interval
         | Interpretation::TruthValue
         | Interpretation::Timestamp
