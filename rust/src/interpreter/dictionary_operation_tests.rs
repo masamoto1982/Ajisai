@@ -105,12 +105,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_builtin_renders_three_layer_template() {
+    async fn test_lookup_builtin_renders_four_section_template() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'GET' ?").await;
-        assert!(result.is_ok(), "LOOKUP on built-in GET should succeed: {:?}", result.err());
-        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
-        for section in ["# GET", "Summary:", "Stack Effect:", "Behavior:", "Examples:"] {
+        assert!(
+            result.is_ok(),
+            "LOOKUP on built-in GET should succeed: {:?}",
+            result.err()
+        );
+        let loaded = interp
+            .definition_to_load
+            .take()
+            .expect("definition_to_load should be set");
+        for section in ["# GET", "Category:", "Summary:", "Role:", "Stack Effect:"] {
             assert!(
                 loaded.contains(section),
                 "Built-in LOOKUP must include '{}' section, got: {}",
@@ -126,18 +133,34 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_module_word_loads_placeholder() {
+    async fn test_lookup_module_word_renders_four_section_template() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
         let result = interp.execute("'MUSIC@PLAY' ?").await;
-        assert!(result.is_ok(), "LOOKUP on module word should succeed: {:?}", result.err());
-        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
         assert!(
-            loaded.contains("placeholder"),
-            "Module-word LOOKUP should load placeholder text, got: {}",
-            loaded
+            result.is_ok(),
+            "LOOKUP on module word should succeed: {:?}",
+            result.err()
         );
+        let loaded = interp
+            .definition_to_load
+            .take()
+            .expect("definition_to_load should be set");
+        for section in [
+            "# MUSIC@PLAY",
+            "Category:",
+            "Summary:",
+            "Role:",
+            "Stack Effect:",
+        ] {
+            assert!(
+                loaded.contains(section),
+                "Module LOOKUP must include '{}' section, got: {}",
+                section,
+                loaded
+            );
+        }
     }
 
     #[tokio::test]
@@ -146,8 +169,15 @@ mod tests {
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
         let _ = interp.collect_output();
         let result = interp.execute("'DOUBLE' ?").await;
-        assert!(result.is_ok(), "LOOKUP on user word should succeed: {:?}", result.err());
-        let loaded = interp.definition_to_load.take().expect("definition_to_load should be set");
+        assert!(
+            result.is_ok(),
+            "LOOKUP on user word should succeed: {:?}",
+            result.err()
+        );
+        let loaded = interp
+            .definition_to_load
+            .take()
+            .expect("definition_to_load should be set");
         assert!(
             loaded.contains("DEF") && loaded.contains("'DOUBLE'"),
             "User-word LOOKUP should reconstruct DEF source, got: {}",
@@ -186,8 +216,13 @@ mod tests {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
-            crate::interpreter::execute_def::op_def_inner(interp, name, &tokens, Some(description.to_string()))
-                .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
+            crate::interpreter::execute_def::op_def_inner(
+                interp,
+                name,
+                &tokens,
+                Some(description.to_string()),
+            )
+            .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
 
         interp
@@ -224,7 +259,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_del_sample_user_words_with_fqn() {
-
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -236,22 +270,29 @@ mod tests {
 
         assert!(interp.user_words.contains_key("D4"));
 
-
         let result = interp.execute("'DEMO@D4' DEL").await;
-        assert!(result.is_ok(), "Should delete D4 via FQN: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should delete D4 via FQN: {:?}",
+            result.err()
+        );
         assert!(!interp.user_words.contains_key("D4"));
-
 
         let result = interp.execute("'DEMO@NONEXISTENT' DEL").await;
         assert!(result.is_err(), "Should error for non-existent FQN word");
 
-
         let result = interp.execute("'DEMO@C4' DEL").await;
-        assert!(result.is_err(), "Should not delete C4 via FQN (has dependents)");
-
+        assert!(
+            result.is_err(),
+            "Should not delete C4 via FQN (has dependents)"
+        );
 
         let result = interp.execute("! 'DEMO@C4' DEL").await;
-        assert!(result.is_ok(), "Should force delete C4 via FQN: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should force delete C4 via FQN: {:?}",
+            result.err()
+        );
         assert!(!interp.user_words.contains_key("C4"));
     }
 
@@ -284,12 +325,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_numeric_vector_literal_play_after_music_sample_reset() {
-
-
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
-
 
         let result = interp.execute("[ 264 297 330 ] MUSIC@SEQ MUSIC@PLAY").await;
         assert!(
@@ -309,7 +347,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_sample_words_scalar_output() {
-
         let mut interp = Interpreter::new();
 
         let sample_words = vec![
@@ -342,10 +379,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_builtin_symbols_remain_strings_in_vector() {
-
-
         let mut interp = Interpreter::new();
-
 
         let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
@@ -370,7 +404,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_user_word_resolved_in_nested_vector() {
-
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -396,7 +429,6 @@ mod tests {
     #[tokio::test]
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
-
 
         let result = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(
@@ -429,7 +461,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_def_without_music_sample_collision_warning() {
-
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
         let _ = interp.collect_output();
@@ -450,13 +481,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_import_keeps_user_word_unambiguous_after_music_sample_reset() {
-
         let mut interp = Interpreter::new();
-
 
         interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
         assert!(interp.user_words.contains_key("C4"));
-
 
         interp.execute("'music' IMPORT").await.unwrap();
         let output = interp.collect_output();
@@ -471,7 +499,6 @@ mod tests {
             output
         );
 
-
         let result = interp.execute("C4").await;
         assert!(
             result.is_ok(),
@@ -479,9 +506,10 @@ mod tests {
             result.err()
         );
         if let Some(val) = interp.stack.last() {
-            let scalar_owned = val.as_scalar().cloned().or_else(|| {
-                val.child(0).and_then(|c| c.as_scalar().cloned())
-            });
+            let scalar_owned = val
+                .as_scalar()
+                .cloned()
+                .or_else(|| val.child(0).and_then(|c| c.as_scalar().cloned()));
             let scalar = scalar_owned.expect("C4 should resolve to a numeric value");
             assert_eq!(
                 scalar.to_i64().unwrap(),
@@ -489,7 +517,6 @@ mod tests {
                 "C4 should remain the user-defined value"
             );
         }
-
 
         let result = interp.execute("MUSIC@C4").await;
         assert!(
@@ -520,13 +547,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_module_first_builtin_still_protected() {
-
         let mut interp = Interpreter::new();
         let result = interp.execute("{ [ 1 ] } 'GET' DEF").await;
-        assert!(result.is_err(), "Should not be able to override built-in GET");
+        assert!(
+            result.is_err(),
+            "Should not be able to override built-in GET"
+        );
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot redefine built-in word"),
-            "Expected BuiltinProtection error, got: {}", err_msg);
+        assert!(
+            err_msg.contains("Cannot redefine built-in word"),
+            "Expected BuiltinProtection error, got: {}",
+            err_msg
+        );
     }
-
 }

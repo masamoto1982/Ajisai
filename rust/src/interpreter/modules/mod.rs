@@ -82,3 +82,10 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
 pub fn module_word_description(module_name: &str, short_name: &str) -> Option<&'static str> {
     module_builtins::module_word_description(module_name, short_name)
 }
+
+/// Render the four-section LOOKUP body for a module word, accepting either
+/// a qualified `MODULE@WORD` name or a bare module word name. Returns
+/// `None` if no such word exists.
+pub fn lookup_module_word_detail(name: &str) -> Option<String> {
+    module_builtins::lookup_module_word_detail(name)
+}

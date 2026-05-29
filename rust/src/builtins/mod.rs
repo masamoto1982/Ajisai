@@ -6,6 +6,7 @@ pub use builtin_word_definitions::{
     BuiltinSpec, WordShape,
 };
 pub use builtin_word_details::lookup_builtin_detail;
+pub use builtin_word_details::render_four_section;
 
 use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};
