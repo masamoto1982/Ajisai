@@ -3,8 +3,9 @@ use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{Value, ValueData};
 
 use super::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
@@ -204,9 +205,10 @@ pub fn op_transpose(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-fn apply_unary_math<F>(interp: &mut Interpreter, op: F, op_name: &str) -> Result<()>
+fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
 where
     F: Fn(&Fraction) -> Fraction + Copy,
+    G: Fn(&ExactReal) -> Option<ExactReal>,
 {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {
@@ -249,6 +251,25 @@ where
         }
     }
 
+    // ExactScalar path: exact irrational via CF (SPEC §4.2.2)
+    if let ValueData::ExactScalar(er) = &val.data {
+        match exact_op(er) {
+            Some(result) => {
+                interp.stack.push(Value::from_exact_real(result));
+                return Ok(());
+            }
+            None => {
+                if !is_keep_mode {
+                    interp.stack.push(val);
+                }
+                return Err(AjisaiError::from(format!(
+                    "{} requires number or vector",
+                    op_name
+                )));
+            }
+        }
+    }
+
     if val.is_vector() {
         match apply_unary_flat_with_metrics(&val, op, Some(&mut interp.runtime_metrics)) {
             Ok(result) => {
@@ -277,15 +298,15 @@ where
 }
 
 pub fn op_floor(interp: &mut Interpreter) -> Result<()> {
-    apply_unary_math(interp, |f| f.floor(), "FLOOR")
+    apply_unary_math(interp, |f| f.floor(), |er| er.floor(), "FLOOR")
 }
 
 pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
-    apply_unary_math(interp, |f| f.ceil(), "CEIL")
+    apply_unary_math(interp, |f| f.ceil(), |er| er.ceil(), "CEIL")
 }
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
-    apply_unary_math(interp, |f| f.round(), "ROUND")
+    apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
 }
 
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
@@ -298,6 +319,46 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
 
     if nil_passthrough_binary(interp) {
         return Ok(());
+    }
+
+    // ExactScalar path: a mod b = a - b * floor(a/b) via CF (SPEC §4.2.2)
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && interp.stack.len() >= 2
+    {
+        let stack_len = interp.stack.len();
+        let a_ref = &interp.stack[stack_len - 2];
+        let b_ref = &interp.stack[stack_len - 1];
+        let has_exact = matches!(&a_ref.data, ValueData::ExactScalar(_))
+            || matches!(&b_ref.data, ValueData::ExactScalar(_));
+        if has_exact {
+            let a_er = match &a_ref.data {
+                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+                ValueData::ExactScalar(er) => Some(er.clone()),
+                _ => None,
+            };
+            let b_er = match &b_ref.data {
+                ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+                ValueData::ExactScalar(er) => Some(er.clone()),
+                _ => None,
+            };
+            if let (Some(a), Some(b)) = (a_er, b_er) {
+                let zero = ExactReal::from_fraction(Fraction::from(0i64));
+                let b_is_zero = b
+                    .eq_with_budget(&zero, DEFAULT_COMPARISON_BUDGET)
+                    .unwrap_or(false);
+                if b_is_zero {
+                    return Err(AjisaiError::from("Modulo by zero"));
+                }
+                if let Some(result) = a.div(&b).and_then(|q| q.floor()).map(|fl| a.sub(&b.mul(&fl))) {
+                    if interp.consumption_mode != ConsumptionMode::Keep {
+                        interp.stack.pop();
+                        interp.stack.pop();
+                    }
+                    interp.stack.push(Value::from_exact_real(result));
+                    return Ok(());
+                }
+            }
+        }
     }
 
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;

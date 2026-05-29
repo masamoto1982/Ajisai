@@ -1211,4 +1211,95 @@ mod exact_scalar_tests {
             "√2 + 1 must be a non-nil scalar, got: {val}"
         );
     }
+
+    #[tokio::test]
+    async fn exact_scalar_floor_is_exact_rational() {
+        // floor(√2) = 1 exactly
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 2 SQRT FLOOR")
+            .await
+            .unwrap();
+        let val = &interp.get_stack()[0];
+        let f = val.as_scalar().expect("floor(√2) must be exact rational");
+        assert_eq!(
+            f.to_i64(),
+            Some(1),
+            "floor(√2) must equal 1, got {f}"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_scalar_ceil_is_exact_rational() {
+        // ceil(√2) = 2 exactly
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT CEIL").await.unwrap();
+        let val = &interp.get_stack()[0];
+        let f = val.as_scalar().expect("ceil(√2) must be exact rational");
+        assert_eq!(
+            f.to_i64(),
+            Some(2),
+            "ceil(√2) must equal 2, got {f}"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_scalar_round_is_exact_rational() {
+        // round(√2) = 1 (√2 ≈ 1.414 → nearest integer is 1)
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 2 SQRT ROUND")
+            .await
+            .unwrap();
+        let val = &interp.get_stack()[0];
+        let f = val.as_scalar().expect("round(√2) must be exact rational");
+        assert_eq!(
+            f.to_i64(),
+            Some(1),
+            "round(√2) must equal 1, got {f}"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_scalar_floor_sqrt3_is_exact_rational() {
+        // floor(√3) = 1 exactly
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 3 SQRT FLOOR")
+            .await
+            .unwrap();
+        let val = &interp.get_stack()[0];
+        let f = val.as_scalar().expect("floor(√3) must be exact rational");
+        assert_eq!(
+            f.to_i64(),
+            Some(1),
+            "floor(√3) must equal 1, got {f}"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_scalar_mod_rational_is_exact() {
+        // √2 mod 1 = √2 - 1 (irrational, stays ExactScalar)
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'math' IMPORT 2 SQRT 1 MOD")
+            .await
+            .unwrap();
+        let val = &interp.get_stack()[0];
+        assert!(
+            val.is_scalar() && !val.is_nil(),
+            "√2 mod 1 must be a non-nil scalar, got: {val}"
+        );
+        // Result should be less than 1
+        let mut interp2 = Interpreter::new();
+        interp2
+            .execute("'math' IMPORT 2 SQRT 1 MOD 1 <")
+            .await
+            .unwrap();
+        let cmp = &interp2.get_stack()[0];
+        assert!(
+            !cmp.is_nil() && cmp.as_scalar().map(|f| !f.is_zero()).unwrap_or(false),
+            "(√2 mod 1) < 1 must be TRUE"
+        );
+    }
 }
