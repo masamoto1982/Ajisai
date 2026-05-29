@@ -1420,7 +1420,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Arithmetic primitive: Modulo (remainder) of two numeric values.",
 
         stack_effect: "[ a ] [ b ] -> [ a mod b ]",
-        partiality: Partiality::Partial,
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -1437,6 +1438,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Arithmetic primitive: Round toward negative infinity.",
 
         stack_effect: "[ x ] -> [ floor x ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -1452,6 +1456,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Arithmetic primitive: Round toward positive infinity.",
 
         stack_effect: "[ x ] -> [ ceil x ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -1467,6 +1474,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Arithmetic primitive: Round to nearest integer (half-up).",
 
         stack_effect: "[ x ] -> [ round x ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
 

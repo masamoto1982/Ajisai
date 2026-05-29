@@ -1,11 +1,26 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
+
+/// Push a SPEC §7.4.1 Undecidable NIL. Used when an exact-real (CF)
+/// arithmetic word cannot resolve its result within the partial-quotient
+/// budget; the Bubble Rule (SPEC §11.2) places NIL on the stack instead
+/// of raising an error, matching the comparison-budget exhaustion path.
+fn push_undecidable_nil(interp: &mut Interpreter) {
+    interp
+        .stack
+        .push(Value::nil_with_reason(NilReason::Undecidable));
+    let stack_len = interp.stack.len();
+    interp.semantic_registry.normalize_to_stack_len(stack_len);
+    interp
+        .semantic_registry
+        .update_hint_at(stack_len - 1, Interpretation::Nil);
+}
 
 use super::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
@@ -251,23 +266,16 @@ where
         }
     }
 
-    // ExactScalar path: exact irrational via CF (SPEC §4.2.2)
+    // ExactScalar path: exact irrational via CF (SPEC §4.2.2). When the
+    // CF stream exhausts its partial-quotient budget the result is
+    // undecidable, so project to a Bubble NIL (SPEC §7.4.1, §11.2)
+    // instead of raising an error — matching the comparison-budget path.
     if let ValueData::ExactScalar(er) = &val.data {
         match exact_op(er) {
-            Some(result) => {
-                interp.stack.push(Value::from_exact_real(result));
-                return Ok(());
-            }
-            None => {
-                if !is_keep_mode {
-                    interp.stack.push(val);
-                }
-                return Err(AjisaiError::from(format!(
-                    "{} requires number or vector",
-                    op_name
-                )));
-            }
+            Some(result) => interp.stack.push(Value::from_exact_real(result)),
+            None => push_undecidable_nil(interp),
         }
+        return Ok(());
     }
 
     if val.is_vector() {
@@ -349,14 +357,20 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 if b_is_zero {
                     return Err(AjisaiError::from("Modulo by zero"));
                 }
-                if let Some(result) = a.div(&b).and_then(|q| q.floor()).map(|fl| a.sub(&b.mul(&fl))) {
-                    if interp.consumption_mode != ConsumptionMode::Keep {
-                        interp.stack.pop();
-                        interp.stack.pop();
-                    }
-                    interp.stack.push(Value::from_exact_real(result));
-                    return Ok(());
+                // a mod b = a - b * floor(a/b). A `None` here (after the
+                // zero check) means the CF division/floor exhausted its
+                // budget, so the result is undecidable: project to a
+                // Bubble NIL (SPEC §7.4.1) rather than erroring.
+                let modulo = a.div(&b).and_then(|q| q.floor()).map(|fl| a.sub(&b.mul(&fl)));
+                if interp.consumption_mode != ConsumptionMode::Keep {
+                    interp.stack.pop();
+                    interp.stack.pop();
                 }
+                match modulo {
+                    Some(result) => interp.stack.push(Value::from_exact_real(result)),
+                    None => push_undecidable_nil(interp),
+                }
+                return Ok(());
             }
         }
     }
