@@ -2,6 +2,7 @@ mod module_builtins;
 mod module_import_execution;
 mod module_registry;
 mod module_samples;
+mod module_word_docs;
 mod module_word_types;
 
 use crate::coreword_registry::CorewordMetadata;
