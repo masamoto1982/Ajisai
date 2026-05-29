@@ -169,6 +169,23 @@ mod tests {
     }
 
     #[test]
+    fn comparison_words_have_uniform_stack_effect() {
+        // All six comparison primitives must use the same stack-effect
+        // notation so the four-section template is consistent across the
+        // comparison category.
+        const EXPECTED: &str = "[ a ] [ b ] -> [ TRUE | FALSE ]";
+        for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
+            let spec = crate::builtins::builtin_word_definitions::lookup_builtin_spec(name)
+                .unwrap_or_else(|| panic!("{} must have a BuiltinSpec", name));
+            assert_eq!(
+                spec.stack_effect, EXPECTED,
+                "{} stack_effect deviates from the comparison-word standard",
+                name
+            );
+        }
+    }
+
+    #[test]
     fn lookup_output_is_ascii() {
         for name in ["ADD", "MAP", "LOOKUP", "DEF", "OR-NIL", "TOP", "PRINT"] {
             let body = lookup_builtin_detail(name);
