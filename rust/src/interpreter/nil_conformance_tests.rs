@@ -68,10 +68,11 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    ("MOD", NilClass::BinaryBlanket),
-    ("FLOOR", NilClass::UnaryNil),
-    ("CEIL", NilClass::UnaryNil),
-    ("ROUND", NilClass::UnaryNil),
+    // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil: on ExactScalar (CF)
+    // operands the partial-quotient budget can exhaust, yielding an
+    // Undecidable NIL (SPEC §7.4.1) — the same treatment as comparison
+    // words. They are covered by projecting_word_set_matches_registry and
+    // the arithmetic NIL-input probes below.
     // Comparison words (EQ/NEQ/LT/LTE/GT/GTE) are Projecting/CreatesNil
     // per SPEC §7.14 (comparison-budget exhaustion can produce Undecidable
     // NIL). They are covered by the projecting_word_set_matches_registry
@@ -193,20 +194,24 @@ async fn three_valued_or() {
 /// reason; malformed use raises an ordinary error. `READ` is host/serial
 /// dependent (needs a port) so only its registry presence is asserted.
 const PROJECTING_WORDS: &[&str] = &[
+    "CEIL",
     "CHR",
     "DIV",
     "EQ",
+    "FLOOR",
     "GET",
     "GT",
     "GTE",
     "INDEX-OF",
     "LT",
     "LTE",
+    "MOD",
     "NEQ",
     "NUM",
     "PARSE-ISO",
     "POW",
     "READ",
+    "ROUND",
 ];
 
 #[test]
@@ -295,6 +300,25 @@ async fn bubble_creation_comparison_nil_input() {
                 stack[0]
             );
         }
+    }
+}
+
+#[tokio::test]
+async fn projecting_arithmetic_nil_input_passes_through() {
+    // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil, but a NIL operand
+    // still propagates as NIL via the universal Bubble Rule (SPEC §4.5.1)
+    // — the CreatesNil policy is about CF-budget exhaustion on irrational
+    // operands, not about rejecting NIL inputs.
+    for name in &["FLOOR", "CEIL", "ROUND"] {
+        let code = format!("NIL {name}");
+        let stack = run_ok(&code).await;
+        assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+        assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
+    }
+    for code in ["NIL 1 MOD", "1 NIL MOD", "NIL NIL MOD"] {
+        let stack = run_ok(code).await;
+        assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+        assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
     }
 }
 

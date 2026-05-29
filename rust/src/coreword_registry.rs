@@ -741,6 +741,50 @@ mod tests {
     }
 
     #[test]
+    fn aq_ver_contract_g_rounding_modulo_create_nil_under_undecidable() {
+        // MOD/FLOOR/CEIL/ROUND operate on ExactScalar (CF) operands whose
+        // partial-quotient budget can exhaust, yielding an Undecidable NIL
+        // (SPEC §7.4.1). They are therefore Projecting/CreatesNil/B, matching
+        // DIV and the comparison words. ADD/SUB/MUL stay Total because their
+        // CF arithmetic always yields a value (never a budget miss).
+        for name in &["MOD", "FLOOR", "CEIL", "ROUND"] {
+            let meta = get_coreword_metadata(name)
+                .unwrap_or_else(|| panic!("{} must be in registry", name));
+            assert_eq!(
+                meta.partiality,
+                Partiality::Projecting,
+                "{} must be Projecting (SPEC §7.4.1)",
+                name
+            );
+            assert_eq!(
+                meta.nil_policy,
+                NilPolicy::CreatesNil,
+                "{} must be CreatesNil (SPEC §7.4.1)",
+                name
+            );
+            assert_eq!(
+                meta.safety_level,
+                SafetyLevel::B,
+                "{} must be SafetyLevel B",
+                name
+            );
+        }
+
+        // ADD/SUB/MUL must remain Total: their ExactReal arithmetic always
+        // produces a value, so they never create a budget-exhaustion NIL.
+        for name in &["ADD", "SUB", "MUL"] {
+            let meta = get_coreword_metadata(name)
+                .unwrap_or_else(|| panic!("{} must be in registry", name));
+            assert_eq!(
+                meta.nil_policy,
+                NilPolicy::Passthrough,
+                "{} must stay Passthrough (CF arithmetic is total)",
+                name
+            );
+        }
+    }
+
+    #[test]
     fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
         let registry = get_builtin_word_registry();
         for word in registry
