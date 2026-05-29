@@ -214,6 +214,23 @@ impl Value {
     }
 
     #[inline]
+    pub fn from_exact_real(er: crate::types::continued_fraction::ExactReal) -> Self {
+        // If the ExactReal is already rational, use the fast Fraction path.
+        if let Some(f) = er.as_rational() {
+            return Self {
+                data: ValueData::Scalar(f.clone()),
+                hint: Interpretation::RawNumber,
+                absence: None,
+            };
+        }
+        Self {
+            data: ValueData::ExactScalar(er),
+            hint: Interpretation::RawNumber,
+            absence: None,
+        }
+    }
+
+    #[inline]
     pub fn from_number(f: Fraction) -> Self {
         Self::from_fraction(f)
     }
@@ -252,7 +269,7 @@ impl Value {
     #[inline]
     pub fn semantic_kind(&self) -> SemanticKind {
         match &self.data {
-            ValueData::Scalar(_) => SemanticKind::Number,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
             ValueData::Record { .. } => SemanticKind::Record,
             ValueData::Nil => SemanticKind::Absence,
@@ -265,7 +282,7 @@ impl Value {
     #[inline]
     pub fn shape_kind(&self) -> ValueShape {
         match &self.data {
-            ValueData::Scalar(_) => ValueShape::Scalar,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
             ValueData::Record { .. } => ValueShape::Record,
@@ -286,6 +303,10 @@ impl Value {
                 capabilities.push(Capability::Numeric);
                 capabilities.push(Capability::ExactNumeric);
                 capabilities.push(Capability::UserEditable);
+            }
+            ValueData::ExactScalar(_) => {
+                capabilities.push(Capability::Numeric);
+                capabilities.push(Capability::ExactNumeric);
             }
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
                 capabilities.push(Capability::Iterable);
@@ -319,7 +340,7 @@ impl Value {
 
     #[inline]
     pub fn is_scalar(&self) -> bool {
-        matches!(self.data, ValueData::Scalar(_))
+        matches!(self.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
     }
 
     #[inline]
@@ -366,6 +387,7 @@ impl Value {
                 tensor_to_nested_values(data, shape),
             )),
             ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -399,7 +421,7 @@ impl Value {
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
-            ValueData::Scalar(_) | ValueData::Nil => true,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
                 Rc::strong_count(data) == 1 && Rc::strong_count(shape) == 1
@@ -416,6 +438,9 @@ impl Value {
         match &self.data {
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
+            // ExactScalar values from AlgebraicSqrt are always non-zero positive
+            // irrationals; Gosper nodes conservatively report truthy.
+            ValueData::ExactScalar(_) => true,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
             }
@@ -432,7 +457,7 @@ impl Value {
     pub fn len(&self) -> usize {
         match &self.data {
             ValueData::Nil => 0,
-            ValueData::Scalar(_) => 1,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
             ValueData::Tensor { data, shape } => {
                 if shape.is_empty() {
@@ -455,8 +480,9 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
             ValueData::Tensor { .. } => None,
-            ValueData::Scalar(_) if index == 0 => Some(self),
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self),
             ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -475,9 +501,10 @@ impl Value {
     pub fn child(&self, index: usize) -> Option<Value> {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index).cloned(),
-            ValueData::Scalar(_) if index == 0 => Some(self.clone()),
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self.clone()),
             ValueData::Tensor { data, shape } => tensor_child(data, shape, index),
             ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -495,6 +522,7 @@ impl Value {
             }
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -512,7 +540,7 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
             ValueData::Tensor { .. } => None,
-            ValueData::Scalar(_) => Some(self),
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
             ValueData::Nil => None,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -546,6 +574,10 @@ impl Value {
                 let old = Value::from_fraction(f.clone());
                 self.data = ValueData::Vector(Rc::new(vec![old, child]));
             }
+            ValueData::ExactScalar(_) => {
+                // Cannot push_child into an ExactScalar — silently ignore
+                // (ExactScalar is always a scalar leaf, never mutated into a vector).
+            }
             ValueData::Tensor { .. }
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -561,6 +593,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -576,6 +609,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -594,6 +628,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -614,6 +649,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -630,7 +666,8 @@ impl Value {
     pub fn as_scalar(&self) -> Option<&Fraction> {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::Vector(_)
+            ValueData::ExactScalar(_)
+            | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
@@ -644,7 +681,8 @@ impl Value {
     pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::Vector(_)
+            ValueData::ExactScalar(_)
+            | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
@@ -670,6 +708,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -686,6 +725,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
             ValueData::Tensor { .. }
             | ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -703,6 +743,13 @@ impl Value {
         match &self.data {
             ValueData::Nil => buf.push(Fraction::nil()),
             ValueData::Scalar(f) => buf.push(f.clone()),
+            ValueData::ExactScalar(er) => {
+                // Use best rational approximation for ExactScalar in flat collection
+                if let Some(f) = er.as_rational() {
+                    buf.push(f.clone());
+                }
+                // non-rational ExactScalars are not representable as a single Fraction
+            }
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 for child in v.iter() {
                     child.collect_fractions_flat_into(buf);
@@ -720,7 +767,7 @@ impl Value {
     pub fn count_fractions(&self) -> usize {
         match &self.data {
             ValueData::Nil => 1,
-            ValueData::Scalar(_) => 1,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().map(|c| c.count_fractions()).sum()
             }
@@ -734,7 +781,7 @@ impl Value {
     pub fn shape(&self) -> Vec<usize> {
         match &self.data {
             ValueData::Nil => vec![],
-            ValueData::Scalar(_) => vec![],
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => vec![],
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 if v.is_empty() {
                     vec![0]
@@ -804,7 +851,7 @@ impl Value {
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
             ValueData::Nil => Interpretation::Nil,
-            ValueData::Scalar(_) => Interpretation::RawNumber,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
                 Interpretation::Unassigned
             }
@@ -937,6 +984,7 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
     }
     match &v.data {
         ValueData::Scalar(f) => Some((vec![f.clone()], Vec::new())),
+        ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
         ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
         ValueData::Nil

@@ -321,14 +321,18 @@ mod interval_tests {
 
     #[tokio::test]
     async fn test_sqrt_interval_soundness_and_eps() {
+        // SQRT now returns an exact AlgebraicSqrt for rational scalar inputs
+        // instead of an interval. Verify the result is an ExactScalar.
         let mut interp = Interpreter::new();
         interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
-        let iv = value_to_interval(&interp.get_stack()[0]).expect("sqrt(2) must be interval");
-        let two = Fraction::from(2);
-        assert!(iv.lo.mul(&iv.lo).le(&two));
-        assert!(iv.hi.mul(&iv.hi).ge(&two));
-        assert!(iv.lo.le(&iv.hi));
+        let val = &interp.get_stack()[0];
+        assert!(
+            matches!(&val.data, crate::types::ValueData::ExactScalar(er)
+                if er.sqrt_radicand().map(|r| *r == crate::types::fraction::Fraction::from(2)).unwrap_or(false)),
+            "SQRT(2) must be ExactScalar(AlgebraicSqrt {{ radicand: 2/1 }}), got: {val}"
+        );
 
+        // SQRT-EPS still returns an interval (interval path unchanged)
         let mut interp_eps = Interpreter::new();
         interp_eps
             .execute("'math' IMPORT 2 1/100 SQRT-EPS")
@@ -1123,5 +1127,88 @@ mod ragged_equality_tests {
             Value::from_children(vec![Value::from_int(3), Value::from_int(4)]),
         ]);
         assert_eq!(dense, nested);
+    }
+}
+
+#[cfg(test)]
+mod exact_scalar_tests {
+    use crate::interpreter::Interpreter;
+    use crate::types::continued_fraction::ExactReal;
+    use crate::types::fraction::Fraction;
+    use crate::types::ValueData;
+    use num_bigint::BigInt;
+
+    #[tokio::test]
+    async fn sqrt_of_perfect_square_is_exact_rational() {
+        // 4 MATH@SQRT = 2/1 exactly (Fraction fast path, not ExactScalar)
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 4 SQRT").await.unwrap();
+        let f = interp.get_stack()[0]
+            .as_scalar()
+            .expect("SQRT(4) must be exact rational scalar");
+        assert_eq!(*f, Fraction::new(BigInt::from(2), BigInt::from(1)));
+    }
+
+    #[tokio::test]
+    async fn sqrt_of_irrational_produces_exact_scalar() {
+        // 2 MATH@SQRT → ExactScalar(AlgebraicSqrt { radicand: 2/1 })
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
+        let val = &interp.get_stack()[0];
+        assert!(
+            matches!(&val.data, ValueData::ExactScalar(er)
+                if er.is_algebraic_sqrt()),
+            "SQRT(2) must be ExactScalar(AlgebraicSqrt), got: {val}"
+        );
+    }
+
+    #[tokio::test]
+    async fn sqrt_of_irrational_compares_equal_to_itself() {
+        // Push √2 twice; EQ should return TRUE via CF data equality
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT 2 SQRT EQ").await.unwrap();
+        let val = &interp.get_stack()[0];
+        assert!(
+            val.is_truthy(),
+            "√2 == √2 must be TRUE, got: {val}"
+        );
+    }
+
+    #[tokio::test]
+    async fn sqrt_of_irrational_lt_comparison_correct() {
+        // √2 ≈ 1.414 < 2
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT 2 LT").await.unwrap();
+        let val = &interp.get_stack()[0];
+        assert!(val.is_truthy(), "√2 < 2 must be TRUE, got: {val}");
+    }
+
+    #[tokio::test]
+    async fn sqrt_squared_via_mul_returns_exact_scalar() {
+        // √2 × √2 produces an exact value via Gosper bihomographic path.
+        // The result is ExactScalar(Gosper); it should be a non-nil scalar.
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT 2 SQRT *").await.unwrap();
+        let val = &interp.get_stack()[0];
+        assert!(
+            val.is_scalar() && !val.is_nil(),
+            "√2 × √2 must be a non-nil scalar, got: {val}"
+        );
+        // The display should be an approximate rational (Gosper node)
+        let display = format!("{val}");
+        assert!(!display.is_empty() && display != "NIL", "display must be non-nil");
+    }
+
+    #[tokio::test]
+    async fn exact_scalar_add_rational_produces_result() {
+        // √2 + 1 → irrational result (ExactScalar)
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT 1 +").await.unwrap();
+        let val = &interp.get_stack()[0];
+        // Result is a Gosper Möbius transform — an ExactScalar
+        assert!(
+            val.is_scalar() && !val.is_nil(),
+            "√2 + 1 must be a non-nil scalar, got: {val}"
+        );
     }
 }

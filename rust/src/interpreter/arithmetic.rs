@@ -7,12 +7,14 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::types::continued_fraction::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, SparseTensor, Value, ValueData};
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
         ValueData::Scalar(f) => Some(f.clone()),
+        ValueData::ExactScalar(_) => None, // handled by ExactReal path
         ValueData::Vector(children) if children.len() == 1 => {
             extract_scalar_from_value(&children[0])
         }
@@ -27,8 +29,36 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     }
 }
 
+fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
+    match &val.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
+}
+
 fn is_scalar_value(val: &Value) -> bool {
-    extract_scalar_from_value(val).is_some()
+    matches!(&val.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
+        || matches!(&val.data, ValueData::Vector(c) if c.len() == 1 && extract_scalar_from_value(&c[0]).is_some())
+        || matches!(&val.data, ValueData::Tensor { data, .. } if data.len() == 1)
+}
+
+/// Apply an ExactReal binary operation to two stack values where at least
+/// one is an `ExactScalar`. Returns `None` if neither value is an ExactScalar
+/// (let the Fraction fast path handle it).
+fn try_exact_real_binary_op<F>(a_val: &Value, b_val: &Value, op: F) -> Option<Value>
+where
+    F: Fn(&ExactReal, &ExactReal) -> Option<ExactReal>,
+{
+    let has_exact = matches!(&a_val.data, ValueData::ExactScalar(_))
+        || matches!(&b_val.data, ValueData::ExactScalar(_));
+    if !has_exact {
+        return None;
+    }
+    let a = extract_exact_real_from_value(a_val)?;
+    let b = extract_exact_real_from_value(b_val)?;
+    let result = op(&a, &b)?;
+    Some(Value::from_exact_real(result))
 }
 
 fn sparse_mul_candidate(a: &Value, b: &Value) -> Option<Value> {
@@ -229,6 +259,20 @@ pub fn op_add(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
+    // ExactScalar path: at least one operand is an exact irrational
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.add(b))) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
     apply_binary_arithmetic(interp, |a, b| Ok(a.add(b)))
 }
 
@@ -261,6 +305,20 @@ pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
                 .runtime_metrics
                 .vtu_simd_kernel_use_count
                 .saturating_add(1);
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
+    // ExactScalar path
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.sub(b))) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -325,6 +383,20 @@ pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
         }
 
         if let Some(result) = sparse_mul_candidate(a, b) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        }
+    }
+    // ExactScalar path
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.mul(b))) {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -413,6 +485,36 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
+    // ExactScalar path
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+        if let Some(result) =
+            try_exact_real_binary_op(a, b, |a, b| a.div(b))
+        {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        } else if matches!(&a.data, ValueData::ExactScalar(_))
+            || matches!(&b.data, ValueData::ExactScalar(_))
+        {
+            // div returned None — structurally-zero divisor
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(Value::bubble_with_reason(
+                NilReason::DivisionByZero,
+                AbsenceOrigin::ExecutionFailure,
+                Recoverability::Recoverable,
+            ));
+            return Ok(());
+        }
+    }
     apply_binary_arithmetic(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)

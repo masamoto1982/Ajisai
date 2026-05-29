@@ -37,6 +37,7 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
             });
         }
         ValueData::Scalar(_) => return false,
+        ValueData::ExactScalar(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
         ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
@@ -49,6 +50,7 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
 fn check_char_scalar(child: &Value) -> bool {
     let f: &Fraction = match &child.data {
         ValueData::Scalar(f) => f,
+        ValueData::ExactScalar(_) => return false,
         ValueData::Vector(_) => return false,
         ValueData::Tensor { .. } => return false,
         ValueData::Nil => return false,
@@ -210,6 +212,13 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
+            ValueData::ExactScalar(er) => {
+                use num_bigint::BigInt;
+                match er.best_rational_approximation(&BigInt::from(1_000_000u64)) {
+                    Some(approx) => vec![format_fraction_to_string(&approx)],
+                    None => vec!["NIL".to_string()],
+                }
+            }
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..

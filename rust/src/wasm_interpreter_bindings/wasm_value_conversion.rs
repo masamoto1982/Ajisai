@@ -375,6 +375,14 @@ pub(crate) fn value_to_protocol(
     let effective = external_hint_opt.unwrap_or(value.hint);
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
+        ValueData::ExactScalar(er) => {
+            // Serialize ExactScalar as best rational approximation with large denominator
+            use num_bigint::BigInt;
+            let approx = er
+                .best_rational_approximation(&BigInt::from(1_000_000_000u64))
+                .unwrap_or_else(crate::types::fraction::Fraction::nil);
+            scalar_to_protocol(&approx, effective)
+        }
         ValueData::Scalar(f) => scalar_to_protocol(f, effective),
         ValueData::Vector(children) => {
             if effective == Interpretation::Text {

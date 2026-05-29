@@ -118,6 +118,16 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
         match &value.data {
             ValueData::Nil => arena.alloc_nil(value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
+            ValueData::ExactScalar(er) => {
+                // ExactScalar cannot be stored exactly in the arena (which uses Fraction
+                // scalars). Store as best rational approximation; lossy but safe for
+                // arena consumers (JSON export, display via arena).
+                use num_bigint::BigInt;
+                let approx = er
+                    .best_rational_approximation(&BigInt::from(1_000_000_000u64))
+                    .unwrap_or_else(super::fraction::Fraction::nil);
+                arena.alloc_scalar(approx, value.hint)
+            }
             ValueData::Vector(children) => {
                 let child_ids = children
                     .iter()

@@ -1,5 +1,6 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::continued_fraction::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::interval::{
     default_sqrt_eps, exact_rational_sqrt, sqrt_rational_interval, Interval,
@@ -129,6 +130,25 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
+
+    // Fast exact path for rational scalar inputs: produce an ExactReal.
+    if let Some(f) = value.as_scalar() {
+        match ExactReal::from_sqrt_rational(f.clone()) {
+            Some(er) => {
+                // from_exact_real already collapses Rational variants to Scalar(Fraction)
+                interp.stack.push(Value::from_exact_real(er));
+                interp.semantic_registry.push_hint(Interpretation::RawNumber);
+            }
+            None => {
+                // Negative input → NIL
+                interp.stack.push(Value::nil_with_reason(NilReason::DivisionByZero));
+                interp.semantic_registry.push_hint(Interpretation::Nil);
+            }
+        }
+        return Ok(());
+    }
+
+    // Fallback: interval path for Interval-type inputs (SQRT_EPS etc.)
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("SQRT: expected Number or Interval"))?;
 
