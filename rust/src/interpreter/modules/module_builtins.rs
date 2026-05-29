@@ -1236,6 +1236,45 @@ pub(crate) fn module_word_description(module_name: &str, short_name: &str) -> Op
         .map(|w| w.description)
 }
 
+/// Render the four-section LOOKUP body for a module word, given a
+/// qualified `MODULE@WORD` name (e.g. `"JSON@PARSE"`). Returns `None` if
+/// the word does not exist.
+///
+/// Until the module-word 4-section content authoring is complete (see
+/// the follow-up PR planned in the three-layer documentation migration),
+/// `Summary` reuses the existing `description`, `Role` is synthesized
+/// from the module name + description, and `Stack Effect` is a
+/// placeholder. A test in this module guards the structural invariant
+/// (every entry produces all four sections) but content is not yet
+/// asserted.
+pub(crate) fn lookup_module_word_detail(name: &str) -> Option<String> {
+    let upper = name.to_uppercase();
+    let (module_name, short_name) = upper.split_once('@')?;
+    let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
+    let word = module.words.iter().find(|w| w.short_name == short_name)?;
+    let stability_str = match word.stability {
+        Stability::Stable => "stable",
+        Stability::Experimental => "experimental",
+    };
+    let category = module.name.to_lowercase();
+    let summary = word.description;
+    let role = format!(
+        "{} module word: {}",
+        module.name,
+        word.description.trim_end_matches('.')
+    );
+    let stack_effect = "see source / SPECIFICATION.md (placeholder)";
+    Some(crate::builtins::render_four_section(
+        "",
+        &format!("{}@{}", module.name, word.short_name),
+        stability_str,
+        &category,
+        summary,
+        &role,
+        stack_effect,
+    ))
+}
+
 /// Per-word contract overrides for module words whose `partiality` /
 /// `nil_policy` differ from the purity-class default produced by
 /// `coreword_registry::{pure,observable,effectful}`.
