@@ -12,6 +12,8 @@ fn check_value_has_truthy(val: &Value) -> bool {
     match &val.data {
         ValueData::Nil => false,
         ValueData::Scalar(f) => !f.is_zero(),
+        // ExactScalar values are always non-zero irrationals → truthy
+        ValueData::ExactScalar(_) => true,
         ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => true,
         ValueData::Vector(_) | ValueData::Record { .. } => {
             if let Ok(tensor) = FlatTensor::from_value(val) {

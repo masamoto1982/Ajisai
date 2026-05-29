@@ -1,5 +1,7 @@
+use super::continued_fraction::ExactReal;
 use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Value, ValueData};
+use num_bigint::BigInt;
 use std::fmt;
 
 impl fmt::Display for Value {
@@ -57,6 +59,7 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
         ValueData::Scalar(f) => format_fraction(f),
+        ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
             if v.is_empty() {
                 return "[ ]".to_string();
@@ -163,9 +166,30 @@ fn format_fraction(f: &Fraction) -> String {
     format!("{}/{}", f.numerator(), f.denominator())
 }
 
+/// Display an `ExactReal`. Rational variants use the canonical fraction
+/// format. `AlgebraicSqrt` variants show `sqrt(p/q)`. Gosper transforms
+/// show a best-rational-approximation with a `~` prefix to indicate the
+/// value is irrational but displayed approximately.
+fn format_exact_real(er: &ExactReal) -> String {
+    match er {
+        ExactReal::Rational(f) => format_fraction(f),
+        ExactReal::AlgebraicSqrt { radicand } => {
+            format!("sqrt({})", format_fraction(radicand))
+        }
+        ExactReal::Gosper(_) => {
+            // Best-rational approximation up to denominator 10^6
+            match er.best_rational_approximation(&BigInt::from(1_000_000u64)) {
+                Some(approx) => format!("~{}", format_fraction(&approx)),
+                None => "~?".to_string(),
+            }
+        }
+    }
+}
+
 fn format_as_string(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "''".to_string(),
+        ValueData::ExactScalar(er) => format!("'{}'", format_exact_real(er)),
         ValueData::Scalar(f) => {
             if let Some(n) = f.to_i64() {
                 if n >= 0 && n <= 0x10FFFF {
@@ -227,6 +251,8 @@ fn format_as_string(data: &ValueData) -> String {
 fn format_as_boolean(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
+        // ExactScalar values are always non-zero positive irrationals → TRUE
+        ValueData::ExactScalar(_) => "TRUE".to_string(),
         ValueData::Scalar(f) => {
             if f.is_nil() {
                 "NIL".to_string()
@@ -273,6 +299,7 @@ fn format_as_boolean(data: &ValueData) -> String {
                             "TRUE"
                         }
                     }
+                    ValueData::ExactScalar(_) => "TRUE",
                     ValueData::CodeBlock(_) => "TRUE",
                     ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
                 })
@@ -306,6 +333,7 @@ fn format_as_boolean(data: &ValueData) -> String {
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
+        ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
             format_value_recursive(data, 0)

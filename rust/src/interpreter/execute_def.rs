@@ -37,6 +37,7 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
                     })
                 })
                 .collect(),
+            ValueData::ExactScalar(_) => vec![],
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec![],
@@ -70,6 +71,7 @@ fn is_string_like(val: &Value) -> bool {
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .all(|f| f.to_i64().map(|n| (0..=0x10FFFF).contains(&n)).unwrap_or(false)),
+            ValueData::ExactScalar(_) => false,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => false,

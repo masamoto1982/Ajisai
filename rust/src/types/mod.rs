@@ -11,6 +11,7 @@ mod value_operations;
 use self::fraction::Fraction;
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
+use crate::types::continued_fraction::ExactReal;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -307,6 +308,10 @@ pub enum Interpretation {
 #[derive(Debug, Clone)]
 pub enum ValueData {
     Scalar(Fraction),
+    /// An exact real value backed by a continued-fraction representation
+    /// (e.g. AlgebraicSqrt or a Gosper transform). Constructed only by
+    /// `Value::from_exact_real`; use `as_scalar()` for the rational fast path.
+    ExactScalar(ExactReal),
     Vector(Rc<Vec<Value>>),
     Tensor {
         data: Rc<DenseTensor>,
@@ -326,6 +331,7 @@ impl PartialEq for ValueData {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (ValueData::Scalar(a), ValueData::Scalar(b)) => a == b,
+            (ValueData::ExactScalar(a), ValueData::ExactScalar(b)) => a == b,
             (ValueData::Vector(a), ValueData::Vector(b)) => a == b,
             (
                 ValueData::Tensor {
@@ -398,7 +404,7 @@ fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
 /// ragged sub-structures.
 fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             nested_vector_shape(items)
@@ -418,6 +424,8 @@ fn nested_flatten_matches(v: &[Value], data: &DenseTensor, idx: &mut usize) -> b
                 }
                 *idx += 1;
             }
+            // ExactScalar cannot equal a dense-tensor Fraction element
+            ValueData::ExactScalar(_) => return false,
             ValueData::Vector(inner) => {
                 if !nested_flatten_matches(inner, data, idx) {
                     return false;

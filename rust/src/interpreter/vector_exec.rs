@@ -59,6 +59,20 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
             }
         }
         ValueData::Tensor { data, shape } => format_tensor_to_source(data, shape, depth),
+        ValueData::ExactScalar(er) => {
+            // Display ExactScalar in source as a best rational approximation comment
+            use num_bigint::BigInt;
+            match er.best_rational_approximation(&BigInt::from(1_000_000_000u64)) {
+                Some(approx) => {
+                    if approx.is_integer() {
+                        Ok(format!("{}", approx.numerator()))
+                    } else {
+                        Ok(format!("{}/{}", approx.numerator(), approx.denominator()))
+                    }
+                }
+                None => Ok("NIL".to_string()),
+            }
+        }
     }
 }
 

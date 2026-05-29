@@ -76,6 +76,9 @@ impl FlatTensor {
                     strides,
                 })
             }
+            ValueData::ExactScalar(_) => Err(AjisaiError::from(
+                "Tensor conversion does not support exact irrational values",
+            )),
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
@@ -249,7 +252,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 /// the recursively flattened element count.
 fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             if items.is_empty() {

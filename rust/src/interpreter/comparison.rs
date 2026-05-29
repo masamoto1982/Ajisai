@@ -102,6 +102,9 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
 /// surface the new variant, and `compare_scalar_pair` / `pairwise_eq`
 /// will route it through the budgeted CF path automatically.
 fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
+    if let ValueData::ExactScalar(er) = &val.data {
+        return Ok(er.clone());
+    }
     let f = extract_scalar_for_comparison(val)?;
     Ok(ExactReal::from_fraction(f))
 }
@@ -109,6 +112,14 @@ fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
 fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     match &val.data {
         ValueData::Scalar(f) => Ok(f.clone()),
+        ValueData::ExactScalar(er) => {
+            // Provide best rational approximation for contexts requiring a Fraction
+            use num_bigint::BigInt;
+            er.best_rational_approximation(&BigInt::from(1_000_000_000u64))
+                .ok_or_else(|| {
+                    AjisaiError::create_structure_error("scalar value", "non-rational ExactReal")
+                })
+        }
         ValueData::Vector(_) | ValueData::Record { .. } => {
             let tensor = FlatTensor::from_value(val)?;
             if tensor.data.len() != 1 {
@@ -404,7 +415,10 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> Option<bool> {
         return Some(false);
     }
     match (&a_val.data, &b_val.data) {
-        (ValueData::Scalar(_), ValueData::Scalar(_)) => scalar_pair_eq(a_val, b_val),
+        (ValueData::Scalar(_), ValueData::Scalar(_))
+        | (ValueData::ExactScalar(_), ValueData::ExactScalar(_))
+        | (ValueData::ExactScalar(_), ValueData::Scalar(_))
+        | (ValueData::Scalar(_), ValueData::ExactScalar(_)) => scalar_pair_eq(a_val, b_val),
         (ValueData::Scalar(_), ValueData::Vector(children)) if children.len() == 1 => {
             Some(a_val.data == children[0].data)
         }
