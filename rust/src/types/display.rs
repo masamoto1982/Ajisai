@@ -28,6 +28,106 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
         Interpretation::Text => format_as_string(&value.data),
         Interpretation::TruthValue => format_as_boolean(&value.data),
         Interpretation::Timestamp => format_as_datetime(&value.data),
+        Interpretation::ContinuedFraction => format_as_continued_fraction(value),
+    }
+}
+
+/// Display budget for lazy continued fractions (SPEC §4.2.3:
+/// "implementation-defined display budget").
+const CF_DISPLAY_BUDGET: usize = 32;
+
+/// Render a numeric scalar value as the canonical nested
+/// continued-fraction form (SPEC §4.2.3): `( a0 ( a1 ( a2 ) ) )`.
+/// Lazy irrationals truncate at CF_DISPLAY_BUDGET terms with a `...)`
+/// marker on the innermost level.
+pub(crate) fn format_as_continued_fraction(value: &Value) -> String {
+    // Obtain the partial-quotient sequence and whether it is truncated.
+    let (terms, truncated): (Vec<BigInt>, bool) = match &value.data {
+        ValueData::Scalar(f) => {
+            // Rational: finite canonical CF.
+            match ExactReal::from_fraction(f.clone()).partial_quotients() {
+                Some(qs) => (qs, false),
+                None => (Vec::new(), false), // nil fraction
+            }
+        }
+        ValueData::ExactScalar(er) => match er.partial_quotients() {
+            Some(qs) => (qs, false), // collapsed to rational
+            None => {
+                let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
+                let truncated = qs.len() == CF_DISPLAY_BUDGET;
+                (qs, truncated)
+            }
+        },
+        // Non-scalar values fall back to the structural rendering.
+        _ => return format_value_recursive(&value.data, 0),
+    };
+    render_cf_nested(&terms, truncated)
+}
+
+/// Build the nested right-associative CF string from partial quotients.
+/// finite [a0,a1,a2] -> "( a0 ( a1 ( a2 ) ) )"
+/// truncated [a0,a1,a2] -> "( a0 ( a1 ( a2 ...) ) )"
+fn render_cf_nested(terms: &[BigInt], truncated: bool) -> String {
+    if terms.is_empty() {
+        return "( )".to_string();
+    }
+    let mut s = String::new();
+    for t in terms {
+        s.push_str("( ");
+        s.push_str(&t.to_string());
+        s.push(' ');
+    }
+    if truncated {
+        // The `...)` marker provides the innermost closing paren.
+        s.push_str("...)");
+    } else {
+        s.push(')');
+    }
+    // Close the remaining opened levels.
+    for _ in 0..terms.len() - 1 {
+        s.push_str(" )");
+    }
+    s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_cf_nested;
+    use num_bigint::BigInt;
+
+    fn bi(n: i64) -> BigInt {
+        BigInt::from(n)
+    }
+
+    #[test]
+    fn render_cf_nested_exact_forms() {
+        assert_eq!(render_cf_nested(&[bi(1)], false), "( 1 )");
+        assert_eq!(render_cf_nested(&[bi(1), bi(2)], false), "( 1 ( 2 ) )");
+        assert_eq!(
+            render_cf_nested(&[bi(1), bi(2), bi(2)], false),
+            "( 1 ( 2 ( 2 ) ) )"
+        );
+        assert_eq!(
+            render_cf_nested(&[bi(1), bi(2), bi(2)], true),
+            "( 1 ( 2 ( 2 ...) ) )"
+        );
+        assert_eq!(render_cf_nested(&[], false), "( )");
+    }
+
+    #[test]
+    fn render_cf_nested_balanced_parens() {
+        for terms in [
+            vec![bi(1)],
+            vec![bi(1), bi(2)],
+            vec![bi(2), bi(2), bi(2), bi(2)],
+        ] {
+            for truncated in [false, true] {
+                let s = render_cf_nested(&terms, truncated);
+                let opens = s.matches('(').count();
+                let closes = s.matches(')').count();
+                assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+            }
+        }
     }
 }
 

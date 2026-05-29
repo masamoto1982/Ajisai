@@ -90,6 +90,21 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == '>' {
+            // `>NAME` (e.g. `>CF`) is a single conversion-modifier identifier,
+            // not the `>` comparison operator followed by a word.
+            if i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
+                let start = i;
+                i += 1;
+                while i < chars.len()
+                    && !chars[i].is_whitespace()
+                    && !is_special_char(chars[i])
+                {
+                    i += 1;
+                }
+                let token_str: String = chars[start..i].iter().collect();
+                tokens.push(Token::Symbol(token_str.into()));
+                continue;
+            }
             if i + 1 < chars.len() && chars[i + 1] == '=' {
                 tokens.push(Token::Symbol(">=".into()));
                 i += 2;

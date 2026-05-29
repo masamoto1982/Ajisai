@@ -93,7 +93,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         True | False | Nil | Idle => pure_trivial,
 
         // ── Pure casts / string ops ───────────────────────────────────────
-        Str | Num | Bool | Chr | Chars | Join => pure_light,
+        Str | Num | Bool | Chr | Chars | Join | ToCf => pure_light,
         Trim | TrimLeft | TrimRight | Tokenize | Substitute | StartsWith | EndsWith => pure_light,
 
         // ── Pure vector ops ───────────────────────────────────────────────

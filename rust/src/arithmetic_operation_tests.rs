@@ -1303,3 +1303,61 @@ mod exact_scalar_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod continued_fraction_role_tests {
+    use crate::interpreter::Interpreter;
+    use crate::types::display::{format_as_continued_fraction, format_with_hint};
+    use crate::types::Interpretation;
+
+    // `>CF` on a rational: 5/2 = [2; 2] -> "( 2 ( 2 ) )".
+    #[tokio::test]
+    async fn to_cf_rational_nested_form() {
+        let mut interp = Interpreter::new();
+        interp.execute("5/2 >CF").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let hints = interp.collect_stack_hints();
+        assert_eq!(hints.last(), Some(&Interpretation::ContinuedFraction));
+        let s = format_with_hint(&stack[0], Interpretation::ContinuedFraction);
+        assert_eq!(s, "( 2 ( 2 ) )");
+    }
+
+    // `>CF` on √2 = [1; 2,2,2,...] -> lazy, truncated.
+    #[tokio::test]
+    async fn to_cf_sqrt2_truncated_form() {
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT 2 SQRT >CF").await.unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        let s = format_as_continued_fraction(&stack[0]);
+        assert!(s.starts_with("( 1"), "expected '( 1' prefix, got {s:?}");
+        assert!(s.contains("( 1 ( 2 ( 2 "), "expected √2 expansion, got {s:?}");
+        assert!(s.contains("...)"), "expected truncation marker, got {s:?}");
+        let opens = s.matches('(').count();
+        let closes = s.matches(')').count();
+        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+    }
+
+    // `>CF` only retags; the underlying value is byte-for-byte identical to
+    // an untagged √2 (same structural rendering, no data mutation).
+    #[tokio::test]
+    async fn to_cf_preserves_value() {
+        let mut tagged = Interpreter::new();
+        tagged.execute("'math' IMPORT 2 SQRT >CF").await.unwrap();
+        let mut plain = Interpreter::new();
+        plain.execute("'math' IMPORT 2 SQRT").await.unwrap();
+
+        let tagged_stack = tagged.get_stack();
+        let plain_stack = plain.get_stack();
+        assert_eq!(tagged_stack.len(), 1);
+        assert_eq!(plain_stack.len(), 1);
+
+        // The retagged value's underlying data renders identically to the
+        // untagged √2 under the structural (RawNumber) role.
+        assert_eq!(
+            format_with_hint(&tagged_stack[0], Interpretation::RawNumber),
+            format_with_hint(&plain_stack[0], Interpretation::RawNumber)
+        );
+    }
+}

@@ -60,6 +60,23 @@ pub(crate) fn op_interval(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// `>CF` — tag the top-of-stack value with the ContinuedFraction
+/// interpretation role (SPEC §12.2). Value-preserving: it only retags
+/// the existing top, leaving the underlying data untouched.
+pub(crate) fn op_to_cf(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
+        return Err(AjisaiError::from(">CF: Stack mode is not supported"));
+    }
+    let len = interp.stack.len();
+    if len == 0 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    interp
+        .semantic_registry
+        .update_hint_at(len - 1, Interpretation::ContinuedFraction);
+    Ok(())
+}
+
 pub(crate) fn op_lower(interp: &mut Interpreter) -> Result<()> {
     unary_interval_accessor(interp, |i| i.lo)
 }
