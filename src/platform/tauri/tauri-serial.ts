@@ -13,11 +13,42 @@ const invoke = async (command: string, args?: Record<string, unknown>): Promise<
 
 const DEFAULT_BAUD_RATE = 9600;
 
+// Cap a single serial_write payload at 1 MiB. Larger writes are almost
+// certainly a runaway loop on the Ajisai side; the Rust serialport crate
+// can't usefully buffer that much in one IPC hop anyway. Matches
+// MAX_WRITE_BYTES in src-tauri/src/serial.rs.
+const MAX_WRITE_BYTES = 1 << 20;
+
+// Cap the per-port receive buffer at 1 MiB so a never-drained port (e.g. a
+// noisy device whose Ajisai program is paused) cannot grow without bound and
+// OOM the WebView. When new bytes would push past the cap we drop the oldest
+// bytes (ring-buffer semantics) and warn exactly once per port so the user
+// sees there has been a loss without the console flooding.
+const MAX_RX_BYTES = 1 << 20;
+
 interface PortState {
     opened: boolean;
     baudRate: number;
     rx: number[];
     disconnected: boolean;
+    rxOverflowed: boolean;
+}
+
+function appendBytesWithRingBuffer(state: PortState, portId: string, incoming: ArrayLike<number>): void {
+    for (let i = 0; i < incoming.length; i += 1) {
+        state.rx.push(incoming[i]!);
+    }
+    if (state.rx.length > MAX_RX_BYTES) {
+        const drop = state.rx.length - MAX_RX_BYTES;
+        state.rx.splice(0, drop);
+        if (!state.rxOverflowed) {
+            state.rxOverflowed = true;
+            console.warn(
+                `Serial port '${portId}': receive buffer exceeded ${MAX_RX_BYTES} bytes; ` +
+                `oldest bytes dropped. Drain inbox more frequently or reduce inbound rate.`
+            );
+        }
+    }
 }
 
 /**
@@ -36,7 +67,13 @@ export class TauriSerialAdapter implements SerialAdapter {
     private entry(portId: string): PortState {
         let state = this.ports.get(portId);
         if (!state) {
-            state = { opened: false, baudRate: DEFAULT_BAUD_RATE, rx: [], disconnected: false };
+            state = {
+                opened: false,
+                baudRate: DEFAULT_BAUD_RATE,
+                rx: [],
+                disconnected: false,
+                rxOverflowed: false,
+            };
             this.ports.set(portId, state);
         }
         return state;
@@ -48,7 +85,7 @@ export class TauriSerialAdapter implements SerialAdapter {
                 const { listen } = await dynamicImport('@tauri-apps/api/event');
                 await listen('serial-rx', (event: { payload: { portId: string; bytes: number[] } }) => {
                     const entry = this.entry(event.payload.portId);
-                    for (const b of event.payload.bytes) entry.rx.push(b);
+                    appendBytesWithRingBuffer(entry, event.payload.portId, event.payload.bytes);
                 });
                 await listen('serial-disconnect', (event: { payload: { portId: string } }) => {
                     this.entry(event.payload.portId).disconnected = true;
@@ -86,6 +123,9 @@ export class TauriSerialAdapter implements SerialAdapter {
     }
 
     async write(portId: string, bytes: Uint8Array): Promise<void> {
+        if (bytes.length > MAX_WRITE_BYTES) {
+            throw new Error(`serial write payload too large: ${bytes.length} > ${MAX_WRITE_BYTES}`);
+        }
         await invoke('serial_write', { portId, bytes: Array.from(bytes) });
     }
 

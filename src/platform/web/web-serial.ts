@@ -20,6 +20,13 @@ const getNavigatorSerial = (): WebSerial | undefined =>
 
 const DEFAULT_BAUD_RATE = 9600;
 
+// Match tauri-serial.ts: cap the per-port RX buffer at 1 MiB and the per-call
+// write payload at 1 MiB. The cap protects against a never-drained noisy port
+// growing without bound; on overflow the oldest bytes are dropped
+// (ring-buffer semantics) and a single warning is logged per port.
+const MAX_RX_BYTES = 1 << 20;
+const MAX_WRITE_BYTES = 1 << 20;
+
 interface GrantedPort {
     readonly id: string;
     readonly port: WebSerialPort;
@@ -31,6 +38,23 @@ interface GrantedPort {
     rx: number[];
     /** Set when the RX loop ends unexpectedly (device unplugged / stream error). */
     disconnected: boolean;
+    /** True after the RX buffer has been trimmed at least once. */
+    rxOverflowed: boolean;
+}
+
+function appendRxBytes(entry: GrantedPort, incoming: Uint8Array): void {
+    for (const b of incoming) entry.rx.push(b);
+    if (entry.rx.length > MAX_RX_BYTES) {
+        const drop = entry.rx.length - MAX_RX_BYTES;
+        entry.rx.splice(0, drop);
+        if (!entry.rxOverflowed) {
+            entry.rxOverflowed = true;
+            console.warn(
+                `Serial port '${entry.id}': receive buffer exceeded ${MAX_RX_BYTES} bytes; ` +
+                `oldest bytes dropped. Drain inbox more frequently or reduce inbound rate.`
+            );
+        }
+    }
 }
 
 /**
@@ -66,7 +90,8 @@ export class WebSerialAdapter implements SerialAdapter {
             writer: null,
             reader: null,
             rx: [],
-            disconnected: false
+            disconnected: false,
+            rxOverflowed: false,
         };
         this.ports.push(entry);
         return entry;
@@ -87,7 +112,7 @@ export class WebSerialAdapter implements SerialAdapter {
                     const { value, done } = await reader.read();
                     if (done) break;
                     if (value) {
-                        for (const b of value) entry.rx.push(b);
+                        appendRxBytes(entry, value);
                     }
                 }
             } catch {
@@ -174,6 +199,11 @@ export class WebSerialAdapter implements SerialAdapter {
     }
 
     write(portId: string, bytes: Uint8Array): Promise<void> {
+        if (bytes.length > MAX_WRITE_BYTES) {
+            return Promise.reject(
+                new Error(`serial write payload too large: ${bytes.length} > ${MAX_WRITE_BYTES}`)
+            );
+        }
         return this.enqueue(async () => {
             const entry = this.require(portId);
             if (!entry.opened) {
