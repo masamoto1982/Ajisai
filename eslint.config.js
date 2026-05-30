@@ -39,15 +39,4 @@ export default [
       'no-eval': 'error',
     },
   },
-  {
-    // Task 4 で eval を Vite の @vite-ignore 動的 import に置換するまでの一時除外。
-    files: [
-      'src/platform/tauri/tauri-serial.ts',
-      'src/platform/tauri/tauri-file-io.ts',
-      'src/platform/tauri/tauri-persistence.ts',
-    ],
-    rules: {
-      'no-eval': 'off',
-    },
-  },
 ];

@@ -1,9 +1,10 @@
 import type { SerialAdapter, SerialInboxData, SerialPortInfo } from '../platform-adapter';
 
 // Avoid statically bundling the Tauri API into the web build; resolved only at
-// runtime inside the Tauri WebView (matches tauri-file-io.ts).
+// runtime inside the Tauri WebView. `@vite-ignore` tells Vite not to attempt
+// the resolution at build time, so the web bundle does not ship a stub.
 const dynamicImport = (specifier: string): Promise<any> =>
-    (0, eval)(`import(${JSON.stringify(specifier)})`);
+    import(/* @vite-ignore */ specifier);
 
 const invoke = async (command: string, args?: Record<string, unknown>): Promise<any> => {
     const { invoke } = await dynamicImport('@tauri-apps/api/core');
