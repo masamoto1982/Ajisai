@@ -91,6 +91,18 @@ impl Interpreter {
             return self.execute_builtin(&resolved_name);
         }
 
+        // Recursion depth guard: catches blown Rust stack before WASM traps.
+        // The matching decrement is just before the return below; there are
+        // no `?` early returns between this point and the decrement.
+        if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
+            return Err(AjisaiError::from(format!(
+                "recursion limit exceeded ({}) in '{}'",
+                super::interpreter_core::MAX_USER_WORD_DEPTH,
+                resolved_name
+            )));
+        }
+        self.call_depth += 1;
+
         let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
         self.call_stack.push(resolved_name.clone());
@@ -142,6 +154,7 @@ impl Interpreter {
             self.execute_guard_structure(&def.lines)
         };
         self.call_stack.pop();
+        self.call_depth -= 1;
         result
     }
 
