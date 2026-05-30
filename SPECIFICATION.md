@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-22**
+Version: **2026-05-30**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -64,7 +64,8 @@ Ajisai values are observed through independent semantic axes:
 |------|----------------|--------------------------|
 | semantic kind | `semanticKind` | `number`, `collection`, `record`, `code`, `process`, `supervisor`, `absence`, `unknown` |
 | shape | `shape` | `scalar`, `vector`, `tensor`, `record`, `codeBlock`, `handle`, `absence`, `unknown` |
-| capabilities | `capabilities` | `numeric`, `exactNumeric`, `iterable`, `indexable`, `callable`, `stackItem`, `nilPassthrough`, `diagnosable`, `serializable`, `displayable`, `userEditable`, `moduleOwned`, `coreOwned`, `aiExplainable` |
+| capabilities | `capabilities` | `numeric`, `exactNumeric`, `iterable`, `indexable`, `callable`, `stackItem`, `nilPassthrough`, `diagnosable`, `serializable`, `displayable`, `userEditable`, `moduleOwned`, `coreOwned`, `aiExplainable`, `truthValued` |
+| truth value | `truthValue` | `true`, `false`, `unknown` |
 | origin | `origin` | `literal`, `computed`, `coreWord`, `builtinWord`, `moduleWord`, `userWord`, `safeProjection`, `nilPropagation`, `hostEnvironment`, `optimizer`, `unknown` |
 | absence metadata | `absence` | structured object |
 | diagnostic context | `diagnosis` | structured object |
@@ -72,6 +73,8 @@ Ajisai values are observed through independent semantic axes:
 | serialization | `serialization` | explicit format contract only |
 
 External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine-readable tooling must not branch on Rust enum names, `Debug` strings, display text, GUI colors, or storage layout. Protocol strings are lower camel case and are the canonical machine-readable surface.
+
+The `truthValue` axis is present only on values carrying the `TruthValue` interpretation role (Section 12.2); such values also carry the `truthValued` capability. Its three protocol strings — `true`, `false`, `unknown` — are the **only** observable surface for the three-valued logic of Section 7.5. The third value `unknown` (U) is a logical truth value, not an operational absence: how it is represented internally (for example, whether it shares storage with a NIL node) is not observable, and consumers must not infer it from `semanticKind = absence`, from any `absence.reason`, or from display text. A consumer that needs to distinguish true, false, and unknown reads the `truthValue` axis and nothing else.
 
 ---
 
@@ -285,6 +288,12 @@ The intent is that pipelines built with safe mode (`~`) propagate NIL through su
 
 When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.
 
+#### 4.5.2 NIL versus Unknown
+
+NIL and the logical truth value `Unknown` (U, Section 7.5) are distinct and must not be conflated. **NIL is an operational absence**: a diagnostic bubble that records *why* a value is missing (division by zero, out-of-range `GET`, parse failure, a `SAFE`-caught error). **U is a logical undecidability**: a definite member of the three-valued truth domain that records that a proposition could not be settled true or false (notably a continued-fraction comparison that did not decide within its budget, Section 7.4.1). U carries the `TruthValue` role and is observed as `truthValue = unknown`; NIL is observed as `semanticKind = absence`.
+
+When NIL and U meet in the same operation, **NIL takes priority**. NIL carries a diagnostic `reason` that must be preserved (`PreservesReason`, Section 7.14), so the stronger, reason-bearing operational information is never erased by the logical value. Concretely, a logic word (Section 7.5) that receives both a NIL operand and a U operand applies its NIL handling and produces NIL, not U, unless an absorbing definite operand (`false` for `AND`, `true` for `OR`) settles the result first.
+
 ### 4.6 CodeBlock
 
 An executable sequence of tokens. CodeBlocks are first-class values: they can be stored on the stack, passed to higher-order words, and executed with `EXEC`.
@@ -459,7 +468,7 @@ Arithmetic on scalars is performed directly on the continued-fraction representa
 
 `FLOOR`, `CEIL`, and `ROUND` pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond `a0`.
 
-`MOD` is defined as `x - FLOOR(x / y) * y` and is computed by composing the underlying Gosper transforms. `DIV` by a value whose CF reduces to zero produces NIL with `reason = divisionByZero` (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with `reason = undecidable` (Section 7.4).
+`MOD` is defined as `x - FLOOR(x / y) * y` and is computed by composing the underlying Gosper transforms. `DIV` by a value whose CF reduces to zero produces NIL with `reason = divisionByZero` (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with `reason = undecidable` (Section 7.4). This is an *operational* absence — `DIV` could not produce a number — and remains a NIL; it is distinct from the *logical* `unknown` (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).
 
 ### 7.4 Comparison
 
@@ -472,7 +481,7 @@ Arithmetic on scalars is performed directly on the continued-fraction representa
 | `EQ` | `=` | Equal |
 | `NEQ` | `<>` | Not equal |
 
-Comparisons return a boolean (true/false encoded as Scalar with the `TruthValue` interpretation role), or NIL when the comparison is not decidable within the comparison budget (see below).
+Comparisons return a truth value with the `TruthValue` interpretation role: `true`, `false`, or — when the comparison is not decidable within the comparison budget (see below) — `unknown` (U, the third value of the three-valued logic of Section 7.5).
 
 The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`, `SAFE`).
 
@@ -484,13 +493,15 @@ Comparison on continued fractions (Section 4.2) proceeds by emitting partial quo
 
 To preserve totality, every comparison operation runs under an implementation-defined **partial-quotient budget**. If the budget is exhausted before a difference is found:
 
-- the comparison produces NIL with `absence.reason = undecidable` and `absence.origin = comparisonBudget`;
-- under the Bubble Rule (Section 11.2), this NIL is not a `SAFE`-caught error and must not be wrapped with `caughtCategory`;
-- NIL-passthrough (Section 7.12) carries the reason through subsequent passthrough words so a pipeline-final `OR-NIL` can supply a fallback.
+- the comparison produces the truth value `unknown` (U), observed as `truthValue = unknown`, with the `TruthValue` interpretation role;
+- U is a logical truth value, not an operational absence: the comparison does **not** produce a `reason = undecidable` NIL, and the Bubble Rule (Section 11.2) does not apply to it;
+- U flows into the three-valued logic of Section 7.5 directly. It is not a NIL, so the NIL-passthrough machinery of Section 7.12 does not carry it; instead `AND`/`OR`/`NOT` settle it according to the Kleene truth tables.
 
-The exhaustion-NIL outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison). The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
+The U outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison). The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
 
-`STAK`-mode ordering comparisons short-circuit on the first NIL-producing pair: the entire stack-mode result is NIL with the propagated reason, regardless of how many subsequent pairs would have decided.
+The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried in the comparison's `diagnosis` context (Section 4.5.0). It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable `truthValue`.
+
+`STAK`-mode ordering comparisons short-circuit on the first pair that yields U: the entire stack-mode result is U, regardless of how many subsequent pairs would have decided. (A NIL operand still short-circuits to NIL per Section 7.12; when both a NIL operand and a U-producing pair are present, NIL takes priority per Section 4.5.2.)
 
 ### 7.5 Logic
 
@@ -499,9 +510,21 @@ The exhaustion-NIL outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`
 | `AND` | `&` | Logical AND |
 | `OR` | — | Logical OR |
 | `NOT` | — | Logical NOT |
-| `TRUE` | — | Push boolean true |
-| `FALSE` | — | Push boolean false |
+| `TRUE` | — | Push truth value `true` |
+| `FALSE` | — | Push truth value `false` |
 | `NIL` | — | Push NIL |
+
+`AND`, `OR`, and `NOT` implement **strong Kleene three-valued logic (K3)** over the truth domain {`true` (T), `false` (F), `unknown` (U)}. U is a first-class logical truth value, observed as `truthValue = unknown` (Section 2.3), and arises in particular from undecidable continued-fraction comparisons (Section 7.4.1). The truth tables are:
+
+```
+AND:  T∧T=T   T∧U=U   T∧F=F   U∧U=U   U∧F=F   F∧anything=F
+OR :  F∨F=F   F∨U=U   F∨T=T   U∨U=U   U∨T=T   T∨anything=T
+NOT:  ¬T=F    ¬U=U    ¬F=T
+```
+
+The absorbing elements are exact: `AND` returns F whenever either operand is F (even if the other is U), and `OR` returns T whenever either operand is T (even if the other is U). U propagates in every other case where it appears.
+
+**Interaction with NIL.** NIL (operational absence, Section 4.5) and U (logical undecidability) are distinct values; see Section 4.5.2. The absorbing rule that previously collapsed NIL — `AND` with a definite F yields F, `OR` with a definite T yields T — is unchanged and continues to apply to NIL operands. In all other cases involving a NIL operand the logic word produces NIL (preserving the leftmost reason, Section 4.5.1), and `NOT` of NIL is NIL. When an operation receives both a NIL operand and a U operand and no absorbing definite operand settles the result, **NIL takes priority** and the result is NIL, not U (Section 4.5.2). This keeps the reason-bearing diagnostic value from being erased by the logical value.
 
 ### 7.6 String and type conversion
 
@@ -590,7 +613,9 @@ The following built-in words follow the NIL passthrough rule defined in Section 
 | Comparison | `LT`, `LTE`, `GT`, `GTE`, `EQ`, `NEQ` |
 | Logic | `AND`, `OR`, `NOT` (three-valued; see below) |
 
-`AND` and `OR` use three-valued logic: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL. `NOT` of NIL is NIL.
+`AND`, `OR`, and `NOT` implement strong Kleene three-valued logic (K3) over {`true`, `false`, `unknown`}; the truth tables and the U value are defined in Section 7.5. The three-valued behavior listed here concerns NIL operands specifically: NIL combined with a definite false (for `AND`) or definite true (for `OR`) collapses to that definite value; in all other cases involving NIL the result is NIL, and `NOT` of NIL is NIL. The logical third value U is separate from NIL (Section 4.5.2); when both appear, NIL takes priority.
+
+The comparison words are NIL-passthrough for NIL operands as listed above. They do **not** produce a `reason = undecidable` NIL on budget exhaustion; that case now yields the truth value `unknown` (Section 7.4.1), which is a `TruthValue` result rather than an absence.
 
 Words not listed here retain their existing handling of NIL. In particular, control-flow words (`COND`, `EXEC`, `MAP`, `FILTER`, `FOLD`, `UNFOLD`, `ANY`, `ALL`, `COUNT`, `SCAN`), most conversion words (`STR`, `BOOL`, `CHARS`, `JOIN`), IO words (`PRINT`, `NOW`, `DATETIME`, `TIMESTAMP`, `CSPRNG`, `HASH`), child-runtime words, and `OR-NIL` (`=>`) itself are not NIL-passthrough. `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
 
@@ -608,7 +633,11 @@ A contract entry has the following fields, in addition to the existing identific
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
 
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors. Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting` with `nil_policy = CreatesNil` for the comparison-budget exhaustion case introduced in Section 7.4.1 (`reason = undecidable`), while remaining `Passthrough` for NIL operands per Section 7.12; both behaviors coexist because they are independent axes.
+`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
+
+Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting`: they are total because every well-shaped input yields a `TruthValue` result, projecting the undecidable case onto the truth value `unknown` (U) rather than raising. Their `nil_policy` is `Passthrough` (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a `TruthValue` result and **not** a `reason`-bearing NIL, so they are no longer classified `CreatesNil` for that case. (The `reason = undecidable` NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)
+
+Logic words (`AND`, `OR`, `NOT`) are `Total` over the three-valued domain {`true`, `false`, `unknown`} (Section 7.5) and `Passthrough` for NIL operands, with `PreservesReason` so that the leftmost NIL reason survives and a NIL operand is never silently replaced by U (Section 4.5.2).
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -806,7 +835,7 @@ Initial Core words following this rule include:
 | `GET` | Valid vector target with an out-of-range index (`NilReason::IndexOutOfBounds`) | Non-vector target or non-numeric index |
 | `NUM` | Text cannot be parsed as a number (`NilReason::InvalidEncoding`) | Input shape is not convertible text |
 | `CHR` | Numeric code point is outside the valid Unicode scalar range (`NilReason::InvalidEncoding`) | Operand is not numeric, or numeric operand is not an integer |
-| `EQ` / `NEQ` / `LT` / `LTE` / `GT` / `GTE` | Comparison budget exhausted on lazy continued fractions (`NilReason::Undecidable`, `absence.origin = comparisonBudget`; see Section 7.4.1) | Non-numeric operands or malformed shapes |
+| `EQ` / `NEQ` / `LT` / `LTE` / `GT` / `GTE` | None: budget exhaustion on lazy continued fractions yields the truth value `unknown` (U), a `TruthValue` result, not a Bubble/NIL (Section 7.4.1). These words still pass NIL operands through (Section 7.12). | Non-numeric operands or malformed shapes |
 | `SERIAL@READ` | Receive buffer empty (`NilReason::NoData`); host reported the port disconnected with no remaining data (`NilReason::PortDisconnected`); both with `absence.origin = hostEnvironment` (Section 9.4) | Non-text port id, or a missing operand |
 
 `OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
@@ -842,7 +871,7 @@ The semantic plane holds an **interpretation role** for each stack position. A r
 | `ContinuedFraction` | Display a numeric scalar as the nested right-associative continued-fraction form `( a0 ( a1 ( a2 ... )))` (Section 4.2.3); lazy CFs render with a `...)` truncation marker |
 | `Interval` | A 2-element vector interpreted as the closed interval `[lo, hi]` |
 | `Text` | A codepoint sequence interpreted as text |
-| `TruthValue` | A scalar interpreted as a truth value |
+| `TruthValue` | A three-state scalar-like truth value drawn from {`true`, `false`, `unknown`} (Section 7.5). It is observed through the `truthValue` axis (`true` / `false` / `unknown`, Section 2.3) and carries the `truthValued` capability. Displays as `TRUE`, `FALSE`, or `UNKNOWN` (display-only, non-canonical). The third state `unknown` (U) is a logical truth value, not an operational absence; how it is represented internally is not observable. |
 | `Timestamp` | An integer interpreted as a formatted datetime |
 | `Nil` | A diagnostic absence value, displayed as `NIL` |
 
@@ -905,6 +934,8 @@ Every NIL-producing path must have at least one test that asserts both the surfa
 
 Words whose behavior depends on more than one independent condition (e.g. `~ /` decides on left-operand validity, right-operand validity, right-operand zero-ness, NIL-passthrough applicability, and SAFE engagement) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
 
+The three-valued logic words (`AND`, `OR`, `NOT`, Section 7.5) must cover every cell of the K3 truth tables — `AND` and `OR` over the nine {T, F, U}² combinations, `NOT` over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding `unknown` (U), and distinct irrationals deciding at a finite prefix.
+
 ### 15.4 Stack discipline under projection
 
 `SAFE`-guarded failures must restore the stack to the pre-call snapshot before pushing the projected NIL. Tests must verify the stack length, the semantic-plane length, and the absence of leaked partial intermediates.
@@ -925,5 +956,5 @@ A change is conformant only if all of the following hold:
 8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
 9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.3).
 10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
-11. Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion produces `NilReason::Undecidable` Bubble/NIL rather than an error or a non-deterministic answer (Section 7.4.1).
+11. Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion in the comparison words produces the truth value `unknown` (U) rather than an error or a non-deterministic answer (Section 7.4.1).
 12. Source text contains no `(` or `)` outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).
