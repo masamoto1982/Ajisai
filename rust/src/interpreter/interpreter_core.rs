@@ -8,6 +8,19 @@ use super::epoch::EpochSnapshot;
 
 pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 
+/// Cap on the user-word call stack depth. Hit before Rust's native call stack
+/// runs out and panics the WASM module to an unrecoverable trap. The value is
+/// set well above any reasonable hand-written nesting (the existing deep
+/// non-recursive test uses 5 frames) but well below the Rust stack budget on
+/// WASM and on the 2 MiB default native test-thread stack — every user-word
+/// recursion expands to several Rust frames (execute_word_core_inner →
+/// plan/structure runner → execution loop → resolve), so the empirical
+/// safe ceiling is roughly 256 levels in debug builds. The execution-step
+/// limit (DEFAULT_MAX_EXECUTION_STEPS = 100_000) is still the primary
+/// backstop for non-recursive runaway computation; this guard turns deep
+/// recursion specifically into a recoverable AjisaiError instead of a trap.
+pub const MAX_USER_WORD_DEPTH: usize = 256;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTargetMode {
     StackTop,
@@ -211,6 +224,11 @@ pub struct Interpreter {
     pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
     pub(crate) import_table: ImportTable,
     pub(crate) call_stack: SmallVec<[String; 5]>,
+    /// User-word call depth. Incremented on entry to a user-word body in
+    /// `execute_word_core_inner`, decremented on exit. Compared against
+    /// `MAX_USER_WORD_DEPTH` to prevent a deep recursion from blowing the
+    /// Rust call stack and trapping the WASM module.
+    pub(crate) call_depth: usize,
     pub(crate) execution_step_count: usize,
     pub(crate) max_execution_steps: usize,
     pub(crate) input_buffer: String,
@@ -274,6 +292,7 @@ impl Interpreter {
             module_state: HashMap::new(),
             import_table: ImportTable::default(),
             call_stack: SmallVec::new(),
+            call_depth: 0,
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             input_buffer: String::new(),
@@ -475,6 +494,7 @@ impl Interpreter {
         self.pending_token_index = 0;
         self.module_state.clear();
         self.call_stack.clear();
+        self.call_depth = 0;
         self.import_table.modules.clear();
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();

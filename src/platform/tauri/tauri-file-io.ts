@@ -1,7 +1,9 @@
-const dynamicImport = (specifier: string): Promise<any> =>
-    (0, eval)(`import(${JSON.stringify(specifier)})`);
-
 import type { FileIO, OpenResult, SaveResult } from '../platform-adapter';
+
+// Resolved only at runtime inside the Tauri WebView; `@vite-ignore` keeps the
+// web build from trying to bundle the Tauri SDK.
+const dynamicImport = (specifier: string): Promise<any> =>
+    import(/* @vite-ignore */ specifier);
 
 export class TauriFileIO implements FileIO {
     async saveJson(defaultName: string, data: unknown): Promise<SaveResult> {

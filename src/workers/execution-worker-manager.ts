@@ -12,6 +12,7 @@ interface WorkerTask {
     strategyLabel: string;
     resolve: (result: any) => void;
     reject: (error: any) => void;
+    timeoutHandle: ReturnType<typeof setTimeout> | null;
 }
 
 interface HedgedGroup {
@@ -28,6 +29,14 @@ interface WorkerInstance {
 
 const MOBILE_BREAKPOINT = 768;
 const MAX_MOBILE_WORKERS = 2;
+
+// Per-task wall-clock cap on worker execution. Task 6's recursion guard
+// returns an AjisaiError immediately for blown-stack programs; this is
+// the second line of defence for "still running" non-recursive loops
+// that neither hit the execution-step cap fast enough nor produce a
+// recursion error. Set well above the longest legitimate hedged race
+// (typically tens of milliseconds) so a legal program never trips it.
+const EXECUTION_TIMEOUT_MS = 5_000;
 
 export class WorkerManager {
     private workers: WorkerInstance[] = [];
@@ -196,6 +205,10 @@ export class WorkerManager {
         if (instance.currentTaskId) {
             const task = this.activeTasks.get(instance.currentTaskId);
             if (task) {
+                if (task.timeoutHandle !== null) {
+                    clearTimeout(task.timeoutHandle);
+                    task.timeoutHandle = null;
+                }
                 const group = this.hedgedGroups.get(task.hedgedRequestId);
                 if (group) {
                     group.taskIds.delete(task.id);
@@ -208,6 +221,36 @@ export class WorkerManager {
         }
         instance.busy = false;
         instance.currentTaskId = null;
+        this.processQueue();
+    }
+
+    private handleTaskTimeout(taskId: string): void {
+        const task = this.activeTasks.get(taskId);
+        if (!task) return;
+        task.timeoutHandle = null;
+
+        // Terminate the worker carrying the runaway task; a terminated
+        // worker cannot be reused, so we drop it from the pool and spawn
+        // a replacement immediately to keep the pool size constant.
+        const instance = this.workers.find(w => w.currentTaskId === taskId);
+        if (instance) {
+            instance.worker.terminate();
+            const index = this.workers.indexOf(instance);
+            if (index > -1) this.workers.splice(index, 1);
+        }
+
+        const group = this.hedgedGroups.get(task.hedgedRequestId);
+        if (group) {
+            group.taskIds.delete(task.id);
+            if (group.taskIds.size === 0) {
+                this.hedgedGroups.delete(task.hedgedRequestId);
+            }
+        }
+        this.activeTasks.delete(taskId);
+
+        task.reject(new Error(`Execution timed out after ${EXECUTION_TIMEOUT_MS} ms`));
+
+        this.createWorker();
         this.processQueue();
     }
 
@@ -228,6 +271,11 @@ export class WorkerManager {
         instance.currentTaskId = task.id;
         this.activeTasks.set(task.id, task);
         this.getOrCreateHedgedGroup(task.hedgedRequestId).taskIds.add(task.id);
+
+        task.timeoutHandle = setTimeout(
+            () => this.handleTaskTimeout(task.id),
+            EXECUTION_TIMEOUT_MS
+        );
 
         instance.worker.postMessage({
             type: 'execute',
@@ -278,7 +326,8 @@ export class WorkerManager {
                     hedgedRequestId,
                     strategyLabel: 'hedged-safe',
                     resolve: wrapResolve,
-                    reject: wrapReject
+                    reject: wrapReject,
+                    timeoutHandle: null
                 });
                 this.taskQueue.push({
                     id: this.createTaskId(),
@@ -287,7 +336,8 @@ export class WorkerManager {
                     hedgedRequestId,
                     strategyLabel: 'plain-greedy',
                     resolve: wrapResolve,
-                    reject: wrapReject
+                    reject: wrapReject,
+                    timeoutHandle: null
                 });
             } else {
                 this.taskQueue.push({
@@ -297,7 +347,8 @@ export class WorkerManager {
                     hedgedRequestId,
                     strategyLabel: state.executionMode,
                     resolve: wrapResolve,
-                    reject: wrapReject
+                    reject: wrapReject,
+                    timeoutHandle: null
                 });
             }
             this.processQueue();

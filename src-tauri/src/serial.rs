@@ -42,6 +42,12 @@ struct SerialDisconnect {
 
 const READ_TIMEOUT: Duration = Duration::from_millis(50);
 
+/// Cap a single `serial_write` payload at 1 MiB. Matches `MAX_WRITE_BYTES`
+/// in `src/platform/tauri/tauri-serial.ts` / `web-serial.ts`. Larger
+/// payloads from a runaway loop on the Ajisai side are rejected outright
+/// instead of being committed in one IPC hop.
+const MAX_WRITE_BYTES: usize = 1 << 20;
+
 fn spawn_reader(
     app: AppHandle,
     port_id: String,
@@ -128,6 +134,13 @@ pub fn serial_write(
     port_id: String,
     bytes: Vec<u8>,
 ) -> Result<(), String> {
+    if bytes.len() > MAX_WRITE_BYTES {
+        return Err(format!(
+            "serial write payload too large: {} > {}",
+            bytes.len(),
+            MAX_WRITE_BYTES
+        ));
+    }
     let mut ports = state.0.lock().map_err(|e| e.to_string())?;
     let entry = ports
         .get_mut(&port_id)

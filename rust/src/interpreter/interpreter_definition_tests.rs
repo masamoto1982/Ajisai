@@ -335,6 +335,71 @@ mod tests {
         );
     }
 
+    // Task 6: infinite recursion must surface as a recoverable AjisaiError
+    // and never as a WASM trap from Rust stack exhaustion. The depth guard
+    // fires before the execution-step guard when steps are left high.
+    #[tokio::test]
+    async fn test_infinite_recursion_hits_recursion_depth_limit() {
+        let mut interp = Interpreter::new();
+        // Leave the step limit at default so the depth guard fires first.
+        interp.execute("{ REC } 'REC' DEF").await.unwrap();
+
+        let result = interp.execute("REC").await;
+        assert!(
+            result.is_err(),
+            "Direct recursion should produce an error, not a trap"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("recursion limit exceeded"),
+            "Error message should mention recursion limit: {}",
+            err_msg
+        );
+    }
+
+    // Task 6: the depth guard must not regress legal deep call chains
+    // (non-recursive). 5-level chain stays comfortably under the cap.
+    #[tokio::test]
+    async fn test_depth_guard_does_not_break_legal_deep_chain() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ B } 'A' DEF").await.unwrap();
+        interp.execute("{ C } 'B' DEF").await.unwrap();
+        interp.execute("{ D } 'C' DEF").await.unwrap();
+        interp.execute("{ E } 'D' DEF").await.unwrap();
+        interp.execute("{ [ 1 ] } 'E' DEF").await.unwrap();
+
+        let result = interp.execute("A").await;
+        assert!(
+            result.is_ok(),
+            "Legal 5-level chain should not trigger the depth guard: {:?}",
+            result
+        );
+        // call_depth must be back to 0 after a successful run.
+        assert_eq!(interp.call_depth, 0, "call_depth should reset to 0 on success");
+    }
+
+    // Task 6: after a recursion-limit error, call_depth must reset to 0 so
+    // the next program is not penalized by the previous run's leftover state.
+    #[tokio::test]
+    async fn test_call_depth_resets_after_recursion_error() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ REC } 'REC' DEF").await.unwrap();
+        let _ = interp.execute("REC").await;
+        assert_eq!(
+            interp.call_depth, 0,
+            "call_depth should unwind back to 0 once the error has propagated"
+        );
+
+        // Subsequent normal execution must still work.
+        interp.execute("{ [ 1 ] } 'OK' DEF").await.unwrap();
+        let result = interp.execute("OK").await;
+        assert!(
+            result.is_ok(),
+            "After a recursion error a normal call should still succeed: {:?}",
+            result
+        );
+    }
+
     #[tokio::test]
     async fn test_call_chain_state_resets_after_completion() {
         let mut interp = Interpreter::new();

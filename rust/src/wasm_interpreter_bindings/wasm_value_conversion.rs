@@ -1,3 +1,9 @@
+// `js_sys::Reflect::set(...).unwrap()` 群について:
+// 直前に `js_sys::Object::new()` で生成したフレッシュなプレーン JS オブジェクト
+// に対する set のため、Proxy ハンドラや凍結など失敗要因は実質的に発生しない。
+// それでも万一 set が失敗した場合は console_error_panic_hook 経由で
+// ブラウザコンソールにスタックトレースが出るので、原因解析は可能。
+
 use crate::types::arena::{NodeId, NodeKind, ValueArena};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};

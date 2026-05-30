@@ -94,7 +94,21 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      // Resolved at runtime inside the Tauri WebView; never bundled. The
+      // platform/tauri/*.ts adapters use `import(/* @vite-ignore */ ...)`
+      // so these specifiers must remain external for both web and Tauri
+      // builds.
+      external: [
+        '@tauri-apps/api/core',
+        '@tauri-apps/api/event',
+        '@tauri-apps/plugin-dialog',
+        '@tauri-apps/plugin-fs',
+        '@tauri-apps/plugin-store',
+        /^@tauri-apps\//
+      ]
+    }
   },
   optimizeDeps: {
     exclude: ['./src/wasm/generated/ajisai_core.js']

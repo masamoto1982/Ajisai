@@ -30,6 +30,14 @@ export async function initWasm(): Promise<WasmModule | null> {
             await (module.init as (input?: unknown) => Promise<unknown>)({ module_or_path: compiledModule });
         }
 
+        // Surface Rust panics as console.error with a real stack trace
+        // instead of an opaque `RuntimeError: unreachable executed`.
+        try {
+            module.init_panic_hook?.();
+        } catch (e) {
+            console.warn('init_panic_hook unavailable; rebuild wasm to enable.', e);
+        }
+
         wasmModule = module;
         return module;
     } catch (error) {
