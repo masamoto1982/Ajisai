@@ -70,6 +70,9 @@ jobs:
       - name: TypeScript check
         run: npm run check
 
+      - name: ESLint
+        run: npm run lint
+
       - name: TypeScript MC/DC tests (Vitest)
         run: npm test
 
