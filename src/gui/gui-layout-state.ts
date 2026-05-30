@@ -38,12 +38,6 @@ export interface LayoutState {
     currentRightMode: ViewMode;
 }
 
-export const createLayoutState = (): LayoutState => ({
-    currentMode: 'input',
-    currentLeftMode: 'input',
-    currentRightMode: 'stack'
-});
-
 const syncSelectorState = (elements: GUIElements, leftMode: ViewMode, rightMode: ViewMode): void => {
     elements.leftPanelSelect.value = leftMode;
     elements.rightPanelSelect.value = rightMode;

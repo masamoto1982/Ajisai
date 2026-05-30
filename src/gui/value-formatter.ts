@@ -80,43 +80,6 @@ export function formatFraction(frac: Fraction): string {
 }
 
 
-export function formatValueSimple(value: Value): string {
-    switch (value.type) {
-        case 'number': {
-            const frac = value.value as Fraction;
-            return `${frac.numerator}/${frac.denominator}`;
-        }
-        case 'string':
-            return `'${value.value}'`;
-        case 'boolean':
-            return value.value ? 'TRUE' : 'FALSE';
-        case 'nil':
-            return 'NIL';
-        case 'vector':
-            if (Array.isArray(value.value)) {
-                const elements = value.value.map(v => formatValueSimple(v)).join(' ');
-                return `[${elements ? ' ' + elements + ' ' : ''}]`;
-            }
-            return '[]';
-        case 'process_handle':
-            return `<process:${value.value}>`;
-        case 'supervisor_handle':
-            return `<supervisor:${value.value}>`;
-        default:
-            return JSON.stringify(value.value);
-    }
-}
-
-
-export function formatStack(stack: Value[]): string {
-    if (stack.length === 0) {
-        return '[]';
-    }
-    const formatted = stack.map(v => formatValueSimple(v)).join(', ');
-    return `[${formatted}]`;
-}
-
-
 export function compareValue(actual: Value, expected: Value): boolean {
     if (actual.type !== expected.type) {
         return false;
