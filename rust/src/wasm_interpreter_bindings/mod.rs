@@ -6,6 +6,17 @@ pub(crate) mod wasm_value_conversion;
 mod wasm_interpreter_execution;
 mod wasm_interpreter_state;
 
+/// Install console_error_panic_hook so any panic on the WASM side
+/// surfaces in the browser console with a JS-friendly stack trace
+/// instead of an opaque `RuntimeError: unreachable executed` trap.
+/// Idempotent (`set_once`). Called from the TS loader exactly once
+/// right after wasm-bindgen `init`.
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    #[cfg(target_arch = "wasm32")]
+    console_error_panic_hook::set_once();
+}
+
 #[wasm_bindgen]
 pub struct AjisaiInterpreter {
     interpreter: Interpreter,

@@ -158,4 +158,5 @@ export interface WasmModule {
     AjisaiInterpreter: AjisaiInterpreterClass;
     default?: () => Promise<any>;
     init?: () => Promise<any>;
+    init_panic_hook?: () => void;
 }
