@@ -82,6 +82,25 @@ impl Value {
         }
     }
 
+    /// The logical truth value `Unknown` (U) carrying the CF-comparison
+    /// agreed-prefix diagnosis (SPEC §4.5.0 / §7.4.1). Identical to
+    /// [`unknown`] except that the absence metadata records a
+    /// `DebugDiagnosis` whose `agreed_prefix` is surfaced as
+    /// `diagnosis.agreedPrefix`. `word` names the comparison Coreword that
+    /// produced U (e.g. `"COMPARE-WITHIN"`, `"LT"`).
+    pub fn unknown_with_agreed_prefix(word: Option<&str>, agreed_prefix: usize) -> Self {
+        Self {
+            data: ValueData::Nil,
+            hint: Interpretation::TruthValue,
+            absence: Some(AbsenceMetadata::from_diagnosis(
+                NilReason::LogicallyUnknown,
+                AbsenceOrigin::ComparisonBudget,
+                Recoverability::Unknown,
+                DebugDiagnosis::comparison_unknown(word, agreed_prefix),
+            )),
+        }
+    }
+
     /// Whether this value is the logical truth value `Unknown` (U).
     ///
     /// This is the single canonical predicate for U. It keys off the

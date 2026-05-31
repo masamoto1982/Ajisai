@@ -54,6 +54,10 @@ enum NilClass {
     BinaryBlanket,
     /// Unary word: NIL operand yields NIL.
     UnaryNil,
+    /// Ternary comparison `[ a ] [ b ] [ budget ] -> ...` whose a/b operands
+    /// are NIL-passthrough (COMPARE-WITHIN, SPEC §7.4.2). A NIL in either
+    /// value operand yields NIL; the budget operand is a plain integer.
+    TernaryValueNil,
     /// Three-valued AND: NIL with definite-false => false, else NIL.
     ThreeValAnd,
     /// Three-valued OR: NIL with definite-true => true, else NIL.
@@ -84,6 +88,10 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("LTE", NilClass::BinaryBlanket),
     ("GT", NilClass::BinaryBlanket),
     ("GTE", NilClass::BinaryBlanket),
+    // COMPARE-WITHIN (SPEC §7.4.2) is Projecting/Passthrough like the six
+    // relations, but ternary: its a/b value operands pass NIL through while
+    // the trailing budget operand is a plain positive integer.
+    ("COMPARE-WITHIN", NilClass::TernaryValueNil),
     ("NOT", NilClass::UnaryNil),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
@@ -160,6 +168,19 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                 let stack = run_ok(&code).await;
                 assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
                 assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
+            }
+            NilClass::TernaryValueNil => {
+                // §7.12 / §7.4.2: a NIL in either value operand (with a
+                // valid budget) passes through to a single NIL result.
+                for code in [
+                    format!("NIL 1 8 {name}"),
+                    format!("1 NIL 8 {name}"),
+                    format!("NIL NIL 8 {name}"),
+                ] {
+                    let stack = run_ok(&code).await;
+                    assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
+                    assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
+                }
             }
             // Three-valued words are verified by their dedicated truth-table
             // tests below; the completeness test guarantees they are present.
