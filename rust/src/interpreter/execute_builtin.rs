@@ -190,6 +190,7 @@ impl Interpreter {
             BuiltinExecutorKey::Gt => comparison::op_gt(self),
             BuiltinExecutorKey::Gte => comparison::op_gte(self),
             BuiltinExecutorKey::Neq => comparison::op_neq(self),
+            BuiltinExecutorKey::CompareWithin => comparison::op_compare_within(self),
             BuiltinExecutorKey::Map => higher_order::op_map(self),
             BuiltinExecutorKey::Filter => higher_order::op_filter(self),
             BuiltinExecutorKey::Fold => higher_order_fold::op_fold(self),

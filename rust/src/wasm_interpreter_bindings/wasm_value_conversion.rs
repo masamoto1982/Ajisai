@@ -190,6 +190,13 @@ fn diagnosis_to_protocol_js(
         checks_arr.push(&check_obj);
     }
     set_prop(&obj, "nextChecks", &checks_arr.into());
+
+    // CF-comparison agreed-prefix (SPEC §4.5.0 / §7.4.1): machine-readable
+    // count of leading partial quotients that matched before an Unknown (U)
+    // comparison gave up. Emitted only when present.
+    if let Some(prefix) = diagnosis.agreed_prefix {
+        set_prop(&obj, "agreedPrefix", &(prefix as f64).into());
+    }
     obj.into()
 }
 
@@ -408,9 +415,7 @@ pub(crate) fn value_to_protocol(
     {
         return ProtocolNode {
             type_str: "string",
-            value: ProtocolValue::Text(
-                crate::types::display::format_as_continued_fraction(value),
-            ),
+            value: ProtocolValue::Text(crate::types::display::format_as_continued_fraction(value)),
             display_hint: effective,
             semantics: None,
         };

@@ -413,6 +413,20 @@ fn cmp_sqrt_vs_rational(radicand: &Fraction, q: &Fraction) -> std::cmp::Ordering
     radicand.cmp(&q.mul(q))
 }
 
+/// Outcome of a budgeted three-way CF comparison that also reports how
+/// far the two partial-quotient streams agreed (SPEC §4.5.0 / §7.4.1).
+///
+/// `Decided` carries the resolved order. `Undecided` carries the
+/// agreed-prefix length: the number of leading partial quotients that
+/// matched before the budget (or an internal CF safety budget) was
+/// exhausted. The agreed-prefix is the CF-specific evidence behind the
+/// logical `Unknown` (U) and is surfaced as `diagnosis.agreedPrefix`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CmpOutcome {
+    Decided(std::cmp::Ordering),
+    Undecided { agreed_prefix: usize },
+}
+
 impl ExactReal {
     /// Three-way comparison of CF values under a partial-quotient
     /// budget.
@@ -431,17 +445,33 @@ impl ExactReal {
     /// `None` outcome is what the language-level Bubble Rule
     /// projects to `NilReason::Undecidable` with `absence.origin =
     /// comparisonBudget`.
-    pub fn cmp_with_budget(
-        &self,
-        other: &Self,
-        budget: usize,
-    ) -> Option<std::cmp::Ordering> {
+    pub fn cmp_with_budget(&self, other: &Self, budget: usize) -> Option<std::cmp::Ordering> {
+        match self.cmp_with_budget_tracked(other, budget) {
+            CmpOutcome::Decided(o) => Some(o),
+            CmpOutcome::Undecided { .. } => None,
+        }
+    }
+
+    /// Three-way comparison under a partial-quotient budget that also
+    /// reports the agreed-prefix length (SPEC §4.5.0 / §7.4.1).
+    ///
+    /// Returns `CmpOutcome::Decided(ordering)` when the order resolves
+    /// within `budget` partial quotients (or via an algebraic
+    /// short-circuit), exactly as `cmp_with_budget`. Returns
+    /// `CmpOutcome::Undecided { agreed_prefix }` when the budget is
+    /// exhausted, an operand is nil, or a CF stream hits its internal
+    /// safety budget before the order resolves; `agreed_prefix` is the
+    /// number of leading partial quotients that matched before giving up.
+    /// When the full `budget` is consumed with every quotient matching,
+    /// `agreed_prefix == budget`. `COMPARE-WITHIN` (SPEC §7.4.2) surfaces
+    /// this field as `diagnosis.agreedPrefix` on its `Unknown` result.
+    pub fn cmp_with_budget_tracked(&self, other: &Self, budget: usize) -> CmpOutcome {
         use std::cmp::Ordering;
         if self.is_nil() || other.is_nil() {
-            return None;
+            return CmpOutcome::Undecided { agreed_prefix: 0 };
         }
         if budget == 0 {
-            return None;
+            return CmpOutcome::Undecided { agreed_prefix: 0 };
         }
         // Algebraic short-circuits (SPEC §4.2.4): a comparison whose
         // operands are only `Rational` and `AlgebraicSqrt` is decided
@@ -454,13 +484,13 @@ impl ExactReal {
             (Self::AlgebraicSqrt { radicand: r }, Self::AlgebraicSqrt { radicand: s }) => {
                 // √ is strictly increasing on the non-negative
                 // rationals, so √r vs √s is decided by r vs s.
-                return Some(r.cmp(s));
+                return CmpOutcome::Decided(r.cmp(s));
             }
             (Self::AlgebraicSqrt { radicand: r }, Self::Rational(q)) => {
-                return Some(cmp_sqrt_vs_rational(r, q));
+                return CmpOutcome::Decided(cmp_sqrt_vs_rational(r, q));
             }
             (Self::Rational(q), Self::AlgebraicSqrt { radicand: r }) => {
-                return Some(cmp_sqrt_vs_rational(r, q).reverse());
+                return CmpOutcome::Decided(cmp_sqrt_vs_rational(r, q).reverse());
             }
             _ => {}
         }
@@ -472,36 +502,43 @@ impl ExactReal {
             match (av, bv) {
                 (CfStep::Quotient(av), CfStep::Quotient(bv)) => {
                     if av != bv {
-                        return Some(if i % 2 == 0 {
+                        return CmpOutcome::Decided(if i % 2 == 0 {
                             av.cmp(&bv)
                         } else {
                             bv.cmp(&av)
                         });
                     }
                 }
-                (CfStep::Ended, CfStep::Ended) => return Some(Ordering::Equal),
+                (CfStep::Ended, CfStep::Ended) => return CmpOutcome::Decided(Ordering::Equal),
                 (CfStep::Ended, CfStep::Quotient(_)) => {
                     // self's CF terminated; treat its phantom term
                     // at index i as +∞. Alternating-parity rule:
                     // even i ⇒ phantom is greater ⇒ self > other;
                     // odd i ⇒ phantom is less ⇒ self < other.
-                    return Some(if i % 2 == 0 {
+                    return CmpOutcome::Decided(if i % 2 == 0 {
                         Ordering::Greater
                     } else {
                         Ordering::Less
                     });
                 }
                 (CfStep::Quotient(_), CfStep::Ended) => {
-                    return Some(if i % 2 == 0 {
+                    return CmpOutcome::Decided(if i % 2 == 0 {
                         Ordering::Less
                     } else {
                         Ordering::Greater
                     });
                 }
-                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => return None,
+                // A CF stream ran out of internal budget at index `i`;
+                // the `i` quotients at indices 0..i matched.
+                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => {
+                    return CmpOutcome::Undecided { agreed_prefix: i };
+                }
             }
         }
-        None
+        // Every one of the `budget` partial quotients matched.
+        CmpOutcome::Undecided {
+            agreed_prefix: budget,
+        }
     }
 
     /// `self == other` under the partial-quotient budget. `None` on
@@ -719,9 +756,7 @@ impl ExactReal {
         let mut seen: Vec<(BigInt, BigInt)> = Vec::new();
 
         for _ in 0..PERIOD_SCAN_CAP {
-            if let Some(start) =
-                seen.iter().position(|(sp, sq)| *sp == p_i && *sq == q_i)
-            {
+            if let Some(start) = seen.iter().position(|(sp, sq)| *sp == p_i && *sq == q_i) {
                 let period = quotients.split_off(start);
                 return Some((quotients, period));
             }
@@ -1131,7 +1166,15 @@ fn normalize_bihom(
 /// when the state has transitioned to a non-Möbius form that the
 /// caller's outer loop should re-dispatch.
 fn step_mobius(state: &mut CfState) -> Option<BigInt> {
-    let CfState::Mobius { a, b, c, d, x, x_done } = state else {
+    let CfState::Mobius {
+        a,
+        b,
+        c,
+        d,
+        x,
+        x_done,
+    } = state
+    else {
         return None;
     };
     let mut ingest_budget = GOSPER_INGEST_SAFETY;
@@ -1174,10 +1217,7 @@ fn step_mobius(state: &mut CfState) -> Option<BigInt> {
                 return None;
             }
             let canonical = rational_partial_quotients(a.clone(), c.clone());
-            *state = CfState::Finite {
-                canonical,
-                pos: 0,
-            };
+            *state = CfState::Finite { canonical, pos: 0 };
             return None;
         }
 
@@ -1247,10 +1287,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
                 return None;
             }
             let canonical = rational_partial_quotients(a.clone(), e.clone());
-            *state = CfState::Finite {
-                canonical,
-                pos: 0,
-            };
+            *state = CfState::Finite { canonical, pos: 0 };
             return None;
         }
         if *x_done {
@@ -1339,18 +1376,7 @@ fn step_bihom(state: &mut CfState) -> Option<BigInt> {
         // balanced consumption so an axis whose corners are all
         // initially zero-denominator (e.g. y in `x + y`) still gets
         // its first ingestion before the safety budget expires.
-        let ingest_x = pick_ingest_axis(
-            a,
-            b,
-            c,
-            d,
-            e,
-            f,
-            g,
-            h,
-            *x_consumed,
-            *y_consumed,
-        );
+        let ingest_x = pick_ingest_axis(a, b, c, d, e, f, g, h, *x_consumed, *y_consumed);
         if ingest_x {
             match x.next_step() {
                 CfStep::Quotient(p) => {
@@ -1675,8 +1701,7 @@ mod tests {
     fn round_trip_canonical_sequence_is_idempotent() {
         let value = rational(355, 113);
         let canonical = value.partial_quotients().expect("rational");
-        let reconstructed =
-            ExactReal::from_partial_quotients(&canonical).expect("valid sequence");
+        let reconstructed = ExactReal::from_partial_quotients(&canonical).expect("valid sequence");
         let canonical_again = reconstructed.partial_quotients().expect("rational");
         assert_eq!(canonical, canonical_again);
     }
@@ -1685,8 +1710,7 @@ mod tests {
     fn round_trip_negative_value_is_idempotent() {
         let value = rational(-22, 7);
         let canonical = value.partial_quotients().expect("rational");
-        let reconstructed =
-            ExactReal::from_partial_quotients(&canonical).expect("valid sequence");
+        let reconstructed = ExactReal::from_partial_quotients(&canonical).expect("valid sequence");
         let canonical_again = reconstructed.partial_quotients().expect("rational");
         assert_eq!(canonical, canonical_again);
     }
@@ -1712,8 +1736,7 @@ mod tests {
 
     #[test]
     fn from_sqrt_rational_zero_returns_rational_zero() {
-        let value =
-            ExactReal::from_sqrt_rational(Fraction::new(bi(0), bi(1))).expect("zero");
+        let value = ExactReal::from_sqrt_rational(Fraction::new(bi(0), bi(1))).expect("zero");
         assert_eq!(value, rational(0, 1));
         assert!(value.is_rational());
         assert!(!value.is_algebraic_sqrt());
@@ -1721,23 +1744,20 @@ mod tests {
 
     #[test]
     fn from_sqrt_rational_perfect_square_integer_collapses_to_rational() {
-        let value =
-            ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
+        let value = ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
         assert_eq!(value, rational(3, 1));
         assert!(value.is_integer());
     }
 
     #[test]
     fn from_sqrt_rational_perfect_square_rational_collapses_to_rational() {
-        let value =
-            ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(16))).expect("9/16");
+        let value = ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(16))).expect("9/16");
         assert_eq!(value, rational(3, 4));
     }
 
     #[test]
     fn from_sqrt_rational_quarter_collapses_to_one_half() {
-        let value =
-            ExactReal::from_sqrt_rational(Fraction::new(bi(1), bi(4))).expect("1/4");
+        let value = ExactReal::from_sqrt_rational(Fraction::new(bi(1), bi(4))).expect("1/4");
         assert_eq!(value, rational(1, 2));
     }
 
@@ -2013,12 +2033,10 @@ mod tests {
     #[test]
     fn div_with_nil_returns_nil() {
         let nil = ExactReal::Rational(Fraction::nil());
-        assert!(
-            sqrt_of(2, 1)
-                .div(&nil)
-                .expect("nil-divisor yields nil, not None")
-                .is_nil()
-        );
+        assert!(sqrt_of(2, 1)
+            .div(&nil)
+            .expect("nil-divisor yields nil, not None")
+            .is_nil());
     }
 
     // -- bihomographic: two non-rational operands --
@@ -2087,9 +2105,7 @@ mod tests {
 
     #[test]
     fn sqrt_two_plus_one_minus_one_returns_sqrt_two() {
-        let value = sqrt_of(2, 1)
-            .add(&rational(1, 1))
-            .sub(&rational(1, 1));
+        let value = sqrt_of(2, 1).add(&rational(1, 1)).sub(&rational(1, 1));
         let baseline = sqrt_of(2, 1);
         assert_eq!(
             value.partial_quotients_bounded(7),
@@ -2109,9 +2125,7 @@ mod tests {
         assert!(prod.is_rational());
         assert_eq!(prod, rational(1, 6));
 
-        let quo = rational(7, 3)
-            .div(&rational(7, 3))
-            .expect("nonzero");
+        let quo = rational(7, 3).div(&rational(7, 3)).expect("nonzero");
         assert!(quo.is_rational());
         assert_eq!(quo, rational(1, 1));
     }
@@ -2263,14 +2277,8 @@ mod tests {
     fn cmp_sqrt_two_less_than_sqrt_three() {
         let two = sqrt_of(2, 1);
         let three = sqrt_of(3, 1);
-        assert_eq!(
-            two.cmp_with_budget(&three, BUDGET),
-            Some(Ordering::Less)
-        );
-        assert_eq!(
-            three.cmp_with_budget(&two, BUDGET),
-            Some(Ordering::Greater)
-        );
+        assert_eq!(two.cmp_with_budget(&three, BUDGET), Some(Ordering::Less));
+        assert_eq!(three.cmp_with_budget(&two, BUDGET), Some(Ordering::Greater));
     }
 
     #[test]
@@ -2378,10 +2386,7 @@ mod tests {
         // budget projects to None ⇒ NIL `undecidable`.
         let lazy_zero = sqrt_of(2, 1).sub(&sqrt_of(2, 1));
         let true_zero = rational(0, 1);
-        assert_eq!(
-            lazy_zero.cmp_with_budget(&true_zero, BUDGET),
-            None
-        );
+        assert_eq!(lazy_zero.cmp_with_budget(&true_zero, BUDGET), None);
     }
 
     // -- nil / zero-budget --
@@ -2673,8 +2678,7 @@ mod tests {
         assert_eq!(rational(3, 2).sqrt_cf_period(), None);
         // A perfect-square radicand collapses to Rational, not
         // AlgebraicSqrt.
-        let perfect =
-            ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
+        let perfect = ExactReal::from_sqrt_rational(Fraction::new(bi(9), bi(1))).expect("9");
         assert_eq!(perfect.sqrt_cf_period(), None);
         // A Gosper value is not an AlgebraicSqrt either.
         let gosper = sqrt_of(2, 1).add(&rational(1, 1));

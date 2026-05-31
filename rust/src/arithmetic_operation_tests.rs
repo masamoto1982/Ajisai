@@ -1053,6 +1053,169 @@ mod phase_seven_eq_budget_tests {
     }
 }
 
+/// SPEC §7.4.2 — `COMPARE-WITHIN` and the §4.5.0 `agreedPrefix` diagnosis.
+///
+/// `COMPARE-WITHIN` ( `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]` )
+/// makes the partial-quotient budget a first-class, user-controlled
+/// parameter. The decided result is the exact sign of `a − b`; the
+/// budget-undecided result is the logical `Unknown` (U) carrying
+/// `diagnosis.agreedPrefix`, the number of leading partial quotients that
+/// matched before the budget was exhausted.
+#[cfg(test)]
+mod compare_within_tests {
+    use crate::interpreter::Interpreter;
+    use crate::types::continued_fraction::{CmpOutcome, ExactReal};
+    use crate::types::fraction::Fraction;
+    use num_bigint::BigInt;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn rational(n: i64, d: i64) -> ExactReal {
+        ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
+    }
+
+    // ── Unit level: the tracked three-way compare reports the prefix ─────
+
+    #[test]
+    fn tracked_undecided_reports_agreed_prefix_equal_to_budget() {
+        // CF(1/2) = [0; 2], CF(1/3) = [0; 3]. They share index 0 (both 0)
+        // and first differ at index 1. With budget 1 only index 0 is
+        // consumed, so the order is undecided and the agreed prefix is the
+        // full consumed budget, 1.
+        assert_eq!(
+            rational(1, 2).cmp_with_budget_tracked(&rational(1, 3), 1),
+            CmpOutcome::Undecided { agreed_prefix: 1 }
+        );
+    }
+
+    #[test]
+    fn tracked_decides_when_budget_reaches_divergence() {
+        // The same pair decides at budget 2 (index 1 differs: 2 vs 3),
+        // 1/2 > 1/3.
+        assert_eq!(
+            rational(1, 2).cmp_with_budget_tracked(&rational(1, 3), 2),
+            CmpOutcome::Decided(std::cmp::Ordering::Greater)
+        );
+    }
+
+    #[test]
+    fn tracked_equal_finite_decides_when_budget_reaches_termination() {
+        // CF(1/2) = CF(2/4) = [0; 2]: index 0 = 0, index 1 = 2, then both
+        // streams end at index 2. The raw tracked compare has no Fraction
+        // fast path, so it only decides Equal once the budget reaches the
+        // shared termination (budget >= 3); below that it is genuinely
+        // undecided, reporting the matched prefix. (The COMPARE-WITHIN word
+        // adds a finite fast path that decides regardless of budget — see
+        // `compare_within_finite_decides_even_at_budget_one`.)
+        assert_eq!(
+            rational(1, 2).cmp_with_budget_tracked(&rational(2, 4), 3),
+            CmpOutcome::Decided(std::cmp::Ordering::Equal)
+        );
+        assert_eq!(
+            rational(1, 2).cmp_with_budget_tracked(&rational(2, 4), 2),
+            CmpOutcome::Undecided { agreed_prefix: 2 }
+        );
+    }
+
+    // ── Source level: decided signs ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn compare_within_yields_minus_one_when_less() {
+        let interp = run("1 2 16 COMPARE-WITHIN").await;
+        assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
+    }
+
+    #[tokio::test]
+    async fn compare_within_yields_zero_when_equal() {
+        let interp = run("2 2 16 COMPARE-WITHIN").await;
+        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
+    }
+
+    #[tokio::test]
+    async fn compare_within_yields_one_when_greater() {
+        let interp = run("2 1 16 COMPARE-WITHIN").await;
+        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
+    }
+
+    #[tokio::test]
+    async fn compare_within_finite_decides_even_at_budget_one() {
+        // Two finite rationals differ at a bounded index, so they decide
+        // regardless of how small the budget is (SPEC §7.4.2).
+        let interp = run("1/3 1/2 1 COMPARE-WITHIN").await;
+        assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
+    }
+
+    // ── Source level: budget-undecided → Unknown with agreedPrefix ──────
+
+    #[tokio::test]
+    async fn compare_within_equal_irrationals_yield_unknown_with_prefix() {
+        // √2 − √2 is a Gosper node the budget cannot distinguish from 0,
+        // so comparing it against 0 never decides → logical Unknown (U).
+        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 8 COMPARE-WITHIN").await;
+        let v = &interp.get_stack()[0];
+        assert!(
+            v.is_unknown(),
+            "equal irrationals must yield Unknown, got {v}"
+        );
+        assert_eq!(v.truth_value(), Some("unknown"));
+
+        // The Unknown result carries the machine-readable agreedPrefix.
+        let absence = v.absence_metadata().expect("U carries absence metadata");
+        let diagnosis = absence
+            .diagnosis
+            .as_ref()
+            .expect("COMPARE-WITHIN U carries a diagnosis");
+        let prefix = diagnosis
+            .agreed_prefix
+            .expect("diagnosis carries agreedPrefix");
+        assert!(
+            prefix <= 8,
+            "agreedPrefix must not exceed the consumed budget, got {prefix}"
+        );
+    }
+
+    // ── Source level: NIL passthrough (SPEC §7.12) ──────────────────────
+
+    #[tokio::test]
+    async fn compare_within_nil_left_passes_nil_through() {
+        let interp = run("NIL 1 8 COMPARE-WITHIN").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    #[tokio::test]
+    async fn compare_within_nil_right_passes_nil_through() {
+        let interp = run("1 NIL 8 COMPARE-WITHIN").await;
+        assert!(interp.get_stack()[0].is_nil());
+    }
+
+    // ── Source level: malformed budget / operand → error (not U) ────────
+
+    #[tokio::test]
+    async fn compare_within_zero_budget_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("1 2 0 COMPARE-WITHIN").await;
+        assert!(result.is_err(), "zero budget is malformed use");
+    }
+
+    #[tokio::test]
+    async fn compare_within_negative_budget_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("1 2 -4 COMPARE-WITHIN").await;
+        assert!(result.is_err(), "negative budget is malformed use");
+    }
+
+    #[tokio::test]
+    async fn compare_within_non_numeric_operand_errors() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute("{ 1 } 2 8 COMPARE-WITHIN").await;
+        assert!(result.is_err(), "non-numeric operand is malformed use");
+    }
+}
+
 #[cfg(test)]
 mod ragged_broadcast_tests {
     use crate::interpreter::Interpreter;
@@ -1212,12 +1375,12 @@ mod exact_scalar_tests {
     async fn sqrt_of_irrational_compares_equal_to_itself() {
         // Push √2 twice; EQ should return TRUE via CF data equality
         let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT 2 SQRT EQ").await.unwrap();
+        interp
+            .execute("'math' IMPORT 2 SQRT 2 SQRT EQ")
+            .await
+            .unwrap();
         let val = &interp.get_stack()[0];
-        assert!(
-            val.is_truthy(),
-            "√2 == √2 must be TRUE, got: {val}"
-        );
+        assert!(val.is_truthy(), "√2 == √2 must be TRUE, got: {val}");
     }
 
     #[tokio::test]
@@ -1234,7 +1397,10 @@ mod exact_scalar_tests {
         // √2 × √2 produces an exact value via Gosper bihomographic path.
         // The result is ExactScalar(Gosper); it should be a non-nil scalar.
         let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT 2 SQRT *").await.unwrap();
+        interp
+            .execute("'math' IMPORT 2 SQRT 2 SQRT *")
+            .await
+            .unwrap();
         let val = &interp.get_stack()[0];
         assert!(
             val.is_scalar() && !val.is_nil(),
@@ -1242,7 +1408,10 @@ mod exact_scalar_tests {
         );
         // The display should be an approximate rational (Gosper node)
         let display = format!("{val}");
-        assert!(!display.is_empty() && display != "NIL", "display must be non-nil");
+        assert!(
+            !display.is_empty() && display != "NIL",
+            "display must be non-nil"
+        );
     }
 
     #[tokio::test]
@@ -1262,17 +1431,10 @@ mod exact_scalar_tests {
     async fn exact_scalar_floor_is_exact_rational() {
         // floor(√2) = 1 exactly
         let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT FLOOR")
-            .await
-            .unwrap();
+        interp.execute("'math' IMPORT 2 SQRT FLOOR").await.unwrap();
         let val = &interp.get_stack()[0];
         let f = val.as_scalar().expect("floor(√2) must be exact rational");
-        assert_eq!(
-            f.to_i64(),
-            Some(1),
-            "floor(√2) must equal 1, got {f}"
-        );
+        assert_eq!(f.to_i64(), Some(1), "floor(√2) must equal 1, got {f}");
     }
 
     #[tokio::test]
@@ -1282,55 +1444,34 @@ mod exact_scalar_tests {
         interp.execute("'math' IMPORT 2 SQRT CEIL").await.unwrap();
         let val = &interp.get_stack()[0];
         let f = val.as_scalar().expect("ceil(√2) must be exact rational");
-        assert_eq!(
-            f.to_i64(),
-            Some(2),
-            "ceil(√2) must equal 2, got {f}"
-        );
+        assert_eq!(f.to_i64(), Some(2), "ceil(√2) must equal 2, got {f}");
     }
 
     #[tokio::test]
     async fn exact_scalar_round_is_exact_rational() {
         // round(√2) = 1 (√2 ≈ 1.414 → nearest integer is 1)
         let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT ROUND")
-            .await
-            .unwrap();
+        interp.execute("'math' IMPORT 2 SQRT ROUND").await.unwrap();
         let val = &interp.get_stack()[0];
         let f = val.as_scalar().expect("round(√2) must be exact rational");
-        assert_eq!(
-            f.to_i64(),
-            Some(1),
-            "round(√2) must equal 1, got {f}"
-        );
+        assert_eq!(f.to_i64(), Some(1), "round(√2) must equal 1, got {f}");
     }
 
     #[tokio::test]
     async fn exact_scalar_floor_sqrt3_is_exact_rational() {
         // floor(√3) = 1 exactly
         let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 3 SQRT FLOOR")
-            .await
-            .unwrap();
+        interp.execute("'math' IMPORT 3 SQRT FLOOR").await.unwrap();
         let val = &interp.get_stack()[0];
         let f = val.as_scalar().expect("floor(√3) must be exact rational");
-        assert_eq!(
-            f.to_i64(),
-            Some(1),
-            "floor(√3) must equal 1, got {f}"
-        );
+        assert_eq!(f.to_i64(), Some(1), "floor(√3) must equal 1, got {f}");
     }
 
     #[tokio::test]
     async fn exact_scalar_mod_rational_is_exact() {
         // √2 mod 1 = √2 - 1 (irrational, stays ExactScalar)
         let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT 1 MOD")
-            .await
-            .unwrap();
+        interp.execute("'math' IMPORT 2 SQRT 1 MOD").await.unwrap();
         let val = &interp.get_stack()[0];
         assert!(
             val.is_scalar() && !val.is_nil(),
@@ -1378,7 +1519,10 @@ mod continued_fraction_role_tests {
         assert_eq!(stack.len(), 1);
         let s = format_as_continued_fraction(&stack[0]);
         assert!(s.starts_with("( 1"), "expected '( 1' prefix, got {s:?}");
-        assert!(s.contains("( 1 ( 2 ( 2 "), "expected √2 expansion, got {s:?}");
+        assert!(
+            s.contains("( 1 ( 2 ( 2 "),
+            "expected √2 expansion, got {s:?}"
+        );
         assert!(s.contains("...)"), "expected truncation marker, got {s:?}");
         let opens = s.matches('(').count();
         let closes = s.matches(')').count();

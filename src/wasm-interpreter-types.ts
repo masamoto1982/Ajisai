@@ -78,6 +78,14 @@ export interface ProtocolDiagnosis {
         label: string;
         detail: string;
     }>;
+    /**
+     * CF-comparison agreed-prefix length (SPEC §4.5.0 / §7.4.1): the number
+     * of leading partial quotients that matched before the partial-quotient
+     * budget was exhausted on an `Unknown` (U) comparison result. Present
+     * only on diagnoses produced by an undecidable continued-fraction
+     * comparison (e.g. `COMPARE-WITHIN`). Machine-readable.
+     */
+    agreedPrefix?: number;
 }
 
 export interface ProtocolAbsence {

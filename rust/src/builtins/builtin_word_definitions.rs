@@ -12,6 +12,7 @@ pub enum BuiltinExecutorKey {
     Gt,
     Gte,
     Neq,
+    CompareWithin,
     Map,
     Filter,
     Fold,
@@ -742,6 +743,22 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         stack_effect: "[ a ] [ b ] -> [ a / b ]",
         partiality: Partiality::Projecting,
         nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "COMPARE-WITHIN",
+        category: "comparison",
+        hover_summary: "COMPARE-WITHIN — three-way compare within a budget",
+        hover_syntax: "a b 64 COMPARE-WITHIN",
+        executor_key: Some(BuiltinExecutorKey::CompareWithin),
+        summary: "Three-way compare two values within an explicit partial-quotient budget.",
+        role: "Comparison primitive: yield -1, 0, 1, or UNKNOWN within a budget.",
+
+        stack_effect: "[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
