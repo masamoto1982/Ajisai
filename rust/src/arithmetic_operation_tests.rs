@@ -242,10 +242,8 @@ mod num_tests {
 
 #[cfg(test)]
 mod interval_tests {
-    use crate::error::NilReason;
     use crate::interpreter::interval_ops::value_to_interval;
     use crate::interpreter::Interpreter;
-    use crate::semantic::AbsenceOrigin;
     use crate::types::fraction::Fraction;
 
     #[tokio::test]
@@ -367,11 +365,16 @@ mod interval_tests {
             .execute("'math' IMPORT 2 3 INTERVAL 3 4 INTERVAL <")
             .await
             .unwrap();
-        let absence = interp_undetermined.get_stack()[0]
-            .absence_metadata()
-            .expect("overlapping interval comparison projects to NIL");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+        // SPEC §7.4.1 (revised): an undecidable comparison yields the logical
+        // truth value `Unknown` (U), observed as `truthValue = unknown`, not
+        // a `reason = undecidable` NIL.
+        let result = &interp_undetermined.get_stack()[0];
+        assert!(
+            result.is_unknown(),
+            "overlapping interval comparison projects to the logical Unknown"
+        );
+        assert_eq!(result.truth_value(), Some("unknown"));
+        assert_eq!(format!("{}", result), "UNKNOWN");
 
         let mut interp_eq = Interpreter::new();
         interp_eq
@@ -505,9 +508,7 @@ mod ai_first_comparison_tests {
     //! that matches its intent directly rather than rewriting it as a
     //! negation or operand swap.
 
-    use crate::error::NilReason;
     use crate::interpreter::Interpreter;
-    use crate::semantic::AbsenceOrigin;
 
     async fn run(source: &str) -> Interpreter {
         let mut interp = Interpreter::new();
@@ -625,17 +626,62 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn gt_on_overlapping_intervals_projects_undecidable_nil() {
+    async fn gt_on_overlapping_intervals_projects_unknown() {
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 2 3 INTERVAL 2 4 INTERVAL GT")
             .await
             .unwrap();
-        let absence = interp.get_stack()[0]
-            .absence_metadata()
-            .expect("overlapping interval comparison projects to NIL");
-        assert_eq!(absence.reason, Some(NilReason::Undecidable));
-        assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+        // SPEC §7.4.1 (revised): undecidable comparison yields the logical
+        // truth value `Unknown` (U), not a `reason = undecidable` NIL.
+        let result = &interp.get_stack()[0];
+        assert!(
+            result.is_unknown(),
+            "overlapping interval GT yields Unknown"
+        );
+        assert_eq!(result.truth_value(), Some("unknown"));
+    }
+
+    #[tokio::test]
+    async fn finite_cf_comparison_always_decides() {
+        for (code, expected) in [("1 1 EQ", "1/1"), ("1 2 EQ", "0/1"), ("1 2 LT", "1/1")] {
+            let mut interp = Interpreter::new();
+            interp.execute(code).await.unwrap();
+            let v = &interp.get_stack()[0];
+            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
+            assert_eq!(format!("{}", v), expected, "`{code}`");
+        }
+    }
+
+    #[tokio::test]
+    async fn equal_irrationals_compare_unknown() {
+        // sqrt(2) - sqrt(2) is, structurally, a Gosper node the budget cannot
+        // distinguish from 0; EQ / LT against 0 therefore yield Unknown (U).
+        for code in ["2 SQRT 2 SQRT SUB 0 EQ", "2 SQRT 2 SQRT SUB 0 LT"] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("'math' IMPORT {code}"))
+                .await
+                .unwrap();
+            let v = &interp.get_stack()[0];
+            assert!(v.is_unknown(), "`{code}` must be the logical Unknown");
+            assert_eq!(v.truth_value(), Some("unknown"), "`{code}`");
+            assert_eq!(format!("{}", v), "UNKNOWN", "`{code}`");
+        }
+    }
+
+    #[tokio::test]
+    async fn distinct_irrationals_decide_at_finite_prefix() {
+        for (code, expected) in [("2 SQRT 3 SQRT EQ", "0/1"), ("2 SQRT 3 SQRT LT", "1/1")] {
+            let mut interp = Interpreter::new();
+            interp
+                .execute(&format!("'math' IMPORT {code}"))
+                .await
+                .unwrap();
+            let v = &interp.get_stack()[0];
+            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
+            assert_eq!(format!("{}", v), expected, "`{code}`");
+        }
     }
 
     // ── NIL passthrough for the new ops (contract: nil_policy = Passthrough)

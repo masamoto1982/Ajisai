@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::value_extraction_helpers::{
@@ -34,8 +34,8 @@ impl OrderingKind {
 
     /// Apply the relation to a budgeted `ExactReal` three-way
     /// comparison result. `None` propagates the budget-exhaustion
-    /// case unchanged so callers project it to the §7.4.1
-    /// Undecidable NIL.
+    /// case unchanged so callers project it to the §7.4.1 logical
+    /// `Unknown` (U).
     fn apply_to_ordering(self, ord: Option<std::cmp::Ordering>) -> Option<bool> {
         use std::cmp::Ordering;
         ord.map(|o| match self {
@@ -56,25 +56,25 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
         .update_hint_at(stack_len - 1, Interpretation::TruthValue);
 }
 
-/// Push the SPEC §7.4.1 undecidable-NIL: reason = `Undecidable`,
-/// origin = `ComparisonBudget`. The Bubble Rule (SPEC §11.2) places
-/// this on the stack instead of raising an error, so subsequent
-/// NIL-passthrough words can continue the pipeline.
-fn push_undecidable_nil(interp: &mut Interpreter) {
-    interp
-        .stack
-        .push(Value::nil_with_reason(NilReason::Undecidable));
+/// Push the SPEC §7.4.1 logical `Unknown` (U): a `TruthValue`-role value
+/// produced when the partial-quotient budget is exhausted before two
+/// continued fractions decide. U is a logical truth value, not an
+/// operational NIL — it flows into the three-valued logic of SPEC §7.5
+/// directly. The `TruthValue` interpretation role makes it observable as
+/// `truthValue = unknown`.
+fn push_unknown(interp: &mut Interpreter) {
+    interp.stack.push(Value::unknown());
     let stack_len = interp.stack.len();
     interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
         .semantic_registry
-        .update_hint_at(stack_len - 1, Interpretation::Nil);
+        .update_hint_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 /// Compare two scalar values under an ordering kind. Returns `Ok(Some(bool))`
 /// when the comparison decides, `Ok(None)` when the comparison budget
-/// exhausts (SPEC §7.4.1) — the caller projects `None` to an Undecidable
-/// NIL. Returns `Err(_)` for structurally-non-comparable operands.
+/// exhausts (SPEC §7.4.1) — the caller projects `None` to the logical
+/// `Unknown` (U). Returns `Err(_)` for structurally-non-comparable operands.
 ///
 /// Both-Rational operands take the Fraction fast path (always
 /// decidable per SPEC §7.4.1: "the budget value itself is not part
@@ -158,8 +158,8 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
 /// Returns `Ok(Some(bool))` when the property is decidable for every
 /// pair, `Ok(None)` when some pair triggers SPEC §7.4.1's comparison
 /// budget short-circuit. SPEC §7.4 requires the entire STAK-mode
-/// result to be NIL on the first NIL-producing pair regardless of
-/// later pairs.
+/// result to be the logical `Unknown` (U) on the first U-producing
+/// pair regardless of later pairs.
 fn check_all_adjacent_pairs(items: &[Value], kind: OrderingKind) -> Result<Option<bool>> {
     for pair in items.windows(2) {
         match compare_scalar_pair(&pair[0], &pair[1], kind)? {
@@ -219,7 +219,7 @@ fn apply_binary_comparison(
 
             match compare_scalar_pair(&a_val, &b_val, kind) {
                 Ok(Some(b)) => push_boolean_result(interp, b),
-                Ok(None) => push_undecidable_nil(interp),
+                Ok(None) => push_unknown(interp),
                 Err(e) => {
                     if !is_keep_mode {
                         interp.stack.push(a_val);
@@ -259,7 +259,7 @@ fn apply_binary_comparison(
 
             match check_all_adjacent_pairs(&items, kind) {
                 Ok(Some(decided)) => push_boolean_result(interp, decided),
-                Ok(None) => push_undecidable_nil(interp),
+                Ok(None) => push_unknown(interp),
                 Err(e) => {
                     if !is_keep_mode {
                         interp.stack.extend(items);
@@ -319,7 +319,7 @@ where
                 interp.stack.pop();
                 interp.stack.pop();
             }
-            push_undecidable_nil(interp);
+            push_unknown(interp);
             Ok(())
         }
     })
@@ -399,7 +399,8 @@ pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
 
 /// Three-valued pairwise equality matching the SPEC §7.4.1
 /// discipline: `Some(true)` / `Some(false)` for decidable pairs,
-/// `None` when budget exhaustion makes the comparison undecidable.
+/// `None` when budget exhaustion makes the comparison undecidable
+/// (the caller projects `None` to the logical `Unknown` U).
 /// `None` is only reachable for scalar pairs where at least one
 /// operand is a non-Rational `ExactReal`; the structural Vector /
 /// Tensor / Record paths and the singleton-projection paths always
@@ -484,7 +485,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
             match pairwise_eq(&a_val, &b_val) {
                 Some(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
-                None => push_undecidable_nil(interp),
+                None => push_unknown(interp),
             }
             Ok(())
         }
@@ -517,7 +518,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
             match check_all_adjacent_eq(&items, invert) {
                 Some(decided) => push_boolean_result(interp, decided),
-                None => push_undecidable_nil(interp),
+                None => push_unknown(interp),
             }
             Ok(())
         }

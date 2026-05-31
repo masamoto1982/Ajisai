@@ -48,6 +48,10 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         NilReason::StackUnderflow => Some(ErrorCategory::StackUnderflow),
         NilReason::UnknownWord => Some(ErrorCategory::UnknownWord),
         NilReason::SafeCaught(category) => Some((**category).clone()),
+        // The logical Unknown (U) is not an error/absence and never carries
+        // an error category. It is excluded from error-flow tracing by
+        // `top_direct_nil_reason`, so this arm is defensive.
+        NilReason::LogicallyUnknown => None,
         NilReason::EmptySequence
         | NilReason::MissingField
         | NilReason::InvalidEncoding
@@ -65,7 +69,12 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
         return None;
     }
     let reason = top.nil_reason()?.clone();
-    if matches!(reason, NilReason::SafeCaught(_)) {
+    // The logical Unknown (U) is a TruthValue result, not an error/absence:
+    // keep it out of the error-flow trace (SPEC §4.5.2).
+    if matches!(
+        reason,
+        NilReason::SafeCaught(_) | NilReason::LogicallyUnknown
+    ) {
         None
     } else {
         Some(reason)

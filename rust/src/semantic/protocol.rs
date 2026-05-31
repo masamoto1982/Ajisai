@@ -47,6 +47,7 @@ impl Capability {
             Capability::ModuleOwned => "moduleOwned",
             Capability::CoreOwned => "coreOwned",
             Capability::AiExplainable => "aiExplainable",
+            Capability::TruthValued => "truthValued",
         }
     }
 }

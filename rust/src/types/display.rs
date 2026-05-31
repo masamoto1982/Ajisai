@@ -11,6 +11,12 @@ impl fmt::Display for Value {
 }
 
 pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
+    // The logical Unknown (U, SPEC §7.5) always renders as `UNKNOWN`,
+    // regardless of the effective hint, so it is never shown as `NIL`.
+    // Display-only and non-canonical (SPEC §12.2).
+    if value.is_unknown() {
+        return "UNKNOWN".to_string();
+    }
     match hint {
         Interpretation::Nil => {
             if matches!(value.data, ValueData::Nil) {
@@ -26,7 +32,7 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
         Interpretation::RawNumber => format_value_recursive(&value.data, 0),
         Interpretation::Interval => format_as_interval(value),
         Interpretation::Text => format_as_string(&value.data),
-        Interpretation::TruthValue => format_as_boolean(&value.data),
+        Interpretation::TruthValue => format_as_boolean(value),
         Interpretation::Timestamp => format_as_datetime(&value.data),
         Interpretation::ContinuedFraction => format_as_continued_fraction(value),
     }
@@ -348,8 +354,51 @@ fn format_as_string(data: &ValueData) -> String {
     }
 }
 
-fn format_as_boolean(data: &ValueData) -> String {
-    match data {
+/// Boolean label for a single element of a truth-valued vector/tensor.
+/// The logical Unknown (U, SPEC §7.5) renders as `UNKNOWN`; an
+/// operational NIL stays `NIL`.
+fn boolean_element_label(child: &Value) -> &'static str {
+    if child.is_unknown() {
+        return "UNKNOWN";
+    }
+    match &child.data {
+        ValueData::Nil => "NIL",
+        ValueData::Scalar(f) => {
+            if f.is_nil() {
+                "NIL"
+            } else if f.is_zero() {
+                "FALSE"
+            } else {
+                "TRUE"
+            }
+        }
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+            if v.is_empty() {
+                "FALSE"
+            } else {
+                "TRUE"
+            }
+        }
+        ValueData::Tensor { data, .. } => {
+            if data.is_empty() {
+                "FALSE"
+            } else {
+                "TRUE"
+            }
+        }
+        ValueData::ExactScalar(_) => "TRUE",
+        ValueData::CodeBlock(_) => "TRUE",
+        ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
+    }
+}
+
+fn format_as_boolean(value: &Value) -> String {
+    // The logical Unknown is handled by `format_with_hint`, but guard
+    // here too so the function is correct in isolation.
+    if value.is_unknown() {
+        return "UNKNOWN".to_string();
+    }
+    match &value.data {
         ValueData::Nil => "NIL".to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -367,43 +416,7 @@ fn format_as_boolean(data: &ValueData) -> String {
                 return "FALSE".to_string();
             }
 
-            let inner: Vec<&str> = v
-                .iter()
-                .map(|child| match &child.data {
-                    ValueData::Nil => "NIL",
-                    ValueData::Scalar(f) => {
-                        if f.is_nil() {
-                            "NIL"
-                        } else if f.is_zero() {
-                            "FALSE"
-                        } else {
-                            "TRUE"
-                        }
-                    }
-                    ValueData::Vector(_) | ValueData::Record { .. } => {
-                        let cv = match &child.data {
-                            ValueData::Vector(v) => v,
-                            ValueData::Record { pairs, .. } => pairs,
-                            _ => unreachable!(),
-                        };
-                        if cv.is_empty() {
-                            "FALSE"
-                        } else {
-                            "TRUE"
-                        }
-                    }
-                    ValueData::Tensor { data, .. } => {
-                        if data.is_empty() {
-                            "FALSE"
-                        } else {
-                            "TRUE"
-                        }
-                    }
-                    ValueData::ExactScalar(_) => "TRUE",
-                    ValueData::CodeBlock(_) => "TRUE",
-                    ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
-                })
-                .collect();
+            let inner: Vec<&str> = v.iter().map(boolean_element_label).collect();
             format!("{{ {} }}", inner.join(" "))
         }
         ValueData::Tensor { data, .. } => {

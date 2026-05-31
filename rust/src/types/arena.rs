@@ -283,6 +283,12 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
 
 pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
     match arena.kind(root) {
+        // The logical Unknown (U, SPEC §7.5) is a TruthValue-role NIL node;
+        // it serializes to the string `"unknown"` (display-only surface,
+        // SPEC §12.2) rather than JSON null.
+        NodeKind::Nil if arena.hint(root) == Interpretation::TruthValue => {
+            JsonValue::String("unknown".to_string())
+        }
         NodeKind::Nil => JsonValue::Null,
         NodeKind::Scalar(frac) => {
             if arena.hint(root) == Interpretation::TruthValue {

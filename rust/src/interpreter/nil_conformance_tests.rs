@@ -70,13 +70,20 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("MUL", NilClass::BinaryBlanket),
     // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil: on ExactScalar (CF)
     // operands the partial-quotient budget can exhaust, yielding an
-    // Undecidable NIL (SPEC §7.4.1) — the same treatment as comparison
-    // words. They are covered by projecting_word_set_matches_registry and
-    // the arithmetic NIL-input probes below.
-    // Comparison words (EQ/NEQ/LT/LTE/GT/GTE) are Projecting/CreatesNil
-    // per SPEC §7.14 (comparison-budget exhaustion can produce Undecidable
-    // NIL). They are covered by the projecting_word_set_matches_registry
-    // and bubble_creation_comparison_nil_input probes below.
+    // Undecidable NIL (SPEC §7.4.1). They are covered by
+    // projecting_word_set_matches_registry and the arithmetic NIL-input
+    // probes below.
+    // Comparison words (EQ/NEQ/LT/LTE/GT/GTE) are Projecting/Passthrough
+    // per SPEC §7.14 (revised): budget exhaustion now yields the logical
+    // truth value Unknown (U), not a reasoned NIL, so they no longer create
+    // NIL — but they still pass NIL operands through (§7.12), which is the
+    // BinaryBlanket behavior verified here.
+    ("EQ", NilClass::BinaryBlanket),
+    ("NEQ", NilClass::BinaryBlanket),
+    ("LT", NilClass::BinaryBlanket),
+    ("LTE", NilClass::BinaryBlanket),
+    ("GT", NilClass::BinaryBlanket),
+    ("GTE", NilClass::BinaryBlanket),
     ("NOT", NilClass::UnaryNil),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
@@ -188,6 +195,76 @@ async fn three_valued_or() {
     }
 }
 
+// --- Three-valued logic with the logical Unknown (SPEC §7.5, §4.5.2) ------
+
+/// Ajisai source that leaves the logical Unknown (U) on the stack: the
+/// comparison of two equal irrationals exhausts the partial-quotient
+/// budget (SPEC §7.4.1).
+const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+
+fn is_unknown(v: &Value) -> bool {
+    v.is_unknown()
+}
+
+#[tokio::test]
+async fn unknown_is_produced_by_undecidable_comparison() {
+    let stack = run_ok(PRODUCE_U).await;
+    assert_eq!(stack.len(), 1);
+    assert!(is_unknown(&stack[0]), "undecidable EQ must yield Unknown");
+    assert_eq!(stack[0].truth_value(), Some("unknown"));
+}
+
+#[tokio::test]
+async fn k3_and_or_not_with_unknown() {
+    // U AND TRUE = U ; U AND FALSE = FALSE (F absorbs).
+    let s = run_ok(&format!("{PRODUCE_U} TRUE AND")).await;
+    assert!(is_unknown(&s[0]), "U AND TRUE must be Unknown");
+    let s = run_ok(&format!("{PRODUCE_U} FALSE AND")).await;
+    assert!(is_false(&s[0]), "U AND FALSE must be FALSE");
+
+    // U OR FALSE = U ; U OR TRUE = TRUE (T absorbs).
+    let s = run_ok(&format!("{PRODUCE_U} FALSE OR")).await;
+    assert!(is_unknown(&s[0]), "U OR FALSE must be Unknown");
+    let s = run_ok(&format!("{PRODUCE_U} TRUE OR")).await;
+    assert!(is_true(&s[0]), "U OR TRUE must be TRUE");
+
+    // NOT U = U.
+    let s = run_ok(&format!("{PRODUCE_U} NOT")).await;
+    assert!(is_unknown(&s[0]), "NOT U must be Unknown");
+}
+
+#[tokio::test]
+async fn nil_takes_priority_over_unknown_in_logic() {
+    // SPEC §4.5.2: when NIL and U meet with no absorbing definite, NIL wins
+    // (it carries a diagnostic reason that must be preserved). The result is
+    // an operational NIL, not U.
+    let s = run_ok(&format!("{PRODUCE_U} NIL AND")).await;
+    assert!(
+        is_nil(&s[0]) && !is_unknown(&s[0]),
+        "U AND NIL must be NIL, not Unknown"
+    );
+    let s = run_ok(&format!("{PRODUCE_U} NIL OR")).await;
+    assert!(
+        is_nil(&s[0]) && !is_unknown(&s[0]),
+        "U OR NIL must be NIL, not Unknown"
+    );
+
+    // But an absorbing definite still decides over both.
+    let s = run_ok(&format!("{PRODUCE_U} FALSE AND")).await;
+    assert!(
+        is_false(&s[0]),
+        "U AND FALSE must be FALSE even though U is present"
+    );
+}
+
+#[tokio::test]
+async fn unknown_passes_through_pipeline_distinct_from_nil() {
+    // U flowing through a logic pipeline stays U (not collapsed to NIL) until
+    // an absorbing element or a real NIL intervenes.
+    let s = run_ok(&format!("{PRODUCE_U} NOT NOT")).await;
+    assert!(is_unknown(&s[0]), "NOT NOT U must remain Unknown");
+}
+
 // --- Bubble creation: Projecting / CreatesNil words (SPEC §11.2) ----------
 
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
@@ -197,16 +274,10 @@ const PROJECTING_WORDS: &[&str] = &[
     "CEIL",
     "CHR",
     "DIV",
-    "EQ",
     "FLOOR",
     "GET",
-    "GT",
-    "GTE",
     "INDEX-OF",
-    "LT",
-    "LTE",
     "MOD",
-    "NEQ",
     "NUM",
     "PARSE-ISO",
     "POW",
@@ -284,8 +355,10 @@ async fn bubble_creation_well_formed_domain_miss() {
 
 #[tokio::test]
 async fn bubble_creation_comparison_nil_input() {
-    // Comparison words are Projecting/CreatesNil (SPEC §7.14). A NIL operand
-    // propagates as NIL output via the Bubble Rule (SPEC §4.5.1, §11.2).
+    // Comparison words are Projecting/Passthrough (SPEC §7.14, revised). A
+    // NIL operand propagates as NIL output via the passthrough rule
+    // (SPEC §4.5.1, §7.12). (Budget exhaustion instead yields Unknown, not
+    // a NIL — covered by the comparison Unknown tests.)
     for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
         for code in [
             format!("NIL 1 {name}"),

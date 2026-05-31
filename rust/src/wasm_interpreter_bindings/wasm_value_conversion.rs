@@ -213,7 +213,7 @@ fn absence_to_protocol_js(absence: &crate::semantic::AbsenceMetadata) -> JsValue
     obj.into()
 }
 
-fn value_semantics_to_js(value: &Value) -> JsValue {
+fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     let obj = js_sys::Object::new();
     set_prop(
         &obj,
@@ -221,9 +221,30 @@ fn value_semantics_to_js(value: &Value) -> JsValue {
         &value.semantic_kind().as_protocol_str().into(),
     );
     set_prop(&obj, "shape", &value.shape_kind().as_protocol_str().into());
+    // The `truthValue` axis (SPEC §2.3) is the only observable surface for
+    // the three-valued logic: `true` / `false` / `unknown`. It is derived
+    // from the *effective* interpretation role, because a definite boolean
+    // carries the `TruthValue` role in the semantic plane rather than on the
+    // value's own hint (SPEC §12.2). Present only on truth-valued values.
+    let truth = value.truth_value_for_role(effective);
+    if let Some(truth) = truth {
+        set_prop(&obj, "truthValue", &truth.into());
+    }
     let capabilities = js_sys::Array::new();
+    let mut has_truth_valued = false;
     for capability in value.capabilities() {
+        if capability == crate::semantic::Capability::TruthValued {
+            has_truth_valued = true;
+        }
         capabilities.push(&JsValue::from_str(capability.as_protocol_str()));
+    }
+    // A value rendered under the TruthValue role advertises `truthValued`
+    // even when the role lives in the semantic plane (comparison/logic
+    // booleans), not on the value's own hint.
+    if truth.is_some() && !has_truth_valued {
+        capabilities.push(&JsValue::from_str(
+            crate::semantic::Capability::TruthValued.as_protocol_str(),
+        ));
     }
     set_prop(&obj, "capabilities", &capabilities.into());
     set_prop(&obj, "origin", &value.origin().as_protocol_str().into());
@@ -394,6 +415,18 @@ pub(crate) fn value_to_protocol(
             semantics: None,
         };
     }
+    // The logical Unknown (U, SPEC §7.5) is observed through the
+    // `truthValue` axis as `unknown`, never as a NIL. Detected via the
+    // canonical `is_unknown()` predicate (SPEC §2.3 firewall: the internal
+    // NIL representation is not observable).
+    if value.is_unknown() {
+        return ProtocolNode {
+            type_str: "truthValue",
+            value: ProtocolValue::Text("unknown".to_string()),
+            display_hint: Interpretation::TruthValue,
+            semantics: Some(value.clone()),
+        };
+    }
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::ExactScalar(er) => {
@@ -463,7 +496,11 @@ fn protocol_to_js(node: &ProtocolNode) -> JsValue {
         &interpretation_protocol_str(node.display_hint).into(),
     );
     if let Some(source) = &node.semantics {
-        set_prop(&obj, "semantics", &value_semantics_to_js(source));
+        set_prop(
+            &obj,
+            "semantics",
+            &value_semantics_to_js(source, node.display_hint),
+        );
     }
     set_prop(&obj, "type", &node.type_str.into());
     match &node.value {
@@ -532,10 +569,15 @@ fn tensor_data_to_js_array(
                 js_sys::Reflect::set(&elem, &"displayHint".into(), &"rawNumber".into()).unwrap();
             }
             let element_value = Value::from_fraction(f.clone());
+            let leaf_role = if leaves_are_bool {
+                Interpretation::TruthValue
+            } else {
+                Interpretation::RawNumber
+            };
             js_sys::Reflect::set(
                 &elem,
                 &"semantics".into(),
-                &value_semantics_to_js(&element_value),
+                &value_semantics_to_js(&element_value, leaf_role),
             )
             .unwrap();
             arr.push(&elem);
@@ -953,6 +995,57 @@ mod protocol_mcdc_tests {
             ProtocolValue::Children(kids) => kids,
             other => panic!("expected Children, got {:?}", other),
         }
+    }
+
+    // --- logical Unknown (U) serialization (SPEC §7.5, §2.3) ---
+
+    #[test]
+    fn unknown_serializes_as_truth_value_unknown() {
+        let node = value_to_protocol(&Value::unknown(), None);
+        assert_eq!(node.type_str, "truthValue");
+        assert_eq!(node.value, ProtocolValue::Text("unknown".to_string()));
+        assert_eq!(node.display_hint, Interpretation::TruthValue);
+    }
+
+    #[test]
+    fn unknown_serializes_as_truth_value_even_under_external_hint() {
+        // Detection is reason-based, so U is observed as `unknown` regardless
+        // of any external hint override (SPEC §2.3 firewall).
+        let node = value_to_protocol(&Value::unknown(), Some(Interpretation::Nil));
+        assert_eq!(node.type_str, "truthValue");
+        assert_eq!(node.value, ProtocolValue::Text("unknown".to_string()));
+    }
+
+    #[test]
+    fn plain_nil_is_still_nil_not_unknown() {
+        let node = value_to_protocol(&Value::nil(), None);
+        assert_eq!(node.type_str, "nil");
+        assert_eq!(node.value, ProtocolValue::Null);
+    }
+
+    #[test]
+    fn truth_value_axis_uses_effective_role_for_definite_booleans() {
+        // A comparison/logic boolean carries the TruthValue role in the
+        // semantic plane (here passed as the external hint), not on the
+        // value's own RawNumber hint. The truthValue axis must still resolve.
+        assert_eq!(
+            scalar(1).truth_value_for_role(Interpretation::TruthValue),
+            Some("true")
+        );
+        assert_eq!(
+            scalar(0).truth_value_for_role(Interpretation::TruthValue),
+            Some("false")
+        );
+        // Without the TruthValue role it is a plain number, not a truth value.
+        assert_eq!(
+            scalar(1).truth_value_for_role(Interpretation::RawNumber),
+            None
+        );
+        // U is `unknown` regardless of the role.
+        assert_eq!(
+            Value::unknown().truth_value_for_role(Interpretation::RawNumber),
+            Some("unknown")
+        );
     }
 
     // --- scalar interpretation arms (MC/DC on the 4-way match) ---
