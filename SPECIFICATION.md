@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-30**
+Version: **2026-05-31**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -275,6 +275,7 @@ The diagnostic object uses the existing three-layer model:
 | `summary` | human-readable explanation | non-canonical; do not parse |
 | `evidence` | human-readable evidence list | non-canonical; do not parse |
 | `nextChecks` | suggested checks for UI/AI display | structured label/detail strings |
+| `agreedPrefix` | for a continued-fraction comparison that produced `Unknown` (Section 7.4.1): the number of leading partial quotients that matched before the budget was exhausted | optional non-negative integer; machine-readable |
 
 SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = structureError`. Direct Bubble/NIL results use their own reason and are not wrapped as `safeCaught`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
 
@@ -499,9 +500,30 @@ To preserve totality, every comparison operation runs under an implementation-de
 
 The U outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison). The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
 
-The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried in the comparison's `diagnosis` context (Section 4.5.0). It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable `truthValue`.
+The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried on the comparison's `Unknown` result in the machine-readable `diagnosis.agreedPrefix` field (Section 4.5.0): a non-negative integer. It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable `truthValue`.
 
 `STAK`-mode ordering comparisons short-circuit on the first pair that yields U: the entire stack-mode result is U, regardless of how many subsequent pairs would have decided. (A NIL operand still short-circuits to NIL per Section 7.12; when both a NIL operand and a U-producing pair are present, NIL takes priority per Section 4.5.2.)
+
+#### 7.4.2 Explicit-budget comparison: `COMPARE-WITHIN`
+
+The six relations of Section 7.4 run under an implementation-defined budget that is not observable. `COMPARE-WITHIN` makes the half-decidability threshold a first-class, user-controlled parameter: the program names the depth at which an undecided comparison becomes `Unknown`.
+
+| Canonical | Sugar | Description |
+|-----------|-------|-------------|
+| `COMPARE-WITHIN` | — | Three-way compare two values within an explicit partial-quotient budget |
+
+Stack effect: `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]`.
+
+`COMPARE-WITHIN` consumes two numeric values `a` and `b` and a positive integer `budget`, and emits partial quotients of `a` and `b` in parallel (Section 7.4.1) for at most `budget` steps. It produces:
+
+- the scalar `-1` (role `RawNumber`) if `a < b`,
+- the scalar `0` if `a = b`,
+- the scalar `1` if `a > b`,
+- the logical `Unknown` (U, Section 7.5) if the order is not settled within `budget` partial quotients; the U result carries `diagnosis.agreedPrefix` (Section 4.5.0), which for this word equals the consumed `budget`.
+
+The decided outcome is the exact sign of `a − b`; the six relations of Section 7.4 are recoverable from it (`a < b` iff `-1`, `a <= b` iff not `1`, and so on). For two finite (rational) operands the comparison always decides regardless of `budget`, because finite CFs differ at a bounded index; `budget` only governs lazy irrationals.
+
+`COMPARE-WITHIN` is `Projecting` (Section 7.14): it is total over well-shaped input because it projects the undecided case onto U. It is NIL-passthrough (Section 7.12) for its `a`/`b` operands. A non-positive or non-integer `budget`, or non-numeric `a`/`b`, is malformed use and raises an error (Section 11.2), not U. The implicit budget of the bare relations is an implementation-defined constant; `COMPARE-WITHIN` does not change it and is the only way to observe or override the depth.
 
 ### 7.5 Logic
 
@@ -638,6 +660,8 @@ A contract entry has the following fields, in addition to the existing identific
 Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting`: they are total because every well-shaped input yields a `TruthValue` result, projecting the undecidable case onto the truth value `unknown` (U) rather than raising. Their `nil_policy` is `Passthrough` (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a `TruthValue` result and **not** a `reason`-bearing NIL, so they are no longer classified `CreatesNil` for that case. (The `reason = undecidable` NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)
 
 Logic words (`AND`, `OR`, `NOT`) are `Total` over the three-valued domain {`true`, `false`, `unknown`} (Section 7.5) and `Passthrough` for NIL operands, with `PreservesReason` so that the leftmost NIL reason survives and a NIL operand is never silently replaced by U (Section 4.5.2).
+
+`COMPARE-WITHIN` (Section 7.4.2) is `Projecting`: it is total over well-shaped input because it projects the budget-undecided case onto the logical `Unknown` (a result, not a reasoned NIL). Its `nil_policy` is `Passthrough` for the `a`/`b` operands. A non-positive or non-integer `budget` or non-numeric operands are malformed use and raise an error, so it is not `CreatesNil`.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -935,6 +959,8 @@ Every NIL-producing path must have at least one test that asserts both the surfa
 Words whose behavior depends on more than one independent condition (e.g. `~ /` decides on left-operand validity, right-operand validity, right-operand zero-ness, NIL-passthrough applicability, and SAFE engagement) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
 
 The three-valued logic words (`AND`, `OR`, `NOT`, Section 7.5) must cover every cell of the K3 truth tables — `AND` and `OR` over the nine {T, F, U}² combinations, `NOT` over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding `unknown` (U), and distinct irrationals deciding at a finite prefix.
+
+`COMPARE-WITHIN` (Section 7.4.2) must cover: each decided sign (`-1` / `0` / `1`); the budget-undecided case yielding `unknown` with `diagnosis.agreedPrefix` equal to the consumed `budget`; finite operands deciding regardless of `budget`; the same lazy-irrational pair deciding at a large `budget` but yielding U at a small `budget`; NIL operand passthrough; and the malformed-`budget` / non-numeric-operand error paths.
 
 ### 15.4 Stack discipline under projection
 
