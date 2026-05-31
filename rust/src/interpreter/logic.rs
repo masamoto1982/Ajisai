@@ -1,29 +1,20 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
+use crate::interpreter::logic_kleene::{self, Ternary};
 use crate::interpreter::tensor_ops::{
-    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, FlatTensor,
+    apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics,
 };
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 
-fn check_value_has_truthy(val: &Value) -> bool {
-    match &val.data {
-        ValueData::Nil => false,
-        ValueData::Scalar(f) => !f.is_zero(),
-        // ExactScalar values are always non-zero irrationals → truthy
-        ValueData::ExactScalar(_) => true,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => true,
-        ValueData::Vector(_) | ValueData::Record { .. } => {
-            if let Ok(tensor) = FlatTensor::from_value(val) {
-                tensor.data.iter().any(|f| !f.is_zero())
-            } else {
-                false
-            }
-        }
-        ValueData::Tensor { data, .. } => data.iter().any(|f| !f.is_zero()),
-    }
+/// Whether an operand forces the scalar three-valued (K3) path rather
+/// than element-wise tensor broadcast: an operational NIL or the logical
+/// `Unknown` (U). When neither operand is special, `AND`/`OR` keep their
+/// existing vector/tensor broadcast semantics.
+fn forces_k3_path(value: &Value) -> bool {
+    value.is_nil() || value.is_unknown()
 }
 
 fn compute_inverted_fraction(f: &Fraction) -> Fraction {
@@ -38,8 +29,12 @@ fn compute_inverted_value(
     val: &Value,
     metrics: Option<&mut RuntimeMetrics>,
 ) -> Result<Value> {
-    if val.is_nil() {
-        return Ok(Value::nil());
+    // The logical Unknown (¬U = U) and operational NIL (¬NIL = NIL) cases
+    // route through the canonical K3 NOT table (SPEC §7.5). Checked before
+    // the scalar path because U is represented as a NIL node; a plain
+    // numeric/boolean scalar keeps its existing 0↔1 inversion below.
+    if val.is_unknown() || val.is_nil() {
+        return Ok(logic_kleene::not(Ternary::classify(val)).into_value());
     }
     if let Some(f) = val.as_scalar() {
         return Ok(Value::from_fraction(compute_inverted_fraction(f)));
@@ -79,7 +74,10 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             let source: Vec<Value> = interp.stack.to_vec();
             let mut results: Vec<Value> = Vec::with_capacity(source.len());
             for value in &source {
-                results.push(compute_inverted_value(value, Some(&mut interp.runtime_metrics))?);
+                results.push(compute_inverted_value(
+                    value,
+                    Some(&mut interp.runtime_metrics),
+                )?);
             }
 
             if is_keep_mode {
@@ -113,25 +111,12 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let a_is_nil: bool = a_val.is_nil();
-            let b_is_nil: bool = b_val.is_nil();
-
-            if a_is_nil && b_is_nil {
-                interp.stack.push(Value::nil());
-                return Ok(());
-            } else if a_is_nil {
-                if check_value_has_truthy(&b_val) {
-                    interp.stack.push(Value::nil());
-                } else {
-                    interp.stack.push(Value::from_bool(false));
-                }
-                return Ok(());
-            } else if b_is_nil {
-                if check_value_has_truthy(&a_val) {
-                    interp.stack.push(Value::nil());
-                } else {
-                    interp.stack.push(Value::from_bool(false));
-                }
+            // K3 (SPEC §7.5) when either operand is an operational NIL or
+            // the logical Unknown (U); otherwise keep element-wise broadcast.
+            if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
+                let result =
+                    logic_kleene::and(Ternary::classify(&a_val), Ternary::classify(&b_val));
+                interp.stack.push(result.into_value());
                 return Ok(());
             }
 
@@ -170,19 +155,16 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            let has_nil: bool = items.iter().any(|v| v.is_nil());
-            let has_falsy_non_nil: bool = items.iter().any(|v| !v.is_nil() && !v.is_truthy());
-            let all_truthy: bool = items.iter().all(|v| v.is_truthy());
-
-            if has_falsy_non_nil {
-                interp.stack.push(Value::from_bool(false));
-            } else if has_nil {
-                interp.stack.push(Value::nil());
-            } else if all_truthy {
-                interp.stack.push(Value::from_bool(true));
-            } else {
-                interp.stack.push(Value::from_bool(false));
+            // STAK-mode K3 fold (SPEC §7.5): F absorbs, then NIL takes
+            // priority over U (SPEC §4.5.2), then U propagates, else T.
+            let mut acc = Ternary::True;
+            for v in &items {
+                acc = logic_kleene::and(acc, Ternary::classify(v));
+                if acc == Ternary::False {
+                    break;
+                }
             }
+            interp.stack.push(acc.into_value());
             Ok(())
         }
     }
@@ -209,25 +191,11 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 (a_val, b_val)
             };
 
-            let a_is_nil: bool = a_val.is_nil();
-            let b_is_nil: bool = b_val.is_nil();
-
-            if a_is_nil && b_is_nil {
-                interp.stack.push(Value::nil());
-                return Ok(());
-            } else if a_is_nil {
-                if check_value_has_truthy(&b_val) {
-                    interp.stack.push(Value::from_bool(true));
-                } else {
-                    interp.stack.push(Value::nil());
-                }
-                return Ok(());
-            } else if b_is_nil {
-                if check_value_has_truthy(&a_val) {
-                    interp.stack.push(Value::from_bool(true));
-                } else {
-                    interp.stack.push(Value::nil());
-                }
+            // K3 (SPEC §7.5) when either operand is an operational NIL or
+            // the logical Unknown (U); otherwise keep element-wise broadcast.
+            if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
+                let result = logic_kleene::or(Ternary::classify(&a_val), Ternary::classify(&b_val));
+                interp.stack.push(result.into_value());
                 return Ok(());
             }
 
@@ -266,16 +234,16 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            let has_nil: bool = items.iter().any(|v| v.is_nil());
-            let has_truthy: bool = items.iter().any(|v| v.is_truthy());
-
-            if has_truthy {
-                interp.stack.push(Value::from_bool(true));
-            } else if has_nil {
-                interp.stack.push(Value::nil());
-            } else {
-                interp.stack.push(Value::from_bool(false));
+            // STAK-mode K3 fold (SPEC §7.5): T absorbs, then NIL takes
+            // priority over U (SPEC §4.5.2), then U propagates, else F.
+            let mut acc = Ternary::False;
+            for v in &items {
+                acc = logic_kleene::or(acc, Ternary::classify(v));
+                if acc == Ternary::True {
+                    break;
+                }
             }
+            interp.stack.push(acc.into_value());
             Ok(())
         }
     }

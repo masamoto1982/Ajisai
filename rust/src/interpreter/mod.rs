@@ -23,6 +23,7 @@ pub mod interval_ops;
 pub mod io;
 pub mod json;
 pub mod logic;
+pub mod logic_kleene;
 pub mod math_ops;
 pub mod modules;
 pub(crate) mod naming_convention_checker;

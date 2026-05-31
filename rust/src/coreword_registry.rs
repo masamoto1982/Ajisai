@@ -711,11 +711,14 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_contract_f_comparison_words_create_nil_under_undecidable() {
-        // SPEC §7.14 line 611 and §9.4 table require all six comparison
-        // primitives to be Projecting/CreatesNil/B — matching DIV — because
-        // the comparison-budget exhaustion path (§7.4.1) can produce an
-        // Undecidable NIL instead of a boolean.
+    fn aq_ver_contract_f_comparison_words_project_undecidable_to_unknown() {
+        // SPEC §7.14 (revised): all six comparison primitives are
+        // Projecting/Passthrough/B. They are Projecting because every
+        // well-shaped input yields a `TruthValue` result — the
+        // comparison-budget exhaustion path (§7.4.1) projects onto the
+        // logical `Unknown` (U), a TruthValue result, not a reasoned NIL.
+        // They are Passthrough because they still pass NIL operands through
+        // (§7.12); they are no longer CreatesNil for the undecidable case.
         for name in &["EQ", "NEQ", "LT", "LTE", "GT", "GTE"] {
             let meta = get_coreword_metadata(name)
                 .unwrap_or_else(|| panic!("{} must be in registry", name));
@@ -727,8 +730,8 @@ mod tests {
             );
             assert_eq!(
                 meta.nil_policy,
-                NilPolicy::CreatesNil,
-                "{} must be CreatesNil (SPEC §7.14)",
+                NilPolicy::Passthrough,
+                "{} must be Passthrough (SPEC §7.14, revised)",
                 name
             );
             assert_eq!(

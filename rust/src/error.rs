@@ -20,6 +20,15 @@ pub enum NilReason {
     /// `absence.origin = comparisonBudget` rather than a SAFE-caught
     /// error.
     Undecidable,
+    /// The logical truth value `Unknown` (U) of the three-valued (Kleene)
+    /// logic, SPEC §7.5. Unlike `Undecidable` (an operational NIL), this
+    /// marks a *logical* undecidability: a continued-fraction comparison
+    /// (SPEC §7.4.1) that did not settle true or false within its budget.
+    /// A value carrying this reason together with `Interpretation::TruthValue`
+    /// is the runtime representation of U; observe it through the
+    /// `truthValue` axis (`unknown`), never by inspecting this reason
+    /// directly. Use `Value::is_unknown()` / `Value::unknown()`.
+    LogicallyUnknown,
     /// A host-mediated read (`SERIAL@READ`) found no buffered data. The Bubble
     /// Rule projects this to NIL with `absence.origin = hostEnvironment`.
     NoData,
@@ -94,6 +103,7 @@ impl NilReason {
             NilReason::UnknownWord => "unknownWord",
             NilReason::ExecutionFailure => "executionFailure",
             NilReason::Undecidable => "undecidable",
+            NilReason::LogicallyUnknown => "logicallyUnknown",
             NilReason::NoData => "noData",
             NilReason::PortDisconnected => "portDisconnected",
             NilReason::SafeCaught(_) => "safeCaught",

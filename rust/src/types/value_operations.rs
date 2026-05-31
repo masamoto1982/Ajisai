@@ -20,6 +20,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::UnknownWord => AbsenceOrigin::UnknownWord,
         NilReason::ExecutionFailure => AbsenceOrigin::ExecutionFailure,
         NilReason::Undecidable => AbsenceOrigin::ComparisonBudget,
+        NilReason::LogicallyUnknown => AbsenceOrigin::ComparisonBudget,
         NilReason::NoData => AbsenceOrigin::HostEnvironment,
         NilReason::PortDisconnected => AbsenceOrigin::HostEnvironment,
         NilReason::SafeCaught(_) => AbsenceOrigin::SafeProjection,
@@ -59,6 +60,80 @@ impl Value {
             origin,
             Recoverability::Unknown,
         ))
+    }
+
+    /// Construct the logical truth value `Unknown` (U), SPEC §7.5 / §7.4.1.
+    ///
+    /// U is represented as a NIL node carrying `NilReason::LogicallyUnknown`
+    /// and the `Interpretation::TruthValue` role. This reuses the existing
+    /// NIL plumbing (passthrough, diagnosis, arena) while remaining a
+    /// *logical* value rather than an operational absence. Never branch on
+    /// the underlying `ValueData::Nil` to detect U — use [`is_unknown`].
+    #[inline]
+    pub fn unknown() -> Self {
+        Self {
+            data: ValueData::Nil,
+            hint: Interpretation::TruthValue,
+            absence: Some(AbsenceMetadata::with_reason(
+                NilReason::LogicallyUnknown,
+                AbsenceOrigin::ComparisonBudget,
+                Recoverability::Unknown,
+            )),
+        }
+    }
+
+    /// Whether this value is the logical truth value `Unknown` (U).
+    ///
+    /// This is the single canonical predicate for U. It keys off the
+    /// `LogicallyUnknown` reason, which is attached exclusively to U, so it
+    /// is robust regardless of how the `TruthValue` hint propagates. All
+    /// call sites must use this instead of matching `ValueData::Nil`.
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        matches!(self.nil_reason(), Some(NilReason::LogicallyUnknown))
+    }
+
+    /// Whether this value carries the `TruthValue` interpretation role
+    /// (true, false, or unknown). Used at observation boundaries to attach
+    /// the `truthValue` axis and the `truthValued` capability.
+    #[inline]
+    pub fn is_truth_value(&self) -> bool {
+        self.hint == Interpretation::TruthValue
+    }
+
+    /// The observable `truthValue` axis (SPEC §2.3) under a given effective
+    /// interpretation role: `Some("true")`, `Some("false")`, or
+    /// `Some("unknown")` for truth-valued values, and `None` otherwise.
+    ///
+    /// The role is taken as a parameter because a definite boolean produced
+    /// by a comparison/logic word carries its `TruthValue` role in the
+    /// semantic plane (SPEC §12.2), not on the value's own `hint`. The
+    /// logical Unknown (U) is always `unknown` regardless of the role, since
+    /// it is detected from its reason. This is the single canonical mapping
+    /// from a value to its three-valued logical surface; external consumers
+    /// must read this axis rather than the internal NIL representation or
+    /// display text.
+    pub fn truth_value_for_role(&self, effective: Interpretation) -> Option<&'static str> {
+        if self.is_unknown() {
+            return Some("unknown");
+        }
+        if effective != Interpretation::TruthValue {
+            return None;
+        }
+        match &self.data {
+            ValueData::Nil => Some("unknown"),
+            ValueData::Scalar(f) => Some(if f.is_zero() { "false" } else { "true" }),
+            ValueData::ExactScalar(_) => Some("true"),
+            _ => Some(if self.is_truthy() { "true" } else { "false" }),
+        }
+    }
+
+    /// The `truthValue` axis using the value's own `hint` as the role.
+    /// Convenience for values that carry the `TruthValue` role on the value
+    /// itself (notably U); the boundary uses
+    /// [`truth_value_for_role`] with the effective role.
+    pub fn truth_value(&self) -> Option<&'static str> {
+        self.truth_value_for_role(self.hint)
     }
 
     #[inline]
@@ -320,6 +395,13 @@ impl Value {
             }
             ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
+        }
+        // Truth-valued values (true / false / unknown) advertise the
+        // `truthValued` capability so consumers know to read the
+        // `truthValue` axis (SPEC §2.3, §12.2). This covers definite
+        // booleans (Scalar + TruthValue role) and the logical U.
+        if self.is_truth_value() {
+            capabilities.push(Capability::TruthValued);
         }
         capabilities
     }

@@ -91,6 +91,13 @@ export interface ProtocolAbsence {
 export interface ProtocolValueSemantics {
     semanticKind: string;
     shape: string;
+    /**
+     * Three-valued logic surface (SPEC §2.3, §7.5). Present only on
+     * truth-valued values; `'true'` / `'false'` / `'unknown'`. This is the
+     * only observable surface for the third value — do not infer it from
+     * `semanticKind` or the internal NIL representation.
+     */
+    truthValue?: 'true' | 'false' | 'unknown';
     capabilities: string[];
     origin: string;
     absence?: ProtocolAbsence;

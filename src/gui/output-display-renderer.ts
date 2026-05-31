@@ -272,6 +272,10 @@ const formatValue = (item: Value, depth: number): string => {
             return String(item.value);
         case 'boolean':
             return item.value ? 'TRUE' : 'FALSE';
+        case 'truthValue':
+            // Three-valued logic Unknown (SPEC §7.5). The wire value is the
+            // protocol string 'unknown'; render it as UNKNOWN (display-only).
+            return item.value === 'unknown' ? 'UNKNOWN' : String(item.value).toUpperCase();
         case 'vector':
             return formatVector(item.value, depth);
         case 'nil':

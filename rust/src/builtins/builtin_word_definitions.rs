@@ -757,7 +757,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -773,7 +773,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -789,7 +789,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -805,7 +805,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -821,7 +821,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -837,7 +837,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ a ] [ b ] -> [ TRUE | FALSE ]",
         partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
+        nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
