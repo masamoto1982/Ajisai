@@ -1551,3 +1551,153 @@ mod continued_fraction_role_tests {
         );
     }
 }
+
+/// SPEC §7.4.3 — propagation of the logical `Unknown` (U) through the
+/// comparison-dependent words `MIN`, `MAX`, `SORT`, and `COND`. The
+/// U-producing idiom is `2 SQRT 2 SQRT SUB 0 <cmp>`: √2−√2 is a Gosper node
+/// the budget cannot distinguish from 0, so any comparison against 0 yields U.
+#[cfg(test)]
+mod u_propagation_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn top(interp: &Interpreter) -> &crate::types::Value {
+        interp.get_stack().last().expect("non-empty stack")
+    }
+
+    // ── MIN / MAX ────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn min_selects_smaller_when_decided() {
+        let interp = run("'math' IMPORT 3 5 MIN").await;
+        assert_eq!(format!("{}", top(&interp)), "3/1");
+    }
+
+    #[tokio::test]
+    async fn max_selects_larger_when_decided() {
+        let interp = run("'math' IMPORT 3 5 MAX").await;
+        assert_eq!(format!("{}", top(&interp)), "5/1");
+    }
+
+    #[tokio::test]
+    async fn min_on_undecidable_yields_unknown_with_prefix() {
+        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 MIN").await;
+        let v = top(&interp);
+        assert!(
+            v.is_unknown(),
+            "MIN of an undecidable pair must be U, got {v}"
+        );
+        assert_eq!(v.truth_value(), Some("unknown"));
+        let absence = v.absence_metadata().expect("U carries absence");
+        let diag = absence.diagnosis.as_ref().expect("U carries a diagnosis");
+        assert!(
+            diag.agreed_prefix.is_some(),
+            "MIN U must carry agreedPrefix"
+        );
+    }
+
+    #[tokio::test]
+    async fn max_on_undecidable_yields_unknown() {
+        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 MAX").await;
+        assert!(top(&interp).is_unknown());
+    }
+
+    #[tokio::test]
+    async fn min_with_nil_operand_passes_nil_through() {
+        let interp = run("'math' IMPORT NIL 3 MIN").await;
+        assert!(top(&interp).is_nil() && !top(&interp).is_unknown());
+    }
+
+    // ── SORT ─────────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn sort_orders_rationals_ascending() {
+        let interp = run("'algo' IMPORT [ 3 1 2 ] SORT").await;
+        assert_eq!(format!("{}", top(&interp)), "[ 1/1 2/1 3/1 ]");
+    }
+
+    #[tokio::test]
+    async fn sort_stack_mode_orders_ascending() {
+        let interp = run("'algo' IMPORT 3 1 2 .. SORT").await;
+        let s: Vec<String> = interp
+            .get_stack()
+            .iter()
+            .map(|v| format!("{}", v))
+            .collect();
+        assert_eq!(s, vec!["1/1", "2/1", "3/1"]);
+    }
+
+    #[tokio::test]
+    async fn sort_with_undecidable_pair_yields_unknown_not_partial() {
+        // Build a runtime vector containing √2−√2 and 0 via stack-mode SORT;
+        // the undecidable pair makes the whole order unestablished ⇒ U.
+        let interp = run("'algo' IMPORT 'math' IMPORT 2 SQRT 2 SQRT SUB 0 .. SORT").await;
+        let v = top(&interp);
+        assert!(
+            v.is_unknown(),
+            "SORT with an undecidable pair must be U, got {v}"
+        );
+        let absence = v.absence_metadata().expect("U carries absence");
+        let diag = absence.diagnosis.as_ref().expect("U carries a diagnosis");
+        assert!(
+            diag.agreed_prefix.is_some(),
+            "SORT U must carry agreedPrefix"
+        );
+    }
+
+    // ── COND ─────────────────────────────────────────────────────────────
+    //
+    // Syntax: `[ value ] { guard $ body } { IDLE $ body } COND`. The guard is
+    // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. The
+    // value `2 SQRT 2 SQRT SUB` (≈ √2−√2) compares Unknown against 0.
+
+    #[tokio::test]
+    async fn cond_fires_clause_with_definite_true_guard() {
+        let interp = run("[ 0 ]\n{ [ 0 ] = $ 'zero' }\n{ IDLE $ 'other' }\nCOND").await;
+        assert_eq!(format!("{}", top(&interp)), "'zero'");
+    }
+
+    #[tokio::test]
+    async fn cond_u_guard_does_not_fire_falls_through_to_next_clause() {
+        // First clause guard reduces to U (√2−√2 == 0 is Unknown — and √2−√2
+        // is in fact Unknown against every rational); it must NOT fire. The
+        // second guard `TRUE` is value-independent and definitely fires.
+        let interp = run(
+            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\n{ TRUE $ 'second' }\n{ IDLE $ 'else' }\nCOND",
+        )
+        .await;
+        assert_eq!(
+            format!("{}", top(&interp)),
+            "'second'",
+            "U guard must fall through to the next clause, not fire or error"
+        );
+    }
+
+    #[tokio::test]
+    async fn cond_u_guard_then_else_clause() {
+        // The only non-else guard is U ⇒ does not fire ⇒ IDLE/else runs.
+        let interp = run(
+            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\n{ IDLE $ 'else' }\nCOND",
+        )
+        .await;
+        assert_eq!(format!("{}", top(&interp)), "'else'");
+    }
+
+    #[tokio::test]
+    async fn cond_u_guard_with_no_match_is_cond_exhausted() {
+        // U guard does not fire and there is no else clause ⇒ CondExhausted.
+        let mut interp = Interpreter::new();
+        let result = interp
+            .execute("'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\nCOND")
+            .await;
+        assert!(
+            result.is_err(),
+            "a U-only COND with no else clause must raise CondExhausted"
+        );
+    }
+}

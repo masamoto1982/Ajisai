@@ -152,7 +152,9 @@ fn evaluate_guard_isolated(
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
     interp.stack.push(value.clone());
-    interp.semantic_registry.push_hint(Interpretation::Unassigned);
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::Unassigned);
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
     interp.safe_mode = false;
@@ -175,6 +177,13 @@ fn evaluate_guard_isolated(
     let result_value: Value = guard_result_value.ok_or_else(|| {
         AjisaiError::from("COND: guard must return TRUE or FALSE, got empty stack")
     })?;
+    // SPEC §7.4.3: a guard that reduces to the logical `Unknown` (U) — e.g.
+    // an undecidable continued-fraction comparison — is not a definite
+    // `true`, so its clause does not fire. Fall through to the next clause
+    // exactly as for a `false` guard. U is neither an error nor a match.
+    if result_value.is_unknown() {
+        return Ok(false);
+    }
     let unwrapped: &Value = if result_value.as_scalar().is_none() {
         if result_value.len() == 1 {
             result_value.get_child(0).ok_or_else(|| {

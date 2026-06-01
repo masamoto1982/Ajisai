@@ -105,6 +105,43 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
     })
 }
 
+/// Outcome of a budgeted three-way order comparison shared by the
+/// comparison-dependent words of SPEC §7.4.3 (`MIN`, `MAX`, `SORT`).
+/// `Decided` carries the exact `a` vs `b` ordering. `Undecided` carries the
+/// agreed-prefix length of the budget-exhausted continued-fraction
+/// comparison; the caller projects it to the logical `Unknown` (U) with
+/// `diagnosis.agreedPrefix`.
+pub(crate) enum OrderOutcome {
+    Decided(std::cmp::Ordering),
+    Undecided(usize),
+}
+
+/// Three-way order of two scalar values under the SPEC §7.4.1 comparison
+/// budget. Returns `Err(_)` for structurally non-comparable operands (the
+/// malformed-use path). Both-`Rational` operands take the exact `Fraction`
+/// fast path; any non-`Rational` `ExactReal` routes through the budgeted CF
+/// comparison and may yield `Undecided`.
+
+pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOutcome> {
+    let a = extract_exact_real_for_comparison(a_val)?;
+    let b = extract_exact_real_for_comparison(b_val)?;
+    Ok(match (a.as_rational(), b.as_rational()) {
+        (Some(af), Some(bf)) => OrderOutcome::Decided(af.cmp(bf)),
+        _ => match a.cmp_with_budget_tracked(&b, DEFAULT_COMPARISON_BUDGET) {
+            CmpOutcome::Decided(o) => OrderOutcome::Decided(o),
+            CmpOutcome::Undecided { agreed_prefix } => OrderOutcome::Undecided(agreed_prefix),
+        },
+    })
+}
+
+/// Push the logical `Unknown` (U) carrying an agreed-prefix diagnosis, for
+/// the comparison-dependent words of SPEC §7.4.3. Mirrors the relations'
+/// own U production: a `TruthValue`-role value observed as
+/// `truthValue = unknown` with `diagnosis.agreedPrefix`.
+pub(crate) fn push_comparison_unknown(interp: &mut Interpreter, agreed_prefix: usize) {
+    push_unknown(interp, Some(agreed_prefix));
+}
+
 /// Extract an `ExactReal` view of a value's scalar content for
 /// comparison. Scalar (`Fraction`-backed) values lift to
 /// `ExactReal::Rational`; singleton Vector / Tensor values also
