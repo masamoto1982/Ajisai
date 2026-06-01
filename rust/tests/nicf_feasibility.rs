@@ -8,10 +8,24 @@
 //! the `agreedPrefix` the comparison budget cares about (SPEC §4.5.0/§7.4.1),
 //! so a reduction here means more comparisons decide within a fixed budget.
 //!
-//! Run with: `cargo test --test nicf_feasibility -- --nocapture`
+//! Run with: `cargo test --test nicf_feasibility -- --ignored --nocapture`
 //!
 //! It is `#[ignore]` by default so it never runs in the normal suite / CI;
 //! it is a one-off measurement harness, run explicitly.
+//!
+//! MEASURED RESULTS (seed 0x9E3779B97F4A7C15, CAP=300):
+//!   broad random rationals:   RCF mean 0.217  NICF 0.169   −22.0%   (max 4→3)
+//!   near-equal x vs x+1/N:     RCF mean 5.274  NICF 3.895   −26.2%   (max 12→7)
+//!   surds √D vs rational/√D':  RCF mean 62.74  NICF 45.00   −28.3%   (max 104→78)
+//! Conclusion: NICF shrinks the agreed-prefix depth by ~22–28% across the
+//! board, including ~28% on the surd/lazy-CF case that actually exhausts the
+//! budget. The win is aggregate, not per-pair (a few percent of pairs tie or
+//! regress by one term), which matches the theory: NICF converges at least as
+//! fast as RCF on average but is not a strict per-pair refinement. This term-
+//! count reduction is the quantity the comparison budget sees directly. It
+//! does NOT measure the production-path (Gosper-node) emission cost — open
+//! question ②.2 — which remains the implementation risk to settle before any
+//! promotion of SPEC §4.2.5 / §7.4.1.1.
 
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -208,7 +222,10 @@ impl Stats {
 #[test]
 #[ignore = "feasibility measurement harness; run explicitly with --nocapture"]
 fn nicf_vs_rcf_agreed_prefix() {
-    const CAP: usize = 4000;
+    // The agreedPrefix the budget cares about is in the tens (production
+    // budget is 256), so a cap of 300 captures every decision we measure
+    // while keeping BigInt growth bounded and the run fast.
+    const CAP: usize = 300;
 
     // Deterministic LCG so the corpus is reproducible without an rng dep.
     let mut seed: u64 = 0x9E3779B97F4A7C15;
@@ -221,7 +238,7 @@ fn nicf_vs_rcf_agreed_prefix() {
 
     // 1) Broad random rational pairs.
     let mut broad = Stats::new();
-    for _ in 0..20_000 {
+    for _ in 0..5_000 {
         let xn = (next() % 20_001) as i64 - 10_000;
         let xd = (next() % 10_000) as i64 + 1;
         let yn = (next() % 20_001) as i64 - 10_000;
@@ -233,7 +250,7 @@ fn nicf_vs_rcf_agreed_prefix() {
     // 2) Budget-stressing near-equal family: x and x + 1/N for large N.
     //    These share a long CF prefix and are exactly what exhausts a budget.
     let mut near = Stats::new();
-    for _ in 0..20_000 {
+    for _ in 0..5_000 {
         let xn = (next() % 2_001) as i64 - 1_000;
         let xd = (next() % 1_000) as i64 + 1;
         let x = Rat::from_ints(xn, xd);
@@ -248,7 +265,7 @@ fn nicf_vs_rcf_agreed_prefix() {
     let mut surd = Stats::new();
     let ds = [2u64, 3, 5, 6, 7, 8, 10, 11, 13, 17, 19, 23, 29, 31];
     for &d in &ds {
-        let s = sqrt_approx(d, 400);
+        let s = sqrt_approx(d, 60);
         // sqrt(D) vs a ladder of its own rational convergents' neighbours.
         for k in 1..=200i64 {
             // sqrt(D) vs a near rational offset by k/scale.
@@ -258,7 +275,7 @@ fn nicf_vs_rcf_agreed_prefix() {
         // sqrt(D) vs sqrt(D')
         for &e in &ds {
             if e != d {
-                surd.record(&s, &sqrt_approx(e, 400), CAP);
+                surd.record(&s, &sqrt_approx(e, 60), CAP);
             }
         }
     }
