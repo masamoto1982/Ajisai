@@ -109,12 +109,57 @@ pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
     })
 }
 
+/// `MIN` / `MAX` select one of two numeric operands by the order relation
+/// (SPEC §7.4.3). They accept the full numeric domain, including lazy
+/// continued-fraction operands, and decide the order through the same
+/// budgeted comparison as the relations. When the comparison decides, the
+/// selected operand is returned unchanged (preserving its exact
+/// representation). When it does not decide within the budget, the result is
+/// the logical `Unknown` (U) carrying `diagnosis.agreedPrefix` — the program
+/// cannot be told which operand is the min/max when their order is unknown.
+/// NIL-passthrough, with NIL taking priority over a U-producing comparison.
+fn apply_selecting<F>(interp: &mut Interpreter, word: &str, pick_left: F) -> Result<()>
+where
+    // Given the order of `a` (left) vs `b` (right), return true to keep `a`.
+    F: Fn(std::cmp::Ordering) -> bool,
+{
+    require_stack_top(interp, word)?;
+    if nil_passthrough_binary(interp) {
+        return Ok(());
+    }
+    let operands = extract_operands(interp, 2)?;
+    match crate::interpreter::comparison::three_way_compare(&operands[0], &operands[1]) {
+        Ok(crate::interpreter::comparison::OrderOutcome::Decided(ord)) => {
+            let chosen = if pick_left(ord) {
+                operands[0].clone()
+            } else {
+                operands[1].clone()
+            };
+            push_result(interp, chosen);
+            interp
+                .semantic_registry
+                .push_hint(Interpretation::RawNumber);
+            Ok(())
+        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
+            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
+            Ok(())
+        }
+        Err(e) => {
+            restore_operands(interp, operands);
+            Err(e)
+        }
+    }
+}
+
 pub(crate) fn op_min(interp: &mut Interpreter) -> Result<()> {
-    apply_binary(interp, "MIN", |a, b| if a.le(&b) { a } else { b })
+    // Keep the left operand when it is less-or-equal to the right.
+    apply_selecting(interp, "MIN", |ord| ord != std::cmp::Ordering::Greater)
 }
 
 pub(crate) fn op_max(interp: &mut Interpreter) -> Result<()> {
-    apply_binary(interp, "MAX", |a, b| if a.ge(&b) { a } else { b })
+    // Keep the left operand when it is greater-or-equal to the right.
+    apply_selecting(interp, "MAX", |ord| ord != std::cmp::Ordering::Less)
 }
 
 fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
