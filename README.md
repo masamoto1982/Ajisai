@@ -30,9 +30,9 @@ Like water that keeps both its volume and its channel history, Ajisai values pre
 
 Spec links: [§4.2 Scalar: exact-real continued-fraction arithmetic](SPECIFICATION.md#42-scalar-exact-real-continued-fraction-arithmetic), [§3.2 Numeric literal formats](SPECIFICATION.md#32-numeric-literal-formats), [§12.2 Display hints](SPECIFICATION.md#122-display-hints)
 
-### 2) Bubble/NIL: bubbles that keep the flow inspectable
+### 2) Bubble and Yodomi: absence and undecidability stay visible
 
-Ajisai treats absence as a first-class value: `NIL`. In the water metaphor, `NIL` is a bubble in the flow: not the water itself, but a meaningful part of the stream state.
+Ajisai treats both absence and undecidability as first-class states, but it keeps them separate. In the water metaphor, **Bubble/NIL** is a bubble in the flow: the operation was well-formed, but a value could not be produced. **Yodomi/UNKNOWN** is a still point in the stream: the value is present, but the current observation cannot decide which way the flow should go.
 
 The current failure model is the **Bubble Rule**:
 
@@ -40,7 +40,16 @@ The current failure model is the **Bubble Rule**:
 
 For example, division by zero, an out-of-range `GET` on a valid vector, `NUM` parse failure, and invalid `CHR` code points produce reasoned Bubble/NIL values. Misusing a word — such as dividing by text or calling `GET` on a non-vector target — remains an error. Existing NIL-passthrough words preserve the reason as the bubble flows onward, and `=>` supplies a fallback when a bubble reaches a point where the program wants an ordinary value.
 
-Spec links: [§4.5 NIL](SPECIFICATION.md#45-nil), [§4.5.1 NIL passthrough rule](SPECIFICATION.md#451-nil-passthrough-rule), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule)
+Yodomi is different. Continued-fraction comparison may reach its observation budget before it can settle `true` or `false`. In that case, comparison words produce the logical truth value `UNKNOWN`, not Bubble/NIL. Yodomi is therefore not a failure marker and not an operational absence; it is a visible undecided point that can still participate in Kleene three-valued logic.
+
+So the water model has four distinct cases:
+
+- ordinary values are water flowing through the channel;
+- Bubble/NIL is a reason-bearing absence that flows onward;
+- Yodomi/UNKNOWN is a still point where the flow direction is not yet decided;
+- Error is a malformed channel connection, not a value in the stream.
+
+Spec links: [§4.5 NIL](SPECIFICATION.md#45-nil), [§4.5.1 NIL passthrough rule](SPECIFICATION.md#451-nil-passthrough), [§4.5.2 NIL versus Unknown](SPECIFICATION.md#452-nil-versus-unknown), [§7.4.1 Decidability and comparison budget](SPECIFICATION.md#741-decidability-and-comparison-budget), [§7.5 Logic](SPECIFICATION.md#75-logic), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule)
 
 ### 3) 0-origin and 1-origin by function role: choosing the right measuring scale
 
