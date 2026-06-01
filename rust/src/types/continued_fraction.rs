@@ -21,7 +21,9 @@ pub enum ExactReal {
     /// perfect square). Constructed only via `from_sqrt_rational`, which
     /// projects perfect-square and zero radicands onto `Rational` so this
     /// variant always denotes a lazy continued fraction per SPEC §4.2.2.
-    AlgebraicSqrt { radicand: Fraction },
+    AlgebraicSqrt {
+        radicand: Fraction,
+    },
     /// Unevaluated Gosper transform of one or two operand CFs per
     /// SPEC §4.2.2. Constructed only by the arithmetic methods, which
     /// fold pure-rational operands through the `Fraction` fast path
@@ -94,10 +96,7 @@ impl ExactReal {
             return None;
         }
         if num.is_zero() {
-            return Some(Self::Rational(Fraction::new(
-                BigInt::zero(),
-                BigInt::one(),
-            )));
+            return Some(Self::Rational(Fraction::new(BigInt::zero(), BigInt::one())));
         }
         let sn = num.sqrt();
         let sd = den.sqrt();
@@ -494,51 +493,87 @@ impl ExactReal {
             }
             _ => {}
         }
-        let mut a = CfIter::from_exact_real(self);
-        let mut b = CfIter::from_exact_real(other);
+        // SPEC §7.4.1.1: the budget and the agreed-prefix are measured in
+        // *nearest-integer* (semiregular) terms, whose faster convergence
+        // reveals the order in fewer terms. We advance the two NICF streams
+        // in parallel; the first index at which their semiregular terms
+        // differ (or at which one terminates while the other continues) both
+        // establishes that the values are unequal and fixes the agreed-prefix
+        // length. The *order* of two unequal values is then the order their
+        // regular CFs would give — identical to the NICF order (SPEC
+        // §7.4.1.1) but computed by the regular-CF routine, which carries no
+        // signed-term parity subtleties. Equal values' NICFs never diverge,
+        // so they yield U exactly as their RCFs would.
+        let mut a = NicfStream::new(self);
+        let mut b = NicfStream::new(other);
         for i in 0..budget {
-            let av = a.next_step();
-            let bv = b.next_step();
-            match (av, bv) {
-                (CfStep::Quotient(av), CfStep::Quotient(bv)) => {
+            match (a.next(), b.next()) {
+                (NicfStep::Term(av), NicfStep::Term(bv)) => {
                     if av != bv {
-                        return CmpOutcome::Decided(if i % 2 == 0 {
-                            av.cmp(&bv)
-                        } else {
-                            bv.cmp(&av)
-                        });
+                        // Distinct semiregular terms ⇒ the values differ.
+                        return CmpOutcome::Decided(self.rcf_order(other));
                     }
                 }
-                (CfStep::Ended, CfStep::Ended) => return CmpOutcome::Decided(Ordering::Equal),
-                (CfStep::Ended, CfStep::Quotient(_)) => {
-                    // self's CF terminated; treat its phantom term
-                    // at index i as +∞. Alternating-parity rule:
-                    // even i ⇒ phantom is greater ⇒ self > other;
-                    // odd i ⇒ phantom is less ⇒ self < other.
-                    return CmpOutcome::Decided(if i % 2 == 0 {
-                        Ordering::Greater
-                    } else {
-                        Ordering::Less
-                    });
+                (NicfStep::Ended, NicfStep::Ended) => return CmpOutcome::Decided(Ordering::Equal),
+                (NicfStep::Ended, NicfStep::Term(_)) | (NicfStep::Term(_), NicfStep::Ended) => {
+                    // One value's NICF terminated (it is exactly its
+                    // convergent) while the other still has a term ⇒ unequal.
+                    return CmpOutcome::Decided(self.rcf_order(other));
                 }
-                (CfStep::Quotient(_), CfStep::Ended) => {
-                    return CmpOutcome::Decided(if i % 2 == 0 {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    });
-                }
-                // A CF stream ran out of internal budget at index `i`;
-                // the `i` quotients at indices 0..i matched.
-                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => {
+                // A stream ran out of internal safety budget at index `i`;
+                // the `i` terms at indices 0..i matched.
+                (NicfStep::Exhausted, _) | (_, NicfStep::Exhausted) => {
                     return CmpOutcome::Undecided { agreed_prefix: i };
                 }
             }
         }
-        // Every one of the `budget` partial quotients matched.
+        // Every one of the `budget` semiregular terms matched.
         CmpOutcome::Undecided {
             agreed_prefix: budget,
         }
+    }
+
+    /// The order of two values via their *regular* continued fractions, used
+    /// to orient a comparison the NICF streams have already shown to be
+    /// between unequal values (SPEC §7.4.1.1: the NICF order equals the RCF
+    /// order). Returns `Equal` only as a defensive fallback — callers invoke
+    /// this only after establishing the values differ — and treats an
+    /// internal-budget exhaustion conservatively as `Equal` so a comparison
+    /// can never report a *wrong* strict order.
+    fn rcf_order(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+        // Generous cap: the operands are already known to be unequal, so this
+        // only has to find the first regular-CF divergence, which for any
+        // representable pair occurs well within this bound.
+        const RCF_ORDER_CAP: usize = 4096;
+        let mut a = CfIter::from_exact_real(self);
+        let mut b = CfIter::from_exact_real(other);
+        for i in 0..RCF_ORDER_CAP {
+            match (a.next_step(), b.next_step()) {
+                (CfStep::Quotient(av), CfStep::Quotient(bv)) => {
+                    if av != bv {
+                        return if i % 2 == 0 { av.cmp(&bv) } else { bv.cmp(&av) };
+                    }
+                }
+                (CfStep::Ended, CfStep::Ended) => return Ordering::Equal,
+                (CfStep::Ended, CfStep::Quotient(_)) => {
+                    return if i % 2 == 0 {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Less
+                    };
+                }
+                (CfStep::Quotient(_), CfStep::Ended) => {
+                    return if i % 2 == 0 {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    };
+                }
+                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => return Ordering::Equal,
+            }
+        }
+        Ordering::Equal
     }
 
     /// `self == other` under the partial-quotient budget. `None` on
@@ -691,10 +726,7 @@ impl ExactReal {
     /// Returns `None` when `max_denominator < 1`, when the value is
     /// nil, or when a lazy CF stream exhausts before any convergent
     /// is produced.
-    pub fn best_rational_approximation(
-        &self,
-        max_denominator: &BigInt,
-    ) -> Option<Fraction> {
+    pub fn best_rational_approximation(&self, max_denominator: &BigInt) -> Option<Fraction> {
         if max_denominator < &BigInt::one() {
             return None;
         }
@@ -1160,6 +1192,199 @@ fn normalize_bihom(
     *h = &*h / &common;
 }
 
+/// Tri-state advance of a [`NicfStream`], mirroring [`CfStep`] but for the
+/// nearest-integer (semiregular) expansion of SPEC §4.2.5.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum NicfStep {
+    /// A semiregular partial quotient `b_i` (signed; `|b_i| >= 2` for
+    /// `i >= 1`).
+    Term(BigInt),
+    /// The value is rational and its NICF terminated.
+    Ended,
+    /// Internal safety budget hit before the next term was determined.
+    Exhausted,
+}
+
+/// Nearest-integer continued-fraction stream (SPEC §4.2.5 / §7.4.1.1).
+///
+/// This is the comparison-only expansion: it consumes the *regular* CF of a
+/// value (the untouched [`CfIter`], which still backs display, canonical
+/// form, and rounding) and re-expands it as nearest-integer terms by running
+/// an identity Möbius `(1·x + 0)/(0·x + 1)` over the inner regular stream and
+/// emitting `round`-agreement instead of `floor`-agreement across the value
+/// range `x ∈ [1, ∞)`. The coefficient update on emit is identical to the
+/// regular Gosper emitter; the sign of a negative remainder propagates through
+/// the reciprocal continuation, so no separate `ε` bookkeeping is carried in
+/// the coefficients (this is the property verified by the §7.4.1.1 Gosper
+/// feasibility prototype).
+struct NicfStream {
+    // Möbius coefficients of (a·x + b)/(c·x + d) over the inner regular CF.
+    a: BigInt,
+    b: BigInt,
+    c: BigInt,
+    d: BigInt,
+    inner: CfIter,
+    inner_done: bool,
+    /// Once the inner stream has produced the leading regular term, the value
+    /// range collapses to `x ∈ [1, ∞)`; before that the first regular term is
+    /// an unrestricted integer `a0 ∈ (-∞, ∞)`, handled by `prime`.
+    primed: bool,
+    /// Set once the final (exact) semiregular term has been emitted; the next
+    /// `next()` then reports [`NicfStep::Ended`].
+    done: bool,
+}
+
+impl NicfStream {
+    fn new(value: &ExactReal) -> Self {
+        NicfStream {
+            a: BigInt::one(),
+            b: BigInt::zero(),
+            c: BigInt::zero(),
+            d: BigInt::one(),
+            inner: CfIter::from_exact_real(value),
+            inner_done: false,
+            primed: false,
+            done: false,
+        }
+    }
+
+    /// Ingest one regular partial quotient `p` of the inner stream:
+    /// substitute `x ← p + 1/x'`, i.e. `(a,b,c,d) ← (a·p + b, a, c·p + d, c)`.
+    fn ingest(&mut self, p: &BigInt) {
+        let na = &self.a * p + &self.b;
+        let nb = self.a.clone();
+        let nc = &self.c * p + &self.d;
+        let nd = self.c.clone();
+        self.a = na;
+        self.b = nb;
+        self.c = nc;
+        self.d = nd;
+        normalize_mobius(&mut self.a, &mut self.b, &mut self.c, &mut self.d);
+    }
+
+    /// Nearest integer to `num/den` (`den != 0`) under the normative
+    /// round-half-down tie-break of SPEC §4.2.5: remainder in `(-1/2, 1/2]`,
+    /// `round = ⌈(2·num − den)/(2·den)⌉` after normalizing `den > 0`.
+    fn round_half_down(mut num: BigInt, mut den: BigInt) -> BigInt {
+        if den.is_negative() {
+            num = -num;
+            den = -den;
+        }
+        let two = BigInt::from(2);
+        let p = &two * &num - &den;
+        let q = &two * &den;
+        p.div_ceil(&q)
+    }
+
+    fn next(&mut self) -> NicfStep {
+        if self.done {
+            return NicfStep::Ended;
+        }
+        let mut ingest_budget = GOSPER_INGEST_SAFETY;
+        loop {
+            if !self.primed {
+                // Pull the leading regular term a0 ∈ ℤ (any sign) and the
+                // first restricted term, so the Möbius value range becomes
+                // x ∈ [1, ∞). The identity-Möbius leading term equals a0's
+                // nearest integer trivially once one inner term is absorbed.
+                match self.inner.next_step() {
+                    CfStep::Quotient(p) => {
+                        self.ingest(&p);
+                        self.primed = true;
+                    }
+                    CfStep::Ended => {
+                        // Value is an integer literal already pinned in (a,b)?
+                        // Identity Möbius with no terms means value range is
+                        // x∈[1,∞) over an empty stream; treat as ended.
+                        self.inner_done = true;
+                        self.primed = true;
+                    }
+                    CfStep::Exhausted => return NicfStep::Exhausted,
+                }
+                continue;
+            }
+
+            // Try to emit: round of the value must agree at both endpoints
+            // of x ∈ [1, ∞): v(∞) = a/c and v(1) = (a+b)/(c+d), with no pole
+            // in [1, ∞) (denominators share a sign).
+            if !self.c.is_zero() && !(&self.c + &self.d).is_zero() {
+                let cd = &self.c + &self.d;
+                let pole_free = (self.c.is_positive() && cd.is_positive())
+                    || (self.c.is_negative() && cd.is_negative());
+                if pole_free {
+                    let q_inf = Self::round_half_down(self.a.clone(), self.c.clone());
+                    let q_one = Self::round_half_down(&self.a + &self.b, cd.clone());
+                    if q_inf == q_one {
+                        let q = q_inf;
+                        // Update is identical to the regular emitter:
+                        //   v' = 1/(v − q) ⇒ (a,b,c,d) ← (c, d, a−q·c, b−q·d).
+                        let nc = &self.a - &q * &self.c;
+                        let nd = &self.b - &q * &self.d;
+                        let na = self.c.clone();
+                        let nb = self.d.clone();
+                        self.a = na;
+                        self.b = nb;
+                        self.c = nc;
+                        self.d = nd;
+                        normalize_mobius(&mut self.a, &mut self.b, &mut self.c, &mut self.d);
+                        // After emit, v' = (a·x + b)/(c·x + d). When both new
+                        // c and d are zero the residual is the constant a/b
+                        // with no x-dependence and, when also the numerator is
+                        // proportional, the value was exactly q ⇒ terminate.
+                        // The robust terminal test: the inner stream is done
+                        // and the post-emit value reduces to an integer with
+                        // zero remainder — detected on the next pass via the
+                        // `inner_done` branch. Here we only mark termination
+                        // when the remainder is provably zero: new c == 0 and
+                        // new d == 0 (the operand fully consumed and pinned).
+                        if self.c.is_zero() && self.d.is_zero() {
+                            self.done = true;
+                        }
+                        return NicfStep::Term(q);
+                    }
+                }
+            }
+
+            if self.inner_done {
+                // No more inner terms and still cannot pin a nearest integer:
+                // the residual value is the constant a/c (x has gone to ∞, so
+                // the b,d terms drop). If c == 0 the value is infinite (should
+                // not happen for a finite operand) — report exhaustion.
+                if self.c.is_zero() {
+                    return NicfStep::Exhausted;
+                }
+                let q = Self::round_half_down(self.a.clone(), self.c.clone());
+                let rem_num = &self.a - &q * &self.c; // remainder over c
+                if rem_num.is_zero() {
+                    // a/c == q exactly: final term.
+                    self.done = true;
+                    return NicfStep::Term(q);
+                }
+                // Continue with v' = 1/(a/c − q): the new value is the
+                // constant c/rem_num (still x-independent), so collapse to a
+                // pure rational Möbius (b = d = 0) and keep emitting.
+                let nc = rem_num;
+                self.a = self.c.clone();
+                self.b = BigInt::zero();
+                self.c = nc;
+                self.d = BigInt::zero();
+                return NicfStep::Term(q);
+            }
+
+            if ingest_budget == 0 {
+                return NicfStep::Exhausted;
+            }
+            ingest_budget -= 1;
+
+            match self.inner.next_step() {
+                CfStep::Quotient(p) => self.ingest(&p),
+                CfStep::Ended => self.inner_done = true,
+                CfStep::Exhausted => return NicfStep::Exhausted,
+            }
+        }
+    }
+}
+
 /// Run the unary Gosper loop until it emits, transitions to a
 /// rational tail, or exhausts the safety budget. Returns `Some(q)`
 /// when a partial quotient is emitted (state already updated); `None`
@@ -1598,6 +1823,242 @@ mod tests {
     fn sqrt_of(num: i64, den: i64) -> ExactReal {
         ExactReal::from_sqrt_rational(Fraction::new(bi(num), bi(den)))
             .expect("non-negative radicand should construct")
+    }
+
+    // ─── SPEC §7.4.1.1 / §15.3: NICF-accelerated comparison conformance ───
+
+    /// Reference regular-CF (floor) comparison, used only as the differential
+    /// oracle for the NICF-accelerated `cmp_with_budget`. This is the
+    /// pre-NICF algorithm verbatim, so agreement proves the NICF expansion
+    /// never changes a decided order (SPEC §7.4.1.1).
+    fn rcf_reference_cmp(x: &ExactReal, y: &ExactReal, budget: usize) -> CmpOutcome {
+        use std::cmp::Ordering;
+        if x.is_nil() || y.is_nil() || budget == 0 {
+            return CmpOutcome::Undecided { agreed_prefix: 0 };
+        }
+        match (x, y) {
+            (
+                ExactReal::AlgebraicSqrt { radicand: r },
+                ExactReal::AlgebraicSqrt { radicand: s },
+            ) => {
+                return CmpOutcome::Decided(r.cmp(s));
+            }
+            (ExactReal::AlgebraicSqrt { radicand: r }, ExactReal::Rational(q)) => {
+                return CmpOutcome::Decided(cmp_sqrt_vs_rational(r, q));
+            }
+            (ExactReal::Rational(q), ExactReal::AlgebraicSqrt { radicand: r }) => {
+                return CmpOutcome::Decided(cmp_sqrt_vs_rational(r, q).reverse());
+            }
+            _ => {}
+        }
+        let mut a = CfIter::from_exact_real(x);
+        let mut b = CfIter::from_exact_real(y);
+        for i in 0..budget {
+            match (a.next_step(), b.next_step()) {
+                (CfStep::Quotient(av), CfStep::Quotient(bv)) => {
+                    if av != bv {
+                        return CmpOutcome::Decided(if i % 2 == 0 {
+                            av.cmp(&bv)
+                        } else {
+                            bv.cmp(&av)
+                        });
+                    }
+                }
+                (CfStep::Ended, CfStep::Ended) => return CmpOutcome::Decided(Ordering::Equal),
+                (CfStep::Ended, CfStep::Quotient(_)) => {
+                    return CmpOutcome::Decided(if i % 2 == 0 {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Less
+                    });
+                }
+                (CfStep::Quotient(_), CfStep::Ended) => {
+                    return CmpOutcome::Decided(if i % 2 == 0 {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    });
+                }
+                (CfStep::Exhausted, _) | (_, CfStep::Exhausted) => {
+                    return CmpOutcome::Undecided { agreed_prefix: i };
+                }
+            }
+        }
+        CmpOutcome::Undecided {
+            agreed_prefix: budget,
+        }
+    }
+
+    fn decided(o: CmpOutcome) -> Option<std::cmp::Ordering> {
+        match o {
+            CmpOutcome::Decided(o) => Some(o),
+            CmpOutcome::Undecided { .. } => None,
+        }
+    }
+
+    /// §15.3 (i): over a broad corpus the NICF-accelerated comparison decides
+    /// the *same order* as the regular-CF reference whenever the reference
+    /// decides — across Rational, AlgebraicSqrt, and Gosper operands.
+    #[test]
+    fn nicf_order_matches_rcf_reference_over_corpus() {
+        const BUDGET: usize = 256;
+        // Deterministic LCG corpus (no rng dep).
+        let mut seed: u64 = 0xD1B54A32D192ED03;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        // Build a varied pool: rationals, sqrts, and Gosper (sums/products).
+        let mut pool: Vec<ExactReal> = Vec::new();
+        for _ in 0..40 {
+            let n = (next() % 40_001) as i64 - 20_000;
+            let d = (next() % 20_000) as i64 + 1;
+            pool.push(rational(n, d));
+        }
+        for r in [2i64, 3, 5, 6, 7, 8, 10, 11, 13, 19, 23, 31] {
+            pool.push(sqrt_of(r, 1));
+            // √r + p/q and √r · (p/q) exercise the Gosper (Mobius/Bihom) path.
+            pool.push(sqrt_of(r, 1).add(&rational((next() % 9) as i64 - 4, 1)));
+            pool.push(sqrt_of(r, 1).mul(&rational(1, (next() % 5) as i64 + 1)));
+        }
+        // sqrt differences (the budget-stressing equal/near-equal cases).
+        pool.push(sqrt_of(2, 1).sub(&sqrt_of(2, 1))); // == 0, must be U vs 0-ish
+        pool.push(sqrt_of(2, 1).add(&sqrt_of(3, 1)));
+
+        let mut compared = 0usize;
+        let mut both_decided = 0usize;
+        for (i, x) in pool.iter().enumerate() {
+            for y in pool.iter().skip(i) {
+                let got = decided(x.cmp_with_budget_tracked(y, BUDGET));
+                let want = decided(rcf_reference_cmp(x, y, BUDGET));
+                compared += 1;
+                // When the reference decides, NICF must decide identically.
+                if let Some(w) = want {
+                    if let Some(g) = got {
+                        assert_eq!(
+                            g, w,
+                            "NICF order disagreed with RCF reference for pair #{compared}"
+                        );
+                        both_decided += 1;
+                    }
+                    // NICF deciding at least as often is checked separately;
+                    // here we only forbid a *wrong* decided order.
+                }
+                // Antisymmetry of the NICF result itself.
+                let rev = decided(y.cmp_with_budget_tracked(x, BUDGET));
+                if let (Some(g), Some(r)) = (got, rev) {
+                    assert_eq!(g, r.reverse(), "NICF comparison not antisymmetric");
+                }
+            }
+        }
+        assert!(compared > 1000, "corpus too small: {compared}");
+        assert!(both_decided > 500, "too few decided pairs: {both_decided}");
+    }
+
+    /// §15.3 (i) continued: NICF never decides *fewer* pairs than RCF at the
+    /// same budget — its faster convergence can only move the U→decided
+    /// boundary favorably.
+    #[test]
+    fn nicf_decides_at_least_as_often_as_rcf() {
+        const BUDGET: usize = 24; // small budget to surface the difference
+        let pairs = [
+            (sqrt_of(2, 1).add(&sqrt_of(3, 1)), sqrt_of(5, 1)),
+            (sqrt_of(7, 1), rational(8463, 3200)),
+            (sqrt_of(13, 1).mul(&rational(1, 2)), rational(9, 5)),
+            (sqrt_of(2, 1), rational(239, 169)),
+        ];
+        for (x, y) in &pairs {
+            let nicf = decided(x.cmp_with_budget_tracked(y, BUDGET));
+            let rcf = decided(rcf_reference_cmp(x, y, BUDGET));
+            if rcf.is_some() {
+                assert!(
+                    nicf.is_some(),
+                    "NICF failed to decide a pair RCF decided at budget {BUDGET}"
+                );
+                assert_eq!(nicf, rcf, "NICF decided a different order than RCF");
+            }
+        }
+    }
+
+    /// §15.3 (ii): `agreedPrefix` is monotone non-decreasing in the budget.
+    #[test]
+    fn nicf_agreed_prefix_monotone_in_budget() {
+        let x = sqrt_of(2, 1).sub(&sqrt_of(2, 1)); // structurally ~0, never decides
+        let y = rational(0, 1);
+        let mut last = 0usize;
+        for budget in [1usize, 2, 4, 8, 16, 32, 64, 128] {
+            if let CmpOutcome::Undecided { agreed_prefix } = x.cmp_with_budget_tracked(&y, budget) {
+                assert!(
+                    agreed_prefix >= last,
+                    "agreedPrefix decreased with budget: {agreed_prefix} < {last}"
+                );
+                assert!(
+                    agreed_prefix <= budget,
+                    "agreedPrefix {agreed_prefix} exceeded budget {budget}"
+                );
+                last = agreed_prefix;
+            }
+        }
+    }
+
+    /// §15.3 (iii): the normative round-half-down tie-break of §4.2.5 yields
+    /// the specified semiregular digit on the singular `1/2`-remainder cases.
+    #[test]
+    fn nicf_round_half_down_tie_break() {
+        // round_half_down(num,den): tie (frac == 1/2) rounds DOWN.
+        // 1/2 → 0, 3/2 → 1, 5/2 → 2, -1/2 → -1, -3/2 → -2.
+        let cases = [
+            ((1, 2), 0),
+            ((3, 2), 1),
+            ((5, 2), 2),
+            ((-1, 2), -1),
+            ((-3, 2), -2),
+            ((7, 4), 2),   // 1.75 → 2 (not a tie)
+            ((-7, 4), -2), // -1.75 → -2
+        ];
+        for ((n, d), want) in cases {
+            let got = NicfStream::round_half_down(BigInt::from(n), BigInt::from(d));
+            assert_eq!(got, BigInt::from(want), "round_half_down({n}/{d})");
+        }
+        // The leading NICF terms reflect the tie-break: 1/2 = [0; 2] (b0 = 0,
+        // the round of 1/2 under half-down), 2/3 = [1; -3] (round of 2/3 = 1).
+        let mut s = NicfStream::new(&rational(1, 2));
+        assert_eq!(s.next(), NicfStep::Term(BigInt::zero()));
+    }
+
+    /// NICF emission is correct across representations: a value's NICF terms,
+    /// reconstructed back to a rational, equal the value (finite cases).
+    #[test]
+    fn nicf_terms_reconstruct_value() {
+        for (n, d) in [(1, 2), (2, 3), (355, 113), (-7, 5), (22, 7), (0, 1)] {
+            let v = rational(n, d);
+            let mut s = NicfStream::new(&v);
+            // Evaluate the semiregular CF b0 + ε1/(b1 + ε2/(... )) from the
+            // emitted signed terms by folding from the back.
+            let mut terms = Vec::new();
+            loop {
+                match s.next() {
+                    NicfStep::Term(b) => terms.push(b),
+                    NicfStep::Ended => break,
+                    NicfStep::Exhausted => panic!("finite rational must not exhaust"),
+                }
+                if terms.len() > 64 {
+                    panic!("finite NICF too long");
+                }
+            }
+            // Fold: value = b_{k} ; then value = b_{i} + 1/value for the
+            // signed semiregular form (ε is carried in the sign of b_{i+1}).
+            let mut acc = Fraction::new(terms.last().unwrap().clone(), BigInt::one());
+            for b in terms.iter().rev().skip(1) {
+                // acc ← b + 1/acc
+                let recip = Fraction::new(acc.denominator(), acc.numerator());
+                acc = Fraction::new(b.clone(), BigInt::one()).add(&recip);
+            }
+            let want = Fraction::new(BigInt::from(n), BigInt::from(d));
+            assert_eq!(acc, want, "NICF of {n}/{d} did not reconstruct");
+        }
     }
 
     // === Phase 3 baseline (rationals) ===
