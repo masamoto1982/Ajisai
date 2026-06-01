@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-05-31**
+Version: **2026-06-01**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -430,7 +430,7 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `SPLIT` | — | Split a vector into sub-vectors by given sizes |
 | `REORDER` | — | Reorder elements according to an index list; supports duplication and negative indices |
 | `COLLECT` | — | Gather all current stack values into a single vector |
-| `SORT` | — | Sort elements in ascending order (exact fraction comparison) |
+| `SORT` | — | Sort elements in ascending order; yields `Unknown` if any required comparison is undecidable (Section 7.4.3) |
 
 ### 7.2 Tensor operations
 
@@ -498,7 +498,7 @@ To preserve totality, every comparison operation runs under an implementation-de
 - U is a logical truth value, not an operational absence: the comparison does **not** produce a `reason = undecidable` NIL, and the Bubble Rule (Section 11.2) does not apply to it;
 - U flows into the three-valued logic of Section 7.5 directly. It is not a NIL, so the NIL-passthrough machinery of Section 7.12 does not carry it; instead `AND`/`OR`/`NOT` settle it according to the Kleene truth tables.
 
-The U outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison). The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
+The U outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any downstream Coreword whose result depends on a comparison (notably `MIN`, `MAX`, `SORT`, and `COND` clauses whose head reduces to such a comparison); the propagation rule for those words is fixed in Section 7.4.3. The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.
 
 The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried on the comparison's `Unknown` result in the machine-readable `diagnosis.agreedPrefix` field (Section 4.5.0): a non-negative integer. It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable `truthValue`.
 
@@ -524,6 +524,20 @@ Stack effect: `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]`.
 The decided outcome is the exact sign of `a − b`; the six relations of Section 7.4 are recoverable from it (`a < b` iff `-1`, `a <= b` iff not `1`, and so on). For two finite (rational) operands the comparison always decides regardless of `budget`, because finite CFs differ at a bounded index; `budget` only governs lazy irrationals.
 
 `COMPARE-WITHIN` is `Projecting` (Section 7.14): it is total over well-shaped input because it projects the undecided case onto U. It is NIL-passthrough (Section 7.12) for its `a`/`b` operands. A non-positive or non-integer `budget`, or non-numeric `a`/`b`, is malformed use and raises an error (Section 11.2), not U. The implicit budget of the bare relations is an implementation-defined constant; `COMPARE-WITHIN` does not change it and is the only way to observe or override the depth.
+
+#### 7.4.3 Propagation of U through comparison-dependent words
+
+The U outcome named in Section 7.4.1 is required not only of the comparison primitives themselves but of every Coreword whose result depends on a comparison. This section fixes how U flows through the four such words — `MIN`, `MAX`, `SORT`, and `COND` — so that an undecidable comparison never silently produces a wrong order, a spurious error, or a definite truth value it has not earned.
+
+The common rule is **U-honesty**: when the comparison a word relies on is undecidable, the word must surface that undecidability (as U, or, for `COND`, as the absence of a satisfied clause) rather than fabricate a decision. None of these words may treat U as `true`, as `false`, or as a malformed-input error.
+
+**`MIN` / `MAX`.** These select one of two (or, in sequence form, several) numeric operands by the order relation. They accept the full numeric domain, including the lazy continued-fraction operands of Section 4.2, and decide the order through the same budgeted comparison as the relations (Section 7.4.1). When the governing comparison decides, the selected operand is returned unchanged. When it does not decide within the budget, the result is the logical `Unknown` (U), observed as `truthValue = unknown` and carrying `diagnosis.agreedPrefix` (Section 4.5.0) — because the program cannot be told *which* operand is the minimum/maximum when their order is unknown. `MIN` and `MAX` remain NIL-passthrough (Section 7.12): a NIL operand yields NIL, and NIL takes priority over a U-producing comparison per Section 4.5.2. In sequence form they short-circuit on the first undecidable pair, matching the `STAK`-mode rule of Section 7.4.1.
+
+**`SORT`.** Sorting is a transitive cascade of pairwise order comparisons; a single undecidable pair makes the position of those elements relative to each other unknown, and the sorted order as a whole is therefore not established. When every pairwise comparison the sort requires decides, `SORT` returns the elements in ascending order as before. When any required comparison is undecidable within the budget, `SORT` produces the logical `Unknown` (U) for the whole result, carrying `diagnosis.agreedPrefix` for the first undecidable pair encountered. `SORT` does not return a partially-sorted vector, and it does not fall back to a tie-break: a partial order is not a sort. (The earlier exact-fraction-only behavior is the decided case of this rule: finite rationals always decide, so a vector of rationals always sorts.) A NIL element is handled by `SORT`'s existing NIL policy and takes priority over a U-producing comparison per Section 4.5.2.
+
+**`COND`.** A `COND` clause fires when its guard evaluates to a definite `true`. Under three-valued logic a guard may now reduce to U (for example, a guard that is itself an undecidable comparison). A guard that yields U is **not** a definite `true`, so its clause does **not** fire; evaluation falls through to the next clause exactly as it would for a `false` guard, and ultimately to the `IDLE` / else clause if no guard yields a definite `true`. A U guard is therefore neither an error nor a match: it is the K3-faithful reading of "this clause's condition could not be established." If no clause fires and there is no else clause, the existing `CondExhausted` outcome (Section 11) applies unchanged. This makes a U guard behave, for clause-selection purposes, like `false` — but the distinction is observable while the guard value is on the stack (it reads `truthValue = unknown`, not `false`), and it is only the *clause-firing decision* that treats "not definitely true" uniformly.
+
+In all four words the budget is the same implementation-defined constant used by the bare relations (Section 7.4.1); none of them expose or override it. `COMPARE-WITHIN` (Section 7.4.2) remains the only word that names the budget explicitly.
 
 ### 7.5 Logic
 
@@ -583,7 +597,7 @@ listing is presentation-only and does not introduce a `TEXT` module.
 | `ALL` | — | True if all elements satisfy the predicate |
 | `COUNT` | — | Count elements satisfying the predicate |
 | `SCAN` | — | Like FOLD but returns all intermediate accumulator values |
-| `COND` | — | Evaluate clauses separated by `$`; execute the first whose condition is true |
+| `COND` | — | Evaluate clauses separated by `$`; execute the first whose guard is definitely true (a U guard does not fire, Section 7.4.3) |
 | `IDLE` | — | No-op; does nothing |
 | `EXEC` | — | Execute a code block |
 | `EVAL` | — | Parse and execute a string as Ajisai code |
@@ -662,6 +676,8 @@ Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting`: they 
 Logic words (`AND`, `OR`, `NOT`) are `Total` over the three-valued domain {`true`, `false`, `unknown`} (Section 7.5) and `Passthrough` for NIL operands, with `PreservesReason` so that the leftmost NIL reason survives and a NIL operand is never silently replaced by U (Section 4.5.2).
 
 `COMPARE-WITHIN` (Section 7.4.2) is `Projecting`: it is total over well-shaped input because it projects the budget-undecided case onto the logical `Unknown` (a result, not a reasoned NIL). Its `nil_policy` is `Passthrough` for the `a`/`b` operands. A non-positive or non-integer `budget` or non-numeric operands are malformed use and raise an error, so it is not `CreatesNil`.
+
+`MIN`, `MAX`, and `SORT` (Section 7.4.3) are `Projecting`: each is total over well-shaped numeric input because it projects an undecidable governing comparison onto the logical `Unknown` (a result, not a reasoned NIL). Their `nil_policy` is `Passthrough`, with NIL taking priority over a U-producing comparison (Section 4.5.2). `COND` (Section 7.7) treats a U guard as not-firing rather than producing U as a value, so its existing partiality and `CondExhausted` behavior are unchanged by Section 7.4.3.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -961,6 +977,8 @@ Words whose behavior depends on more than one independent condition (e.g. `~ /` 
 The three-valued logic words (`AND`, `OR`, `NOT`, Section 7.5) must cover every cell of the K3 truth tables — `AND` and `OR` over the nine {T, F, U}² combinations, `NOT` over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding `unknown` (U), and distinct irrationals deciding at a finite prefix.
 
 `COMPARE-WITHIN` (Section 7.4.2) must cover: each decided sign (`-1` / `0` / `1`); the budget-undecided case yielding `unknown` with `diagnosis.agreedPrefix` equal to the consumed `budget`; finite operands deciding regardless of `budget`; the same lazy-irrational pair deciding at a large `budget` but yielding U at a small `budget`; NIL operand passthrough; and the malformed-`budget` / non-numeric-operand error paths.
+
+The propagation of U through comparison-dependent words (Section 7.4.3) must cover, for `MIN` and `MAX`: a decided comparison selecting the correct operand; an undecidable comparison yielding `unknown` with `diagnosis.agreedPrefix`; NIL-operand passthrough with NIL taking priority over a U-producing comparison; and the sequence-form short-circuit on the first undecidable pair. For `SORT`: a fully-decidable input (notably any vector of rationals) sorting to ascending order; an input with at least one undecidable pair yielding `unknown` for the whole result (never a partially-sorted vector) carrying `diagnosis.agreedPrefix`; and NIL handling. For `COND`: a definite-`true` guard firing its clause; a U guard **not** firing and falling through to the next clause; a U guard before a later definite-`true` guard selecting the later clause; and a U guard with no other match reaching the `IDLE`/else clause, or `CondExhausted` when none exists.
 
 ### 15.4 Stack discipline under projection
 
