@@ -3,7 +3,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
 [![Build and Deploy Ajisai](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml/badge.svg)](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
 
-![Ajisai QR Code](public/images/ajisai-qr.png "Ajisai QR Code")
+![Ajisai QR Code](public/images/QR_341201.png "Ajisai QR Code")
 
 # Ajisai
 
