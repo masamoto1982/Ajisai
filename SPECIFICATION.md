@@ -209,6 +209,26 @@ This nested form is **not** Ajisai source syntax (Section 3.4). It appears only 
 
 Two scalars are equal as values iff they produce the same canonical CF sequence. A `Rational` scalar and a `Gosper`/`AlgebraicSqrt` scalar may compare equal whenever their generated partial quotients agree at every position. The internal representation tag is not part of value identity and must not be branched on by Corewords or external consumers.
 
+#### 4.2.5 Nearest-integer continued fractions (internal acceleration)
+
+> **Status: DRAFT — not yet canonical.** This subsection is a proposal under review. Until promoted, the regular continued fraction of Sections 4.2.1–4.2.4 is the sole basis for value identity, canonical form, display, and comparison.
+
+The **regular** continued fraction (RCF) of Section 4.2.1 takes each partial quotient by *floor*, leaving a remainder in `[0, 1)` and forcing every quotient after `a0` to be a strictly positive integer. The **nearest-integer continued fraction** (NICF) instead takes each partial quotient by *rounding to the nearest integer*, leaving a remainder in `(-1/2, 1/2]`. An NICF is a *semiregular* continued fraction
+
+```
+x = b0 + ε1 / (b1 + ε2 / (b2 + ε3 / ( ... )))
+```
+
+where each `bi` is the nearest integer to the current tail, each `εi ∈ {+1, -1}` is the sign of the corresponding remainder, and `bi >= 2` for `i >= 1`. Because each step removes more of the value than a floor step can, NICF expansions are never longer than the RCF and are typically shorter: by a classical result the NICF converges at least as fast as the RCF and on average meaningfully faster (larger effective partial quotients per term).
+
+NICF is an **internal representation and algorithm only**. It does **not** change any observable surface:
+
+- **Value identity and canonical form are unchanged.** The canonical CF of a value remains its RCF (Section 4.2.1); two values are equal iff their RCFs agree (Section 4.2.4). NICF is never the canonical form and is never the basis of equality.
+- **Display and serialization are unchanged.** The nested form of Section 4.2.3 always renders the RCF. NICF digits, signs, and the `εi` are never serialized and must not be parsed.
+- **The representation tag is not observable** (Section 4.2.2 / 4.2.4): whether a comparison expanded a value as RCF or NICF must not be branchable by Corewords or external consumers.
+
+The sole purpose of NICF in this specification is to accelerate comparison (Section 7.4.1): its faster convergence lets distinct values reveal their order in fewer terms, so more comparisons decide within a fixed budget and the residual undecided depth is reached sooner. NICF introduces no new numeric type, no new Coreword, and no new protocol field.
+
 ### 4.3 Vector
 
 An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: `-1` is the last element.
@@ -503,6 +523,27 @@ The U outcome is required for `EQ`, `LT`, `LTE`, `GT`, `GTE`, `NEQ`, and for any
 The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried on the comparison's `Unknown` result in the machine-readable `diagnosis.agreedPrefix` field (Section 4.5.0): a non-negative integer. It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable `truthValue`.
 
 `STAK`-mode ordering comparisons short-circuit on the first pair that yields U: the entire stack-mode result is U, regardless of how many subsequent pairs would have decided. (A NIL operand still short-circuits to NIL per Section 7.12; when both a NIL operand and a U-producing pair are present, NIL takes priority per Section 4.5.2.)
+
+##### 7.4.1.1 NICF-accelerated comparison (DRAFT)
+
+> **Status: DRAFT — not yet canonical.** Proposal under review; depends on Section 4.2.5.
+
+An implementation **may** decide the order of two operands by emitting their **nearest-integer** continued fractions (NICF, Section 4.2.5) in parallel instead of their regular CFs. Because NICF converges at least as fast as RCF, two distinct values reveal their order at an NICF index no later — and usually earlier — than the RCF index, so a budget of fixed size decides strictly more comparisons. This is a permitted internal optimization of the comparison procedure above; it is **observably equivalent** for the decided `true` / `false` outcomes:
+
+- For any two operands whose RCF comparison decides within budget, the NICF comparison decides identically (same `truthValue`). NICF must never flip, widen, or narrow a decided order.
+- Equal values never differ in either expansion, so they still yield U; the optimization only moves the *boundary* at which distinct values cross from U to decided, in the favorable direction.
+
+The comparison of two semiregular (signed-numerator) CFs follows the same "first differing index decides the order" rule as the regular case, with the sign correction induced by the `εi` partial-numerator signs rather than the plain alternating parity; the procedure and its budget are otherwise unchanged, and the budget value remains unobservable.
+
+**Effect on `agreedPrefix`.** The `agreedPrefix` of a U result (Sections 4.5.0, 7.4.1) is defined as a depth of agreement in the operands' partial-quotient streams. Its contract is unchanged — a non-negative integer, monotone (a larger budget never decreases it), and `0` for operands that disagree at the first term — and it remains diagnostic-only: it never affects `truthValue`. What changes is the *unit*: when a comparison is computed over NICF, `agreedPrefix` counts matching **NICF** terms, which is a tighter (smaller-or-equal) measure of the same "equal to at least this depth of CF precision" notion than the RCF count would be, because each NICF term carries more precision. Consumers already treat `agreedPrefix` as an opaque CF-precision depth, not a count of RCF terms specifically (Section 4.5.0); the value stays well-defined and monotone under the optimization. The exact correspondence between an NICF agreed-prefix length and an RCF agreed-prefix length is **not** part of observable semantics and must not be relied upon.
+
+This optimization is **optional**: a conforming implementation may use RCF throughout. The DRAFT exists to authorize NICF as a comparison accelerator without making the choice observable. If promoted, Section 15.3's comparison mandate is extended to require that a reference set of decided comparisons produces identical `truthValue` under both RCF and NICF expansion, and that `agreedPrefix` stays monotone in the budget under NICF.
+
+**Open questions for review (to resolve before promotion).**
+
+1. **`COMPARE-WITHIN` budget unit.** For the bare relations the budget is unobservable, so changing its unit from RCF terms to NICF terms is invisible. But `COMPARE-WITHIN` (Section 7.4.2) makes the budget *user-supplied* and reports `agreedPrefix = budget` on U. If `COMPARE-WITHIN` runs over NICF, a caller's `budget` of `n` buys `n` NICF terms — more precision than `n` RCF terms — so the U boundary shifts under the user's feet relative to today. Options: (a) `COMPARE-WITHIN` keeps using **RCF** (NICF accelerates only the unobservable-budget relations), so the user-facing budget unit is stable; (b) `COMPARE-WITHIN` also uses NICF and the spec redefines its budget as "semiregular terms," accepting the unit shift; (c) the budget is redefined in an implementation-neutral precision unit. Recommendation: **(a)** — keep `COMPARE-WITHIN` on RCF so the one observable budget keeps a fixed, documented meaning, and confine NICF to the relations whose budget is already unobservable.
+2. **Which representations expand to NICF.** `Rational` and `AlgebraicSqrt` have clean nearest-integer expansions; whether `Gosper` nodes can emit NICF terms without extra Möbius bookkeeping (and whether the speedup survives that bookkeeping) needs a feasibility check before promotion.
+3. **Singular `εi` handling.** A remainder of exactly `1/2` (the closed end of `(-1/2, 1/2]`) and the resulting `bi`/`εi` tie-break must be pinned down so two implementations agree on the NICF digits even though those digits are unobservable (they still must not disagree on the *decided order*).
 
 #### 7.4.2 Explicit-budget comparison: `COMPARE-WITHIN`
 
