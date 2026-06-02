@@ -109,6 +109,16 @@ export interface ProtocolValueSemantics {
     capabilities: string[];
     origin: string;
     absence?: ProtocolAbsence;
+    /**
+     * Present and `true` only when this node's numeric `value` is a *best
+     * rational approximation* of an exact irrational (`ExactScalar`) rendered
+     * under a lossy role (e.g. `rawNumber`), rather than an exact rational
+     * (SPEC §2.3). The exact source is available via the node's `semantics`.
+     * Lossless `continuedFraction` rendering carries no `semantics` block and
+     * never sets this. The GUI may use it to prefix an `≈`; consumers that
+     * ignore it are unaffected (additive, optional).
+     */
+    approximate?: boolean;
 }
 
 export interface ErrorFlowTraceEvent {
