@@ -7,6 +7,17 @@
 - 結論: **元指示書はそのまま実行してはならない。** 中心的前提が実態と異なり、推奨手順が破壊的かつ自己矛盾を含む。
   ただし「安全性を通常意味論と境界制御へ分解する」という最終方針は妥当であり、その大半は**すでに実現済み**である。
 
+### 実施状況（owner 承認済み・非破壊分を反映）
+
+本書 §4.1 のうち、破壊を伴わない以下を実装済み。`SAFE`(`~`)・意味論・トークン・型・テストは無変更。
+
+- README に「Safety model: safe by design, with gates and water levels」節を追加。`SAFE` を「廃止」ではなく
+  「水路エラーの明示的スピルウェイ」として正確に説明し、Gate / Water Level を既存機構の総称として導入。
+- `SPECIFICATION.md` に **非規範の** 「Appendix A. Gates and Water Levels」を追加（既存節へのインデックスのみ。
+  新規規範・型・word・protocol field は無し）。既存番号は不変。
+- 付随バグ修正: `SPECIFICATION.md` の重複していた節番号 `11.3`（Equal-value output と Safe mode behavior）を
+  Safe mode behavior 側で `11.4` へ是正し、README と Conformance 項目 9 の参照を追随。
+
 ---
 
 ## 1. 評価サマリ

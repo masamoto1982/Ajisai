@@ -916,7 +916,7 @@ Initial Core words following this rule include:
 
 Operations that produce a value equal to their input are successful. Equal-value output is not an error.
 
-### 11.3 Safe mode behavior
+### 11.4 Safe mode behavior
 
 `~` (`SAFE`) is the explicit projection operator for malformed-use errors that have not already become Bubble/NIL values. If the guarded word raises an error, the projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `stackUnderflow`, `unknownWord`, or `structureError`). The error itself does not propagate.
 
@@ -1032,7 +1032,49 @@ A change is conformant only if all of the following hold:
 6. It improves or preserves AI-first structural clarity.
 7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
 8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
-9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.3).
+9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.4).
 10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
 11. Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion in the comparison words produces the truth value `unknown` (U) rather than an error or a non-deterministic answer (Section 7.4.1).
 12. Source text contains no `(` or `)` outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).
+
+---
+
+## Appendix A. Gates and Water Levels (non-normative index)
+
+This appendix is **non-normative**. It introduces no new rules, types, words, or
+protocol fields. It is a vocabulary index that maps the water metaphor used in
+user-facing material onto the normative mechanisms already defined above. Where
+this appendix and any numbered section disagree, the numbered section governs.
+
+Ajisai does not have a global "safe mode" that wraps evaluation. Ordinary value
+flow is **safe by design**: a well-formed operation that cannot produce a value
+yields a Bubble/NIL (Section 11.2), an observation that cannot decide a truth
+value yields the logical `Unknown` / Stagnation (Sections 4.5.2, 7.4.1), and a
+malformed use raises a channel error (Section 11.1). `SAFE` (`~`) is not a mode;
+it is the explicit spillway that projects a raised channel error onto a
+`safeCaught` NIL (Section 11.4).
+
+Two further families of controls complete the metaphor:
+
+**Gates — where flow may cross a boundary.** A gate controls whether flow may
+cross a trust or effect boundary. Gates are not a new subsystem; they are the
+existing boundaries:
+
+| Gate (vocabulary) | Direction | Normative mechanism |
+|-------------------|-----------|---------------------|
+| Host effects (serial, future IO) | outward | IO/semantic boundary; effects are emitted as host commands and the host performs them; absence of a capable host is an environment condition, not a semantic error (Sections 5.2, 9.4) |
+| Module dictionary import | inward | `IMPORT` / `IMPORT-ONLY` / `UNIMPORT` visibility control and dependency tracking across the Core / Module / User boundary (Sections 7, 9) |
+
+**Water Levels — how much flow may run.** A water level bounds the amount of
+work or expansion. These are the existing budgets and limits:
+
+| Water Level (vocabulary) | Normative mechanism | Outcome on reaching the level |
+|--------------------------|---------------------|-------------------------------|
+| Evaluation step budget | step limit, default 100,000 (Section 5.3) | raises `ExecutionLimitExceeded` (Section 11.1) |
+| Comparison / observation depth | comparison budget (Section 7.4.1); explicitly via `COMPARE-WITHIN` (Section 7.4.2) | yields the logical `Unknown` (U) / Stagnation, **not** a Bubble/NIL (Sections 4.5.2, 7.4.3) |
+
+The defining distinction of Section 4.5.2 is preserved by this vocabulary: a gate
+refusal or a step-budget exhaustion is an operational or environment condition,
+whereas an exhausted comparison budget is a *logical* `Unknown`, never an
+operational absence.
+
