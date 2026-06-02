@@ -58,6 +58,34 @@ impl Ternary {
     }
 }
 
+/// Materialize a K3 combination result as a `Value`, re-attaching the
+/// comparison diagnosis (`agreedPrefix`, SPEC §4.5.0 / §7.4.1) when the
+/// result is the logical Unknown (U).
+///
+/// The truth tables (`and`/`or`/`not`) stay pure `Ternary -> Ternary`; the
+/// diagnosis is composed only here, at the `Value` layer, so the K3
+/// semantics are never polluted by metadata. Policy: when the result is U,
+/// the diagnosis of the **first U operand** (left-priority) is carried over
+/// by cloning that operand value; a bare `Value::unknown()` operand carries
+/// no diagnosis, so the result stays bare (diagnosis is never fabricated).
+/// This is diagnostic-only: the observable `truthValue` is identical to
+/// [`Ternary::into_value`] (both yield `unknown` for U), preserving the
+/// SPEC §2.3 firewall.
+pub(crate) fn into_value_with_diagnosis(result: Ternary, operands: &[&Value]) -> Value {
+    if result != Ternary::Unknown {
+        return result.into_value();
+    }
+    for op in operands {
+        if op.is_unknown() {
+            // The operand is itself a U value carrying (or lacking) the
+            // comparison diagnosis; cloning it faithfully preserves the
+            // agreedPrefix without inventing one.
+            return (*op).clone();
+        }
+    }
+    result.into_value()
+}
+
 /// A definite `true`/`false` carrying the `TruthValue` interpretation
 /// role so it displays as `TRUE`/`FALSE` and serializes through the
 /// `truthValue` axis.
@@ -205,5 +233,124 @@ mod tests {
         assert!(Ternary::Nil.into_value().is_nil() && !Ternary::Nil.into_value().is_unknown());
         assert!(Ternary::True.into_value().is_truth_value());
         assert!(Ternary::False.into_value().is_truth_value());
+    }
+
+    // --- P2: agreedPrefix diagnosis carry-over (SPEC §4.5.0 / §7.4.1) -------
+
+    /// A U carrying an `agreedPrefix=k` comparison diagnosis, as produced by
+    /// COMPARE-WITHIN / the comparison words via
+    /// `Value::unknown_with_agreed_prefix`.
+    fn u_with_prefix(k: usize) -> Value {
+        Value::unknown_with_agreed_prefix(Some("COMPARE-WITHIN"), k)
+    }
+
+    fn agreed_prefix_of(v: &Value) -> Option<usize> {
+        v.nil_diagnosis().and_then(|d| d.agreed_prefix)
+    }
+
+    /// `NOT` of a diagnosed U keeps the same `agreedPrefix`.
+    #[test]
+    fn not_preserves_agreed_prefix() {
+        let input = u_with_prefix(7);
+        let result = into_value_with_diagnosis(not(Ternary::classify(&input)), &[&input]);
+        assert!(result.is_unknown());
+        assert_eq!(result.truth_value(), Some("unknown"));
+        assert_eq!(agreed_prefix_of(&result), Some(7));
+    }
+
+    /// `U(k) AND TRUE` is U and keeps `agreedPrefix=k` (the lone U operand).
+    #[test]
+    fn and_unknown_true_preserves_agreed_prefix() {
+        let a = u_with_prefix(3);
+        let b = t();
+        let result =
+            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        assert!(result.is_unknown());
+        assert_eq!(agreed_prefix_of(&result), Some(3));
+    }
+
+    /// `U(k1) AND U(k2)` is U and keeps the left operand's `agreedPrefix=k1`.
+    #[test]
+    fn and_two_unknowns_keeps_left_diagnosis() {
+        let a = u_with_prefix(11);
+        let b = u_with_prefix(99);
+        let result =
+            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        assert!(result.is_unknown());
+        assert_eq!(agreed_prefix_of(&result), Some(11));
+    }
+
+    /// `OR` mirrors `AND`: left-priority diagnosis carry-over.
+    #[test]
+    fn or_two_unknowns_keeps_left_diagnosis() {
+        let a = u_with_prefix(5);
+        let b = u_with_prefix(8);
+        let result =
+            into_value_with_diagnosis(or(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        assert!(result.is_unknown());
+        assert_eq!(agreed_prefix_of(&result), Some(5));
+    }
+
+    /// Bare U operands (no diagnosis) yield a bare U: the carry-over never
+    /// fabricates an `agreedPrefix`.
+    #[test]
+    fn bare_unknowns_stay_bare() {
+        let a = u();
+        let b = u();
+        let result =
+            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        assert!(result.is_unknown());
+        assert_eq!(agreed_prefix_of(&result), None);
+    }
+
+    /// Definite and NIL results are unchanged by the diagnosis wrapper, and
+    /// no diagnosis leaks onto them: the observable `truthValue` is intact.
+    #[test]
+    fn definite_and_nil_results_unchanged() {
+        let u_k = u_with_prefix(4);
+        let ff = f();
+        // U(k) AND FALSE = FALSE (F absorbs); no agreedPrefix carried.
+        let result =
+            into_value_with_diagnosis(and(Ternary::classify(&u_k), Ternary::classify(&ff)), &[&u_k, &ff]);
+        assert_eq!(result.truth_value(), Some("false"));
+        assert_eq!(agreed_prefix_of(&result), None);
+        // U(k) AND NIL = NIL (NIL priority, SPEC §4.5.2); stays operational NIL.
+        let nn = n();
+        let result =
+            into_value_with_diagnosis(and(Ternary::classify(&u_k), Ternary::classify(&nn)), &[&u_k, &nn]);
+        assert!(result.is_nil() && !result.is_unknown());
+    }
+
+    /// End-to-end through the interpreter: an undecidable comparison emits a
+    /// U with an `agreedPrefix`; `NOT` must keep that diagnosis (this pins
+    /// the `logic.rs` wiring, not just the helper). `AND TRUE` likewise.
+    #[tokio::test]
+    async fn interpreter_not_and_preserve_agreed_prefix() {
+        use crate::interpreter::Interpreter;
+        async fn top(code: &str) -> Value {
+            let mut interp = Interpreter::new();
+            interp.execute(code).await.expect("executes");
+            interp.get_stack().last().expect("nonempty").clone()
+        }
+        // (√2 − √2) == 0 is undecidable within budget -> U with agreedPrefix.
+        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+        let base = top(PRODUCE_U).await;
+        let k = agreed_prefix_of(&base).expect("U carries an agreedPrefix");
+
+        let negated = top(&format!("{PRODUCE_U} NOT")).await;
+        assert!(negated.is_unknown());
+        assert_eq!(
+            agreed_prefix_of(&negated),
+            Some(k),
+            "NOT U must preserve agreedPrefix through op_not"
+        );
+
+        let anded = top(&format!("{PRODUCE_U} TRUE AND")).await;
+        assert!(anded.is_unknown());
+        assert_eq!(
+            agreed_prefix_of(&anded),
+            Some(k),
+            "U AND TRUE must preserve agreedPrefix through op_and"
+        );
     }
 }

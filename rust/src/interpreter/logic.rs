@@ -34,7 +34,12 @@ fn compute_inverted_value(
     // the scalar path because U is represented as a NIL node; a plain
     // numeric/boolean scalar keeps its existing 0↔1 inversion below.
     if val.is_unknown() || val.is_nil() {
-        return Ok(logic_kleene::not(Ternary::classify(val)).into_value());
+        // ¬U = U: carry the operand's comparison diagnosis (agreedPrefix)
+        // over to the result U (SPEC §4.5.0 / §7.4.1).
+        return Ok(logic_kleene::into_value_with_diagnosis(
+            logic_kleene::not(Ternary::classify(val)),
+            &[val],
+        ));
     }
     if let Some(f) = val.as_scalar() {
         return Ok(Value::from_fraction(compute_inverted_fraction(f)));
@@ -116,7 +121,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
                 let result =
                     logic_kleene::and(Ternary::classify(&a_val), Ternary::classify(&b_val));
-                interp.stack.push(result.into_value());
+                interp.stack.push(logic_kleene::into_value_with_diagnosis(
+                    result,
+                    &[&a_val, &b_val],
+                ));
                 return Ok(());
             }
 
@@ -164,7 +172,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                     break;
                 }
             }
-            interp.stack.push(acc.into_value());
+            let refs: Vec<&Value> = items.iter().collect();
+            interp
+                .stack
+                .push(logic_kleene::into_value_with_diagnosis(acc, &refs));
             Ok(())
         }
     }
@@ -195,7 +206,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             // the logical Unknown (U); otherwise keep element-wise broadcast.
             if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
                 let result = logic_kleene::or(Ternary::classify(&a_val), Ternary::classify(&b_val));
-                interp.stack.push(result.into_value());
+                interp.stack.push(logic_kleene::into_value_with_diagnosis(
+                    result,
+                    &[&a_val, &b_val],
+                ));
                 return Ok(());
             }
 
@@ -243,7 +257,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                     break;
                 }
             }
-            interp.stack.push(acc.into_value());
+            let refs: Vec<&Value> = items.iter().collect();
+            interp
+                .stack
+                .push(logic_kleene::into_value_with_diagnosis(acc, &refs));
             Ok(())
         }
     }
