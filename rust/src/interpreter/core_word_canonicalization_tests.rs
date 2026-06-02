@@ -71,7 +71,27 @@ async fn symbol_aliases_and_canonical_core_words_are_reserved_for_user_definitio
 #[tokio::test]
 async fn lookup_alias_canonicalizes_to_english_word() {
     use crate::core_word_aliases::canonicalize_core_word_name;
+    assert_eq!(canonicalize_core_word_name("+"), "ADD");
     assert_eq!(canonicalize_core_word_name("?"), "LOOKUP");
     assert_eq!(canonicalize_core_word_name("=="), "PIPE");
     assert_eq!(canonicalize_core_word_name("=>"), "OR-NIL");
+}
+
+/// Lexical / structural surface forms are documented as named concepts but are
+/// never runtime words: `canonicalize_core_word_name` must not return their
+/// concept names. (See `crate::surface_forms`.)
+#[tokio::test]
+async fn surface_form_concepts_are_not_runtime_canonicalizations() {
+    use crate::core_word_aliases::canonicalize_core_word_name;
+    use crate::surface_forms::lookup_surface_form;
+
+    assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
+    assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
+    assert_eq!(lookup_surface_form(";").unwrap().concept, "TOP-EAT");
+
+    assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
+    assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");
+    assert_ne!(canonicalize_core_word_name("{"), "BEGIN-BLOCK");
+    assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
+    assert_ne!(canonicalize_core_word_name(";"), "TOP-EAT");
 }

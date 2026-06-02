@@ -241,8 +241,10 @@ impl Interpreter {
                     i += 1;
                 }
                 Token::CondClauseSep => {
+                    // ControlDirective: '$' -> COND-CLAUSE (see surface_forms.rs).
                     return Err(AjisaiError::from(
-                        "Unexpected '$' separator outside COND clause parsing",
+                        "Unexpected '$' separator outside COND clause parsing. \
+                         '$' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression.",
                     ));
                 }
                 _ => {
@@ -428,8 +430,10 @@ impl Interpreter {
                     }
                 }
                 Token::CondClauseSep => {
+                    // ControlDirective: '$' -> COND-CLAUSE (see surface_forms.rs).
                     return Err(AjisaiError::from(
-                        "Unexpected '$' separator outside COND clause parsing",
+                        "Unexpected '$' separator outside COND clause parsing. \
+                         '$' is control directive sugar for COND-CLAUSE and is meaningful only inside a COND expression.",
                     ));
                 }
 

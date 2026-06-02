@@ -5,6 +5,7 @@ pub mod elastic;
 mod error;
 pub mod interpreter;
 pub mod semantic;
+pub mod surface_forms;
 mod tokenizer;
 pub mod types;
 mod wasm_interpreter_bindings;
