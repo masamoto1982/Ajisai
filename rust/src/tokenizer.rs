@@ -16,6 +16,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
+        // SourceDirective: `#` -> COMMENT-LINE (see surface_forms.rs). Not a
+        // runtime word; consumed here at the lexical level to end of line.
         if chars[i] == '#' {
             let had_token_before = !tokens.is_empty() && tokens.last() != Some(&Token::LineBreak);
 
@@ -29,12 +31,21 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
+        // ReservedMarker: `(` -> RESERVED-BEGIN, `)` -> RESERVED-END (see
+        // surface_forms.rs). These are never runtime tokens.
         if chars[i] == '(' || chars[i] == ')' {
+            let concept = if chars[i] == '(' {
+                "RESERVED-BEGIN"
+            } else {
+                "RESERVED-END"
+            };
             return Err(format!(
-                "'{}' is not a valid Ajisai source character (Section 3.4). The nested continued-fraction form is a display/serialization artifact only; use '{{' and '}}' for code blocks.",
-                chars[i]
+                "'{}' is a reserved marker ({}) and is not a valid Ajisai source character (Section 3.4). The nested continued-fraction form is a display/serialization artifact only; use '{{' and '}}' for code blocks.",
+                chars[i], concept
             ));
         }
+        // ModifierSugar: `;` -> TOP-EAT (`. ,`), `;;` -> STAK-KEEP (`.. ,,`)
+        // (see surface_forms.rs). Expanded here into the underlying modifiers.
         if chars[i] == ';' {
             if i + 1 < chars.len() && chars[i + 1] == ';' {
                 tokens.push(Token::Symbol("..".into()));
@@ -90,8 +101,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == '>' {
-            // `>NAME` (e.g. `>CF`) is a single conversion-modifier identifier,
-            // not the `>` comparison operator followed by a word.
+            // ConversionWord: `>NAME` (e.g. `>CF`) is a single conversion-word
+            // token whose canonical home is the runtime word of the same name
+            // (see surface_forms::is_conversion_word_token). This is distinct
+            // from `>` -> GT and `>=` -> GTE (core_word_aliases.rs).
             if i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
                 let start = i;
                 i += 1;
@@ -177,6 +190,9 @@ fn is_special_char(c: char) -> bool {
 }
 
 fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
+    // DelimiterSugar / ControlDirective surface forms (see surface_forms.rs):
+    // `[` -> BEGIN-VECTOR, `]` -> END-VECTOR, `{` -> BEGIN-BLOCK,
+    // `}` -> END-BLOCK, `$` -> COND-CLAUSE. None of these are runtime words.
     match c {
         '[' => Some((Token::VectorStart, 1)),
         ']' => Some((Token::VectorEnd, 1)),
@@ -356,6 +372,8 @@ enum QuoteParseResult {
     NotQuote,
 }
 
+// LiteralSugar: `'` -> STRING-QUOTE (see surface_forms.rs). A single quote
+// serves as both the opening and closing string delimiter; not a runtime word.
 fn parse_string_from_quote(chars: &[char]) -> QuoteParseResult {
     if chars.is_empty() {
         return QuoteParseResult::NotQuote;

@@ -129,7 +129,7 @@ Examples:
 
 A sequence of tokens enclosed in `{...}`. A code block must be written on a single line.
 
-`(` and `)` are not Ajisai syntactic characters. They are reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering `(` or `)` in source text is a tokenizer error.
+`(` and `)` are not Ajisai syntactic characters. They are reserved markers — `(` denotes the concept `RESERVED-BEGIN` and `)` denotes `RESERVED-END` (Section 3.9) — reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering `(` or `)` in source text is a tokenizer error.
 
 ### 3.5 Vectors
 
@@ -149,6 +149,46 @@ Inside a `COND` expression, clauses are separated by `$`. Each clause must occup
 ### 3.8 Word name normalization
 
 Word names are normalized to uppercase at runtime. `add` and `ADD` refer to the same word.
+
+### 3.9 Surface forms
+
+Ajisai source syntax is word-based. Every visible *symbolic* form is an alias or sugar for a named, English-based **canonical concept**.
+
+Not every surface form is a runtime word. A surface form is classified as one of the following kinds:
+
+| Kind | Meaning | Runtime word? |
+|------|---------|---------------|
+| Word alias | Symbol form of a runtime word (canonicalized at runtime) | yes |
+| Modifier sugar | Compound shorthand for stack modifiers | no |
+| Delimiter sugar | Parser-level structural delimiter | no |
+| Literal sugar | String-literal delimiter | no |
+| Source directive | Consumed lexically by the tokenizer | no |
+| Control directive | Meaningful only inside a specific construct | no |
+| Reserved marker | Never a runtime token; rejected in source | no |
+| Conversion word | `>` followed by letters; canonical home is a runtime word | yes |
+
+**Word aliases** are canonicalized to their English name at runtime (Section 7.0); the canonical name is the authoritative identifier. The remaining kinds denote concepts that are *not* runtime words: they are handled at the lexical or parser level and are never produced by `DEF`, never canonicalized to a runtime word, and (for reserved markers) never valid in source at all.
+
+| Surface | Canonical concept | Kind | Runtime word? |
+|---------|-------------------|------|---------------|
+| `+` `-` `*` `/` `%` | `ADD` `SUB` `MUL` `DIV` `MOD` | Word alias | yes |
+| `=` `<>` `<` `<=` `>` `>=` | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` | Word alias | yes |
+| `&` `!` `?` | `AND` `FORC` `LOOKUP` | Word alias | yes |
+| `.` `..` `,` `,,` | `TOP` `STAK` `EAT` `KEEP` | Word alias | yes |
+| `==` `=>` | `PIPE` `OR-NIL` | Word alias | yes |
+| `;` | `TOP-EAT` (`. ,`) | Modifier sugar | no |
+| `;;` | `STAK-KEEP` (`.. ,,`) | Modifier sugar | no |
+| `[` `]` | `BEGIN-VECTOR` `END-VECTOR` | Delimiter sugar | no |
+| `{` `}` | `BEGIN-BLOCK` `END-BLOCK` | Delimiter sugar | no |
+| `'` | `STRING-QUOTE` | Literal sugar | no |
+| `#` | `COMMENT-LINE` | Source directive | no |
+| `$` | `COND-CLAUSE` | Control directive | no |
+| `(` `)` | `RESERVED-BEGIN` `RESERVED-END` | Reserved marker | no |
+| `>CF` | `>CF` (continued-fraction conversion) | Conversion word | yes |
+
+`;` and `;;` are pure shorthand: `; == . ,` and `;; == .. ,,`. The concept names `TOP-EAT` and `STAK-KEEP` name the compound forms; they are not stand-alone runtime words.
+
+`>` followed by an ASCII letter (e.g. `>CF`) is a single **conversion-word** token, not the `>` (`GT`) comparison alias followed by a word. Its canonical home is the runtime conversion word of the same name; `>` and `>=` remain the `GT` / `GTE` aliases.
 
 ---
 
