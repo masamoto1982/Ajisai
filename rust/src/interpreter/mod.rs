@@ -75,6 +75,10 @@ mod hash_tests;
 #[cfg(test)]
 mod math_ops_tests;
 #[cfg(test)]
+mod arithmetic_exact_div_tests;
+#[cfg(test)]
+mod nil_unknown_firewall_tests;
+#[cfg(test)]
 mod nil_conformance_tests;
 #[cfg(test)]
 mod higher_order_fold_tests;

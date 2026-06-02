@@ -435,6 +435,37 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
     }
+    // ExactScalar path: at least one operand is an exact irrational. Placed
+    // before the generic broadcast block (which cannot convert ExactScalar to
+    // a FlatTensor and would hard-error first), matching op_add/op_sub/op_mul.
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+        let stack_len = interp.stack.len();
+        let a = &interp.stack[stack_len - 2];
+        let b = &interp.stack[stack_len - 1];
+        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| a.div(b)) {
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(result);
+            return Ok(());
+        } else if matches!(&a.data, ValueData::ExactScalar(_))
+            || matches!(&b.data, ValueData::ExactScalar(_))
+        {
+            // div returned None — structurally-zero divisor. DivisionByZero is a
+            // recoverable Bubble (NilReason::DivisionByZero), not a hard error.
+            if interp.consumption_mode != ConsumptionMode::Keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(Value::bubble_with_reason(
+                NilReason::DivisionByZero,
+                AbsenceOrigin::ExecutionFailure,
+                Recoverability::Recoverable,
+            ));
+            return Ok(());
+        }
+    }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
         let stack_len = interp.stack.len();
         if stack_len >= 2 {
@@ -485,36 +516,6 @@ pub fn op_div(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    // ExactScalar path
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-        if let Some(result) =
-            try_exact_real_binary_op(a, b, |a, b| a.div(b))
-        {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        } else if matches!(&a.data, ValueData::ExactScalar(_))
-            || matches!(&b.data, ValueData::ExactScalar(_))
-        {
-            // div returned None — structurally-zero divisor
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(Value::bubble_with_reason(
-                NilReason::DivisionByZero,
-                AbsenceOrigin::ExecutionFailure,
-                Recoverability::Recoverable,
-            ));
-            return Ok(());
-        }
-    }
     apply_binary_arithmetic(interp, |a, b| {
         if b.is_zero() {
             Err(AjisaiError::DivisionByZero)

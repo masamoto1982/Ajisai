@@ -350,14 +350,42 @@ impl Value {
         }
     }
 
+    /// Storage-level NIL test: `true` for any `ValueData::Nil` node,
+    /// **including the logical Unknown (U)**, which is represented as a NIL
+    /// node (SPEC §7.5). This is a low-level storage predicate, not an
+    /// operational-absence test. If you need operational NIL only (U
+    /// excluded), use [`is_operational_nil`]. Kept with storage semantics to
+    /// avoid churning its ~164 call sites; see SPEC §7.5 / §2.3 firewall.
     #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
 
+    /// As [`is_nil`]: storage-level NIL test, **U included**. For
+    /// operational absence excluding the logical Unknown, use
+    /// [`is_operational_nil`].
     #[inline]
     pub fn is_absent(&self) -> bool {
         matches!(self.data, ValueData::Nil)
+    }
+
+    /// Low-level: whether the storage representation is a NIL node (U
+    /// included). Internal-detection only; equivalent to [`is_nil`] but
+    /// named to make the storage intent explicit at call sites that must
+    /// not be confused with operational absence.
+    #[inline]
+    pub fn is_nil_storage(&self) -> bool {
+        matches!(self.data, ValueData::Nil)
+    }
+
+    /// Operational NIL only: a NIL storage node that is **not** the logical
+    /// truth value Unknown (U). This is the firewall (SPEC §7.5 / §2.3)
+    /// between operational absence and the K3 logical Unknown: generic NIL
+    /// passthrough helpers use this so U is never silently absorbed as a
+    /// reasoned operational NIL.
+    #[inline]
+    pub fn is_operational_nil(&self) -> bool {
+        self.is_nil_storage() && !self.is_unknown()
     }
 
     #[inline]

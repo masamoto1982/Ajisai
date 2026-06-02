@@ -93,3 +93,42 @@ async fn bubble_nil_serializes_as_nil() {
     assert_eq!(stack.length(), 1);
     assert_eq!(type_of(&stack.get(0)), "nil");
 }
+
+/// An ExactScalar (√2) under the default `RawNumber` role crosses the boundary
+/// as a `number` (its best rational approximation) carrying an explicit
+/// `semantics.approximate === true` marker, so the GUI never mistakes the
+/// approximation for an exact rational (SPEC §2.3 firewall; P1).
+#[wasm_bindgen_test]
+async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
+    let stack = stack_of("'math' IMPORT 2 SQRT").await;
+    assert_eq!(stack.length(), 1);
+    let node = stack.get(0);
+    assert_eq!(type_of(&node), "number", "√2 (RawNumber) serializes as number");
+    // The numeric value is present (the rational approximation).
+    let value = field(&node, "value");
+    assert!(field(&value, "numerator").as_string().is_some());
+    assert!(field(&value, "denominator").as_string().is_some());
+    // The approximation marker rides on the semantics metadata bag.
+    let semantics = field(&node, "semantics");
+    assert_eq!(
+        field(&semantics, "approximate").as_bool(),
+        Some(true),
+        "ExactScalar rendered lossily must be marked approximate"
+    );
+}
+
+/// A genuinely exact rational (not an ExactScalar) is NOT marked approximate:
+/// the marker is specific to exact irrationals collapsed to an approximation.
+#[wasm_bindgen_test]
+async fn exact_rational_is_not_marked_approximate() {
+    let stack = stack_of("3 4 /").await;
+    assert_eq!(stack.length(), 1);
+    let node = stack.get(0);
+    assert_eq!(type_of(&node), "number");
+    let semantics = field(&node, "semantics");
+    // `approximate` is absent (undefined) for exact rationals.
+    assert!(
+        field(&semantics, "approximate").as_bool().is_none(),
+        "exact rational must not carry an approximate marker"
+    );
+}

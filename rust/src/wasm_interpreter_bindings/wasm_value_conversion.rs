@@ -258,6 +258,19 @@ fn value_semantics_to_js(value: &Value, effective: Interpretation) -> JsValue {
     if let Some(absence) = value.normalized_absence_metadata() {
         set_prop(&obj, "absence", &absence_to_protocol_js(&absence));
     }
+    // Exact-irrational firewall marker (SPEC §2.3): an `ExactScalar` rendered
+    // under any role other than the lossless ContinuedFraction form is shown
+    // as a *best rational approximation* (see `value_to_protocol`). Without a
+    // marker its `number` value is indistinguishable from an exact rational,
+    // which contradicts Ajisai's "no hidden truncation" guarantee. This is an
+    // additive, optional field on the `semantics` metadata bag: existing
+    // consumers ignore it; the GUI can use it to prefix an `≈`. ContinuedFraction
+    // nodes carry no `semantics` block, so they never reach here.
+    if matches!(value.data, ValueData::ExactScalar(_))
+        && effective != Interpretation::ContinuedFraction
+    {
+        set_prop(&obj, "approximate", &JsValue::TRUE);
+    }
     obj.into()
 }
 
@@ -435,7 +448,12 @@ pub(crate) fn value_to_protocol(
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         ValueData::ExactScalar(er) => {
-            // Serialize ExactScalar as best rational approximation with large denominator
+            // Serialize ExactScalar as best rational approximation with large
+            // denominator. The resulting node carries `semantics:
+            // Some(value.clone())` (the original exact real) plus an
+            // `approximate: true` marker in its semantics block (see
+            // `value_semantics_to_js`), so the approximation is observable and
+            // the GUI can reference the exact source (SPEC §2.3).
             use num_bigint::BigInt;
             let approx = er
                 .best_rational_approximation(&BigInt::from(1_000_000_000u64))
@@ -1026,6 +1044,63 @@ mod protocol_mcdc_tests {
         let node = value_to_protocol(&Value::nil(), None);
         assert_eq!(node.type_str, "nil");
         assert_eq!(node.value, ProtocolValue::Null);
+    }
+
+    // --- ExactScalar approximation marker (SPEC §2.3) ---
+
+    /// √2 as an exact irrational (AlgebraicSqrt), the canonical ExactScalar.
+    fn sqrt2() -> Value {
+        use crate::types::continued_fraction::ExactReal;
+        let er = ExactReal::from_sqrt_rational(frac(2)).expect("√2 is a valid exact real");
+        let v = Value::from_exact_real(er);
+        assert!(
+            matches!(v.data, ValueData::ExactScalar(_)),
+            "√2 must remain an ExactScalar, not collapse to a rational"
+        );
+        v
+    }
+
+    /// Under `RawNumber`, an ExactScalar serializes as a `number` (its best
+    /// rational approximation) but its `semantics` block must carry the
+    /// original exact value, so the GUI can reference the exact source rather
+    /// than a silent truncation (Option 1 / SPEC §2.3 firewall).
+    #[test]
+    fn exact_scalar_rawnumber_carries_exact_source_in_semantics() {
+        let node = value_to_protocol(&sqrt2(), Some(Interpretation::RawNumber));
+        assert_eq!(node.type_str, "number", "RawNumber ExactScalar -> number");
+        assert!(
+            matches!(node.value, ProtocolValue::Number { .. }),
+            "value is the rational approximation, got {:?}",
+            node.value
+        );
+        let semantics = node
+            .semantics
+            .as_ref()
+            .expect("ExactScalar node must carry a semantics source");
+        assert!(
+            matches!(semantics.data, ValueData::ExactScalar(_)),
+            "semantics must preserve the exact ExactScalar source, got {:?}",
+            semantics.data
+        );
+    }
+
+    /// Under the `ContinuedFraction` role the value is rendered losslessly as
+    /// the canonical nested-form string and carries no `semantics` block, so
+    /// it is never marked approximate (regression guard: unchanged behavior).
+    #[test]
+    fn exact_scalar_continued_fraction_role_is_lossless_nested_form() {
+        let node = value_to_protocol(&sqrt2(), Some(Interpretation::ContinuedFraction));
+        assert_eq!(node.type_str, "string", "CF role -> nested-form string");
+        assert!(
+            matches!(node.value, ProtocolValue::Text(_)),
+            "CF role yields the nested-form text, got {:?}",
+            node.value
+        );
+        assert_eq!(node.display_hint, Interpretation::ContinuedFraction);
+        assert!(
+            node.semantics.is_none(),
+            "CF nodes carry no semantics block (and thus no approximate marker)"
+        );
     }
 
     #[test]
