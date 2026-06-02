@@ -83,7 +83,7 @@ Ajisai modifiers control how a word touches the stream.
 
 `SAFE` is not the main mechanism for ordinary partial operations. Under the Bubble Rule, many well-formed “could not produce a value” cases already produce reasoned `NIL` directly. `SAFE` is the explicit spillway for errors that would otherwise break the channel.
 
-Spec links: [§6 Modifiers](SPECIFICATION.md#6-modifiers), [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.3 Safe mode behavior](SPECIFICATION.md#113-safe-mode-behavior)
+Spec links: [§6 Modifiers](SPECIFICATION.md#6-modifiers), [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior)
 
 ### 5) Words, modules, and contracts: searchable channels for humans and AI
 
@@ -92,6 +92,36 @@ Ajisai treats built-in words as documented, searchable units. The registry recor
 The design goal is not only to make the language usable by people, but also mechanically inspectable by AI tools: every Coreword should expose contracts for requirements, guarantees, partiality, NIL policy, safety level, and effects.
 
 Spec links: [§7.0 English-word-based naming](SPECIFICATION.md#70-english-word-based-naming), [§7.14 Coreword contract metadata](SPECIFICATION.md#714-coreword-contract-metadata), [§8 User Words](SPECIFICATION.md#8-user-words), [§9 Module System](SPECIFICATION.md#9-module-system), [§14 AI-first Implementation Rules](SPECIFICATION.md#14-ai-first-implementation-rules)
+
+---
+
+## Safety model: safe by design, with gates and water levels
+
+Ajisai does **not** rely on a broad "safe mode" that wraps evaluation. There is no
+global safe/unsafe switch. Ordinary value flow is safe by design:
+
+- a well-formed operation that cannot produce a value becomes a **bubble** (`NIL`),
+- an observation that cannot decide a truth value becomes **stagnation** (`UNKNOWN`),
+- a malformed use raises a **channel error**.
+
+`SAFE` (`~`) is not a mode. It is the explicit *spillway* that catches a raised
+channel error from the next word and projects it to `NIL` with `safeCaught`
+metadata, so a pipeline can end with a single `=>` fallback.
+
+Two further controls complete the water metaphor — both are names for mechanisms
+Ajisai already has, not new subsystems:
+
+- **Gates** control *where* flow may cross a boundary. Outward gates guard host
+  effects (such as serial and future IO), where effects are emitted as host
+  commands and the host performs them. Inward gates guard module imports crossing
+  the Core / Module / User trust boundary (`IMPORT` / `UNIMPORT`).
+- **Water levels** control *how much* flow may run. The evaluation step budget
+  bounds total work and raises `ExecutionLimitExceeded` when reached. The
+  comparison budget bounds observation depth; when it is reached the result is
+  the logical `UNKNOWN` (stagnation), never a bubble — keeping operational
+  absence and logical undecidability distinct.
+
+Spec links: [§4.5.2 NIL versus Unknown](SPECIFICATION.md#452-nil-versus-unknown), [§5.2 Two-plane architecture](SPECIFICATION.md#52-two-plane-architecture), [§5.3 Execution step limit](SPECIFICATION.md#53-execution-step-limit), [§7.4.1 Decidability and comparison budget](SPECIFICATION.md#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](SPECIFICATION.md#742-explicit-budget-comparison-compare-within), [§9 Module System](SPECIFICATION.md#9-module-system), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior), [Appendix A Gates and Water Levels](SPECIFICATION.md#appendix-a-gates-and-water-levels-non-normative-index)
 
 ---
 
