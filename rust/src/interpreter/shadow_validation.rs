@@ -43,7 +43,6 @@ impl Interpreter {
         let saved_hints = self.semantic_registry.stack_hints.clone();
         let saved_target = self.operation_target_mode;
         let saved_consumption = self.consumption_mode;
-        let saved_safe_mode = self.safe_mode;
         let saved_output = std::mem::take(&mut self.output_buffer);
         let saved_io_output = std::mem::take(&mut self.io_output_buffer);
 
@@ -57,7 +56,6 @@ impl Interpreter {
         self.semantic_registry.stack_hints = saved_hints;
         self.operation_target_mode = saved_target;
         self.consumption_mode = saved_consumption;
-        self.safe_mode = saved_safe_mode;
 
         let plain_result = self.execute_guard_structure(&def.lines);
         let plain_stack = self.stack.clone();

@@ -39,7 +39,6 @@ async fn syntax_sugar_executes_same_as_canonical_mode_words() {
     assert_same_stack("1 2 ,, +", "1 2 KEEP ADD").await;
     assert_same_stack("1 2 ; +", "1 2 . , +").await;
     assert_same_stack("[1] [2] [3] [3] ;; +", "[1] [2] [3] [3] .. ,, +").await;
-    assert_same_stack("[ 1 2 3 ] [ 10 ] ~ GET", "[ 1 2 3 ] [ 10 ] SAFE GET").await;
 }
 
 #[tokio::test]

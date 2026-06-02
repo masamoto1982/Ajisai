@@ -148,7 +148,6 @@ fn evaluate_guard_isolated(
     let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
-    let saved_safe_mode: bool = interp.safe_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
     interp.stack.push(value.clone());
@@ -157,7 +156,6 @@ fn evaluate_guard_isolated(
         .push_hint(Interpretation::Unassigned);
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
-    interp.safe_mode = false;
 
     let execution_result: Result<usize> = interp.execute_section_core(guard_tokens, 0);
     let guard_result_value: Option<Value> = interp.stack.pop();
@@ -168,7 +166,6 @@ fn evaluate_guard_isolated(
         saved_hints,
         saved_target_mode,
         saved_consumption_mode,
-        saved_safe_mode,
         saved_epoch,
     );
 
@@ -227,14 +224,12 @@ fn restore_cond_eval_state(
     saved_hints: Vec<Interpretation>,
     saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
-    saved_safe_mode: bool,
     saved_epoch: EpochSnapshot,
 ) {
     interp.stack = saved_stack;
     interp.semantic_registry.stack_hints = saved_hints;
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
-    interp.safe_mode = saved_safe_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
     interp.module_epoch = saved_epoch.module_epoch;
     interp.execution_epoch = saved_epoch.execution_epoch;
@@ -308,13 +303,11 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
-    let saved_safe_mode: bool = interp.safe_mode;
 
     interp.stack.push(value.clone());
     interp.semantic_registry.stack_hints = vec![Interpretation::Unassigned];
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
-    interp.safe_mode = false;
 
     let execution_result: Result<usize> = interp.execute_section_core(body_tokens, 0);
     let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
@@ -324,7 +317,6 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     interp.semantic_registry.stack_hints = saved_hints;
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
-    interp.safe_mode = saved_safe_mode;
 
     execution_result?;
     let result_value: Value =

@@ -4,7 +4,10 @@ use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AbsenceOrigin {
     Literal,
-    SafeProjection,
+    /// Division by zero (or by a value indistinguishable from zero within the
+    /// comparison budget) produced a Bubble/NIL under the Bubble Rule
+    /// (SPEC §11.2). Used together with `NilReason::DivisionByZero`.
+    DivisionByZero,
     NilPropagation,
     EmptySequence,
     MissingField,

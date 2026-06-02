@@ -7,13 +7,13 @@ import type {
 } from './wasm-interpreter-types';
 
 const diagnosis: ProtocolDiagnosis = {
-    when: 'safeProjection',
+    when: 'executeWord',
     where: {
         kind: 'coreWord',
         word: 'DIV'
     },
     why: 'domain',
-    summary: 'Division by zero was projected to NIL.',
+    summary: 'Division by zero produced a Bubble/NIL.',
     evidence: ['right operand was zero'],
     nextChecks: [
         {
@@ -24,10 +24,9 @@ const diagnosis: ProtocolDiagnosis = {
 };
 
 const absence: ProtocolAbsence = {
-    reason: 'safeCaught',
-    origin: 'safeProjection',
+    reason: 'divisionByZero',
+    origin: 'divisionByZero',
     recoverability: 'recoverable',
-    caughtCategory: 'divisionByZero',
     diagnosis
 };
 
@@ -48,14 +47,14 @@ describe('Semantic Firewall protocol payload types', () => {
                     'diagnosable',
                     'aiExplainable'
                 ],
-                origin: 'safeProjection',
+                origin: 'unknown',
                 absence
             }
         };
 
         expect(value.semantics?.semanticKind).toBe('absence');
-        expect(value.semantics?.absence?.reason).toBe('safeCaught');
-        expect(value.semantics?.absence?.caughtCategory).toBe('divisionByZero');
+        expect(value.semantics?.absence?.reason).toBe('divisionByZero');
+        expect(value.semantics?.absence?.origin).toBe('divisionByZero');
         expect(Object.hasOwn(value, ['nil', 'Reason'].join(''))).toBe(false);
         expect(Object.hasOwn(value, ['error', 'Category'].join(''))).toBe(false);
     });
@@ -67,11 +66,11 @@ describe('Semantic Firewall protocol payload types', () => {
             absence,
             stackLenBefore: 2,
             stackLenAfter: 3,
-            message: 'NIL produced by SAFE word=DIV stack_len_after=3',
+            message: 'NIL produced by DIV stack_len_after=3',
             diagnosis
         };
 
-        expect(event.absence?.diagnosis?.when).toBe('safeProjection');
+        expect(event.absence?.diagnosis?.when).toBe('executeWord');
         expect(event.diagnosis?.where.kind).toBe('coreWord');
         expect(Object.hasOwn(event, ['nil', 'Reason'].join(''))).toBe(false);
         expect(Object.hasOwn(event, ['error', 'Category'].join(''))).toBe(false);

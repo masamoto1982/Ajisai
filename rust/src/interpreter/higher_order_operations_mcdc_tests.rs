@@ -103,11 +103,11 @@ mod hedged_mode_classifier {
 // DUT: rust/src/interpreter/quantized-block.rs:266-271 in `is_quantizable_block`
 //
 //     !tokens.is_empty()
-//         && !tokens.iter().any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
+//         && !tokens.iter().any(|t| matches!(t, Token::LineBreak))
 //
 // Outer decision A && B where:
 //   A = !tokens.is_empty()
-//   B = !tokens.iter().any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
+//   B = !tokens.iter().any(|t| matches!(t, Token::LineBreak))
 //
 // MC/DC for A&&B:
 //   row 1: (A=T, B=T) — non-empty, no blocker -> true
@@ -115,7 +115,7 @@ mod hedged_mode_classifier {
 //           (When A=F the iterator short-circuits in `any`, so B has no
 //           meaningful T/F distinction for an empty slice; treated as T by
 //           virtue of the vacuous truth of `!any(...)` over an empty list.)
-//   row 3: (A=T, B=F) — has LineBreak or SafeMode -> false
+//   row 3: (A=T, B=F) — has LineBreak -> false
 //
 // Independent effect:
 //   Pair (1, 2): A flips T->F, B held T -> outcome flips T->F (A independent).
@@ -138,7 +138,7 @@ mod is_quantizable_block_outer {
         ];
         assert!(
             is_quantizable_block(&tokens),
-            "non-empty token sequence without LineBreak/SafeMode must quantize"
+            "non-empty token sequence without LineBreak must quantize"
         );
     }
 
@@ -169,30 +169,25 @@ mod is_quantizable_block_outer {
 
 // ---------------------------------------------------------------------------
 // AQ-VER-006-B (inner)
-// DUT: rust/src/interpreter/quantized-block.rs:270 — closure `|t| matches!(t,
-// Token::LineBreak | Token::SafeMode)`
+// DUT: rust/src/interpreter/quantized-block.rs — closure `|t| matches!(t,
+// Token::LineBreak)`
 //
-// Conditions (inside the `any` predicate):
+// The inner predicate is now a single condition:
 //   A' = (t == Token::LineBreak)
-//   B' = (t == Token::SafeMode)
-//
-// Variants are mutually exclusive so (A'=T, B'=T) is structurally impossible.
 //
 // MC/DC rows (per-token truth of the inner `matches!`):
-//   row 1: A'=T, B'=F (LineBreak)  -> true  -> sequence is not quantizable
-//   row 2: A'=F, B'=T (SafeMode)   -> true  -> sequence is not quantizable
-//   row 3: A'=F, B'=F (e.g. Number) -> false -> sequence IS quantizable (if non-empty)
+//   row 1: A'=T (LineBreak)   -> true  -> sequence is not quantizable
+//   row 2: A'=F (e.g. Number) -> false -> sequence IS quantizable (if non-empty)
 //
-// Independent effect for the inner disjunction:
-//   Pair (1, 3): A' flips T->F, B' held F -> outcome flips T->F (A' independent).
-//   Pair (2, 3): B' flips T->F, A' held F -> outcome flips T->F (B' independent).
+// Independent effect:
+//   Pair (1, 2): A' flips T->F -> outcome flips T->F (A' independent).
 // ---------------------------------------------------------------------------
 mod is_quantizable_block_inner_match {
     use super::*;
 
     #[test]
     fn aq_ver_006_b_inner_row1_linebreak_blocks_quantization() {
-        // A'=T, B'=F
+        // A'=T
         let tokens = vec![Token::LineBreak];
         assert!(
             !is_quantizable_block(&tokens),
@@ -201,18 +196,8 @@ mod is_quantizable_block_inner_match {
     }
 
     #[test]
-    fn aq_ver_006_b_inner_row2_safemode_blocks_quantization() {
-        // A'=F, B'=T
-        let tokens = vec![Token::SafeMode];
-        assert!(
-            !is_quantizable_block(&tokens),
-            "SafeMode token alone must block quantization"
-        );
-    }
-
-    #[test]
     fn aq_ver_006_b_inner_row3_number_does_not_block_quantization() {
-        // A'=F, B'=F — pairs with rows 1 and 2 to prove each variant independent.
+        // A'=F — pairs with row 1 to prove the LineBreak condition independent.
         let tokens = vec![Token::Number("1".into())];
         assert!(
             is_quantizable_block(&tokens),
@@ -396,7 +381,7 @@ mod compiled_plan_cache_guard {
 //      Phase 1-C purity gate (third conjunct).
 //
 //     !tokens.is_empty()                                          // A
-//         && !tokens.iter().any(|t| matches!(t, LineBreak | SafeMode)) // B
+//         && !tokens.iter().any(|t| matches!(t, LineBreak))           // B
 //         && !tokens.iter().any(token_is_impure_builtin)          // C
 //
 // AQ-VER-006-B already pairs row 1 (A=T, B=T, C=T -> true) with row 2

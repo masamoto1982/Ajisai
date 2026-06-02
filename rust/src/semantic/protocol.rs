@@ -61,7 +61,6 @@ impl ValueOrigin {
             ValueOrigin::BuiltinWord => "builtinWord",
             ValueOrigin::ModuleWord { .. } => "moduleWord",
             ValueOrigin::UserWord => "userWord",
-            ValueOrigin::SafeProjection => "safeProjection",
             ValueOrigin::NilPropagation => "nilPropagation",
             ValueOrigin::HostEnvironment => "hostEnvironment",
             ValueOrigin::Optimizer => "optimizer",
@@ -74,7 +73,7 @@ impl AbsenceOrigin {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             AbsenceOrigin::Literal => "literal",
-            AbsenceOrigin::SafeProjection => "safeProjection",
+            AbsenceOrigin::DivisionByZero => "divisionByZero",
             AbsenceOrigin::NilPropagation => "nilPropagation",
             AbsenceOrigin::EmptySequence => "emptySequence",
             AbsenceOrigin::MissingField => "missingField",

@@ -1,6 +1,6 @@
 //! Test suite for NIL reason metadata.
 
-use crate::error::{ErrorCategory, NilReason};
+use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::Value;
@@ -13,54 +13,50 @@ fn last_nil_reason(interp: &Interpreter) -> Option<NilReason> {
 }
 
 #[tokio::test]
-async fn safe_division_by_zero_preserves_direct_bubble_reason() {
+async fn division_by_zero_preserves_direct_bubble_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 ~ /").await.unwrap();
+    interp.execute("1 0 /").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
-        "top of stack must be NIL after safe-guarded division by zero"
+        "top of stack must be NIL after division by zero"
     );
     let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
     assert_eq!(reason, NilReason::DivisionByZero);
 }
 
 #[tokio::test]
-async fn safe_index_out_of_bounds_preserves_direct_bubble_reason() {
+async fn index_out_of_bounds_preserves_direct_bubble_reason() {
     let mut interp = Interpreter::new();
-    interp.execute("[ 10 20 ] [ 99 ] ~ GET").await.unwrap();
+    interp.execute("[ 10 20 ] [ 99 ] GET").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         stack.last().map(|v| v.is_nil()).unwrap_or(false),
-        "top of stack must be NIL after safe-guarded out-of-bounds GET"
+        "top of stack must be NIL after out-of-bounds GET"
     );
     let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
     assert_eq!(reason, NilReason::IndexOutOfBounds);
 }
 
 #[tokio::test]
-async fn safe_unknown_word_creates_nil_with_safe_caught_unknown_word() {
+async fn unknown_word_propagates_error() {
     let mut interp = Interpreter::new();
-    interp.execute("~ __NO_SUCH_WORD__").await.unwrap();
-    let stack = interp.get_stack();
-    assert_eq!(stack.len(), 1);
-    assert!(stack[0].is_nil());
-    let reason = last_nil_reason(&interp).expect("Bubble/NIL must carry a reason");
-    match reason {
-        NilReason::SafeCaught(category) => assert_eq!(*category, ErrorCategory::UnknownWord),
-        other => panic!("expected SafeCaught(UnknownWord), got {:?}", other),
-    }
+    let result = interp.execute("__NO_SUCH_WORD__").await;
+    assert!(
+        result.is_err(),
+        "an unknown word must propagate its error, not project to NIL"
+    );
 }
 
 #[tokio::test]
-async fn safe_successful_bubble_uses_normal_word_stack_effect() {
+async fn successful_bubble_uses_normal_word_stack_effect() {
     let mut interp = Interpreter::new();
-    interp.execute("1 2 3 0 ~ /").await.unwrap();
+    interp.execute("1 2 3 0 /").await.unwrap();
     let stack = interp.get_stack();
     assert_eq!(
         stack.len(),
         3,
-        "SAFE only restores the stack when the guarded word raises an error"
+        "DIV consumes its two operands and pushes a single Bubble/NIL result"
     );
     assert_eq!(format!("{}", stack[0]), "1/1");
     assert_eq!(format!("{}", stack[1]), "2/1");
@@ -71,7 +67,7 @@ async fn safe_successful_bubble_uses_normal_word_stack_effect() {
 #[tokio::test]
 async fn nil_passthrough_preserves_reason_through_arithmetic_pipeline() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 ~ /").await.unwrap();
+    interp.execute("1 0 /").await.unwrap();
     interp.execute(", 10 +").await.unwrap();
     interp.execute(", 2 *").await.unwrap();
     assert!(
@@ -162,7 +158,7 @@ async fn bare_nil_literal_has_no_reason() {
 #[tokio::test]
 async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
     let mut interp = Interpreter::new();
-    interp.execute("1 0 ~ /").await.unwrap();
+    interp.execute("1 0 /").await.unwrap();
     interp.execute("42 =>").await.unwrap();
     let stack = interp.get_stack();
     assert!(
@@ -172,33 +168,25 @@ async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
 
-mod mcdc_safe_division {
+mod division_bubble_rule {
     use super::*;
 
     #[tokio::test]
-    async fn aq_ver_safe_div_a_left_nil_safe_engaged_projects_to_nil() {
+    async fn left_nil_propagates_to_nil() {
         let mut interp = Interpreter::new();
-        interp.execute("NIL 5 ~ /").await.unwrap();
+        interp.execute("NIL 5 /").await.unwrap();
         assert!(interp.get_stack().last().unwrap().is_nil());
     }
 
     #[tokio::test]
-    async fn aq_ver_safe_div_b_right_nil_safe_engaged_projects_to_nil() {
+    async fn right_nil_propagates_to_nil() {
         let mut interp = Interpreter::new();
-        interp.execute("5 NIL ~ /").await.unwrap();
+        interp.execute("5 NIL /").await.unwrap();
         assert!(interp.get_stack().last().unwrap().is_nil());
     }
 
     #[tokio::test]
-    async fn aq_ver_safe_div_c_right_zero_safe_engaged_projects_to_nil_with_division_by_zero() {
-        let mut interp = Interpreter::new();
-        interp.execute("5 0 ~ /").await.unwrap();
-        let reason = last_nil_reason(&interp).expect("must carry reason");
-        assert_eq!(reason, NilReason::DivisionByZero);
-    }
-
-    #[tokio::test]
-    async fn aq_ver_safe_div_d_safe_disengaged_zero_produces_direct_bubble() {
+    async fn right_zero_produces_nil_with_division_by_zero() {
         let mut interp = Interpreter::new();
         interp.execute("5 0 /").await.unwrap();
         let reason = last_nil_reason(&interp).expect("must carry reason");
@@ -206,9 +194,9 @@ mod mcdc_safe_division {
     }
 
     #[tokio::test]
-    async fn aq_ver_safe_div_e_all_valid_safe_engaged_succeeds_and_no_reason() {
+    async fn all_valid_succeeds_and_no_reason() {
         let mut interp = Interpreter::new();
-        interp.execute("10 2 ~ /").await.unwrap();
+        interp.execute("10 2 /").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         assert!(!stack[0].is_nil());

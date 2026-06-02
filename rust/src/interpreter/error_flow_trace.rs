@@ -5,9 +5,6 @@ use crate::semantic::AbsenceMetadata;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorFlowEventKind {
     WordError,
-    SafeEnter,
-    SafeSuccess,
-    SafeCaught,
     NilProduced,
 }
 
@@ -27,9 +24,6 @@ impl ErrorFlowEventKind {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             ErrorFlowEventKind::WordError => "wordError",
-            ErrorFlowEventKind::SafeEnter => "safeEnter",
-            ErrorFlowEventKind::SafeSuccess => "safeSuccess",
-            ErrorFlowEventKind::SafeCaught => "safeCaught",
             ErrorFlowEventKind::NilProduced => "nilProduced",
         }
     }

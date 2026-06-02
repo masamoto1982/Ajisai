@@ -1,5 +1,4 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
-use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, ExecutionLine, Token, Value};
 
@@ -47,7 +46,6 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         NilReason::IndexOutOfBounds => Some(ErrorCategory::IndexOutOfBounds),
         NilReason::StackUnderflow => Some(ErrorCategory::StackUnderflow),
         NilReason::UnknownWord => Some(ErrorCategory::UnknownWord),
-        NilReason::SafeCaught(category) => Some((**category).clone()),
         // The logical Unknown (U) is not an error/absence and never carries
         // an error category. It is excluded from error-flow tracing by
         // `top_direct_nil_reason`, so this arm is defensive.
@@ -71,10 +69,7 @@ fn top_direct_nil_reason(interp: &Interpreter) -> Option<NilReason> {
     let reason = top.nil_reason()?.clone();
     // The logical Unknown (U) is a TruthValue result, not an error/absence:
     // keep it out of the error-flow trace (SPEC §4.5.2).
-    if matches!(
-        reason,
-        NilReason::SafeCaught(_) | NilReason::LogicallyUnknown
-    ) {
+    if matches!(reason, NilReason::LogicallyUnknown) {
         None
     } else {
         Some(reason)
@@ -340,158 +335,42 @@ impl Interpreter {
                         "EAT" => {
                             self.update_consumption_mode(ConsumptionMode::Consume);
                         }
-                        "SAFE" => {
-                            self.safe_mode = true;
-                        }
                         _ => {
                             let upper = canonical;
-                            if self.safe_mode {
-                                let stack_len_before = self.stack.len();
-                                self.push_error_flow_trace(ErrorFlowEvent {
-                                    kind: ErrorFlowEventKind::SafeEnter,
-                                    word: Some(upper.to_string()),
-                                    error_category: None,
-                                    absence: None,
-                                    stack_len_before,
-                                    stack_len_after: stack_len_before,
-                                    message: format!("SAFE enter word={}", upper),
-                                    diagnosis: None,
-                                });
-
-                                let stack_snapshot = self.stack.clone();
-                                self.safe_mode = false;
-                                match self.execute_word_core(upper.as_ref()) {
-                                    Ok(()) => {
-                                        trace_direct_nil_produced(
-                                            self,
-                                            upper.as_ref(),
-                                            stack_len_before,
-                                        );
-                                        let stack_len_after = self.stack.len();
-                                        self.push_error_flow_trace(ErrorFlowEvent {
-                                            kind: ErrorFlowEventKind::SafeSuccess,
-                                            word: Some(upper.to_string()),
-                                            error_category: None,
-                                            absence: None,
-                                            stack_len_before,
-                                            stack_len_after,
-                                            message: format!(
-                                                "SAFE success word={} stack_len_before={} stack_len_after={}",
-                                                upper, stack_len_before, stack_len_after
-                                            ),
-                                            diagnosis: None,
-                                        });
-                                        self.semantic_registry
-                                            .normalize_to_stack_len(self.stack.len());
-                                        apply_word_hint_override(self, upper.as_ref());
-                                    }
-                                    Err(err) => {
-                                        let category = ErrorCategory::from_error(&err);
-                                        let nil_reason = NilReason::from_error(&err);
-                                        self.stack = stack_snapshot;
-                                        let restored_len = self.stack.len();
-                                        let safe_caught_diagnosis =
-                                            DebugDiagnosis::from_error_category(
-                                                ErrorPhase::SafeProjection,
-                                                Some(upper.as_ref()),
-                                                Some(&category),
-                                                Some(&nil_reason),
-                                                stack_len_before,
-                                                restored_len,
-                                                Some(format!("{}", err)),
-                                            );
-                                        self.push_error_flow_trace(ErrorFlowEvent {
-                                            kind: ErrorFlowEventKind::SafeCaught,
-                                            word: Some(upper.to_string()),
-                                            error_category: Some(category.clone()),
-                                            absence: Some(AbsenceMetadata::with_reason(
-                                                nil_reason.clone(),
-                                                AbsenceOrigin::SafeProjection,
-                                                Recoverability::Recoverable,
-                                            )),
-                                            stack_len_before,
-                                            stack_len_after: restored_len,
-                                            message: format!(
-                                                "SAFE caught word={} error={:?} restored_stack_len={}",
-                                                upper, category, restored_len
-                                            ),
-                                            diagnosis: Some(safe_caught_diagnosis),
-                                        });
-                                        let nil_produced_diagnosis =
-                                            DebugDiagnosis::from_error_category(
-                                                ErrorPhase::SafeProjection,
-                                                Some(upper.as_ref()),
-                                                Some(&category),
-                                                Some(&nil_reason),
-                                                restored_len,
-                                                restored_len + 1,
-                                                Some("NIL produced by SAFE".to_string()),
-                                            );
-                                        self.stack.push(Value::nil_from_diagnosis(
-                                            nil_reason.clone(),
-                                            AbsenceOrigin::SafeProjection,
-                                            Recoverability::Recoverable,
-                                            nil_produced_diagnosis.clone(),
-                                        ));
-                                        self.push_error_flow_trace(ErrorFlowEvent {
-                                            kind: ErrorFlowEventKind::NilProduced,
-                                            word: Some(upper.to_string()),
-                                            error_category: Some(category),
-                                            absence: Some(AbsenceMetadata::from_diagnosis(
-                                                nil_reason,
-                                                AbsenceOrigin::SafeProjection,
-                                                Recoverability::Recoverable,
-                                                nil_produced_diagnosis.clone(),
-                                            )),
-                                            stack_len_before: restored_len,
-                                            stack_len_after: self.stack.len(),
-                                            message: format!(
-                                                "NIL produced by SAFE word={} stack_len_after={}",
-                                                upper,
-                                                self.stack.len()
-                                            ),
-                                            diagnosis: Some(nil_produced_diagnosis),
-                                        });
-                                        self.semantic_registry
-                                            .normalize_to_stack_len(self.stack.len());
-                                    }
+                            let stack_len_before = self.stack.len();
+                            match self.execute_word_core(upper.as_ref()) {
+                                Ok(()) => {
+                                    trace_direct_nil_produced(
+                                        self,
+                                        upper.as_ref(),
+                                        stack_len_before,
+                                    );
+                                    self.semantic_registry
+                                        .normalize_to_stack_len(self.stack.len());
+                                    apply_word_hint_override(self, upper.as_ref());
                                 }
-                            } else {
-                                let stack_len_before = self.stack.len();
-                                match self.execute_word_core(upper.as_ref()) {
-                                    Ok(()) => {
-                                        trace_direct_nil_produced(
-                                            self,
-                                            upper.as_ref(),
-                                            stack_len_before,
-                                        );
-                                        self.semantic_registry
-                                            .normalize_to_stack_len(self.stack.len());
-                                        apply_word_hint_override(self, upper.as_ref());
-                                    }
-                                    Err(err) => {
-                                        let category = ErrorCategory::from_error(&err);
-                                        let diagnosis = DebugDiagnosis::from_error(
-                                            &err,
-                                            Some(upper.as_ref()),
-                                            stack_len_before,
-                                            self.stack.len(),
-                                        );
-                                        self.push_error_flow_trace(ErrorFlowEvent {
-                                            kind: ErrorFlowEventKind::WordError,
-                                            word: Some(upper.to_string()),
-                                            error_category: Some(category),
-                                            absence: None,
-                                            stack_len_before,
-                                            stack_len_after: self.stack.len(),
-                                            message: format!(
-                                                "word error word={} error={}",
-                                                upper, err
-                                            ),
-                                            diagnosis: Some(diagnosis),
-                                        });
-                                        return Err(err);
-                                    }
+                                Err(err) => {
+                                    let category = ErrorCategory::from_error(&err);
+                                    let diagnosis = DebugDiagnosis::from_error(
+                                        &err,
+                                        Some(upper.as_ref()),
+                                        stack_len_before,
+                                        self.stack.len(),
+                                    );
+                                    self.push_error_flow_trace(ErrorFlowEvent {
+                                        kind: ErrorFlowEventKind::WordError,
+                                        word: Some(upper.to_string()),
+                                        error_category: Some(category),
+                                        absence: None,
+                                        stack_len_before,
+                                        stack_len_after: self.stack.len(),
+                                        message: format!(
+                                            "word error word={} error={}",
+                                            upper, err
+                                        ),
+                                        diagnosis: Some(diagnosis),
+                                    });
+                                    return Err(err);
                                 }
                             }
                             if !modules::is_mode_preserving_word(upper.as_ref()) {
@@ -547,9 +426,6 @@ impl Interpreter {
                             }
                         }
                     }
-                }
-                Token::SafeMode => {
-                    self.safe_mode = true;
                 }
                 Token::CondClauseSep => {
                     return Err(AjisaiError::from(

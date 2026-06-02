@@ -522,13 +522,6 @@ impl AjisaiInterpreter {
                 let absence_obj = js_sys::Object::new();
                 if let Some(reason) = &absence.reason {
                     set_js_prop(&absence_obj, "reason", &(reason.as_protocol_str().into()));
-                    if let Some(category) = reason.caught_category() {
-                        set_js_prop(
-                            &absence_obj,
-                            "caughtCategory",
-                            &(category.as_protocol_str().into()),
-                        );
-                    }
                 }
                 set_js_prop(
                     &absence_obj,

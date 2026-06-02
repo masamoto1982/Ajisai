@@ -92,7 +92,6 @@ export interface ProtocolAbsence {
     reason?: string;
     origin: string;
     recoverability: string;
-    caughtCategory?: string;
     diagnosis?: ProtocolDiagnosis;
 }
 

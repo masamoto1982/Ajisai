@@ -28,7 +28,6 @@ fn format_token_to_source(token: &Token) -> String {
         Token::Pipeline => "==".to_string(),
         Token::NilCoalesce => "=>".to_string(),
         Token::CondClauseSep => "$".to_string(),
-        Token::SafeMode => "~".to_string(),
         Token::LineBreak => "\n".to_string(),
     }
 }
