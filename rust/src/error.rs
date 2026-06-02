@@ -35,7 +35,6 @@ pub enum NilReason {
     /// A host-mediated port was reported disconnected with no remaining
     /// buffered data. Projected to NIL with `absence.origin = hostEnvironment`.
     PortDisconnected,
-    SafeCaught(Box<ErrorCategory>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,19 +105,7 @@ impl NilReason {
             NilReason::LogicallyUnknown => "logicallyUnknown",
             NilReason::NoData => "noData",
             NilReason::PortDisconnected => "portDisconnected",
-            NilReason::SafeCaught(_) => "safeCaught",
         }
-    }
-
-    pub fn caught_category(&self) -> Option<&ErrorCategory> {
-        match self {
-            NilReason::SafeCaught(category) => Some(category),
-            _ => None,
-        }
-    }
-
-    pub fn from_error(err: &AjisaiError) -> Self {
-        NilReason::SafeCaught(Box::new(ErrorCategory::from_error(err)))
     }
 }
 

@@ -117,12 +117,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Keep operands",
     },
     CoreWordAlias {
-        alias: "~",
-        canonical: Some("SAFE"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "Enable safe mode",
-    },
-    CoreWordAlias {
         alias: "'",
         canonical: None,
         kind: CoreWordAliasKind::InputHelper,

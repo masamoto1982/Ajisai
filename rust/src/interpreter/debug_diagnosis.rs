@@ -6,7 +6,6 @@ pub enum ErrorPhase {
     ParseStructure,
     ResolveWord,
     ExecuteWord,
-    SafeProjection,
     NilPropagation,
     Assertion,
     HostIo,
@@ -80,7 +79,6 @@ impl ErrorPhase {
             ErrorPhase::ParseStructure => "parseStructure",
             ErrorPhase::ResolveWord => "resolveWord",
             ErrorPhase::ExecuteWord => "executeWord",
-            ErrorPhase::SafeProjection => "safeProjection",
             ErrorPhase::NilPropagation => "nilPropagation",
             ErrorPhase::Assertion => "assertion",
             ErrorPhase::HostIo => "hostIo",
@@ -222,7 +220,7 @@ impl DebugDiagnosis {
             message.as_deref(),
         );
         let evidence = build_evidence(category, nil_reason, stack_len_before, stack_len_after);
-        let next_checks = build_next_checks(&why, word, category, nil_reason);
+        let next_checks = build_next_checks(&why, word, category);
 
         DebugDiagnosis {
             when,
@@ -319,11 +317,8 @@ fn build_next_checks(
     why: &CauseClass,
     word: Option<&str>,
     category: Option<&ErrorCategory>,
-    nil_reason: Option<&NilReason>,
 ) -> Vec<DebugCheck> {
     let mut out = Vec::new();
-
-    let safe_caught = matches!(nil_reason, Some(NilReason::SafeCaught(_)));
 
     match why {
         CauseClass::Domain => {
@@ -509,18 +504,6 @@ fn build_next_checks(
                 "Custom エラーの場合は message を直接確認する",
             ));
         }
-    }
-
-    if safe_caught {
-        out.push(check("Check NIL origin", "NIL が生成された地点を確認する"));
-        out.push(check(
-            "Check SAFE intent",
-            "SAFE で握りつぶしてよいエラーか確認する",
-        ));
-        out.push(check(
-            "Check fallback",
-            "fallback が必要なら => の利用を検討する",
-        ));
     }
 
     out

@@ -13,23 +13,16 @@ fn semantic_axes_use_lower_camel_case_protocol_strings() {
         Capability::NilPassthrough.as_protocol_str(),
         "nilPassthrough"
     );
-    assert_eq!(
-        ValueOrigin::SafeProjection.as_protocol_str(),
-        "safeProjection"
-    );
+    assert_eq!(ValueOrigin::Computed.as_protocol_str(), "computed");
 }
 
 #[test]
 fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
     assert_eq!(
-        AbsenceOrigin::SafeProjection.as_protocol_str(),
-        "safeProjection"
+        AbsenceOrigin::DivisionByZero.as_protocol_str(),
+        "divisionByZero"
     );
     assert_eq!(Recoverability::Recoverable.as_protocol_str(), "recoverable");
-    assert_eq!(
-        NilReason::SafeCaught(Box::new(ErrorCategory::DivisionByZero)).as_protocol_str(),
-        "safeCaught"
-    );
     assert_eq!(
         ErrorCategory::DivisionByZero.as_protocol_str(),
         "divisionByZero"

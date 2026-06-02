@@ -8,7 +8,6 @@ pub struct HedgedSnapshot {
     pub display_hints: Vec<Interpretation>,
     pub operation_target_mode: OperationTargetMode,
     pub consumption_mode: ConsumptionMode,
-    pub safe_mode: bool,
     pub epoch_snapshot: EpochSnapshot,
 }
 
@@ -19,7 +18,6 @@ impl HedgedSnapshot {
             display_hints: interpreter.collect_stack_hints().to_vec(),
             operation_target_mode: interpreter.operation_target_mode,
             consumption_mode: interpreter.consumption_mode,
-            safe_mode: interpreter.safe_mode,
             epoch_snapshot: interpreter.current_epoch_snapshot(),
         }
     }
@@ -34,6 +32,5 @@ impl Interpreter {
         self.semantic_registry.stack_hints = snapshot.display_hints.clone();
         self.operation_target_mode = snapshot.operation_target_mode;
         self.consumption_mode = snapshot.consumption_mode;
-        self.safe_mode = snapshot.safe_mode;
     }
 }

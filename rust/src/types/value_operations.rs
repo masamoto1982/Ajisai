@@ -23,8 +23,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::LogicallyUnknown => AbsenceOrigin::ComparisonBudget,
         NilReason::NoData => AbsenceOrigin::HostEnvironment,
         NilReason::PortDisconnected => AbsenceOrigin::HostEnvironment,
-        NilReason::SafeCaught(_) => AbsenceOrigin::SafeProjection,
-        NilReason::DivisionByZero => AbsenceOrigin::SafeProjection,
+        NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
     }
 }
 
@@ -179,8 +178,8 @@ impl Value {
     }
 
     /// Create a reasoned NIL for the Bubble Rule: well-formed operations that
-    /// cannot produce a value return Bubble/NIL directly instead of reusing
-    /// SAFE's `SafeCaught` reason.
+    /// cannot produce a value return Bubble/NIL directly with an explicit
+    /// reason.
     #[inline]
     pub fn bubble_with_reason(
         reason: NilReason,
@@ -460,7 +459,6 @@ impl Value {
     pub fn origin(&self) -> ValueOrigin {
         match self.absence_metadata().map(|metadata| &metadata.origin) {
             Some(AbsenceOrigin::Literal) => ValueOrigin::Literal,
-            Some(AbsenceOrigin::SafeProjection) => ValueOrigin::SafeProjection,
             Some(AbsenceOrigin::NilPropagation) => ValueOrigin::NilPropagation,
             Some(AbsenceOrigin::HostEnvironment) => ValueOrigin::HostEnvironment,
             _ => ValueOrigin::Unknown,

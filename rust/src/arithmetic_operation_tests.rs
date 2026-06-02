@@ -479,19 +479,19 @@ mod nil_passthrough_tests {
     }
 
     #[tokio::test]
-    async fn safe_divide_then_add_propagates_nil_through_pipeline() {
-        let interp = run("[ 10 ] [ 0 ] ~ / 1 +").await;
+    async fn divide_then_add_propagates_nil_through_pipeline() {
+        let interp = run("[ 10 ] [ 0 ] / 1 +").await;
         let stack = interp.get_stack();
         assert!(
             stack.last().unwrap().is_nil(),
-            "expected NIL on top of stack after safe-divide and add; got {}",
+            "expected NIL on top of stack after divide and add; got {}",
             stack.last().unwrap()
         );
     }
 
     #[tokio::test]
     async fn or_nil_can_supply_fallback_after_passthrough() {
-        let interp = run("[ 10 ] [ 0 ] ~ / 1 + 0 =>").await;
+        let interp = run("[ 10 ] [ 0 ] / 1 + 0 =>").await;
         let stack = interp.get_stack();
         assert!(
             !stack.last().unwrap().is_nil(),
@@ -747,14 +747,6 @@ mod ai_first_comparison_tests {
         assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
     }
 
-    // ── SAFE projection preserves error category on malformed input ──────
-
-    #[tokio::test]
-    async fn gt_safe_mode_projects_structure_error_to_nil() {
-        // Comparing a code block against a number is malformed → SAFE catches it.
-        let interp = run("{ 1 } 1 ~ GT").await;
-        assert!(interp.get_stack().last().unwrap().is_nil());
-    }
 }
 
 #[cfg(test)]

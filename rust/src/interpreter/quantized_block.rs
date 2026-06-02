@@ -403,7 +403,7 @@ fn try_user_word_is_pure(
 
 /// Gate: a block is eligible for quantization iff
 ///   1. it is non-empty,
-///   2. it contains no `LineBreak` or `SafeMode` token, and
+///   2. it contains no `LineBreak` token, and
 ///   3. no symbol token resolves, via the purity table, to an impure builtin.
 ///
 /// Clauses 1 and 2 are token-shape filters. Clause 3 is the
@@ -415,7 +415,7 @@ pub fn is_quantizable_block(tokens: &[Token]) -> bool {
     !tokens.is_empty()
         && !tokens
             .iter()
-            .any(|t| matches!(t, Token::LineBreak | Token::SafeMode))
+            .any(|t| matches!(t, Token::LineBreak))
         && !tokens.iter().any(token_is_impure_builtin)
 }
 

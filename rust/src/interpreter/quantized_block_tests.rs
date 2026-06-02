@@ -114,13 +114,6 @@ fn linebreak_makes_block_non_quantizable() {
     assert!(!is_quantizable_block(&tokens));
 }
 
-#[test]
-fn safemode_token_makes_block_non_quantizable() {
-    // Token::SafeMode is the safe-mode sentinel
-    let tokens = vec![Token::SafeMode, sym("+")];
-    assert!(!is_quantizable_block(&tokens));
-}
-
 // ---------------------------------------------------------------------------
 // Arity inference — pure-builtin blocks only
 // ---------------------------------------------------------------------------

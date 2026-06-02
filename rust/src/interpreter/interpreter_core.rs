@@ -218,7 +218,6 @@ pub struct Interpreter {
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) force_flag: bool,
     pub(crate) disable_no_change_check: bool,
-    pub(crate) safe_mode: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
     pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
@@ -286,7 +285,6 @@ impl Interpreter {
             consumption_mode: ConsumptionMode::Consume,
             force_flag: false,
             disable_no_change_check: true,
-            safe_mode: false,
             pending_tokens: None,
             pending_token_index: 0,
             module_state: HashMap::new(),
@@ -457,7 +455,6 @@ impl Interpreter {
     pub(crate) fn reset_execution_modes(&mut self) {
         self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
-        self.safe_mode = false;
     }
 
     pub(crate) fn normalize_symbol<'a>(symbol: &'a str) -> std::borrow::Cow<'a, str> {

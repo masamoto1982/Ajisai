@@ -172,7 +172,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '~' | '$'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '$'
     )
 }
 
@@ -184,7 +184,6 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         '}' => Some((Token::BlockEnd, 1)),
 
         '$' => Some((Token::CondClauseSep, 1)),
-        '~' => Some((Token::SafeMode, 1)),
 
         _ => None,
     }

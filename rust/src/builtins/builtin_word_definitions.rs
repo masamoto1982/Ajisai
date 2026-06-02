@@ -211,21 +211,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
-
-        name: "SAFE",
-        category: "modifier",
-        hover_summary: "SAFE — catch next-word errors",
-        hover_syntax: "~ GET",
-        summary:
-            "Safety boundary for converting the next operation's raised error to NIL.",
-        role: "Modifier that catches an error from one word without rewrapping direct Bubble/NIL results.",
-
-        stack_effect: "no values popped or pushed",
-        nil_policy: NilPolicy::PreservesReason,
-        ..SPEC_DEFAULT
-        },
-
     // === Vector ops ===
     BuiltinSpec {
 
@@ -1667,7 +1652,7 @@ mod tests {
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
             "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "TOP",
-            "STAK", "EAT", "KEEP", "SAFE", "FORC", "LOOKUP", "PIPE", "OR-NIL",
+            "STAK", "EAT", "KEEP", "FORC", "LOOKUP", "PIPE", "OR-NIL",
         ];
 
         for name in required {

@@ -14,7 +14,7 @@
 //! Trace: docs/quality/TRACEABILITY_MATRIX.md (NIL/Bubble conformance).
 
 use crate::coreword_registry::{get_builtin_word_registry, CanonicalHome, NilPolicy};
-use crate::error::{ErrorCategory, NilReason};
+use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
@@ -448,38 +448,34 @@ async fn or_nil_supplies_fallback_and_clears_reason() {
     assert_eq!(format!("{}", stack[0]), "[ 7/1 ]");
 }
 
-// --- SAFE (~) projects malformed-use errors to NIL (SPEC §11.3) ----------
+// --- A raised error propagates; a well-formed Bubble keeps its reason -----
 
 #[tokio::test]
-async fn safe_projects_malformed_errors_with_caught_category() {
-    // guarded stack underflow
-    let stack = run_ok("~ ADD").await;
-    assert_eq!(stack.len(), 1);
-    assert!(is_nil(&stack[0]));
-    match reason_of(&stack[0]) {
-        Some(NilReason::SafeCaught(cat)) => assert_eq!(*cat, ErrorCategory::StackUnderflow),
-        other => panic!("expected SafeCaught(StackUnderflow), got {other:?}"),
-    }
+async fn raised_errors_propagate_instead_of_projecting_to_nil() {
+    // stack underflow propagates as an error
+    let mut interp = Interpreter::new();
+    assert!(
+        interp.execute("ADD").await.is_err(),
+        "stack underflow must propagate, not project to NIL"
+    );
 
-    // guarded unknown word
-    let stack = run_ok("~ __NO_SUCH_WORD__").await;
-    assert!(is_nil(&stack[0]));
-    match reason_of(&stack[0]) {
-        Some(NilReason::SafeCaught(cat)) => assert_eq!(*cat, ErrorCategory::UnknownWord),
-        other => panic!("expected SafeCaught(UnknownWord), got {other:?}"),
-    }
+    // unknown word propagates as an error
+    let mut interp = Interpreter::new();
+    assert!(
+        interp.execute("__NO_SUCH_WORD__").await.is_err(),
+        "unknown word must propagate, not project to NIL"
+    );
 }
 
 #[tokio::test]
-async fn safe_preserves_direct_bubble_reason_without_rewrapping() {
-    // SPEC §11.3: a well-formed Bubble produced under SAFE keeps its own
-    // reason; SAFE does not rewrap it as SafeCaught.
-    let stack = run_ok("1 0 ~ DIV").await;
+async fn direct_bubble_preserves_its_own_reason() {
+    // A well-formed Bubble (division by zero) keeps its own reason.
+    let stack = run_ok("1 0 DIV").await;
     assert!(is_nil(&stack[0]));
     assert_eq!(
         reason_of(&stack[0]),
         Some(NilReason::DivisionByZero),
-        "SAFE must not rewrap a direct Bubble as SafeCaught"
+        "a direct Bubble keeps its DivisionByZero reason"
     );
 }
 

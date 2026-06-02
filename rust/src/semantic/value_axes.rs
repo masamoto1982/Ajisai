@@ -30,7 +30,6 @@ pub enum ValueOrigin {
     BuiltinWord,
     ModuleWord { module: Option<String> },
     UserWord,
-    SafeProjection,
     NilPropagation,
     HostEnvironment,
     Optimizer,

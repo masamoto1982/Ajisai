@@ -559,7 +559,6 @@ pub enum Token {
     Pipeline,
     NilCoalesce,
     CondClauseSep,
-    SafeMode,
     LineBreak,
 }
 
