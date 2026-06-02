@@ -10,7 +10,7 @@ Ajisai is a typed, vector-oriented dataflow language. Its safety story is the co
 - **Value-shape safety** — operations check that operands have the structural shape they require (Scalar / Vector / Record / NIL / CodeBlock / handles).
 - **Encoding safety** — string and code values carry encoding contracts on top of their underlying fraction sequences.
 - **Contract safety** — every Coreword has machine-readable `requires` / `ensures` / partiality / NIL policy / effect metadata in the registry.
-- **NIL projection safety** — partial operations may project failure onto NIL with a structured reason; `SAFE` is the explicit projection operator.
+- **Bubble Rule safety** — a well-formed operation that cannot produce a value projects the failure onto NIL with a structured reason, while malformed use raises an ordinary error (Section 11.2).
 
 These layers compose. A change is conformant only if it preserves all of them.
 
@@ -95,7 +95,6 @@ The `truthValue` axis is present only on values carrying the `TruthValue` interp
 | `>=` | Syntactic sugar for `GTE` |
 | `<>` | Syntactic sugar for `NEQ` |
 | `$` | COND clause separator |
-| `~` | Syntactic sugar for `SAFE` (safe mode modifier) |
 | `#` | Line comment: all characters from `#` to end of line are ignored |
 
 ### 3.2 Numeric literal formats
@@ -113,7 +112,7 @@ The nested-parentheses form `( a0 ( a1 ( a2 ... )))` is the canonical serializat
 
 ### 3.3 String literals
 
-A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `#`, `=`, `~`, `$`).
+A string literal begins with `'` and ends with the last `'` before a token boundary. A token boundary is whitespace, end of input, or any special character other than `'` (such as `[`, `]`, `{`, `}`, `#`, `=`, `$`).
 
 Any `'` that appears before a non-boundary character is a literal quote character in the string content.
 
@@ -261,7 +260,7 @@ A collection of named fields. Each field has a string key and an associated valu
 
 ### 4.5 NIL
 
-NIL represents the absence of a value. It is pushed by safe mode when an error is absorbed, and produced by operations that yield no meaningful result.
+NIL represents the absence of a value. It is produced by well-formed operations that yield no meaningful result (Section 11.2).
 
 #### 4.5.0 Diagnostic absence metadata
 
@@ -281,7 +280,6 @@ NIL metadata is exposed as an optional structured `absence` object with these fi
 | `reason` | Direct reason the value became NIL | Optional lower camel case protocol string |
 | `origin` | Path by which the NIL was produced | Required lower camel case protocol string |
 | `recoverability` | UI/AI hint for next action | Required lower camel case protocol string |
-| `caughtCategory` | Original error category caught by `SAFE`, when applicable | Optional lower camel case protocol string |
 | `diagnosis` | Three-layer debug diagnosis | Optional structured object |
 
 `NIL?` checks only whether a value is absent. It must not branch on `absence.reason`. Reason-specific code must use explicit diagnostic accessors such as `NIL-REASON`, `NIL-ORIGIN`, `NIL-RECOVERABLE?`, or `NIL-DIAGNOSIS` when such words are available.
@@ -299,7 +297,7 @@ The diagnostic object uses the existing three-layer model:
 | `nextChecks` | suggested checks for UI/AI display | structured label/detail strings |
 | `agreedPrefix` | for a continued-fraction comparison that produced `Unknown` (Section 7.4.1): the number of leading partial quotients that matched before the budget was exhausted | optional non-negative integer; machine-readable |
 
-SAFE-caught errors use `reason = safeCaught` and preserve the original error category in `caughtCategory`, for example `caughtCategory = structureError`. Direct Bubble/NIL results use their own reason and are not wrapped as `safeCaught`. Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
+A Bubble/NIL result carries its own direct reason (Section 11.2). Literal NIL has `origin = literal` and no `reason` unless a future protocol explicitly adds one.
 
 #### 4.5.1 NIL passthrough
 
@@ -307,13 +305,13 @@ Operations classified as **NIL-passthrough** in Section 7 do not raise `Structur
 
 NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.13). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL.
 
-The intent is that pipelines built with safe mode (`~`) propagate NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
+The intent is that pipelines propagate a Bubble/NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
 
 When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.
 
 #### 4.5.2 NIL versus Unknown
 
-NIL and the logical truth value `Unknown` (U, Section 7.5) are distinct and must not be conflated. **NIL is an operational absence**: a diagnostic bubble that records *why* a value is missing (division by zero, out-of-range `GET`, parse failure, a `SAFE`-caught error). **U is a logical undecidability**: a definite member of the three-valued truth domain that records that a proposition could not be settled true or false (notably a continued-fraction comparison that did not decide within its budget, Section 7.4.1). U carries the `TruthValue` role and is observed as `truthValue = unknown`; NIL is observed as `semanticKind = absence`.
+NIL and the logical truth value `Unknown` (U, Section 7.5) are distinct and must not be conflated. **NIL is an operational absence**: a diagnostic bubble that records *why* a value is missing (division by zero, out-of-range `GET`, parse failure). **U is a logical undecidability**: a definite member of the three-valued truth domain that records that a proposition could not be settled true or false (notably a continued-fraction comparison that did not decide within its budget, Section 7.4.1). U carries the `TruthValue` role and is observed as `truthValue = unknown`; NIL is observed as `semanticKind = absence`.
 
 When NIL and U meet in the same operation, **NIL takes priority**. NIL carries a diagnostic `reason` that must be preserved (`PreservesReason`, Section 7.14), so the stronger, reason-bearing operational information is never erased by the logical value. Concretely, a logic word (Section 7.5) that receives both a NIL operand and a U operand applies its NIL handling and produces NIL, not U, unless an absorbing definite operand (`false` for `AND`, `true` for `OR`) settles the result first.
 
@@ -367,17 +365,11 @@ Modifiers precede a word and alter its execution behavior. Multiple modifiers ma
 | `EAT` | `,` | Operands are removed from the stack after the operation (default) |
 | `KEEP` | `,,` | Operands are retained; the result is also pushed |
 
-### 6.3 Safe mode modifier
+### 6.3 Modifier combinations
 
-| Canonical | Sugar | Behavior |
-|-----------|-------|----------|
-| `SAFE` | `~` | If the operation raises an error, NIL is pushed instead of propagating the error |
+All modifier combinations are explicit and mechanically testable. Combined forms such as `.,,` and `..,,` are valid.
 
-### 6.4 Modifier combinations
-
-All modifier combinations are explicit and mechanically testable. Combined forms such as `..,,` and `~..` are valid.
-
-### 6.5 Additional syntax forms
+### 6.4 Additional syntax forms
 
 All built-in words have English-word-based canonical names (see Section 7). The forms below are syntactic sugar that the tokenizer maps to the corresponding canonical word; either spelling is accepted in source code and behaves identically at runtime.
 
@@ -419,7 +411,7 @@ Categories such as `CAST`, `TEXT`, `TENSOR`, and `RUNTIME` are documentation-onl
 
 ### 7.0 English-word-based naming
 
-All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+`, `-`, `*`, `/`, `%`, `=`, `<`, `<=`, `&`, `==`, `=>`, `?`, `!`, `.`, `..`, `,`, `,,`, `~`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
+All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+`, `-`, `*`, `/`, `%`, `=`, `<`, `<=`, `&`, `==`, `=>`, `?`, `!`, `.`, `..`, `,`, `,,`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
 
 | Canonical | Sugar | Canonical | Sugar |
 |-----------|-------|-----------|-------|
@@ -427,11 +419,11 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `SUB` | `-` | `STAK` | `..` |
 | `MUL` | `*` | `EAT` | `,` |
 | `DIV` | `/` | `KEEP` | `,,` |
-| `MOD` | `%` | `SAFE` | `~` |
-| `EQ` | `=` | `FORC` | `!` |
-| `NEQ` | `<>` | `PIPE` | `==` |
-| `LT` | `<` | `OR-NIL` | `=>` |
-| `LTE` | `<=` | `LOOKUP` | `?` |
+| `MOD` | `%` | `FORC` | `!` |
+| `EQ` | `=` | `PIPE` | `==` |
+| `NEQ` | `<>` | `OR-NIL` | `=>` |
+| `LT` | `<` | `LOOKUP` | `?` |
+| `LTE` | `<=` | | |
 | `GT` | `>` | | |
 | `GTE` | `>=` | | |
 | `AND` | `&` | | |
@@ -506,7 +498,7 @@ Arithmetic on scalars is performed directly on the continued-fraction representa
 
 Comparisons return a truth value with the `TruthValue` interpretation role: `true`, `false`, or — when the comparison is not decidable within the comparison budget (see below) — `unknown` (U, the third value of the three-valued logic of Section 7.5).
 
-The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`, `SAFE`).
+The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. `GT` and `GTE` are the strict mirrors of `LT` and `LTE`; `NEQ` is the negation of `EQ`. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (`TOP` / `STAK`, `EAT` / `KEEP`).
 
 Under `STAK` mode, ordering comparisons describe a sequence property of the consumed values: `LT` true iff strictly increasing, `LTE` non-decreasing, `GT` strictly decreasing, `GTE` non-increasing, `EQ` all equal, `NEQ` all adjacent pairs unequal.
 
@@ -701,7 +693,7 @@ A contract entry has the following fields, in addition to the existing identific
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
 
-`partiality` and `nil_policy` are independent axes. For example, `~/` (safe-mode division) is `Projecting` with `nil_policy = CreatesNil`. Under the Bubble Rule, bare `/`, `GET`, `NUM`, and `CHR` can also be `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
+`partiality` and `nil_policy` are independent axes. For example, under the Bubble Rule `/` (division) is `Projecting` with `nil_policy = CreatesNil`: `/`, `GET`, `NUM`, and `CHR` are `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
 
 Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting`: they are total because every well-shaped input yields a `TruthValue` result, projecting the undecidable case onto the truth value `unknown` (U) rather than raising. Their `nil_policy` is `Passthrough` (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a `TruthValue` result and **not** a `reason`-bearing NIL, so they are no longer classified `CreatesNil` for that case. (The `reason = undecidable` NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)
 
@@ -897,7 +889,7 @@ The Bubble Rule is the user-level failure model for well-formed partial operatio
 
 > If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.
 
-In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`. `NilReason::SafeCaught` is reserved for actual errors caught by the `SAFE` (`~`) boundary; `SAFE` does not rewrap a direct Bubble/NIL produced by a well-formed operation.
+In Japanese user-facing guidance this is summarized as: "できなかった -> 泡 / そもそも使い方が違う -> エラー". Internally, Bubble/NIL is represented by `Value::Nil` with `AbsenceMetadata` and a direct `NilReason`. A malformed operation raises an ordinary error, which propagates rather than becoming a value.
 
 Initial Core words following this rule include:
 
@@ -916,15 +908,9 @@ Initial Core words following this rule include:
 
 Operations that produce a value equal to their input are successful. Equal-value output is not an error.
 
-### 11.4 Safe mode behavior
+### 11.4 Error propagation
 
-`~` (`SAFE`) is the explicit projection operator for malformed-use errors that have not already become Bubble/NIL values. If the guarded word raises an error, the projected NIL carries `absence.reason = safeCaught` and preserves the original error category in `absence.caughtCategory` (for example `stackUnderflow`, `unknownWord`, or `structureError`). The error itself does not propagate.
-
-Stack discipline: when `~`-guarded execution raises an error, the stack is restored to the snapshot taken before the guarded word ran, then a single NIL with `absence.reason = safeCaught` is pushed. When the guarded word succeeds by producing a direct Bubble/NIL, `SAFE` leaves that Bubble/NIL and the word's normal stack effect unchanged. The semantic plane is normalized to the new stack length.
-
-The NIL passthrough rule (Section 4.5.1) means a NIL produced by a `~`-guarded operation continues to flow through subsequent NIL-passthrough words (Section 7.12) without raising `StructureError`. A pipeline can therefore use `OR-NIL` (`=>`) once at the end to supply a fallback value.
-
-`~` is **not** a generic exception swallower: the original error category and three-layer diagnosis are preserved on the resulting NIL for debugging, testing, and proof logging.
+Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a *well-formed* operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single `OR-NIL` (`=>`) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.
 
 ---
 
@@ -1000,11 +986,11 @@ For each Coreword, the test suite must exercise:
 
 ### 15.2 NIL reason coverage
 
-Every NIL-producing path must have at least one test that asserts both the surface NIL and the structured `absence` metadata. `SAFE`-projected NILs must additionally assert `absence.reason = safeCaught` and that the original error category survives in `absence.caughtCategory`. Tests must verify protocol strings, not Rust `Debug` output.
+Every NIL-producing path must have at least one test that asserts both the surface NIL and the structured `absence` metadata. Tests must verify protocol strings, not Rust `Debug` output.
 
 ### 15.3 MC/DC-style coverage for compound decisions
 
-Words whose behavior depends on more than one independent condition (e.g. `~ /` decides on left-operand validity, right-operand validity, right-operand zero-ness, NIL-passthrough applicability, and SAFE engagement) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
+Words whose behavior depends on more than one independent condition (e.g. `/` decides on left-operand validity, right-operand validity, right-operand zero-ness, and NIL-passthrough applicability) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.
 
 The three-valued logic words (`AND`, `OR`, `NOT`, Section 7.5) must cover every cell of the K3 truth tables — `AND` and `OR` over the nine {T, F, U}² combinations, `NOT` over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding `unknown` (U), and distinct irrationals deciding at a finite prefix.
 
@@ -1013,10 +999,6 @@ The three-valued logic words (`AND`, `OR`, `NOT`, Section 7.5) must cover every 
 NICF-accelerated comparison (Section 7.4.1.1) must cover: (i) a reference set of decided comparisons producing an identical `truthValue` whether reasoned about via the RCF or computed via the NICF expansion — across `Rational`, `AlgebraicSqrt`, and `Gosper` operands — so the acceleration never changes a decided order; (ii) `agreedPrefix` being monotone non-decreasing in the budget under NICF; and (iii) the normative tie-break of Section 4.2.5 yielding the specified semiregular digit on the singular `1/2`-remainder cases, including the round-half-down boundary.
 
 The propagation of U through comparison-dependent words (Section 7.4.3) must cover, for `MIN` and `MAX`: a decided comparison selecting the correct operand; an undecidable comparison yielding `unknown` with `diagnosis.agreedPrefix`; NIL-operand passthrough with NIL taking priority over a U-producing comparison; and the sequence-form short-circuit on the first undecidable pair. For `SORT`: a fully-decidable input (notably any vector of rationals) sorting to ascending order; an input with at least one undecidable pair yielding `unknown` for the whole result (never a partially-sorted vector) carrying `diagnosis.agreedPrefix`; and NIL handling. For `COND`: a definite-`true` guard firing its clause; a U guard **not** firing and falling through to the next clause; a U guard before a later definite-`true` guard selecting the later clause; and a U guard with no other match reaching the `IDLE`/else clause, or `CondExhausted` when none exists.
-
-### 15.4 Stack discipline under projection
-
-`SAFE`-guarded failures must restore the stack to the pre-call snapshot before pushing the projected NIL. Tests must verify the stack length, the semantic-plane length, and the absence of leaked partial intermediates.
 
 ---
 
@@ -1032,7 +1014,7 @@ A change is conformant only if all of the following hold:
 6. It improves or preserves AI-first structural clarity.
 7. Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.
 8. Every introduced or modified Coreword has a contract entry covering `partiality`, `nil_policy`, and `safety_level` (Section 7.14).
-9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0); `SAFE` projection preserves the original error category as `absence.caughtCategory` (Section 11.4).
+9. Every NIL-producing path attaches appropriate structured `absence` metadata (Section 4.5.0).
 10. Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.
 11. Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion in the comparison words produces the truth value `unknown` (U) rather than an error or a non-deterministic answer (Section 7.4.1).
 12. Source text contains no `(` or `)` outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).
@@ -1050,9 +1032,9 @@ Ajisai does not have a global "safe mode" that wraps evaluation. Ordinary value
 flow is **safe by design**: a well-formed operation that cannot produce a value
 yields a Bubble/NIL (Section 11.2), an observation that cannot decide a truth
 value yields the logical `Unknown` / Stagnation (Sections 4.5.2, 7.4.1), and a
-malformed use raises a channel error (Section 11.1). `SAFE` (`~`) is not a mode;
-it is the explicit spillway that projects a raised channel error onto a
-`safeCaught` NIL (Section 11.4).
+malformed use raises a channel error (Section 11.1). A raised channel error
+propagates and halts the current evaluation; Ajisai has no modifier or mode that
+converts an error into a value (Section 11.4).
 
 Two further families of controls complete the metaphor:
 

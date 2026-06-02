@@ -26,7 +26,7 @@ The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.�
 | Flow | ordinary values moving through the stack | Scalars, vectors, records, code blocks, handles |
 | Bubble | a well-formed operation could not produce a value | `NIL` with structured absence metadata |
 | Stagnation | a value exists, but the current observation cannot decide the next direction | logical `UNKNOWN` in Kleene three-valued logic |
-| Channel error | the operation or input shape is malformed | raised error, optionally projected by `SAFE` |
+| Channel error | the operation or input shape is malformed | raised error that propagates and halts evaluation |
 
 Ajisai keeps these cases separate. A bubble is absence. Stagnation is undecidability. An error is not a value in the stream.
 
@@ -73,17 +73,16 @@ This is part of Ajisai's Virtual Tensor Unit direction: optimize movement and sh
 
 Spec links: [§4.3 Vector](SPECIFICATION.md#43-vector), [§4.3.1 Internal representation classes](SPECIFICATION.md#431-internal-representation-classes), [§7.1 Vector operations](SPECIFICATION.md#71-vector-operations), [§7.2 Tensor operations](SPECIFICATION.md#72-tensor-operations), [VTU design note](docs/dev/virtual-tensor-unit-design.md)
 
-### 4) Modifiers: gates, branches, and spillways
+### 4) Modifiers: how a word touches the stream
 
 Ajisai modifiers control how a word touches the stream.
 
 - **Target mode** chooses where the word acts: `TOP` for the surface point, `STAK` for the whole stack.
 - **Consumption mode** chooses whether the input is consumed or preserved: `EAT` consumes, `KEEP` branches.
-- **Safe mode** (`~`) catches raised errors from the next word and projects them to `NIL` with `safeCaught` metadata.
 
-`SAFE` is not the main mechanism for ordinary partial operations. Under the Bubble Rule, many well-formed “could not produce a value” cases already produce reasoned `NIL` directly. `SAFE` is the explicit spillway for errors that would otherwise break the channel.
+There is no error-swallowing modifier. Partial failure of a well-formed operation is handled by the Bubble Rule, which produces a reasoned `NIL` directly; a malformed operation raises an error that propagates rather than becoming a value.
 
-Spec links: [§6 Modifiers](SPECIFICATION.md#6-modifiers), [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§6.3 Safe mode modifier](SPECIFICATION.md#63-safe-mode-modifier), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior)
+Spec links: [§6 Modifiers](SPECIFICATION.md#6-modifiers), [§6.1 Target modifiers](SPECIFICATION.md#61-target-modifiers), [§6.2 Consumption modifiers](SPECIFICATION.md#62-consumption-modifiers), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule), [§11.4 Error propagation](SPECIFICATION.md#114-error-propagation)
 
 ### 5) Words, modules, and contracts: searchable channels for humans and AI
 
@@ -104,9 +103,10 @@ global safe/unsafe switch. Ordinary value flow is safe by design:
 - an observation that cannot decide a truth value becomes **stagnation** (`UNKNOWN`),
 - a malformed use raises a **channel error**.
 
-`SAFE` (`~`) is not a mode. It is the explicit *spillway* that catches a raised
-channel error from the next word and projects it to `NIL` with `safeCaught`
-metadata, so a pipeline can end with a single `=>` fallback.
+There is no mode or modifier that converts an error into a value: a channel error
+propagates and halts evaluation, while well-formed partial failure already flows
+as a reasoned bubble that a single `=>` can turn into a fallback at the end of a
+pipeline.
 
 Two further controls complete the water metaphor — both are names for mechanisms
 Ajisai already has, not new subsystems:
@@ -121,7 +121,7 @@ Ajisai already has, not new subsystems:
   the logical `UNKNOWN` (stagnation), never a bubble — keeping operational
   absence and logical undecidability distinct.
 
-Spec links: [§4.5.2 NIL versus Unknown](SPECIFICATION.md#452-nil-versus-unknown), [§5.2 Two-plane architecture](SPECIFICATION.md#52-two-plane-architecture), [§5.3 Execution step limit](SPECIFICATION.md#53-execution-step-limit), [§7.4.1 Decidability and comparison budget](SPECIFICATION.md#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](SPECIFICATION.md#742-explicit-budget-comparison-compare-within), [§9 Module System](SPECIFICATION.md#9-module-system), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule), [§11.4 Safe mode behavior](SPECIFICATION.md#114-safe-mode-behavior), [Appendix A Gates and Water Levels](SPECIFICATION.md#appendix-a-gates-and-water-levels-non-normative-index)
+Spec links: [§4.5.2 NIL versus Unknown](SPECIFICATION.md#452-nil-versus-unknown), [§5.2 Two-plane architecture](SPECIFICATION.md#52-two-plane-architecture), [§5.3 Execution step limit](SPECIFICATION.md#53-execution-step-limit), [§7.4.1 Decidability and comparison budget](SPECIFICATION.md#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](SPECIFICATION.md#742-explicit-budget-comparison-compare-within), [§9 Module System](SPECIFICATION.md#9-module-system), [§11.2 Bubble Rule](SPECIFICATION.md#112-bubble-rule), [§11.4 Error propagation](SPECIFICATION.md#114-error-propagation), [Appendix A Gates and Water Levels](SPECIFICATION.md#appendix-a-gates-and-water-levels-non-normative-index)
 
 ---
 
