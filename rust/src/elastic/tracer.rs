@@ -17,7 +17,6 @@
 /// === Elastic Tracer Report ===
 ///   +                    calls=42  avg=0.011ms  total=0.5ms
 /// ```
-
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -52,7 +51,10 @@ lazy_static::lazy_static! {
 pub fn init_from_env() {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        if std::env::var("AJISAI_TRACE").map(|v| v == "1").unwrap_or(false) {
+        if std::env::var("AJISAI_TRACE")
+            .map(|v| v == "1")
+            .unwrap_or(false)
+        {
             TRACE_ENABLED.store(true, Ordering::Relaxed);
         }
     }
@@ -97,14 +99,17 @@ pub fn report() {
     let data = TRACE_DATA.lock().unwrap();
     eprintln!("\n=== Elastic Tracer Report ===");
 
-    let mut entries: Vec<(&String, u64)> =
-        data.call_counts.iter().map(|(k, &v)| (k, v)).collect();
+    let mut entries: Vec<(&String, u64)> = data.call_counts.iter().map(|(k, &v)| (k, v)).collect();
     entries.sort_by(|a, b| b.1.cmp(&a.1));
 
     for (word, count) in entries.iter().take(20) {
-        let total_ns  = data.total_nanos.get(*word).copied().unwrap_or(0);
-        let avg_ms    = if *count > 0 { total_ns as f64 / *count as f64 / 1_000_000.0 } else { 0.0 };
-        let total_ms  = total_ns as f64 / 1_000_000.0;
+        let total_ns = data.total_nanos.get(*word).copied().unwrap_or(0);
+        let avg_ms = if *count > 0 {
+            total_ns as f64 / *count as f64 / 1_000_000.0
+        } else {
+            0.0
+        };
+        let total_ms = total_ns as f64 / 1_000_000.0;
         eprintln!(
             "  {:<20} calls={:<6} avg={:.3}ms  total={:.1}ms",
             word, count, avg_ms, total_ms

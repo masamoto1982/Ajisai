@@ -1,12 +1,10 @@
-
-
+use super::super::Interpreter;
 use super::audio_types::{update_play_mode, PlayMode, WaveformType};
 use super::music_group::{explain_value, make_group, operand_children, GroupMode};
 use super::music_values::{
     make_duration, make_edo_pitch, make_hz_pitch, make_note, make_rest, make_scope, make_tuning,
     parse_ratio, record_kind, tuning_components, DURATION_KIND, PITCH_KIND, TUNING_KIND,
 };
-use super::super::Interpreter;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
 use crate::interpreter::{ConsumptionMode, OperationTargetMode};
@@ -14,18 +12,15 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
-
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Sequential);
     Ok(())
 }
 
-
 pub fn op_sim(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Simultaneous);
     Ok(())
 }
-
 
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     if let Some(f) = val.as_scalar() {
@@ -38,24 +33,19 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     None
 }
 
-
 pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-
-    let frac =
-        extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("SLOT requires a single number"))?;
-
+    let frac = extract_scalar_from_value(&val)
+        .ok_or_else(|| AjisaiError::from("SLOT requires a single number"))?;
 
     let seconds = frac
         .to_f64()
         .ok_or_else(|| AjisaiError::from("SLOT value too large"))?;
 
-
     if seconds <= 0.0 {
         return Err(AjisaiError::from("SLOT duration must be positive"));
     }
-
 
     if seconds < 0.01 {
         interp.output_buffer.push_str(&format!(
@@ -70,7 +60,6 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-
     interp
         .output_buffer
         .push_str(&format!("CONFIG:{{\"slot_duration\":{}}}\n", seconds));
@@ -78,16 +67,15 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let frac = extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("GAIN requires a number"))?;
+    let frac = extract_scalar_from_value(&val)
+        .ok_or_else(|| AjisaiError::from("GAIN requires a number"))?;
 
     let gain = frac
         .to_f64()
         .ok_or_else(|| AjisaiError::from("GAIN value too large"))?;
-
 
     let clamped = gain.clamp(0.0, 1.0);
 
@@ -98,7 +86,6 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-
     interp
         .output_buffer
         .push_str(&format!("EFFECT:{{\"gain\":{}}}\n", clamped));
@@ -106,22 +93,20 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
     interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
     Ok(())
 }
 
-
 pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    let frac = extract_scalar_from_value(&val).ok_or_else(|| AjisaiError::from("PAN requires a number"))?;
+    let frac = extract_scalar_from_value(&val)
+        .ok_or_else(|| AjisaiError::from("PAN requires a number"))?;
 
     let pan = frac
         .to_f64()
         .ok_or_else(|| AjisaiError::from("PAN value too large"))?;
-
 
     let clamped = pan.clamp(-1.0, 1.0);
 
@@ -132,7 +117,6 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-
     interp
         .output_buffer
         .push_str(&format!("EFFECT:{{\"pan\":{}}}\n", clamped));
@@ -140,12 +124,10 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_pan_reset(interp: &mut Interpreter) -> Result<()> {
     interp.output_buffer.push_str("EFFECT:{\"pan\":0.0}\n");
     Ok(())
 }
-
 
 pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
     interp
@@ -153,7 +135,6 @@ pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
         .push_str("EFFECT:{\"gain\":1.0,\"pan\":0.0}\n");
     Ok(())
 }
-
 
 /// Reject the whole-stack operation target mode for value constructors, which
 /// only have a well-defined effect on a fixed number of stack-top operands.
@@ -167,7 +148,6 @@ fn reject_stack_mode(interp: &Interpreter, word: &str) -> Result<()> {
     Ok(())
 }
 
-
 /// Clone the top `count` operands (stack order) without consuming them, so a
 /// constructor can validate before committing.
 fn peek_operands(interp: &Interpreter, count: usize) -> Result<Vec<Value>> {
@@ -178,7 +158,6 @@ fn peek_operands(interp: &Interpreter, count: usize) -> Result<Vec<Value>> {
     Ok(interp.stack[len - count..].to_vec())
 }
 
-
 /// Consume the operands (only in `Consume` mode) and push the constructed value.
 fn consume_and_push(interp: &mut Interpreter, count: usize, result: Value) {
     if interp.consumption_mode == ConsumptionMode::Consume {
@@ -188,14 +167,12 @@ fn consume_and_push(interp: &mut Interpreter, count: usize, result: Value) {
     interp.stack.push(result);
 }
 
-
 fn require_scalar(value: &Value, message: &str) -> Result<Fraction> {
     value
         .as_scalar()
         .cloned()
         .ok_or_else(|| AjisaiError::from(message))
 }
-
 
 fn require_positive_divisions(value: &Value, word: &str) -> Result<i64> {
     let divisions = extract_integer_from_value(value).map_err(|_| {
@@ -213,55 +190,42 @@ fn require_positive_divisions(value: &Value, word: &str) -> Result<i64> {
     Ok(divisions)
 }
 
-
 /// Build an explicit sequential music group from a vector.
 pub fn op_seq_group(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "generic", "SEQ-GROUP")
 }
-
 
 /// Build an explicit simultaneous music group from a vector.
 pub fn op_sim_group(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Simultaneous, "generic", "SIM-GROUP")
 }
 
-
 /// Build an explicit chord group (simultaneous playback) from a vector.
 pub fn op_chord(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Chord, "chord", "CHORD")
 }
-
 
 /// Build a music group with the role of a single melodic voice.
 pub fn op_voice(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "voice", "VOICE")
 }
 
-
 /// Build a music group with the role of an instrument track.
 pub fn op_track(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "track", "TRACK")
 }
-
 
 /// Build a music group with the role of a measure (bar).
 pub fn op_measure(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "measure", "MEASURE")
 }
 
-
 /// Build a music group with the role of a phrase.
 pub fn op_phrase(interp: &mut Interpreter) -> Result<()> {
     build_group(interp, GroupMode::Sequential, "phrase", "PHRASE")
 }
 
-
-fn build_group(
-    interp: &mut Interpreter,
-    mode: GroupMode,
-    role: &str,
-    word: &str,
-) -> Result<()> {
+fn build_group(interp: &mut Interpreter, mode: GroupMode, role: &str, word: &str) -> Result<()> {
     reject_stack_mode(interp, word)?;
     let operands = peek_operands(interp, 1)?;
     let children = operand_children(&operands[0], word)?;
@@ -270,30 +234,23 @@ fn build_group(
     Ok(())
 }
 
-
 /// Build a `music.pitch` from a direct frequency in Hz. The frequency is kept
 /// as an exact rational, so just-intonation ratios survive losslessly.
 pub fn op_hz(interp: &mut Interpreter) -> Result<()> {
     reject_stack_mode(interp, "HZ")?;
     let operands = peek_operands(interp, 1)?;
 
-    let hz = require_scalar(
-        &operands[0],
-        "MUSIC@HZ requires a number (frequency in Hz)",
-    )?;
+    let hz = require_scalar(&operands[0], "MUSIC@HZ requires a number (frequency in Hz)")?;
     let approx = hz
         .to_f64()
         .ok_or_else(|| AjisaiError::from("MUSIC@HZ frequency is too large"))?;
     if approx < 0.0 {
-        return Err(AjisaiError::from(
-            "MUSIC@HZ frequency must be non-negative",
-        ));
+        return Err(AjisaiError::from("MUSIC@HZ frequency must be non-negative"));
     }
 
     consume_and_push(interp, 1, make_hz_pitch(hz, "explicit:MUSIC@HZ"));
     Ok(())
 }
-
 
 /// Build a `music.duration` from a number of seconds.
 pub fn op_dur(interp: &mut Interpreter) -> Result<()> {
@@ -314,7 +271,6 @@ pub fn op_dur(interp: &mut Interpreter) -> Result<()> {
     consume_and_push(interp, 1, make_duration(seconds, "explicit:MUSIC@DUR"));
     Ok(())
 }
-
 
 /// Combine a `music.pitch` and a `music.duration` into a `music.note`.
 pub fn op_note(interp: &mut Interpreter) -> Result<()> {
@@ -341,7 +297,6 @@ pub fn op_note(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 /// Build a `music.rest` from a `music.duration`.
 pub fn op_rest(interp: &mut Interpreter) -> Result<()> {
     reject_stack_mode(interp, "REST")?;
@@ -357,7 +312,6 @@ pub fn op_rest(interp: &mut Interpreter) -> Result<()> {
     consume_and_push(interp, 1, rest);
     Ok(())
 }
-
 
 /// Build a `music.tuning` for equal division of the octave (EDO).
 pub fn op_edo(interp: &mut Interpreter) -> Result<()> {
@@ -389,7 +343,6 @@ pub fn op_edo(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 /// Build a `music.tuning` for equal division of an arbitrary ratio (EDR),
 /// supporting non-octave tunings such as the Bohlen-Pierce tritave (3/1).
 pub fn op_edr(interp: &mut Interpreter) -> Result<()> {
@@ -410,9 +363,7 @@ pub fn op_edr(interp: &mut Interpreter) -> Result<()> {
     }
 
     let (num, den) = parse_ratio(&operands[1]).ok_or_else(|| {
-        AjisaiError::from(
-            "MUSIC@EDR equave must be a ratio: a number or a [ num den ] vector",
-        )
+        AjisaiError::from("MUSIC@EDR equave must be a ratio: a number or a [ num den ] vector")
     })?;
     let num_f = num
         .to_f64()
@@ -433,7 +384,6 @@ pub fn op_edr(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 /// Resolve a step within a `music.tuning` into a `music.pitch`.
 pub fn op_step(interp: &mut Interpreter) -> Result<()> {
     reject_stack_mode(interp, "STEP")?;
@@ -452,7 +402,6 @@ pub fn op_step(interp: &mut Interpreter) -> Result<()> {
     consume_and_push(interp, 2, pitch);
     Ok(())
 }
-
 
 /// Bind a tuning over a body of musical content. Inside the resulting scope
 /// bare integers are interpreted as steps of the tuning at MUSIC@PLAY time.
@@ -480,7 +429,6 @@ pub fn op_with_tuning(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 /// Explain how a value would be interpreted by MUSIC@PLAY. Diagnostic only:
 /// the inspected value is always left on the stack.
 pub fn op_explain(interp: &mut Interpreter) -> Result<()> {
@@ -497,18 +445,13 @@ pub fn op_explain(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
-
     let params = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-
     let target = interp.stack.pop().ok_or_else(|| {
-
         interp.stack.push(params.clone());
         AjisaiError::StackUnderflow
     })?;
-
 
     if !params.is_vector() {
         interp.stack.push(target);
@@ -524,13 +467,11 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-
     if !target.is_vector() {
         interp.stack.push(target);
         interp.stack.push(params);
         return Err(AjisaiError::from("ADSR target must be a vector"));
     }
-
 
     let param_at = |i: usize, label: &str| -> Result<f64> {
         params
@@ -542,7 +483,6 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
     let decay = param_at(1, "decay")?;
     let sustain = param_at(2, "sustain")?;
     let release = param_at(3, "release")?;
-
 
     if attack < 0.0 || decay < 0.0 || release < 0.0 {
         interp.stack.push(target);
@@ -557,40 +497,32 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-
     interp.stack.push(target);
     Ok(())
 }
-
 
 pub fn op_sine(interp: &mut Interpreter) -> Result<()> {
     apply_waveform(interp, WaveformType::Sine)
 }
 
-
 pub fn op_square(interp: &mut Interpreter) -> Result<()> {
     apply_waveform(interp, WaveformType::Square)
 }
-
 
 pub fn op_saw(interp: &mut Interpreter) -> Result<()> {
     apply_waveform(interp, WaveformType::Sawtooth)
 }
 
-
 pub fn op_tri(interp: &mut Interpreter) -> Result<()> {
     apply_waveform(interp, WaveformType::Triangle)
 }
 
-
 fn apply_waveform(interp: &mut Interpreter, _waveform: WaveformType) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
 
     if !val.is_vector() {
         return Err(AjisaiError::from("Waveform word requires a vector"));
     }
-
 
     interp.stack.push(val);
     Ok(())

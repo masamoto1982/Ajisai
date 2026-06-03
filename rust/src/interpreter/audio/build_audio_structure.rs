@@ -1,14 +1,11 @@
-
-
+use super::super::{Interpreter, OperationTargetMode};
 use super::audio_types::{
     update_play_mode, AudioStructure, Envelope, PlayCommand, PlayMode, WaveformType,
 };
-use super::super::{Interpreter, OperationTargetMode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{is_string_value, value_as_string};
 use crate::types::{Value, ValueData};
 use num_traits::ToPrimitive;
-
 
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
     let mode = super::lookup_play_mode(interp);
@@ -16,24 +13,20 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
 
     match target {
         OperationTargetMode::StackTop => {
-
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
             emit_play_command(&structure, &mut interp.output_buffer);
         }
         OperationTargetMode::Stack => {
-
             let values: Vec<Value> = interp.stack.drain(..).collect();
             if values.is_empty() {
                 return Err(AjisaiError::StackUnderflow);
             }
 
-
             let structures: Vec<AudioStructure> = values
                 .iter()
                 .map(|v| build_audio_structure(v, PlayMode::Sequential, &mut interp.output_buffer))
                 .collect::<Result<Vec<_>>>()?;
-
 
             let combined = match mode {
                 PlayMode::Sequential => AudioStructure::Seq {
@@ -52,13 +45,11 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-
     update_play_mode(interp, PlayMode::Sequential);
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
     Ok(())
 }
-
 
 pub(crate) fn build_audio_structure(
     value: &Value,
@@ -67,7 +58,6 @@ pub(crate) fn build_audio_structure(
 ) -> Result<AudioStructure> {
     build_audio_structure_ctx(value, mode, output, None)
 }
-
 
 /// `tuning`, when set, marks an active `MUSIC@WITH-TUNING` scope: bare scalars
 /// are read as steps of that tuning (numerator = step, denominator = duration)
@@ -132,9 +122,7 @@ fn build_audio_structure_ctx(
             .map(|e| build_audio_structure_ctx(e, PlayMode::Sequential, output, tuning))
             .collect::<Result<Vec<_>>>()?
             .into_iter()
-            .filter(
-                |s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()),
-            )
+            .filter(|s| !matches!(s, AudioStructure::Seq { children, .. } if children.is_empty()))
             .collect();
 
         return match group.mode {
@@ -143,12 +131,13 @@ fn build_audio_structure_ctx(
                 envelope,
                 waveform,
             }),
-            super::music_group::GroupMode::Simultaneous
-            | super::music_group::GroupMode::Chord => Ok(AudioStructure::Sim {
-                children: group_children,
-                envelope,
-                waveform,
-            }),
+            super::music_group::GroupMode::Simultaneous | super::music_group::GroupMode::Chord => {
+                Ok(AudioStructure::Sim {
+                    children: group_children,
+                    envelope,
+                    waveform,
+                })
+            }
         };
     }
 
@@ -222,7 +211,6 @@ fn build_audio_structure_ctx(
     })
 }
 
-
 fn tone_or_rest(
     frequency: f64,
     duration: f64,
@@ -248,7 +236,6 @@ fn tone_or_rest(
     })
 }
 
-
 fn note_to_structure(
     note: &Value,
     envelope: Option<Envelope>,
@@ -264,7 +251,6 @@ fn note_to_structure(
         .ok_or_else(|| AjisaiError::from("Invalid music.note: unresolvable duration"))?;
     tone_or_rest(frequency, duration, envelope, waveform, output)
 }
-
 
 fn check_audible_range(freq: f64, output: &mut String) {
     const MIN_AUDIBLE: f64 = 20.0;
@@ -283,7 +269,6 @@ fn check_audible_range(freq: f64, output: &mut String) {
     }
 }
 
-
 fn emit_play_command(structure: &AudioStructure, output: &mut String) {
     let command = PlayCommand {
         command_type: "play".to_string(),
@@ -291,7 +276,6 @@ fn emit_play_command(structure: &AudioStructure, output: &mut String) {
     };
 
     if let Ok(json) = serde_json::to_string(&command) {
-
         if !output.is_empty() && !output.ends_with('\n') {
             output.push('\n');
         }

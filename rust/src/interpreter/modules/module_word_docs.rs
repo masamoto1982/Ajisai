@@ -13,10 +13,7 @@ pub(super) struct ModuleWordDoc {
     pub stack_effect: &'static str,
 }
 
-pub(super) fn lookup_module_word_doc(
-    module: &str,
-    word: &str,
-) -> Option<&'static ModuleWordDoc> {
+pub(super) fn lookup_module_word_doc(module: &str, word: &str) -> Option<&'static ModuleWordDoc> {
     MODULE_WORD_DOCS
         .iter()
         .find(|d| d.module == module && d.word == word)
@@ -44,10 +41,7 @@ pub(super) fn assert_every_word_has_doc(specs: &[ModuleSpec]) -> Result<(), Stri
                         return Err(format!("{}@{} has empty role", d.module, d.word));
                     }
                     if d.stack_effect.is_empty() {
-                        return Err(format!(
-                            "{}@{} has empty stack_effect",
-                            d.module, d.word
-                        ));
+                        return Err(format!("{}@{} has empty stack_effect", d.module, d.word));
                     }
                 }
             }

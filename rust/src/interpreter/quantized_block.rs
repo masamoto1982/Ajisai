@@ -413,9 +413,7 @@ fn try_user_word_is_pure(
 /// rather than caught later in the analyzer.
 pub fn is_quantizable_block(tokens: &[Token]) -> bool {
     !tokens.is_empty()
-        && !tokens
-            .iter()
-            .any(|t| matches!(t, Token::LineBreak))
+        && !tokens.iter().any(|t| matches!(t, Token::LineBreak))
         && !tokens.iter().any(token_is_impure_builtin)
 }
 

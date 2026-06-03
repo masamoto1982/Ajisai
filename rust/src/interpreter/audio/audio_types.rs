@@ -1,9 +1,6 @@
-
-
 use super::super::Interpreter;
 use crate::types::ValueExt;
 use serde::Serialize;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -53,7 +50,6 @@ impl ValueExt for AudioHint {
     }
 }
 
-
 pub(crate) struct MusicState {
     pub play_mode: PlayMode,
 }
@@ -80,14 +76,12 @@ pub(crate) fn update_play_mode(interp: &mut Interpreter, mode: PlayMode) {
     );
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum PlayMode {
     #[default]
     Sequential,
     Simultaneous,
 }
-
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
@@ -121,11 +115,9 @@ pub enum AudioStructure {
     },
 }
 
-
 pub(crate) fn is_default_waveform(wf: &WaveformType) -> bool {
     *wf == WaveformType::Sine
 }
-
 
 #[derive(Debug, Serialize)]
 pub(crate) struct PlayCommand {

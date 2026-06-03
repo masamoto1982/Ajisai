@@ -8,7 +8,8 @@ use crate::types::Value;
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> = code_val.as_code_block().map(|t| t.to_vec());
+    let plain_tokens: Option<Vec<crate::types::Token>> =
+        code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -200,16 +201,14 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
             for item in targets {
                 let fold_res = match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        execute_hedged_fold_kernel(
-                            interp,
-                            "FOLD",
-                            qb,
-                            plain_tokens.as_deref(),
-                            accumulator,
-                            item,
-                        )
-                    }
+                    ExecutableCode::QuantizedBlock(qb) => execute_hedged_fold_kernel(
+                        interp,
+                        "FOLD",
+                        qb,
+                        plain_tokens.as_deref(),
+                        accumulator,
+                        item,
+                    ),
                     _ => {
                         interp.stack.clear();
                         interp.stack.push(accumulator);
@@ -322,14 +321,10 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                 }
 
                 if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                    let yielded = unwrapped
-                        .child(0)
-                        .expect("len==2 implies child(0) exists");
+                    let yielded = unwrapped.child(0).expect("len==2 implies child(0) exists");
                     results.push(yielded);
 
-                    let next_state = unwrapped
-                        .child(1)
-                        .expect("len==2 implies child(1) exists");
+                    let next_state = unwrapped.child(1).expect("len==2 implies child(1) exists");
                     if next_state.is_nil() {
                         break;
                     }
@@ -406,14 +401,12 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
                         }
 
                         if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                            let yielded = unwrapped
-                                .child(0)
-                                .expect("len==2 implies child(0) exists");
+                            let yielded =
+                                unwrapped.child(0).expect("len==2 implies child(0) exists");
                             results.push(yielded);
 
-                            let next_state = unwrapped
-                                .child(1)
-                                .expect("len==2 implies child(1) exists");
+                            let next_state =
+                                unwrapped.child(1).expect("len==2 implies child(1) exists");
                             if next_state.is_nil() {
                                 break;
                             }
@@ -453,7 +446,8 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> = code_val.as_code_block().map(|t| t.to_vec());
+    let plain_tokens: Option<Vec<crate::types::Token>> =
+        code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -623,16 +617,14 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
             for item in targets {
                 let fold_res = match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        execute_hedged_fold_kernel(
-                            interp,
-                            "SCAN",
-                            qb,
-                            plain_tokens.as_deref(),
-                            accumulator,
-                            item,
-                        )
-                    }
+                    ExecutableCode::QuantizedBlock(qb) => execute_hedged_fold_kernel(
+                        interp,
+                        "SCAN",
+                        qb,
+                        plain_tokens.as_deref(),
+                        accumulator,
+                        item,
+                    ),
                     _ => {
                         interp.stack.clear();
                         interp.stack.push(accumulator);

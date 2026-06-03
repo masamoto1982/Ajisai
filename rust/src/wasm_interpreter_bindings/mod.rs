@@ -2,9 +2,9 @@ use crate::interpreter::Interpreter;
 use crate::types::Token;
 use wasm_bindgen::prelude::*;
 
-pub(crate) mod wasm_value_conversion;
 mod wasm_interpreter_execution;
 mod wasm_interpreter_state;
+pub(crate) mod wasm_value_conversion;
 
 /// Install console_error_panic_hook so any panic on the WASM side
 /// surfaces in the browser console with a JS-friendly stack trace

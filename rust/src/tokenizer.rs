@@ -108,10 +108,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             if i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
                 let start = i;
                 i += 1;
-                while i < chars.len()
-                    && !chars[i].is_whitespace()
-                    && !is_special_char(chars[i])
-                {
+                while i < chars.len() && !chars[i].is_whitespace() && !is_special_char(chars[i]) {
                     i += 1;
                 }
                 let token_str: String = chars[start..i].iter().collect();

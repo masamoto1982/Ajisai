@@ -11,7 +11,6 @@ async fn test_play_integration() {
 
     let output = interp.collect_output();
 
-
     assert!(
         output.contains("AUDIO:"),
         "Output should contain AUDIO command: {}",
@@ -27,9 +26,7 @@ async fn test_play_integration() {
 async fn test_seq_play_integration() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    let result = interp
-        .execute("[ 440 550 660 ] MUSIC@SEQ MUSIC@PLAY")
-        .await;
+    let result = interp.execute("[ 440 550 660 ] MUSIC@SEQ MUSIC@PLAY").await;
     assert!(
         result.is_ok(),
         "SEQ MUSIC@PLAY should succeed: {:?}",
@@ -47,9 +44,7 @@ async fn test_seq_play_integration() {
 async fn test_sim_play_integration() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-    let result = interp
-        .execute("[ 440 550 660 ] MUSIC@SIM MUSIC@PLAY")
-        .await;
+    let result = interp.execute("[ 440 550 660 ] MUSIC@SIM MUSIC@PLAY").await;
     assert!(
         result.is_ok(),
         "SIM MUSIC@PLAY should succeed: {:?}",
@@ -58,11 +53,7 @@ async fn test_sim_play_integration() {
 
     let output = interp.collect_output();
 
-
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -83,7 +74,6 @@ async fn test_multitrack_play() {
         output.contains("\"type\":\"sim\""),
         "Should contain sim structure for multitrack"
     );
-
 
     assert!(
         interp.get_stack().is_empty(),
@@ -111,7 +101,6 @@ async fn test_multitrack_seq_play() {
         "Should contain seq structure for multitrack"
     );
 
-
     assert!(
         interp.get_stack().is_empty(),
         "Stack should be empty after .. MUSIC@SEQ MUSIC@PLAY"
@@ -120,7 +109,6 @@ async fn test_multitrack_seq_play() {
 
 #[tokio::test]
 async fn test_multitrack_play_consumes_all() {
-
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp
@@ -132,7 +120,6 @@ async fn test_multitrack_play_consumes_all() {
         result
     );
 
-
     assert!(
         interp.get_stack().is_empty(),
         "Stack should be completely empty after playing 3 tracks"
@@ -141,8 +128,6 @@ async fn test_multitrack_play_consumes_all() {
 
 #[tokio::test]
 async fn test_play_with_duration() {
-
-
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp.execute("[ 440/3 550/1 660/7 ] MUSIC@PLAY").await;
@@ -153,16 +138,11 @@ async fn test_play_with_duration() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
 async fn test_play_with_zero_rest() {
-
-
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp.execute("[ 440 0/2 550 ] MUSIC@PLAY").await;
@@ -173,18 +153,13 @@ async fn test_play_with_zero_rest() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
-
 
 #[tokio::test]
 async fn test_chord_marks_as_simultaneous() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
-
 
     let result = interp
         .execute("[ 440 550 660 ] MUSIC@CHORD MUSIC@PLAY")
@@ -196,10 +171,7 @@ async fn test_chord_marks_as_simultaneous() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -215,7 +187,6 @@ async fn test_adsr_sets_envelope() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-
     let result = interp
         .execute("[ 440 ] [ 0.05 0.1 0.8 0.2 ] MUSIC@ADSR MUSIC@PLAY")
         .await;
@@ -227,10 +198,7 @@ async fn test_adsr_sets_envelope() {
 
     let output = interp.collect_output();
 
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -244,7 +212,6 @@ async fn test_adsr_requires_4_elements() {
 
 #[tokio::test]
 async fn test_adsr_sustain_validation() {
-
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp
@@ -266,10 +233,7 @@ async fn test_square_waveform() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -285,10 +249,7 @@ async fn test_saw_waveform() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -304,15 +265,11 @@ async fn test_tri_waveform() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
 async fn test_sine_is_default_not_serialized() {
-
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
     let result = interp.execute("[ 440 ] MUSIC@SINE MUSIC@PLAY").await;
@@ -512,8 +469,11 @@ async fn test_combined_chord_adsr_waveform() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-
-    let result = interp.execute("[ 440 550 660 ] MUSIC@CHORD [ 0.01 0.1 0.7 0.3 ] MUSIC@ADSR MUSIC@SQUARE MUSIC@PLAY").await;
+    let result = interp
+        .execute(
+            "[ 440 550 660 ] MUSIC@CHORD [ 0.01 0.1 0.7 0.3 ] MUSIC@ADSR MUSIC@SQUARE MUSIC@PLAY",
+        )
+        .await;
     assert!(
         result.is_ok(),
         "Combined CHORD ADSR SQUARE PLAY should succeed: {:?}",
@@ -521,10 +481,7 @@ async fn test_combined_chord_adsr_waveform() {
     );
 
     let output = interp.collect_output();
-    assert!(
-        output.contains("AUDIO:"),
-        "Should contain AUDIO command"
-    );
+    assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
 }
 
 #[tokio::test]
@@ -579,9 +536,7 @@ async fn test_rest_plays_as_rest() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-    let result = interp
-        .execute("1 MUSIC@DUR MUSIC@REST MUSIC@PLAY")
-        .await;
+    let result = interp.execute("1 MUSIC@DUR MUSIC@REST MUSIC@PLAY").await;
     assert!(result.is_ok(), "REST/PLAY should succeed: {:?}", result);
 
     let output = interp.collect_output();
@@ -669,7 +624,11 @@ async fn test_hz_respects_keep_mode() {
 
     // ,, is the KEEP modifier: the operand must remain on the stack.
     let result = interp.execute("440 ,, MUSIC@HZ").await;
-    assert!(result.is_ok(), "HZ in KEEP mode should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "HZ in KEEP mode should succeed: {:?}",
+        result
+    );
 
     assert_eq!(
         interp.get_stack().len(),
@@ -721,10 +680,7 @@ async fn test_explain_describes_pitch_and_note() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-    interp
-        .execute("440 MUSIC@HZ MUSIC@EXPLAIN")
-        .await
-        .unwrap();
+    interp.execute("440 MUSIC@HZ MUSIC@EXPLAIN").await.unwrap();
     let pitch_output = interp.collect_output();
     assert!(
         pitch_output.contains("Pitch:"),
@@ -752,7 +708,11 @@ async fn test_raw_tensor_vector_plays_all_children() {
     interp.execute("'music' IMPORT").await.unwrap();
 
     let result = interp.execute("[ 440 550 660 ] MUSIC@PLAY").await;
-    assert!(result.is_ok(), "Raw vector PLAY should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Raw vector PLAY should succeed: {:?}",
+        result
+    );
 
     let output = interp.collect_output();
     assert!(
@@ -769,9 +729,7 @@ async fn test_voice_group_explains_as_voice() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-    let result = interp
-        .execute("[ 440 550 ] MUSIC@VOICE MUSIC@PLAY")
-        .await;
+    let result = interp.execute("[ 440 550 ] MUSIC@VOICE MUSIC@PLAY").await;
     assert!(result.is_ok(), "VOICE PLAY should succeed: {:?}", result);
     let output = interp.collect_output();
     assert!(
@@ -876,7 +834,9 @@ async fn test_with_tuning_rejects_non_tuning_operand() {
     let mut interp = Interpreter::new();
     interp.execute("'music' IMPORT").await.unwrap();
 
-    let result = interp.execute("[ 0 2 4 ] [ 0 2 4 ] MUSIC@WITH-TUNING").await;
+    let result = interp
+        .execute("[ 0 2 4 ] [ 0 2 4 ] MUSIC@WITH-TUNING")
+        .await;
     assert!(
         result.is_err(),
         "WITH-TUNING without a music.tuning operand should fail"

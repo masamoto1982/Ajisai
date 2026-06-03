@@ -103,7 +103,11 @@ async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
     let stack = stack_of("'math' IMPORT 2 SQRT").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
-    assert_eq!(type_of(&node), "number", "√2 (RawNumber) serializes as number");
+    assert_eq!(
+        type_of(&node),
+        "number",
+        "√2 (RawNumber) serializes as number"
+    );
     // The numeric value is present (the rational approximation).
     let value = field(&node, "value");
     assert!(field(&value, "numerator").as_string().is_some());

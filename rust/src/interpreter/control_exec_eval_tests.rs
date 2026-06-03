@@ -4,7 +4,6 @@
 mod tests {
     use crate::interpreter::Interpreter;
 
-
     #[tokio::test]
     async fn test_exec_stack_top_simple() {
         let mut interp = Interpreter::new();
@@ -99,7 +98,6 @@ mod tests {
             }
         }
     }
-
 
     #[tokio::test]
     async fn test_eval_stack_top_simple() {

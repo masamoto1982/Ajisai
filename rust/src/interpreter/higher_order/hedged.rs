@@ -70,8 +70,7 @@ pub(crate) fn execute_hedged_map_kernel(
     };
     if fast_guarded_mode(interp.elastic_mode()) {
         if is_quantized_block_guard_valid(interp, qb) {
-            return execute_quantized_map_kernel(interp, qb, elem)
-                .map(normalize_map_kernel_result);
+            return execute_quantized_map_kernel(interp, qb, elem).map(normalize_map_kernel_result);
         }
         interp.runtime_metrics.hedged_race_fallback_count += 1;
         interp.push_hedged_trace(format!(

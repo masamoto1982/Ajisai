@@ -11,7 +11,9 @@ mod tests {
     #[test]
     fn available_modules_cover_all_specced_modules() {
         let names = available_module_names();
-        for expected in ["MUSIC", "JSON", "IO", "TIME", "CRYPTO", "ALGO", "MATH", "SERIAL"] {
+        for expected in [
+            "MUSIC", "JSON", "IO", "TIME", "CRYPTO", "ALGO", "MATH", "SERIAL",
+        ] {
             assert!(
                 names.contains(&expected),
                 "available module list should include {}",
@@ -27,7 +29,9 @@ mod tests {
         let names: Vec<&str> = catalog.iter().map(|w| w.short_name).collect();
         assert!(names.contains(&"PARSE"));
         assert!(names.contains(&"STRINGIFY"));
-        assert!(!catalog.iter().any(|w| w.is_sample && w.short_name == "PARSE"));
+        assert!(!catalog
+            .iter()
+            .any(|w| w.is_sample && w.short_name == "PARSE"));
     }
 
     #[test]
@@ -75,6 +79,12 @@ mod tests {
     #[test]
     fn restore_import_entry_unknown_module_returns_false() {
         let mut interp = Interpreter::new();
-        assert!(!restore_import_entry(&mut interp, "NOPE", true, vec![], vec![]));
+        assert!(!restore_import_entry(
+            &mut interp,
+            "NOPE",
+            true,
+            vec![],
+            vec![]
+        ));
     }
 }

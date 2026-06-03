@@ -109,7 +109,11 @@ mod dimension_limit_tests {
             "2D outermost should be [ ], got: {}",
             result
         );
-        assert!(result.contains("[ 1/1 2/1 ]"), "2D inner should use [ ], got: {}", result);
+        assert!(
+            result.contains("[ 1/1 2/1 ]"),
+            "2D inner should use [ ], got: {}",
+            result
+        );
     }
 
     #[tokio::test]

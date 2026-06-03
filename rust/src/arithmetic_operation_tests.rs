@@ -746,7 +746,6 @@ mod ai_first_comparison_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 3, "KEEP must retain both operands plus result");
     }
-
 }
 
 #[cfg(test)]

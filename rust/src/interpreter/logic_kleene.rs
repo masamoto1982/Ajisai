@@ -310,14 +310,18 @@ mod tests {
         let u_k = u_with_prefix(4);
         let ff = f();
         // U(k) AND FALSE = FALSE (F absorbs); no agreedPrefix carried.
-        let result =
-            into_value_with_diagnosis(and(Ternary::classify(&u_k), Ternary::classify(&ff)), &[&u_k, &ff]);
+        let result = into_value_with_diagnosis(
+            and(Ternary::classify(&u_k), Ternary::classify(&ff)),
+            &[&u_k, &ff],
+        );
         assert_eq!(result.truth_value(), Some("false"));
         assert_eq!(agreed_prefix_of(&result), None);
         // U(k) AND NIL = NIL (NIL priority, SPEC §4.5.2); stays operational NIL.
         let nn = n();
-        let result =
-            into_value_with_diagnosis(and(Ternary::classify(&u_k), Ternary::classify(&nn)), &[&u_k, &nn]);
+        let result = into_value_with_diagnosis(
+            and(Ternary::classify(&u_k), Ternary::classify(&nn)),
+            &[&u_k, &nn],
+        );
         assert!(result.is_nil() && !result.is_unknown());
     }
 

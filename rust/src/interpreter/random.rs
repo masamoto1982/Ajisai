@@ -230,9 +230,7 @@ mod tests {
     async fn test_csprng_small_denominator_efficiency() {
         let mut interp = Interpreter::new();
 
-        let result = interp
-            .execute("'crypto' IMPORT [ 2 ] [ 50 ] CSPRNG")
-            .await;
+        let result = interp.execute("'crypto' IMPORT [ 2 ] [ 50 ] CSPRNG").await;
         assert!(result.is_ok());
 
         let val = &interp.stack[0];

@@ -32,8 +32,8 @@ pub mod quantized_block;
 pub mod random;
 pub mod redundancy_layer;
 mod resolve_cache;
-mod shadow_validation;
 pub mod serial;
+mod shadow_validation;
 pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
@@ -53,6 +53,10 @@ mod execution_loop;
 mod execute_builtin;
 
 #[cfg(test)]
+mod algo_ops_tests;
+#[cfg(test)]
+mod arithmetic_exact_div_tests;
+#[cfg(test)]
 mod child_runtime_tests;
 #[cfg(test)]
 mod control_cond_tests;
@@ -69,17 +73,7 @@ mod dictionary_tier_tests;
 #[cfg(test)]
 mod error_flow_trace_tests;
 #[cfg(test)]
-mod algo_ops_tests;
-#[cfg(test)]
 mod hash_tests;
-#[cfg(test)]
-mod math_ops_tests;
-#[cfg(test)]
-mod arithmetic_exact_div_tests;
-#[cfg(test)]
-mod nil_unknown_firewall_tests;
-#[cfg(test)]
-mod nil_conformance_tests;
 #[cfg(test)]
 mod higher_order_fold_tests;
 #[cfg(test)]
@@ -91,11 +85,17 @@ mod interpreter_execution_tests;
 #[cfg(test)]
 mod interpreter_mode_tests;
 #[cfg(test)]
-mod module_unimport_tests;
+mod math_ops_tests;
 #[cfg(test)]
 mod module_catalog_tests;
 #[cfg(test)]
+mod module_unimport_tests;
+#[cfg(test)]
+mod nil_conformance_tests;
+#[cfg(test)]
 mod nil_reason_tests;
+#[cfg(test)]
+mod nil_unknown_firewall_tests;
 
 pub use interpreter_core::*;
 

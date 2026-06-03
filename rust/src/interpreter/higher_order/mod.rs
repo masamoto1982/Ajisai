@@ -51,4 +51,3 @@ pub(crate) fn try_bulk_quantized_predicate_pub(
 ) -> Option<fast_kernels::BulkPredicateResult> {
     fast_kernels::try_bulk_quantized_predicate(interp, qb, target)
 }
-

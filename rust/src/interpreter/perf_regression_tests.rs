@@ -108,16 +108,14 @@ fn run_loop(
         ..Default::default()
     };
 
-    let plan_total =
-        delta.compiled_plan_cache_hit_count + delta.compiled_plan_cache_miss_count;
+    let plan_total = delta.compiled_plan_cache_hit_count + delta.compiled_plan_cache_miss_count;
     let hit_rate = if plan_total > 0 {
         (delta.compiled_plan_cache_hit_count as f64 / plan_total as f64) * 100.0
     } else {
         0.0
     };
     let expected_total_quant = (iterations as u64) * expected_quant_calls_per_iter.max(1);
-    let quant_rate = (delta.quantized_block_use_count as f64 / expected_total_quant as f64)
-        * 100.0;
+    let quant_rate = (delta.quantized_block_use_count as f64 / expected_total_quant as f64) * 100.0;
     append_perf_jsonl(&PerfJsonLine {
         label: label.to_string(),
         iterations,
@@ -150,8 +148,7 @@ fn run_loop(
     #[cfg(feature = "trace-compile")]
     eprintln!(
         "[metrics] quant_build={} quant_use={}",
-        delta.quantized_block_build_count,
-        delta.quantized_block_use_count
+        delta.quantized_block_build_count, delta.quantized_block_use_count
     );
 
     (elapsed, delta)
@@ -165,18 +162,10 @@ fn perf_filter_map_fold_reports_metrics() {
         11,
         "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER",
     );
-    let (map_elapsed, map_metrics) = run_loop(
-        "MAP",
-        1000,
-        10,
-        "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 1 ] + } MAP",
-    );
-    let (fold_elapsed, fold_metrics) = run_loop(
-        "FOLD",
-        500,
-        10,
-        "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD",
-    );
+    let (map_elapsed, map_metrics) =
+        run_loop("MAP", 1000, 10, "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 1 ] + } MAP");
+    let (fold_elapsed, fold_metrics) =
+        run_loop("FOLD", 500, 10, "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD");
 
     assert!(filter_elapsed < PERF_LOOP_SOFT_LIMIT);
     assert!(map_elapsed < PERF_LOOP_SOFT_LIMIT);
@@ -198,7 +187,8 @@ fn perf_filter_map_fold_reports_metrics() {
 fn perf_scan_any_all_count_reports_quantized_usage() {
     let (_scan_elapsed, scan_metrics) = run_loop("SCAN", 500, 5, "[ 1 2 3 4 5 ] [ 0 ] { + } SCAN");
     let (_any_elapsed, any_metrics) = run_loop("ANY", 1000, 3, "[ 1 2 3 4 5 ] { [ 3 ] = } ANY");
-    let (_all_elapsed, all_metrics) = run_loop("ALL", 1000, 5, "[ 1 2 3 4 5 ] { [ 0 ] <= NOT } ALL");
+    let (_all_elapsed, all_metrics) =
+        run_loop("ALL", 1000, 5, "[ 1 2 3 4 5 ] { [ 0 ] <= NOT } ALL");
     let (_count_elapsed, count_metrics) = run_loop(
         "COUNT",
         1000,

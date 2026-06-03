@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, ErrorCategory, NilReason, Result};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, ExecutionLine, Token, Value};
+use crate::types::{ExecutionLine, Interpretation, Token, Value};
 
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
@@ -366,10 +366,7 @@ impl Interpreter {
                                         absence: None,
                                         stack_len_before,
                                         stack_len_after: self.stack.len(),
-                                        message: format!(
-                                            "word error word={} error={}",
-                                            upper, err
-                                        ),
+                                        message: format!("word error word={} error={}", upper, err),
                                         diagnosis: Some(diagnosis),
                                     });
                                     return Err(err);

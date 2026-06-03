@@ -31,8 +31,7 @@ mod tests {
         let val = &interp.stack[3];
 
         assert!(
-            !val
-                .as_scalar()
+            !val.as_scalar()
                 .expect("Expected scalar boolean result")
                 .is_zero(),
             "Expected TRUE from comparison"
@@ -92,8 +91,7 @@ ADDTEST
             let only = val.child(0).expect("len==1 implies child(0) exists");
             {
                 assert_eq!(
-                    only
-                        .as_scalar()
+                    only.as_scalar()
                         .expect("Expected scalar")
                         .numerator()
                         .to_string(),
@@ -150,8 +148,7 @@ ADDTEST
             let only = val.child(0).expect("len==1 implies child(0) exists");
             {
                 assert_eq!(
-                    only
-                        .as_scalar()
+                    only.as_scalar()
                         .expect("Expected scalar")
                         .numerator()
                         .to_string(),
@@ -185,8 +182,7 @@ ADDTEST
             let only = val.child(0).expect("len==1 implies child(0) exists");
             {
                 assert_eq!(
-                    only
-                        .as_scalar()
+                    only.as_scalar()
                         .expect("Expected scalar")
                         .numerator()
                         .to_string(),
@@ -196,7 +192,6 @@ ADDTEST
             }
         }
     }
-
 }
 
 #[tokio::test]
@@ -228,12 +223,20 @@ async fn numbers_render_as_canonical_fractions_on_stack() {
 
 #[tokio::test]
 async fn comparison_words_return_scalar_booleans() {
-    let cases = [("1 2 LT", true), ("2 2 LTE", true), ("2 1 LT", false), ("1 1 EQ", true), ("1 2 EQ", false)];
+    let cases = [
+        ("1 2 LT", true),
+        ("2 2 LTE", true),
+        ("2 1 LT", false),
+        ("1 1 EQ", true),
+        ("1 2 EQ", false),
+    ];
     for (program, expected) in cases {
         let mut interp = crate::interpreter::Interpreter::new();
         interp.execute(program).await.unwrap();
         assert_eq!(interp.stack.len(), 1, "program: {program}");
-        let scalar = interp.stack[0].as_scalar().expect("comparison should return scalar boolean");
+        let scalar = interp.stack[0]
+            .as_scalar()
+            .expect("comparison should return scalar boolean");
         assert_eq!(scalar.is_zero(), !expected, "program: {program}");
     }
 }
