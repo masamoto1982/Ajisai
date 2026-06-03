@@ -48,12 +48,14 @@ impl Interpreter {
         let saved_consumption = self.consumption_mode;
         let saved_output = std::mem::take(&mut self.output_buffer);
         let saved_io_output = std::mem::take(&mut self.io_output_buffer);
+        let saved_host_effects = std::mem::take(&mut self.host_effects);
 
         let fast_result = execute_compiled_plan(self, compiled);
         let fast_stack = self.stack.clone();
         let fast_hints = self.semantic_registry.stack_hints.clone();
         let fast_output = std::mem::take(&mut self.output_buffer);
         let fast_io_output = std::mem::take(&mut self.io_output_buffer);
+        let fast_host_effects = std::mem::take(&mut self.host_effects);
 
         self.stack = saved_stack;
         self.semantic_registry.stack_hints = saved_hints;
@@ -65,9 +67,11 @@ impl Interpreter {
         let plain_hints = self.semantic_registry.stack_hints.clone();
         let plain_output = std::mem::take(&mut self.output_buffer);
         let plain_io_output = std::mem::take(&mut self.io_output_buffer);
+        let plain_host_effects = std::mem::take(&mut self.host_effects);
 
         self.output_buffer = saved_output;
         self.io_output_buffer = saved_io_output;
+        self.host_effects = saved_host_effects;
 
         match (&fast_result, &plain_result) {
             (Ok(()), Ok(())) if fast_stack == plain_stack => {
@@ -76,6 +80,7 @@ impl Interpreter {
                 self.semantic_registry.stack_hints = fast_hints;
                 self.output_buffer.push_str(&fast_output);
                 self.io_output_buffer.push_str(&fast_io_output);
+                self.host_effects.extend(fast_host_effects.clone());
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: false,
@@ -88,6 +93,7 @@ impl Interpreter {
                 self.semantic_registry.stack_hints = plain_hints;
                 self.output_buffer.push_str(&plain_output);
                 self.io_output_buffer.push_str(&plain_io_output);
+                self.host_effects.extend(plain_host_effects);
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: true,
@@ -102,6 +108,7 @@ impl Interpreter {
                 self.semantic_registry.stack_hints = fast_hints;
                 self.output_buffer.push_str(&fast_output);
                 self.io_output_buffer.push_str(&fast_io_output);
+                self.host_effects.extend(fast_host_effects);
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: false,

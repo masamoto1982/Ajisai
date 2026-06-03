@@ -63,7 +63,7 @@ fn decode_entities(s: &str) -> String {
 }
 
 /// Collapse inter-token whitespace to single spaces and trim. This is the only
-/// normalization applied to results (and to effect payloads).
+/// normalization applied to results. Host-effect payload strings are exact.
 fn normalize_ws(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
@@ -319,7 +319,7 @@ async fn run_case(case: &Case) -> std::result::Result<(), String> {
                 act.kind()
             ));
         }
-        if normalize_ws(&exp.payload) != normalize_ws(act.payload()) {
+        if exp.payload != act.payload() {
             return Err(format!(
                 "effect[{i}] payload mismatch:\n  expected: {:?}\n  actual:   {:?}",
                 exp.payload,
