@@ -213,6 +213,19 @@ pub struct Interpreter {
     pub(crate) user_dictionaries: HashMap<String, UserDictionary>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
+    /// Structured, ordered host effects produced during execution. This is the
+    /// language-independent observation channel for the conformance suite
+    /// (`tests/conformance/`): two implementations agree iff they emit the same
+    /// effect列. The legacy `output_buffer` string protocol is still emitted in
+    /// parallel so existing front-ends keep working.
+    ///
+    // TODO(portability): tag each coreword with its portability profile so that
+    // Core vs Hosted membership is machine-checkable. Sketch:
+    //   pub enum WordProfile { Core, Hosted(HostCapability), PlatformSpecific }
+    // A Hosted word would then declare the single capability it requires, and a
+    // missing capability would fail in a specified way rather than at the call
+    // site.
+    pub(crate) host_effects: Vec<super::HostEffect>,
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target_mode: OperationTargetMode,
     pub(crate) consumption_mode: ConsumptionMode,
@@ -280,6 +293,7 @@ impl Interpreter {
             user_dictionaries: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
+            host_effects: Vec::new(),
             definition_to_load: None,
             operation_target_mode: OperationTargetMode::StackTop,
             consumption_mode: ConsumptionMode::Consume,
@@ -484,6 +498,7 @@ impl Interpreter {
         self.user_dictionaries.clear();
         self.dependents.clear();
         self.output_buffer.clear();
+        self.host_effects.clear();
         self.definition_to_load = None;
         self.reset_execution_modes();
         self.force_flag = false;
@@ -511,6 +526,13 @@ impl Interpreter {
 
     pub fn collect_output(&mut self) -> String {
         std::mem::take(&mut self.output_buffer)
+    }
+
+    /// The ordered sequence of structured host effects produced so far. This is
+    /// the language-independent observation channel used by the conformance
+    /// suite, distinct from the human-readable `output_buffer`.
+    pub fn host_effects(&self) -> &[super::HostEffect] {
+        &self.host_effects
     }
 
     pub fn get_stack(&self) -> &Stack {

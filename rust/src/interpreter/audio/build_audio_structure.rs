@@ -15,7 +15,11 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
         OperationTargetMode::StackTop => {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
-            emit_play_command(&structure, &mut interp.output_buffer);
+            if let Some(json) = emit_play_command(&structure, &mut interp.output_buffer) {
+                interp
+                    .host_effects
+                    .push(crate::interpreter::HostEffect::Audio(json));
+            }
         }
         OperationTargetMode::Stack => {
             let values: Vec<Value> = interp.stack.drain(..).collect();
@@ -41,7 +45,11 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
                 },
             };
 
-            emit_play_command(&combined, &mut interp.output_buffer);
+            if let Some(json) = emit_play_command(&combined, &mut interp.output_buffer) {
+                interp
+                    .host_effects
+                    .push(crate::interpreter::HostEffect::Audio(json));
+            }
         }
     }
 
@@ -269,18 +277,25 @@ fn check_audible_range(freq: f64, output: &mut String) {
     }
 }
 
-fn emit_play_command(structure: &AudioStructure, output: &mut String) {
+/// Emit the `play` command. Writes the legacy `AUDIO:{json}` protocol line into
+/// `output` and returns the JSON payload so the caller can also record a
+/// structured `HostEffect::Audio` (the conformance observation channel).
+fn emit_play_command(structure: &AudioStructure, output: &mut String) -> Option<String> {
     let command = PlayCommand {
         command_type: "play".to_string(),
         structure: structure.clone(),
     };
 
-    if let Ok(json) = serde_json::to_string(&command) {
-        if !output.is_empty() && !output.ends_with('\n') {
+    match serde_json::to_string(&command) {
+        Ok(json) => {
+            if !output.is_empty() && !output.ends_with('\n') {
+                output.push('\n');
+            }
+            output.push_str("AUDIO:");
+            output.push_str(&json);
             output.push('\n');
+            Some(json)
         }
-        output.push_str("AUDIO:");
-        output.push_str(&json);
-        output.push('\n');
+        Err(_) => None,
     }
 }

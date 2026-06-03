@@ -1,2 +1,11 @@
-[target.wasm32-unknown-unknown]
-rustflags = ["-C", "target-feature=+simd128"]
+# Baseline wasm build does NOT force SIMD. WASM SIMD (`simd128`) was previously
+# enabled globally here, which made every wasm build assume a SIMD-capable host
+# and required the intrinsics kernel in interpreter/simd_ops.rs to compile.
+# Baseline portability comes first: simd_ops.rs falls back to a scalar kernel
+# unless `simd128` is enabled, so the default wasm build is host-agnostic.
+#
+# TODO(portability): add an explicit optimized build path (e.g. npm
+# `build:wasm:simd`) that re-enables SIMD with:
+#   [target.wasm32-unknown-unknown]
+#   rustflags = ["-C", "target-feature=+simd128"]
+# selecting the intrinsics kernel in simd_ops.rs.

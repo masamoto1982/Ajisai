@@ -19,6 +19,7 @@ pub mod execution_plan_set;
 pub mod hash;
 pub mod higher_order;
 pub mod higher_order_fold;
+pub mod host;
 pub mod interval_ops;
 pub mod io;
 pub mod json;
@@ -98,6 +99,8 @@ mod nil_reason_tests;
 mod nil_unknown_firewall_tests;
 
 pub use interpreter_core::*;
+
+pub use host::{HostCapability, HostEffect};
 
 pub use crate::types::WordDefinition;
 

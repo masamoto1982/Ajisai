@@ -84,7 +84,16 @@ fn apply_simd_binary(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -
     Some(create_value_from_integer_vector(op(&va, &vb)))
 }
 
-#[cfg(target_arch = "wasm32")]
+// SIMD intrinsics path: only when wasm32 is built with the `simd128` target
+// feature enabled. This is no longer the baseline default (see
+// `.cargo/config.toml`); a future `build:wasm:simd` path can opt in with
+// `-C target-feature=+simd128` to take this kernel. Without simd128 the scalar
+// fallback below is used so the baseline wasm build always compiles.
+//
+// TODO(portability): expose this as an explicit optimized build target
+// (e.g. npm `build:wasm:simd`) and/or runtime feature detection, rather than a
+// global compile-time flag.
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm_impl {
     use std::arch::wasm32::*;
 
@@ -217,7 +226,9 @@ mod wasm_impl {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+// Scalar fallback: native builds, and any wasm build without `simd128`
+// (now the baseline). Same observable result as the intrinsics path.
+#[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
 mod wasm_impl {
     #[inline]
     pub fn simd_add(a: &[i64], b: &[i64]) -> Vec<i64> {

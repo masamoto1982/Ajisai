@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ajisai Conformance Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; line-height: 1.5; }
+    .ajisai-case { border: 1px solid #ccc; border-radius: 6px; padding: 1rem; margin: 1rem 0; }
+    .ajisai-case h3 { margin-top: 0; }
+    .ajisai-source, .ajisai-expect-result { background: #f6f6f6; padding: .5rem; border-radius: 4px; white-space: pre-wrap; }
+    .label { font-weight: bold; color: #555; }
+    .ajisai-effect { display: inline-block; background: #eef; padding: .1rem .4rem; border-radius: 4px; margin: .1rem; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<h1>Ajisai Conformance Suite</h1>
+
+<p>
+  This file defines the <em>phenomenon</em> of Ajisai language-independently.
+  An implementation is an Ajisai implementation if and only if it reproduces
+  every case below (see <code>PORTABILITY.md</code> and
+  <code>SPECIFICATION.md</code> &sect; "Conformance and Identity").
+</p>
+
+<h2>Contract</h2>
+<ol>
+  <li>Each case is a <code>&lt;section class="ajisai-case"&gt;</code> with an
+      <code>id</code> and a <code>data-category</code>.</li>
+  <li><code>ajisai-source</code> is run as an Ajisai program.</li>
+  <li>The observed final result &mdash; the whole stack, each value rendered
+      value-by-value &mdash; must equal <code>ajisai-expect-result</code> after
+      normalization.</li>
+  <li>The fired host effects must equal the ordered list of
+      <code>ajisai-effect</code> elements inside
+      <code>ajisai-expect-effects</code>: both <code>data-kind</code> and
+      <code>data-payload</code>, in order. The observation target is the
+      structured host-effect channel, never the human-readable output buffer.
+      An empty <code>ajisai-expect-effects</code> means no effects.</li>
+</ol>
+
+<h2>Normalization (minimal, strict-leaning)</h2>
+<p>
+  Only whitespace <strong>between tokens</strong> (spaces, tabs, newlines) is
+  normalized, because whitespace is a separator in Ajisai's value model, not a
+  value. Everything else is matched exactly: numeric notation (every number is
+  a reduced <code>numerator/denominator</code>, integers included &mdash;
+  <code>3</code> renders as <code>3/1</code>), element order, nesting, and the
+  spellings <code>NIL</code> and <code>UNKNOWN</code>. This line may only be
+  <em>loosened</em> in future, never tightened, and any change must record why.
+</p>
+<p>
+  Note: Ajisai has no empty-vector literal &mdash; <code>[ ]</code> is rejected
+  by the value model ("Use NIL for empty values"). NIL is the canonical
+  absence, so there is no "empty vector vs NIL" case to encode here; the
+  distinction does not arise as an observable literal.
+</p>
+
+<!-- ============================ CORE ============================ -->
+
+<section class="ajisai-case" id="core-vector-self-evaluates" data-category="core">
+  <h3>A vector literal evaluates to itself</h3>
+  <div><span class="label">source</span></div>
+  <pre class="ajisai-source">[ 1 2 3 ]</pre>
+  <div><span class="label">expect result</span></div>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nesting-preserved" data-category="core">
+  <h3>Nesting is preserved</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ]</pre>
+  <pre class="ajisai-expect-result">[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-exact-addition" data-category="core">
+  <h3>Exact addition</h3>
+  <pre class="ajisai-source">3 4 +</pre>
+  <pre class="ajisai-expect-result">7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-bignum-does-not-fall-to-float" data-category="core">
+  <h3>Arbitrary-precision integers do not fall back to float</h3>
+  <pre class="ajisai-source">1000000000000 1000000000000 *</pre>
+  <pre class="ajisai-expect-result">1000000000000000000000000/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-exact-division" data-category="core">
+  <h3>Exact division yields an exact rational</h3>
+  <pre class="ajisai-source">1 3 /</pre>
+  <pre class="ajisai-expect-result">1/3</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-division-by-zero-is-nil" data-category="core">
+  <h3>Division by zero is NIL (a specified absence, not a trap)</h3>
+  <pre class="ajisai-source">1 0 /</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map" data-category="core">
+  <h3>MAP applies a user block element-wise</h3>
+  <pre class="ajisai-source">{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</pre>
+  <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fold" data-category="core">
+  <h3>FOLD reduces with an initial accumulator</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 ] [ 0 ] '+' FOLD</pre>
+  <pre class="ajisai-expect-result">[ 10/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-spelling" data-category="core">
+  <h3>NIL spells as NIL</h3>
+  <pre class="ajisai-source">NIL</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-propagation" data-category="core">
+  <h3>NIL propagates through arithmetic</h3>
+  <pre class="ajisai-source">NIL 1 +</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-unknown-spelling" data-category="core">
+  <h3>UNKNOWN spells as UNKNOWN (an undecidable comparison)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</pre>
+  <pre class="ajisai-expect-result">UNKNOWN</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-unknown-propagation" data-category="core">
+  <h3>UNKNOWN propagates through Kleene AND</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ TRUE AND</pre>
+  <pre class="ajisai-expect-result">UNKNOWN</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-user-definition-resolved" data-category="core">
+  <h3>A user-defined word resolves through the dictionary</h3>
+  <pre class="ajisai-source">{ [ 10 ] + } 'ADD10' DEF 5 ADD10</pre>
+  <pre class="ajisai-expect-result">[ 15/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ============================ HOSTED ============================ -->
+
+<section class="ajisai-case" id="hosted-serial-list-ports" data-category="hosted">
+  <h3>SERIAL@LIST-PORTS fires one structured serial host effect</h3>
+  <pre class="ajisai-source">'serial' IMPORT SERIAL@LIST-PORTS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"listPorts"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-open-then-write" data-category="hosted">
+  <h3>SERIAL open then write fires two serial effects in order</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN [ 1 2 3 ] SERIAL@WRITE</pre>
+  <pre class="ajisai-expect-result">'COM1'</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"bytes":[1,2,3],"op":"write","portId":"COM1"}'></span>
+  </div>
+</section>
+
+</body>
+</html>
