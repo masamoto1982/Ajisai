@@ -33,15 +33,20 @@ pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
                 ));
             }
             let temp_vec: Value = Value::from_vector(all_elements);
-            value_as_string(&temp_vec)
-                .ok_or_else(|| AjisaiError::from("EVAL: expected convertible stack, got non-string data"))?
+            value_as_string(&temp_vec).ok_or_else(|| {
+                AjisaiError::from("EVAL: expected convertible stack, got non-string data")
+            })?
         }
     };
 
     interp.operation_target_mode = OperationTargetMode::StackTop;
 
-    let tokens: Vec<Token> = crate::tokenizer::tokenize(&source_code)
-        .map_err(|e| AjisaiError::from(format!("EVAL: expected valid syntax, got tokenization error: {}", e)))?;
+    let tokens: Vec<Token> = crate::tokenizer::tokenize(&source_code).map_err(|e| {
+        AjisaiError::from(format!(
+            "EVAL: expected valid syntax, got tokenization error: {}",
+            e
+        ))
+    })?;
 
     interp.execute_section_core(&tokens, 0)?;
 

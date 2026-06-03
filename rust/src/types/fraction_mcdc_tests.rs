@@ -183,7 +183,11 @@ mod as_usize_small {
     #[test]
     fn aq_ver_001_c_row2_integer_negative_returns_none() {
         let f = small(-1, 1);
-        assert_eq!(f.as_usize(), None, "negative integer must not coerce to usize");
+        assert_eq!(
+            f.as_usize(),
+            None,
+            "negative integer must not coerce to usize"
+        );
     }
 
     #[test]
@@ -466,7 +470,10 @@ mod create_from_i128_small_big_boundary {
         // before line 267 evaluates `d >= 0`. The result still depends on
         // A,B,D. Here d = -3 is normalized to d = +3 with sign flipped onto n.
         let f = Fraction::create_from_i128(5, -3);
-        assert!(f.is_small(), "after normalization both n,d fit i64 -> Small");
+        assert!(
+            f.is_small(),
+            "after normalization both n,d fit i64 -> Small"
+        );
         assert_eq!(f, small(-5, 3));
     }
 }
@@ -523,7 +530,10 @@ mod add_small_fast_path_entry_guard {
         // Expected: 2*i64::MAX + 1
         let expected_num = BigInt::from(i64::MAX) * BigInt::from(2i64) + BigInt::from(1i64);
         assert_eq!(result, Fraction::new(expected_num, BigInt::from(1)));
-        assert!(!result.is_small(), "Big + Small with overflow must stay Big");
+        assert!(
+            !result.is_small(),
+            "Big + Small with overflow must stay Big"
+        );
     }
 
     #[test]
@@ -535,7 +545,10 @@ mod add_small_fast_path_entry_guard {
         let result = small_one.add(&big);
         let expected_num = BigInt::from(i64::MAX) * BigInt::from(2i64) + BigInt::from(1i64);
         assert_eq!(result, Fraction::new(expected_num, BigInt::from(1)));
-        assert!(!result.is_small(), "Small + Big with overflow must stay Big");
+        assert!(
+            !result.is_small(),
+            "Small + Big with overflow must stay Big"
+        );
     }
 }
 
@@ -600,7 +613,11 @@ mod add_checked_chain_defensive {
         let lhs = small(i64::MAX, i64::MAX);
         let rhs = small(i64::MAX, i64::MAX);
         let result = lhs.add(&rhs);
-        assert_eq!(result, small(2, 1), "i64::MAX/i64::MAX + i64::MAX/i64::MAX = 2");
+        assert_eq!(
+            result,
+            small(2, 1),
+            "i64::MAX/i64::MAX + i64::MAX/i64::MAX = 2"
+        );
     }
 
     #[test]

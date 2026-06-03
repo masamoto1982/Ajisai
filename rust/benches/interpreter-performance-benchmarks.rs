@@ -1,31 +1,93 @@
-use criterion::{criterion_group, criterion_main, Criterion, black_box};
-use std::collections::HashMap;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use num_bigint::BigInt;
 use num_traits::One;
+use std::collections::HashMap;
 
-use ajisai_core::types::fraction::Fraction;
 use ajisai_core::elastic::ElasticMode;
 use ajisai_core::interpreter::Interpreter;
-
+use ajisai_core::types::fraction::Fraction;
 
 fn build_ajisai_dictionary() -> HashMap<String, String> {
     let words = vec![
-        "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "SPLIT",
-        "CONCAT", "REVERSE", "RANGE", "REORDER", "COLLECT", "SORT",
-        "SHAPE", "RANK", "RESHAPE", "TRANSPOSE", "FILL",
-        "FLOOR", "CEIL", "ROUND", "MOD",
-        "+", "-", "*", "/", "=", "<", "<=",
-        "AND", "OR", "NOT",
-        "PRINT", "DEF", "DEL", "?",
-        "MAP", "FILTER", "FOLD", "TIMES", "EXEC", "EVAL",
-        "TRUE", "FALSE", "NIL",
-        "STR", "NUM", "BOOL", "CHR", "CHARS", "JOIN",
-        "NOW", "DATETIME", "TIMESTAMP", "CSPRNG", "HASH",
-        "SEQ", "SIM", "SLOT", "GAIN", "GAIN-RESET",
-        "PAN", "PAN-RESET", "FX-RESET", "PLAY", "CHORD", "ADSR",
-        "SINE", "SQUARE", "SAW", "TRI",
-        "PARSE", "STRINGIFY", "INPUT", "OUTPUT",
-        "JSON-GET", "JSON-KEYS", "JSON-SET", "JSON-EXPORT",
+        "GET",
+        "INSERT",
+        "REPLACE",
+        "REMOVE",
+        "LENGTH",
+        "TAKE",
+        "SPLIT",
+        "CONCAT",
+        "REVERSE",
+        "RANGE",
+        "REORDER",
+        "COLLECT",
+        "SORT",
+        "SHAPE",
+        "RANK",
+        "RESHAPE",
+        "TRANSPOSE",
+        "FILL",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "MOD",
+        "+",
+        "-",
+        "*",
+        "/",
+        "=",
+        "<",
+        "<=",
+        "AND",
+        "OR",
+        "NOT",
+        "PRINT",
+        "DEF",
+        "DEL",
+        "?",
+        "MAP",
+        "FILTER",
+        "FOLD",
+        "TIMES",
+        "EXEC",
+        "EVAL",
+        "TRUE",
+        "FALSE",
+        "NIL",
+        "STR",
+        "NUM",
+        "BOOL",
+        "CHR",
+        "CHARS",
+        "JOIN",
+        "NOW",
+        "DATETIME",
+        "TIMESTAMP",
+        "CSPRNG",
+        "HASH",
+        "SEQ",
+        "SIM",
+        "SLOT",
+        "GAIN",
+        "GAIN-RESET",
+        "PAN",
+        "PAN-RESET",
+        "FX-RESET",
+        "PLAY",
+        "CHORD",
+        "ADSR",
+        "SINE",
+        "SQUARE",
+        "SAW",
+        "TRI",
+        "PARSE",
+        "STRINGIFY",
+        "INPUT",
+        "OUTPUT",
+        "JSON-GET",
+        "JSON-KEYS",
+        "JSON-SET",
+        "JSON-EXPORT",
         "!",
     ];
     let mut map = HashMap::new();
@@ -61,7 +123,6 @@ fn bench_hashmap_lookup_miss(c: &mut Criterion) {
     });
 }
 
-
 fn bench_fraction_new_small_integers(c: &mut Criterion) {
     c.bench_function("fraction_new_small_integers", |b| {
         b.iter(|| {
@@ -87,7 +148,6 @@ fn bench_fraction_new_large_gcd(c: &mut Criterion) {
         })
     });
 }
-
 
 fn bench_fraction_add_i64_path(c: &mut Criterion) {
     let a = Fraction::new(BigInt::from(3), BigInt::from(7));
@@ -201,14 +261,14 @@ fn bench_fraction_eq_fraction(c: &mut Criterion) {
     });
 }
 
-
 fn bench_interpreter_simple_arithmetic(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     c.bench_function("interp_simple_arithmetic", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("[ 1 2 3 ] [ 4 5 6 ] +")).unwrap();
+            rt.block_on(interp.execute("[ 1 2 3 ] [ 4 5 6 ] +"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -276,7 +336,8 @@ fn bench_interpreter_sort(c: &mut Criterion) {
     c.bench_function("interp_sort", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("'algo' IMPORT [ 5 3 8 1 9 2 7 4 10 6 ] SORT")).unwrap();
+            rt.block_on(interp.execute("'algo' IMPORT [ 5 3 8 1 9 2 7 4 10 6 ] SORT"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -288,9 +349,8 @@ fn bench_interpreter_word_lookup_overhead(c: &mut Criterion) {
     c.bench_function("interp_many_word_lookups", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute(
-                "'algo' IMPORT [ 3 1 2 ] SORT == ,, LENGTH"
-            )).unwrap();
+            rt.block_on(interp.execute("'algo' IMPORT [ 3 1 2 ] SORT == ,, LENGTH"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -330,7 +390,8 @@ fn bench_interpreter_vector_construction(c: &mut Criterion) {
     c.bench_function("interp_vector_construction", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("[ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ]")).unwrap();
+            rt.block_on(interp.execute("[ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ]"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -342,9 +403,8 @@ fn bench_interpreter_fraction_heavy(c: &mut Criterion) {
     c.bench_function("interp_fraction_heavy", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute(
-                "[ 1/3 2/7 5/11 3/13 7/17 ] [ 1/2 3/5 4/9 2/3 1/7 ] *"
-            )).unwrap();
+            rt.block_on(interp.execute("[ 1/3 2/7 5/11 3/13 7/17 ] [ 1/2 3/5 4/9 2/3 1/7 ] *"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -365,7 +425,8 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
     c.bench_function("interp_reuse_add", |b| {
         b.iter(|| {
             interp.update_stack(Vec::new());
-            rt.block_on(interp.execute("[ 1 2 3 ] [ 4 5 6 ] +")).unwrap();
+            rt.block_on(interp.execute("[ 1 2 3 ] [ 4 5 6 ] +"))
+                .unwrap();
             black_box(&interp);
         })
     });
@@ -374,19 +435,71 @@ fn bench_interpreter_reuse(c: &mut Criterion) {
 fn bench_interpreter_hof_mode_matrix(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let scenarios: [(&str, &str, ElasticMode); 13] = [
-        ("map_arith_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::Greedy),
-        ("map_arith_hedged", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::HedgedSafe),
-        ("map_arith_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP", ElasticMode::FastGuarded),
-        ("map_predicate_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP", ElasticMode::Greedy),
-        ("map_predicate_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP", ElasticMode::FastGuarded),
-        ("filter_greedy", "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER", ElasticMode::Greedy),
-        ("filter_fast_guarded", "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER", ElasticMode::FastGuarded),
-        ("fold_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD", ElasticMode::Greedy),
-        ("fold_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD", ElasticMode::FastGuarded),
-        ("scan_greedy", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN", ElasticMode::Greedy),
-        ("scan_fast_guarded", "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN", ElasticMode::FastGuarded),
-        ("epoch_change_hedged", "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP", ElasticMode::HedgedSafe),
-        ("epoch_change_fast_guarded", "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP", ElasticMode::FastGuarded),
+        (
+            "map_arith_greedy",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP",
+            ElasticMode::Greedy,
+        ),
+        (
+            "map_arith_hedged",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP",
+            ElasticMode::HedgedSafe,
+        ),
+        (
+            "map_arith_fast_guarded",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 2 ] * } MAP",
+            ElasticMode::FastGuarded,
+        ),
+        (
+            "map_predicate_greedy",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP",
+            ElasticMode::Greedy,
+        ),
+        (
+            "map_predicate_fast_guarded",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] < } MAP",
+            ElasticMode::FastGuarded,
+        ),
+        (
+            "filter_greedy",
+            "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER",
+            ElasticMode::Greedy,
+        ),
+        (
+            "filter_fast_guarded",
+            "[ -5 -4 -3 -2 -1 0 1 2 3 4 5 ] { [ 0 ] <= NOT } FILTER",
+            ElasticMode::FastGuarded,
+        ),
+        (
+            "fold_greedy",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD",
+            ElasticMode::Greedy,
+        ),
+        (
+            "fold_fast_guarded",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } FOLD",
+            ElasticMode::FastGuarded,
+        ),
+        (
+            "scan_greedy",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN",
+            ElasticMode::Greedy,
+        ),
+        (
+            "scan_fast_guarded",
+            "[ 1 2 3 4 5 6 7 8 9 10 ] [ 0 ] { + } SCAN",
+            ElasticMode::FastGuarded,
+        ),
+        (
+            "epoch_change_hedged",
+            "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP",
+            ElasticMode::HedgedSafe,
+        ),
+        (
+            "epoch_change_fast_guarded",
+            "{ [2] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP { [3] * } 'DBL' DEF [1 2 3 4] 'DBL' MAP",
+            ElasticMode::FastGuarded,
+        ),
     ];
 
     c.bench_function("interp_hof_mode_matrix", |b| {
@@ -417,7 +530,6 @@ fn bench_interpreter_hof_mode_matrix(c: &mut Criterion) {
         })
     });
 }
-
 
 const TRIE_ALPHABET_SIZE: usize = 40;
 
@@ -485,22 +597,82 @@ impl Default for TrieNode {
 
 fn build_trie_dictionary() -> TrieNode {
     let words = vec![
-        "GET", "INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE", "SPLIT",
-        "CONCAT", "REVERSE", "RANGE", "REORDER", "COLLECT", "SORT",
-        "SHAPE", "RANK", "RESHAPE", "TRANSPOSE", "FILL",
-        "FLOOR", "CEIL", "ROUND", "MOD",
-        "+", "-", "*", "/", "=", "<", "<=",
-        "AND", "OR", "NOT",
-        "PRINT", "DEF", "DEL", "?",
-        "MAP", "FILTER", "FOLD", "TIMES", "EXEC", "EVAL",
-        "TRUE", "FALSE", "NIL",
-        "STR", "NUM", "BOOL", "CHR", "CHARS", "JOIN",
-        "CSPRNG", "HASH",
-        "SEQ", "SIM", "SLOT", "GAIN", "GAIN-RESET",
-        "PAN", "PAN-RESET", "FX-RESET", "PLAY", "CHORD", "ADSR",
-        "SINE", "SQUARE", "SAW", "TRI",
-        "PARSE", "STRINGIFY", "INPUT", "OUTPUT",
-        "JSON-GET", "JSON-KEYS", "JSON-SET", "JSON-EXPORT",
+        "GET",
+        "INSERT",
+        "REPLACE",
+        "REMOVE",
+        "LENGTH",
+        "TAKE",
+        "SPLIT",
+        "CONCAT",
+        "REVERSE",
+        "RANGE",
+        "REORDER",
+        "COLLECT",
+        "SORT",
+        "SHAPE",
+        "RANK",
+        "RESHAPE",
+        "TRANSPOSE",
+        "FILL",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "MOD",
+        "+",
+        "-",
+        "*",
+        "/",
+        "=",
+        "<",
+        "<=",
+        "AND",
+        "OR",
+        "NOT",
+        "PRINT",
+        "DEF",
+        "DEL",
+        "?",
+        "MAP",
+        "FILTER",
+        "FOLD",
+        "TIMES",
+        "EXEC",
+        "EVAL",
+        "TRUE",
+        "FALSE",
+        "NIL",
+        "STR",
+        "NUM",
+        "BOOL",
+        "CHR",
+        "CHARS",
+        "JOIN",
+        "CSPRNG",
+        "HASH",
+        "SEQ",
+        "SIM",
+        "SLOT",
+        "GAIN",
+        "GAIN-RESET",
+        "PAN",
+        "PAN-RESET",
+        "FX-RESET",
+        "PLAY",
+        "CHORD",
+        "ADSR",
+        "SINE",
+        "SQUARE",
+        "SAW",
+        "TRI",
+        "PARSE",
+        "STRINGIFY",
+        "INPUT",
+        "OUTPUT",
+        "JSON-GET",
+        "JSON-KEYS",
+        "JSON-SET",
+        "JSON-EXPORT",
         "!",
     ];
     let mut trie = TrieNode::new();
@@ -535,7 +707,6 @@ fn bench_trie_lookup_miss(c: &mut Criterion) {
         })
     });
 }
-
 
 criterion_group!(
     dictionary_benches,

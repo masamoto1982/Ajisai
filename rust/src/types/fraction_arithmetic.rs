@@ -57,10 +57,11 @@ impl Fraction {
             if b == d {
                 return Self::create_from_i128((a as i128) + (c as i128), b as i128);
             }
-            if let Some(num) = (a as i128).checked_mul(d as i128)
-                .and_then(|ad| (c as i128).checked_mul(b as i128)
-                    .and_then(|cb| ad.checked_add(cb)))
-            {
+            if let Some(num) = (a as i128).checked_mul(d as i128).and_then(|ad| {
+                (c as i128)
+                    .checked_mul(b as i128)
+                    .and_then(|cb| ad.checked_add(cb))
+            }) {
                 return Self::create_from_i128(num, (b as i128) * (d as i128));
             }
         }
@@ -80,10 +81,7 @@ impl Fraction {
             return Self::create_already_reduced(&sum / &g, &ad / &g);
         }
 
-        Fraction::new(
-            &an * &bd + &bn * &ad,
-            &ad * &bd,
-        )
+        Fraction::new(&an * &bd + &bn * &ad, &ad * &bd)
     }
 
     pub fn sub(&self, other: &Fraction) -> Fraction {
@@ -98,10 +96,11 @@ impl Fraction {
             if b == d {
                 return Self::create_from_i128((a as i128) - (c as i128), b as i128);
             }
-            if let Some(num) = (a as i128).checked_mul(d as i128)
-                .and_then(|ad| (c as i128).checked_mul(b as i128)
-                    .and_then(|cb| ad.checked_sub(cb)))
-            {
+            if let Some(num) = (a as i128).checked_mul(d as i128).and_then(|ad| {
+                (c as i128)
+                    .checked_mul(b as i128)
+                    .and_then(|cb| ad.checked_sub(cb))
+            }) {
                 return Self::create_from_i128(num, (b as i128) * (d as i128));
             }
         }
@@ -121,10 +120,7 @@ impl Fraction {
             return Self::create_already_reduced(&diff / &g, &ad / &g);
         }
 
-        Fraction::new(
-            &an * &bd - &bn * &ad,
-            &ad * &bd,
-        )
+        Fraction::new(&an * &bd - &bn * &ad, &ad * &bd)
     }
 
     pub fn mul(&self, other: &Fraction) -> Fraction {
@@ -173,10 +169,7 @@ impl Fraction {
         let c_reduced: BigInt = &bn / &g2;
         let b_reduced: BigInt = &ad / &g2;
 
-        Self::create_already_reduced(
-            a_reduced * c_reduced,
-            b_reduced * d_reduced,
-        )
+        Self::create_already_reduced(a_reduced * c_reduced, b_reduced * d_reduced)
     }
 
     pub fn div(&self, other: &Fraction) -> Fraction {
@@ -228,10 +221,7 @@ impl Fraction {
         let d_reduced: BigInt = &bd / &g2;
         let b_reduced: BigInt = &ad / &g2;
 
-        Self::create_already_reduced(
-            a_reduced * d_reduced,
-            b_reduced * c_reduced,
-        )
+        Self::create_already_reduced(a_reduced * d_reduced, b_reduced * c_reduced)
     }
 
     #[inline]
@@ -240,19 +230,18 @@ impl Fraction {
             return self.clone();
         }
         match &self.repr {
-            FractionRepr::Small(n, d) => {
-                Fraction::from_repr(FractionRepr::Small(n.abs(), *d))
-            }
-            FractionRepr::Big { numerator, denominator } => {
-                Fraction::from_repr(FractionRepr::Big {
-                    numerator: if *numerator < BigInt::zero() {
-                        -numerator.clone()
-                    } else {
-                        numerator.clone()
-                    },
-                    denominator: denominator.clone(),
-                })
-            }
+            FractionRepr::Small(n, d) => Fraction::from_repr(FractionRepr::Small(n.abs(), *d)),
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => Fraction::from_repr(FractionRepr::Big {
+                numerator: if *numerator < BigInt::zero() {
+                    -numerator.clone()
+                } else {
+                    numerator.clone()
+                },
+                denominator: denominator.clone(),
+            }),
         }
     }
 
@@ -268,7 +257,10 @@ impl Fraction {
                 let floored = if *n < 0 && r != 0 { q - 1 } else { q };
                 Fraction::from_repr(FractionRepr::Small(floored, 1))
             }
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 let q = numerator / denominator;
                 let r = numerator % denominator;
                 let floored = if *numerator < BigInt::zero() && !r.is_zero() {
@@ -293,7 +285,10 @@ impl Fraction {
                 let ceiled = if *n > 0 && r != 0 { q + 1 } else { q };
                 Fraction::from_repr(FractionRepr::Small(ceiled, 1))
             }
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 let q = numerator / denominator;
                 let r = numerator % denominator;
                 let ceiled = if *numerator > BigInt::zero() && !r.is_zero() {
@@ -305,7 +300,6 @@ impl Fraction {
             }
         }
     }
-
 
     pub fn round(&self) -> Fraction {
         if self.is_integer() {
@@ -322,9 +316,15 @@ impl Fraction {
                 let abs_n = n.abs() as i128;
                 let d128 = *d as i128;
                 let result = ((2 * abs_n + d128) / (2 * d128)) as i64;
-                Fraction::from_repr(FractionRepr::Small(if is_negative { -result } else { result }, 1))
+                Fraction::from_repr(FractionRepr::Small(
+                    if is_negative { -result } else { result },
+                    1,
+                ))
             }
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 let is_negative = *numerator < BigInt::zero();
                 let abs_num = if is_negative {
                     -numerator.clone()
@@ -334,14 +334,10 @@ impl Fraction {
                 let two = BigInt::from(2);
                 let two_abs_num = &abs_num * &two;
                 let result = (&two_abs_num + denominator) / (&two * denominator);
-                Self::from_bigint_pair(
-                    if is_negative { -result } else { result },
-                    BigInt::one(),
-                )
+                Self::from_bigint_pair(if is_negative { -result } else { result }, BigInt::one())
             }
         }
     }
-
 
     pub fn modulo(&self, other: &Fraction) -> Fraction {
         if other.is_zero() {
@@ -352,7 +348,11 @@ impl Fraction {
             if b == 1 && d == 1 {
                 let rem = a % c;
                 let result = if rem < 0 {
-                    if c > 0 { rem + c } else { rem - c }
+                    if c > 0 {
+                        rem + c
+                    } else {
+                        rem - c
+                    }
                 } else {
                     rem
                 };
@@ -368,7 +368,11 @@ impl Fraction {
             let den = b * d;
             let rem = num % mod_by;
             let result_num = if rem < 0 {
-                if mod_by > 0 { rem + mod_by } else { rem - mod_by }
+                if mod_by > 0 {
+                    rem + mod_by
+                } else {
+                    rem - mod_by
+                }
             } else {
                 rem
             };

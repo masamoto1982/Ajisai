@@ -150,5 +150,4 @@ mod tests {
             "Stack should have 3 elements after keep mode division"
         );
     }
-
 }

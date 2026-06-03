@@ -1,9 +1,7 @@
 use crate::error::AjisaiError;
 use crate::types::{Interpretation, Value};
 
-use super::interpreter_core::{
-    ChildRuntime, ChildState, ExitReason, RuntimeDictionarySnapshot,
-};
+use super::interpreter_core::{ChildRuntime, ChildState, ExitReason, RuntimeDictionarySnapshot};
 use super::value_extraction_helpers::extract_integer_from_value;
 use super::Interpreter;
 
@@ -126,8 +124,10 @@ impl Interpreter {
         child_interpreter.module_vocabulary = child.dictionary_snapshot.module_vocabulary.clone();
         child_interpreter.dictionary_dependencies =
             child.dictionary_snapshot.dictionary_dependencies.clone();
-        child_interpreter.next_registration_order = child.dictionary_snapshot.next_registration_order;
-        child_interpreter.active_user_dictionary = child.dictionary_snapshot.active_user_dictionary.clone();
+        child_interpreter.next_registration_order =
+            child.dictionary_snapshot.next_registration_order;
+        child_interpreter.active_user_dictionary =
+            child.dictionary_snapshot.active_user_dictionary.clone();
         child_interpreter.max_execution_steps = self.max_execution_steps;
 
         let lines = vec![crate::types::ExecutionLine {
@@ -139,7 +139,8 @@ impl Interpreter {
                 child.state = ChildState::Completed;
                 child.exit_reason = Some(ExitReason::Normal);
                 let stack = child_interpreter.stack.clone();
-                child.result_snapshot = Some(Self::build_exit_result(ExitReason::Normal, Some(stack)));
+                child.result_snapshot =
+                    Some(Self::build_exit_result(ExitReason::Normal, Some(stack)));
             }
             Err(err) => {
                 let exit_reason = Self::map_error_to_exit_reason(err);
@@ -212,8 +213,8 @@ impl Interpreter {
         let mut attempt = 0usize;
         loop {
             self.bump_execution_epoch();
-        let spawn_epoch = self.current_epoch_snapshot();
-        let id = self.next_child_id;
+            let spawn_epoch = self.current_epoch_snapshot();
+            let id = self.next_child_id;
             self.next_child_id += 1;
             let mut child = ChildRuntime {
                 code_block: code_block.clone(),

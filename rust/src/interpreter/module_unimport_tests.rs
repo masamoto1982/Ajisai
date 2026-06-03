@@ -93,13 +93,14 @@ mod tests {
     async fn del_cannot_destroy_module_dictionary_or_words_even_forced() {
         let mut interp = Interpreter::new();
         let before_import = interp.execute("'JSON' DEL").await;
-        assert!(before_import.is_err(), "known modules cannot be deleted before import");
         assert!(
-            before_import
-                .unwrap_err()
-                .to_string()
-                .contains("Cannot delete module dictionary JSON")
+            before_import.is_err(),
+            "known modules cannot be deleted before import"
         );
+        assert!(before_import
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot delete module dictionary JSON"));
 
         interp.execute("'music' IMPORT").await.unwrap();
 

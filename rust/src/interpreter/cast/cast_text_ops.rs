@@ -58,7 +58,9 @@ fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Resu
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
             let s = pop_string(interp, word)?;
-            interp.stack.push(Value::from_string(&apply_trim(&side, &s)));
+            interp
+                .stack
+                .push(Value::from_string(&apply_trim(&side, &s)));
             Ok(())
         }
         OperationTargetMode::Stack => {
@@ -107,9 +109,10 @@ pub fn op_trim_right(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let sep_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let src_val = interp.stack.pop().ok_or_else(|| {
-        AjisaiError::StackUnderflow
-    });
+    let src_val = interp
+        .stack
+        .pop()
+        .ok_or_else(|| AjisaiError::StackUnderflow);
     let src_val = match src_val {
         Ok(v) => v,
         Err(e) => {
@@ -141,10 +144,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     }
     if !is_string_value(&sep_val) {
         let tn = type_name_of(&sep_val);
-        let err = AjisaiError::from(format!(
-            "TOKENIZE: expected separator String, got {}",
-            tn
-        ));
+        let err = AjisaiError::from(format!("TOKENIZE: expected separator String, got {}", tn));
         restore(interp, src_val, sep_val);
         return Err(err);
     }
@@ -158,10 +158,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
         return Err(err);
     }
 
-    let parts: Vec<Value> = src
-        .split(sep.as_str())
-        .map(Value::from_string)
-        .collect();
+    let parts: Vec<Value> = src.split(sep.as_str()).map(Value::from_string).collect();
     interp.stack.push(Value::from_vector(parts));
     Ok(())
 }

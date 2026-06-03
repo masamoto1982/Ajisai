@@ -330,9 +330,7 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     }
 
     // ExactScalar path: a mod b = a - b * floor(a/b) via CF (SPEC §4.2.2)
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && interp.stack.len() >= 2
-    {
+    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a_ref = &interp.stack[stack_len - 2];
         let b_ref = &interp.stack[stack_len - 1];
@@ -361,7 +359,10 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 // zero check) means the CF division/floor exhausted its
                 // budget, so the result is undecidable: project to a
                 // Bubble NIL (SPEC §7.4.1) rather than erroring.
-                let modulo = a.div(&b).and_then(|q| q.floor()).map(|fl| a.sub(&b.mul(&fl)));
+                let modulo = a
+                    .div(&b)
+                    .and_then(|q| q.floor())
+                    .map(|fl| a.sub(&b.mul(&fl)));
                 if interp.consumption_mode != ConsumptionMode::Keep {
                     interp.stack.pop();
                     interp.stack.pop();

@@ -34,16 +34,12 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
             if is_number_value(&val) {
                 interp.stack.push(val);
-                return Err(AjisaiError::from(
-                    "CHARS: expected String, got Number",
-                ));
+                return Err(AjisaiError::from("CHARS: expected String, got Number"));
             }
 
             if is_boolean_value(&val) {
                 interp.stack.push(val);
-                return Err(AjisaiError::from(
-                    "CHARS: expected String, got Boolean",
-                ));
+                return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
             }
 
             interp.stack.push(val);
@@ -83,17 +79,13 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 if is_number_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from(
-                        "CHARS: expected String, got Number",
-                    ));
+                    return Err(AjisaiError::from("CHARS: expected String, got Number"));
                 }
 
                 if is_boolean_value(&elem) {
                     interp.stack = results;
                     interp.stack.push(elem);
-                    return Err(AjisaiError::from(
-                        "CHARS: expected String, got Boolean",
-                    ));
+                    return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
                 }
 
                 interp.stack = results;
@@ -120,9 +112,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             if let Some(children) = val.as_vector_view() {
                 if children.is_empty() {
                     interp.stack.push(val);
-                    return Err(AjisaiError::from(
-                        "JOIN: expected non-empty Vector",
-                    ));
+                    return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
                 }
 
                 let mut result = String::new();
@@ -136,7 +126,10 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                     if is_number_value(elem) {
                         match try_char_from_value(elem) {
-                            Some(c) => { result.push(c); continue; }
+                            Some(c) => {
+                                result.push(c);
+                                continue;
+                            }
                             None => {
                                 interp.stack.push(val);
                                 return Err(AjisaiError::from(format!(
@@ -183,7 +176,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             )))
         }
         OperationTargetMode::Stack => {
-
             let stack_len = interp.stack.len();
             if stack_len == 0 {
                 return Err(AjisaiError::StackUnderflow);
@@ -193,13 +185,11 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             let elements: Vec<Value> = interp.stack.drain(..).collect();
 
             for elem in elements {
-
                 if elem.is_nil() {
                     interp.stack = results;
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
                 }
-
 
                 if let Some(children) = elem.as_vector_view() {
                     if children.is_empty() {
@@ -212,14 +202,12 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
                     let mut result_str = String::new();
                     for (i, v) in children.iter().enumerate() {
-
                         if is_string_value(v) {
                             if let Some(s) = value_as_string(v) {
                                 result_str.push_str(&s);
                                 continue;
                             }
                         }
-
 
                         if is_number_value(v) {
                             if let Some(f) = v.as_scalar() {
@@ -240,7 +228,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                             )));
                         }
 
-
                         let type_name = if v.is_nil() {
                             "nil"
                         } else if is_boolean_value(v) {
@@ -259,7 +246,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                     results.push(Value::from_string(&result_str));
                     continue;
                 }
-
 
                 let type_name = if is_string_value(&elem) {
                     "String"
@@ -308,8 +294,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_chars_structure_error() {
-
-
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 42 ] CHARS").await;
         assert!(result.is_ok());
@@ -366,7 +350,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_nil_pushes_constant() {
-
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL").await;
         assert!(result.is_ok());
@@ -379,7 +362,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_nil_multiple() {
-
         let mut interp = Interpreter::new();
         let result = interp.execute("NIL NIL NIL").await;
         assert!(result.is_ok());

@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
-use num_traits::{Zero, One, ToPrimitive, Signed};
 use num_integer::Integer;
+use num_traits::{One, Signed, ToPrimitive, Zero};
 use std::str::FromStr;
 
 #[inline]
@@ -29,15 +29,21 @@ pub(crate) fn create_bigint_from_i128(n: i128) -> BigInt {
         } else {
             BigInt::from(high) * BigInt::from(1u128 << 64) + BigInt::from(low)
         };
-        if sign < 0 { -result } else { result }
+        if sign < 0 {
+            -result
+        } else {
+            result
+        }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub(crate) enum FractionRepr {
     Small(i64, i64),
-    Big { numerator: BigInt, denominator: BigInt },
+    Big {
+        numerator: BigInt,
+        denominator: BigInt,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +66,9 @@ impl PartialEq for Fraction {
         }
         match (&self.repr, &other.repr) {
             (FractionRepr::Small(a, b), FractionRepr::Small(c, d)) => {
-                if b == d { return a == c; }
+                if b == d {
+                    return a == c;
+                }
                 (*a as i128) * (*d as i128) == (*c as i128) * (*b as i128)
             }
             (FractionRepr::Small(..), FractionRepr::Big { .. })
@@ -68,7 +76,9 @@ impl PartialEq for Fraction {
             | (FractionRepr::Big { .. }, FractionRepr::Big { .. }) => {
                 let (an, ad): (BigInt, BigInt) = self.to_bigint_pair();
                 let (bn, bd): (BigInt, BigInt) = other.to_bigint_pair();
-                if ad == bd { return an == bn; }
+                if ad == bd {
+                    return an == bn;
+                }
                 an * &bd == bn * &ad
             }
         }
@@ -80,7 +90,9 @@ impl Eq for Fraction {}
 impl Fraction {
     #[inline]
     pub fn nil() -> Self {
-        Fraction { repr: FractionRepr::Small(0, 0) }
+        Fraction {
+            repr: FractionRepr::Small(0, 0),
+        }
     }
 
     #[inline]
@@ -91,17 +103,20 @@ impl Fraction {
         }
     }
 
-
     #[inline]
     pub fn is_small(&self) -> bool {
         matches!(self.repr, FractionRepr::Small(..))
     }
 
     pub fn new(numerator: BigInt, denominator: BigInt) -> Self {
-        if denominator.is_zero() { panic!("Division by zero"); }
+        if denominator.is_zero() {
+            panic!("Division by zero");
+        }
 
         if numerator.is_zero() {
-            return Fraction { repr: FractionRepr::Small(0, 1) };
+            return Fraction {
+                repr: FractionRepr::Small(0, 1),
+            };
         }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
@@ -112,7 +127,9 @@ impl Fraction {
                 num = -num;
                 den = -den;
             }
-            return Fraction { repr: FractionRepr::Small(num, den) };
+            return Fraction {
+                repr: FractionRepr::Small(num, den),
+            };
         }
 
         let common: BigInt = numerator.gcd(&denominator);
@@ -127,7 +144,9 @@ impl Fraction {
 
     #[inline]
     pub fn create_unreduced(mut numerator: BigInt, mut denominator: BigInt) -> Self {
-        if denominator.is_zero() { panic!("Division by zero"); }
+        if denominator.is_zero() {
+            panic!("Division by zero");
+        }
         if denominator < BigInt::zero() {
             numerator = -numerator;
             denominator = -denominator;
@@ -148,9 +167,16 @@ impl Fraction {
     #[inline]
     pub(crate) fn from_bigint_pair(numerator: BigInt, denominator: BigInt) -> Self {
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
-            return Fraction { repr: FractionRepr::Small(n, d) };
+            return Fraction {
+                repr: FractionRepr::Small(n, d),
+            };
         }
-        Fraction { repr: FractionRepr::Big { numerator, denominator } }
+        Fraction {
+            repr: FractionRepr::Big {
+                numerator,
+                denominator,
+            },
+        }
     }
 
     #[inline]
@@ -173,9 +199,10 @@ impl Fraction {
     pub fn to_bigint_pair(&self) -> (BigInt, BigInt) {
         match &self.repr {
             FractionRepr::Small(n, d) => (BigInt::from(*n), BigInt::from(*d)),
-            FractionRepr::Big { numerator, denominator } => {
-                (numerator.clone(), denominator.clone())
-            }
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => (numerator.clone(), denominator.clone()),
         }
     }
 
@@ -204,7 +231,10 @@ impl Fraction {
     pub(crate) fn extract_i64_pair(&self) -> Option<(i64, i64)> {
         match &self.repr {
             FractionRepr::Small(n, d) => Some((*n, *d)),
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 let n = numerator.to_i64()?;
                 let d = denominator.to_i64()?;
                 Some((n, d))
@@ -216,10 +246,19 @@ impl Fraction {
     pub fn to_i64(&self) -> Option<i64> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 1 { Some(*n) } else { None }
+                if *d == 1 {
+                    Some(*n)
+                } else {
+                    None
+                }
             }
-            FractionRepr::Big { numerator, denominator } => {
-                if !denominator.is_one() { return None; }
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
+                if !denominator.is_one() {
+                    return None;
+                }
                 numerator.to_i64()
             }
         }
@@ -235,8 +274,13 @@ impl Fraction {
                     None
                 }
             }
-            FractionRepr::Big { numerator, denominator } => {
-                if !denominator.is_one() || *numerator < BigInt::zero() { return None; }
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
+                if !denominator.is_one() || *numerator < BigInt::zero() {
+                    return None;
+                }
                 numerator.to_usize()
             }
         }
@@ -263,10 +307,10 @@ impl Fraction {
             d = -d;
         }
 
-        if n >= i64::MIN as i128 && n <= i64::MAX as i128
-            && d >= 0 && d <= i64::MAX as i128
-        {
-            return Fraction { repr: FractionRepr::Small(n as i64, d as i64) };
+        if n >= i64::MIN as i128 && n <= i64::MAX as i128 && d >= 0 && d <= i64::MAX as i128 {
+            return Fraction {
+                repr: FractionRepr::Small(n as i64, d as i64),
+            };
         }
         Fraction {
             repr: FractionRepr::Big {
@@ -277,11 +321,13 @@ impl Fraction {
     }
 
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
-        if s.is_empty() { return Err("Empty string".to_string()); }
+        if s.is_empty() {
+            return Err("Empty string".to_string());
+        }
 
         if let Some(e_pos) = s.find(|c| char::is_ascii(&c) && (c == 'e' || c == 'E')) {
             let mantissa_str = &s[..e_pos];
-            let exponent_str = &s[e_pos+1..];
+            let exponent_str = &s[e_pos + 1..];
 
             let mantissa: Fraction = Self::from_str(mantissa_str)?;
             let exponent: i32 = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
@@ -297,27 +343,46 @@ impl Fraction {
         }
         if let Some(pos) = s.find('/') {
             let num: BigInt = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
-            let den: BigInt = BigInt::from_str(&s[pos+1..]).map_err(|e| e.to_string())?;
+            let den: BigInt = BigInt::from_str(&s[pos + 1..]).map_err(|e| e.to_string())?;
             Ok(Fraction::new(num, den))
         } else if let Some(dot_pos) = s.find('.') {
-            let int_part_str = if s.starts_with('.') { "0" } else { &s[..dot_pos] };
-            let frac_part_str = &s[dot_pos+1..];
-            if frac_part_str.is_empty() { return Self::from_str(int_part_str); }
+            let int_part_str = if s.starts_with('.') {
+                "0"
+            } else {
+                &s[..dot_pos]
+            };
+            let frac_part_str = &s[dot_pos + 1..];
+            if frac_part_str.is_empty() {
+                return Self::from_str(int_part_str);
+            }
             let int_part: BigInt = BigInt::from_str(int_part_str).map_err(|e| e.to_string())?;
             let frac_num: BigInt = BigInt::from_str(frac_part_str).map_err(|e| e.to_string())?;
             let frac_den: BigInt = BigInt::from(10).pow(frac_part_str.len() as u32);
             let total_num: BigInt = int_part.abs() * &frac_den + frac_num;
-            Ok(Fraction::new(if int_part < BigInt::zero() { -total_num } else { total_num }, frac_den))
+            Ok(Fraction::new(
+                if int_part < BigInt::zero() {
+                    -total_num
+                } else {
+                    total_num
+                },
+                frac_den,
+            ))
         } else {
             let num: BigInt = BigInt::from_str(s).map_err(|e| e.to_string())?;
 
             if let Some(n) = num.to_i64() {
-                return Ok(Fraction { repr: FractionRepr::Small(n, 1) });
+                return Ok(Fraction {
+                    repr: FractionRepr::Small(n, 1),
+                });
             }
-            Ok(Fraction { repr: FractionRepr::Big { numerator: num, denominator: BigInt::one() } })
+            Ok(Fraction {
+                repr: FractionRepr::Big {
+                    numerator: num,
+                    denominator: BigInt::one(),
+                },
+            })
         }
     }
-
 
     #[inline]
     pub fn lt(&self, other: &Fraction) -> bool {
@@ -373,23 +438,33 @@ impl ToPrimitive for Fraction {
     fn to_i64(&self) -> Option<i64> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 0 { return None; }
+                if *d == 0 {
+                    return None;
+                }
                 Some(n / d)
             }
-            FractionRepr::Big { numerator, denominator } => {
-                (numerator / denominator).to_i64()
-            }
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => (numerator / denominator).to_i64(),
         }
     }
 
     fn to_u64(&self) -> Option<u64> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 0 || *n < 0 { return None; }
+                if *d == 0 || *n < 0 {
+                    return None;
+                }
                 Some((*n / *d) as u64)
             }
-            FractionRepr::Big { numerator, denominator } => {
-                if *numerator < BigInt::zero() { return None; }
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
+                if *numerator < BigInt::zero() {
+                    return None;
+                }
                 (numerator / denominator).to_u64()
             }
         }
@@ -398,13 +473,22 @@ impl ToPrimitive for Fraction {
     fn to_f64(&self) -> Option<f64> {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 0 { return None; }
+                if *d == 0 {
+                    return None;
+                }
                 Some(*n as f64 / *d as f64)
             }
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 let num_f64: f64 = numerator.to_f64()?;
                 let den_f64: f64 = denominator.to_f64()?;
-                if den_f64 == 0.0 { None } else { Some(num_f64 / den_f64) }
+                if den_f64 == 0.0 {
+                    None
+                } else {
+                    Some(num_f64 / den_f64)
+                }
             }
         }
     }
@@ -413,14 +497,18 @@ impl ToPrimitive for Fraction {
 impl From<i64> for Fraction {
     #[inline]
     fn from(n: i64) -> Self {
-        Fraction { repr: FractionRepr::Small(n, 1) }
+        Fraction {
+            repr: FractionRepr::Small(n, 1),
+        }
     }
 }
 
 impl From<i32> for Fraction {
     #[inline]
     fn from(n: i32) -> Self {
-        Fraction { repr: FractionRepr::Small(n as i64, 1) }
+        Fraction {
+            repr: FractionRepr::Small(n as i64, 1),
+        }
     }
 }
 
@@ -428,10 +516,16 @@ impl std::fmt::Display for Fraction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.repr {
             FractionRepr::Small(n, d) => {
-                if *d == 1 { write!(f, "{}", n) }
-                else { write!(f, "{}/{}", n, d) }
+                if *d == 1 {
+                    write!(f, "{}", n)
+                } else {
+                    write!(f, "{}/{}", n, d)
+                }
             }
-            FractionRepr::Big { numerator, denominator } => {
+            FractionRepr::Big {
+                numerator,
+                denominator,
+            } => {
                 if denominator.is_one() {
                     write!(f, "{}", numerator)
                 } else {
@@ -442,7 +536,6 @@ impl std::fmt::Display for Fraction {
     }
 }
 
-
 #[cfg(test)]
 mod literal_parsing_tests {
     use super::Fraction;
@@ -451,9 +544,18 @@ mod literal_parsing_tests {
     fn literals_parse_to_reduced_canonical_fractions() {
         // Surface forms are convenience syntax; all reduce to the same
         // canonical exact-real value. No surface style is retained.
-        assert_eq!(Fraction::from_str("0.5").unwrap(), Fraction::from_str("1/2").unwrap());
-        assert_eq!(Fraction::from_str("2/1").unwrap(), Fraction::from_str("2").unwrap());
-        assert_eq!(Fraction::from_str("4/2").unwrap(), Fraction::from_str("2").unwrap());
+        assert_eq!(
+            Fraction::from_str("0.5").unwrap(),
+            Fraction::from_str("1/2").unwrap()
+        );
+        assert_eq!(
+            Fraction::from_str("2/1").unwrap(),
+            Fraction::from_str("2").unwrap()
+        );
+        assert_eq!(
+            Fraction::from_str("4/2").unwrap(),
+            Fraction::from_str("2").unwrap()
+        );
         assert!(Fraction::from_str("2/1").unwrap().is_integer());
     }
 

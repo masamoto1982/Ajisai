@@ -52,7 +52,9 @@ mod tests {
         // HOF / Cond / Exec dispatchers are themselves pure (Phase 1-B).
         // Callback purity is propagated separately via the PushCodeBlock
         // recursion in `analyze_compiled_plan_with_context`.
-        for word in &["MAP", "FILTER", "FOLD", "SCAN", "ANY", "ALL", "COUNT", "UNFOLD", "COND", "EXEC"] {
+        for word in &[
+            "MAP", "FILTER", "FOLD", "SCAN", "ANY", "ALL", "COUNT", "UNFOLD", "COND", "EXEC",
+        ] {
             let info = purity_by_name(word)
                 .unwrap_or_else(|| panic!("missing purity entry for '{}'", word));
             assert_eq!(info.purity, Purity::Pure, "{}: expected Pure", word);
@@ -510,7 +512,8 @@ mod tests {
 
     #[tokio::test]
     async fn semantics_fast_guarded_hof_kernels() {
-        let code = "[1 2 3 4] { [1] + } MAP [1 2 3 4] { [2] MOD [0] = } FILTER [1 2 3 4] [0] { + } FOLD";
+        let code =
+            "[1 2 3 4] { [1] + } MAP [1 2 3 4] { [2] MOD [0] = } FILTER [1 2 3 4] [0] { + } FOLD";
         let greedy = run_greedy(code).await;
         let fast_guarded = run_fast_guarded(code).await;
         assert_eq!(

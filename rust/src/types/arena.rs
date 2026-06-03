@@ -74,7 +74,8 @@ impl ValueArena {
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
         let mut children = Vec::with_capacity(value.chars().count());
         for ch in value.chars() {
-            let scalar = self.alloc_scalar(Fraction::from(ch as u32 as i64), Interpretation::RawNumber);
+            let scalar =
+                self.alloc_scalar(Fraction::from(ch as u32 as i64), Interpretation::RawNumber);
             children.push(scalar);
         }
         if children.is_empty() {
@@ -273,7 +274,8 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
                 index.insert(key.clone(), pairs.len());
                 let key_id = arena.alloc_string(&key);
                 let value_id = json_to_arena_node(arena, value)?;
-                let pair_id = arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
+                let pair_id =
+                    arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
                 pairs.push(pair_id);
             }
             Ok(arena.alloc_record(pairs, index, Interpretation::Unassigned))

@@ -25,10 +25,7 @@ fn compute_inverted_fraction(f: &Fraction) -> Fraction {
     }
 }
 
-fn compute_inverted_value(
-    val: &Value,
-    metrics: Option<&mut RuntimeMetrics>,
-) -> Result<Value> {
+fn compute_inverted_value(val: &Value, metrics: Option<&mut RuntimeMetrics>) -> Result<Value> {
     // The logical Unknown (¬U = U) and operational NIL (¬NIL = NIL) cases
     // route through the canonical K3 NOT table (SPEC §7.5). Checked before
     // the scalar path because U is represented as a NIL node; a plain

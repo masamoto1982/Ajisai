@@ -230,7 +230,9 @@ fn nicf_vs_rcf_agreed_prefix() {
     // Deterministic LCG so the corpus is reproducible without an rng dep.
     let mut seed: u64 = 0x9E3779B97F4A7C15;
     let mut next = || {
-        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         seed
     };
 

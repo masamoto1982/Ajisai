@@ -5,7 +5,6 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
 
-
     #[tokio::test]
     async fn test_map_with_increment() {
         let mut interp = Interpreter::new();
@@ -68,7 +67,6 @@ mod tests {
         assert!(result.is_err(), "Empty brackets should be an error");
         assert!(result.unwrap_err().to_string().contains("Empty vector"));
     }
-
 
     #[tokio::test]
     async fn test_force_flag_del_without_dependents() {
@@ -158,7 +156,6 @@ mod tests {
         let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
     }
-
 
     #[tokio::test]
     async fn test_nil_keyword_works() {
@@ -292,7 +289,6 @@ mod tests {
         assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
 
-
     #[tokio::test]
     async fn test_nested_call_chain_4_levels_ok() {
         let mut interp = Interpreter::new();
@@ -302,7 +298,11 @@ mod tests {
         interp.execute("{ [ 1 ] } 'D' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
-        assert!(result.is_ok(), "4-level nested call chain should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "4-level nested call chain should succeed: {:?}",
+            result
+        );
         assert_eq!(interp.stack.len(), 1);
     }
 
@@ -316,7 +316,11 @@ mod tests {
         interp.execute("{ [ 1 ] } 'E' DEF").await.unwrap();
 
         let result = interp.execute("A").await;
-        assert!(result.is_ok(), "Deep call chain should succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Deep call chain should succeed: {:?}",
+            result
+        );
     }
 
     #[tokio::test]
@@ -326,7 +330,10 @@ mod tests {
         interp.execute("{ REC } 'REC' DEF").await.unwrap();
 
         let result = interp.execute("REC").await;
-        assert!(result.is_err(), "Direct recursion should hit execution limit");
+        assert!(
+            result.is_err(),
+            "Direct recursion should hit execution limit"
+        );
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.contains("Execution step limit"),
@@ -375,7 +382,10 @@ mod tests {
             result
         );
         // call_depth must be back to 0 after a successful run.
-        assert_eq!(interp.call_depth, 0, "call_depth should reset to 0 on success");
+        assert_eq!(
+            interp.call_depth, 0,
+            "call_depth should reset to 0 on success"
+        );
     }
 
     // Task 6: after a recursion-limit error, call_depth must reset to 0 so
@@ -456,7 +466,10 @@ mod tests {
             .execute("{ { 1 2 } PRECOMPUTE ADD } 'THREE' DEF")
             .await
             .expect("multi-value PRECOMPUTE should succeed");
-        interp.execute("THREE").await.expect("THREE should evaluate");
+        interp
+            .execute("THREE")
+            .await
+            .expect("THREE should evaluate");
         let val = interp.stack.last().unwrap();
         assert_eq!(
             val.as_scalar().expect("scalar").numerator().to_string(),
@@ -492,10 +505,11 @@ mod tests {
     #[tokio::test]
     async fn test_precompute_runtime_error_is_wrapped() {
         let mut interp = Interpreter::new();
-        let result = interp
-            .execute("{ { 1 0 DIV } PRECOMPUTE } 'BAD' DEF")
-            .await;
-        assert!(result.is_err(), "division by zero in PRECOMPUTE should fail DEF");
+        let result = interp.execute("{ { 1 0 DIV } PRECOMPUTE } 'BAD' DEF").await;
+        assert!(
+            result.is_err(),
+            "division by zero in PRECOMPUTE should fail DEF"
+        );
         let err = result.unwrap_err().to_string();
         assert!(
             err.contains("PRECOMPUTE"),

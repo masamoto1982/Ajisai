@@ -114,9 +114,7 @@ mod tests {
     async fn test_hash_with_bit_specification() {
         let mut interp = Interpreter::new();
 
-        let result = interp
-            .execute("'crypto' IMPORT [ 128 ] 'hello' HASH")
-            .await;
+        let result = interp.execute("'crypto' IMPORT [ 128 ] 'hello' HASH").await;
         assert!(
             result.is_ok(),
             "HASH with bit spec should succeed: {:?}",
@@ -232,9 +230,7 @@ mod tests {
     async fn test_hash_invalid_bits() {
         let mut interp = Interpreter::new();
 
-        let result = interp
-            .execute("'crypto' IMPORT [ 16 ] 'hello' HASH")
-            .await;
+        let result = interp.execute("'crypto' IMPORT [ 16 ] 'hello' HASH").await;
         assert!(result.is_err(), "Bits < 32 should error");
 
         let result = interp

@@ -28,7 +28,10 @@ where
             interp.stack.push(target_val);
         }
         interp.stack.push(arg_to_restore.clone());
-        return Err(AjisaiError::create_structure_error("vector", "other format"));
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
     }
 
     match action(&target_val) {
@@ -52,7 +55,11 @@ where
     F: FnOnce(&Value) -> Result<R>,
 {
     let target_val = if preserve_source {
-        interp.stack.last().cloned().ok_or(AjisaiError::StackUnderflow)?
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
@@ -61,7 +68,10 @@ where
         if !preserve_source {
             interp.stack.push(target_val);
         }
-        return Err(AjisaiError::create_structure_error("vector", "other format"));
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
     }
 
     match action(&target_val) {

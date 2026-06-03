@@ -1,7 +1,7 @@
 //! Unit test suite for `crate::interpreter::audio`.
 
-use super::build_audio_structure::build_audio_structure;
 use super::audio_types::{AudioStructure, PlayMode};
+use super::build_audio_structure::build_audio_structure;
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_bigint::BigInt;
@@ -27,7 +27,6 @@ fn create_vector(elements: Vec<Value>) -> Value {
 
 #[test]
 fn test_tone_from_integer() {
-
     let val = create_number(440);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -47,7 +46,6 @@ fn test_tone_from_integer() {
 
 #[test]
 fn test_tone_from_fraction() {
-
     let val = create_fraction(440, 3);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -67,8 +65,6 @@ fn test_tone_from_fraction() {
 
 #[test]
 fn test_tone_from_fraction_unreduced() {
-
-
     let val = create_fraction(440, 2);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -88,7 +84,6 @@ fn test_tone_from_fraction_unreduced() {
 
 #[test]
 fn test_rest_from_zero() {
-
     let val = create_fraction(0, 4);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -103,7 +98,6 @@ fn test_rest_from_zero() {
 
 #[test]
 fn test_rest_from_zero_coprime() {
-
     let val = create_fraction(0, 3);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -118,7 +112,6 @@ fn test_rest_from_zero_coprime() {
 
 #[test]
 fn test_rest_from_nil() {
-
     let val = create_nil();
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Sequential, &mut output).unwrap();
@@ -133,11 +126,9 @@ fn test_rest_from_nil() {
 
 #[test]
 fn test_nil_becomes_rest() {
-
     let val = Value::nil();
     let mut output = String::new();
     let result = build_audio_structure(&val, PlayMode::Sequential, &mut output);
-
 
     match result {
         Ok(AudioStructure::Rest { duration }) => {
@@ -150,8 +141,6 @@ fn test_nil_becomes_rest() {
 
 #[test]
 fn test_seq_structure() {
-
-
     let elements = vec![create_number(440), create_number(550)];
     let val = create_vector(elements);
     let mut output = String::new();
@@ -167,13 +156,10 @@ fn test_seq_structure() {
 
 #[test]
 fn test_sim_structure() {
-
-
     let elements = vec![create_number(440), create_number(550)];
     let val = create_vector(elements);
     let mut output = String::new();
     let structure = build_audio_structure(&val, PlayMode::Simultaneous, &mut output).unwrap();
-
 
     match structure {
         AudioStructure::Seq { children, .. } => {

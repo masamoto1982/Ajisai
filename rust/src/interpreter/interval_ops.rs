@@ -105,7 +105,9 @@ pub(crate) fn op_is_exact(interp: &mut Interpreter) -> Result<()> {
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("IS_EXACT: expected Number or Interval"))?;
     interp.stack.push(Value::from_bool(interval.is_exact()));
-    interp.semantic_registry.push_hint(Interpretation::TruthValue);
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::TruthValue);
     Ok(())
 }
 
@@ -130,7 +132,9 @@ where
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("interval accessor: expected Number or Interval"))?;
     interp.stack.push(Value::from_fraction(f(interval)));
-    interp.semantic_registry.push_hint(Interpretation::RawNumber);
+    interp
+        .semantic_registry
+        .push_hint(Interpretation::RawNumber);
     Ok(())
 }
 
@@ -154,11 +158,15 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
             Some(er) => {
                 // from_exact_real already collapses Rational variants to Scalar(Fraction)
                 interp.stack.push(Value::from_exact_real(er));
-                interp.semantic_registry.push_hint(Interpretation::RawNumber);
+                interp
+                    .semantic_registry
+                    .push_hint(Interpretation::RawNumber);
             }
             None => {
                 // Negative input → NIL
-                interp.stack.push(Value::nil_with_reason(NilReason::DivisionByZero));
+                interp
+                    .stack
+                    .push(Value::nil_with_reason(NilReason::DivisionByZero));
                 interp.semantic_registry.push_hint(Interpretation::Nil);
             }
         }

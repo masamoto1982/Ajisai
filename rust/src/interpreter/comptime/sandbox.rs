@@ -4,7 +4,10 @@ use crate::types::{Token, Value};
 
 pub(crate) const PRECOMPUTE_STEP_LIMIT: usize = 20_000;
 
-pub(crate) fn run_precompute_block(interp: &Interpreter, block_body_tokens: &[Token]) -> Result<Vec<Value>> {
+pub(crate) fn run_precompute_block(
+    interp: &Interpreter,
+    block_body_tokens: &[Token],
+) -> Result<Vec<Value>> {
     let mut sandbox = Interpreter::new();
     sandbox.core_vocabulary = interp.core_vocabulary.clone();
     sandbox.user_words = interp.user_words.clone();

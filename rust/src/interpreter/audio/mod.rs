@@ -1,14 +1,10 @@
-
-
 mod audio_types;
-mod execute_audio_commands;
 mod build_audio_structure;
+mod execute_audio_commands;
 mod music_group;
 mod music_values;
 
-pub use audio_types::{
-    AudioHint, AudioStructure, Envelope, PlayMode, WaveformType,
-};
+pub use audio_types::{AudioHint, AudioStructure, Envelope, PlayMode, WaveformType};
 pub use build_audio_structure::op_play;
 pub use execute_audio_commands::{
     op_adsr, op_chord, op_dur, op_edo, op_edr, op_explain, op_fx_reset, op_gain, op_gain_reset,
@@ -20,6 +16,6 @@ pub use execute_audio_commands::{
 pub(crate) use audio_types::lookup_play_mode;
 
 #[cfg(test)]
-mod audio_unit_tests;
-#[cfg(test)]
 mod audio_integration_tests;
+#[cfg(test)]
+mod audio_unit_tests;

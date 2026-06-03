@@ -40,7 +40,9 @@ mod tests {
     #[tokio::test]
     async fn monitor_registration() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("{ [ 1 ] [ 0 ] / } SPAWN MONITOR AWAIT").await;
+        let result = interp
+            .execute("{ [ 1 ] [ 0 ] / } SPAWN MONITOR AWAIT")
+            .await;
         assert!(result.is_ok());
         assert_eq!(interp.monitor_notifications.len(), 1);
     }

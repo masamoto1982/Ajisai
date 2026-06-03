@@ -1,5 +1,3 @@
-
-
 use super::extract_vector_elements;
 use super::targeting::{with_stacktop_vector_target_no_arg, with_stacktop_vector_target_with_arg};
 use crate::error::{AjisaiError, Result};
@@ -115,7 +113,6 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
     Ok(vec![single])
 }
 
-
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -153,7 +150,6 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -181,11 +177,8 @@ pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
-
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
-
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
 
     let (start, end, step) = match parse_range_args(&args_val) {
         Ok(values) => values,
@@ -227,13 +220,10 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
-
 pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-
     let indices_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
 
     let indices = match parse_reorder_indices(&indices_val) {
         Ok(values) => values,
@@ -245,8 +235,11 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let reordered =
-                with_stacktop_vector_target_with_arg(interp, &indices_val, is_keep_mode, |target_val| {
+            let reordered = with_stacktop_vector_target_with_arg(
+                interp,
+                &indices_val,
+                is_keep_mode,
+                |target_val| {
                     let len = target_val.len();
                     if len == 0 {
                         return Err(AjisaiError::from("REORDER: target vector is empty"));
@@ -272,7 +265,8 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                     } else {
                         Ok(Value::from_vector(result))
                     }
-                })?;
+                },
+            )?;
 
             if is_keep_mode {
                 interp.stack.push(indices_val);
@@ -311,7 +305,6 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
         }
     }
 }
-
 
 pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
     let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;

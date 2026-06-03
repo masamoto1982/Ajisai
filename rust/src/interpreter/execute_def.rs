@@ -68,9 +68,11 @@ fn is_string_like(val: &Value) -> bool {
             | ValueData::Record {
                 pairs: children, ..
             } => children.iter().all(check_codepoints),
-            ValueData::Tensor { data, .. } => data
-                .iter()
-                .all(|f| f.to_i64().map(|n| (0..=0x10FFFF).contains(&n)).unwrap_or(false)),
+            ValueData::Tensor { data, .. } => data.iter().all(|f| {
+                f.to_i64()
+                    .map(|n| (0..=0x10FFFF).contains(&n))
+                    .unwrap_or(false)
+            }),
             ValueData::ExactScalar(_) => false,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)

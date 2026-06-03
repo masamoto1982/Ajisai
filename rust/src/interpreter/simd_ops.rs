@@ -25,7 +25,9 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
         | ValueData::ExactScalar(_)
         | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => return None,
     };
 
     if children.len() < SIMD_THRESHOLD {
@@ -45,7 +47,9 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
-            | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => return None,
+            | ValueData::CodeBlock(_)
+            | ValueData::ProcessHandle(_)
+            | ValueData::SupervisorHandle(_) => return None,
         }
     }
     Some(result)
@@ -65,7 +69,9 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::Tensor { .. }
         | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => None,
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => None,
     }
 }
 
@@ -215,17 +221,26 @@ mod wasm_impl {
 mod wasm_impl {
     #[inline]
     pub fn simd_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x + y).collect::<Vec<i64>>()
+        a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| x + y)
+            .collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x - y).collect::<Vec<i64>>()
+        a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| x - y)
+            .collect::<Vec<i64>>()
     }
 
     #[inline]
     pub fn simd_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter().zip(b.iter()).map(|(x, y)| x * y).collect::<Vec<i64>>()
+        a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| x * y)
+            .collect::<Vec<i64>>()
     }
 
     #[inline]
@@ -254,17 +269,17 @@ pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
 pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
     let va: Vec<i64> = extract_integer_vector(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    Some(create_value_from_integer_vector(wasm_impl::simd_scalar_add(
-        &va, scalar,
-    )))
+    Some(create_value_from_integer_vector(
+        wasm_impl::simd_scalar_add(&va, scalar),
+    ))
 }
 
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
     let va: Vec<i64> = extract_integer_vector(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    Some(create_value_from_integer_vector(wasm_impl::simd_scalar_mul(
-        &va, scalar,
-    )))
+    Some(create_value_from_integer_vector(
+        wasm_impl::simd_scalar_mul(&va, scalar),
+    ))
 }
 
 #[cfg(test)]
@@ -272,7 +287,10 @@ mod tests {
     use super::*;
 
     fn create_int_vector(values: &[i64]) -> Value {
-        let children: Vec<Value> = values.iter().map(|&v| Value::from_int(v)).collect::<Vec<Value>>();
+        let children: Vec<Value> = values
+            .iter()
+            .map(|&v| Value::from_int(v))
+            .collect::<Vec<Value>>();
         Value::from_children(children)
     }
 

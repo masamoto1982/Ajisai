@@ -2,7 +2,6 @@
 
 use crate::interpreter::Interpreter;
 
-
 #[tokio::test]
 async fn test_collect_basic() {
     let mut interp = Interpreter::new();
@@ -78,7 +77,6 @@ async fn test_collect_error_negative_count() {
     let result = interp.execute("1 2 3 -2 COLLECT").await;
     assert!(result.is_err(), "COLLECT with negative count should fail");
 }
-
 
 #[tokio::test]
 async fn test_get_consume_mode() {
@@ -174,7 +172,6 @@ async fn test_take_keep_mode() {
     );
 }
 
-
 #[tokio::test]
 async fn test_get_keep_mode_preserves_all_operands() {
     let mut interp = Interpreter::new();
@@ -267,7 +264,6 @@ async fn test_mod_keep_mode() {
     );
 }
 
-
 #[tokio::test]
 async fn test_percent_alias_keep_mode() {
     let mut interp = Interpreter::new();
@@ -300,8 +296,14 @@ async fn test_modifier_order_independence() {
 #[tokio::test]
 async fn test_insert_stack_consume_modifies_in_place() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] .. INSERT").await;
-    assert!(result.is_ok(), "Stack+Consume INSERT should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] .. INSERT")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Stack+Consume INSERT should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         4,
@@ -310,14 +312,24 @@ async fn test_insert_stack_consume_modifies_in_place() {
     let first = interp.stack[0]
         .as_scalar()
         .expect("inserted element should be scalar");
-    assert_eq!(first.to_i64(), Some(99), "inserted element should be at index 0");
+    assert_eq!(
+        first.to_i64(),
+        Some(99),
+        "inserted element should be at index 0"
+    );
 }
 
 #[tokio::test]
 async fn test_insert_stack_keep_preserves_original_and_appends_modified() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] ,, .. INSERT").await;
-    assert!(result.is_ok(), "Stack+Keep INSERT should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 0 99 ] ,, .. INSERT")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Stack+Keep INSERT should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         7,
@@ -328,14 +340,22 @@ async fn test_insert_stack_keep_preserves_original_and_appends_modified() {
     let inserted = interp.stack[3]
         .as_scalar()
         .expect("inserted element should be scalar");
-    assert_eq!(inserted.to_i64(), Some(99), "modified copy head should be the inserted element");
+    assert_eq!(
+        inserted.to_i64(),
+        Some(99),
+        "modified copy head should be the inserted element"
+    );
 }
 
 #[tokio::test]
 async fn test_remove_stack_consume_modifies_in_place() {
     let mut interp = Interpreter::new();
     let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 ] .. REMOVE").await;
-    assert!(result.is_ok(), "Stack+Consume REMOVE should succeed: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "Stack+Consume REMOVE should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         2,
@@ -346,8 +366,14 @@ async fn test_remove_stack_consume_modifies_in_place() {
 #[tokio::test]
 async fn test_remove_stack_keep_preserves_original_and_appends_modified() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 ] ,, .. REMOVE").await;
-    assert!(result.is_ok(), "Stack+Keep REMOVE should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 1 ] ,, .. REMOVE")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Stack+Keep REMOVE should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         5,
@@ -358,8 +384,14 @@ async fn test_remove_stack_keep_preserves_original_and_appends_modified() {
 #[tokio::test]
 async fn test_replace_stack_consume_modifies_in_place() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] .. REPLACE").await;
-    assert!(result.is_ok(), "Stack+Consume REPLACE should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] .. REPLACE")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Stack+Consume REPLACE should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         3,
@@ -374,8 +406,14 @@ async fn test_replace_stack_consume_modifies_in_place() {
 #[tokio::test]
 async fn test_replace_stack_keep_preserves_original_and_appends_modified() {
     let mut interp = Interpreter::new();
-    let result = interp.execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] ,, .. REPLACE").await;
-    assert!(result.is_ok(), "Stack+Keep REPLACE should succeed: {:?}", result);
+    let result = interp
+        .execute("[ 10 ] [ 20 ] [ 30 ] [ 1 99 ] ,, .. REPLACE")
+        .await;
+    assert!(
+        result.is_ok(),
+        "Stack+Keep REPLACE should succeed: {:?}",
+        result
+    );
     assert_eq!(
         interp.stack.len(),
         6,
