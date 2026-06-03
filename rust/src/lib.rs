@@ -32,3 +32,6 @@ mod tensor_operation_tests;
 
 #[cfg(test)]
 mod json_io_tests;
+
+#[cfg(test)]
+mod conformance_tests;

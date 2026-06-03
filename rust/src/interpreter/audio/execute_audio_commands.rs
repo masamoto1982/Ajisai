@@ -60,9 +60,13 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
+    let payload = format!("{{\"slot_duration\":{}}}", seconds);
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Config(payload.clone()));
     interp
         .output_buffer
-        .push_str(&format!("CONFIG:{{\"slot_duration\":{}}}\n", seconds));
+        .push_str(&format!("CONFIG:{}\n", payload));
 
     Ok(())
 }
@@ -86,14 +90,23 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
+    let payload = format!("{{\"gain\":{}}}", clamped);
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Effect(payload.clone()));
     interp
         .output_buffer
-        .push_str(&format!("EFFECT:{{\"gain\":{}}}\n", clamped));
+        .push_str(&format!("EFFECT:{}\n", payload));
 
     Ok(())
 }
 
 pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Effect(
+            "{\"gain\":1.0}".to_string(),
+        ));
     interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
     Ok(())
 }
@@ -117,19 +130,33 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
+    let payload = format!("{{\"pan\":{}}}", clamped);
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Effect(payload.clone()));
     interp
         .output_buffer
-        .push_str(&format!("EFFECT:{{\"pan\":{}}}\n", clamped));
+        .push_str(&format!("EFFECT:{}\n", payload));
 
     Ok(())
 }
 
 pub fn op_pan_reset(interp: &mut Interpreter) -> Result<()> {
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Effect(
+            "{\"pan\":0.0}".to_string(),
+        ));
     interp.output_buffer.push_str("EFFECT:{\"pan\":0.0}\n");
     Ok(())
 }
 
 pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
+    interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::Effect(
+            "{\"gain\":1.0,\"pan\":0.0}".to_string(),
+        ));
     interp
         .output_buffer
         .push_str("EFFECT:{\"gain\":1.0,\"pan\":0.0}\n");

@@ -294,6 +294,11 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     let json_val = arena_node_to_json(&arena, root_id);
     let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
     interp
+        .host_effects
+        .push(crate::interpreter::HostEffect::JsonExport(
+            json_compact.clone(),
+        ));
+    interp
         .output_buffer
         .push_str(&format!("JSONEXPORT:{}\n", json_compact));
     Ok(())
