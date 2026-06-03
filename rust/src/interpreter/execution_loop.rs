@@ -212,11 +212,13 @@ impl Interpreter {
                             if resolved {
                                 let stack_backup = std::mem::take(&mut self.stack);
                                 let output_backup = std::mem::take(&mut self.output_buffer);
+                                let host_effects_backup = std::mem::take(&mut self.host_effects);
                                 match self.execute_word_core(upper.as_ref()) {
                                     Ok(()) => {
                                         let results =
                                             std::mem::replace(&mut self.stack, stack_backup);
                                         self.output_buffer = output_backup;
+                                        self.host_effects = host_effects_backup;
                                         if results.is_empty() {
                                             values.push(Value::from_string(s));
                                             has_other = true;
@@ -228,6 +230,7 @@ impl Interpreter {
                                     Err(_) => {
                                         self.stack = stack_backup;
                                         self.output_buffer = output_backup;
+                                        self.host_effects = host_effects_backup;
                                         values.push(Value::from_string(s));
                                         has_other = true;
                                     }
