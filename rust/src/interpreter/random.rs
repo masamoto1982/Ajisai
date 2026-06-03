@@ -8,6 +8,15 @@ use num_traits::{One, ToPrimitive};
 
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
 
+// TODO(portability): Allow CSPRNG to be provided by HostEnv for deterministic
+// conformance tests (e.g. a DeterministicHost { now_millis, random_bytes }).
+
+/// The single secure-random boundary. On native std this uses the OS entropy
+/// source; on wasm it uses `getrandom/js` (selected by the `wasm` feature).
+pub(crate) fn default_fill_random(buf: &mut [u8]) -> std::result::Result<(), String> {
+    getrandom::getrandom(buf).map_err(|e| format!("random generation failed: {}", e))
+}
+
 fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     if *denominator <= BigInt::one() {
         return Ok(BigInt::from(0));
@@ -18,7 +27,7 @@ fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     let bytes = total_bits.div_ceil(8);
 
     let mut buf = vec![0u8; bytes];
-    getrandom::getrandom(&mut buf).map_err(|e| {
+    default_fill_random(&mut buf).map_err(|e| {
         AjisaiError::from(format!("CSPRNG: failed to generate random bytes: {}", e))
     })?;
 

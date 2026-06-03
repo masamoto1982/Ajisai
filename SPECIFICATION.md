@@ -1100,3 +1100,24 @@ refusal or a step-budget exhaustion is an operational or environment condition,
 whereas an exhausted comparison budget is a *logical* `Unknown`, never an
 operational absence.
 
+
+## Portability Profiles
+
+### Core Profile
+Host-independent semantics only: tokenization, vector evaluation, exact
+arithmetic, vectors, blocks, map/form/fold, NIL/UNKNOWN, user definitions.
+
+### Hosted Profile
+Words requiring host capabilities: NOW, CSPRNG, SERIAL, AUDIO, JSONEXPORT,
+persistence, file I/O.
+
+### Platform Profile
+Concrete runtime bindings: Web/WASM, Tauri, CLI, WASI, Native desktop.
+
+## Conformance and Identity
+An implementation is an Ajisai implementation if and only if it passes the
+conformance suite (tests/conformance/). The suite defines, language-
+independently, the correspondence between Ajisai source programs and their
+observable results, including the ordered sequence of host effects. This
+correspondence is the phenomenon of Ajisai; everything not fixed by the
+suite is implementation freedom.

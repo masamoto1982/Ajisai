@@ -27,7 +27,10 @@ if ! command -v wasm-pack >/dev/null 2>&1; then
 fi
 
 cd "${repo_root}/rust"
-wasm-pack build --target web --out-dir "${scratch_dir}" --no-opt
+# The WASM/JS bindings are gated behind the `wasm` Cargo feature so the native
+# Core build never pulls in wasm-bindgen. wasm-pack passes args after `--`
+# straight to cargo.
+wasm-pack build --target web --out-dir "${scratch_dir}" --no-opt -- --features wasm
 
 mkdir -p "${out_dir}"
 for f in ajisai_core.js ajisai_core.d.ts ajisai_core_bg.wasm ajisai_core_bg.wasm.d.ts; do

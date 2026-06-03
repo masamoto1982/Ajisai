@@ -11,12 +11,44 @@ use crate::interpreter::value_extraction_helpers::create_datetime_value;
 use crate::interpreter::{Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
-use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = Date, js_name = now)]
-    fn date_now() -> f64;
+// TODO(portability): Route NOW through HostEnv instead of the default clock.
+// A deterministic clock is required for time-dependent conformance cases
+// (e.g. a DeterministicHost { now_millis, random_bytes }).
+
+/// The single host-clock boundary. Returns wall-clock milliseconds since the
+/// Unix epoch from whichever host the current build targets. WASM-specific
+/// access to `Date.now()` is isolated behind the `wasm` feature so the Core
+/// (native std) build never references wasm-bindgen.
+pub(crate) fn default_now_millis() -> i64 {
+    #[cfg(feature = "wasm")]
+    {
+        wasm_now_millis()
+    }
+    #[cfg(all(not(feature = "wasm"), feature = "std"))]
+    {
+        std_now_millis()
+    }
+}
+
+#[cfg(feature = "wasm")]
+fn wasm_now_millis() -> i64 {
+    use wasm_bindgen::prelude::*;
+    #[wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(js_namespace = Date, js_name = now)]
+        fn date_now() -> f64;
+    }
+    date_now() as i64
+}
+
+#[cfg(all(not(feature = "wasm"), feature = "std"))]
+fn std_now_millis() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 pub fn op_now(interp: &mut Interpreter) -> Result<()> {
@@ -27,8 +59,8 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let now_ms = date_now();
-    let ms_bigint = BigInt::from(now_ms as i64);
+    let now_ms = default_now_millis();
+    let ms_bigint = BigInt::from(now_ms);
     let timestamp = Fraction::new(ms_bigint, BigInt::from(1000));
 
     interp.stack.push(create_datetime_value(timestamp));

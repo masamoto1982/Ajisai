@@ -8,8 +8,11 @@ pub mod semantic;
 pub mod surface_forms;
 mod tokenizer;
 pub mod types;
+
+#[cfg(feature = "wasm")]
 mod wasm_interpreter_bindings;
 
+#[cfg(feature = "wasm")]
 pub use wasm_interpreter_bindings::AjisaiInterpreter;
 
 #[cfg(test)]
