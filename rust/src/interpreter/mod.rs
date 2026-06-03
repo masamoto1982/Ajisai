@@ -100,7 +100,9 @@ mod nil_unknown_firewall_tests;
 
 pub use interpreter_core::*;
 
-pub use host::{HostCapability, HostEffect};
+pub use host::{
+    default_host_env, DefaultHostEnv, DeterministicHostEnv, HostCapability, HostEffect, HostEnv,
+};
 
 pub use crate::types::WordDefinition;
 

@@ -8,6 +8,8 @@ use crate::types::{Value, ValueData};
 use num_traits::ToPrimitive;
 
 pub fn op_play(interp: &mut Interpreter) -> Result<()> {
+    interp.require_host_capability("MUSIC@PLAY", crate::interpreter::HostCapability::Audio)?;
+
     let mode = super::lookup_play_mode(interp);
     let target = interp.operation_target_mode;
 
@@ -16,9 +18,7 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
             let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let structure = build_audio_structure(&val, mode, &mut interp.output_buffer)?;
             if let Some(json) = emit_play_command(&structure, &mut interp.output_buffer) {
-                interp
-                    .host_effects
-                    .push(crate::interpreter::HostEffect::Audio(json));
+                interp.emit_host_effect(crate::interpreter::HostEffect::Audio(json));
             }
         }
         OperationTargetMode::Stack => {
@@ -46,9 +46,7 @@ pub fn op_play(interp: &mut Interpreter) -> Result<()> {
             };
 
             if let Some(json) = emit_play_command(&combined, &mut interp.output_buffer) {
-                interp
-                    .host_effects
-                    .push(crate::interpreter::HostEffect::Audio(json));
+                interp.emit_host_effect(crate::interpreter::HostEffect::Audio(json));
             }
         }
     }

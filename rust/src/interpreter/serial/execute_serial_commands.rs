@@ -65,12 +65,11 @@ fn extract_bytes(val: &Value) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn emit(interp: &mut Interpreter, command: serde_json::Value) {
+fn emit(interp: &mut Interpreter, command: serde_json::Value) -> Result<()> {
+    interp.require_host_capability("SERIAL", crate::interpreter::HostCapability::Serial)?;
     let line = command.to_string();
     // Structured observation channel (conformance suite, kind = "serial").
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Serial(line.clone()));
+    interp.emit_host_effect(crate::interpreter::HostEffect::Serial(line.clone()));
     // Legacy string protocol kept in parallel for the Web/Tauri adapters.
     if !interp.output_buffer.is_empty() && !interp.output_buffer.ends_with('\n') {
         interp.output_buffer.push('\n');
@@ -78,12 +77,13 @@ fn emit(interp: &mut Interpreter, command: serde_json::Value) {
     interp.output_buffer.push_str("SERIAL:");
     interp.output_buffer.push_str(&line);
     interp.output_buffer.push('\n');
+    Ok(())
 }
 
 /// `-- ` : ask the host adapter to enumerate available ports. The result is
 /// surfaced by the adapter (program output); a stack-returning form is Phase 2.
 pub fn op_list_ports(interp: &mut Interpreter) -> Result<()> {
-    emit(interp, json!({ "op": "listPorts" }));
+    emit(interp, json!({ "op": "listPorts" }))?;
     Ok(())
 }
 
@@ -92,7 +92,7 @@ pub fn op_list_ports(interp: &mut Interpreter) -> Result<()> {
 pub fn op_open(interp: &mut Interpreter) -> Result<()> {
     let handle = pop(interp)?;
     let id = require_port_id(&handle)?;
-    emit(interp, json!({ "op": "open", "portId": id }));
+    emit(interp, json!({ "op": "open", "portId": id }))?;
     interp.stack.push(handle);
     Ok(())
 }
@@ -109,7 +109,7 @@ pub fn op_configure(interp: &mut Interpreter) -> Result<()> {
     emit(
         interp,
         json!({ "op": "configure", "portId": id, "baudRate": baud }),
-    );
+    )?;
     interp.stack.push(handle);
     Ok(())
 }
@@ -123,7 +123,7 @@ pub fn op_write(interp: &mut Interpreter) -> Result<()> {
     emit(
         interp,
         json!({ "op": "write", "portId": id, "bytes": bytes }),
-    );
+    )?;
     interp.stack.push(handle);
     Ok(())
 }
@@ -132,7 +132,7 @@ pub fn op_write(interp: &mut Interpreter) -> Result<()> {
 pub fn op_flush(interp: &mut Interpreter) -> Result<()> {
     let handle = pop(interp)?;
     let id = require_port_id(&handle)?;
-    emit(interp, json!({ "op": "flush", "portId": id }));
+    emit(interp, json!({ "op": "flush", "portId": id }))?;
     interp.stack.push(handle);
     Ok(())
 }
@@ -141,7 +141,7 @@ pub fn op_flush(interp: &mut Interpreter) -> Result<()> {
 pub fn op_close(interp: &mut Interpreter) -> Result<()> {
     let handle = pop(interp)?;
     let id = require_port_id(&handle)?;
-    emit(interp, json!({ "op": "close", "portId": id }));
+    emit(interp, json!({ "op": "close", "portId": id }))?;
     Ok(())
 }
 

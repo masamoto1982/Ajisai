@@ -12,6 +12,10 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
+fn require_audio(interp: &mut Interpreter, word: &str) -> Result<()> {
+    interp.require_host_capability(word, crate::interpreter::HostCapability::Audio)
+}
+
 pub fn op_seq(interp: &mut Interpreter) -> Result<()> {
     update_play_mode(interp, PlayMode::Sequential);
     Ok(())
@@ -34,6 +38,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
 }
 
 pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
+    require_audio(interp, "MUSIC@SLOT")?;
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let frac = extract_scalar_from_value(&val)
@@ -61,9 +66,7 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
     }
 
     let payload = format!("{{\"slot_duration\":{}}}", seconds);
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Config(payload.clone()));
+    interp.emit_host_effect(crate::interpreter::HostEffect::Config(payload.clone()));
     interp
         .output_buffer
         .push_str(&format!("CONFIG:{}\n", payload));
@@ -72,6 +75,7 @@ pub fn op_slot(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
+    require_audio(interp, "MUSIC@GAIN")?;
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let frac = extract_scalar_from_value(&val)
@@ -91,9 +95,7 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
     }
 
     let payload = format!("{{\"gain\":{}}}", clamped);
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Effect(payload.clone()));
+    interp.emit_host_effect(crate::interpreter::HostEffect::Effect(payload.clone()));
     interp
         .output_buffer
         .push_str(&format!("EFFECT:{}\n", payload));
@@ -102,16 +104,16 @@ pub fn op_gain(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_gain_reset(interp: &mut Interpreter) -> Result<()> {
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Effect(
-            "{\"gain\":1.0}".to_string(),
-        ));
+    require_audio(interp, "MUSIC@GAIN-RESET")?;
+    interp.emit_host_effect(crate::interpreter::HostEffect::Effect(
+        "{\"gain\":1.0}".to_string(),
+    ));
     interp.output_buffer.push_str("EFFECT:{\"gain\":1.0}\n");
     Ok(())
 }
 
 pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
+    require_audio(interp, "MUSIC@PAN")?;
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let frac = extract_scalar_from_value(&val)
@@ -131,9 +133,7 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
     }
 
     let payload = format!("{{\"pan\":{}}}", clamped);
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Effect(payload.clone()));
+    interp.emit_host_effect(crate::interpreter::HostEffect::Effect(payload.clone()));
     interp
         .output_buffer
         .push_str(&format!("EFFECT:{}\n", payload));
@@ -142,21 +142,19 @@ pub fn op_pan(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_pan_reset(interp: &mut Interpreter) -> Result<()> {
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Effect(
-            "{\"pan\":0.0}".to_string(),
-        ));
+    require_audio(interp, "MUSIC@PAN-RESET")?;
+    interp.emit_host_effect(crate::interpreter::HostEffect::Effect(
+        "{\"pan\":0.0}".to_string(),
+    ));
     interp.output_buffer.push_str("EFFECT:{\"pan\":0.0}\n");
     Ok(())
 }
 
 pub fn op_fx_reset(interp: &mut Interpreter) -> Result<()> {
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::Effect(
-            "{\"gain\":1.0,\"pan\":0.0}".to_string(),
-        ));
+    require_audio(interp, "MUSIC@FX-RESET")?;
+    interp.emit_host_effect(crate::interpreter::HostEffect::Effect(
+        "{\"gain\":1.0,\"pan\":0.0}".to_string(),
+    ));
     interp
         .output_buffer
         .push_str("EFFECT:{\"gain\":1.0,\"pan\":0.0}\n");
