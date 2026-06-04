@@ -615,6 +615,115 @@ Projecting の NIL 射影、契約の全域性(全語が到達可能契約を持
 
 ---
 
+## 9-quinquies. 拡張定式化 IV — 名前解決と辞書(Phase 6, 2026-06 改修)
+
+本節は改修ロードマップ Phase 6(名前解決と辞書=モジュール・DEF)の成果を取り込む。
+語名はもはや「裸の文字列」ではなく、**辞書状態 `Σ_dict` に相対的な束縛**である。
+SPEC §7.8/§8(ユーザ辞書・DEF/DEL)・§7.10/§9(モジュール・IMPORT)・§7.14
+(`canonical_home`/`listed_*` 契約フィールド)の現象を、決定的な解決関数と
+可視性格子上の単調作用素として記述する。本節は仕様を追い越さない(§16.1)。
+
+### F. 辞書・決定的 `resolve`・可視性格子(Phase 6)
+
+#### F.1 辞書と解決の対象領域
+
+辞書を三層の有限写像とする(SPEC §4.6・§7.8・§9):
+
+```
+Core : Name ⇀ Blk          (核語彙、不変)
+Mod  : Module → (Name ⇀ Blk)   (モジュール辞書、キャッシュ)
+Usr  : Dict   → (Name ⇀ Blk)   (ユーザ辞書、既定 DICT=DEMO)
+```
+
+可視性状態 `Vis` は import 表 `Module ⇀ {all | W⊆Name}`(全公開取込か明示部分取込)と
+ユーザ辞書からなる。語名は §3.8 で大文字へ正規化される(`sqrt ≡ SQRT`、`%≡MOD`,
+`&≡AND`)ので、`resolve` の定義域は正規化済み `Name`。
+
+#### F.2 `resolve` は決定的な可視性相対関数
+
+解決を
+
+```
+resolve : Name × Vis ⇀ Blk + Unknown
+```
+
+とし、裸名の解決順は **Core → 取込済みモジュール語 → (モジュール sample / ユーザ語)**
+で固定する(参照実装 `resolve_short_name`):
+
+```
+resolve(w, Vis) =
+  Core[w]                          if w ∈ dom Core            -- (1) 核が最優先
+  Mod[m][m@w]   (m: w を取込済みの最初のモジュール)            -- (2) 取込モジュール語
+  最小 registration_order の一致    if sample/user に一意一致    -- (3) 残りは登録順で決定的
+  Unknown                          otherwise
+```
+
+`(3)` で **モジュール sample とユーザ語が両方一致すると曖昧** として
+`Unknown`(=解決失敗)を返す。修飾名は層で解決する:`CORE@w` は核へ、`m@w` は
+モジュール `m` の取込済み語へ、`USER@d@w`・`DICT@…` は各辞書へ(`split_path`)。
+**中心性質——決定性**: `resolve` は評価履歴に依らず `(Name, Vis)` のみの関数であり、
+同じ状態で同じ名は常に同じ束縛へ解決する。
+
+#### F.3 DEF/DEL は辞書状態変換子(依存グラフ `FORC`)
+
+`DEF`/`DEL` を `Σ_dict` 上の変換子として与える(SPEC §8):
+
+```
+⟦{b} 'w' DEF⟧ : Usr[DEMO][w] := b      (核語は不可=「built-in 再定義不可」)
+⟦'w' DEL⟧     : Usr[DEMO] ∖ w
+```
+
+定義時に本体トークンを `resolve` して**依存グラフ** `dependents : Name → 2^Name` を
+構成する(`rebuild_dependencies`)。被参照語の再定義・削除は **`FORC` ガード**で
+保護され、力修飾子 `!` なしでは拒否される(`{requires: deps=∅ ∨ forced}`、§8.2)。
+解決面での法則:`DEF` は名を可視化し定義本体の変換子を束ね、`DEL` はそれを左から
+打ち消す——新鮮名 `w` について `resolve(w) = Unknown`、`DEF` 後 `= b`、`DEL` 後
+再び `Unknown`(可視性に対する **DEF/DEL の往復恒等**)。
+
+#### F.4 IMPORT/UNIMPORT は可視性格子の単調作用素
+
+import 状態を包含で順序づけた格子 `(Vis, ⊑)` 上で(SPEC §9.2):
+
+| 作用素 | 効果 | 法則 |
+|---|---|---|
+| `IMPORT` | `Vis[m] := all` | **冪等** `IMPORT_m ∘ IMPORT_m = IMPORT_m`(単調・上昇) |
+| `IMPORT-ONLY S` | `Vis[m] := Vis[m] ∪ S` | 選択的:`S` のみ可視化、兄弟語は不可視のまま |
+| `UNIMPORT` | 被参照語を保つ最小可視へ縮小 | **参照保存**:ユーザ語が指す `m@w` は残し残余を隠す |
+| `UNIMPORT-ONLY S` | `S` を個別に隠す | 被参照セレクタは**拒否**(辞書 UNIMPORT を要求) |
+
+`IMPORT` と `UNIMPORT` は、被参照語が無いとき**互いに逆**:`IMPORT_m` 後に
+`UNIMPORT_m` すると裸名・修飾名の双方が import 前の `Unknown` へ戻る。境界語の
+**`bare ≡ m@w`**:`m` 取込後、正準モジュール語は裸名でも `m@w` でも同一に観測される
+(SPEC §7.14)。`core-listed` セレクタ(モジュール view に列挙されるが正準は核の語、
+例 `IO` の `PRINT`)の `IMPORT-ONLY`/`UNIMPORT-ONLY` は **no-op**(既に核で可用、
+警告のみ)。`canonical_home`/`listed_in_*`(§7.14)はこの作用素群の静的台帳であり、
+裸名が複数の正準ホームを持つとき(例 核 `GET` と `JSON@GET`)契約照会は**核を優先**
+する(実行時解決順に一致)。
+
+#### F.5 所見(finding)
+
+- **所見 F1(修飾解決は import ゲート付き)— 追跡中:** 静的契約レジストリ
+  `get_coreword_metadata("MATH@SQRT")` は **常に**モジュール項へ到達する(SPEC §7.14
+  「`MODULE@WORD` always reaches the module entry」)が、**実行時**の `m@w` 解決は
+  `IMPORT` を要する(`4 MATH@SQRT` は未取込で `Unknown`)。すなわち §7.14 の到達性
+  言明は**静的台帳の性質**であり、実行時可視性はそれに import ゲートを重ねる。
+  乖離ではなく層の分離だが、両者を混同しないようガード付きオラクルで固定。
+- **所見 F2(取込モジュール語は同名ユーザ語を遮蔽)— 追跡中:** 解決順が
+  Core→取込モジュール→ユーザであるため、ユーザが先に `SQRT` を定義していても
+  `'math' IMPORT` 後の裸 `SQRT` は **MATH@SQRT** に解決する(ユーザ語ではない)。
+  自分の定義が勝つという素朴な期待と異なる決定的順序であり、オラクルで固定。
+  到達可能状態では一貫(曖昧は §F.2(3) で `Unknown` 化)。
+
+**テスト**: `rust/tests/naming_resolution_laws.rs` — 境界語 `bare≡m@w`、IMPORT 冪等、
+解決決定性、核語は import で遮蔽されない、F2 遮蔽、DEF 本体インライン、DEF/DEL 往復、
+`FORC` ガード(再定義・削除の `!`)、built-in 再定義不可、UNIMPORT が import を逆転、
+UNIMPORT の参照保存、UNIMPORT-ONLY の被参照拒否、IMPORT-ONLY の選択性・core-listed
+no-op、レジストリの canonical_home/核優先・修飾到達・F1 import ゲート(計 18 法則群)。
+生成器は `rust/tests/test_support/generators.rs` に `module_word_call`/`user_word_name`
+/`user_word_body` を追加。
+
+---
+
 ## 10. 付録 — 経験的法則チェック(参照実装 2026-06)
 
 参照実装に直接プログラムを流して §9.2 の法則を確認した結果。
@@ -650,6 +759,11 @@ Projecting の NIL 射影、契約の全域性(全語が到達可能契約を持
 | 所見 E1: 質量契約 `mass` を §7.14 へ露出・静的検証器を実装 | HOLDS(解消) | §9-quater E.5、`tests/mass_conservation_laws.rs` |
 | 静的 net mass=実行時深さ・過消費⇔underflow・KEEP増分=arity | HOLDS | `tests/mass_conservation_laws.rs` |
 | 所見 E2: safety A⟹{Total,Projecting}(GCD/LCM を B へ修正) | HOLDS(解消) | §9-quater E.5、`tests/contract_modifier_laws.rs` |
+| 境界語 `bare≡m@w`・IMPORT 冪等・解決決定性・核語は import で非遮蔽(§9-quinquies F) | HOLDS | `tests/naming_resolution_laws.rs` |
+| DEF 本体インライン・DEF/DEL 往復・`FORC` ガード(`!`)・built-in 再定義不可 | HOLDS | `tests/naming_resolution_laws.rs` |
+| UNIMPORT が import を逆転・参照保存・UNIMPORT-ONLY 被参照拒否・IMPORT-ONLY 選択/core-listed no-op | HOLDS | `tests/naming_resolution_laws.rs` |
+| 所見 F1: 修飾解決は import ゲート(静的台帳は常に到達) | HOLDS(層分離) | §9-quinquies F.5、追跡中 |
+| 所見 F2: 取込モジュール語が同名ユーザ語を遮蔽(Core→mod→user) | HOLDS(到達可能) | §9-quinquies F.5、追跡中 |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は

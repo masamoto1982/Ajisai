@@ -39,9 +39,9 @@
 | §7.5 | K3 論理 | Defined | De Morgan(Kleene)束 |
 | §7.6 | 文字列・変換 | Absent | 符号点列・符号化契約 |
 | §7.7 | 高階・制御語 | **Defined**(Phase 4 済) | 再帰スキーム(cata/ana/…)・K3 ガード case |
-| §7.8 / §8 | ユーザ辞書・DEF | Absent | `Dict` 上の状態変換子・依存グラフ |
+| §7.8 / §8 | ユーザ辞書・DEF | **Defined**(Phase 6 済) | `Dict` 上の状態変換子・依存グラフ |
 | §7.9 | IO・ユーティリティ | Absent | 効果ラベル・非決定性の分離 |
-| §7.10 / §9 | モジュール・名前解決 | Absent | 可視性格子・決定的 `resolve` |
+| §7.10 / §9 | モジュール・名前解決 | **Defined**(Phase 6 済) | 可視性格子・決定的 `resolve` |
 | §7.11 / §10 | 子ランタイム(並行) | Absent | 状態機械・小ステップ計算(探索的) |
 | §7.14 | Coreword 契約 | **Defined**(Phase 3 済) | Hoare 契約+部分性/効果/安全性の格子 |
 | §11 | 誤差モデル・Bubble Rule | Defined(述語は Sketched) | `Σ+Error` 二層・整形/不整形述語 |
@@ -49,11 +49,11 @@
 | §2.3 | 観測軸(protocol) | **Defined**(Phase 1 済) | 観測代数 `observe` を semantic axes で |
 
 当初「Ajisai のごく一部」だった被覆は、Phase 1(観測基盤)・Phase 2(構文)・
-Phase 3(修飾子・契約・質量保存)・Phase 4(高階語)・Phase 5(構造データ)の完了で
-言語表層の中核へ拡大した。残る `Absent` はレコード・文字列・辞書/名前解決・効果/IO・
-並行性であり、新セッションで Phase 6/7/8/9 として取り組む。各完了フェーズの定義は
-形式化本体 §9-bis / §9-ter / §9-quater、法則は
-`rust/tests/{observation,desugar,contract_modifier,higher_order,structural}_laws.rs`。
+Phase 3(修飾子・契約・質量保存)・Phase 4(高階語)・Phase 5(構造データ)・
+Phase 6(名前解決・辞書)の完了で言語表層の中核へ拡大した。残る `Absent` は
+レコード・文字列・効果/IO・並行性であり、Phase 7/8/9 として取り組む。各完了フェーズの
+定義は形式化本体 §9-bis / §9-ter / §9-quater / §9-quinquies、法則は
+`rust/tests/{observation,desugar,contract_modifier,higher_order,structural,naming_resolution}_laws.rs`。
 
 ### 0.3 進捗(本セッション)
 
@@ -64,7 +64,8 @@ Phase 3(修飾子・契約・質量保存)・Phase 4(高階語)・Phase 5(構造
 | 3 ⭐契約・修飾子・質量保存 | ✅ 完了 | 本体 §9-quater E | `rust/tests/contract_modifier_laws.rs`(11 群) |
 | 4 高階・制御語 | ✅ 完了 | 本体 §9-bis B | `rust/tests/higher_order_laws.rs`(11 群) |
 | 5 構造データ | ✅ 完了 | 本体 §9-bis C | `rust/tests/structural_laws.rs`(10 群) |
-| 6,7,8,9 | 未着手 | — | 新セッション |
+| 6 名前解決・辞書 | ✅ 完了 | 本体 §9-quinquies F | `rust/tests/naming_resolution_laws.rs`(18 群) |
+| 7,8,9 | 未着手 | — | 新セッション |
 
 ---
 
