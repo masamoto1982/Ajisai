@@ -25,20 +25,20 @@
 
 | 仕様節 | 領域 | 現状 | 主な数学的道具(目標) |
 |---|---|---|---|
-| §3 | 構文・字句・脱糖 | Absent | `tokenize/parse/desugar` を全域関数として |
+| §3 | 構文・字句・脱糖 | **Defined**(Phase 2 済) | `tokenize/parse/desugar` を全域関数として |
 | §4.1 / §5(Σ) | 値空間・配置 | Defined | 直和 `V`、`Σ = Stack×Dict×Eff` |
 | §4.2 | 連分数スカラ | Defined | GL₂(ℤ) 行列積、遅延ストリーム |
 | §4.2.5 / §7.4.1.1 | NICF 比較 | Sketched | 半正則展開・丸め・予算単位 |
-| §4.3 / §7.2 | ベクトル・テンソル | Sketched | 添字函手・reshape 群作用・broadcast applicative |
+| §4.3 / §7.2 | ベクトル・テンソル | **Defined**(Phase 5 済) | 添字函手・reshape 群作用・broadcast applicative |
 | §4.4 | レコード | Absent | 順序保存有限写像 `Name ⇀ V` の代数 |
 | §4.5 | NIL・absence metadata | Defined(metadata は Sketched) | Bubble モナド `M(X)=X+(⊥×R∞)` |
 | §6 / §13 | 修飾子・質量保存 | Sketched | 変換子コンビネータ・線形(資源)型 |
-| §7.1 | ベクトル操作語 | Absent | `V*` 上の自由モノイド+部分添字写像 |
+| §7.1 | ベクトル操作語 | **Defined**(Phase 5 済) | `V*` 上の自由モノイド+部分添字写像 |
 | §7.3 / §7.13 | 算術・丸め | Defined | 双一次変換(Gosper)・整数部抽出 |
 | §7.4 | 比較・U 伝播 | Defined(7.4.2/7.4.3 は Sketched) | 予算付き観測 `cmp_β` |
 | §7.5 | K3 論理 | Defined | De Morgan(Kleene)束 |
 | §7.6 | 文字列・変換 | Absent | 符号点列・符号化契約 |
-| §7.7 | 高階・制御語 | Absent | 再帰スキーム(cata/ana/…)・K3 ガード case |
+| §7.7 | 高階・制御語 | **Defined**(Phase 4 済) | 再帰スキーム(cata/ana/…)・K3 ガード case |
 | §7.8 / §8 | ユーザ辞書・DEF | Absent | `Dict` 上の状態変換子・依存グラフ |
 | §7.9 | IO・ユーティリティ | Absent | 効果ラベル・非決定性の分離 |
 | §7.10 / §9 | モジュール・名前解決 | Absent | 可視性格子・決定的 `resolve` |
@@ -48,8 +48,20 @@
 | §12 | 意味プレーン・ロール | Sketched | `render : (data, role) → display` 純関数 |
 | §2.3 | 観測軸(protocol) | Sketched | 観測代数 `observe` を semantic axes で |
 
-「Ajisai のごく一部」という認識はこの行列が裏づける:`Defined` は核の数値・論理・
-部分性に集中し、言語表層の大半が `Sketched`/`Absent`。
+当初「Ajisai のごく一部」だった被覆は、Phase 2(構文)・Phase 4(高階語)・
+Phase 5(構造データ)の完了で言語表層の中核へ拡大した。残る `Absent` は
+レコード・文字列・辞書/名前解決・効果/IO・契約/質量保存・並行性であり、
+新セッションで Phase 1/3/6/7/8/9 として取り組む。各完了フェーズの定義は
+形式化本体 §9-bis、法則は `rust/tests/{desugar,higher_order,structural}_laws.rs`。
+
+### 0.3 進捗(本セッション)
+
+| Phase | 状態 | 定義(D) | 法則・テスト(L/T) |
+|---|---|---|---|
+| 2 構文・脱糖 | ✅ 完了 | 本体 §9-bis A | `rust/tests/desugar_laws.rs`(6 群) |
+| 4 高階・制御語 | ✅ 完了 | 本体 §9-bis B | `rust/tests/higher_order_laws.rs`(11 群) |
+| 5 構造データ | ✅ 完了 | 本体 §9-bis C | `rust/tests/structural_laws.rs`(10 群) |
+| 1,3,6,7,8,9 | 未着手 | — | 新セッション |
 
 ---
 

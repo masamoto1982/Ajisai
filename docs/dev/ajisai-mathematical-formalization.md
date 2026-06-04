@@ -315,6 +315,87 @@ observe(p)  =  ( render( π_Stack( ⟦p⟧(σ₀) ) ),  π_Eff( ⟦p⟧(σ₀) )
 
 ---
 
+## 9-bis. 拡張定式化 I — 構文・高階語・構造データ(2026-06 改修)
+
+本節は改修ロードマップ
+(`docs/dev/ajisai-formalization-expansion-roadmap.md`)Phase 2/4/5 の成果を
+形式化本体へ取り込む。いずれも §2 の準同型・§5 のモナド・§7 の添字函手の上に
+立つ。各小節の法則は実行可能な性質ベーステストとして常時検証される
+(末尾の「テスト」欄)。
+
+### A. 構文層 — 脱糖は観測透明(Phase 2)
+
+字句・構文・脱糖を全域関数の合成として与える:
+
+```
+tokenize : Source ⇀ Token*      parse : Token* ⇀ Phrase*      desugar : Phrase* → Phrase*
+```
+
+`desugar` は §3.9 / §7.0 の表に従い、記号糖衣を英語正準語へ書き換える。本書 §2 の
+準同型はこの脱糖後のフレーズ列に対して厳密に閉じる。脱糖の**健全性**は
+
+```
+⟦desugar(s)⟧ = ⟦s⟧
+```
+
+であり、観測レベルでは「糖衣形と正準形が同一に render される」こととして現れる。
+語名は大文字へ正規化される(§3.8)ので `add ≡ Add ≡ ADD`。`PIPE`(`==`)は
+単位変換子 id(視覚的分離子、§6.4)、`TOP-EAT`(`;`)は `. ,` の合成、すなわち
+脱糖は**新しい意味を加えない構文層の恒等**である。`(`/`)` は字句段で拒否され、
+`>CF` 等の conversion word は単一トークン化される(§3.9)。
+
+**テスト**: `rust/tests/desugar_laws.rs` — 四則・比較の記号≡英語、`==` no-op、
+大小文字正規化、`;`≡`. ,`、`&`≡`AND` を {T,F,U} 上で(計 6 法則群)。
+
+### B. 高階・制御語 — 再帰スキーム(Phase 4)
+
+§7.7 の制御語を、そのモデルの代数法則で特徴づける。被演算ブロックは第一級
+`Blk`(§4.6)であり、`EXEC` が脱参照適用、`EVAL` が文字列ソースに対する `⟦·⟧` の
+reflection。
+
+| 語 | モデル | 中心法則 |
+|---|---|---|
+| `MAP` | 添字函手上の関手持ち上げ | 恒等 `MAP id = id`、融合 `MAP g ∘ MAP f = MAP (g∘f)` |
+| `FOLD` | catamorphism(モノイド畳み込み) | `[a b c] 0 {ADD} FOLD = a+b+c`、`1 {MUL} FOLD = a·b·c` |
+| `SCAN` | catamorphism の中間累算列 | prefix-sums: `[1 2 3 4] 0 {ADD} SCAN = [1 3 6 10]` |
+| `FILTER` | 述語による部分列制限 | 冪等 `FILTER p ∘ FILTER p = FILTER p`、可換 `FILTER p ∘ FILTER q = FILTER q ∘ FILTER p` |
+| `ANY`/`ALL` | 存在/全称量化 | De Morgan 双対 `ALL p = ¬ ANY ¬p`(K3、§4) |
+| `EXEC` | ブロック脱参照 | `a b {ADD} EXEC = a b ADD` |
+| `EVAL` | `⟦·⟧` の reflection | `⟦EVAL(STR p)⟧ = ⟦p⟧` |
+| `COND` | K3 ガード付き case | **U ガードは不発火**:U は `false` と同様に次節へ落ち、definite `true` のみ発火(§7.4.3) |
+
+`COND` の U-不発火は K3 への忠実性そのもの:ガードが「真と確立できない」(U)とき
+その節は選ばれず、しかし値はスタック上で `truthValue=unknown` として観測可能。これは
+比較の半決定性(§3.3)が制御フローへ波及する地点であり、`MIN`/`MAX`/`SORT` の
+U 伝播(§7.4.3)と同じ規律に属する。
+
+**テスト**: `rust/tests/higher_order_laws.rs` — 上記 11 法則群(map 恒等・融合、
+fold 加法/乗法、scan、filter 冪等/可換、any/all 双対、exec/eval reflection、
+cond U-不発火)。
+
+### C. 構造データ — 自由モノイドと reshape 群(Phase 5)
+
+ベクトル語(§7.1)を `V*` 上の**自由モノイド**として:`CONCAT` が結合的な積、
+空でない列が要素(空列は NIL、§4.5)、`REVERSE` が反同型の対合
+
+```
+REVERSE ∘ REVERSE = id        REVERSE(a ++ b) = REVERSE(b) ++ REVERSE(a)
+```
+
+テンソル(§7.2/§4.3)は同型 `Tensor ≅ (data: V*, shape)` 上で reshape 群が添字に
+作用する対象。`TRANSPOSE` は 2 階テンソルの対合、`RESHAPE` は総要素数を保つ往復、
+`SHAPE`/`RANK` は添字構造の読み出し、`FILL` は所与の形のテンソル構成
+(`SHAPE ∘ FILL = id` on shape)。`SPLIT` と `CONCAT` は逆操作
+(`split` してから `concat` で復元)。`REORDER` は添字写像で、恒等添字 `[0 1 …]` は
+id、反転添字は `REVERSE`。`SORT`(正準ホーム `ALGO`、§9.1)は決定可能な有理部分域で
+冪等かつ置換不変(§7.4.3 の決定ケース)。
+
+**テスト**: `rust/tests/structural_laws.rs` — reverse 対合・反同型、concat 結合、
+split↔concat 往復、transpose 対合、reshape 往復、shape/rank/fill/range、take 全長恒等、
+reorder 恒等/反転、sort 冪等/置換不変(計 10 法則群)。
+
+---
+
 ## 10. 付録 — 経験的法則チェック(参照実装 2026-06)
 
 参照実装に直接プログラムを流して §9.2 の法則を確認した結果。
@@ -333,6 +414,13 @@ observe(p)  =  ( render( π_Stack( ⟦p⟧(σ₀) ) ),  π_Eff( ⟦p⟧(σ₀) )
 | `TRUE 1 EQ ≡ FALSE`(B2 区別) | HOLDS(修正後) | **所見 B 解消**: T≠1 |
 | 真偽値の一貫表示 `TRUE`/`FALSE`/`UNKNOWN` | HOLDS(修正後) | **所見 B1 解消** |
 | 無理数の入れ子CF表示 §4.2.3 | HOLDS(修正後) | **所見 C 解消** |
+| 脱糖透明 `a b + ≡ a b ADD` ほか(§9-bis A) | HOLDS | `tests/desugar_laws.rs` |
+| `;` ≡ `. ,`、`==` no-op、大小文字正規化 | HOLDS | `tests/desugar_laws.rs` |
+| MAP 恒等/融合、FOLD/SCAN cata(§9-bis B) | HOLDS | `tests/higher_order_laws.rs` |
+| FILTER 冪等/可換、`ALL p ≡ ¬ANY¬p` | HOLDS | `tests/higher_order_laws.rs` |
+| EXEC inline、`EVAL(STR p) ≡ p`、COND の U 不発火 | HOLDS | `tests/higher_order_laws.rs` |
+| REVERSE 対合/反同型、CONCAT 結合、SPLIT↔CONCAT | HOLDS | `tests/structural_laws.rs` |
+| TRANSPOSE 対合、RESHAPE 往復、SORT 冪等/置換不変 | HOLDS | `tests/structural_laws.rs` |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は
