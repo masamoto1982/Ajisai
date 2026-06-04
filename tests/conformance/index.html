@@ -30,13 +30,21 @@
   <li><code>ajisai-source</code> is run as an Ajisai program.</li>
   <li>The observed final result &mdash; the whole stack, each value rendered
       value-by-value &mdash; must equal <code>ajisai-expect-result</code> after
-      normalization.</li>
+      normalization. A case may instead include <code>ajisai-expect-error</code>;
+      then execution must fail with an error containing that text, and the stack
+      result is not compared.</li>
   <li>The fired host effects must equal the ordered list of
       <code>ajisai-effect</code> elements inside
       <code>ajisai-expect-effects</code>: both <code>data-kind</code> and
       <code>data-payload</code>, in order. The observation target is the
       structured host-effect channel, never the human-readable output buffer.
       An empty <code>ajisai-expect-effects</code> means no effects.</li>
+  <li>Hosted cases may request a deterministic host using
+      <code>data-host-now-millis</code>, <code>data-host-random-hex</code>, and
+      <code>data-host-capabilities</code>. Capability names use protocol spelling
+      (<code>clock</code>, <code>secureRandom</code>, <code>serial</code>,
+      <code>audio</code>, <code>jsonExport</code>, <code>config</code>,
+      <code>effect</code>).</li>
 </ol>
 
 <h2>Normalization (minimal, strict-leaning)</h2>
@@ -152,6 +160,41 @@
 </section>
 
 <!-- ============================ HOSTED ============================ -->
+
+
+<section class="ajisai-case" id="hosted-now-deterministic" data-category="hosted" data-host-now-millis="1700000000123" data-host-capabilities="clock">
+  <h3>TIME@NOW reads the injected deterministic host clock</h3>
+  <pre class="ajisai-source">'time' IMPORT NOW</pre>
+  <pre class="ajisai-expect-result">1700000000123/1000</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-csprng-deterministic" data-category="hosted" data-host-random-hex="030000000000000000" data-host-capabilities="secureRandom">
+  <h3>CRYPTO@CSPRNG reads deterministic host bytes</h3>
+  <pre class="ajisai-source">'crypto' IMPORT [ 10 ] [ 1 ] CSPRNG</pre>
+  <pre class="ajisai-expect-result">[ 3/10 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-csprng-missing-capability" data-category="hosted" data-host-capabilities="">
+  <h3>CRYPTO@CSPRNG without secureRandom fails with diagnostic effect</h3>
+  <pre class="ajisai-source">'crypto' IMPORT CSPRNG</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">CSPRNG requires missing host capability secureRandom</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="diagnostic" data-payload='{"capability":"secureRandom","op":"missingCapability","word":"CSPRNG"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-missing-capability" data-category="hosted" data-host-capabilities="">
+  <h3>SERIAL without serial capability fails with diagnostic effect</h3>
+  <pre class="ajisai-source">'serial' IMPORT SERIAL@LIST-PORTS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">SERIAL requires missing host capability serial</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="diagnostic" data-payload='{"capability":"serial","op":"missingCapability","word":"SERIAL"}'></span>
+  </div>
+</section>
 
 <section class="ajisai-case" id="hosted-serial-list-ports" data-category="hosted">
   <h3>SERIAL@LIST-PORTS fires one structured serial host effect</h3>

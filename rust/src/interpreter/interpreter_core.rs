@@ -551,12 +551,7 @@ impl Interpreter {
         if self.host_env.has_capability(capability) {
             return Ok(());
         }
-        let payload = serde_json::json!({
-            "op": "missingCapability",
-            "word": word,
-            "capability": format!("{:?}", capability),
-        })
-        .to_string();
+        let payload = super::host::missing_capability_payload(word, capability);
         self.emit_host_effect(super::HostEffect::Diagnostic(payload));
         Err(super::host::missing_capability_error(word, capability))
     }

@@ -35,6 +35,20 @@ pub enum HostCapability {
     Effect,
 }
 
+impl HostCapability {
+    pub fn as_protocol_str(self) -> &'static str {
+        match self {
+            HostCapability::Clock => "clock",
+            HostCapability::SecureRandom => "secureRandom",
+            HostCapability::Serial => "serial",
+            HostCapability::Audio => "audio",
+            HostCapability::JsonExport => "jsonExport",
+            HostCapability::Config => "config",
+            HostCapability::Effect => "effect",
+        }
+    }
+}
+
 /// A structured, observable side effect produced by a Hosted-profile word.
 ///
 /// Each variant corresponds to a conformance `data-kind` (see `kind`). The
@@ -186,9 +200,18 @@ impl HostEnv for DeterministicHostEnv {
     }
 }
 
+pub(crate) fn missing_capability_payload(word: &str, capability: HostCapability) -> String {
+    format!(
+        r#"{{"capability":"{}","op":"missingCapability","word":"{}"}}"#,
+        capability.as_protocol_str(),
+        word
+    )
+}
+
 pub(crate) fn missing_capability_error(word: &str, capability: HostCapability) -> AjisaiError {
     AjisaiError::from(format!(
-        "{} requires missing host capability {:?}",
-        word, capability
+        "{} requires missing host capability {}",
+        word,
+        capability.as_protocol_str()
     ))
 }
