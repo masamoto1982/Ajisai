@@ -45,23 +45,24 @@
 | §7.11 / §10 | 子ランタイム(並行) | Absent | 状態機械・小ステップ計算(探索的) |
 | §7.14 | Coreword 契約 | Absent | Hoare 契約+部分性/効果/安全性の格子 |
 | §11 | 誤差モデル・Bubble Rule | Defined(述語は Sketched) | `Σ+Error` 二層・整形/不整形述語 |
-| §12 | 意味プレーン・ロール | Sketched | `render : (data, role) → display` 純関数 |
-| §2.3 | 観測軸(protocol) | Sketched | 観測代数 `observe` を semantic axes で |
+| §12 | 意味プレーン・ロール | **Defined**(Phase 1 済) | `render : (data, role) → display` 純関数 |
+| §2.3 | 観測軸(protocol) | **Defined**(Phase 1 済) | 観測代数 `observe` を semantic axes で |
 
-当初「Ajisai のごく一部」だった被覆は、Phase 2(構文)・Phase 4(高階語)・
-Phase 5(構造データ)の完了で言語表層の中核へ拡大した。残る `Absent` は
-レコード・文字列・辞書/名前解決・効果/IO・契約/質量保存・並行性であり、
-新セッションで Phase 1/3/6/7/8/9 として取り組む。各完了フェーズの定義は
-形式化本体 §9-bis、法則は `rust/tests/{desugar,higher_order,structural}_laws.rs`。
+当初「Ajisai のごく一部」だった被覆は、Phase 1(観測基盤)・Phase 2(構文)・
+Phase 4(高階語)・Phase 5(構造データ)の完了で言語表層の中核へ拡大した。残る
+`Absent` はレコード・文字列・辞書/名前解決・効果/IO・契約/質量保存・並行性であり、
+新セッションで Phase 3/6/7/8/9 として取り組む。各完了フェーズの定義は形式化本体
+§9-bis / §9-ter、法則は `rust/tests/{observation,desugar,higher_order,structural}_laws.rs`。
 
 ### 0.3 進捗(本セッション)
 
 | Phase | 状態 | 定義(D) | 法則・テスト(L/T) |
 |---|---|---|---|
+| 1 観測基盤 | ✅ 完了 | 本体 §9-ter D | `rust/tests/observation_laws.rs`(10 群)+ `tests/test_support/{generators,observe}.rs` |
 | 2 構文・脱糖 | ✅ 完了 | 本体 §9-bis A | `rust/tests/desugar_laws.rs`(6 群) |
 | 4 高階・制御語 | ✅ 完了 | 本体 §9-bis B | `rust/tests/higher_order_laws.rs`(11 群) |
 | 5 構造データ | ✅ 完了 | 本体 §9-bis C | `rust/tests/structural_laws.rs`(10 群) |
-| 1,3,6,7,8,9 | 未着手 | — | 新セッション |
+| 3,6,7,8,9 | 未着手 | — | 新セッション |
 
 ---
 

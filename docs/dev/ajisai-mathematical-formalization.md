@@ -396,6 +396,108 @@ reorder 恒等/反転、sort 冪等/置換不変(計 10 法則群)。
 
 ---
 
+## 9-ter. 拡張定式化 II — 観測基盤(Phase 1, 2026-06 改修)
+
+本節は改修ロードマップ Phase 1(観測基盤と観測代数の確定)の成果を取り込む。
+§8 の観測関数 `observe` を SPEC §2.3 の semantic axes で再定義し、§8 が用いる
+表示函数 `render` を **全ロールについて純関数**として特徴づける。以後の全フェーズは
+本節が固定する観測基盤(protocol 軸 + 純 `render`)の上に立つ。
+
+### D. 観測代数 — 軸射影と純 `render`(Phase 1)
+
+#### D.1 観測の二層分解
+
+観測を **データ面の軸射影**と **表示**に分ける。値 `v ∈ V` の観測可能面は、
+SPEC §2.3 の semantic axes への射影で与えられる:
+
+```
+obs_axes(v) = ( semanticKind(v), shape(v), capabilities(v),
+                truthValue(v),   origin(v), absence(v) )
+```
+
+各成分は protocol 文字列(lower camelCase)であり、Rust enum 名・`Debug`・表示
+テキスト・GUI 配色には一切分岐しない(semantic firewall)。プログラム全体の観測は
+
+```
+observe(p) = ( render*(π_Stack ⟦p⟧ σ₀), π_Eff ⟦p⟧ σ₀ )
+```
+
+で、`render*` はスタック各値への `render` の写像。**`π_Eff`(効果列)は Phase 7**
+の効果代数で与え、本節はデータ面 `render*` と軸射影を確定する。
+
+#### D.2 `render` は `(data, role)` の純関数
+
+表示函数を
+
+```
+render : ValueData × Role → Display
+```
+
+とする(SPEC §12.1)。`Role` は SPEC §12.2 の解釈ロール 8 種
+`{Unassigned, RawNumber, ContinuedFraction, Interval, Text, TruthValue,
+Timestamp, Nil}`。`render` は **全ロールで定義された全域関数**であり、値が
+内部に持つ既定ロール(hint)には依存しない。観測上の中心法則:
+
+| 法則 | 内容 |
+|---|---|
+| 全域性・決定性 | `render(d, r)` は 8 ロール全てで定義(網羅)・決定的(SPEC §12.2) |
+| ロール純粋性 | `render(d, r)` は `(data, role)` のみに依存し、担体値の hint に依存しない。すなわち **データとロールが等しければ表示は等しい**(SPEC §12.2 末尾) |
+| 既定観測の分解 | 既定の表示 `to_string(v)` は `render(v, hint(v))`。`observe` の表示半は `render` を経由する |
+| U の表示吸収 | 論理 Unknown は **全ロールで `UNKNOWN`** に表示され、`NIL` や数値形へ漏れない(SPEC §2.3, §7.5) |
+
+ロール純粋性は「表示は意味プレーン(ロール割当)だけの関数であり、データ面を
+変えない」という二面分離(SPEC §5.2, §12.1)の表示側の内容である。
+
+#### D.3 semantic firewall — 構造軸はロール直交
+
+データ面の **構造軸** `semanticKind` / `shape` / `origin` は値の data と absence
+だけを読む。ゆえにロール(意味プレーン)の割当は構造軸を変えない:
+
+```
+obs_struct(v) = obs_struct(v with role := r)   (∀ r)
+```
+
+これは「意味面の変更が計算・データ面に非干渉」(SPEC §5.2)の軸レベルの言明。
+真偽軸 `truthValue` と `truthValued` capability は **意図的にロール結合**で、
+SPEC §2.3 が言う「`TruthValue` ロールを担う値にのみ truthValue 軸が現れる」を
+反映する(構造軸とは別扱い)。
+
+#### D.4 軸整合(runtime-produced 値)
+
+参照実装が生成する値の上で、真偽軸と capability は整合する:
+
+```
+truthValue(v) ≠ ⊥  ⟺  truthValued ∈ capabilities(v)
+```
+
+また全値は基底 capability `{stackItem, serializable, displayable}` を備える。
+
+#### D.5 所見(finding、descriptive)
+
+- **所見 D1(真偽 capability のロール結合):** `truthValued` capability は
+  `hint = TruthValue` を鍵に算出される一方、`truthValue` 軸は **Boolean を
+  本質的に真偽値**として扱う(ロール非依存に `true`/`false` を返す)。両者は
+  **runtime-produced 値では整合**するが、Boolean の担体を `TruthValue` 以外の
+  ロールへ人為的に付け替えると軸=Some・capability=なしと **乖離する**。
+  これは SPEC §2.3 が要求する「truthValue 軸を持つ値は truthValued capability も
+  持つ」の境界事例であり、実行時に Boolean は常に `TruthValue` ロールを担うため
+  実害はない。**モデル/実装の不変条件として追跡**(到達可能状態では HOLDS、
+  人為再ロールでは BREAKS)。仕様は正典(§16.1)であり、本所見は記述に留める。
+- **所見 D2(完全平方の√は有理に縮退):** `√4`・`√9` 等は有理数へ collapse し、
+  等値比較が `U` でなく定値 `true` を返す。U を得る生成器は **非完全平方の
+  radicand** に限定する必要がある(モデリング上の注意。仕様上の乖離ではない)。
+- **所見 D3(空ブロックの表示は空文字列):** `{ }` は空文字列に表示される。
+  したがって `render` の **非空性は法則ではない**;全域性・決定性のみが法則。
+
+**テスト**: `rust/tests/observation_laws.rs` — render 全域/決定性、ロール純粋性、
+既定観測=`render(·,hint)`、U の表示吸収、構造軸のロール直交、真偽軸=capability
+整合、基底 capability、真偽値≠数値(所見 B の観測層再確認)、protocol 文字列の
+lower camelCase(計 10 法則群)。生成器は `rust/tests/test_support/generators.rs`
+(意味領域別)、観測は `rust/tests/test_support/observe.rs`(軸射影 + 純 `render`)。
+以後のフェーズは generator を足すだけで法則を追加できる。
+
+---
+
 ## 10. 付録 — 経験的法則チェック(参照実装 2026-06)
 
 参照実装に直接プログラムを流して §9.2 の法則を確認した結果。
@@ -421,6 +523,10 @@ reorder 恒等/反転、sort 冪等/置換不変(計 10 法則群)。
 | EXEC inline、`EVAL(STR p) ≡ p`、COND の U 不発火 | HOLDS | `tests/higher_order_laws.rs` |
 | REVERSE 対合/反同型、CONCAT 結合、SPLIT↔CONCAT | HOLDS | `tests/structural_laws.rs` |
 | TRANSPOSE 対合、RESHAPE 往復、SORT 冪等/置換不変 | HOLDS | `tests/structural_laws.rs` |
+| render 全域/決定性・ロール純粋・既定観測=`render(·,hint)`(§9-ter D) | HOLDS | `tests/observation_laws.rs` |
+| U の表示吸収・構造軸のロール直交・真偽軸=capability 整合 | HOLDS | `tests/observation_laws.rs` |
+| 真偽値≠数値(所見 B 観測層)・protocol 文字列 lower camelCase | HOLDS | `tests/observation_laws.rs` |
+| 所見 D1: 真偽 capability のロール結合(人為再ロールで乖離) | BREAKS(人為) / HOLDS(到達可能) | §9-ter D.5、追跡中 |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は
