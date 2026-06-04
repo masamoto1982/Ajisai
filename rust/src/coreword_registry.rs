@@ -40,6 +40,57 @@ pub enum SafetyLevel {
     Quarantined,
 }
 
+/// Static mass contract (SPEC §13.1): a word's flow-mass relationship under the
+/// default `TOP`/`EAT` mode. `consumes` operands are read and `produces` results
+/// are pushed; under `KEEP` the `consumes` operands are additionally retained
+/// (bifurcation, §13.2). This is the machine-readable form of the §13.1 "arity /
+/// consumption / production / bifurcation" declaration; the NIL-projection part
+/// of §13.1 is carried by `nil_policy`.
+///
+/// `Dynamic` marks a data-dependent arity (e.g. the `STAK` count-driven fold or
+/// runtime-shaped vector ops) that is not statically pinned; the static
+/// mass-conservation validator abstains on `Dynamic` words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum MassContract {
+    Fixed { consumes: u8, produces: u8 },
+    Dynamic,
+}
+
+impl MassContract {
+    /// `(consumes, produces)` when the contract is statically fixed.
+    pub fn fixed(self) -> Option<(u8, u8)> {
+        match self {
+            MassContract::Fixed { consumes, produces } => Some((consumes, produces)),
+            MassContract::Dynamic => None,
+        }
+    }
+}
+
+/// The canonical mass contract for a Coreword, keyed by its canonical name.
+/// Single source of truth for static arity: the compiled-plan analyzer
+/// (`quantized_block::builtin_arity`) and the §7.14 contract registry both read
+/// this so they cannot drift. Values are probe-verified against the reference
+/// implementation; unpinned words are `Dynamic`.
+pub fn mass_contract(name: &str) -> MassContract {
+    match name {
+        // Binary arithmetic / comparison / logic: read two, push one.
+        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ"
+        | "AND" | "OR" => MassContract::Fixed {
+            consumes: 2,
+            produces: 1,
+        },
+        // Unary arithmetic / math / cast: read one, push one.
+        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" | "STR" | "BOOL" => {
+            MassContract::Fixed {
+                consumes: 1,
+                produces: 1,
+            }
+        }
+        _ => MassContract::Dynamic,
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WordProfile {
@@ -76,6 +127,9 @@ pub struct CorewordMetadata {
     pub partiality: Partiality,
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
+    /// Static flow-mass contract (SPEC §13.1): arity / production, with
+    /// bifurcation governed by the `KEEP` modifier (§13.2).
+    pub mass: MassContract,
     /// Portability profile used by conformance tooling to keep the Core
     /// profile free of host-boundary words.
     pub profile: WordProfile,
@@ -466,6 +520,7 @@ fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> Coreword
         partiality: spec.partiality,
         nil_policy: spec.nil_policy,
         safety_level: spec.safety_level,
+        mass: mass_contract(spec.name),
         profile,
         required_capability,
         canonical_home: CanonicalHome::Core,
@@ -486,6 +541,7 @@ pub(crate) fn pure(name: &str, category: &str) -> CorewordMetadata {
         partiality: Partiality::Total,
         nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::A,
+        mass: mass_contract(name),
         profile: WordProfile::Core,
         required_capability: None,
         canonical_home: CanonicalHome::Core,
@@ -511,6 +567,7 @@ pub(crate) fn observable(
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::C,
+        mass: mass_contract(name),
         profile: WordProfile::Core,
         required_capability: None,
         canonical_home: CanonicalHome::Core,
@@ -531,6 +588,7 @@ pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> Corewor
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::D,
+        mass: mass_contract(name),
         profile: WordProfile::Core,
         required_capability: None,
         canonical_home: CanonicalHome::Core,

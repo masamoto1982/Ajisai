@@ -734,7 +734,8 @@ A contract entry has the following fields, in addition to the existing identific
 |-------|--------|---------|
 | `partiality` | `Total` / `Partial` / `Projecting` | `Total`: the operation is defined on every well-shaped input. `Partial`: the operation has well-shaped inputs for which it raises an error. `Projecting`: the operation is total because it projects all failures onto NIL with reason. |
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
-| `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. |
+| `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. A `Partial` word is therefore at least `B` (it is not total); `Projecting` words are total by projection and may be `A`. |
+| `mass` | `Fixed { consumes, produces }` / `Dynamic` | The static flow-mass contract of Section 13.1: under the default `TOP`/`EAT` mode the word reads `consumes` operands and pushes `produces` results; under `KEEP` the `consumes` operands are additionally retained (bifurcation, Section 13.2). `Dynamic` marks a data-dependent arity (for example the `STAK` count-fold or runtime-shaped vector operations) that is not statically pinned. |
 
 `partiality` and `nil_policy` are independent axes. For example, under the Bubble Rule `/` (division) is `Projecting` with `nil_policy = CreatesNil`: `/`, `GET`, `NUM`, and `CHR` are `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
 
@@ -986,9 +987,9 @@ The `ContinuedFraction` role is the canonical AI-readable numeric serialization 
 
 ### 13.1 Static Mass Conservation
 
-Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.
+Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior: arity/consumption/production are carried by the `mass` contract field (Section 7.14), bifurcation by the `KEEP` modifier (Section 13.2), and NIL-projection by `nil_policy`. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.
 
-The ordinary runtime must not maintain per-value `FlowToken` objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes.
+The ordinary runtime must not maintain per-value `FlowToken` objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes. A word whose `mass` is `Dynamic` has a data-dependent arity that the static validator does not certify; flows through such words are validated only up to that point.
 
 ### 13.2 Bifurcation
 

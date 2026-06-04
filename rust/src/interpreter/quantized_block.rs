@@ -145,20 +145,12 @@ pub struct QuantizedBlock {
 /// Returns (inputs_consumed, outputs_produced) for well-known pure builtins.
 /// Returns None for unknown or variable-arity builtins.
 fn builtin_arity(name: &str) -> Option<(i32, i32)> {
-    match name {
-        // Binary arithmetic
-        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" => Some((2, 1)),
-        // Binary comparison
-        "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" => Some((2, 1)),
-        // Binary logical
-        "AND" | "OR" => Some((2, 1)),
-        // Unary arithmetic / math (ABS/NEG paired with FastUnaryMapKernel)
-        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" => Some((1, 1)),
-        // Type cast / unary
-        "STR" | "BOOL" => Some((1, 1)),
-        // Unknown arity (vector ops, HOF, stack words not in BUILTIN_SPECS, etc.) → None
-        _ => None,
-    }
+    // Single source of truth: the §7.14 Coreword mass contract. Keeping this a
+    // thin adapter prevents the compiled-plan analyzer and the contract registry
+    // from drifting on arity (SPEC §13.1).
+    crate::coreword_registry::mass_contract(name)
+        .fixed()
+        .map(|(consumes, produces)| (consumes as i32, produces as i32))
 }
 
 /// Returns true if the given builtin name has observable side effects
