@@ -498,6 +498,113 @@ lower camelCase(計 10 法則群)。生成器は `rust/tests/test_support/genera
 
 ---
 
+## 9-quater. 拡張定式化 III — 修飾子・契約・質量保存(Phase 3 ⭐, 2026-06 改修)
+
+本節は改修ロードマップ Phase 3(修飾子と質量保存の型理論=契約)の成果を取り込む。
+§2 の準同型(生成元はフレーズ)・§6 の修飾子コンビネータ・SPEC §7.14 の Coreword
+契約・SPEC §13 の質量保存を、**実装に依らず検証可能な型システム**として与える。
+本節は SPEC §6/§7.14/§13 の現象を記述するモデルであり、第二権威化しない(§16.1)。
+
+### E. 修飾子コンビネータ・契約格子・線形質量(Phase 3)
+
+#### E.1 修飾子は変換子コンビネータ
+
+語の基底変換子 `base(w) : Σ ⇀ Σ+Error` に、修飾子が高階作用素として作用する
+(§6)。被演算域 `δ_region` と消費規律 `κ_consume` の二軸:
+
+```
+δ : {TOP, STAK}   region 選択(頂上 arity 個 / 頂上 count 個の畳み込み)
+κ : {EAT, KEEP}   consumption(消費 / 複製して結果も積む)
+⟦μ·w⟧ = κ_consume ∘ δ_region ∘ base(w)
+```
+
+`TOP` と `EAT` は **既定の恒等**:`base(w) = ⟦TOP·w⟧ = ⟦EAT·w⟧ = ⟦TOP EAT·w⟧`。
+糖衣は `.`≡TOP, `,`≡EAT, `..`≡STAK, `,,`≡KEEP(SPEC §6.1/§6.2)。4 組
+`{TOP,STAK}×{EAT,KEEP}` は変換子→変換子の関手として閉じ、生成元をフレーズに取る
+ため §2 の準同型を保つ。
+
+`STAK·w` は **頂上の count を引数に取る左畳み込み**(probe で確定):スタック頂上の
+整数 `n` を消費し、続く `n` 個を `w` で左結合的に畳む。`count∈{0,1}` は no-op
+(count を戻す)。例 `x₁ … xₙ n STAK ADD = (((x₁ x₂ ADD) x₃ ADD) … xₙ ADD)`。
+
+#### E.2 KEEP は分岐(bifurcation)= 質量の複製
+
+`KEEP·w` は被演算子を残しつつ結果も積む(§13.2)。二項語 `w` の観測:
+
+```
+obs(a b KEEP w) = obs(a b) ⧺ obs(a b w)        (= [a, b, w(a,b)])
+```
+
+すなわち `EAT` 経路の上に、消費したはずの被演算子のコピーを保持する。
+
+#### E.3 質量保存は線形(資源)不変条件(§13)
+
+語の契約は arity・consumption・production・bifurcation を宣言する(SPEC §13.1)。
+質量保存を **スタック深さ(資源)の差分**として観測的に定式化する。二項純粋語
+`w`(arity 2)で:
+
+```
+depth(EAT·w 適用後) − depth(適用前) = production − consumption = 1 − 2 = −1
+depth(KEEP·w 適用後) − depth(適用前) = production = +1
+⟹ depth(KEEP·w) − depth(EAT·w) = consumption = arity = 2
+```
+
+`KEEP` と `EAT` の深さ差が **ちょうど arity** に等しいことが、分岐が「被演算子を
+複製して保存する」という質量関係(§13.2)の観測内容である。過消費・未消費漏れ・
+分岐比違反は、この資源等式の破れとして現れる。最適化経路は契約検証後にのみ進入
+可能(§13.1)で、本モデルは資源等式が合成で閉じることを要求する。
+
+#### E.4 Coreword 契約は Hoare 契約 + 格子(§7.14)
+
+各 Coreword は機械可読契約 `{requires} w {ensures}` を持ち、分類は三つの格子で
+型付けされる:
+
+| 軸 | 領域(格子) | 観測的内容 |
+|---|---|---|
+| `partiality` | `Total` ⊑ `Projecting` / `Partial` | `Total`/`Projecting` は整形入力で**エラーを発生させない**(`Projecting` は領域失敗を NIL へ射影=total-by-projection);`Partial` のみ整形入力でエラーを起こしうる |
+| `nil_policy` | `Passthrough`/`CreatesNil`/`RejectsNil`/`ConsumesNil`/`PreservesReason` | NIL への反応・生成規律(§4.5.1, §11.2) |
+| `safety_level` | `A` ⊏ `B` ⊏ `C` ⊏ `D` ⊏ `Quarantined` | 保証の強さ。`A`=total・pure・deterministic |
+
+契約欠落=型不在=適合違反(SPEC §7.14)。観測される契約↔挙動の対応(全 174 語で
+HOLDS):
+
+- **partiality↔挙動**: `Total` 語は整形入力で常に値を残す(`ensures` の充足);
+  `Projecting`/`CreatesNil` 語は領域失敗(0 除算・範囲外 GET)を **NIL へ射影**し
+  停止しない(§11.2)。
+- **safety 格子の単調性**: `A ⟹ pure ∧ deterministic`;`effects ≠ ∅ ⟹ safety ∉
+  {A,B}`;`Effectful ⟹ safety ∈ {C,D,Quarantined}`(反例 0)。
+- **契約合成**: Kleisli 合成 `•`(§2.2)下で、上流の `ensures` が下流の
+  `requires` を含意するとき合成は安全。partiality は `Partial` が伝播で支配的
+  (一方が Partial なら合成も Partial 以上)であり、`Total/Projecting` は閉じる。
+
+#### E.5 所見(finding、descriptive)
+
+- **所見 E1(質量フィールドの未実装):** SPEC §13.1 は Coreword Contract が
+  `arity / consumption / production / bifurcation` を宣言すると記すが、実装の
+  `CorewordMetadata` 構造体は `nil_policy` 以外の質量フィールドを **持たない**。
+  本モデルは質量保存を **観測的(スタック深さ差分)**に検証する。仕様は正典の
+  まま、メタデータ拡張 or 仕様注記のいずれかを要する **乖離として追跡**。
+- **所見 E2(safety A と partiality の不整合、追跡オラクル):** SPEC §7.14 は
+  safety `A` を「total・pure・deterministic」と定義するが、registry は **Partial**
+  な `GCD`/`LCM` を `A` と宣言する(`Projecting` の `POW` 等は total-by-projection
+  で `A` と整合する一方、`Partial` は整合しない)。乖離集合が **ちょうど
+  {GCD, LCM}** であることをテストで固定し、契約修正・新規不整合の双方を可視化する。
+- **所見 E3(GET は非消費):** `[v…] i GET` は **元ベクタを保持**し要素(範囲外は
+  NIL)を積む(`obs([1 2 3] 9 GET) = [[1 2 3], NIL]`)。GET の consumption profile は
+  (vector 保持, index 消費, element 生成)であり、素朴な arity 計算と異なる
+  (質量モデリング上の注意)。
+- **所見 E4(契約は正準名で索引):** 糖衣 `/` は契約を持たず(canonical `DIV` で
+  解決)、`DUP`/`DROP` 等は語として存在しない(Ajisai は修飾子で代替)。これは
+  正準名索引の帰結であり、仕様上の乖離ではない。
+
+**テスト**: `rust/tests/contract_modifier_laws.rs` — 既定修飾子の恒等、KEEP 分岐、
+KEEP−EAT=arity(質量)、STAK 畳み込み・`..`≡STAK、STAK KEEP の保持、Total 無エラー、
+Projecting の NIL 射影、契約の全域性(全語が到達可能契約を持つ)、safety 格子の
+単調性、所見 E2 の追跡オラクル、§7.14 アンカー契約(ADD/DIV/EQ/LT/AND/OR/NOT)
+(計 11 法則群)。
+
+---
+
 ## 10. 付録 — 経験的法則チェック(参照実装 2026-06)
 
 参照実装に直接プログラムを流して §9.2 の法則を確認した結果。
@@ -527,6 +634,11 @@ lower camelCase(計 10 法則群)。生成器は `rust/tests/test_support/genera
 | U の表示吸収・構造軸のロール直交・真偽軸=capability 整合 | HOLDS | `tests/observation_laws.rs` |
 | 真偽値≠数値(所見 B 観測層)・protocol 文字列 lower camelCase | HOLDS | `tests/observation_laws.rs` |
 | 所見 D1: 真偽 capability のロール結合(人為再ロールで乖離) | BREAKS(人為) / HOLDS(到達可能) | §9-ter D.5、追跡中 |
+| 既定修飾子の恒等・KEEP 分岐・KEEP−EAT=arity・STAK 畳み込み(§9-quater E) | HOLDS | `tests/contract_modifier_laws.rs` |
+| Total 無エラー・Projecting の NIL 射影・契約全域性・safety 格子単調 | HOLDS | `tests/contract_modifier_laws.rs` |
+| §7.14 アンカー契約(ADD/DIV/EQ/LT/AND/OR/NOT) | HOLDS | `tests/contract_modifier_laws.rs` |
+| 所見 E1: 質量フィールド(arity 等)が registry に未実装 | 乖離(追跡) | §9-quater E.5、観測的に代替検証 |
+| 所見 E2: safety A だが Partial({GCD,LCM}) | BREAKS(§7.14) | §9-quater E.5、追跡オラクル化 |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は
