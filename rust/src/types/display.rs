@@ -121,6 +121,32 @@ mod tests {
     }
 
     #[test]
+    fn irrational_renders_as_nested_cf_not_approximation() {
+        use super::format_exact_real;
+        use crate::types::continued_fraction::ExactReal;
+        use crate::types::fraction::Fraction;
+        use num_bigint::BigInt;
+
+        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical nested
+        // CF form (SPEC §4.2.3), never `sqrt(...)` or a `~`-approximation.
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
+            .expect("√2 is a valid algebraic sqrt");
+        let s = format_exact_real(&sqrt2);
+        assert!(s.starts_with("( 1 ( 2 ( 2 "), "expected nested CF, got {s:?}");
+        assert!(s.contains("...)"), "lazy CF must carry the `...)` truncation marker, got {s:?}");
+        assert!(!s.contains("sqrt"), "must not use sqrt() display, got {s:?}");
+        assert!(!s.contains('~'), "must not use ~approximation display, got {s:?}");
+        let opens = s.matches('(').count();
+        let closes = s.matches(')').count();
+        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+
+        // A perfect square collapses to the exact rational form.
+        let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
+            .expect("√4 is a valid sqrt");
+        assert_eq!(format_exact_real(&sqrt4), "2/1");
+    }
+
+    #[test]
     fn render_cf_nested_balanced_parens() {
         for terms in [
             vec![bi(1)],
@@ -271,23 +297,37 @@ fn format_fraction(f: &Fraction) -> String {
     format!("{}/{}", f.numerator(), f.denominator())
 }
 
-/// Display an `ExactReal`. Rational variants use the canonical fraction
-/// format. `AlgebraicSqrt` variants show `sqrt(p/q)`. Gosper transforms
-/// show a best-rational-approximation with a `~` prefix to indicate the
-/// value is irrational but displayed approximately.
+/// Display an `ExactReal`. Rational variants use the canonical
+/// `numerator/denominator` form. Irrational variants (`AlgebraicSqrt`,
+/// `Gosper`) render in the canonical nested continued-fraction form of
+/// SPEC §4.2.3 — `( a0 ( a1 ( a2 ... ) ) )` — truncated at the display
+/// budget with a `...)` marker for lazy CFs. This keeps the default
+/// numeric surface exact and AI-readable: arithmetic on irrationals is
+/// computed exactly on the CF representation (Gosper, SPEC §7.3), so the
+/// display must not collapse it to an approximate rational.
 fn format_exact_real(er: &ExactReal) -> String {
     match er {
         ExactReal::Rational(f) => format_fraction(f),
-        ExactReal::AlgebraicSqrt { radicand } => {
-            format!("sqrt({})", format_fraction(radicand))
-        }
-        ExactReal::Gosper(_) => {
-            // Best-rational approximation up to denominator 10^6
-            match er.best_rational_approximation(&BigInt::from(1_000_000u64)) {
-                Some(approx) => format!("~{}", format_fraction(&approx)),
-                None => "~?".to_string(),
+        _ => match er.partial_quotients() {
+            // Collapsed to a finite (rational) CF: render the exact nested form.
+            Some(qs) => render_cf_nested(&qs, false),
+            // Lazy irrational: emit partial quotients up to the display budget.
+            None => {
+                let qs = er.partial_quotients_bounded(CF_DISPLAY_BUDGET);
+                if qs.is_empty() {
+                    // The emitter could not determine even a0 within the
+                    // display budget (a rare Gosper transform — e.g. a product
+                    // of equal surds that is exactly rational but whose CF the
+                    // streaming algorithm does not resolve in budget). Render
+                    // the undetermined-CF marker rather than an empty `( )` or
+                    // an approximate `~` rational.
+                    "( ...)".to_string()
+                } else {
+                    let truncated = qs.len() == CF_DISPLAY_BUDGET;
+                    render_cf_nested(&qs, truncated)
+                }
             }
-        }
+        },
     }
 }
 
