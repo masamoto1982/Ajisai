@@ -23,9 +23,10 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Tensor { .. } => None,
         ValueData::Nil => None,
         ValueData::Record { .. } => None,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
-            None
-        }
+        ValueData::Boolean(_)
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => None,
     }
 }
 

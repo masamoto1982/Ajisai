@@ -31,7 +31,11 @@ fn differential_harness_smoke() {
 
 #[test]
 fn differential_arity_logic_and_compare() {
-    let code = "[ TRUE FALSE ] [ TRUE TRUE ] AND";
+    // Element-wise logic over numeric truth lanes (1/0). Scalar TRUE/FALSE are
+    // distinct truth values (finding B2) routed through K3; the dense
+    // element-wise path operates on numeric 1/0 lanes, so this parity check
+    // uses 1/0 vectors.
+    let code = "[ 1 0 ] [ 1 1 ] AND";
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
 }

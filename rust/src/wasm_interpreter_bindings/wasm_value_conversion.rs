@@ -444,6 +444,7 @@ pub(crate) fn value_to_protocol(
     }
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
+        ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large
             // denominator. The resulting node carries `semantics:
@@ -642,6 +643,10 @@ pub(crate) fn arena_node_to_js(
         NodeKind::Nil => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
+        }
+        NodeKind::Boolean(b) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"boolean".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(*b).into()).unwrap();
         }
         NodeKind::Scalar(f) => {
             let scalar_type = match effective_hint {

@@ -79,7 +79,8 @@ impl FlatTensor {
             ValueData::ExactScalar(_) => Err(AjisaiError::from(
                 "Tensor conversion does not support exact irrational values",
             )),
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
@@ -269,9 +270,10 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
             shape.extend(first);
             Some(shape)
         }
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
-            None
-        }
+        ValueData::Boolean(_)
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => None,
     }
 }
 

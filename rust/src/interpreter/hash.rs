@@ -42,6 +42,14 @@ fn serialize_value_inner_for_hash(val: &Value, bytes: &mut Vec<u8>) {
         return;
     }
 
+    if let ValueData::Boolean(b) = &val.data {
+        // Distinct tag + payload so TRUE and FALSE hash differently and
+        // neither collides with the scalars 1 / 0.
+        bytes.push(0x07);
+        bytes.push(if *b { 0x01 } else { 0x00 });
+        return;
+    }
+
     if val.is_scalar() {
         if let Some(frac) = val.as_scalar() {
             let canonical = Fraction::new(frac.numerator(), frac.denominator());

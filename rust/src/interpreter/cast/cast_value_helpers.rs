@@ -41,9 +41,10 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
         ValueData::ExactScalar(_) => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
-            return false
-        }
+        ValueData::Boolean(_)
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => return false,
     };
     children.iter().all(check_char_scalar)
 }
@@ -56,9 +57,10 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::Tensor { .. } => return false,
         ValueData::Nil => return false,
         ValueData::Record { .. } => return false,
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
-            return false
-        }
+        ValueData::Boolean(_)
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => return false,
     };
     let n: i64 = match f.to_i64() {
         Some(n) if (0..=0x10FFFF).contains(&n) => n,
@@ -71,8 +73,8 @@ fn check_char_scalar(child: &Value) -> bool {
     }
 }
 
-pub(crate) fn is_boolean_value(_val: &Value) -> bool {
-    false
+pub(crate) fn is_boolean_value(val: &Value) -> bool {
+    matches!(val.data, ValueData::Boolean(_))
 }
 
 pub(crate) fn is_number_value(val: &Value) -> bool {
@@ -212,6 +214,7 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
             ValueData::Nil => vec!["NIL".to_string()],
+            ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::ExactScalar(er) => {
                 use num_bigint::BigInt;

@@ -199,12 +199,15 @@ Not every surface form is a runtime word. A surface form is classified as one of
 | Type | Description |
 |------|-------------|
 | Scalar | An exact real number, represented internally as a (possibly lazy) continued fraction |
+| Boolean | A definite logical truth value, `true` or `false` (Section 7.5). A Boolean is a distinct value kind, **not** a number: `TRUE` is not the Scalar `1` and `FALSE` is not the Scalar `0`, so `TRUE 1 EQ` is `false`. The third truth value Unknown (U) is not a Boolean; it is the logical-undecidability value of Section 7.4.1, observed as `truthValue = unknown`. |
 | Vector | An ordered, indexable sequence of values (may be nested) |
 | Record | An ordered set of named fields (string keys) |
 | NIL | The absence of a value |
 | CodeBlock | An executable sequence of tokens |
 | ProcessHandle | A reference to a running child runtime |
 | SupervisorHandle | A reference to a supervisor |
+
+A Boolean carries the `TruthValue` interpretation role (Section 12.2) and the `truthValued` capability (Section 2.3); it renders uniformly as `TRUE` / `FALSE` (display-only, non-canonical). Equality and ordering treat a Boolean as distinct from every Scalar: value identity never conflates a truth value with a number. Inside element-wise numeric operations over vectors, truth lanes are represented numerically as `1` / `0`; the distinctness rule above governs Scalar-level value identity (notably `EQ`), not numeric broadcast over vector lanes.
 
 ### 4.2 Scalar: exact-real continued-fraction arithmetic
 
@@ -969,7 +972,7 @@ The semantic plane holds an **interpretation role** for each stack position. A r
 | `ContinuedFraction` | Display a numeric scalar as the nested right-associative continued-fraction form `( a0 ( a1 ( a2 ... )))` (Section 4.2.3); lazy CFs render with a `...)` truncation marker |
 | `Interval` | A 2-element vector interpreted as the closed interval `[lo, hi]` |
 | `Text` | A codepoint sequence interpreted as text |
-| `TruthValue` | A three-state scalar-like truth value drawn from {`true`, `false`, `unknown`} (Section 7.5). It is observed through the `truthValue` axis (`true` / `false` / `unknown`, Section 2.3) and carries the `truthValued` capability. Displays as `TRUE`, `FALSE`, or `UNKNOWN` (display-only, non-canonical). The third state `unknown` (U) is a logical truth value, not an operational absence; how it is represented internally is not observable. |
+| `TruthValue` | A three-state truth value drawn from {`true`, `false`, `unknown`} (Section 7.5). The definite states `true` / `false` are carried by a Boolean value (Section 4.1) — a distinct value kind, not a number; the third state `unknown` (U) is the logical-undecidability value of Section 7.4.1. Observed through the `truthValue` axis (`true` / `false` / `unknown`, Section 2.3); carries the `truthValued` capability. Displays as `TRUE`, `FALSE`, or `UNKNOWN` (display-only, non-canonical). How U is represented internally is not observable. |
 | `Timestamp` | An integer interpreted as a formatted datetime |
 | `Nil` | A diagnostic absence value, displayed as `NIL` |
 

@@ -35,11 +35,11 @@ fn is_nil(v: &Value) -> bool {
 }
 
 fn is_true(v: &Value) -> bool {
-    !v.is_nil() && v.as_scalar().map(|f| !f.is_zero()).unwrap_or(false)
+    v.as_truth() == Some(true)
 }
 
 fn is_false(v: &Value) -> bool {
-    !v.is_nil() && v.as_scalar().map(|f| f.is_zero()).unwrap_or(false)
+    v.as_truth() == Some(false)
 }
 
 fn reason_of(v: &Value) -> Option<NilReason> {

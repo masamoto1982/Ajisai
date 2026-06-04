@@ -135,6 +135,12 @@ impl Value {
         if self.is_unknown() {
             return Some("unknown");
         }
+        // A Boolean is intrinsically truth-valued: it reports its truth on the
+        // axis regardless of the effective role, because its data identity —
+        // not a semantic-plane role — carries the truth.
+        if let ValueData::Boolean(b) = &self.data {
+            return Some(if *b { "true" } else { "false" });
+        }
         if effective != Interpretation::TruthValue {
             return None;
         }
@@ -241,9 +247,22 @@ impl Value {
     #[inline]
     pub fn from_bool(b: bool) -> Self {
         Self {
-            data: ValueData::Scalar(Fraction::from(if b { 1 } else { 0 })),
-            hint: Interpretation::RawNumber,
+            data: ValueData::Boolean(b),
+            hint: Interpretation::TruthValue,
             absence: None,
+        }
+    }
+
+    /// The definite truth value carried by a Boolean data value, or `None`
+    /// for any non-Boolean value. This is the data-plane truth accessor:
+    /// unlike [`Value::is_truthy`] it never coerces a number, vector, or
+    /// other shape into a truth value. The logical Unknown (U) is not a
+    /// Boolean, so it returns `None` here (test it with [`Value::is_unknown`]).
+    #[inline]
+    pub fn as_truth(&self) -> Option<bool> {
+        match &self.data {
+            ValueData::Boolean(b) => Some(*b),
+            _ => None,
         }
     }
 
@@ -390,6 +409,13 @@ impl Value {
     #[inline]
     pub fn semantic_kind(&self) -> SemanticKind {
         match &self.data {
+            // A definite boolean is truth-valued, not numeric; its truth is
+            // observed through the `truthValue` axis and `truthValued`
+            // capability (SPEC §2.3). It reports `number` on the coarse
+            // `semanticKind` axis only for protocol stability — distinctness
+            // from a number lives in value identity (`TRUE 1 EQ` is false),
+            // not in this axis.
+            ValueData::Boolean(_) => SemanticKind::Number,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
             ValueData::Record { .. } => SemanticKind::Record,
@@ -403,6 +429,7 @@ impl Value {
     #[inline]
     pub fn shape_kind(&self) -> ValueShape {
         match &self.data {
+            ValueData::Boolean(_) => ValueShape::Scalar,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
@@ -440,6 +467,8 @@ impl Value {
                 capabilities.push(Capability::AiExplainable);
             }
             ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
+            // A boolean's only extra capability is `truthValued`, added below.
+            ValueData::Boolean(_) => {}
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
         }
         // Truth-valued values (true / false / unknown) advertise the
@@ -513,7 +542,8 @@ impl Value {
             ValueData::Tensor { data, shape } => Some(std::borrow::Cow::Owned(
                 tensor_to_nested_values(data, shape),
             )),
-            ValueData::Scalar(_)
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -548,6 +578,7 @@ impl Value {
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
+            ValueData::Boolean(_) => true,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
@@ -563,6 +594,7 @@ impl Value {
     #[inline]
     pub fn is_truthy(&self) -> bool {
         match &self.data {
+            ValueData::Boolean(b) => *b,
             ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
@@ -584,6 +616,7 @@ impl Value {
     pub fn len(&self) -> usize {
         match &self.data {
             ValueData::Nil => 0,
+            ValueData::Boolean(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
             ValueData::Tensor { data, shape } => {
@@ -608,7 +641,8 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self),
-            ValueData::Scalar(_)
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -630,7 +664,8 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index).cloned(),
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self.clone()),
             ValueData::Tensor { data, shape } => tensor_child(data, shape, index),
-            ValueData::Scalar(_)
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -647,7 +682,8 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Rc::make_mut(v).get_mut(index)
             }
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -669,7 +705,8 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
             ValueData::Nil => None,
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
         }
@@ -705,7 +742,8 @@ impl Value {
                 // Cannot push_child into an ExactScalar — silently ignore
                 // (ExactScalar is always a scalar leaf, never mutated into a vector).
             }
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => {}
@@ -718,7 +756,8 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -734,7 +773,8 @@ impl Value {
         }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -753,7 +793,8 @@ impl Value {
         }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -774,7 +815,8 @@ impl Value {
         }
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -793,7 +835,8 @@ impl Value {
     pub fn as_scalar(&self) -> Option<&Fraction> {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::ExactScalar(_)
+            ValueData::Boolean(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
@@ -808,7 +851,8 @@ impl Value {
     pub fn as_scalar_mut(&mut self) -> Option<&mut Fraction> {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
-            ValueData::ExactScalar(_)
+            ValueData::Boolean(_)
+            | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
@@ -834,7 +878,8 @@ impl Value {
         match &self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
             ValueData::Tensor { .. } => None,
-            ValueData::Scalar(_)
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
             | ValueData::CodeBlock(_)
@@ -850,7 +895,8 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
-            ValueData::Tensor { .. }
+            ValueData::Boolean(_)
+            | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -885,7 +931,8 @@ impl Value {
             ValueData::Tensor { data, .. } => {
                 buf.extend(data.iter());
             }
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => {}
         }
@@ -899,7 +946,8 @@ impl Value {
                 v.iter().map(|c| c.count_fractions()).sum()
             }
             ValueData::Tensor { data, .. } => data.len(),
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => 0,
         }
@@ -925,7 +973,8 @@ impl Value {
                 }
             }
             ValueData::Tensor { shape, .. } => (**shape).clone(),
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec![],
         }
@@ -978,6 +1027,7 @@ impl Value {
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
             ValueData::Nil => Interpretation::Nil,
+            ValueData::Boolean(_) => Interpretation::TruthValue,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
                 Interpretation::Unassigned
@@ -1114,7 +1164,8 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
         ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
         ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
-        ValueData::Nil
+        ValueData::Boolean(_)
+        | ValueData::Nil
         | ValueData::Record { .. }
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)

@@ -46,14 +46,14 @@ mod tests {
             .execute("'algo' IMPORT [ 1 2 3 ] 2 CONTAINS")
             .await
             .expect("should succeed");
-        assert_eq!(interp.stack[0].as_scalar().unwrap().to_i64().unwrap(), 1);
+        assert_eq!(interp.stack[0].as_truth(), Some(true));
 
         interp.stack.clear();
         interp
             .execute("'algo' IMPORT [ 1 2 3 ] 9 CONTAINS")
             .await
             .expect("should succeed");
-        assert_eq!(interp.stack[0].as_scalar().unwrap().to_i64().unwrap(), 0);
+        assert_eq!(interp.stack[0].as_truth(), Some(false));
     }
 
     #[tokio::test]
@@ -104,6 +104,6 @@ mod tests {
             .expect("keep mode should succeed");
         // vector + target retained, plus the boolean result
         assert_eq!(interp.stack.len(), 3);
-        assert_eq!(interp.stack[2].as_scalar().unwrap().to_i64().unwrap(), 1);
+        assert_eq!(interp.stack[2].as_truth(), Some(true));
     }
 }

@@ -6,10 +6,17 @@ mod tests {
 
     fn top_scalar_i64(interp: &Interpreter) -> i64 {
         let top = interp.stack.last().expect("stack top");
+        // A Boolean predicate result (ANY/ALL) reads as 1/0.
+        if let Some(b) = top.as_truth() {
+            return if b { 1 } else { 0 };
+        }
         if let Some(f) = top.as_scalar() {
             return f.to_i64().expect("scalar i64");
         }
         let child = top.child(0).expect("vector[0]");
+        if let Some(b) = child.as_truth() {
+            return if b { 1 } else { 0 };
+        }
         child
             .as_scalar()
             .and_then(|f| f.to_i64())

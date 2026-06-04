@@ -10,11 +10,13 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 
 /// Whether an operand forces the scalar three-valued (K3) path rather
-/// than element-wise tensor broadcast: an operational NIL or the logical
-/// `Unknown` (U). When neither operand is special, `AND`/`OR` keep their
-/// existing vector/tensor broadcast semantics.
+/// than element-wise tensor broadcast: an operational NIL, the logical
+/// `Unknown` (U), or a definite Boolean truth value. A definite Boolean
+/// must route through K3 so that `AND`/`OR` of truth values yield a Boolean
+/// result (not a 0/1 number). When no operand is truth-valued, `AND`/`OR`
+/// keep their element-wise numeric broadcast semantics over numeric vectors.
 fn forces_k3_path(value: &Value) -> bool {
-    value.is_nil() || value.is_unknown()
+    value.is_nil() || value.is_unknown() || value.as_truth().is_some()
 }
 
 fn compute_inverted_fraction(f: &Fraction) -> Fraction {
@@ -37,6 +39,11 @@ fn compute_inverted_value(val: &Value, metrics: Option<&mut RuntimeMetrics>) -> 
             logic_kleene::not(Ternary::classify(val)),
             &[val],
         ));
+    }
+    // A definite Boolean inverts to the opposite Boolean (¬T=F, ¬F=T), staying
+    // a truth value rather than collapsing to a 0/1 number.
+    if let Some(b) = val.as_truth() {
+        return Ok(Value::from_bool(!b));
     }
     if let Some(f) = val.as_scalar() {
         return Ok(Value::from_fraction(compute_inverted_fraction(f)));

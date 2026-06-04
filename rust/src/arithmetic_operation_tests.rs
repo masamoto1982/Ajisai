@@ -358,7 +358,7 @@ mod interval_tests {
             .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL <")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "TRUE");
 
         let mut interp_undetermined = Interpreter::new();
         interp_undetermined
@@ -381,7 +381,7 @@ mod interval_tests {
             .execute("'math' IMPORT 1 5 INTERVAL 2 4 INTERVAL =")
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "0/1");
+        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "FALSE");
     }
 
     #[tokio::test]
@@ -522,8 +522,8 @@ mod ai_first_comparison_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" | "1/1" => true,
-            "0" | "0/1" => false,
+            "1" | "1/1" | "TRUE" => true,
+            "0" | "0/1" | "FALSE" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }
@@ -615,14 +615,14 @@ mod ai_first_comparison_tests {
     async fn gt_on_disjoint_intervals_decides_true() {
         let interp = run("'math' IMPORT 3 4 INTERVAL 1 2 INTERVAL GT").await;
         let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "1/1");
+        assert_eq!(s, "TRUE");
     }
 
     #[tokio::test]
     async fn gte_on_disjoint_intervals_decides_false() {
         let interp = run("'math' IMPORT 0 1 INTERVAL 2 3 INTERVAL GTE").await;
         let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "0/1");
+        assert_eq!(s, "FALSE");
     }
 
     #[tokio::test]
@@ -644,7 +644,7 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn finite_cf_comparison_always_decides() {
-        for (code, expected) in [("1 1 EQ", "1/1"), ("1 2 EQ", "0/1"), ("1 2 LT", "1/1")] {
+        for (code, expected) in [("1 1 EQ", "TRUE"), ("1 2 EQ", "FALSE"), ("1 2 LT", "TRUE")] {
             let mut interp = Interpreter::new();
             interp.execute(code).await.unwrap();
             let v = &interp.get_stack()[0];
@@ -672,7 +672,7 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn distinct_irrationals_decide_at_finite_prefix() {
-        for (code, expected) in [("2 SQRT 3 SQRT EQ", "0/1"), ("2 SQRT 3 SQRT LT", "1/1")] {
+        for (code, expected) in [("2 SQRT 3 SQRT EQ", "FALSE"), ("2 SQRT 3 SQRT LT", "TRUE")] {
             let mut interp = Interpreter::new();
             interp
                 .execute(&format!("'math' IMPORT {code}"))
@@ -774,8 +774,8 @@ mod comparison_budget_infrastructure_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" | "1/1" => true,
-            "0" | "0/1" => false,
+            "1" | "1/1" | "TRUE" => true,
+            "0" | "0/1" | "FALSE" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }
@@ -902,8 +902,8 @@ mod phase_seven_eq_budget_tests {
         let v = &interp.get_stack()[0];
         let s = format!("{}", v);
         match s.as_str() {
-            "1" | "1/1" => true,
-            "0" | "0/1" => false,
+            "1" | "1/1" | "TRUE" => true,
+            "0" | "0/1" | "FALSE" => false,
             other => panic!("expected boolean (0 or 1), got {}", other),
         }
     }
@@ -1476,7 +1476,7 @@ mod exact_scalar_tests {
             .unwrap();
         let cmp = &interp2.get_stack()[0];
         assert!(
-            !cmp.is_nil() && cmp.as_scalar().map(|f| !f.is_zero()).unwrap_or(false),
+            cmp.as_truth() == Some(true),
             "(√2 mod 1) < 1 must be TRUE"
         );
     }
