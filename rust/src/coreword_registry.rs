@@ -1,5 +1,6 @@
 use crate::builtins::builtin_specs;
 use crate::interpreter::modules::module_word_metadata_entries;
+use crate::interpreter::HostCapability;
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
@@ -39,6 +40,17 @@ pub enum SafetyLevel {
     Quarantined,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WordProfile {
+    /// Host-independent, portable Ajisai semantics.
+    Core,
+    /// Requires an explicit host capability before execution.
+    Hosted,
+    /// Reserved for words whose behavior is intentionally platform-specific.
+    PlatformSpecific,
+}
+
 /// Canonical implementation home for a built-in word.
 ///
 /// Every built-in word has exactly one canonical home. `Core` means the word
@@ -64,6 +76,11 @@ pub struct CorewordMetadata {
     pub partiality: Partiality,
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
+    /// Portability profile used by conformance tooling to keep the Core
+    /// profile free of host-boundary words.
+    pub profile: WordProfile,
+    /// Capability required when `profile == Hosted`; absent for Core words.
+    pub required_capability: Option<HostCapability>,
     /// Where the canonical implementation lives (Core or a specific module).
     pub canonical_home: CanonicalHome,
     /// Whether the word appears in the Core word listing view.
@@ -268,6 +285,22 @@ pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
         .collect()
 }
 
+pub fn get_words_by_profile(profile: WordProfile) -> Vec<CorewordMetadata> {
+    get_builtin_word_registry()
+        .iter()
+        .filter(|word| word.profile == profile)
+        .cloned()
+        .collect()
+}
+
+pub fn get_core_profile_words() -> Vec<CorewordMetadata> {
+    get_words_by_profile(WordProfile::Core)
+}
+
+pub fn get_hosted_profile_words() -> Vec<CorewordMetadata> {
+    get_words_by_profile(WordProfile::Hosted)
+}
+
 /// Words whose Core listing view includes them (canonical core + core-listed
 /// boundary words).
 pub fn get_core_listed_words() -> Vec<CorewordMetadata> {
@@ -414,7 +447,15 @@ impl std::hash::Hash for CanonicalHome {
     }
 }
 
+fn builtin_profile(name: &str) -> (WordProfile, Option<HostCapability>) {
+    match name {
+        "PRINT" => (WordProfile::Hosted, Some(HostCapability::Effect)),
+        _ => (WordProfile::Core, None),
+    }
+}
+
 fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> CorewordMetadata {
+    let (profile, required_capability) = builtin_profile(spec.name);
     CorewordMetadata {
         name: spec.name.to_string(),
         category: spec.category.to_lowercase(),
@@ -425,6 +466,8 @@ fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> Coreword
         partiality: spec.partiality,
         nil_policy: spec.nil_policy,
         safety_level: spec.safety_level,
+        profile,
+        required_capability,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -443,6 +486,8 @@ pub(crate) fn pure(name: &str, category: &str) -> CorewordMetadata {
         partiality: Partiality::Total,
         nil_policy: NilPolicy::Passthrough,
         safety_level: SafetyLevel::A,
+        profile: WordProfile::Core,
+        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -466,6 +511,8 @@ pub(crate) fn observable(
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::C,
+        profile: WordProfile::Core,
+        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -484,6 +531,8 @@ pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> Corewor
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::D,
+        profile: WordProfile::Core,
+        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -505,8 +554,9 @@ mod tests {
         collect_duplicate_entries, collect_namespace_overlapping_names, get_boundary_words,
         get_builtin_word_metadata, get_builtin_word_registry, get_canonical_core_words,
         get_canonical_module_words, get_core_listed_words, get_coreword_metadata,
-        get_module_listed_words, is_listing_only_for_module, is_safe_preview_word, CanonicalHome,
-        NilPolicy, Partiality, SafetyLevel, WordPurity,
+        get_hosted_profile_words, get_module_listed_words, is_listing_only_for_module,
+        is_safe_preview_word, CanonicalHome, NilPolicy, Partiality, SafetyLevel, WordProfile,
+        WordPurity,
     };
 
     #[test]
@@ -1072,6 +1122,41 @@ mod tests {
         assert!(!is_listing_only_for_module("CSPRNG", "CRYPTO"));
         // Unknown word → false.
         assert!(!is_listing_only_for_module("__NOSUCH__", "IO"));
+    }
+
+    #[test]
+    fn aq_ver_profile_a_hosted_words_declare_capabilities() {
+        let hosted = get_hosted_profile_words();
+        assert!(
+            hosted.iter().any(|w| w.name == "NOW"),
+            "TIME@NOW must be classified as Hosted"
+        );
+        assert!(
+            hosted.iter().any(|w| w.name == "CSPRNG"),
+            "CRYPTO@CSPRNG must be classified as Hosted"
+        );
+        for word in hosted {
+            assert_eq!(word.profile, WordProfile::Hosted);
+            assert!(
+                word.required_capability.is_some(),
+                "{} Hosted words must declare a required capability",
+                word.name
+            );
+        }
+    }
+
+    #[test]
+    fn aq_ver_profile_b_core_profile_excludes_host_capabilities() {
+        for word in get_builtin_word_registry()
+            .iter()
+            .filter(|word| word.profile == WordProfile::Core)
+        {
+            assert!(
+                word.required_capability.is_none(),
+                "{} Core-profile words must not require host capability metadata",
+                word.name
+            );
+        }
     }
 
     #[test]

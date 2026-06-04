@@ -8,13 +8,9 @@
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::create_datetime_value;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::{HostCapability, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
-
-// TODO(portability): Route NOW through HostEnv instead of the default clock.
-// A deterministic clock is required for time-dependent conformance cases
-// (e.g. a DeterministicHost { now_millis, random_bytes }).
 
 /// The single host-clock boundary. Returns wall-clock milliseconds since the
 /// Unix epoch from whichever host the current build targets. WASM-specific
@@ -59,10 +55,47 @@ pub fn op_now(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let now_ms = default_now_millis();
+    interp.require_host_capability("NOW", HostCapability::Clock)?;
+
+    let now_ms = interp.host_env.now_millis();
     let ms_bigint = BigInt::from(now_ms);
     let timestamp = Fraction::new(ms_bigint, BigInt::from(1000));
 
     interp.stack.push(create_datetime_value(timestamp));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpreter::{DeterministicHostEnv, HostCapability};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_now_uses_deterministic_host_clock() {
+        let host = Arc::new(DeterministicHostEnv::new(
+            1_700_000_000_123,
+            vec![],
+            vec![HostCapability::Clock],
+        ));
+        let mut interp = Interpreter::with_host(host);
+
+        let result = interp.execute("'time' IMPORT NOW").await;
+        assert!(result.is_ok(), "NOW should succeed: {:?}", result);
+        assert_eq!(interp.stack[0].to_string(), "1700000000123/1000");
+    }
+
+    #[tokio::test]
+    async fn test_now_missing_capability_emits_diagnostic_and_errors() {
+        let host = Arc::new(DeterministicHostEnv::new(0, vec![], vec![]));
+        let mut interp = Interpreter::with_host(host);
+
+        let result = interp.execute("'time' IMPORT NOW").await;
+        assert!(result.is_err(), "NOW should fail without Clock");
+        assert_eq!(interp.host_effects().len(), 1);
+        assert_eq!(interp.host_effects()[0].kind(), "diagnostic");
+        assert!(interp.host_effects()[0]
+            .payload()
+            .contains("missingCapability"));
+    }
 }
