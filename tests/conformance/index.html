@@ -159,6 +159,150 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- ===================== CORE: STRUCTURE & VECTORS ===================== -->
+<!-- These cases extend the suite toward §"Conformance and Identity":
+     every case below was observed against the reference implementation and
+     matches SPECIFICATION.md. They pin structural/vector phenomena that the
+     original suite left entirely unconstrained, so that two implementations
+     passing the suite agree on more than a dozen previously-free behaviors.
+     Deliberately NOT added here: decided-comparison truth values, irrational
+     arithmetic display, and STAK-modifier reductions — the reference
+     implementation currently diverges from the spec on those (see
+     docs/dev/implementation-portability-evaluation-2026-06.md), and the suite
+     must not cement a divergence. -->
+
+<section class="ajisai-case" id="core-vector-scalar-broadcast-add" data-category="core">
+  <h3>Vector + vector is element-wise</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 4 5 6 ] +</pre>
+  <pre class="ajisai-expect-result">[ 5/1 7/1 9/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vector-singleton-broadcast-mul" data-category="core">
+  <h3>A singleton vector broadcasts across a vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 10 ] *</pre>
+  <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-get-negative-index" data-category="core">
+  <h3>GET with a negative index counts from the end (source vector retained)</h3>
+  <pre class="ajisai-source">[ 10 20 30 ] [ -1 ] GET</pre>
+  <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ] 30/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-get-zero-index" data-category="core">
+  <h3>GET index 0 is the first element</h3>
+  <pre class="ajisai-source">[ 10 20 30 ] [ 0 ] GET</pre>
+  <pre class="ajisai-expect-result">[ 10/1 20/1 30/1 ] 10/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-concat" data-category="core">
+  <h3>CONCAT joins two vectors</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 3 4 ] CONCAT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-reverse" data-category="core">
+  <h3>REVERSE reverses element order</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] REVERSE</pre>
+  <pre class="ajisai-expect-result">[ 3/1 2/1 1/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-range" data-category="core">
+  <h3>RANGE generates an inclusive integer sequence</h3>
+  <pre class="ajisai-source">[ 1 5 ] RANGE</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 4/1 5/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-length" data-category="core">
+  <h3>LENGTH reports element count (source vector retained)</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] LENGTH</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] 3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-take" data-category="core">
+  <h3>TAKE keeps the first N elements</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 5 ] [ 3 ] TAKE</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-shape" data-category="core">
+  <h3>SHAPE reports each dimension size</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] SHAPE</pre>
+  <pre class="ajisai-expect-result">[ 2/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-rank" data-category="core">
+  <h3>RANK reports the number of dimensions</h3>
+  <pre class="ajisai-source">[ [ 1 2 ] [ 3 4 ] ] RANK</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-keep-modifier" data-category="core">
+  <h3>KEEP retains operands and also pushes the result</h3>
+  <pre class="ajisai-source">3 4 KEEP ADD</pre>
+  <pre class="ajisai-expect-result">3/1 4/1 7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-or-nil-fallback" data-category="core">
+  <h3>OR-NIL turns a division-by-zero Bubble into a fallback</h3>
+  <pre class="ajisai-source">1 0 / => 99</pre>
+  <pre class="ajisai-expect-result">99/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fold-word-name" data-category="core">
+  <h3>FOLD reduces using a word-name block</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] '+' FOLD</pre>
+  <pre class="ajisai-expect-result">[ 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sort-imported" data-category="core">
+  <h3>SORT (ALGO) orders rationals ascending</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 3 1 2 ] SORT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== CORE: EXPLICIT-BUDGET COMPARE ===================== -->
+<!-- COMPARE-WITHIN returns the RawNumber scalars -1/0/1 (§7.4.2); these are
+     genuine numbers, not the TruthValue axis, so encoding them does not
+     cement the decided-comparison truth-value rendering discussed in the
+     evaluation note. -->
+
+<section class="ajisai-case" id="core-compare-within-gt" data-category="core">
+  <h3>COMPARE-WITHIN yields 1 when a &gt; b</h3>
+  <pre class="ajisai-source">5 3 10 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-compare-within-lt" data-category="core">
+  <h3>COMPARE-WITHIN yields -1 when a &lt; b</h3>
+  <pre class="ajisai-source">3 5 10 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result">-1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-compare-within-eq" data-category="core">
+  <h3>COMPARE-WITHIN yields 0 when a = b</h3>
+  <pre class="ajisai-source">3 3 10 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ============================ HOSTED ============================ -->
 
 
