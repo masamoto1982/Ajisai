@@ -1,15 +1,8 @@
-use ajisai_core::interpreter::Interpreter;
-use ajisai_core::types::Value;
+//! Shared test-support modules for the property-based law suites.
+//!
+//! `generators` provides semantic-domain Ajisai-source strategies and
+//! `observe` provides the firewall-clean §2.3 axis observation and the pure
+//! `render : (data, role) → display` function (Phase 1 foundation).
 
-pub async fn exec_ok_gui(code: &str) -> Result<Vec<Value>, String> {
-    let mut interp = Interpreter::new();
-    interp.gui_mode = true;
-    interp.execute(code).await.map_err(|e| e.to_string())?;
-    Ok(interp.get_stack().clone())
-}
-
-pub async fn exec_err_gui(code: &str) -> bool {
-    let mut interp = Interpreter::new();
-    interp.gui_mode = true;
-    interp.execute(code).await.is_err()
-}
+pub mod generators;
+pub mod observe;
