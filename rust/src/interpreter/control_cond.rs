@@ -181,6 +181,19 @@ fn evaluate_guard_isolated(
     if result_value.is_unknown() {
         return Ok(false);
     }
+    // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
+    // bare Boolean or one wrapped in a single-element vector; fall back to the
+    // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.
+    if let Some(b) = result_value.as_truth() {
+        return Ok(b);
+    }
+    if result_value.len() == 1 {
+        if let Some(child) = result_value.get_child(0) {
+            if let Some(b) = child.as_truth() {
+                return Ok(b);
+            }
+        }
+    }
     let unwrapped: &Value = if result_value.as_scalar().is_none() {
         if result_value.len() == 1 {
             result_value.get_child(0).ok_or_else(|| {

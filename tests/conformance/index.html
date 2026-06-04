@@ -276,6 +276,60 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- ===================== CORE: TRUTH VALUES ===================== -->
+<!-- A definite Boolean is a distinct value kind (not a number) and renders
+     uniformly as TRUE/FALSE through every path: literals, comparisons, and
+     logic words (SPEC §4.1, §7.5, §12.2). -->
+
+<section class="ajisai-case" id="core-true-literal" data-category="core">
+  <h3>TRUE renders as TRUE</h3>
+  <pre class="ajisai-source">TRUE</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-false-literal" data-category="core">
+  <h3>FALSE renders as FALSE</h3>
+  <pre class="ajisai-source">FALSE</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-decided-comparison-true" data-category="core">
+  <h3>A decided ordering comparison is a Boolean TRUE</h3>
+  <pre class="ajisai-source">5 3 GT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-decided-comparison-false" data-category="core">
+  <h3>A decided ordering comparison is a Boolean FALSE</h3>
+  <pre class="ajisai-source">3 5 GT</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-boolean-is-not-a-number" data-category="core">
+  <h3>A truth value is not the number 1 (TRUE 1 EQ is FALSE)</h3>
+  <pre class="ajisai-source">TRUE 1 EQ</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-kleene-and-definite" data-category="core">
+  <h3>Definite Kleene AND yields a Boolean</h3>
+  <pre class="ajisai-source">TRUE FALSE AND</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-kleene-not-definite" data-category="core">
+  <h3>Kleene NOT of TRUE is FALSE</h3>
+  <pre class="ajisai-source">TRUE NOT</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: EXPLICIT-BUDGET COMPARE ===================== -->
 <!-- COMPARE-WITHIN returns the RawNumber scalars -1/0/1 (§7.4.2); these are
      genuine numbers, not the TruthValue axis, so encoding them does not

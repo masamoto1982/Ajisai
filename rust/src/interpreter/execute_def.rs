@@ -38,7 +38,8 @@ fn extract_string_from_value(val: &Value) -> Result<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => vec![],
         }
@@ -74,7 +75,8 @@ fn is_string_like(val: &Value) -> bool {
                     .unwrap_or(false)
             }),
             ValueData::ExactScalar(_) => false,
-            ValueData::CodeBlock(_)
+            ValueData::Boolean(_)
+            | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => false,
         }

@@ -19,7 +19,7 @@ mod tests {
         assert_eq!(format_value_to_string_repr(&num), "42");
 
         let bool_val = Value::from_bool(true);
-        assert_eq!(format_value_to_string_repr(&bool_val), "1");
+        assert_eq!(format_value_to_string_repr(&bool_val), "TRUE");
 
         let nil = Value::nil();
         assert_eq!(format_value_to_string_repr(&nil), "NIL");
@@ -90,7 +90,9 @@ mod tests {
         interp.stack.clear();
         interp.stack.push(Value::from_bool(true));
         let result = op_num(&mut interp);
-        assert!(result.is_ok());
+        // NUM no longer accepts a Boolean: a truth value is not a number
+        // (finding B2). TRUE is distinct from the scalar 1.
+        assert!(result.is_err());
     }
 
     #[test]
@@ -100,30 +102,21 @@ mod tests {
         interp.stack.push(Value::from_string("TRUE"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
         interp.stack.push(Value::from_string("true"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
         interp.stack.push(Value::from_string("false"));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(false));
         }
 
         interp.stack.clear();
@@ -147,10 +140,7 @@ mod tests {
         )));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
@@ -160,10 +150,7 @@ mod tests {
         )));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(false));
         }
 
         interp.stack.clear();
@@ -173,10 +160,7 @@ mod tests {
         )));
         op_bool(&mut interp).unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            if let Some(f) = val.as_scalar() {
-                assert!(!f.is_zero());
-            }
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
@@ -319,15 +303,13 @@ mod tests {
 
         interp.execute("'true' BOOL").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            assert!(val.is_truthy());
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
         interp.execute("'FALSE' BOOL").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            assert!(!val.is_truthy());
+            assert_eq!(val.as_truth(), Some(false));
         }
 
         interp.stack.clear();
@@ -343,22 +325,19 @@ mod tests {
 
         interp.execute("100 BOOL").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            assert!(val.is_truthy());
+            assert_eq!(val.as_truth(), Some(true));
         }
 
         interp.stack.clear();
         interp.execute("0 BOOL").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            assert!(!val.is_truthy());
+            assert_eq!(val.as_truth(), Some(false));
         }
 
         interp.stack.clear();
         interp.execute("-1 BOOL").await.unwrap();
         if let Some(val) = interp.stack.last() {
-            assert!(val.is_scalar());
-            assert!(val.is_truthy());
+            assert_eq!(val.as_truth(), Some(true));
         }
     }
 
@@ -370,7 +349,7 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
             let s = value_as_string(val).unwrap();
-            assert_eq!(s, "1");
+            assert_eq!(s, "TRUE");
         }
 
         interp.stack.clear();
@@ -378,7 +357,7 @@ mod tests {
         if let Some(val) = interp.stack.last() {
             assert!(is_string_value(val));
             let s = value_as_string(val).unwrap();
-            assert_eq!(s, "0");
+            assert_eq!(s, "FALSE");
         }
     }
 

@@ -312,6 +312,12 @@ pub enum Interpretation {
 
 #[derive(Debug, Clone)]
 pub enum ValueData {
+    /// A definite logical truth value, `true` or `false` (SPEC §7.5). A
+    /// Boolean is a data-plane value distinct from any number: `TRUE` is not
+    /// the scalar `1` and `FALSE` is not the scalar `0`, so `TRUE 1 EQ` is
+    /// false. The third truth value Unknown (U) is represented separately
+    /// (a `TruthValue`-role absence node, see `Value::unknown`).
+    Boolean(bool),
     Scalar(Fraction),
     /// An exact real value backed by a continued-fraction representation
     /// (e.g. AlgebraicSqrt or a Gosper transform). Constructed only by
@@ -335,6 +341,7 @@ pub enum ValueData {
 impl PartialEq for ValueData {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (ValueData::Boolean(a), ValueData::Boolean(b)) => a == b,
             (ValueData::Scalar(a), ValueData::Scalar(b)) => a == b,
             (ValueData::ExactScalar(a), ValueData::ExactScalar(b)) => a == b,
             (ValueData::Vector(a), ValueData::Vector(b)) => a == b,
@@ -414,9 +421,10 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             nested_vector_shape(items)
         }
-        ValueData::CodeBlock(_) | ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {
-            None
-        }
+        ValueData::Boolean(_)
+        | ValueData::CodeBlock(_)
+        | ValueData::ProcessHandle(_)
+        | ValueData::SupervisorHandle(_) => None,
     }
 }
 

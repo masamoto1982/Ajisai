@@ -44,7 +44,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "1/1");
+        assert_eq!(result, "TRUE");
     }
 
     #[tokio::test]
@@ -55,7 +55,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "0/1");
+        assert_eq!(result, "FALSE");
     }
 
     #[tokio::test]
@@ -131,7 +131,7 @@ mod json_io_tests {
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
         let result = format!("{}", stack[0]);
-        assert_eq!(result, "'1'");
+        assert_eq!(result, "'true'");
     }
 
     #[tokio::test]
@@ -448,14 +448,14 @@ mod json_io_tests {
             .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@HAS"#)
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "TRUE");
 
         interp.stack.clear();
         interp
             .execute(r#"'{"a": 1}' JSON@PARSE 'missing' JSON@HAS"#)
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "FALSE");
     }
 
     #[tokio::test]
@@ -463,7 +463,7 @@ mod json_io_tests {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
         interp.execute("42 'a' JSON@HAS").await.unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
+        assert_eq!(format!("{}", interp.get_stack()[0]), "FALSE");
     }
 
     #[tokio::test]
@@ -518,14 +518,14 @@ mod json_io_tests {
             .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@DELETE 'a' JSON@HAS"#)
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "FALSE");
 
         interp.stack.clear();
         interp
             .execute(r#"'{"a": 1, "b": 2}' JSON@PARSE 'a' JSON@DELETE 'b' JSON@HAS"#)
             .await
             .unwrap();
-        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "1/1");
+        assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "TRUE");
     }
 
     #[tokio::test]

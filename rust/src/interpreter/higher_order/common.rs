@@ -31,6 +31,9 @@ pub(crate) fn extract_executable_code(
 }
 
 pub(super) fn is_truthy_boolean(val: &Value) -> bool {
+    if let Some(b) = val.as_truth() {
+        return b;
+    }
     if let Some(f) = val.as_scalar() {
         return !f.is_zero();
     }
@@ -38,6 +41,11 @@ pub(super) fn is_truthy_boolean(val: &Value) -> bool {
 }
 
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
+    // A definite Boolean is the canonical predicate result; a bare non-zero
+    // number is still accepted as truthy for numeric conditions.
+    if let Some(b) = condition_result.as_truth() {
+        return Ok(b);
+    }
     if let Some(f) = condition_result.as_scalar() {
         return Ok(!f.is_zero());
     }

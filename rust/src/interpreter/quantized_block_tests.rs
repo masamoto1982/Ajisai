@@ -78,11 +78,17 @@ fn stack_top_i64(interp: &Interpreter) -> i64 {
 /// Extract bool from top of stack, handling both scalars and single-element vectors.
 fn stack_top_bool(interp: &Interpreter) -> bool {
     let top = stack_top(interp);
+    if let Some(b) = top.as_truth() {
+        return b;
+    }
     if let Some(f) = top.as_scalar() {
         return !f.is_zero();
     }
     if top.len() == 1 {
         if let Some(child) = top.child(0) {
+            if let Some(b) = child.as_truth() {
+                return b;
+            }
             if let Some(f) = child.as_scalar() {
                 return !f.is_zero();
             }
@@ -1072,9 +1078,9 @@ fn vtu_phase_iii_eq_dense_tensor_singleton_matches_scalar() {
     let t = stack_top(&true_case);
     let f = stack_top(&false_case);
     let truthy = |v: &Value| -> bool {
-        v.as_scalar()
-            .map(|f| !f.is_zero())
-            .or_else(|| v.child(0).and_then(|c| c.as_scalar().map(|f| !f.is_zero())))
+        v.as_truth()
+            .or_else(|| v.as_scalar().map(|f| !f.is_zero()))
+            .or_else(|| v.child(0).and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero()))))
             .unwrap_or(false)
     };
     assert!(truthy(t), "5 = 5 should be truthy");
@@ -1086,9 +1092,9 @@ fn vtu_phase_iii_lt_dense_tensor_against_scalar() {
     let interp = run_code("[ 1 ] [ 2 ] <");
     let t = stack_top(&interp);
     let truthy = t
-        .as_scalar()
-        .map(|f| !f.is_zero())
-        .or_else(|| t.child(0).and_then(|c| c.as_scalar().map(|f| !f.is_zero())))
+        .as_truth()
+        .or_else(|| t.as_scalar().map(|f| !f.is_zero()))
+        .or_else(|| t.child(0).and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero()))))
         .unwrap_or(false);
     assert!(truthy, "1 < 2 should be truthy");
 }

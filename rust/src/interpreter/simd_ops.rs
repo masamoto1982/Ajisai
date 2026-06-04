@@ -21,7 +21,8 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
             }
             return Some(result);
         }
-        ValueData::Scalar(_)
+        ValueData::Boolean(_)
+        | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
         | ValueData::Record { .. }
         | ValueData::Nil
@@ -41,7 +42,8 @@ pub fn extract_integer_vector(val: &Value) -> Option<Vec<i64>> {
                 Some(n) => result.push(n),
                 None => return None,
             },
-            ValueData::Scalar(_)
+            ValueData::Boolean(_)
+            | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
@@ -63,7 +65,8 @@ pub fn create_value_from_integer_vector(values: Vec<i64>) -> Value {
 fn extract_integer_scalar(value: &Value) -> Option<i64> {
     match &value.data {
         ValueData::Scalar(f) if f.is_integer() => f.to_i64(),
-        ValueData::Scalar(_)
+        ValueData::Boolean(_)
+        | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
         | ValueData::Vector(_)
         | ValueData::Tensor { .. }

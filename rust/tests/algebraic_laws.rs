@@ -8,18 +8,15 @@
 //! infinitely many conformance cases, so this file is the "equation-level
 //! continuous verification" companion to `tests/conformance/`.
 //!
-//! Scope: only laws that are consistent with `SPECIFICATION.md` as written are
-//! asserted here. Laws that the reference implementation currently violates in
-//! ways that depend on an open design decision (the truth-value/number identity
-//! of finding B, and the irrational *display* form of finding C) are NOT
-//! asserted as equalities here; they are tracked separately so this file never
-//! cements a divergence and never fails CI on an undecided question.
+//! Scope: the laws asserted here are consistent with `SPECIFICATION.md`. They
+//! include the strong-Kleene K3 logic laws over {TRUE, FALSE, UNKNOWN}, which
+//! pass now that truth values are a distinct data-plane kind rendering
+//! uniformly as TRUE/FALSE/UNKNOWN (findings B1/B2) and irrationals render as
+//! exact nested continued fractions (finding C).
 //!
 //! Observation: two programs are "equal" when their whole-stack rendering
 //! (`Value::to_string`, the same surface the conformance runner observes) is
-//! identical. Comparing renders keeps every law independent of the finding-B
-//! display question: both sides of every equation render through the same path,
-//! so the law holds whatever that path renders.
+//! identical.
 
 use ajisai_core::interpreter::Interpreter;
 use proptest::prelude::*;
@@ -193,13 +190,9 @@ fn k3_and_or_commutative() {
     }
 }
 
-// Regression target for finding B1 (inconsistent truth-value rendering): the
-// K3 *values* are correct, but a TRUE/FALSE produced by the pure-boolean fast
-// path renders as `1/1`/`0/1` while one produced by the U-absorbing Kleene path
-// renders as `TRUE`/`FALSE`, so the two sides of these laws can render
-// differently even though they denote the same truth value. Un-ignore once
-// every truth-producing path carries the `TruthValue` role consistently.
-#[ignore = "finding B1: truth values render inconsistently across logic paths"]
+// De Morgan over {T, F, U}. Truth values now render uniformly as
+// TRUE/FALSE/UNKNOWN through every path (finding B fixed), so both sides of
+// each law render identically when they denote the same truth value.
 #[test]
 fn k3_de_morgan() {
     for (na, a) in truths() {
@@ -220,7 +213,6 @@ fn k3_de_morgan() {
     }
 }
 
-#[ignore = "finding B1: truth values render inconsistently across logic paths"]
 #[test]
 fn k3_associativity_and_idempotence() {
     let ts = truths();

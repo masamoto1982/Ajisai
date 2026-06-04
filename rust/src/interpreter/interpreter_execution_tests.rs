@@ -30,12 +30,7 @@ mod tests {
         assert_eq!(interp.stack.len(), 4);
         let val = &interp.stack[3];
 
-        assert!(
-            !val.as_scalar()
-                .expect("Expected scalar boolean result")
-                .is_zero(),
-            "Expected TRUE from comparison"
-        );
+        assert_eq!(val.as_truth(), Some(true), "Expected TRUE from comparison");
     }
 
     #[tokio::test]
@@ -234,9 +229,10 @@ async fn comparison_words_return_scalar_booleans() {
         let mut interp = crate::interpreter::Interpreter::new();
         interp.execute(program).await.unwrap();
         assert_eq!(interp.stack.len(), 1, "program: {program}");
-        let scalar = interp.stack[0]
-            .as_scalar()
-            .expect("comparison should return scalar boolean");
-        assert_eq!(scalar.is_zero(), !expected, "program: {program}");
+        assert_eq!(
+            interp.stack[0].as_truth(),
+            Some(expected),
+            "program: {program}"
+        );
     }
 }

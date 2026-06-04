@@ -10,6 +10,7 @@ pub type NodeId = u32;
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
     Nil,
+    Boolean(bool),
     Scalar(Fraction),
     Vector {
         children: Vec<NodeId>,
@@ -106,6 +107,7 @@ impl ValueArena {
             NodeKind::Record { pairs, .. } => pairs.as_slice(),
             NodeKind::Tensor { .. }
             | NodeKind::Nil
+            | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
             | NodeKind::CodeBlock(_)
             | NodeKind::ProcessHandle(_)
@@ -118,6 +120,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
     fn alloc_recursive(value: &Value, arena: &mut ValueArena) -> NodeId {
         match &value.data {
             ValueData::Nil => arena.alloc_nil(value.hint),
+            ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::ExactScalar(er) => {
                 // ExactScalar cannot be stored exactly in the arena (which uses Fraction
@@ -169,6 +172,11 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
             NodeKind::Nil => Value {
                 data: ValueData::Nil,
                 hint: arena.hint(id),
+                absence: None,
+            },
+            NodeKind::Boolean(b) => Value {
+                data: ValueData::Boolean(*b),
+                hint: Interpretation::TruthValue,
                 absence: None,
             },
             NodeKind::Scalar(f) => Value {
@@ -239,10 +247,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
 pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<NodeId, String> {
     match json {
         JsonValue::Null => Ok(arena.alloc_nil(Interpretation::Nil)),
-        JsonValue::Bool(v) => Ok(arena.alloc_scalar(
-            Fraction::from(if v { 1_i64 } else { 0_i64 }),
-            Interpretation::TruthValue,
-        )),
+        JsonValue::Bool(v) => Ok(arena.alloc_node(NodeKind::Boolean(v), Interpretation::TruthValue)),
         JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
                 Ok(arena.alloc_scalar(Fraction::from(i), Interpretation::RawNumber))
@@ -292,6 +297,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::String("unknown".to_string())
         }
         NodeKind::Nil => JsonValue::Null,
+        NodeKind::Boolean(b) => JsonValue::Bool(*b),
         NodeKind::Scalar(frac) => {
             if arena.hint(root) == Interpretation::TruthValue {
                 return JsonValue::Bool(!frac.is_zero());

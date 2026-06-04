@@ -190,6 +190,11 @@ fn format_as_interval(value: &Value) -> String {
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
+        // A definite boolean renders uniformly as TRUE/FALSE in every role
+        // (SPEC §12.2), so the three-valued axis is observable consistently
+        // whether the boolean came from a literal, a comparison, or a logic
+        // word. Display-only and non-canonical.
+        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
@@ -334,6 +339,7 @@ fn format_exact_real(er: &ExactReal) -> String {
 fn format_as_string(data: &ValueData) -> String {
     match data {
         ValueData::Nil => "''".to_string(),
+        ValueData::Boolean(b) => format!("'{}'", if *b { "TRUE" } else { "FALSE" }),
         ValueData::ExactScalar(er) => format!("'{}'", format_exact_real(er)),
         ValueData::Scalar(f) => {
             if let Some(n) = f.to_i64() {
@@ -402,6 +408,13 @@ fn boolean_element_label(child: &Value) -> &'static str {
     }
     match &child.data {
         ValueData::Nil => "NIL",
+        ValueData::Boolean(b) => {
+            if *b {
+                "TRUE"
+            } else {
+                "FALSE"
+            }
+        }
         ValueData::Scalar(f) => {
             if f.is_nil() {
                 "NIL"
@@ -439,6 +452,7 @@ fn format_as_boolean(value: &Value) -> String {
     }
     match &value.data {
         ValueData::Nil => "NIL".to_string(),
+        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
         ValueData::Scalar(f) => {
@@ -485,6 +499,7 @@ fn format_as_boolean(value: &Value) -> String {
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
+        ValueData::Boolean(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
