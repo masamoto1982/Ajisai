@@ -1,6 +1,7 @@
 use crate::builtins::WordShape;
 use crate::coreword_registry::{
-    self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordProfile, WordPurity,
+    self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, SafetyLevel, WordProfile,
+    WordPurity,
 };
 use crate::interpreter::{
     algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort, time_ops,
@@ -1341,6 +1342,16 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 {
                     metadata.partiality = partiality;
                     metadata.nil_policy = nil_policy;
+                }
+                // SPEC §7.14: safety A is reserved for *total* words. A pure
+                // word that the override makes `Partial` (it raises on some
+                // well-shaped input, e.g. MATH@GCD / MATH@LCM on non-integers)
+                // must be safety B ("partial but with explicit error
+                // categories"). `Projecting` is total-by-projection and stays A.
+                if metadata.safety_level == SafetyLevel::A
+                    && metadata.partiality == Partiality::Partial
+                {
+                    metadata.safety_level = SafetyLevel::B;
                 }
                 metadata
             })

@@ -577,18 +577,25 @@ HOLDS):
   `requires` を含意するとき合成は安全。partiality は `Partial` が伝播で支配的
   (一方が Partial なら合成も Partial 以上)であり、`Total/Projecting` は閉じる。
 
-#### E.5 所見(finding、descriptive)
+#### E.5 所見(finding)
 
-- **所見 E1(質量フィールドの未実装):** SPEC §13.1 は Coreword Contract が
-  `arity / consumption / production / bifurcation` を宣言すると記すが、実装の
-  `CorewordMetadata` 構造体は `nil_policy` 以外の質量フィールドを **持たない**。
-  本モデルは質量保存を **観測的(スタック深さ差分)**に検証する。仕様は正典の
-  まま、メタデータ拡張 or 仕様注記のいずれかを要する **乖離として追跡**。
-- **所見 E2(safety A と partiality の不整合、追跡オラクル):** SPEC §7.14 は
-  safety `A` を「total・pure・deterministic」と定義するが、registry は **Partial**
-  な `GCD`/`LCM` を `A` と宣言する(`Projecting` の `POW` 等は total-by-projection
-  で `A` と整合する一方、`Partial` は整合しない)。乖離集合が **ちょうど
-  {GCD, LCM}** であることをテストで固定し、契約修正・新規不整合の双方を可視化する。
+- **所見 E1(質量フィールドの未実装)— 解消済み:** かつて SPEC §13.1 が宣言すると
+  記す `arity / consumption / production / bifurcation` が `CorewordMetadata` に
+  **無かった**。本改修で機械可読な質量契約 `mass : Fixed{consumes,produces} |
+  Dynamic` を §7.14 契約フィールドへ追加(arity/consumption/production を担い、
+  bifurcation は KEEP 修飾子=§13.2、NIL 射影は nil_policy が担う)。コンパイル済み
+  プラン解析器(`quantized_block::builtin_arity`)と契約レジストリは同一の
+  `coreword_registry::mass_contract` を読み、乖離しない。静的検証器
+  `interpreter::mass_conservation::validate_mass_conservation` が CompiledPlan を
+  抽象解釈し、過消費(空スタックからの深さが負)を **診断として**報告する
+  (§13.1「reported by ... developer diagnostics」。最適化経路の gating は変更せず
+  実行時は per-value FlowToken を持たない)。SPEC §7.14/§13.1 を相応に改訂。
+- **所見 E2(safety A と partiality の不整合)— 解消済み:** SPEC §7.14 は safety `A`
+  を「total・pure・deterministic」と定義する。`GCD`/`LCM` は非整数入力で実際に
+  エラーを出す真の `Partial` なので、契約を `A`→`B`(「partial but explicit error
+  categories」)へ修正(`Projecting` の `POW` 等は total-by-projection で `A` 据置)。
+  以後「safety A ⟹ partiality∈{Total,Projecting}」が反例なく成立し、テストで不変
+  条件として固定。仕様は正典のまま実装を仕様へ一致させた。
 - **所見 E3(GET は非消費):** `[v…] i GET` は **元ベクタを保持**し要素(範囲外は
   NIL)を積む(`obs([1 2 3] 9 GET) = [[1 2 3], NIL]`)。GET の consumption profile は
   (vector 保持, index 消費, element 生成)であり、素朴な arity 計算と異なる
@@ -600,8 +607,11 @@ HOLDS):
 **テスト**: `rust/tests/contract_modifier_laws.rs` — 既定修飾子の恒等、KEEP 分岐、
 KEEP−EAT=arity(質量)、STAK 畳み込み・`..`≡STAK、STAK KEEP の保持、Total 無エラー、
 Projecting の NIL 射影、契約の全域性(全語が到達可能契約を持つ)、safety 格子の
-単調性、所見 E2 の追跡オラクル、§7.14 アンカー契約(ADD/DIV/EQ/LT/AND/OR/NOT)
-(計 11 法則群)。
+単調性(A⟹{Total,Projecting})、所見 E2 不変条件(A+Partial 皆無・GCD/LCM=B)、
+§7.14 アンカー契約(ADD/DIV/EQ/LT/AND/OR/NOT)(計 11 法則群)。
+`rust/tests/mass_conservation_laws.rs` — 質量契約の §7.14 露出、静的純 net mass=実行時
+深さの健全性、KEEP の net mass 増分=arity、過消費⇔実行時 underflow、Dynamic で abstain
+(計 5 法則群)。
 
 ---
 
@@ -637,8 +647,9 @@ Projecting の NIL 射影、契約の全域性(全語が到達可能契約を持
 | 既定修飾子の恒等・KEEP 分岐・KEEP−EAT=arity・STAK 畳み込み(§9-quater E) | HOLDS | `tests/contract_modifier_laws.rs` |
 | Total 無エラー・Projecting の NIL 射影・契約全域性・safety 格子単調 | HOLDS | `tests/contract_modifier_laws.rs` |
 | §7.14 アンカー契約(ADD/DIV/EQ/LT/AND/OR/NOT) | HOLDS | `tests/contract_modifier_laws.rs` |
-| 所見 E1: 質量フィールド(arity 等)が registry に未実装 | 乖離(追跡) | §9-quater E.5、観測的に代替検証 |
-| 所見 E2: safety A だが Partial({GCD,LCM}) | BREAKS(§7.14) | §9-quater E.5、追跡オラクル化 |
+| 所見 E1: 質量契約 `mass` を §7.14 へ露出・静的検証器を実装 | HOLDS(解消) | §9-quater E.5、`tests/mass_conservation_laws.rs` |
+| 静的 net mass=実行時深さ・過消費⇔underflow・KEEP増分=arity | HOLDS | `tests/mass_conservation_laws.rs` |
+| 所見 E2: safety A⟹{Total,Projecting}(GCD/LCM を B へ修正) | HOLDS(解消) | §9-quater E.5、`tests/contract_modifier_laws.rs` |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は

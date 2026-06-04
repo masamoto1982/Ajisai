@@ -186,6 +186,15 @@ fn safety_lattice_is_monotone() {
         if m.safety_level == SafetyLevel::A {
             assert_eq!(m.purity, WordPurity::Pure, "{} A must be pure", m.name);
             assert!(m.deterministic, "{} A must be deterministic", m.name);
+            // SPEC §7.14: A is reserved for *total* words. `Projecting` is total
+            // by projection (failures land on NIL), so it qualifies; `Partial`
+            // does not (finding E2, resolved).
+            assert!(
+                matches!(m.partiality, Partiality::Total | Partiality::Projecting),
+                "{} A must be total (or total-by-projection), got {:?}",
+                m.name,
+                m.partiality
+            );
         }
         if !m.effects.is_empty() {
             assert!(
@@ -212,26 +221,28 @@ fn safety_lattice_is_monotone() {
     }
 }
 
-/// **Finding E2 (tracked oracle).** SPEC §7.14 defines safety `A` as
-/// "total, pure, deterministic", yet the registry marks the `Partial` words
-/// `GCD` and `LCM` as `A`. (`Projecting` words such as `POW` are *total by
-/// projection* and reconcile with `A`; `Partial` ones do not.) We assert the
-/// divergence set is *exactly* `{GCD, LCM}` so that fixing the contracts — or a
-/// new mismatch appearing — makes this test fail and forces a spec/impl review
-/// (descriptive discipline: SPECIFICATION.md remains canonical).
+/// **Finding E2 (resolved).** SPEC §7.14 defines safety `A` as "total, pure,
+/// deterministic". `GCD`/`LCM` genuinely raise on non-integer input (they are
+/// `Partial`), so they were corrected from `A` to `B` ("partial but with
+/// explicit error categories"). The invariant now holds with no exceptions:
+/// **no** word is both safety `A` and `Partial`, and `GCD`/`LCM` are `B`. This
+/// guards against regressing the contract.
 #[test]
-fn finding_e2_safety_a_partial_words_are_exactly_gcd_lcm() {
-    let mut a_but_partial: Vec<String> = get_builtin_word_registry()
+fn safety_a_partial_invariant_holds_and_gcd_lcm_are_b() {
+    let a_but_partial: Vec<&str> = get_builtin_word_registry()
         .iter()
         .filter(|m| m.safety_level == SafetyLevel::A && m.partiality == Partiality::Partial)
-        .map(|m| m.name.clone())
+        .map(|m| m.name.as_str())
         .collect();
-    a_but_partial.sort();
-    assert_eq!(
-        a_but_partial,
-        vec!["GCD".to_string(), "LCM".to_string()],
-        "safety-A-but-Partial set drifted; reconcile with SPEC §7.14 finding E2"
+    assert!(
+        a_but_partial.is_empty(),
+        "SPEC §7.14: safety A must be total, but these are A+Partial: {a_but_partial:?}"
     );
+    for w in ["GCD", "LCM"] {
+        let m = get_coreword_metadata(w).unwrap_or_else(|| panic!("no contract {w}"));
+        assert_eq!(m.partiality, Partiality::Partial, "{w}");
+        assert_eq!(m.safety_level, SafetyLevel::B, "{w} must be safety B");
+    }
 }
 
 /// Concrete §7.14 anchor contracts (the narrative examples of §7.14, pinned as
