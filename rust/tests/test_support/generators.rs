@@ -86,6 +86,52 @@ pub fn block_src() -> impl Strategy<Value = String> {
     ]
 }
 
+// ───────────────────────── Phase 6: names & dictionary ──────────────────────
+
+/// A canonical **module word call**: `(module, bare-program, qualified-program)`.
+/// Both programs assume the module is already imported and, when run after
+/// `'module' IMPORT`, leave the *same* stack — the boundary-word law
+/// `bare ≡ MODULE@WORD` (roadmap Phase 6). Every entry is a `Total` module word
+/// over the chosen operands (probe-confirmed: no NIL / error).
+pub fn module_word_call() -> impl Strategy<Value = (&'static str, String, String)> {
+    prop::sample::select(vec![
+        ("MATH", "4 SQRT", "4 MATH@SQRT"),
+        ("MATH", "9 SQRT", "9 MATH@SQRT"),
+        ("MATH", "-5 ABS", "-5 MATH@ABS"),
+        ("MATH", "7 NEG", "7 MATH@NEG"),
+        ("MATH", "-3 SIGN", "-3 MATH@SIGN"),
+        ("MATH", "2 10 POW", "2 10 MATH@POW"),
+        ("MATH", "3 7 MIN", "3 7 MATH@MIN"),
+        ("MATH", "3 7 MAX", "3 7 MATH@MAX"),
+        ("JSON", "'[1]' PARSE", "'[1]' JSON@PARSE"),
+        ("JSON", "'[1,2]' PARSE", "'[1,2]' JSON@PARSE"),
+        ("ALGO", "[ 3 1 2 ] SORT", "[ 3 1 2 ] ALGO@SORT"),
+        ("ALGO", "[ 5 ] SORT", "[ 5 ] ALGO@SORT"),
+    ])
+    .prop_map(|(m, b, q)| (m, b.to_string(), q.to_string()))
+}
+
+/// A short user-word name in the runtime's action-object style (already
+/// uppercase, so word-name normalization §3.8 is a no-op on it). Kept distinct
+/// from every built-in so `DEF` never hits the "cannot redefine built-in" path.
+pub fn user_word_name() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(vec!["INC", "TWICE", "BUMP", "STEP-UP", "ADD-ONE", "GROW"])
+}
+
+/// A user-word body that, applied to one scalar, leaves one scalar (a pure
+/// `Σ ⇀ Σ` transducer over the top of stack). Paired with a closed-form program
+/// `apply(x)` whose observation the defined word must reproduce.
+pub fn user_word_body() -> impl Strategy<Value = (&'static str, &'static str)> {
+    // (body tokens, equivalent inline program fragment applied after a value)
+    prop::sample::select(vec![
+        ("1 ADD", "1 ADD"),
+        ("2 MUL", "2 MUL"),
+        ("3 SUB", "3 SUB"),
+        ("0 SUB 1 ADD", "0 SUB 1 ADD"),
+        ("10 MUL 1 ADD", "10 MUL 1 ADD"),
+    ])
+}
+
 /// Union over every semantic domain — the "any well-formed value" generator.
 pub fn any_value_src() -> impl Strategy<Value = String> {
     prop_oneof![
