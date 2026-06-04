@@ -22,7 +22,8 @@
     "branch:new": "bash ./scripts/create-dated-branch.sh",
     "dev:tauri": "AJISAI_BUILD_TARGET=tauri vite",
     "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build",
-    "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh"
+    "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
+    "conformance:manifest": "node scripts/generate-conformance-manifest.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

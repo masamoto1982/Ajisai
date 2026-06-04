@@ -286,6 +286,11 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
+    interp.require_host_capability(
+        "JSON@EXPORT",
+        crate::interpreter::HostCapability::JsonExport,
+    )?;
+
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
     let val = extract_stack_value(interp, is_keep, 0)?;
@@ -293,11 +298,9 @@ pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
     let (arena, root_id) = value_to_arena(&val);
     let json_val = arena_node_to_json(&arena, root_id);
     let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
-    interp
-        .host_effects
-        .push(crate::interpreter::HostEffect::JsonExport(
-            json_compact.clone(),
-        ));
+    interp.emit_host_effect(crate::interpreter::HostEffect::JsonExport(
+        json_compact.clone(),
+    ));
     interp
         .output_buffer
         .push_str(&format!("JSONEXPORT:{}\n", json_compact));

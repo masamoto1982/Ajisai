@@ -1,9 +1,10 @@
 use crate::builtins::WordShape;
 use crate::coreword_registry::{
-    self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordPurity,
+    self, CanonicalHome, CorewordMetadata, NilPolicy, Partiality, WordProfile, WordPurity,
 };
 use crate::interpreter::{
     algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort, time_ops,
+    HostCapability,
 };
 use crate::types::{Capabilities, Stability};
 
@@ -1290,6 +1291,18 @@ fn contract_override(module: &str, word: &str) -> Option<(Partiality, NilPolicy)
     }
 }
 
+fn host_capability_for_module_word(module: &str, word: &str) -> Option<HostCapability> {
+    match (module, word) {
+        ("TIME", "NOW") => Some(HostCapability::Clock),
+        ("CRYPTO", "CSPRNG") => Some(HostCapability::SecureRandom),
+        ("SERIAL", _) => Some(HostCapability::Serial),
+        ("MUSIC", _) => Some(HostCapability::Audio),
+        ("JSON", "EXPORT") => Some(HostCapability::JsonExport),
+        ("IO", "INPUT") | ("IO", "OUTPUT") => Some(HostCapability::Effect),
+        _ => None,
+    }
+}
+
 pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
     MODULE_SPECS
         .iter()
@@ -1313,6 +1326,12 @@ pub(crate) fn module_word_metadata_entries() -> Vec<CorewordMetadata> {
                 };
                 metadata.deterministic = word.deterministic;
                 metadata.safe_preview = word.safe_preview;
+                if let Some(capability) =
+                    host_capability_for_module_word(spec.name, word.short_name)
+                {
+                    metadata.profile = WordProfile::Hosted;
+                    metadata.required_capability = Some(capability);
+                }
                 metadata.canonical_home = CanonicalHome::Module(spec.name.to_string());
                 metadata.listed_in_core = false;
                 metadata.listed_in_modules = vec![spec.name.to_string()];

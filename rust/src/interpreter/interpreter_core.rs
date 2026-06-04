@@ -218,14 +218,12 @@ pub struct Interpreter {
     /// (`tests/conformance/`): two implementations agree iff they emit the same
     /// effect列. The legacy `output_buffer` string protocol is still emitted in
     /// parallel so existing front-ends keep working.
-    ///
-    // TODO(portability): tag each coreword with its portability profile so that
-    // Core vs Hosted membership is machine-checkable. Sketch:
-    //   pub enum WordProfile { Core, Hosted(HostCapability), PlatformSpecific }
-    // A Hosted word would then declare the single capability it requires, and a
-    // missing capability would fail in a specified way rather than at the call
-    // site.
     pub(crate) host_effects: Vec<super::HostEffect>,
+    /// Host boundary for clocks, entropy, capability checks, and effect sinks.
+    /// Core execution must not call platform APIs directly; Hosted words route
+    /// boundary access through this trait object so conformance can inject a
+    /// deterministic or restricted host.
+    pub(crate) host_env: Arc<dyn super::HostEnv>,
     pub(crate) definition_to_load: Option<String>,
     pub(crate) operation_target_mode: OperationTargetMode,
     pub(crate) consumption_mode: ConsumptionMode,
@@ -286,6 +284,10 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
+        Self::with_host(super::default_host_env())
+    }
+
+    pub fn with_host(host_env: Arc<dyn super::HostEnv>) -> Self {
         let mut interpreter = Interpreter {
             stack: Vec::new(),
             core_vocabulary: HashMap::new(),
@@ -294,6 +296,7 @@ impl Interpreter {
             dependents: HashMap::new(),
             output_buffer: String::new(),
             host_effects: Vec::new(),
+            host_env,
             definition_to_load: None,
             operation_target_mode: OperationTargetMode::StackTop,
             consumption_mode: ConsumptionMode::Consume,
@@ -533,6 +536,24 @@ impl Interpreter {
     /// suite, distinct from the human-readable `output_buffer`.
     pub fn host_effects(&self) -> &[super::HostEffect] {
         &self.host_effects
+    }
+
+    pub(crate) fn emit_host_effect(&mut self, effect: super::HostEffect) {
+        self.host_env.emit_effect(&effect);
+        self.host_effects.push(effect);
+    }
+
+    pub(crate) fn require_host_capability(
+        &mut self,
+        word: &str,
+        capability: super::HostCapability,
+    ) -> Result<()> {
+        if self.host_env.has_capability(capability) {
+            return Ok(());
+        }
+        let payload = super::host::missing_capability_payload(word, capability);
+        self.emit_host_effect(super::HostEffect::Diagnostic(payload));
+        Err(super::host::missing_capability_error(word, capability))
     }
 
     pub fn get_stack(&self) -> &Stack {

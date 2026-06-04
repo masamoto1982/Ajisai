@@ -26,7 +26,8 @@
 //! `ajisai-effect` missing `data-kind`/`data-payload`, aborts with a panic. We
 //! never silently skip a malformed case.
 
-use crate::interpreter::Interpreter;
+use crate::interpreter::{DeterministicHostEnv, HostCapability, Interpreter};
+use std::sync::Arc;
 
 const SUITE: &str = include_str!("../../tests/conformance/index.html");
 
@@ -43,7 +44,11 @@ struct Case {
     category: String,
     source: String,
     expect_result: String,
+    expect_error: Option<String>,
     effects: Vec<ExpectedEffect>,
+    host_now_millis: Option<i64>,
+    host_random_bytes: Vec<u8>,
+    host_capabilities: Option<Vec<HostCapability>>,
 }
 
 // ── tiny strict HTML extraction ───────────────────────────────────────────
@@ -227,6 +232,53 @@ fn class_attr_contains(attrs: &str, class: &str) -> bool {
     }
 }
 
+fn parse_capability(name: &str) -> HostCapability {
+    match name.trim() {
+        "clock" => HostCapability::Clock,
+        "secureRandom" | "secure-random" | "secure_random" => HostCapability::SecureRandom,
+        "serial" => HostCapability::Serial,
+        "audio" => HostCapability::Audio,
+        "jsonExport" | "json-export" | "json_export" => HostCapability::JsonExport,
+        "config" => HostCapability::Config,
+        "effect" => HostCapability::Effect,
+        other => panic!("unknown conformance host capability `{other}`"),
+    }
+}
+
+fn parse_capability_list(raw: &str) -> Vec<HostCapability> {
+    raw.split(|c: char| c == ',' || c.is_ascii_whitespace())
+        .filter(|part| !part.is_empty())
+        .map(parse_capability)
+        .collect()
+}
+
+fn parse_hex_bytes(raw: &str) -> Vec<u8> {
+    let hex: String = raw.chars().filter(|c| !c.is_ascii_whitespace()).collect();
+    assert!(
+        hex.len() % 2 == 0,
+        "data-host-random-hex must have an even number of hex digits"
+    );
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| {
+            u8::from_str_radix(&hex[i..i + 2], 16)
+                .unwrap_or_else(|_| panic!("invalid hex byte `{}`", &hex[i..i + 2]))
+        })
+        .collect()
+}
+
+fn all_capabilities() -> Vec<HostCapability> {
+    vec![
+        HostCapability::Clock,
+        HostCapability::SecureRandom,
+        HostCapability::Serial,
+        HostCapability::Audio,
+        HostCapability::JsonExport,
+        HostCapability::Config,
+        HostCapability::Effect,
+    ]
+}
+
 fn parse_cases() -> Vec<Case> {
     let html = SUITE;
     let mut cases = Vec::new();
@@ -246,6 +298,7 @@ fn parse_cases() -> Vec<Case> {
             .unwrap_or_else(|| panic!("case `{id}` is missing `ajisai-source`"));
         let result_el = find_element_by_class(inner, 0, "ajisai-expect-result")
             .unwrap_or_else(|| panic!("case `{id}` is missing `ajisai-expect-result`"));
+        let error_el = find_element_by_class(inner, 0, "ajisai-expect-error");
         let effects_el = find_element_by_class(inner, 0, "ajisai-expect-effects")
             .unwrap_or_else(|| panic!("case `{id}` is missing `ajisai-expect-effects`"));
 
@@ -253,6 +306,17 @@ fn parse_cases() -> Vec<Case> {
         // (including newlines, which are significant Ajisai tokens) is kept.
         let source = decode_entities(&source_el.inner).trim().to_string();
         let expect_result = decode_entities(&result_el.inner);
+        let expect_error = error_el.map(|el| decode_entities(&el.inner).trim().to_string());
+
+        let host_now_millis = attr_value(&section.attrs, "data-host-now-millis").map(|v| {
+            v.parse::<i64>()
+                .unwrap_or_else(|_| panic!("case `{id}` has invalid data-host-now-millis"))
+        });
+        let host_random_bytes = attr_value(&section.attrs, "data-host-random-hex")
+            .map(|v| parse_hex_bytes(&v))
+            .unwrap_or_default();
+        let host_capabilities =
+            attr_value(&section.attrs, "data-host-capabilities").map(|v| parse_capability_list(&v));
 
         // Effects: every `ajisai-effect` inside `ajisai-expect-effects`, in order.
         let mut effects = Vec::new();
@@ -272,7 +336,11 @@ fn parse_cases() -> Vec<Case> {
             category,
             source,
             expect_result,
+            expect_error,
             effects,
+            host_now_millis,
+            host_random_bytes,
+            host_capabilities,
         });
         from = next_from;
     }
@@ -280,25 +348,57 @@ fn parse_cases() -> Vec<Case> {
 }
 
 async fn run_case(case: &Case) -> std::result::Result<(), String> {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(&case.source)
-        .await
-        .map_err(|e| format!("execution failed: {e}"))?;
+    let mut interp = if case.host_now_millis.is_some()
+        || !case.host_random_bytes.is_empty()
+        || case.host_capabilities.is_some()
+    {
+        let capabilities = case
+            .host_capabilities
+            .clone()
+            .unwrap_or_else(all_capabilities);
+        Interpreter::with_host(Arc::new(DeterministicHostEnv::new(
+            case.host_now_millis.unwrap_or(0),
+            case.host_random_bytes.clone(),
+            capabilities,
+        )))
+    } else {
+        Interpreter::new()
+    };
 
-    // Final result = the whole stack, each value rendered via Display.
-    let actual_result = interp
-        .get_stack()
-        .iter()
-        .map(|v| v.to_string())
-        .collect::<Vec<_>>()
-        .join(" ");
-    let expected_norm = normalize_ws(&case.expect_result);
-    let actual_norm = normalize_ws(&actual_result);
-    if expected_norm != actual_norm {
-        return Err(format!(
-            "result mismatch:\n  expected: {expected_norm:?}\n  actual:   {actual_norm:?}"
-        ));
+    let execution = interp.execute(&case.source).await;
+    if let Some(expected_error) = &case.expect_error {
+        match execution {
+            Ok(()) => {
+                return Err(format!(
+                    "expected execution error containing {expected_error:?}, got success"
+                ));
+            }
+            Err(err) => {
+                let actual = err.to_string();
+                if !actual.contains(expected_error) {
+                    return Err(format!(
+                        "error mismatch:\n  expected substring: {expected_error:?}\n  actual:             {actual:?}"
+                    ));
+                }
+            }
+        }
+    } else {
+        execution.map_err(|e| format!("execution failed: {e}"))?;
+
+        // Final result = the whole stack, each value rendered via Display.
+        let actual_result = interp
+            .get_stack()
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let expected_norm = normalize_ws(&case.expect_result);
+        let actual_norm = normalize_ws(&actual_result);
+        if expected_norm != actual_norm {
+            return Err(format!(
+                "result mismatch:\n  expected: {expected_norm:?}\n  actual:   {actual_norm:?}"
+            ));
+        }
     }
 
     // Host effects in order.

@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, HostCapability, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_bigint::{BigInt, Sign};
@@ -8,16 +8,13 @@ use num_traits::{One, ToPrimitive};
 
 const DEFAULT_DENOMINATOR_BITS: u32 = 32;
 
-// TODO(portability): Allow CSPRNG to be provided by HostEnv for deterministic
-// conformance tests (e.g. a DeterministicHost { now_millis, random_bytes }).
-
 /// The single secure-random boundary. On native std this uses the OS entropy
 /// source; on wasm it uses `getrandom/js` (selected by the `wasm` feature).
 pub(crate) fn default_fill_random(buf: &mut [u8]) -> std::result::Result<(), String> {
     getrandom::getrandom(buf).map_err(|e| format!("random generation failed: {}", e))
 }
 
-fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
+fn compute_uniform_random(interp: &Interpreter, denominator: &BigInt) -> Result<BigInt> {
     if *denominator <= BigInt::one() {
         return Ok(BigInt::from(0));
     }
@@ -27,7 +24,7 @@ fn compute_uniform_random(denominator: &BigInt) -> Result<BigInt> {
     let bytes = total_bits.div_ceil(8);
 
     let mut buf = vec![0u8; bytes];
-    default_fill_random(&mut buf).map_err(|e| {
+    interp.host_env.fill_random(&mut buf).map_err(|e| {
         AjisaiError::from(format!("CSPRNG: failed to generate random bytes: {}", e))
     })?;
 
@@ -87,6 +84,8 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
+    interp.require_host_capability("CSPRNG", HostCapability::SecureRandom)?;
+
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (denominator, count) = if is_keep_mode {
         parse_csprng_args_in_keep_mode(interp)?
@@ -100,7 +99,7 @@ pub fn op_csprng(interp: &mut Interpreter) -> Result<()> {
 
     let mut result_vec = Vec::with_capacity(count);
     for _ in 0..count {
-        let numerator = compute_uniform_random(&denominator)?;
+        let numerator = compute_uniform_random(interp, &denominator)?;
         let frac = Fraction::new(numerator, denominator.clone());
         result_vec.push(Value::from_number(frac));
     }
@@ -245,5 +244,38 @@ mod tests {
         let val = &interp.stack[0];
         assert!(val.is_vector(), "Expected vector-like value");
         assert_eq!(val.len(), 50);
+    }
+    #[tokio::test]
+    async fn test_csprng_uses_deterministic_host_bytes() {
+        use crate::interpreter::{DeterministicHostEnv, HostCapability};
+        use std::sync::Arc;
+
+        let host = Arc::new(DeterministicHostEnv::new(
+            0,
+            vec![3, 0, 0, 0, 0, 0, 0, 0, 0],
+            vec![HostCapability::SecureRandom],
+        ));
+        let mut interp = Interpreter::with_host(host);
+
+        let result = interp.execute("'crypto' IMPORT [ 10 ] [ 1 ] CSPRNG").await;
+        assert!(result.is_ok(), "CSPRNG should succeed: {:?}", result);
+        assert_eq!(interp.stack[0].to_string(), "[ 3/10 ]");
+    }
+
+    #[tokio::test]
+    async fn test_csprng_missing_capability_emits_diagnostic_and_errors() {
+        use crate::interpreter::DeterministicHostEnv;
+        use std::sync::Arc;
+
+        let host = Arc::new(DeterministicHostEnv::new(0, vec![0; 9], vec![]));
+        let mut interp = Interpreter::with_host(host);
+
+        let result = interp.execute("'crypto' IMPORT CSPRNG").await;
+        assert!(result.is_err(), "CSPRNG should fail without SecureRandom");
+        assert_eq!(interp.host_effects().len(), 1);
+        assert_eq!(interp.host_effects()[0].kind(), "diagnostic");
+        assert!(interp.host_effects()[0]
+            .payload()
+            .contains("missingCapability"));
     }
 }
