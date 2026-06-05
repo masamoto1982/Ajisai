@@ -2,7 +2,9 @@
 
 > Status: **Non-canonical / planning.** 正典は `SPECIFICATION.md` のみ。
 > 本書は計画文書であり、Ajisai の意味論・実行時挙動・互換性方針を定義しない
-> (§2.2, §16.1「第二の設計権威を導入しない」を尊重)。仕様と食い違う場合は
+> (§2.2, §16.1「第二の設計権威を導入しない」を尊重)。
+> Active coverage tracking lives in `docs/formalization-coverage.json`; current language observations live in `tests/conformance/index.html`.
+> 仕様と食い違う場合は
 > 仕様が優先する。本書は `docs/dev/ajisai-mathematical-formalization.md`
 > (以下「形式化本体」)が与える意味関数 `⟦·⟧` を **Ajisai 全域へ拡張する**ための
 > 工程表である。
@@ -89,7 +91,7 @@ I.3)、成功基準「全節 Defined か明示 Out-of-scope」を満たす。各
    (`semanticKind`/`shape`/`capabilities`/`truthValue`/`origin`/`absence`)と
    `render` を通して判定する。Rust enum 名・Debug 文字列・表示テキストに分岐しない
    (semantic firewall)。
-4. **完全性の方向**: 有限標本(conformance 37 点)→内包的全域関数 `⟦·⟧`。
+4. **完全性の方向**: 有限標本(conformance 53 点)→内包的全域関数 `⟦·⟧`。
    conformance は `⟦·⟧` の検証用標本へ格下げされる(本体 §8, §9.1)。
 5. **段階独立**: 各フェーズは単独で PR 可能。依存があるものだけ順序を固定する
    (Phase 2 → Phase 3/4 が前提依存、それ以外は概ね並行可能)。
