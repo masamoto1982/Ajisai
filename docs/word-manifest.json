@@ -1,0 +1,1655 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": [
+    "rust/src/builtins/builtin_word_definitions.rs",
+    "rust/src/interpreter/modules/module_builtins.rs",
+    "rust/src/core_word_aliases.rs",
+    "rust/src/surface_forms.rs"
+  ],
+  "counts": {
+    "corewords": 85,
+    "modulewords": 88,
+    "aliases": 20,
+    "surface_forms": 10,
+    "total": 203
+  },
+  "entries": [
+    {
+      "id": "core.top",
+      "kind": "coreword",
+      "surface": "TOP",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.stak",
+      "kind": "coreword",
+      "surface": "STAK",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.eat",
+      "kind": "coreword",
+      "surface": "EAT",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.keep",
+      "kind": "coreword",
+      "surface": "KEEP",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.get",
+      "kind": "coreword",
+      "surface": "GET",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.insert",
+      "kind": "coreword",
+      "surface": "INSERT",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.replace",
+      "kind": "coreword",
+      "surface": "REPLACE",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.remove",
+      "kind": "coreword",
+      "surface": "REMOVE",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.length",
+      "kind": "coreword",
+      "surface": "LENGTH",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.take",
+      "kind": "coreword",
+      "surface": "TAKE",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.split",
+      "kind": "coreword",
+      "surface": "SPLIT",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.concat",
+      "kind": "coreword",
+      "surface": "CONCAT",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.reverse",
+      "kind": "coreword",
+      "surface": "REVERSE",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.range",
+      "kind": "coreword",
+      "surface": "RANGE",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.reorder",
+      "kind": "coreword",
+      "surface": "REORDER",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.collect",
+      "kind": "coreword",
+      "surface": "COLLECT",
+      "category": "vector",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.true",
+      "kind": "coreword",
+      "surface": "TRUE",
+      "category": "constant",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.false",
+      "kind": "coreword",
+      "surface": "FALSE",
+      "category": "constant",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.nil",
+      "kind": "coreword",
+      "surface": "NIL",
+      "category": "constant",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.cf",
+      "kind": "coreword",
+      "surface": ">CF",
+      "category": "conversion",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.chars",
+      "kind": "coreword",
+      "surface": "CHARS",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.join",
+      "kind": "coreword",
+      "surface": "JOIN",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.trim",
+      "kind": "coreword",
+      "surface": "TRIM",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.trim-left",
+      "kind": "coreword",
+      "surface": "TRIM-LEFT",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.trim-right",
+      "kind": "coreword",
+      "surface": "TRIM-RIGHT",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.tokenize",
+      "kind": "coreword",
+      "surface": "TOKENIZE",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.substitute",
+      "kind": "coreword",
+      "surface": "SUBSTITUTE",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.starts-with",
+      "kind": "coreword",
+      "surface": "STARTS-WITH?",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.ends-with",
+      "kind": "coreword",
+      "surface": "ENDS-WITH?",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.num",
+      "kind": "coreword",
+      "surface": "NUM",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.str",
+      "kind": "coreword",
+      "surface": "STR",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.bool",
+      "kind": "coreword",
+      "surface": "BOOL",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.chr",
+      "kind": "coreword",
+      "surface": "CHR",
+      "category": "cast",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.add",
+      "kind": "coreword",
+      "surface": "ADD",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.sub",
+      "kind": "coreword",
+      "surface": "SUB",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.mul",
+      "kind": "coreword",
+      "surface": "MUL",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.div",
+      "kind": "coreword",
+      "surface": "DIV",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.compare-within",
+      "kind": "coreword",
+      "surface": "COMPARE-WITHIN",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.eq",
+      "kind": "coreword",
+      "surface": "EQ",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.lt",
+      "kind": "coreword",
+      "surface": "LT",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.lte",
+      "kind": "coreword",
+      "surface": "LTE",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.gt",
+      "kind": "coreword",
+      "surface": "GT",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.gte",
+      "kind": "coreword",
+      "surface": "GTE",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.neq",
+      "kind": "coreword",
+      "surface": "NEQ",
+      "category": "comparison",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.and",
+      "kind": "coreword",
+      "surface": "AND",
+      "category": "logic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.or",
+      "kind": "coreword",
+      "surface": "OR",
+      "category": "logic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.not",
+      "kind": "coreword",
+      "surface": "NOT",
+      "category": "logic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.idle",
+      "kind": "coreword",
+      "surface": "IDLE",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.cond",
+      "kind": "coreword",
+      "surface": "COND",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.pipe",
+      "kind": "coreword",
+      "surface": "PIPE",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.or-nil",
+      "kind": "coreword",
+      "surface": "OR-NIL",
+      "category": "modifier",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.map",
+      "kind": "coreword",
+      "surface": "MAP",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.filter",
+      "kind": "coreword",
+      "surface": "FILTER",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.fold",
+      "kind": "coreword",
+      "surface": "FOLD",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.unfold",
+      "kind": "coreword",
+      "surface": "UNFOLD",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.any",
+      "kind": "coreword",
+      "surface": "ANY",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.all",
+      "kind": "coreword",
+      "surface": "ALL",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.count",
+      "kind": "coreword",
+      "surface": "COUNT",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.scan",
+      "kind": "coreword",
+      "surface": "SCAN",
+      "category": "higher-order",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.print",
+      "kind": "coreword",
+      "surface": "PRINT",
+      "category": "io",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.precompute",
+      "kind": "coreword",
+      "surface": "PRECOMPUTE",
+      "category": "Control / Staging",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.def",
+      "kind": "coreword",
+      "surface": "DEF",
+      "category": "dictionary",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.del",
+      "kind": "coreword",
+      "surface": "DEL",
+      "category": "dictionary",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.lookup",
+      "kind": "coreword",
+      "surface": "LOOKUP",
+      "category": "dictionary",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.forc",
+      "kind": "coreword",
+      "surface": "FORC",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.shape",
+      "kind": "coreword",
+      "surface": "SHAPE",
+      "category": "tensor",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.rank",
+      "kind": "coreword",
+      "surface": "RANK",
+      "category": "tensor",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.reshape",
+      "kind": "coreword",
+      "surface": "RESHAPE",
+      "category": "tensor",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.transpose",
+      "kind": "coreword",
+      "surface": "TRANSPOSE",
+      "category": "tensor",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.fill",
+      "kind": "coreword",
+      "surface": "FILL",
+      "category": "tensor",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.mod",
+      "kind": "coreword",
+      "surface": "MOD",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.floor",
+      "kind": "coreword",
+      "surface": "FLOOR",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.ceil",
+      "kind": "coreword",
+      "surface": "CEIL",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.round",
+      "kind": "coreword",
+      "surface": "ROUND",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.exec",
+      "kind": "coreword",
+      "surface": "EXEC",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.eval",
+      "kind": "coreword",
+      "surface": "EVAL",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.import",
+      "kind": "coreword",
+      "surface": "IMPORT",
+      "category": "module",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.import-only",
+      "kind": "coreword",
+      "surface": "IMPORT-ONLY",
+      "category": "module",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.unimport",
+      "kind": "coreword",
+      "surface": "UNIMPORT",
+      "category": "module",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.unimport-only",
+      "kind": "coreword",
+      "surface": "UNIMPORT-ONLY",
+      "category": "module",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.spawn",
+      "kind": "coreword",
+      "surface": "SPAWN",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.await",
+      "kind": "coreword",
+      "surface": "AWAIT",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.status",
+      "kind": "coreword",
+      "surface": "STATUS",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.kill",
+      "kind": "coreword",
+      "surface": "KILL",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "core.monitor",
+      "kind": "coreword",
+      "surface": "MONITOR",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs"
+    },
+    {
+      "id": "module.music.seq",
+      "kind": "moduleword",
+      "surface": "MUSIC@SEQ",
+      "short_surface": "SEQ",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.sim",
+      "kind": "moduleword",
+      "surface": "MUSIC@SIM",
+      "short_surface": "SIM",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.slot",
+      "kind": "moduleword",
+      "surface": "MUSIC@SLOT",
+      "short_surface": "SLOT",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.gain",
+      "kind": "moduleword",
+      "surface": "MUSIC@GAIN",
+      "short_surface": "GAIN",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.gain-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@GAIN-RESET",
+      "short_surface": "GAIN-RESET",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.pan",
+      "kind": "moduleword",
+      "surface": "MUSIC@PAN",
+      "short_surface": "PAN",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.pan-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@PAN-RESET",
+      "short_surface": "PAN-RESET",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.fx-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@FX-RESET",
+      "short_surface": "FX-RESET",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.play",
+      "kind": "moduleword",
+      "surface": "MUSIC@PLAY",
+      "short_surface": "PLAY",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.seq-group",
+      "kind": "moduleword",
+      "surface": "MUSIC@SEQ-GROUP",
+      "short_surface": "SEQ-GROUP",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.sim-group",
+      "kind": "moduleword",
+      "surface": "MUSIC@SIM-GROUP",
+      "short_surface": "SIM-GROUP",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.chord",
+      "kind": "moduleword",
+      "surface": "MUSIC@CHORD",
+      "short_surface": "CHORD",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.hz",
+      "kind": "moduleword",
+      "surface": "MUSIC@HZ",
+      "short_surface": "HZ",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.dur",
+      "kind": "moduleword",
+      "surface": "MUSIC@DUR",
+      "short_surface": "DUR",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.note",
+      "kind": "moduleword",
+      "surface": "MUSIC@NOTE",
+      "short_surface": "NOTE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.rest",
+      "kind": "moduleword",
+      "surface": "MUSIC@REST",
+      "short_surface": "REST",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.edo",
+      "kind": "moduleword",
+      "surface": "MUSIC@EDO",
+      "short_surface": "EDO",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.edr",
+      "kind": "moduleword",
+      "surface": "MUSIC@EDR",
+      "short_surface": "EDR",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.step",
+      "kind": "moduleword",
+      "surface": "MUSIC@STEP",
+      "short_surface": "STEP",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.voice",
+      "kind": "moduleword",
+      "surface": "MUSIC@VOICE",
+      "short_surface": "VOICE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.track",
+      "kind": "moduleword",
+      "surface": "MUSIC@TRACK",
+      "short_surface": "TRACK",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.measure",
+      "kind": "moduleword",
+      "surface": "MUSIC@MEASURE",
+      "short_surface": "MEASURE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.phrase",
+      "kind": "moduleword",
+      "surface": "MUSIC@PHRASE",
+      "short_surface": "PHRASE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.with-tuning",
+      "kind": "moduleword",
+      "surface": "MUSIC@WITH-TUNING",
+      "short_surface": "WITH-TUNING",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.explain",
+      "kind": "moduleword",
+      "surface": "MUSIC@EXPLAIN",
+      "short_surface": "EXPLAIN",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.adsr",
+      "kind": "moduleword",
+      "surface": "MUSIC@ADSR",
+      "short_surface": "ADSR",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.sine",
+      "kind": "moduleword",
+      "surface": "MUSIC@SINE",
+      "short_surface": "SINE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.square",
+      "kind": "moduleword",
+      "surface": "MUSIC@SQUARE",
+      "short_surface": "SQUARE",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.saw",
+      "kind": "moduleword",
+      "surface": "MUSIC@SAW",
+      "short_surface": "SAW",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.music.tri",
+      "kind": "moduleword",
+      "surface": "MUSIC@TRI",
+      "short_surface": "TRI",
+      "module": "MUSIC",
+      "category": "music",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.parse",
+      "kind": "moduleword",
+      "surface": "JSON@PARSE",
+      "short_surface": "PARSE",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.stringify",
+      "kind": "moduleword",
+      "surface": "JSON@STRINGIFY",
+      "short_surface": "STRINGIFY",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.get",
+      "kind": "moduleword",
+      "surface": "JSON@GET",
+      "short_surface": "GET",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.keys",
+      "kind": "moduleword",
+      "surface": "JSON@KEYS",
+      "short_surface": "KEYS",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.set",
+      "kind": "moduleword",
+      "surface": "JSON@SET",
+      "short_surface": "SET",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.has",
+      "kind": "moduleword",
+      "surface": "JSON@HAS",
+      "short_surface": "HAS",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.values",
+      "kind": "moduleword",
+      "surface": "JSON@VALUES",
+      "short_surface": "VALUES",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.merge",
+      "kind": "moduleword",
+      "surface": "JSON@MERGE",
+      "short_surface": "MERGE",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.delete",
+      "kind": "moduleword",
+      "surface": "JSON@DELETE",
+      "short_surface": "DELETE",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.json.export",
+      "kind": "moduleword",
+      "surface": "JSON@EXPORT",
+      "short_surface": "EXPORT",
+      "module": "JSON",
+      "category": "json",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.io.input",
+      "kind": "moduleword",
+      "surface": "IO@INPUT",
+      "short_surface": "INPUT",
+      "module": "IO",
+      "category": "io",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.io.output",
+      "kind": "moduleword",
+      "surface": "IO@OUTPUT",
+      "short_surface": "OUTPUT",
+      "module": "IO",
+      "category": "io",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.now",
+      "kind": "moduleword",
+      "surface": "TIME@NOW",
+      "coverage_aliases": [
+        "NOW"
+      ],
+      "short_surface": "NOW",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.datetime",
+      "kind": "moduleword",
+      "surface": "TIME@DATETIME",
+      "short_surface": "DATETIME",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.timestamp",
+      "kind": "moduleword",
+      "surface": "TIME@TIMESTAMP",
+      "short_surface": "TIMESTAMP",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.date",
+      "kind": "moduleword",
+      "surface": "TIME@DATE",
+      "short_surface": "DATE",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.time",
+      "kind": "moduleword",
+      "surface": "TIME@TIME",
+      "short_surface": "TIME",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.year",
+      "kind": "moduleword",
+      "surface": "TIME@YEAR",
+      "short_surface": "YEAR",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.month",
+      "kind": "moduleword",
+      "surface": "TIME@MONTH",
+      "short_surface": "MONTH",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.day",
+      "kind": "moduleword",
+      "surface": "TIME@DAY",
+      "short_surface": "DAY",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.hour",
+      "kind": "moduleword",
+      "surface": "TIME@HOUR",
+      "short_surface": "HOUR",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.minute",
+      "kind": "moduleword",
+      "surface": "TIME@MINUTE",
+      "short_surface": "MINUTE",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.second",
+      "kind": "moduleword",
+      "surface": "TIME@SECOND",
+      "short_surface": "SECOND",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.weekday",
+      "kind": "moduleword",
+      "surface": "TIME@WEEKDAY",
+      "short_surface": "WEEKDAY",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.add-days",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-DAYS",
+      "short_surface": "ADD-DAYS",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.diff-days",
+      "kind": "moduleword",
+      "surface": "TIME@DIFF-DAYS",
+      "short_surface": "DIFF-DAYS",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.format",
+      "kind": "moduleword",
+      "surface": "TIME@FORMAT",
+      "short_surface": "FORMAT",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.parse-iso",
+      "kind": "moduleword",
+      "surface": "TIME@PARSE-ISO",
+      "short_surface": "PARSE-ISO",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.add-months",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-MONTHS",
+      "short_surface": "ADD-MONTHS",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.time.add-years",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-YEARS",
+      "short_surface": "ADD-YEARS",
+      "module": "TIME",
+      "category": "time",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.crypto.csprng",
+      "kind": "moduleword",
+      "surface": "CRYPTO@CSPRNG",
+      "coverage_aliases": [
+        "RANDOM"
+      ],
+      "short_surface": "CSPRNG",
+      "module": "CRYPTO",
+      "category": "crypto",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.crypto.hash",
+      "kind": "moduleword",
+      "surface": "CRYPTO@HASH",
+      "short_surface": "HASH",
+      "module": "CRYPTO",
+      "category": "crypto",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.algo.sort",
+      "kind": "moduleword",
+      "surface": "ALGO@SORT",
+      "short_surface": "SORT",
+      "module": "ALGO",
+      "category": "algo",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.algo.unique",
+      "kind": "moduleword",
+      "surface": "ALGO@UNIQUE",
+      "short_surface": "UNIQUE",
+      "module": "ALGO",
+      "category": "algo",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.algo.contains",
+      "kind": "moduleword",
+      "surface": "ALGO@CONTAINS",
+      "short_surface": "CONTAINS",
+      "module": "ALGO",
+      "category": "algo",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.algo.index-of",
+      "kind": "moduleword",
+      "surface": "ALGO@INDEX-OF",
+      "short_surface": "INDEX-OF",
+      "module": "ALGO",
+      "category": "algo",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.sqrt",
+      "kind": "moduleword",
+      "surface": "MATH@SQRT",
+      "coverage_aliases": [
+        "'math' IMPORT SQRT"
+      ],
+      "short_surface": "SQRT",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.sqrt-eps",
+      "kind": "moduleword",
+      "surface": "MATH@SQRT-EPS",
+      "short_surface": "SQRT-EPS",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.interval",
+      "kind": "moduleword",
+      "surface": "MATH@INTERVAL",
+      "short_surface": "INTERVAL",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.lower",
+      "kind": "moduleword",
+      "surface": "MATH@LOWER",
+      "short_surface": "LOWER",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.upper",
+      "kind": "moduleword",
+      "surface": "MATH@UPPER",
+      "short_surface": "UPPER",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.width",
+      "kind": "moduleword",
+      "surface": "MATH@WIDTH",
+      "short_surface": "WIDTH",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.is-exact",
+      "kind": "moduleword",
+      "surface": "MATH@IS-EXACT",
+      "short_surface": "IS-EXACT",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.abs",
+      "kind": "moduleword",
+      "surface": "MATH@ABS",
+      "short_surface": "ABS",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.neg",
+      "kind": "moduleword",
+      "surface": "MATH@NEG",
+      "short_surface": "NEG",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.sign",
+      "kind": "moduleword",
+      "surface": "MATH@SIGN",
+      "short_surface": "SIGN",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.min",
+      "kind": "moduleword",
+      "surface": "MATH@MIN",
+      "short_surface": "MIN",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.max",
+      "kind": "moduleword",
+      "surface": "MATH@MAX",
+      "short_surface": "MAX",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.pow",
+      "kind": "moduleword",
+      "surface": "MATH@POW",
+      "short_surface": "POW",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.gcd",
+      "kind": "moduleword",
+      "surface": "MATH@GCD",
+      "short_surface": "GCD",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.math.lcm",
+      "kind": "moduleword",
+      "surface": "MATH@LCM",
+      "short_surface": "LCM",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.list-ports",
+      "kind": "moduleword",
+      "surface": "SERIAL@LIST-PORTS",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "LIST-PORTS",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.open",
+      "kind": "moduleword",
+      "surface": "SERIAL@OPEN",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "OPEN",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.configure",
+      "kind": "moduleword",
+      "surface": "SERIAL@CONFIGURE",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "CONFIGURE",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.write",
+      "kind": "moduleword",
+      "surface": "SERIAL@WRITE",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "WRITE",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.read",
+      "kind": "moduleword",
+      "surface": "SERIAL@READ",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "READ",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.flush",
+      "kind": "moduleword",
+      "surface": "SERIAL@FLUSH",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "FLUSH",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "module.serial.close",
+      "kind": "moduleword",
+      "surface": "SERIAL@CLOSE",
+      "coverage_aliases": [
+        "SERIAL-*"
+      ],
+      "short_surface": "CLOSE",
+      "module": "SERIAL",
+      "category": "serial",
+      "source": "rust/src/interpreter/modules/module_builtins.rs"
+    },
+    {
+      "id": "alias.plus",
+      "kind": "symbol_alias",
+      "surface": "+",
+      "canonical": "ADD",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.minus",
+      "kind": "symbol_alias",
+      "surface": "-",
+      "canonical": "SUB",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.asterisk",
+      "kind": "symbol_alias",
+      "surface": "*",
+      "canonical": "MUL",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.slash",
+      "kind": "symbol_alias",
+      "surface": "/",
+      "canonical": "DIV",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.percent",
+      "kind": "symbol_alias",
+      "surface": "%",
+      "canonical": "MOD",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.equals",
+      "kind": "symbol_alias",
+      "surface": "=",
+      "canonical": "EQ",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.less-than",
+      "kind": "symbol_alias",
+      "surface": "<",
+      "canonical": "LT",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.less-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": "<=",
+      "canonical": "LTE",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.greater-than",
+      "kind": "symbol_alias",
+      "surface": ">",
+      "canonical": "GT",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.greater-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": ">=",
+      "canonical": "GTE",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.not-equal",
+      "kind": "symbol_alias",
+      "surface": "<>",
+      "canonical": "NEQ",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.bang",
+      "kind": "symbol_alias",
+      "surface": "!",
+      "canonical": "FORC",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.ampersand",
+      "kind": "symbol_alias",
+      "surface": "&",
+      "canonical": "AND",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.dot",
+      "kind": "syntax_sugar",
+      "surface": ".",
+      "canonical": "TOP",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.dot-dot",
+      "kind": "syntax_sugar",
+      "surface": "..",
+      "canonical": "STAK",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.comma",
+      "kind": "syntax_sugar",
+      "surface": ",",
+      "canonical": "EAT",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.comma-comma",
+      "kind": "syntax_sugar",
+      "surface": ",,",
+      "canonical": "KEEP",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.quote",
+      "kind": "input_helper",
+      "surface": "'",
+      "canonical": null,
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.question",
+      "kind": "symbol_alias",
+      "surface": "?",
+      "canonical": "LOOKUP",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "alias.equals-equals",
+      "kind": "syntax_sugar",
+      "surface": "==",
+      "canonical": "PIPE",
+      "source": "rust/src/core_word_aliases.rs"
+    },
+    {
+      "id": "surface.hash",
+      "kind": "source_directive",
+      "surface": "#",
+      "concept": "COMMENT-LINE",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.dollar",
+      "kind": "control_directive",
+      "surface": "$",
+      "concept": "COND-CLAUSE",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.left-bracket",
+      "kind": "delimiter_sugar",
+      "surface": "[",
+      "concept": "BEGIN-VECTOR",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.right-bracket",
+      "kind": "delimiter_sugar",
+      "surface": "]",
+      "concept": "END-VECTOR",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.left-brace",
+      "kind": "delimiter_sugar",
+      "surface": "{",
+      "concept": "BEGIN-BLOCK",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.right-brace",
+      "kind": "delimiter_sugar",
+      "surface": "}",
+      "concept": "END-BLOCK",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.quote",
+      "kind": "literal_sugar",
+      "surface": "'",
+      "concept": "STRING-QUOTE",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.semicolon",
+      "kind": "modifier_sugar",
+      "surface": ";",
+      "concept": "TOP-EAT",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.semicolon-semicolon",
+      "kind": "modifier_sugar",
+      "surface": ";;",
+      "concept": "STAK-KEEP",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    },
+    {
+      "id": "surface.left-paren",
+      "kind": "reserved_marker",
+      "surface": "(",
+      "concept": "RESERVED-BEGIN",
+      "runtime_word": false,
+      "source": "rust/src/surface_forms.rs"
+    }
+  ]
+}
