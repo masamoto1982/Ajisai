@@ -144,3 +144,45 @@ pub fn any_value_src() -> impl Strategy<Value = String> {
         block_src(),
     ]
 }
+
+// ─────────────────────── Phase 7: effects & observation ──────────────────────
+
+/// A short program that leaves a value **and emits no host effect** — a pure /
+/// internal-state computation (arithmetic, logic, vectors, dictionary, module
+/// import). The outbound `HostEffect` log (π_Eff) stays empty for all of these
+/// (probe-confirmed: `IMPORT`/`DEF` mutate Σ but never push to the log; `NOW` /
+/// `CSPRNG` are host *reads*, not outbound effects).
+pub fn effect_free_src() -> impl Strategy<Value = String> {
+    prop_oneof![
+        scalar_src(),
+        boolean_src(),
+        nil_src(),
+        unknown_src(),
+        irrational_src(),
+        vector_src(),
+        (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
+        (small(), small()).prop_map(|(a, b)| format!("{{ 1 ADD }} 'INC' DEF {a} INC {b} ADD")),
+    ]
+}
+
+/// A canonical `SERIAL` outbound program (after `'serial' IMPORT`), as
+/// `(bare-program, qualified-program)`. Both spellings emit the *same* ordered
+/// `serial` effect list (boundary `bare ≡ SERIAL@W`, applied to effectful
+/// words). Every program threads a port-id handle so it is well-formed in
+/// isolation.
+pub fn serial_outbound_call() -> impl Strategy<Value = (String, String)> {
+    prop::sample::select(vec![
+        ("'P1' OPEN", "'P1' SERIAL@OPEN"),
+        (
+            "'P1' OPEN 9600 CONFIGURE",
+            "'P1' SERIAL@OPEN 9600 SERIAL@CONFIGURE",
+        ),
+        (
+            "'P1' OPEN [ 65 66 ] WRITE",
+            "'P1' SERIAL@OPEN [ 65 66 ] SERIAL@WRITE",
+        ),
+        ("'P1' OPEN FLUSH", "'P1' SERIAL@OPEN SERIAL@FLUSH"),
+        ("'P1' OPEN CLOSE", "'P1' SERIAL@OPEN SERIAL@CLOSE"),
+    ])
+    .prop_map(|(b, q)| (b.to_string(), q.to_string()))
+}
