@@ -1,5 +1,139 @@
 {
   "version": 1,
+  "algebra_primitives": [
+    {
+      "id": "algebra.k3.domain",
+      "algebraic_family": "k3-truth",
+      "kind": "domain",
+      "description": "Kleene three-valued truth domain {T,F,U}; a direct-sum component of V, disjoint from numbers."
+    },
+    {
+      "id": "algebra.k3.meet",
+      "algebraic_family": "k3-truth",
+      "kind": "operation",
+      "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from."
+    },
+    {
+      "id": "algebra.k3.join",
+      "algebraic_family": "k3-truth",
+      "kind": "operation",
+      "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from."
+    },
+    {
+      "id": "algebra.k3.involution",
+      "algebraic_family": "k3-truth",
+      "kind": "operation",
+      "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from."
+    },
+    {
+      "id": "algebra.exact-real.bihomographic",
+      "algebraic_family": "exact-arithmetic",
+      "kind": "operation",
+      "description": "Bihomographic (Gosper) transform over exact reals; ADD/SUB/MUL/DIV are coefficient instances."
+    },
+    {
+      "id": "algebra.exact-real.budgeted-order",
+      "algebraic_family": "exact-arithmetic",
+      "kind": "operation",
+      "description": "Budgeted exact-real ordering; decides <, =, > within a budget or yields the logical U."
+    },
+    {
+      "id": "algebra.exact-real.continued-fraction",
+      "algebraic_family": "exact-arithmetic",
+      "kind": "construction",
+      "description": "Continued-fraction construction of exact reals; canonical irrational observation, not an approximation."
+    },
+    {
+      "id": "algebra.exact-real.gosper",
+      "algebraic_family": "exact-arithmetic",
+      "kind": "operation",
+      "description": "Gosper normalization over continued fractions; exact-real combination without rational fallback."
+    },
+    {
+      "id": "algebra.exact-scalar.codepoint-sequence",
+      "algebraic_family": "exact-scalar",
+      "kind": "domain",
+      "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic."
+    },
+    {
+      "id": "algebra.bubble.passthrough",
+      "algebraic_family": "bubble",
+      "kind": "operation",
+      "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged."
+    },
+    {
+      "id": "algebra.structure-lift.applicative",
+      "algebraic_family": "structure-lift",
+      "kind": "operation",
+      "description": "Functorial/applicative lift of a scalar operation over a tensor index structure (map)."
+    },
+    {
+      "id": "algebra.structure-lift.zip",
+      "algebraic_family": "structure-lift",
+      "kind": "operation",
+      "description": "zipWith lift of a scalar binary operation with documented broadcast rules."
+    },
+    {
+      "id": "algebra.modifier.consumption.keep",
+      "algebraic_family": "modifier",
+      "kind": "operation",
+      "description": "Consumption policy that preserves operands; one axis of the modifier combinator."
+    },
+    {
+      "id": "algebra.modifier.region.stack",
+      "algebraic_family": "modifier",
+      "kind": "operation",
+      "description": "Region selection over the whole operand stack; one axis of the modifier combinator."
+    },
+    {
+      "id": "algebra.state-transformer.combinator",
+      "algebraic_family": "state-transformer",
+      "kind": "operation",
+      "description": "Combinator that transforms a base state transformer (region x consumption x reconstruction)."
+    },
+    {
+      "id": "algebra.state-transformer.composition",
+      "algebraic_family": "state-transformer",
+      "kind": "operation",
+      "description": "Monoid composition of state transformers over Sigma = Stack x Dict x Eff."
+    },
+    {
+      "id": "algebra.dictionary.lookup",
+      "algebraic_family": "dictionary",
+      "kind": "operation",
+      "description": "Deterministic dictionary lookup / name resolution over Dict."
+    },
+    {
+      "id": "algebra.dictionary.finite-partial-map",
+      "algebraic_family": "dictionary",
+      "kind": "domain",
+      "description": "Finite partial map with insertion order; the value-domain component records inhabit."
+    },
+    {
+      "id": "algebra.eff.append",
+      "algebraic_family": "state-transformer",
+      "kind": "operation",
+      "description": "Append into the free-monoid effect log Eff, the third component of Sigma."
+    },
+    {
+      "id": "algebra.observation.structured-diagnostic",
+      "algebraic_family": "observation",
+      "kind": "operation",
+      "description": "Structured diagnostic observation; never a leaked host/Rust error variant."
+    },
+    {
+      "id": "capability.check",
+      "algebraic_family": "hosted-effect",
+      "kind": "capability",
+      "description": "Capability gate guarding a hosted effect; failure is a structured diagnostic, not a Core value."
+    },
+    {
+      "id": "algebra.handle.domain",
+      "algebraic_family": "state-transformer",
+      "kind": "domain",
+      "description": "Child-runtime/supervisor handle value domain; currently Exploratory, outside the Core contract."
+    }
+  ],
   "entries": [
     {
       "id": "core.true",
