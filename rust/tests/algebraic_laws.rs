@@ -148,6 +148,24 @@ proptest! {
     }
 }
 
+/// MOD is the Euclidean remainder induced by floor division: x - floor(x/y)·y.
+#[test]
+fn mod_floor_remainder_examples() {
+    assert_law("mod-positive", "7 3 MOD", "1");
+    assert_law("mod-negative-dividend", "-7 3 MOD", "2");
+}
+
+/// Integer projections are exact-real observations, not float round trips.
+#[test]
+fn integer_projection_examples() {
+    assert_law("floor-positive", "7 3 DIV FLOOR", "2");
+    assert_law("floor-negative", "-7 3 DIV FLOOR", "-3");
+    assert_law("ceil-positive", "7 3 DIV CEIL", "3");
+    assert_law("ceil-negative", "-7 3 DIV CEIL", "-2");
+    assert_law("round-positive-half", "5 2 DIV ROUND", "3");
+    assert_law("round-negative-half", "-5 2 DIV ROUND", "-3");
+}
+
 // ─────────────────── Strong Kleene three-valued logic K3 (§4) ───────────────────
 //
 // K3 laws are checked exhaustively over the truth domain {TRUE, FALSE, U}.
