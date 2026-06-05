@@ -164,12 +164,7 @@
      every case below was observed against the reference implementation and
      matches SPECIFICATION.md. They pin structural/vector phenomena that the
      original suite left entirely unconstrained, so that two implementations
-     passing the suite agree on more than a dozen previously-free behaviors.
-     Deliberately NOT added here: decided-comparison truth values, irrational
-     arithmetic display, and STAK-modifier reductions — the reference
-     implementation currently diverges from the spec on those (see
-     docs/dev/implementation-portability-evaluation-2026-06.md), and the suite
-     must not cement a divergence. -->
+     passing the suite agree on more than a dozen previously-free behaviors. -->
 
 <section class="ajisai-case" id="core-vector-scalar-broadcast-add" data-category="core">
   <h3>Vector + vector is element-wise</h3>
@@ -330,11 +325,79 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-kleene-or-definite" data-category="core">
+  <h3>Kleene OR of TRUE and FALSE is TRUE</h3>
+  <pre class="ajisai-source">TRUE FALSE OR</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: EXPLICIT-BUDGET COMPARE ===================== -->
 <!-- COMPARE-WITHIN returns the RawNumber scalars -1/0/1 (§7.4.2); these are
      genuine numbers, not the TruthValue axis, so encoding them does not
      cement the decided-comparison truth-value rendering discussed in the
      evaluation note. -->
+
+<!-- Exact-real observations are canonical nested continued fractions at the
+     language boundary. These cases deliberately pin the current CF display
+     budget so regressions to Rust Debug names, sqrt(...) wrappers, or
+     approximate ~n/d rationals are conformance failures. -->
+
+<section class="ajisai-case" id="core-sqrt2-continued-fraction" data-category="core">
+  <h3>√2 renders as canonical nested continued fraction</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT</pre>
+  <pre class="ajisai-expect-result">( 1 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-plus-one-continued-fraction" data-category="core">
+  <h3>√2 + 1 remains an exact continued fraction, not an approximate rational</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD</pre>
+  <pre class="ajisai-expect-result">( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-plus-sqrt2-gosper" data-category="core">
+  <h3>√2 + √2 is computed by exact-real Gosper arithmetic</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT ADD</pre>
+  <pre class="ajisai-expect-result">( 2 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ( 4 ( 1 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-eq-sqrt2" data-category="core">
+  <h3>Exact-real equality decides identical algebraic square roots</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-not-less-than-one" data-category="core">
+  <h3>√2 is not less than 1</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 LT</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-less-than-two" data-category="core">
+  <h3>√2 is less than 2</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 LT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-stak-add" data-category="core">
+  <h3>STAK selects the whole operand stack for addition</h3>
+  <pre class="ajisai-source">1 2 3 3 STAK ADD</pre>
+  <pre class="ajisai-expect-result">6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-stak-keep-add" data-category="core">
+  <h3>STAK KEEP preserves operands and pushes the aggregate addition</h3>
+  <pre class="ajisai-source">1 2 3 3 STAK KEEP ADD</pre>
+  <pre class="ajisai-expect-result">1/1 2/1 3/1 6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <section class="ajisai-case" id="core-compare-within-gt" data-category="core">
   <h3>COMPARE-WITHIN yields 1 when a &gt; b</h3>
