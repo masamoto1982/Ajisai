@@ -45,6 +45,29 @@ const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
 if (coverage.version !== 1) fail('version must be 1');
 if (!Array.isArray(coverage.entries)) fail('entries must be an array');
 
+// Optional algebra-primitive registry. When present it closes the
+// `derived_from` vocabulary: every derived word must resolve to a declared
+// semantic primitive, so the derivation graph is checked rather than free-form.
+// Absent => the reference check is skipped (backward compatible).
+let primitiveIds = null;
+if ('algebra_primitives' in coverage) {
+  if (!Array.isArray(coverage.algebra_primitives)) fail('algebra_primitives must be an array');
+  primitiveIds = new Set();
+  for (const [index, prim] of coverage.algebra_primitives.entries()) {
+    const pw = prim?.id ?? `algebra_primitive #${index}`;
+    if (!prim || typeof prim !== 'object') fail(`${pw}: primitive must be an object`);
+    if (typeof prim.id !== 'string' || prim.id.trim() === '') fail(`${pw}: missing non-empty id`);
+    if (primitiveIds.has(prim.id)) fail(`${pw}: duplicate primitive id`);
+    primitiveIds.add(prim.id);
+    if (
+      typeof prim.algebraic_family !== 'string' ||
+      !allowedAlgebraicFamilies.has(prim.algebraic_family)
+    ) {
+      fail(`${pw}: primitive needs a known algebraic_family`);
+    }
+  }
+}
+
 const conformanceHtml = readFileSync(conformancePath, 'utf8');
 const caseIds = new Set(
   [...conformanceHtml.matchAll(/<section\b[^>]*\bclass=["'][^"']*\bajisai-case\b[^"']*["'][^>]*\bid=["']([^"']+)["']/g)]
@@ -100,6 +123,16 @@ for (const [index, entry] of coverage.entries.entries()) {
       }
     }
 
+    // When the registry is declared, every derived_from reference must
+    // resolve to a known semantic primitive (closed derivation vocabulary).
+    if (primitiveIds && Array.isArray(entry.derived_from)) {
+      for (const ref of entry.derived_from) {
+        if (!primitiveIds.has(ref)) {
+          fail(`${where}: derived_from references unknown algebra primitive ${ref}`);
+        }
+      }
+    }
+
     if (entry.semantic_role === 'Primitive' && entry.primitive !== true) {
       fail(`${where}: Primitive entries must set primitive to true`);
     }
@@ -126,6 +159,20 @@ for (const [index, entry] of coverage.entries.entries()) {
       fail(`${where}: referenced law test file does not exist: ${lawTest}`);
     }
   }
+}
+
+if (primitiveIds) {
+  const used = new Set();
+  for (const entry of coverage.entries) {
+    for (const ref of Array.isArray(entry.derived_from) ? entry.derived_from : []) used.add(ref);
+  }
+  const unused = [...primitiveIds].filter((id) => !used.has(id));
+  if (unused.length > 0) {
+    // Non-fatal: a declared-but-unused primitive is a hint of dead metadata,
+    // not a hard error, so it does not break backward-compatible consumers.
+    console.log(`[formalization-coverage] note: ${unused.length} declared primitive(s) unused: ${unused.join(', ')}`);
+  }
+  console.log(`[formalization-coverage] ${primitiveIds.size} algebra primitives declared`);
 }
 
 console.log(`[formalization-coverage] ${coverage.entries.length} entries validated`);

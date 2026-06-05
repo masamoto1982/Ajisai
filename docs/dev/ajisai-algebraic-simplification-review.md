@@ -43,6 +43,27 @@ The coverage metadata now distinguishes formalization progress (`status`) from a
 - `Exploratory`: modeled but not part of the Core portability contract.
 - `NotPortableYet`: not currently safe to classify as Core. No tracked entry currently uses this role.
 
+### Semantic primitive inventory (closed `derived_from` vocabulary)
+
+The success criterion of this theme is that Ajisai reads as *few semantic primitives + derived words that are traceable through `derived_from`*. To make that checkable rather than aspirational, `formalization-coverage.json` now declares the primitives explicitly in a top-level `algebra_primitives` registry, and every `derived_from` reference must resolve to a declared primitive (enforced by `check:formalization-coverage`).
+
+The current inventory is 22 primitives, grouped by algebraic family:
+
+| Family | Primitives |
+| --- | --- |
+| `k3-truth` | `algebra.k3.domain`, `algebra.k3.meet`, `algebra.k3.join`, `algebra.k3.involution` |
+| `exact-arithmetic` | `algebra.exact-real.bihomographic`, `algebra.exact-real.budgeted-order`, `algebra.exact-real.continued-fraction`, `algebra.exact-real.gosper` |
+| `exact-scalar` | `algebra.exact-scalar.codepoint-sequence` |
+| `bubble` | `algebra.bubble.passthrough` |
+| `structure-lift` | `algebra.structure-lift.applicative`, `algebra.structure-lift.zip` |
+| `modifier` | `algebra.modifier.consumption.keep`, `algebra.modifier.region.stack` |
+| `state-transformer` | `algebra.state-transformer.combinator`, `algebra.state-transformer.composition`, `algebra.eff.append`, `algebra.handle.domain` |
+| `dictionary` | `algebra.dictionary.lookup`, `algebra.dictionary.finite-partial-map` |
+| `observation` | `algebra.observation.structured-diagnostic` |
+| `hosted-effect` | `capability.check` |
+
+Reading note: `derived_from` records what an entry *rests directly on*, regardless of role. A `Primitive` Ajisai word rests on its defining domain primitive (e.g. `TRUE` rests on `algebra.k3.domain`); a `Derived` word rests on the operation(s) it specializes (e.g. `AND` rests on `algebra.k3.meet`). The `semantic_role` field, not the presence of `derived_from`, is what distinguishes a primitive injection from a derived operation.
+
 ## 3. Algebraic compression candidates
 
 ### 3.1 K3 truth operations
@@ -165,6 +186,8 @@ Safe future candidates, after tests are clearly grouped:
 ### Phase 5: Prevent regressions through coverage and conformance
 
 Keep `check:formalization-coverage` in CI. Extend it only backward-compatibly: new fields should be validated when present, while older metadata-free entries should not break consumers unless the project later decides to require these fields globally.
+
+Done in this pass: the validator now closes the `derived_from` vocabulary against the `algebra_primitives` registry. Any new derived word must point at a declared semantic primitive, and a declared-but-unused primitive is surfaced as a non-fatal note so dead metadata is visible. This turns "few primitives, traceable derived words" from a documentation claim into a CI-checked invariant without changing any user-visible observation.
 
 ## 6. Revised instruction shape
 
