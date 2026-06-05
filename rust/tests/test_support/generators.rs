@@ -186,3 +186,32 @@ pub fn serial_outbound_call() -> impl Strategy<Value = (String, String)> {
     ])
     .prop_map(|(b, q)| (b.to_string(), q.to_string()))
 }
+
+// ──────────────────────── Phase 8: child runtimes ───────────────────────────
+
+/// A **deterministic, completing block body** for child-runtime laws: run
+/// standalone and via `{ body } SPAWN AWAIT` it leaves the same final stack
+/// (no host effects, no genuine error — domain failures project to NIL and the
+/// child still *completes*, probe finding). Used to pin the law
+/// "AWAIT observes the child's ⟦body⟧ final configuration".
+pub fn completing_block_body() -> impl Strategy<Value = String> {
+    prop_oneof![
+        (small(), small()).prop_map(|(a, b)| format!("{a} {b} ADD")),
+        (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
+        (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
+        small().prop_map(|a| format!("{a} {{ 1 ADD }} EXEC")),
+        small().prop_map(|a| format!("{a} 0 /")), // div-by-zero → NIL, still completes
+        Just("TRUE FALSE AND".to_string()),
+        Just("[ 3 1 2 ] 0 GET".to_string()),
+    ]
+}
+
+/// A block body that raises a **genuine error** (not a domain Bubble), so the
+/// child terminates `failed`: an unknown word or a stack underflow.
+pub fn failing_block_body() -> impl Strategy<Value = String> {
+    prop_oneof![
+        Just("NOPEWORD".to_string()),
+        Just("1 ADD".to_string()), // ADD underflows on a one-item stack
+        Just("UNDEFINED-WORD-XYZ".to_string()),
+    ]
+}
