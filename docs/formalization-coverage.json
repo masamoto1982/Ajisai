@@ -301,6 +301,223 @@
       "algebraic_family": "exact-arithmetic"
     },
     {
+      "id": "core.add",
+      "kind": "coreword",
+      "surface": "ADD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-exact-addition"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real addition as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.sub",
+      "kind": "coreword",
+      "surface": "SUB",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.mul",
+      "kind": "coreword",
+      "surface": "MUL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-bignum-does-not-fall-to-float"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real multiplication as a bihomographic arithmetic word; includes arbitrary-precision integer observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.div",
+      "kind": "coreword",
+      "surface": "DIV",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-exact-division",
+        "core-division-by-zero-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real division as a bihomographic arithmetic word; division by zero projects to NIL rather than a host exception.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.mod",
+      "kind": "coreword",
+      "surface": "MOD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Modulo is derived as x - floor(x/y)·y over exact reals, so it depends on integer projection plus exact arithmetic and preserves Bubble/NIL absence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.floor",
+      "kind": "coreword",
+      "surface": "FLOOR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "FLOOR — exact-real integer projection toward negative infinity. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.ceil",
+      "kind": "coreword",
+      "surface": "CEIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "CEIL — exact-real integer projection toward positive infinity. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.round",
+      "kind": "coreword",
+      "surface": "ROUND",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",
@@ -709,10 +926,6 @@
     "core.str",
     "core.bool",
     "core.chr",
-    "core.add",
-    "core.sub",
-    "core.mul",
-    "core.div",
     "core.compare-within",
     "core.eq",
     "core.lt",
@@ -742,10 +955,6 @@
     "core.reshape",
     "core.transpose",
     "core.fill",
-    "core.mod",
-    "core.floor",
-    "core.ceil",
-    "core.round",
     "core.exec",
     "core.eval",
     "core.import-only",
