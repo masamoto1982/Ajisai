@@ -6,228 +6,543 @@
       "kind": "coreword",
       "surface": "TRUE",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.5", "SPECIFICATION.md §12"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §4"],
-      "law_tests": ["rust/tests/algebraic_laws.rs", "rust/tests/observation_laws.rs"],
-      "conformance_cases": ["core-true-literal"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.5",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §4"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-true-literal"
+      ],
       "status": "Formalized",
-      "notes": "Boolean value; distinct from numeric 1/1."
+      "notes": "Boolean value; distinct from numeric 1/1.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
     },
     {
       "id": "core.false",
       "kind": "coreword",
       "surface": "FALSE",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.5", "SPECIFICATION.md §12"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §4"],
-      "law_tests": ["rust/tests/algebraic_laws.rs", "rust/tests/observation_laws.rs"],
-      "conformance_cases": ["core-false-literal"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.5",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §4"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-false-literal"
+      ],
       "status": "Formalized",
-      "notes": "Boolean value; distinct from numeric 0/1."
+      "notes": "Boolean value; distinct from numeric 0/1.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
     },
     {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.5"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §4"],
-      "law_tests": ["rust/tests/algebraic_laws.rs"],
-      "conformance_cases": ["core-kleene-and-definite", "core-unknown-propagation"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.5"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §4"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-kleene-and-definite",
+        "core-unknown-propagation"
+      ],
       "status": "Formalized",
-      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN."
+      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.k3.meet"
+      ],
+      "algebraic_family": "k3-truth"
     },
     {
       "id": "core.or",
       "kind": "coreword",
       "surface": "OR",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.5"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §4"],
-      "law_tests": ["rust/tests/algebraic_laws.rs"],
-      "conformance_cases": ["core-kleene-or-definite"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.5"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §4"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-kleene-or-definite"
+      ],
       "status": "Formalized",
-      "notes": "Strong Kleene disjunction."
+      "notes": "Strong Kleene disjunction.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.k3.join"
+      ],
+      "algebraic_family": "k3-truth"
     },
     {
       "id": "core.not",
       "kind": "coreword",
       "surface": "NOT",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.5"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §4"],
-      "law_tests": ["rust/tests/algebraic_laws.rs"],
-      "conformance_cases": ["core-kleene-not-definite"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.5"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §4"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-kleene-not-definite"
+      ],
       "status": "Formalized",
-      "notes": "Strong Kleene negation."
+      "notes": "Strong Kleene negation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.k3.involution"
+      ],
+      "algebraic_family": "k3-truth"
     },
     {
       "id": "core.arithmetic.rational",
       "kind": "semantic-area",
       "surface": "ADD/SUB/MUL/DIV",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §4.2", "SPECIFICATION.md §7.3"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §3.2"],
-      "law_tests": ["rust/tests/algebraic_laws.rs"],
-      "conformance_cases": ["core-exact-addition", "core-exact-division", "core-division-by-zero-is-nil"],
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-exact-addition",
+        "core-exact-division",
+        "core-division-by-zero-is-nil"
+      ],
       "status": "Formalized",
-      "notes": "Exact rational arithmetic; division by zero observes NIL rather than host exceptions."
+      "notes": "Exact rational arithmetic; division by zero observes NIL rather than host exceptions.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
     },
     {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.4"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §3.3"],
-      "law_tests": ["rust/tests/algebraic_laws.rs", "rust/tests/observation_laws.rs"],
-      "conformance_cases": ["core-decided-comparison-true", "core-decided-comparison-false", "core-boolean-is-not-a-number", "core-sqrt2-eq-sqrt2", "core-sqrt2-not-less-than-one", "core-sqrt2-less-than-two"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.4"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-decided-comparison-true",
+        "core-decided-comparison-false",
+        "core-boolean-is-not-a-number",
+        "core-sqrt2-eq-sqrt2",
+        "core-sqrt2-not-less-than-one",
+        "core-sqrt2-less-than-two"
+      ],
       "status": "Formalized",
-      "notes": "Decided comparisons produce Boolean observations; budgeted equality can produce UNKNOWN."
+      "notes": "Decided comparisons produce Boolean observations; budgeted equality can produce UNKNOWN.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
     },
     {
       "id": "core.exact-real.sqrt",
       "kind": "moduleword",
       "surface": "'math' IMPORT SQRT",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §4.2.3", "SPECIFICATION.md §7.3"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §3.1", "docs/dev/ajisai-mathematical-formalization.md §3.2"],
-      "law_tests": ["rust/tests/nicf_gosper_feasibility.rs"],
-      "conformance_cases": ["core-sqrt2-continued-fraction", "core-sqrt2-plus-one-continued-fraction", "core-sqrt2-plus-sqrt2-gosper"],
+      "spec_sections": [
+        "SPECIFICATION.md §4.2.3",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/nicf_gosper_feasibility.rs"
+      ],
+      "conformance_cases": [
+        "core-sqrt2-continued-fraction",
+        "core-sqrt2-plus-one-continued-fraction",
+        "core-sqrt2-plus-sqrt2-gosper"
+      ],
       "status": "Formalized",
-      "notes": "Irrational observations are canonical continued fractions, never sqrt(...) Debug-style wrappers or ~ rational approximations."
+      "notes": "Irrational observations are canonical continued fractions, never sqrt(...) Debug-style wrappers or ~ rational approximations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
     },
     {
       "id": "core.modifier.keep",
       "kind": "modifier",
       "surface": "KEEP",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §6", "SPECIFICATION.md §13"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §6"],
-      "law_tests": ["rust/tests/contract_modifier_laws.rs", "rust/tests/mass_conservation_laws.rs"],
-      "conformance_cases": ["core-keep-modifier", "core-stak-keep-add"],
+      "spec_sections": [
+        "SPECIFICATION.md §6",
+        "SPECIFICATION.md §13"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §6"
+      ],
+      "law_tests": [
+        "rust/tests/contract_modifier_laws.rs",
+        "rust/tests/mass_conservation_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-keep-modifier",
+        "core-stak-keep-add"
+      ],
       "status": "Formalized",
-      "notes": "Consumption modifier that preserves operands and pushes the result."
+      "notes": "Consumption modifier that preserves operands and pushes the result.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.consumption.keep",
+        "algebra.state-transformer.combinator"
+      ],
+      "algebraic_family": "modifier"
     },
     {
       "id": "core.modifier.stak",
       "kind": "modifier",
       "surface": "STAK",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §6", "SPECIFICATION.md §13"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §6"],
-      "law_tests": ["rust/tests/contract_modifier_laws.rs", "rust/tests/mass_conservation_laws.rs"],
-      "conformance_cases": ["core-stak-add", "core-stak-keep-add"],
+      "spec_sections": [
+        "SPECIFICATION.md §6",
+        "SPECIFICATION.md §13"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §6"
+      ],
+      "law_tests": [
+        "rust/tests/contract_modifier_laws.rs",
+        "rust/tests/mass_conservation_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-stak-add",
+        "core-stak-keep-add"
+      ],
       "status": "Formalized",
-      "notes": "Region modifier selecting the whole operand stack; conformance guards the previous underflow regression."
+      "notes": "Region modifier selecting the whole operand stack; conformance guards the previous underflow regression.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.region.stack",
+        "algebra.state-transformer.combinator"
+      ],
+      "algebraic_family": "modifier"
     },
     {
       "id": "hosted.clock.deterministic",
       "kind": "hosted-effect",
       "surface": "NOW",
       "classification": "HostedEffect",
-      "spec_sections": ["SPECIFICATION.md §7.9", "SPECIFICATION.md §11"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-sexies"],
-      "law_tests": ["rust/tests/effect_observation_laws.rs"],
-      "conformance_cases": ["hosted-now-deterministic"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.9",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "hosted-now-deterministic"
+      ],
       "status": "HostedEffect",
-      "notes": "Clock reads are hosted capabilities with deterministic conformance host observations."
+      "notes": "Clock reads are hosted capabilities with deterministic conformance host observations.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "algebraic_family": "hosted-effect"
     },
     {
       "id": "hosted.csprng.deterministic",
       "kind": "hosted-effect",
       "surface": "RANDOM",
       "classification": "HostedEffect",
-      "spec_sections": ["SPECIFICATION.md §7.9", "SPECIFICATION.md §11"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-sexies"],
-      "law_tests": ["rust/tests/effect_observation_laws.rs"],
-      "conformance_cases": ["hosted-csprng-deterministic", "hosted-csprng-missing-capability"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.9",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "hosted-csprng-deterministic",
+        "hosted-csprng-missing-capability"
+      ],
       "status": "HostedEffect",
-      "notes": "CSPRNG observations are host-provided and capability-gated."
+      "notes": "CSPRNG observations are host-provided and capability-gated.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "algebraic_family": "hosted-effect"
     },
     {
       "id": "hosted.serial.effects",
       "kind": "hosted-effect",
       "surface": "SERIAL-*",
       "classification": "HostedEffect",
-      "spec_sections": ["SPECIFICATION.md §7.9", "SPECIFICATION.md §11"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-sexies"],
-      "law_tests": ["rust/tests/effect_observation_laws.rs"],
-      "conformance_cases": ["hosted-serial-missing-capability", "hosted-serial-list-ports", "hosted-serial-open-then-write"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.9",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "hosted-serial-missing-capability",
+        "hosted-serial-list-ports",
+        "hosted-serial-open-then-write"
+      ],
       "status": "HostedEffect",
-      "notes": "Serial effects are outside Core but have protocol-level observation contracts."
+      "notes": "Serial effects are outside Core but have protocol-level observation contracts.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "algebraic_family": "hosted-effect"
     },
     {
       "id": "hosted.missing-capability.diagnostics",
       "kind": "diagnostic",
       "surface": "missing capability",
       "classification": "HostedEffect",
-      "spec_sections": ["SPECIFICATION.md §11"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-sexies"],
-      "law_tests": ["rust/tests/effect_observation_laws.rs"],
-      "conformance_cases": ["hosted-csprng-missing-capability", "hosted-serial-missing-capability"],
+      "spec_sections": [
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [
+        "hosted-csprng-missing-capability",
+        "hosted-serial-missing-capability"
+      ],
       "status": "HostedEffect",
-      "notes": "Capability failures are structured diagnostics, not leaked Rust error variants."
+      "notes": "Capability failures are structured diagnostics, not leaked Rust error variants.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "capability.check",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "hosted-effect"
     },
     {
       "id": "core.structural.vector-tensor",
       "kind": "semantic-area",
       "surface": "vector/tensor",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §4.3", "SPECIFICATION.md §7.2"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §7"],
-      "law_tests": ["rust/tests/structural_laws.rs"],
-      "conformance_cases": ["core-vector-self-evaluates", "core-nesting-preserved", "core-vector-scalar-broadcast-add", "core-vector-singleton-broadcast-mul", "core-shape", "core-rank"],
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-vector-self-evaluates",
+        "core-nesting-preserved",
+        "core-vector-scalar-broadcast-add",
+        "core-vector-singleton-broadcast-mul",
+        "core-shape",
+        "core-rank"
+      ],
       "status": "Formalized",
-      "notes": "Structural vector and tensor observations, including shape/rank and broadcast arithmetic."
+      "notes": "Structural vector and tensor observations, including shape/rank and broadcast arithmetic.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.applicative",
+        "algebra.structure-lift.zip"
+      ],
+      "algebraic_family": "structure-lift"
     },
     {
       "id": "core.structural.record",
       "kind": "semantic-area",
       "surface": "record",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §4.4"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-octies"],
-      "law_tests": ["rust/tests/record_laws.rs"],
+      "spec_sections": [
+        "SPECIFICATION.md §4.4"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/record_laws.rs"
+      ],
       "conformance_cases": [],
       "status": "Sketched",
-      "notes": "Record laws exist, but conformance still needs representative record observations before marking Formalized here."
+      "notes": "Record laws exist, but conformance still needs representative record observations before marking Formalized here.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "dictionary"
     },
     {
       "id": "core.structural.string",
       "kind": "semantic-area",
       "surface": "string",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.6"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-octies"],
-      "law_tests": ["rust/tests/string_laws.rs"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.6"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
       "conformance_cases": [],
       "status": "Sketched",
-      "notes": "String algebra has law coverage; conformance still needs stable encoding/role cases."
+      "notes": "String algebra has law coverage; conformance still needs stable encoding/role cases.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
     },
     {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
       "classification": "Core",
-      "spec_sections": ["SPECIFICATION.md §7.8", "SPECIFICATION.md §7.10", "SPECIFICATION.md §8", "SPECIFICATION.md §9"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-quinquies"],
-      "law_tests": ["rust/tests/naming_resolution_laws.rs"],
-      "conformance_cases": ["core-user-definition-resolved", "core-sort-imported", "core-sqrt2-continued-fraction"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.8",
+        "SPECIFICATION.md §7.10",
+        "SPECIFICATION.md §8",
+        "SPECIFICATION.md §9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-user-definition-resolved",
+        "core-sort-imported",
+        "core-sqrt2-continued-fraction"
+      ],
       "status": "Formalized",
-      "notes": "User dictionaries and module imports are deterministic name-resolution observations."
+      "notes": "User dictionaries and module imports are deterministic name-resolution observations.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
     },
     {
       "id": "exploratory.child-runtime",
       "kind": "semantic-area",
       "surface": "SPAWN/AWAIT",
       "classification": "Exploratory",
-      "spec_sections": ["SPECIFICATION.md §7.11", "SPECIFICATION.md §10"],
-      "formalization_sections": ["docs/dev/ajisai-mathematical-formalization.md §9-septies"],
-      "law_tests": ["rust/tests/child_runtime_laws.rs"],
+      "spec_sections": [
+        "SPECIFICATION.md §7.11",
+        "SPECIFICATION.md §10"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
       "conformance_cases": [],
       "status": "Exploratory",
-      "notes": "Child-runtime semantics are modeled but not yet part of the Core portability contract."
+      "notes": "Child-runtime semantics are modeled but not yet part of the Core portability contract.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
     }
   ]
 }

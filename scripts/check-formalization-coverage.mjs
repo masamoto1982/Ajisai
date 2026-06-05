@@ -13,6 +13,30 @@ const allowedStatuses = new Set([
   'NotPortableYet',
 ]);
 
+const allowedSemanticRoles = new Set([
+  'Primitive',
+  'Derived',
+  'Sugar',
+  'HostedEffect',
+  'Exploratory',
+  'NotPortableYet',
+]);
+
+const allowedAlgebraicFamilies = new Set([
+  'state-transformer',
+  'stack',
+  'dictionary',
+  'exact-scalar',
+  'exact-arithmetic',
+  'k3-truth',
+  'bubble',
+  'modifier',
+  'structure-lift',
+  'hosted-effect',
+  'syntax-sugar',
+  'observation',
+]);
+
 function fail(message) {
   throw new Error(`[formalization-coverage] ${message}`);
 }
@@ -59,6 +83,38 @@ for (const [index, entry] of coverage.entries.entries()) {
 
   if (entry.status === 'NotPortableYet' && entry.classification === 'Core') {
     fail(`${where}: NotPortableYet entries must not be classified as Core`);
+  }
+
+
+  if ('semantic_role' in entry) {
+    if (!allowedSemanticRoles.has(entry.semantic_role)) {
+      fail(`${where}: invalid semantic_role ${entry.semantic_role}`);
+    }
+
+    if (entry.semantic_role === 'Derived') {
+      if (!Array.isArray(entry.derived_from)) {
+        fail(`${where}: Derived entries need derived_from`);
+      }
+      if (entry.derived_from.length === 0 && !/derived_from/i.test(entry.notes ?? '')) {
+        fail(`${where}: Derived entries with empty derived_from must document the investigation gap in notes`);
+      }
+    }
+
+    if (entry.semantic_role === 'Primitive' && entry.primitive !== true) {
+      fail(`${where}: Primitive entries must set primitive to true`);
+    }
+
+    if (entry.semantic_role === 'HostedEffect' && entry.classification === 'Core') {
+      fail(`${where}: HostedEffect semantic roles must not be classified as Core`);
+    }
+
+    if (entry.semantic_role === 'NotPortableYet' && entry.classification === 'Core') {
+      fail(`${where}: NotPortableYet semantic roles must not be classified as Core`);
+    }
+  }
+
+  if ('algebraic_family' in entry && !allowedAlgebraicFamilies.has(entry.algebraic_family)) {
+    fail(`${where}: unknown algebraic_family ${entry.algebraic_family}`);
   }
 
   for (const caseId of conformanceCases) {
