@@ -905,6 +905,105 @@ H2 ドメイン失敗は completed(計 11 法則群)。生成器は `completing_
 
 ---
 
+## 9-octies. 拡張定式化 VII — 統合:レコード・文字列・被覆閉包(Phase 9, 2026-06 改修)
+
+本節は改修ロードマップ Phase 9(統合・検証・自己ホストへの道)の成果を取り込む。
+残る `Absent` 領域(レコード §4.4・文字列 §7.6)を Defined 化して被覆行列を閉じ、
+conformance を `⟦·⟧` の標本として位置づけ直し、証明支援系機械化の実現可能性を評価し、
+法則スイートをオラクルとして総括する。本節は仕様を追い越さない(§16.1)。
+
+### I. レコード・文字列の代数と被覆閉包(Phase 9)
+
+#### I.1 レコードは挿入順保存の有限写像(§4.4)
+
+レコードを `Record ≅ (Name ⇀ V, 挿入順)` として与える。構成・操作は `JSON`
+モジュール経由(レコードリテラル構文は無い=所見 I1):
+
+```
+JSON@PARSE : Text ⇀ Record        JSON@GET : Record × Name ⇀ V + NIL
+JSON@SET   : Record × Name × V → Record'   (点別更新)
+JSON@KEYS / JSON@VALUES : Record → V*   (挿入順)
+JSON@MERGE : Record × Record → Record   (右優先)
+```
+
+観測:`semanticKind = record`, `shape = record`。法則:`GET` は写像の定義性
+(`{a:vₐ…} 'a' GET = vₐ`)、`SET` 後 `GET` 同鍵 = 新値・他鍵不変(点別)、`KEYS` の
+挿入順は既存鍵 `SET` で不変、`VALUES` は鍵順、`MERGE` は重複鍵で右優先、欠落鍵の
+`GET` は NIL 射影(`Projecting`、§11.2)。
+
+#### I.2 文字列は符号点列(§7.6)
+
+文字列リテラル `'abc'` は **`Text` ヒント付き符号点ベクタ**(空列は NIL=
+`EmptySequence`、§4.5)。テキスト語(`STR`/`NUM`/`BOOL`/`CHR`/`CHARS`/`JOIN`/
+`TRIM*`/`TOKENIZE`/`SUBSTITUTE`/`STARTS-WITH?`/`ENDS-WITH?`)は核(境界列挙 `TEXT`)。
+法則:`CHARS∘JOIN = id`(符号点列の分解/再結合)、`TRIM` 冪等、`STR∘NUM = id`(整数を
+テキスト経由で値保存)、`STR` は正準十進、`SUBSTITUTE` の自己置換恒等、自己 prefix/
+suffix(`STARTS/ENDS-WITH?` 反射)、`TOKENIZE` 片の `JOIN` 復元。非数値 `NUM` は NIL
+射影(`Projecting`)。
+
+#### I.3 被覆行列の閉包
+
+Phase 1–9 で `⟦·⟧` の被覆は仕様の全主要節に及んだ。残る Sketched 行は **核挙動は
+Defined で、Sketch 部分は最適化・予算層の精緻化**であり、核 `⟦·⟧` の意味としては
+**明示的 Out-of-scope**(refinement であって未定義意味ではない):
+
+| 仕様節 | 状態 | 扱い |
+|---|---|---|
+| §4.4 レコード | **Defined**(Phase 9) | I.1 |
+| §7.6 文字列 | **Defined**(Phase 9) | I.2 |
+| §4.2.5/§7.4.1.1 NICF 比較 | Defined(核)/ Out-of-scope(予算単位の精緻化) | `cmp_β` は §3.3 で Defined;NICF 加速は実装最適化 |
+| §4.5 absence metadata | Defined(核)/ Out-of-scope(診断メタの内部表現) | Bubble モナドは Defined;reason 文字列の網羅は §11 conformance |
+| §7.4.2/§7.4.3 予算比較・U 伝播 | Defined(MIN/MAX/SORT/COND は Phase 4/5)/ Out-of-scope(`COMPARE-WITHIN` の予算単位) | U 伝播は Defined;明示予算 API は最適化層 |
+| §11 誤差述語 | Defined(Bubble Rule)/ Out-of-scope(整形/不整形述語の網羅形式化) | 二層 `Σ+Error` は Defined |
+
+すなわち成功基準「全節が Defined か明示的 Out-of-scope」(ロードマップ §5-1)を満たす。
+
+#### I.4 conformance は `⟦·⟧` の標本
+
+参照 conformance スイート(`tests/conformance/index.html`、45 ケース、
+`rust/src/conformance_tests.rs` が実行)は、各ケースが `(source, expect-result,
+expect-effects)` を与える**言語非依存**の標本である。本形式化はこれを `⟦·⟧` の
+有限標本として包摂する:法則スイート(計 10 ファイル・130 超の法則群)は conformance
+が点検する個別等式を **内包的全称**へ格上げする(ロードマップ §5-3)。
+
+#### I.5 証明支援系機械化の実現可能性(評価)
+
+核(数=GL₂(ℤ)行列積、K3=Kleene 束、NIL=Bubble モナド、モノイド準同型、契約格子)は
+Lean/Coq/Agda への機械化が **実現可能**と評価する:いずれも有限公理化された代数構造で、
+本書の等式は型付き等式として転記できる。妥当な順序は (1) K3 束と De Morgan、(2) 有理
+GL₂(ℤ) 算術と単位/逆元、(3) Bubble モナド則、(4) 契約格子の単調性。一方、効果列
+(Phase 7)・子ランタイム(Phase 8)・予算付き観測(§3.3)は **co-inductive/効果系**を
+要し投資が大きいため、核の機械化を先行し、参照実装が `⟦·⟧` を refine することの証明は
+長期目標に留める(ロードマップ §5-5)。
+
+#### I.6 オラクルとしての法則スイート
+
+「法則破れ = 実装が Ajisai でない」を CI で自動可視化する装置は、**性質ベース法則
+スイートそれ自体**である(`rust/tests/*_laws.rs`)。各法則は §2.3 firewall を通した
+観測等式であり、破れは即 CI 赤として現れる。追跡中の乖離(所見 B/C/D1/E1/E2/F1/F2/
+G1/G2/H1/H2/I1/I2)はすべてガード付きオラクルで固定され、ドリフトは検知される
+(ロードマップ §5-4)。
+
+#### I.7 所見(finding)
+
+- **所見 I1(レコードリテラル構文は無い)— 記述:** レコードは `JSON@PARSE` 等
+  モジュール経由でのみ構成され、`{ }`(コードブロック)・`[ ]`(ベクタ)に相当する
+  レコードリテラルは無い。仕様 §4.4 と整合(乖離ではない)。
+- **所見 I2(CONCAT は単一要素 top でアンダーフロー)— 追跡中:** `CONCAT` の **頂上
+  オペランドが単一要素ベクタ**だと `[ 1 ] [ 2 ] CONCAT` は `StackUnderflow` になる
+  (単一要素ベクタ頂上が特別扱い=spread される)。多要素頂上 `[ 1 ] [ 2 3 ] CONCAT`
+  は正常。文字列の `JOIN∘CONCAT` 則は ≥2 文字語に制約して回避し、本挙動はガード付き
+  オラクルで固定。実装/仕様判断が要る候補(§7.1 の CONCAT arity)。
+
+**テスト**: `rust/tests/record_laws.rs` — レコード観測軸、`GET`=写像、get-after-set、
+点別 SET、KEYS 順序安定、VALUES 鍵順、MERGE 右優先、欠落鍵 NIL 射影、PARSE/STRINGIFY
+往復(計 9 法則群)。`rust/tests/string_laws.rs` — リテラル恒等、`CHARS∘JOIN`、TRIM
+冪等、`STR∘NUM`、`STR` 正準十進、SUBSTITUTE 自己置換、自己 prefix/suffix、JOIN/CONCAT
+連結、TOKENIZE 復元、空列 NIL、非数値 NUM の NIL 射影、CHR/BOOL アンカー、所見 I2
+(計 13 法則群)。生成器は `ascii_word`/`record_abc` を追加。
+
+---
+
 ## 10. 付録 — 経験的法則チェック(参照実装 2026-06)
 
 参照実装に直接プログラムを流して §9.2 の法則を確認した結果。
@@ -955,6 +1054,10 @@ H2 ドメイン失敗は completed(計 11 法則群)。生成器は `completing_
 | dict スナップショット隔離(双方向) | HOLDS | `tests/child_runtime_laws.rs` |
 | 所見 H1: 子は AWAIT で同期実行(SPAWN は記録のみ、STATUS=running) | HOLDS | §9-septies H.5、追跡中 |
 | 所見 H2: ドメイン失敗(0除算→NIL)は completed、実エラーのみ failed | HOLDS | §9-septies H.5、追跡中 |
+| レコード観測・GET=写像・get-after-set・点別SET・KEYS順序・MERGE右優先(§9-octies I.1) | HOLDS | `tests/record_laws.rs` |
+| 文字列 CHARS∘JOIN・TRIM冪等・STR∘NUM・自己prefix/suffix・空列NIL(§9-octies I.2) | HOLDS | `tests/string_laws.rs` |
+| 所見 I1: レコードリテラル構文は無い(JSON 経由構成) | HOLDS(記述) | §9-octies I.7 |
+| 所見 I2: CONCAT は単一要素 top で underflow | HOLDS | §9-octies I.7、`tests/string_laws.rs`、追跡中 |
 
 健全な核(有理算術・K3 論理・NIL モナド・モノイド合成)は法則を満たす。
 かつて §9.3 にあった二つの破れ(B: T=1 の型混同、C: 無理数の近似表示)は

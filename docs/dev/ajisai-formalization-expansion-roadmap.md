@@ -30,14 +30,14 @@
 | §4.2 | 連分数スカラ | Defined | GL₂(ℤ) 行列積、遅延ストリーム |
 | §4.2.5 / §7.4.1.1 | NICF 比較 | Sketched | 半正則展開・丸め・予算単位 |
 | §4.3 / §7.2 | ベクトル・テンソル | **Defined**(Phase 5 済) | 添字函手・reshape 群作用・broadcast applicative |
-| §4.4 | レコード | Absent | 順序保存有限写像 `Name ⇀ V` の代数 |
+| §4.4 | レコード | **Defined**(Phase 9 済) | 順序保存有限写像 `Name ⇀ V` の代数 |
 | §4.5 | NIL・absence metadata | Defined(metadata は Sketched) | Bubble モナド `M(X)=X+(⊥×R∞)` |
 | §6 / §13 | 修飾子・質量保存 | **Defined**(Phase 3 済) | 変換子コンビネータ・線形(資源)型 |
 | §7.1 | ベクトル操作語 | **Defined**(Phase 5 済) | `V*` 上の自由モノイド+部分添字写像 |
 | §7.3 / §7.13 | 算術・丸め | Defined | 双一次変換(Gosper)・整数部抽出 |
 | §7.4 | 比較・U 伝播 | Defined(7.4.2/7.4.3 は Sketched) | 予算付き観測 `cmp_β` |
 | §7.5 | K3 論理 | Defined | De Morgan(Kleene)束 |
-| §7.6 | 文字列・変換 | Absent | 符号点列・符号化契約 |
+| §7.6 | 文字列・変換 | **Defined**(Phase 9 済) | 符号点列・符号化契約 |
 | §7.7 | 高階・制御語 | **Defined**(Phase 4 済) | 再帰スキーム(cata/ana/…)・K3 ガード case |
 | §7.8 / §8 | ユーザ辞書・DEF | **Defined**(Phase 6 済) | `Dict` 上の状態変換子・依存グラフ |
 | §7.9 | IO・ユーティリティ | **Defined**(Phase 7 済) | 効果ラベル・非決定性の分離 |
@@ -50,11 +50,12 @@
 
 当初「Ajisai のごく一部」だった被覆は、Phase 1(観測基盤)・Phase 2(構文)・
 Phase 3(修飾子・契約・質量保存)・Phase 4(高階語)・Phase 5(構造データ)・
-Phase 6(名前解決・辞書)・Phase 7(効果・観測)・Phase 8(並行・子ランタイム)の
-完了で言語表層の中核へ拡大した。残る `Absent` はレコード・文字列であり、Phase 9
-(統合)で被覆行列を全節 Defined/Out-of-scope へ詰める。各完了フェーズの定義は
-形式化本体 §9-bis / §9-ter / §9-quater / §9-quinquies / §9-sexies / §9-septies、法則は
-`rust/tests/{observation,desugar,contract_modifier,higher_order,structural,naming_resolution,effect_observation,child_runtime}_laws.rs`。
+Phase 6(名前解決・辞書)・Phase 7(効果・観測)・Phase 8(並行・子ランタイム)・
+Phase 9(統合:レコード・文字列・被覆閉包)の完了で **仕様の全主要節**に及んだ。
+残る Sketched 行は核挙動 Defined・Sketch 部分を明示 Out-of-scope とし(本体 §9-octies
+I.3)、成功基準「全節 Defined か明示 Out-of-scope」を満たす。各完了フェーズの定義は
+形式化本体 §9-bis / §9-ter / §9-quater / §9-quinquies / §9-sexies / §9-septies /
+§9-octies、法則は `rust/tests/{observation,desugar,contract_modifier,higher_order,structural,naming_resolution,effect_observation,child_runtime,record,string}_laws.rs`。
 
 ### 0.3 進捗(本セッション)
 
@@ -68,7 +69,7 @@ Phase 6(名前解決・辞書)・Phase 7(効果・観測)・Phase 8(並行・子
 | 6 名前解決・辞書 | ✅ 完了 | 本体 §9-quinquies F | `rust/tests/naming_resolution_laws.rs`(18 群) |
 | 7 効果・観測 | ✅ 完了 | 本体 §9-sexies G | `rust/tests/effect_observation_laws.rs`(12 群) |
 | 8 並行・子ランタイム | ✅ 完了 | 本体 §9-septies H | `rust/tests/child_runtime_laws.rs`(11 群) |
-| 9 統合 | 未着手 | — | 次フェーズ |
+| 9 統合(レコード・文字列・被覆閉包) | ✅ 完了 | 本体 §9-octies I | `rust/tests/{record,string}_laws.rs`(9 + 13 群) |
 
 ---
 

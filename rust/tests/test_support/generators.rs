@@ -215,3 +215,20 @@ pub fn failing_block_body() -> impl Strategy<Value = String> {
         Just("UNDEFINED-WORD-XYZ".to_string()),
     ]
 }
+
+// ───────────────────── Phase 9: records & strings ────────────────────────────
+
+/// A non-empty lowercase word (1–6 letters), used as a string-literal body
+/// `'word'`. Kept to `[a-h]` so it never collides with whitespace / quotes and
+/// so `CHARS`/`JOIN` round-trip cleanly (an empty string is NIL, §4.5).
+pub fn ascii_word() -> impl Strategy<Value = String> {
+    prop::collection::vec(0u8..8, 1..7)
+        .prop_map(|cs| cs.iter().map(|b| (b'a' + b) as char).collect())
+}
+
+/// A three-field JSON object `{"a":va,"b":vb,"c":vc}` with integer values, the
+/// source for record laws (records are constructed via `JSON@PARSE`; there is
+/// no record literal syntax, finding I1).
+pub fn record_abc() -> impl Strategy<Value = (i64, i64, i64)> {
+    (small(), small(), small())
+}
