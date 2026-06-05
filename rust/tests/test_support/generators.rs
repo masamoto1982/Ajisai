@@ -186,3 +186,49 @@ pub fn serial_outbound_call() -> impl Strategy<Value = (String, String)> {
     ])
     .prop_map(|(b, q)| (b.to_string(), q.to_string()))
 }
+
+// ──────────────────────── Phase 8: child runtimes ───────────────────────────
+
+/// A **deterministic, completing block body** for child-runtime laws: run
+/// standalone and via `{ body } SPAWN AWAIT` it leaves the same final stack
+/// (no host effects, no genuine error — domain failures project to NIL and the
+/// child still *completes*, probe finding). Used to pin the law
+/// "AWAIT observes the child's ⟦body⟧ final configuration".
+pub fn completing_block_body() -> impl Strategy<Value = String> {
+    prop_oneof![
+        (small(), small()).prop_map(|(a, b)| format!("{a} {b} ADD")),
+        (small(), small()).prop_map(|(a, b)| format!("{a} {b} MUL")),
+        (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
+        small().prop_map(|a| format!("{a} {{ 1 ADD }} EXEC")),
+        small().prop_map(|a| format!("{a} 0 /")), // div-by-zero → NIL, still completes
+        Just("TRUE FALSE AND".to_string()),
+        Just("[ 3 1 2 ] 0 GET".to_string()),
+    ]
+}
+
+/// A block body that raises a **genuine error** (not a domain Bubble), so the
+/// child terminates `failed`: an unknown word or a stack underflow.
+pub fn failing_block_body() -> impl Strategy<Value = String> {
+    prop_oneof![
+        Just("NOPEWORD".to_string()),
+        Just("1 ADD".to_string()), // ADD underflows on a one-item stack
+        Just("UNDEFINED-WORD-XYZ".to_string()),
+    ]
+}
+
+// ───────────────────── Phase 9: records & strings ────────────────────────────
+
+/// A non-empty lowercase word (1–6 letters), used as a string-literal body
+/// `'word'`. Kept to `[a-h]` so it never collides with whitespace / quotes and
+/// so `CHARS`/`JOIN` round-trip cleanly (an empty string is NIL, §4.5).
+pub fn ascii_word() -> impl Strategy<Value = String> {
+    prop::collection::vec(0u8..8, 1..7)
+        .prop_map(|cs| cs.iter().map(|b| (b'a' + b) as char).collect())
+}
+
+/// A three-field JSON object `{"a":va,"b":vb,"c":vc}` with integer values, the
+/// source for record laws (records are constructed via `JSON@PARSE`; there is
+/// no record literal syntax, finding I1).
+pub fn record_abc() -> impl Strategy<Value = (i64, i64, i64)> {
+    (small(), small(), small())
+}
