@@ -2331,6 +2331,58 @@
       "algebraic_family": "exact-scalar"
     },
     {
+      "id": "core.bool",
+      "kind": "coreword",
+      "surface": "BOOL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses or projects a value into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.chr",
+      "kind": "coreword",
+      "surface": "CHR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
