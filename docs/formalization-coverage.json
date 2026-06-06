@@ -56,6 +56,12 @@
       "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic."
     },
     {
+      "id": "algebra.bubble.domain",
+      "algebraic_family": "bubble",
+      "kind": "domain",
+      "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN."
+    },
+    {
       "id": "algebra.bubble.passthrough",
       "algebraic_family": "bubble",
       "kind": "operation",
@@ -192,6 +198,37 @@
       "algebraic_family": "k3-truth"
     },
     {
+      "id": "core.nil",
+      "kind": "coreword",
+      "surface": "NIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.5",
+        "SPECIFICATION.md §7.12",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/tests/observation_laws.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-spelling",
+        "core-nil-propagation",
+        "core-division-by-zero-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, and logical UNKNOWN. Reasoned NIL/Bubble values propagate through NIL-passthrough words.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "bubble"
+    },
+    {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
@@ -301,6 +338,223 @@
       "algebraic_family": "exact-arithmetic"
     },
     {
+      "id": "core.add",
+      "kind": "coreword",
+      "surface": "ADD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-exact-addition"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real addition as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.sub",
+      "kind": "coreword",
+      "surface": "SUB",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.mul",
+      "kind": "coreword",
+      "surface": "MUL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-bignum-does-not-fall-to-float"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real multiplication as a bihomographic arithmetic word; includes arbitrary-precision integer observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.div",
+      "kind": "coreword",
+      "surface": "DIV",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-exact-division",
+        "core-division-by-zero-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Exact-real division as a bihomographic arithmetic word; division by zero projects to NIL rather than a host exception.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.mod",
+      "kind": "coreword",
+      "surface": "MOD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Modulo is derived as x - floor(x/y)·y over exact reals, so it depends on integer projection plus exact arithmetic and preserves Bubble/NIL absence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.floor",
+      "kind": "coreword",
+      "surface": "FLOOR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "FLOOR — exact-real integer projection toward negative infinity. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.ceil",
+      "kind": "coreword",
+      "surface": "CEIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "CEIL — exact-real integer projection toward positive infinity. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.round",
+      "kind": "coreword",
+      "surface": "ROUND",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §7.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",
@@ -327,6 +581,211 @@
       "notes": "Decided comparisons produce Boolean observations; budgeted equality can produce UNKNOWN.",
       "semantic_role": "Derived",
       "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.eq",
+      "kind": "coreword",
+      "surface": "EQ",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-decided-comparison-true",
+        "core-decided-comparison-false",
+        "core-boolean-is-not-a-number",
+        "core-sqrt2-eq-sqrt2"
+      ],
+      "status": "Formalized",
+      "notes": "Budgeted exact-real equality projected into the K3 truth domain; NIL operands pass through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.neq",
+      "kind": "coreword",
+      "surface": "NEQ",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Inequality is the K3-domain complement of budgeted equality when decided, with UNKNOWN and NIL preserved by projection/passthrough.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.lt",
+      "kind": "coreword",
+      "surface": "LT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-sqrt2-not-less-than-one",
+        "core-sqrt2-less-than-two"
+      ],
+      "status": "Formalized",
+      "notes": "Budgeted exact-real strict less-than projected into the K3 truth domain; undecidable comparisons yield UNKNOWN.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.lte",
+      "kind": "coreword",
+      "surface": "LTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Less-than-or-equal is derived from the same budgeted order observation as LT/EQ, projected into K3 truth.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.gt",
+      "kind": "coreword",
+      "surface": "GT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than is the operand-dual of LT over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.gte",
+      "kind": "coreword",
+      "surface": "GTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.compare-within",
+      "kind": "coreword",
+      "surface": "COMPARE-WITHIN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-compare-within-gt",
+        "core-compare-within-lt",
+        "core-compare-within-eq"
+      ],
+      "status": "Formalized",
+      "notes": "Surface exposure of the explicit budgeted-order primitive: returns -1/0/1 for decided order or UNKNOWN with agreedPrefix on budget exhaustion.",
+      "semantic_role": "Primitive",
+      "primitive": true,
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -678,5 +1137,174 @@
       ],
       "algebraic_family": "state-transformer"
     }
+  ],
+  "unclassified_allowlist": [
+    "core.top",
+    "core.eat",
+    "core.get",
+    "core.insert",
+    "core.replace",
+    "core.remove",
+    "core.length",
+    "core.take",
+    "core.split",
+    "core.concat",
+    "core.reverse",
+    "core.range",
+    "core.reorder",
+    "core.collect",
+    "core.cf",
+    "core.chars",
+    "core.join",
+    "core.trim",
+    "core.trim-left",
+    "core.trim-right",
+    "core.tokenize",
+    "core.substitute",
+    "core.starts-with",
+    "core.ends-with",
+    "core.num",
+    "core.str",
+    "core.bool",
+    "core.chr",
+    "core.idle",
+    "core.cond",
+    "core.pipe",
+    "core.or-nil",
+    "core.map",
+    "core.filter",
+    "core.fold",
+    "core.unfold",
+    "core.any",
+    "core.all",
+    "core.count",
+    "core.scan",
+    "core.print",
+    "core.precompute",
+    "core.del",
+    "core.lookup",
+    "core.forc",
+    "core.shape",
+    "core.rank",
+    "core.reshape",
+    "core.transpose",
+    "core.fill",
+    "core.exec",
+    "core.eval",
+    "core.import-only",
+    "core.unimport",
+    "core.unimport-only",
+    "core.spawn",
+    "core.await",
+    "core.status",
+    "core.kill",
+    "core.monitor",
+    "module.music.seq",
+    "module.music.sim",
+    "module.music.slot",
+    "module.music.gain",
+    "module.music.gain-reset",
+    "module.music.pan",
+    "module.music.pan-reset",
+    "module.music.fx-reset",
+    "module.music.play",
+    "module.music.seq-group",
+    "module.music.sim-group",
+    "module.music.chord",
+    "module.music.hz",
+    "module.music.dur",
+    "module.music.note",
+    "module.music.rest",
+    "module.music.edo",
+    "module.music.edr",
+    "module.music.step",
+    "module.music.voice",
+    "module.music.track",
+    "module.music.measure",
+    "module.music.phrase",
+    "module.music.with-tuning",
+    "module.music.explain",
+    "module.music.adsr",
+    "module.music.sine",
+    "module.music.square",
+    "module.music.saw",
+    "module.music.tri",
+    "module.json.parse",
+    "module.json.stringify",
+    "module.json.get",
+    "module.json.keys",
+    "module.json.set",
+    "module.json.has",
+    "module.json.values",
+    "module.json.merge",
+    "module.json.delete",
+    "module.json.export",
+    "module.io.input",
+    "module.io.output",
+    "module.time.datetime",
+    "module.time.timestamp",
+    "module.time.date",
+    "module.time.time",
+    "module.time.year",
+    "module.time.month",
+    "module.time.day",
+    "module.time.hour",
+    "module.time.minute",
+    "module.time.second",
+    "module.time.weekday",
+    "module.time.add-days",
+    "module.time.diff-days",
+    "module.time.format",
+    "module.time.parse-iso",
+    "module.time.add-months",
+    "module.time.add-years",
+    "module.crypto.hash",
+    "module.algo.sort",
+    "module.algo.unique",
+    "module.algo.contains",
+    "module.algo.index-of",
+    "module.math.sqrt-eps",
+    "module.math.interval",
+    "module.math.lower",
+    "module.math.upper",
+    "module.math.width",
+    "module.math.is-exact",
+    "module.math.abs",
+    "module.math.neg",
+    "module.math.sign",
+    "module.math.min",
+    "module.math.max",
+    "module.math.pow",
+    "module.math.gcd",
+    "module.math.lcm",
+    "alias.plus",
+    "alias.minus",
+    "alias.asterisk",
+    "alias.percent",
+    "alias.equals",
+    "alias.less-than",
+    "alias.less-than-or-equal",
+    "alias.greater-than",
+    "alias.greater-than-or-equal",
+    "alias.not-equal",
+    "alias.bang",
+    "alias.ampersand",
+    "alias.dot",
+    "alias.dot-dot",
+    "alias.comma",
+    "alias.comma-comma",
+    "alias.quote",
+    "alias.question",
+    "alias.equals-equals",
+    "surface.hash",
+    "surface.dollar",
+    "surface.left-bracket",
+    "surface.right-bracket",
+    "surface.left-brace",
+    "surface.right-brace",
+    "surface.quote",
+    "surface.semicolon",
+    "surface.semicolon-semicolon",
+    "surface.left-paren"
   ]
 }
