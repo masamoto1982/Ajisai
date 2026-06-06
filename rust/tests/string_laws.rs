@@ -55,6 +55,17 @@ proptest! {
         prop_assert_eq!(once, format!("'{w}'"));
     }
 
+    /// **One-sided trims compose to the two-sided trim** on padded text.
+    #[test]
+    fn trim_left_right_compose_to_trim(w in ascii_word()) {
+        prop_assert_eq!(
+            obs1(&format!("'  {w}  ' TRIM-LEFT TRIM-RIGHT")),
+            obs1(&format!("'  {w}  ' TRIM")),
+        );
+        prop_assert_eq!(obs1(&format!("'  {w}' TRIM-LEFT")), format!("'{w}'"));
+        prop_assert_eq!(obs1(&format!("'{w}  ' TRIM-RIGHT")), format!("'{w}'"));
+    }
+
     /// **`STR`∘`NUM` round-trips an integer through text** (value-preserving):
     /// `n STR NUM = n`. (`STR` renders the canonical integer form `'n'`; `NUM`
     /// parses it back to the rational `n/1`.)

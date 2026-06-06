@@ -24,6 +24,7 @@
     "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build",
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
+    "word:manifest": "node scripts/generate-word-manifest.mjs",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs"
   },
   "devDependencies": {
