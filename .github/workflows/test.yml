@@ -73,6 +73,9 @@ jobs:
       - name: Generate conformance manifest
         run: npm run conformance:manifest
 
+      - name: Generate word manifest
+        run: npm run word:manifest
+
       - name: Check formalization coverage
         run: npm run check:formalization-coverage
 

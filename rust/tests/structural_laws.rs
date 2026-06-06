@@ -121,6 +121,14 @@ fn split_then_concat_round_trips() {
     );
 }
 
+#[test]
+fn point_updates_and_collect_are_sequence_transforms() {
+    assert_law("insert-point", "[ 1 3 ] [ 1 2 ] INSERT", "[ 1 2 3 ]");
+    assert_law("replace-point", "[ 1 2 3 ] [ 1 9 ] REPLACE", "[ 1 9 3 ]");
+    assert_law("remove-point", "[ 1 2 3 ] 1 REMOVE", "[ 1 3 ]");
+    assert_law("collect-stack", "1 2 3 3 COLLECT", "[ 1 2 3 ]");
+}
+
 // ── Tensor / reshape-group laws ──
 
 #[test]
