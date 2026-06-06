@@ -56,6 +56,12 @@
       "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic."
     },
     {
+      "id": "algebra.bubble.domain",
+      "algebraic_family": "bubble",
+      "kind": "domain",
+      "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN."
+    },
+    {
       "id": "algebra.bubble.passthrough",
       "algebraic_family": "bubble",
       "kind": "operation",
@@ -190,6 +196,37 @@
         "algebra.k3.domain"
       ],
       "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.nil",
+      "kind": "coreword",
+      "surface": "NIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.5",
+        "SPECIFICATION.md §7.12",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/tests/observation_laws.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-spelling",
+        "core-nil-propagation",
+        "core-division-by-zero-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Primitive operational absence; distinct from FALSE, numeric zero, and logical UNKNOWN. Reasoned NIL/Bubble values propagate through NIL-passthrough words.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "bubble"
     },
     {
       "id": "core.and",
@@ -1116,7 +1153,6 @@
     "core.range",
     "core.reorder",
     "core.collect",
-    "core.nil",
     "core.cf",
     "core.chars",
     "core.join",
