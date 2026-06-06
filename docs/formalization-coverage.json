@@ -1542,6 +1542,361 @@
       "algebraic_family": "exact-scalar"
     },
     {
+      "id": "core.cf",
+      "kind": "coreword",
+      "surface": ">CF",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §12.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Display-role retagging into canonical continued-fraction serialization; it preserves the underlying exact value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.chars",
+      "kind": "coreword",
+      "surface": "CHARS",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Splits a text value into the finite codepoint sequence of one-character text values.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.join",
+      "kind": "coreword",
+      "surface": "JOIN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Folds a vector of text/codepoint fragments back into one text value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.trim",
+      "kind": "coreword",
+      "surface": "TRIM",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Whitespace-normalization endomorphism over codepoint sequences; idempotent at fixed points.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.trim-left",
+      "kind": "coreword",
+      "surface": "TRIM-LEFT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Left-sided whitespace-normalization endomorphism over codepoint sequences.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.trim-right",
+      "kind": "coreword",
+      "surface": "TRIM-RIGHT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Right-sided whitespace-normalization endomorphism over codepoint sequences.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.tokenize",
+      "kind": "coreword",
+      "surface": "TOKENIZE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Splits a codepoint sequence by a separator sequence into ordered text parts.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.substitute",
+      "kind": "coreword",
+      "surface": "SUBSTITUTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Codepoint-sequence replacement transform over all occurrences of a substring.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.starts-with",
+      "kind": "coreword",
+      "surface": "STARTS-WITH?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Prefix predicate over codepoint sequences, projected into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.ends-with",
+      "kind": "coreword",
+      "surface": "ENDS-WITH?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Suffix predicate over codepoint sequences, projected into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.num",
+      "kind": "coreword",
+      "surface": "NUM",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses text/codepoint sequences into exact numbers; malformed numeric text projects to NIL/Bubble.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.str",
+      "kind": "coreword",
+      "surface": "STR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Renders a value into canonical text/codepoint-sequence form under the text role.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "core.bool",
+      "kind": "coreword",
+      "surface": "BOOL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses or projects a value into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.chr",
+      "kind": "coreword",
+      "surface": "CHR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
@@ -1603,20 +1958,6 @@
   "unclassified_allowlist": [
     "core.top",
     "core.eat",
-    "core.cf",
-    "core.chars",
-    "core.join",
-    "core.trim",
-    "core.trim-left",
-    "core.trim-right",
-    "core.tokenize",
-    "core.substitute",
-    "core.starts-with",
-    "core.ends-with",
-    "core.num",
-    "core.str",
-    "core.bool",
-    "core.chr",
     "core.idle",
     "core.cond",
     "core.pipe",
