@@ -2331,58 +2331,6 @@
       "algebraic_family": "exact-scalar"
     },
     {
-      "id": "core.bool",
-      "kind": "coreword",
-      "surface": "BOOL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses or projects a value into the K3 truth domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "k3-truth"
-    },
-    {
-      "id": "core.chr",
-      "kind": "coreword",
-      "surface": "CHR",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-scalar"
-    },
-    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
@@ -2413,6 +2361,346 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.print",
+      "kind": "coreword",
+      "surface": "PRINT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §5.2",
+        "SPECIFICATION.md §7.11",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "PRINT is the outbound rendering boundary: it renders the consumed value and appends a host effect after capability gating.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "core.precompute",
+      "kind": "coreword",
+      "surface": "PRECOMPUTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §8.2",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/interpreter_definition_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Definition-time staging composes the block transformer into dictionary installation while preserving the resulting user-word observation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.del",
+      "kind": "coreword",
+      "surface": "DEL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §8.3",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "DEL removes user dictionary bindings; for fresh definitions, DEF followed by DEL restores name resolution to Unknown, while module dictionaries remain intact.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.lookup",
+      "kind": "coreword",
+      "surface": "LOOKUP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.8",
+        "SPECIFICATION.md §8"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "LOOKUP observes the active dictionary/name-resolution state and emits structured documentation/diagnostics without changing the dictionary.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.forc",
+      "kind": "coreword",
+      "surface": "FORC",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.8",
+        "SPECIFICATION.md §8.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "FORC is the dependency-graph override modifier consumed by protected destructive dictionary transitions such as redefining or deleting referenced user words.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.consumption.eat",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "modifier"
+    },
+    {
+      "id": "core.import-only",
+      "kind": "coreword",
+      "surface": "IMPORT-ONLY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "IMPORT-ONLY is the selective visibility operator on module dictionaries: it exposes exactly selected module/sample words and treats Core-listed boundary selectors as no-ops.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.unimport",
+      "kind": "coreword",
+      "surface": "UNIMPORT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "UNIMPORT shrinks a module visibility set while preserving referenced module words, acting as the inverse of full import when no references pin the module.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.unimport-only",
+      "kind": "coreword",
+      "surface": "UNIMPORT-ONLY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "UNIMPORT-ONLY hides selected module/sample words and rejects selectors pinned by user-word dependencies.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.spawn",
+      "kind": "coreword",
+      "surface": "SPAWN",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.await",
+      "kind": "coreword",
+      "surface": "AWAIT",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.4"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.status",
+      "kind": "coreword",
+      "surface": "STATUS",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.5"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.kill",
+      "kind": "coreword",
+      "surface": "KILL",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.6"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.monitor",
+      "kind": "coreword",
+      "surface": "MONITOR",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
     },
     {
       "id": "exploratory.child-runtime",
@@ -2876,19 +3164,6 @@
     }
   ],
   "unclassified_allowlist": [
-    "core.print",
-    "core.precompute",
-    "core.del",
-    "core.lookup",
-    "core.forc",
-    "core.import-only",
-    "core.unimport",
-    "core.unimport-only",
-    "core.spawn",
-    "core.await",
-    "core.status",
-    "core.kill",
-    "core.monitor",
     "module.music.seq",
     "module.music.sim",
     "module.music.slot",
