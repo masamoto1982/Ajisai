@@ -56,17 +56,16 @@ function coverageSurfaces(entry) {
 function entryClassifiesSurface(entry, manifestEntry) {
   if (entry.id === manifestEntry.id) return true;
   const manifestSurface = normalizeSurface(manifestEntry.surface);
-  const manifestShort = normalizeSurface(manifestEntry.short_surface);
   const aliases = Array.isArray(manifestEntry.coverage_aliases)
     ? manifestEntry.coverage_aliases.map(normalizeSurface).filter(Boolean)
     : [];
   for (const surface of coverageSurfaces(entry)) {
     const coverageSurface = normalizeSurface(surface);
-    if (coverageSurface === manifestSurface || (manifestShort && coverageSurface === manifestShort) || aliases.includes(coverageSurface)) {
+    if (coverageSurface === manifestSurface || aliases.includes(coverageSurface)) {
       return true;
     }
     const tokens = coverageSurface.match(/[A-Z0-9@?>=<!&+*/%.,;#$'\[\]{}()-]+/g) ?? [];
-    if (tokens.includes(manifestSurface) || (manifestShort && tokens.includes(manifestShort)) || aliases.some((alias) => tokens.includes(alias))) {
+    if (tokens.includes(manifestSurface) || aliases.some((alias) => tokens.includes(alias))) {
       return true;
     }
   }

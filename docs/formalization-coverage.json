@@ -68,6 +68,12 @@
       "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged."
     },
     {
+      "id": "algebra.structure-lift.indexed-sequence",
+      "algebraic_family": "structure-lift",
+      "kind": "domain",
+      "description": "Finite ordered index structure for vector values; GET/LENGTH/TAKE/SPLIT/CONCAT/REVERSE/RANGE/REORDER/COLLECT derive from this sequence algebra."
+    },
+    {
       "id": "algebra.structure-lift.applicative",
       "algebraic_family": "structure-lift",
       "kind": "operation",
@@ -78,6 +84,12 @@
       "algebraic_family": "structure-lift",
       "kind": "operation",
       "description": "zipWith lift of a scalar binary operation with documented broadcast rules."
+    },
+    {
+      "id": "algebra.structure-lift.reshape-group",
+      "algebraic_family": "structure-lift",
+      "kind": "operation",
+      "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, RANK, and FILL derive from this reshape-group action."
     },
     {
       "id": "algebra.modifier.consumption.keep",
@@ -1032,6 +1044,456 @@
       "algebraic_family": "structure-lift"
     },
     {
+      "id": "core.get",
+      "kind": "coreword",
+      "surface": "GET",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs",
+        "rust/tests/contract_modifier_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-get-negative-index",
+        "core-get-zero-index"
+      ],
+      "status": "Formalized",
+      "notes": "Indexed projection over vectors/tensors; out-of-range indices project to NIL/Bubble while preserving the source vector observation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.insert",
+      "kind": "coreword",
+      "surface": "INSERT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Point insertion as an ordered-sequence transform over the vector index structure.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.replace",
+      "kind": "coreword",
+      "surface": "REPLACE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Point replacement as an ordered-sequence transform over the vector index structure.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.remove",
+      "kind": "coreword",
+      "surface": "REMOVE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Point removal as an ordered-sequence transform; removing the last element projects to NIL/Bubble.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.length",
+      "kind": "coreword",
+      "surface": "LENGTH",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-length"
+      ],
+      "status": "Formalized",
+      "notes": "Cardinality observation over the indexed-sequence structure.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.take",
+      "kind": "coreword",
+      "surface": "TAKE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-take"
+      ],
+      "status": "Formalized",
+      "notes": "Prefix/suffix projection over the indexed-sequence structure.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.split",
+      "kind": "coreword",
+      "surface": "SPLIT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Chunking an indexed sequence into ordered subsequences.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.concat",
+      "kind": "coreword",
+      "surface": "CONCAT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-concat"
+      ],
+      "status": "Formalized",
+      "notes": "Free-monoid concatenation of ordered vector sequences.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.reverse",
+      "kind": "coreword",
+      "surface": "REVERSE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-reverse"
+      ],
+      "status": "Formalized",
+      "notes": "Involutive order reversal on indexed sequences.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.range",
+      "kind": "coreword",
+      "surface": "RANGE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-range"
+      ],
+      "status": "Formalized",
+      "notes": "Deterministic construction of an inclusive integer indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.reorder",
+      "kind": "coreword",
+      "surface": "REORDER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Permutation action over an indexed vector sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.collect",
+      "kind": "coreword",
+      "surface": "COLLECT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Stack-to-vector collection that constructs an indexed sequence from the top N stack values.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.shape",
+      "kind": "coreword",
+      "surface": "SHAPE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-shape"
+      ],
+      "status": "Formalized",
+      "notes": "Shape observation for a tensor/indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.rank",
+      "kind": "coreword",
+      "surface": "RANK",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-rank"
+      ],
+      "status": "Formalized",
+      "notes": "Rank observation: the dimension count of a tensor/indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.reshape",
+      "kind": "coreword",
+      "surface": "RESHAPE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Reshape-group action that changes tensor shape without changing element order or count.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.transpose",
+      "kind": "coreword",
+      "surface": "TRANSPOSE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Axis-swap action in the tensor reshape group; 2-D transpose is an involution.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.fill",
+      "kind": "coreword",
+      "surface": "FILL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §4.3",
+        "SPECIFICATION.md §7.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §7"
+      ],
+      "law_tests": [
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Tensor constructor that fills a requested shape with a repeated value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
       "id": "core.structural.record",
       "kind": "semantic-area",
       "surface": "record",
@@ -1141,18 +1603,6 @@
   "unclassified_allowlist": [
     "core.top",
     "core.eat",
-    "core.get",
-    "core.insert",
-    "core.replace",
-    "core.remove",
-    "core.length",
-    "core.take",
-    "core.split",
-    "core.concat",
-    "core.reverse",
-    "core.range",
-    "core.reorder",
-    "core.collect",
     "core.cf",
     "core.chars",
     "core.join",
@@ -1184,11 +1634,6 @@
     "core.del",
     "core.lookup",
     "core.forc",
-    "core.shape",
-    "core.rank",
-    "core.reshape",
-    "core.transpose",
-    "core.fill",
     "core.exec",
     "core.eval",
     "core.import-only",
