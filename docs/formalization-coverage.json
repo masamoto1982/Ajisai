@@ -551,6 +551,211 @@
       "algebraic_family": "observation"
     },
     {
+      "id": "core.eq",
+      "kind": "coreword",
+      "surface": "EQ",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-decided-comparison-true",
+        "core-decided-comparison-false",
+        "core-boolean-is-not-a-number",
+        "core-sqrt2-eq-sqrt2"
+      ],
+      "status": "Formalized",
+      "notes": "Budgeted exact-real equality projected into the K3 truth domain; NIL operands pass through unchanged.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.neq",
+      "kind": "coreword",
+      "surface": "NEQ",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Inequality is the K3-domain complement of budgeted equality when decided, with UNKNOWN and NIL preserved by projection/passthrough.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.lt",
+      "kind": "coreword",
+      "surface": "LT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-sqrt2-not-less-than-one",
+        "core-sqrt2-less-than-two"
+      ],
+      "status": "Formalized",
+      "notes": "Budgeted exact-real strict less-than projected into the K3 truth domain; undecidable comparisons yield UNKNOWN.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.lte",
+      "kind": "coreword",
+      "surface": "LTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Less-than-or-equal is derived from the same budgeted order observation as LT/EQ, projected into K3 truth.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.gt",
+      "kind": "coreword",
+      "surface": "GT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than is the operand-dual of LT over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.gte",
+      "kind": "coreword",
+      "surface": "GTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.compare-within",
+      "kind": "coreword",
+      "surface": "COMPARE-WITHIN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-compare-within-gt",
+        "core-compare-within-lt",
+        "core-compare-within-eq"
+      ],
+      "status": "Formalized",
+      "notes": "Surface exposure of the explicit budgeted-order primitive: returns -1/0/1 for decided order or UNKNOWN with agreedPrefix on budget exhaustion.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
       "id": "core.exact-real.sqrt",
       "kind": "moduleword",
       "surface": "'math' IMPORT SQRT",
@@ -926,13 +1131,6 @@
     "core.str",
     "core.bool",
     "core.chr",
-    "core.compare-within",
-    "core.eq",
-    "core.lt",
-    "core.lte",
-    "core.gt",
-    "core.gte",
-    "core.neq",
     "core.idle",
     "core.cond",
     "core.pipe",
