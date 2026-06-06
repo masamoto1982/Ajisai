@@ -73,7 +73,7 @@ function entryClassifiesSurface(entry, manifestEntry) {
 }
 
 
-function warnDuplicateEntryIds(entries) {
+function validateUniqueEntryIds(entries) {
   const seenIds = new Map();
   for (const [index, entry] of entries.entries()) {
     const where = entry?.id ?? `entry #${index}`;
@@ -83,11 +83,7 @@ function warnDuplicateEntryIds(entries) {
     }
     if (seenIds.has(entry.id)) {
       const firstIndex = seenIds.get(entry.id);
-      console.warn(
-        `[formalization-coverage] warning: ${entry.id}: duplicate id at entries[${index}] ` +
-          `(first seen at entries[${firstIndex}]); using duplicate entries for coverage only`,
-      );
-      continue;
+      fail(`${entry.id}: duplicate id at entries[${index}] (first seen at entries[${firstIndex}])`);
     }
     seenIds.set(entry.id, index);
   }
@@ -170,7 +166,7 @@ function validateWordManifest(coverage) {
 const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
 if (coverage.version !== 1) fail('version must be 1');
 if (!Array.isArray(coverage.entries)) fail('entries must be an array');
-warnDuplicateEntryIds(coverage.entries);
+validateUniqueEntryIds(coverage.entries);
 validateWordManifest(coverage);
 
 // Optional algebra-primitive registry. When present it closes the
