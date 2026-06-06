@@ -72,6 +72,27 @@ function entryClassifiesSurface(entry, manifestEntry) {
   return false;
 }
 
+
+function warnDuplicateEntryIds(entries) {
+  const seenIds = new Map();
+  for (const [index, entry] of entries.entries()) {
+    const where = entry?.id ?? `entry #${index}`;
+    if (!entry || typeof entry !== 'object') fail(`${where}: entry must be an object`);
+    if (typeof entry.id !== 'string' || entry.id.trim() === '') {
+      fail(`${where}: missing non-empty id`);
+    }
+    if (seenIds.has(entry.id)) {
+      const firstIndex = seenIds.get(entry.id);
+      console.warn(
+        `[formalization-coverage] warning: ${entry.id}: duplicate id at entries[${index}] ` +
+          `(first seen at entries[${firstIndex}]); using duplicate entries for coverage only`,
+      );
+      continue;
+    }
+    seenIds.set(entry.id, index);
+  }
+}
+
 function validateWordManifest(coverage) {
   const manifest = JSON.parse(readFileSync(wordManifestPath, 'utf8'));
   if (manifest.schemaVersion !== 1) fail('word manifest schemaVersion must be 1');
@@ -149,6 +170,7 @@ function validateWordManifest(coverage) {
 const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
 if (coverage.version !== 1) fail('version must be 1');
 if (!Array.isArray(coverage.entries)) fail('entries must be an array');
+warnDuplicateEntryIds(coverage.entries);
 validateWordManifest(coverage);
 
 // Optional algebra-primitive registry. When present it closes the
@@ -180,7 +202,6 @@ const caseIds = new Set(
     .map((match) => match[1]),
 );
 
-const seenIds = new Set();
 for (const [index, entry] of coverage.entries.entries()) {
   const where = entry?.id ?? `entry #${index}`;
   if (!entry || typeof entry !== 'object') fail(`${where}: entry must be an object`);
@@ -189,8 +210,6 @@ for (const [index, entry] of coverage.entries.entries()) {
       fail(`${where}: missing non-empty ${key}`);
     }
   }
-  if (seenIds.has(entry.id)) fail(`${where}: duplicate id`);
-  seenIds.add(entry.id);
   if (!allowedStatuses.has(entry.status)) fail(`${where}: invalid status ${entry.status}`);
 
   const formalizationSections = Array.isArray(entry.formalization_sections)

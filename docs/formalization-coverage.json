@@ -68,6 +68,12 @@
       "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged."
     },
     {
+      "id": "algebra.bubble.handler",
+      "algebraic_family": "bubble",
+      "kind": "operation",
+      "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values."
+    },
+    {
       "id": "algebra.structure-lift.indexed-sequence",
       "algebraic_family": "structure-lift",
       "kind": "domain",
@@ -98,10 +104,22 @@
       "description": "Consumption policy that preserves operands; one axis of the modifier combinator."
     },
     {
+      "id": "algebra.modifier.consumption.eat",
+      "algebraic_family": "modifier",
+      "kind": "operation",
+      "description": "Consumption policy that removes operands after applying a word; one axis of the modifier combinator."
+    },
+    {
       "id": "algebra.modifier.region.stack",
       "algebraic_family": "modifier",
       "kind": "operation",
       "description": "Region selection over the whole operand stack; one axis of the modifier combinator."
+    },
+    {
+      "id": "algebra.modifier.region.top",
+      "algebraic_family": "modifier",
+      "kind": "operation",
+      "description": "Region selection over the top stack item; one axis of the modifier combinator."
     },
     {
       "id": "algebra.state-transformer.combinator",
@@ -114,6 +132,12 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "description": "Monoid composition of state transformers over Sigma = Stack x Dict x Eff."
+    },
+    {
+      "id": "algebra.state-transformer.identity",
+      "algebraic_family": "state-transformer",
+      "kind": "operation",
+      "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it."
     },
     {
       "id": "algebra.dictionary.lookup",
@@ -894,6 +918,416 @@
         "algebra.state-transformer.combinator"
       ],
       "algebraic_family": "modifier"
+    },
+    {
+      "id": "core.top",
+      "kind": "coreword",
+      "surface": "TOP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §6.3",
+        "SPECIFICATION.md §7.0"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/contract_modifier_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Top-of-stack region modifier; selects the singleton top region for the next state-transformer word.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.region.top",
+        "algebra.state-transformer.combinator"
+      ],
+      "algebraic_family": "modifier"
+    },
+    {
+      "id": "core.eat",
+      "kind": "coreword",
+      "surface": "EAT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §6.3",
+        "SPECIFICATION.md §7.0"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/contract_modifier_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Operand-consuming modifier; selects the consume/eat policy for the next state-transformer word.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.consumption.eat",
+        "algebra.state-transformer.combinator"
+      ],
+      "algebraic_family": "modifier"
+    },
+    {
+      "id": "core.pipe",
+      "kind": "coreword",
+      "surface": "PIPE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §6.4",
+        "SPECIFICATION.md §7.0"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "No-op pipeline marker; observationally the identity state transformer.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.identity"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.or-nil",
+      "kind": "coreword",
+      "surface": "OR-NIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §6.4",
+        "SPECIFICATION.md §7.12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-or-nil-fallback"
+      ],
+      "status": "Formalized",
+      "notes": "Bubble/NIL coalescing handler; replaces operational absence with a fallback and keeps present values.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.handler",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "bubble"
+    },
+    {
+      "id": "core.idle",
+      "kind": "coreword",
+      "surface": "IDLE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Identity control word over the interpreter state transformer.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.identity"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.cond",
+      "kind": "coreword",
+      "surface": "COND",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "K3-honest guarded state-transformer choice; UNKNOWN guards do not fire.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.k3.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.exec",
+      "kind": "coreword",
+      "surface": "EXEC",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Executes a code value by reflecting it into state-transformer composition.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.eval",
+      "kind": "coreword",
+      "surface": "EVAL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses source text and reflects the resulting program into state-transformer composition.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.map",
+      "kind": "coreword",
+      "surface": "MAP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-map"
+      ],
+      "status": "Formalized",
+      "notes": "Functorial/applicative lift of a block over an indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.applicative",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.filter",
+      "kind": "coreword",
+      "surface": "FILTER",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Predicate restriction over an indexed sequence using a K3 truth-valued block.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "core.fold",
+      "kind": "coreword",
+      "surface": "FOLD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-fold",
+        "core-fold-word-name"
+      ],
+      "status": "Formalized",
+      "notes": "Catamorphism over an indexed sequence with an explicit accumulator and combiner state transformer.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.unfold",
+      "kind": "coreword",
+      "surface": "UNFOLD",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Anamorphism that generates an indexed sequence by repeatedly applying a state transition.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.any",
+      "kind": "coreword",
+      "surface": "ANY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Existential predicate fold over an indexed sequence into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.all",
+      "kind": "coreword",
+      "surface": "ALL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Universal predicate fold over an indexed sequence into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.count",
+      "kind": "coreword",
+      "surface": "COUNT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Counting fold over the predicate-satisfying elements of an indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.scan",
+      "kind": "coreword",
+      "surface": "SCAN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/tests/higher_order_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Prefix-catamorphism exposing intermediate accumulator states over an indexed sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
     },
     {
       "id": "hosted.clock.deterministic",
@@ -1897,6 +2331,58 @@
       "algebraic_family": "exact-scalar"
     },
     {
+      "id": "core.bool",
+      "kind": "coreword",
+      "surface": "BOOL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses or projects a value into the K3 truth domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "core.chr",
+      "kind": "coreword",
+      "surface": "CHR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.6",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/tests/string_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
@@ -1953,30 +2439,448 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "alias.plus",
+      "kind": "symbol_alias",
+      "surface": "+",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for ADD; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "ADD"
+    },
+    {
+      "id": "alias.minus",
+      "kind": "symbol_alias",
+      "surface": "-",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for SUB; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "SUB"
+    },
+    {
+      "id": "alias.asterisk",
+      "kind": "symbol_alias",
+      "surface": "*",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for MUL; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "MUL"
+    },
+    {
+      "id": "alias.percent",
+      "kind": "symbol_alias",
+      "surface": "%",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for MOD; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "MOD"
+    },
+    {
+      "id": "alias.equals",
+      "kind": "symbol_alias",
+      "surface": "=",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for EQ; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "EQ"
+    },
+    {
+      "id": "alias.less-than",
+      "kind": "symbol_alias",
+      "surface": "<",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for LT; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "LT"
+    },
+    {
+      "id": "alias.less-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": "<=",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for LTE; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "LTE"
+    },
+    {
+      "id": "alias.greater-than",
+      "kind": "symbol_alias",
+      "surface": ">",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for GT; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "GT"
+    },
+    {
+      "id": "alias.greater-than-or-equal",
+      "kind": "symbol_alias",
+      "surface": ">=",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for GTE; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "GTE"
+    },
+    {
+      "id": "alias.not-equal",
+      "kind": "symbol_alias",
+      "surface": "<>",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for NEQ; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "NEQ"
+    },
+    {
+      "id": "alias.bang",
+      "kind": "symbol_alias",
+      "surface": "!",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for FORC; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "FORC"
+    },
+    {
+      "id": "alias.ampersand",
+      "kind": "symbol_alias",
+      "surface": "&",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for AND; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "AND"
+    },
+    {
+      "id": "alias.dot",
+      "kind": "syntax_sugar",
+      "surface": ".",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for TOP; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "TOP"
+    },
+    {
+      "id": "alias.dot-dot",
+      "kind": "syntax_sugar",
+      "surface": "..",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for STAK; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "STAK"
+    },
+    {
+      "id": "alias.comma",
+      "kind": "syntax_sugar",
+      "surface": ",",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for EAT; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "EAT"
+    },
+    {
+      "id": "alias.comma-comma",
+      "kind": "syntax_sugar",
+      "surface": ",,",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for KEEP; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "KEEP"
+    },
+    {
+      "id": "alias.quote",
+      "kind": "input_helper",
+      "surface": "'",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Editor/input helper marker; not a runtime coreword.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar"
+    },
+    {
+      "id": "alias.question",
+      "kind": "symbol_alias",
+      "surface": "?",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for LOOKUP; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "LOOKUP"
+    },
+    {
+      "id": "alias.equals-equals",
+      "kind": "syntax_sugar",
+      "surface": "==",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Surface sugar for PIPE; desugaring is observation-transparent.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "PIPE"
     }
   ],
   "unclassified_allowlist": [
-    "core.top",
-    "core.eat",
-    "core.idle",
-    "core.cond",
-    "core.pipe",
-    "core.or-nil",
-    "core.map",
-    "core.filter",
-    "core.fold",
-    "core.unfold",
-    "core.any",
-    "core.all",
-    "core.count",
-    "core.scan",
     "core.print",
     "core.precompute",
     "core.del",
     "core.lookup",
     "core.forc",
-    "core.exec",
-    "core.eval",
     "core.import-only",
     "core.unimport",
     "core.unimport-only",
@@ -2063,32 +2967,12 @@
     "module.math.pow",
     "module.math.gcd",
     "module.math.lcm",
-    "alias.plus",
-    "alias.minus",
-    "alias.asterisk",
-    "alias.percent",
-    "alias.equals",
-    "alias.less-than",
-    "alias.less-than-or-equal",
-    "alias.greater-than",
-    "alias.greater-than-or-equal",
-    "alias.not-equal",
-    "alias.bang",
-    "alias.ampersand",
-    "alias.dot",
-    "alias.dot-dot",
-    "alias.comma",
-    "alias.comma-comma",
-    "alias.quote",
-    "alias.question",
-    "alias.equals-equals",
     "surface.hash",
     "surface.dollar",
     "surface.left-bracket",
     "surface.right-bracket",
     "surface.left-brace",
     "surface.right-brace",
-    "surface.quote",
     "surface.semicolon",
     "surface.semicolon-semicolon",
     "surface.left-paren"
