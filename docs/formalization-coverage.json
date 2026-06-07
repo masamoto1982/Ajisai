@@ -4234,6 +4234,878 @@
       "desugars_to": "RESERVED-BEGIN"
     },
     {
+      "id": "module.music.seq",
+      "kind": "moduleword",
+      "surface": "MUSIC@SEQ",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Sets the interpreter music play mode to sequential; the later PLAY boundary observes that mode when constructing audio output.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "module.music.sim",
+      "kind": "moduleword",
+      "surface": "MUSIC@SIM",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Sets the interpreter music play mode to simultaneous; the later PLAY boundary observes that mode when constructing audio output.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "module.music.slot",
+      "kind": "moduleword",
+      "surface": "MUSIC@SLOT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Sets the host-observed slot-duration configuration after checking the audio capability and validating a positive exact scalar.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.gain",
+      "kind": "moduleword",
+      "surface": "MUSIC@GAIN",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Emits a host audio gain effect after scalar extraction and clamping to the portable gain interval.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.gain-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@GAIN-RESET",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Emits the host audio effect that restores gain to the default value.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.pan",
+      "kind": "moduleword",
+      "surface": "MUSIC@PAN",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Emits a host audio pan effect after scalar extraction and clamping to the portable pan interval.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.pan-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@PAN-RESET",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Emits the host audio effect that restores pan to center.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.fx-reset",
+      "kind": "moduleword",
+      "surface": "MUSIC@FX-RESET",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Emits the host audio effect that resets gain and pan controls to their defaults.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.play",
+      "kind": "moduleword",
+      "surface": "MUSIC@PLAY",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Renders music values into an AUDIO host command; sequencing, grouping, rests, and warnings are observed only at this hosted boundary.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.music.seq-group",
+      "kind": "moduleword",
+      "surface": "MUSIC@SEQ-GROUP",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds an explicit sequential music group from an indexed sequence of child music values.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.sim-group",
+      "kind": "moduleword",
+      "surface": "MUSIC@SIM-GROUP",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.chord",
+      "kind": "moduleword",
+      "surface": "MUSIC@CHORD",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.hz",
+      "kind": "moduleword",
+      "surface": "MUSIC@HZ",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.dur",
+      "kind": "moduleword",
+      "surface": "MUSIC@DUR",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Wraps a positive exact scalar duration into an explicit music.duration record.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.note",
+      "kind": "moduleword",
+      "surface": "MUSIC@NOTE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Combines a music.pitch and music.duration record into a music.note record.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.rest",
+      "kind": "moduleword",
+      "surface": "MUSIC@REST",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds a music.rest record from a music.duration record.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.edo",
+      "kind": "moduleword",
+      "surface": "MUSIC@EDO",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.edr",
+      "kind": "moduleword",
+      "surface": "MUSIC@EDR",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.step",
+      "kind": "moduleword",
+      "surface": "MUSIC@STEP",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Resolves a step index within a tuning record into a derived music.pitch record.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.voice",
+      "kind": "moduleword",
+      "surface": "MUSIC@VOICE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Tags a music group with the role of a single melodic voice.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.track",
+      "kind": "moduleword",
+      "surface": "MUSIC@TRACK",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Tags a music group with the role of an instrument track.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.measure",
+      "kind": "moduleword",
+      "surface": "MUSIC@MEASURE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Tags a music group with the role of a measure/bar.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.phrase",
+      "kind": "moduleword",
+      "surface": "MUSIC@PHRASE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Tags a music group with the role of a phrase.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.with-tuning",
+      "kind": "moduleword",
+      "surface": "MUSIC@WITH-TUNING",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.adsr",
+      "kind": "moduleword",
+      "surface": "MUSIC@ADSR",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.sine",
+      "kind": "moduleword",
+      "surface": "MUSIC@SINE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.square",
+      "kind": "moduleword",
+      "surface": "MUSIC@SQUARE",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.saw",
+      "kind": "moduleword",
+      "surface": "MUSIC@SAW",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.tri",
+      "kind": "moduleword",
+      "surface": "MUSIC@TRI",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.music.explain",
+      "kind": "moduleword",
+      "surface": "MUSIC@EXPLAIN",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/audio/audio_effect_tests.rs",
+        "rust/src/interpreter/audio/audio_integration_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Produces a structured textual explanation of how MUSIC@PLAY would interpret the value while preserving the stack value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.observation.structured-diagnostic",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
       "id": "alias.plus",
       "kind": "symbol_alias",
       "surface": "+",
@@ -4668,36 +5540,5 @@
       "desugars_to": "PIPE"
     }
   ],
-  "unclassified_allowlist": [
-    "module.music.seq",
-    "module.music.sim",
-    "module.music.slot",
-    "module.music.gain",
-    "module.music.gain-reset",
-    "module.music.pan",
-    "module.music.pan-reset",
-    "module.music.fx-reset",
-    "module.music.play",
-    "module.music.seq-group",
-    "module.music.sim-group",
-    "module.music.chord",
-    "module.music.hz",
-    "module.music.dur",
-    "module.music.note",
-    "module.music.rest",
-    "module.music.edo",
-    "module.music.edr",
-    "module.music.step",
-    "module.music.voice",
-    "module.music.track",
-    "module.music.measure",
-    "module.music.phrase",
-    "module.music.with-tuning",
-    "module.music.explain",
-    "module.music.adsr",
-    "module.music.sine",
-    "module.music.square",
-    "module.music.saw",
-    "module.music.tri"
-  ]
+  "unclassified_allowlist": []
 }
