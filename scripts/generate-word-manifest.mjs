@@ -125,6 +125,7 @@ function semanticMetadataForEntry(entry, coverageEntries) {
       'reason',
       'exit_options',
       'review_gate',
+      'implementation_schema',
       'classification',
     ]) {
       if (key in coverageEntry) metadata[key] = coverageEntry[key];

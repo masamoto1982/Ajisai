@@ -913,7 +913,8 @@
       "derived_from": [
         "algebra.k3.meet"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
       "id": "core.or",
@@ -939,7 +940,8 @@
       "derived_from": [
         "algebra.k3.join"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
       "id": "core.not",
@@ -965,7 +967,8 @@
       "derived_from": [
         "algebra.k3.involution"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value"
     },
     {
       "id": "core.arithmetic.rational",

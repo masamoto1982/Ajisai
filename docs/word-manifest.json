@@ -717,6 +717,7 @@
       "derived_from": [
         "algebra.k3.meet"
       ],
+      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values",
       "classification": "Core"
     },
     {
@@ -732,6 +733,7 @@
       "derived_from": [
         "algebra.k3.join"
       ],
+      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values",
       "classification": "Core"
     },
     {
@@ -747,6 +749,7 @@
       "derived_from": [
         "algebra.k3.involution"
       ],
+      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value",
       "classification": "Core"
     },
     {
