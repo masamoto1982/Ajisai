@@ -11,6 +11,221 @@ use crate::types::continued_fraction::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, SparseTensor, Value, ValueData};
 
+#[derive(Clone, Copy)]
+enum ExactArithmeticSchema {
+    Add,
+    Sub,
+    Mul,
+    Div,
+}
+
+impl ExactArithmeticSchema {
+    fn fraction(self, a: &Fraction, b: &Fraction) -> Result<Fraction> {
+        match self {
+            ExactArithmeticSchema::Add => Ok(a.add(b)),
+            ExactArithmeticSchema::Sub => Ok(a.sub(b)),
+            ExactArithmeticSchema::Mul => Ok(a.mul(b)),
+            ExactArithmeticSchema::Div => {
+                if b.is_zero() {
+                    Err(AjisaiError::DivisionByZero)
+                } else {
+                    Ok(a.div(b))
+                }
+            }
+        }
+    }
+
+    fn exact_real(self, a: &ExactReal, b: &ExactReal) -> Option<ExactReal> {
+        match self {
+            ExactArithmeticSchema::Add => Some(a.add(b)),
+            ExactArithmeticSchema::Sub => Some(a.sub(b)),
+            ExactArithmeticSchema::Mul => Some(a.mul(b)),
+            ExactArithmeticSchema::Div => a.div(b),
+        }
+    }
+}
+
+fn consume_stacktop_binary(interp: &mut Interpreter) {
+    if interp.consumption_mode != ConsumptionMode::Keep {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
+}
+
+fn division_by_zero_bubble() -> Value {
+    Value::bubble_with_reason(
+        NilReason::DivisionByZero,
+        AbsenceOrigin::ExecutionFailure,
+        Recoverability::Recoverable,
+    )
+}
+
+fn push_interval_schema_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+    a: &Value,
+    b: &Value,
+) -> Result<bool> {
+    let (Some(ai), Some(bi)) = (value_to_interval(a), value_to_interval(b)) else {
+        return Ok(false);
+    };
+    consume_stacktop_binary(interp);
+    match schema {
+        ExactArithmeticSchema::Add => interp.stack.push(interval_to_value(ai.add(&bi))),
+        ExactArithmeticSchema::Sub => interp.stack.push(interval_to_value(ai.sub(&bi))),
+        ExactArithmeticSchema::Mul => interp.stack.push(interval_to_value(ai.mul(&bi))),
+        ExactArithmeticSchema::Div => match ai.div(&bi) {
+            Ok(result) => interp.stack.push(interval_to_value(result)),
+            Err(AjisaiError::DivisionByZero) => interp.stack.push(division_by_zero_bubble()),
+            Err(error) => return Err(error),
+        },
+    }
+    Ok(true)
+}
+
+fn simd_schema_candidate(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Option<Value> {
+    match schema {
+        ExactArithmeticSchema::Add => simd_ops::apply_simd_add(a, b)
+            .or_else(|| simd_ops::apply_simd_scalar_add(a, b))
+            .or_else(|| simd_ops::apply_simd_scalar_add(b, a)),
+        ExactArithmeticSchema::Sub => simd_ops::apply_simd_sub(a, b),
+        ExactArithmeticSchema::Mul => simd_ops::apply_simd_mul(a, b)
+            .or_else(|| simd_ops::apply_simd_scalar_mul(a, b))
+            .or_else(|| simd_ops::apply_simd_scalar_mul(b, a)),
+        ExactArithmeticSchema::Div => None,
+    }
+}
+
+fn push_simd_schema_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+    a: &Value,
+    b: &Value,
+) -> bool {
+    let Some(result) = simd_schema_candidate(schema, a, b) else {
+        return false;
+    };
+    interp.runtime_metrics.vtu_simd_kernel_use_count = interp
+        .runtime_metrics
+        .vtu_simd_kernel_use_count
+        .saturating_add(1);
+    consume_stacktop_binary(interp);
+    interp.stack.push(result);
+    true
+}
+
+fn push_exact_real_schema_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+    a: &Value,
+    b: &Value,
+) -> bool {
+    let has_exact = matches!(&a.data, ValueData::ExactScalar(_))
+        || matches!(&b.data, ValueData::ExactScalar(_));
+    if !has_exact {
+        return false;
+    }
+    let Some(a_exact) = extract_exact_real_from_value(a) else {
+        return false;
+    };
+    let Some(b_exact) = extract_exact_real_from_value(b) else {
+        return false;
+    };
+    consume_stacktop_binary(interp);
+    if let Some(result) = schema.exact_real(&a_exact, &b_exact) {
+        interp.stack.push(Value::from_exact_real(result));
+    } else {
+        interp.stack.push(division_by_zero_bubble());
+    }
+    true
+}
+
+fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
+    if interp.operation_target_mode != OperationTargetMode::StackTop || interp.stack.len() < 2 {
+        return None;
+    }
+    let stack_len = interp.stack.len();
+    Some((
+        interp.stack[stack_len - 2].clone(),
+        interp.stack[stack_len - 1].clone(),
+    ))
+}
+
+fn apply_exact_arithmetic_schema(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::StackTop
+        && nil_passthrough_binary(interp)
+    {
+        return Ok(());
+    }
+
+    if let Some((a, b)) = stacktop_pair(interp) {
+        if push_interval_schema_result(interp, schema, &a, &b)? {
+            return Ok(());
+        }
+        if push_simd_schema_result(interp, schema, &a, &b) {
+            return Ok(());
+        }
+        if matches!(schema, ExactArithmeticSchema::Mul) {
+            if let Some(result) = sparse_mul_candidate(&a, &b) {
+                consume_stacktop_binary(interp);
+                interp.stack.push(result);
+                return Ok(());
+            }
+        }
+        if push_exact_real_schema_result(interp, schema, &a, &b) {
+            return Ok(());
+        }
+    }
+
+    if matches!(schema, ExactArithmeticSchema::Div)
+        && interp.operation_target_mode == OperationTargetMode::StackTop
+    {
+        let stack_len = interp.stack.len();
+        if stack_len >= 2 {
+            let left_hint = interp.semantic_registry.lookup_hint_at(stack_len - 2);
+            let right_hint = interp.semantic_registry.lookup_hint_at(stack_len - 1);
+            if matches!(left_hint, Interpretation::Text)
+                || matches!(right_hint, Interpretation::Text)
+            {
+                return Err(AjisaiError::create_structure_error("number", "string"));
+            }
+        }
+        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+        let operands = extract_operands(interp, 2)?;
+        let a_val = &operands[0];
+        let b_val = &operands[1];
+
+        match apply_binary_broadcast_with_metrics(
+            a_val,
+            b_val,
+            |a, b| schema.fraction(a, b),
+            Some(&mut interp.runtime_metrics),
+        ) {
+            Ok(result) => {
+                push_result(interp, result);
+                return Ok(());
+            }
+            Err(AjisaiError::DivisionByZero) => {
+                interp.stack.push(division_by_zero_bubble());
+                return Ok(());
+            }
+            Err(error) => {
+                if !is_keep_mode {
+                    for val in operands {
+                        interp.stack.push(val);
+                    }
+                }
+                return Err(error);
+            }
+        }
+    }
+
+    apply_binary_arithmetic(interp, |a, b| schema.fraction(a, b))
+}
+
 fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
     match &val.data {
         ValueData::Scalar(f) => Some(f.clone()),
@@ -42,24 +257,6 @@ fn is_scalar_value(val: &Value) -> bool {
     matches!(&val.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
         || matches!(&val.data, ValueData::Vector(c) if c.len() == 1 && extract_scalar_from_value(&c[0]).is_some())
         || matches!(&val.data, ValueData::Tensor { data, .. } if data.len() == 1)
-}
-
-/// Apply an ExactReal binary operation to two stack values where at least
-/// one is an `ExactScalar`. Returns `None` if neither value is an ExactScalar
-/// (let the Fraction fast path handle it).
-fn try_exact_real_binary_op<F>(a_val: &Value, b_val: &Value, op: F) -> Option<Value>
-where
-    F: Fn(&ExactReal, &ExactReal) -> Option<ExactReal>,
-{
-    let has_exact = matches!(&a_val.data, ValueData::ExactScalar(_))
-        || matches!(&b_val.data, ValueData::ExactScalar(_));
-    if !has_exact {
-        return None;
-    }
-    let a = extract_exact_real_from_value(a_val)?;
-    let b = extract_exact_real_from_value(b_val)?;
-    let result = op(&a, &b)?;
-    Some(Value::from_exact_real(result))
 }
 
 fn sparse_mul_candidate(a: &Value, b: &Value) -> Option<Value> {
@@ -209,320 +406,17 @@ where
 }
 
 pub fn op_add(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = interp.stack[stack_len - 2].clone();
-        let b = interp.stack[stack_len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(interval_to_value(ai.add(&bi)));
-            return Ok(());
-        }
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-
-        if let Some(result) = simd_ops::apply_simd_add(a, b) {
-            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-                .runtime_metrics
-                .vtu_simd_kernel_use_count
-                .saturating_add(1);
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-
-        if let Some(result) =
-            simd_ops::apply_simd_scalar_add(a, b).or_else(|| simd_ops::apply_simd_scalar_add(b, a))
-        {
-            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-                .runtime_metrics
-                .vtu_simd_kernel_use_count
-                .saturating_add(1);
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    // ExactScalar path: at least one operand is an exact irrational
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.add(b))) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.add(b)))
+    apply_exact_arithmetic_schema(interp, ExactArithmeticSchema::Add)
 }
 
 pub fn op_sub(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = interp.stack[stack_len - 2].clone();
-        let b = interp.stack[stack_len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(interval_to_value(ai.sub(&bi)));
-            return Ok(());
-        }
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-
-        if let Some(result) = simd_ops::apply_simd_sub(a, b) {
-            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-                .runtime_metrics
-                .vtu_simd_kernel_use_count
-                .saturating_add(1);
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    // ExactScalar path
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.sub(b))) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.sub(b)))
+    apply_exact_arithmetic_schema(interp, ExactArithmeticSchema::Sub)
 }
 
 pub fn op_mul(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = interp.stack[stack_len - 2].clone();
-        let b = interp.stack[stack_len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(interval_to_value(ai.mul(&bi)));
-            return Ok(());
-        }
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-
-        if let Some(result) = simd_ops::apply_simd_mul(a, b) {
-            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-                .runtime_metrics
-                .vtu_simd_kernel_use_count
-                .saturating_add(1);
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-
-        if let Some(result) =
-            simd_ops::apply_simd_scalar_mul(a, b).or_else(|| simd_ops::apply_simd_scalar_mul(b, a))
-        {
-            interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-                .runtime_metrics
-                .vtu_simd_kernel_use_count
-                .saturating_add(1);
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-
-        if let Some(result) = sparse_mul_candidate(a, b) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    // ExactScalar path
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| Some(a.mul(b))) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        }
-    }
-    apply_binary_arithmetic(interp, |a, b| Ok(a.mul(b)))
+    apply_exact_arithmetic_schema(interp, ExactArithmeticSchema::Mul)
 }
 
 pub fn op_div(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = interp.stack[stack_len - 2].clone();
-        let b = interp.stack[stack_len - 1].clone();
-        if let (Some(ai), Some(bi)) = (value_to_interval(&a), value_to_interval(&b)) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            match ai.div(&bi) {
-                Ok(result) => interp.stack.push(interval_to_value(result)),
-                Err(AjisaiError::DivisionByZero) => interp.stack.push(Value::bubble_with_reason(
-                    NilReason::DivisionByZero,
-                    AbsenceOrigin::ExecutionFailure,
-                    Recoverability::Recoverable,
-                )),
-                Err(error) => return Err(error),
-            }
-            return Ok(());
-        }
-    }
-    // ExactScalar path: at least one operand is an exact irrational. Placed
-    // before the generic broadcast block (which cannot convert ExactScalar to
-    // a FlatTensor and would hard-error first), matching op_add/op_sub/op_mul.
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
-        let stack_len = interp.stack.len();
-        let a = &interp.stack[stack_len - 2];
-        let b = &interp.stack[stack_len - 1];
-        if let Some(result) = try_exact_real_binary_op(a, b, |a, b| a.div(b)) {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(result);
-            return Ok(());
-        } else if matches!(&a.data, ValueData::ExactScalar(_))
-            || matches!(&b.data, ValueData::ExactScalar(_))
-        {
-            // div returned None — structurally-zero divisor. DivisionByZero is a
-            // recoverable Bubble (NilReason::DivisionByZero), not a hard error.
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            interp.stack.push(Value::bubble_with_reason(
-                NilReason::DivisionByZero,
-                AbsenceOrigin::ExecutionFailure,
-                Recoverability::Recoverable,
-            ));
-            return Ok(());
-        }
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        let stack_len = interp.stack.len();
-        if stack_len >= 2 {
-            let left_hint = interp.semantic_registry.lookup_hint_at(stack_len - 2);
-            let right_hint = interp.semantic_registry.lookup_hint_at(stack_len - 1);
-            if matches!(left_hint, Interpretation::Text)
-                || matches!(right_hint, Interpretation::Text)
-            {
-                return Err(AjisaiError::create_structure_error("number", "string"));
-            }
-        }
-        let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-        let operands = extract_operands(interp, 2)?;
-        let a_val = &operands[0];
-        let b_val = &operands[1];
-
-        match apply_binary_broadcast_with_metrics(
-            a_val,
-            b_val,
-            |a, b| {
-                if b.is_zero() {
-                    Err(AjisaiError::DivisionByZero)
-                } else {
-                    Ok(a.div(b))
-                }
-            },
-            Some(&mut interp.runtime_metrics),
-        ) {
-            Ok(result) => {
-                push_result(interp, result);
-                return Ok(());
-            }
-            Err(AjisaiError::DivisionByZero) => {
-                interp.stack.push(Value::bubble_with_reason(
-                    NilReason::DivisionByZero,
-                    AbsenceOrigin::ExecutionFailure,
-                    Recoverability::Recoverable,
-                ));
-                return Ok(());
-            }
-            Err(error) => {
-                if !is_keep_mode {
-                    for val in operands {
-                        interp.stack.push(val);
-                    }
-                }
-                return Err(error);
-            }
-        }
-    }
-
-    apply_binary_arithmetic(interp, |a, b| {
-        if b.is_zero() {
-            Err(AjisaiError::DivisionByZero)
-        } else {
-            Ok(a.div(b))
-        }
-    })
+    apply_exact_arithmetic_schema(interp, ExactArithmeticSchema::Div)
 }

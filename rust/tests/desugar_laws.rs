@@ -9,37 +9,26 @@
 //! of infinitely many tokenizer conformance cases: if desugaring were not
 //! `⟦desugar(s)⟧ = ⟦s⟧`, some generated pair would render differently.
 //!
-//! Observation matches the conformance runner: whole-stack `Value::to_string`.
+//! Observation is structured, not a display-string fragment: laws compare stack
+//! renders plus semantic axes (including NIL/UNKNOWN absence diagnosis), effect
+//! trace, and error category.
 
-use ajisai_core::interpreter::Interpreter;
+mod test_support;
+
 use proptest::prelude::*;
-
-fn eval(src: &str) -> String {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .expect("tokio current-thread runtime");
-    rt.block_on(async {
-        let mut interp = Interpreter::new();
-        interp
-            .execute(src)
-            .await
-            .unwrap_or_else(|e| panic!("program failed: {src:?}: {e}"));
-        interp
-            .get_stack()
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(" ")
-    })
-}
+use test_support::observe::{observe_program, ProgramObservation};
 
 fn assert_law(name: &str, lhs: &str, rhs: &str) {
-    let l = eval(lhs);
-    let r = eval(rhs);
+    let l = observe_program(lhs);
+    let r = observe_program(rhs);
     assert_eq!(
         l, r,
-        "law `{name}` broken:\n  {lhs:?} => {l}\n  {rhs:?} => {r}"
+        "law `{name}` broken:\n  {lhs:?} => {l:#?}\n  {rhs:?} => {r:#?}"
     );
+}
+
+fn observed(src: &str) -> ProgramObservation {
+    observe_program(src)
 }
 
 fn small() -> impl Strategy<Value = i64> {
@@ -92,6 +81,62 @@ proptest! {
         assert_law("semicolon-dot-comma", &format!("{a} {b} ; ADD"), &format!("{a} {b} . , ADD"));
         assert_law("semicolon-default",   &format!("{a} {b} ; ADD"), &format!("{a} {b} ADD"));
     }
+}
+
+#[test]
+fn arithmetic_alias_preserves_nil_absence_metadata() {
+    let alias = observed("1 0 /");
+    let canonical = observed("1 0 DIV");
+    assert_eq!(alias, canonical);
+    let top = alias.stack.last().expect("division leaves a value");
+    let absence = top
+        .axes
+        .absence
+        .as_ref()
+        .expect("division by zero projects structured NIL");
+    assert_eq!(absence.reason, Some("divisionByZero"));
+    // Origin is still a structured field and is compared above through the
+    // full ProgramObservation equality; the current runtime tags this as the
+    // execution site rather than the arithmetic domain site.
+    assert!(!absence.origin.is_empty());
+    assert!(
+        alias.effects.is_empty(),
+        "arithmetic sugar must not emit effects"
+    );
+    assert_eq!(alias.error_category, None);
+}
+
+#[test]
+fn comparison_alias_preserves_unknown_diagnosis() {
+    let lhs = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 =";
+    let rhs = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+    let alias = observed(lhs);
+    let canonical = observed(rhs);
+    assert_eq!(alias, canonical);
+    let top = alias.stack.last().expect("comparison leaves a value");
+    assert_eq!(top.axes.truth_value, Some("unknown"));
+    let absence = top
+        .axes
+        .absence
+        .as_ref()
+        .expect("logical UNKNOWN carries structured metadata");
+    assert_eq!(absence.reason, Some("logicallyUnknown"));
+    assert!(
+        absence.diagnosis.is_some(),
+        "UNKNOWN comparison should preserve AI-readable diagnosis"
+    );
+    assert_eq!(alias.effects, canonical.effects);
+    assert_eq!(alias.error_category, None);
+}
+
+#[test]
+fn alias_error_category_is_observationally_transparent() {
+    let alias = observed("+");
+    let canonical = observed("ADD");
+    assert_eq!(alias, canonical);
+    assert_eq!(alias.error_category, Some("stackUnderflow"));
+    assert!(alias.stack.is_empty());
+    assert!(alias.effects.is_empty());
 }
 
 // ── AND alias `&` over the three-valued domain {T, F, U} (§7.5) ──
