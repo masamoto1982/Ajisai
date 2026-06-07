@@ -164,6 +164,11 @@
       "description": "Structured diagnostic observation; never a leaked host/Rust error variant."
     },
     {
+      "id": "algebra.observation.digest",
+      "algebraic_family": "observation",
+      "notes": "Deterministic digest observation over canonical serialized values; used by pure CRYPTO@HASH."
+    },
+    {
       "id": "capability.check",
       "algebraic_family": "hosted-effect",
       "kind": "capability",
@@ -2288,7 +2293,7 @@
         "SPECIFICATION.md §12"
       ],
       "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
         "rust/tests/string_laws.rs"
@@ -2314,10 +2319,42 @@
         "SPECIFICATION.md §12"
       ],
       "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
-        "rust/tests/string_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-sqrt2-not-less-than-one",
+        "core-sqrt2-less-than-two"
+      ],
+      "status": "Formalized",
+      "notes": "Budgeted exact-real strict less-than projected into the K3 truth domain; undecidable comparisons yield UNKNOWN.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.lte",
+      "kind": "coreword",
+      "surface": "LTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
       ],
       "conformance_cases": [],
       "status": "Formalized",
@@ -2328,63 +2365,121 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "observation"
     },
     {
-      "id": "core.import.name-resolution",
-      "kind": "semantic-area",
-      "surface": "IMPORT / DEF / dictionary resolution",
+      "id": "core.gt",
+      "kind": "coreword",
+      "surface": "GT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.8",
-        "SPECIFICATION.md §7.10",
-        "SPECIFICATION.md §8",
-        "SPECIFICATION.md §9"
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
       ],
       "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
       ],
       "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than is the operand-dual of LT over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.gte",
+      "kind": "coreword",
+      "surface": "GTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4",
+        "SPECIFICATION.md §7.4.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/tests/algebraic_laws.rs",
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.compare-within",
+      "kind": "coreword",
+      "surface": "COMPARE-WITHIN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.3"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
       ],
       "conformance_cases": [
-        "core-user-definition-resolved",
-        "core-sort-imported",
-        "core-sqrt2-continued-fraction"
+        "core-compare-within-gt",
+        "core-compare-within-lt",
+        "core-compare-within-eq"
       ],
       "status": "Formalized",
-      "notes": "User dictionaries and module imports are deterministic name-resolution observations.",
+      "notes": "Surface exposure of the explicit budgeted-order primitive: returns -1/0/1 for decided order or UNKNOWN with agreedPrefix on budget exhaustion.",
       "semantic_role": "Primitive",
       "primitive": true,
       "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.state-transformer.composition"
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "observation"
     },
     {
-      "id": "exploratory.child-runtime",
-      "kind": "semantic-area",
-      "surface": "SPAWN/AWAIT",
-      "classification": "Exploratory",
+      "id": "core.exact-real.sqrt",
+      "kind": "moduleword",
+      "surface": "'math' IMPORT SQRT",
+      "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.11",
-        "SPECIFICATION.md §10"
+        "SPECIFICATION.md §4.2.3",
+        "SPECIFICATION.md §7.3"
       ],
       "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
+        "rust/tests/nicf_gosper_feasibility.rs"
       ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Child-runtime semantics are modeled but not yet part of the Core portability contract.",
-      "semantic_role": "Exploratory",
+      "conformance_cases": [
+        "core-sqrt2-continued-fraction",
+        "core-sqrt2-plus-one-continued-fraction",
+        "core-sqrt2-plus-sqrt2-gosper"
+      ],
+      "status": "Formalized",
+      "notes": "Irrational observations are canonical continued fractions, never sqrt(...) Debug-style wrappers or ~ rational approximations.",
+      "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition"
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.gosper"
       ],
       "algebraic_family": "state-transformer"
     },
