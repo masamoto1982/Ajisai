@@ -166,7 +166,8 @@
     {
       "id": "algebra.observation.digest",
       "algebraic_family": "observation",
-      "notes": "Deterministic digest observation over canonical serialized values; used by pure CRYPTO@HASH."
+      "kind": "operation",
+      "description": "Deterministic digest observation over canonical serialized values; pure CRYPTO@HASH derives from it without a host read effect."
     },
     {
       "id": "capability.check",
