@@ -839,6 +839,7 @@
         "algebra.structure-lift.applicative",
         "algebra.state-transformer.composition"
       ],
+      "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift",
       "classification": "Core"
     },
     {
@@ -856,6 +857,7 @@
         "algebra.k3.domain",
         "algebra.state-transformer.composition"
       ],
+      "implementation_schema": "traversal_scheme(filter) -> predicate_application -> sequence_projection",
       "classification": "Core"
     },
     {
@@ -872,6 +874,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
+      "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy",
       "classification": "Core"
     },
     {
@@ -888,6 +891,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
+      "implementation_schema": "state_seed -> block_application -> sequence_generation_policy",
       "classification": "Core"
     },
     {
@@ -904,6 +908,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
+      "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection",
       "classification": "Core"
     },
     {
@@ -920,6 +925,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
+      "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection",
       "classification": "Core"
     },
     {
@@ -937,6 +943,7 @@
         "algebra.k3.domain",
         "algebra.exact-real.continued-fraction"
       ],
+      "implementation_schema": "predicate_fold(count) via traversal_scheme + exact count projection",
       "classification": "Core"
     },
     {
@@ -953,6 +960,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
+      "implementation_schema": "traversal_scheme(scan) -> block_application -> prefix_accumulator_policy",
       "classification": "Core"
     },
     {

@@ -1785,7 +1785,8 @@
         "algebra.structure-lift.applicative",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift"
     },
     {
       "id": "core.filter",
@@ -1811,7 +1812,8 @@
         "algebra.k3.domain",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "implementation_schema": "traversal_scheme(filter) -> predicate_application -> sequence_projection"
     },
     {
       "id": "core.fold",
@@ -1839,7 +1841,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy"
     },
     {
       "id": "core.unfold",
@@ -1864,7 +1867,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "implementation_schema": "state_seed -> block_application -> sequence_generation_policy"
     },
     {
       "id": "core.any",
@@ -1889,7 +1893,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection"
     },
     {
       "id": "core.all",
@@ -1914,7 +1919,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection"
     },
     {
       "id": "core.count",
@@ -1940,7 +1946,8 @@
         "algebra.k3.domain",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "implementation_schema": "predicate_fold(count) via traversal_scheme + exact count projection"
     },
     {
       "id": "core.scan",
@@ -1965,7 +1972,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "implementation_schema": "traversal_scheme(scan) -> block_application -> prefix_accumulator_policy"
     },
     {
       "id": "hosted.clock.deterministic",
