@@ -1026,7 +1026,8 @@
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "implementation_schema": "exact_arithmetic_schema(Add) via apply_exact_arithmetic_schema"
     },
     {
       "id": "core.sub",
@@ -1052,7 +1053,8 @@
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "implementation_schema": "exact_arithmetic_schema(Sub) via apply_exact_arithmetic_schema"
     },
     {
       "id": "core.mul",
@@ -1080,7 +1082,8 @@
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "implementation_schema": "exact_arithmetic_schema(Mul) via apply_exact_arithmetic_schema"
     },
     {
       "id": "core.div",
@@ -1109,7 +1112,8 @@
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "implementation_schema": "exact_arithmetic_schema(Div) via apply_exact_arithmetic_schema"
     },
     {
       "id": "core.mod",
