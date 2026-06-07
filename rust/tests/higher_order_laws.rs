@@ -151,6 +151,22 @@ fn filter_predicates_commute() {
 // ── ANY / ALL De Morgan duality: ALL p ≡ ¬ ANY ¬p ──
 
 #[test]
+fn any_is_count_positive_projection() {
+    let cases = [
+        ("[ 1 2 3 4 5 ]", "2 >"),
+        ("[ 1 2 3 ]", "5 >"),
+        ("[ -1 0 1 ]", "0 >"),
+    ];
+    for (v, p) in cases {
+        assert_law(
+            &format!("any-count-positive[{v};{p}]"),
+            &format!("{v} {{ {p} }} ANY"),
+            &format!("{v} {{ {p} }} COUNT [ 0 ] GT"),
+        );
+    }
+}
+
+#[test]
 fn all_any_de_morgan() {
     let cases = [
         ("[ 1 2 3 ]", "0 >"),

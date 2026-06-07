@@ -12,6 +12,7 @@ const allowedStatuses = new Set([
   'HostedEffect',
   'Exploratory',
   'NotPortableYet',
+  'Deprecated',
 ]);
 
 const allowedSemanticRoles = new Set([
@@ -21,6 +22,14 @@ const allowedSemanticRoles = new Set([
   'HostedEffect',
   'Exploratory',
   'NotPortableYet',
+  'Extension',
+  'Deprecated',
+]);
+
+const allowedPrimitiveStatuses = new Set([
+  'accepted',
+  'provisional',
+  'deprecated',
 ]);
 
 const allowedAlgebraicFamilies = new Set([
@@ -40,6 +49,20 @@ const allowedAlgebraicFamilies = new Set([
 
 function fail(message) {
   throw new Error(`[formalization-coverage] ${message}`);
+}
+
+function hasNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function hasNonEmptyStringArray(value) {
+  return Array.isArray(value) && value.length > 0 && value.every((item) => hasNonEmptyString(item));
+}
+
+function hasSchemaValue(value) {
+  if (hasNonEmptyString(value)) return true;
+  if (hasNonEmptyStringArray(value)) return true;
+  return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
 }
 
 function normalizeSurface(value) {
@@ -103,6 +126,17 @@ function validateWordManifest(coverage) {
       if (typeof entry[key] !== 'string' || entry[key].trim() === '') {
         fail(`${where}: manifest entry missing non-empty ${key}`);
       }
+    }
+    if (!hasNonEmptyString(entry.canonical)) fail(`${where}: manifest entry missing non-empty canonical`);
+    if (!hasNonEmptyString(entry.semantic_role)) fail(`${where}: manifest entry missing non-empty semantic_role`);
+    if (!allowedSemanticRoles.has(entry.semantic_role)) {
+      fail(`${where}: manifest entry has invalid semantic_role ${entry.semantic_role}`);
+    }
+    if (entry.semantic_role === 'Sugar' && !hasNonEmptyString(entry.desugars_to)) {
+      fail(`${where}: Sugar manifest entries need desugars_to`);
+    }
+    if (entry.semantic_role === 'HostedEffect' && (!hasSchemaValue(entry.capability) || !hasSchemaValue(entry.effect_schema))) {
+      fail(`${where}: HostedEffect manifest entries need capability and effect_schema`);
     }
     if (manifestById.has(entry.id)) fail(`${where}: duplicate manifest id`);
     manifestById.set(entry.id, entry);
@@ -189,6 +223,14 @@ if ('algebra_primitives' in coverage) {
     ) {
       fail(`${pw}: primitive needs a known algebraic_family`);
     }
+    if (!hasNonEmptyString(prim.description)) fail(`${pw}: primitive needs description`);
+    if (!hasNonEmptyString(prim.kind)) fail(`${pw}: primitive needs kind`);
+    if (!hasNonEmptyString(prim.admission_reason)) fail(`${pw}: primitive needs admission_reason`);
+    if (!hasNonEmptyStringArray(prim.introduced_by)) fail(`${pw}: primitive needs non-empty introduced_by`);
+    if (!hasNonEmptyStringArray(prim.can_derive)) fail(`${pw}: primitive needs non-empty can_derive`);
+    if (!hasNonEmptyString(prim.status) || !allowedPrimitiveStatuses.has(prim.status)) {
+      fail(`${pw}: primitive needs status accepted|provisional|deprecated`);
+    }
   }
 }
 
@@ -256,6 +298,21 @@ for (const [index, entry] of coverage.entries.entries()) {
 
     if (entry.semantic_role === 'Primitive' && entry.primitive !== true) {
       fail(`${where}: Primitive entries must set primitive to true`);
+    }
+
+    if (entry.semantic_role === 'Sugar' && !hasNonEmptyString(entry.desugars_to)) {
+      fail(`${where}: Sugar entries need desugars_to`);
+    }
+
+    if (entry.semantic_role === 'HostedEffect' && (!hasSchemaValue(entry.capability) || !hasSchemaValue(entry.effect_schema))) {
+      fail(`${where}: HostedEffect entries need capability and effect_schema`);
+    }
+
+    if (entry.semantic_role === 'Exploratory') {
+      if (!hasNonEmptyString(entry.reason)) fail(`${where}: Exploratory entries need reason`);
+      if (!hasNonEmptyStringArray(entry.exit_options)) fail(`${where}: Exploratory entries need non-empty exit_options`);
+      if (!hasNonEmptyString(entry.review_gate)) fail(`${where}: Exploratory entries need review_gate`);
+      if (entry.classification === 'Core') fail(`${where}: Exploratory entries must not be classified as Core`);
     }
 
     if (entry.semantic_role === 'HostedEffect' && entry.classification === 'Core') {
