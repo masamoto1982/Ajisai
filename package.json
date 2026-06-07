@@ -25,7 +25,8 @@
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
-    "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs"
+    "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
+    "simplify:report": "node scripts/ajisai-simplify-report.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
