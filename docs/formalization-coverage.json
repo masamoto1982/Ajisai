@@ -164,6 +164,11 @@
       "description": "Structured diagnostic observation; never a leaked host/Rust error variant."
     },
     {
+      "id": "algebra.observation.digest",
+      "algebraic_family": "observation",
+      "notes": "Deterministic digest observation over canonical serialized values; used by pure CRYPTO@HASH."
+    },
+    {
       "id": "capability.check",
       "algebraic_family": "hosted-effect",
       "kind": "capability",
@@ -2331,58 +2336,6 @@
       "algebraic_family": "exact-scalar"
     },
     {
-      "id": "core.bool",
-      "kind": "coreword",
-      "surface": "BOOL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses or projects a value into the K3 truth domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "k3-truth"
-    },
-    {
-      "id": "core.chr",
-      "kind": "coreword",
-      "surface": "CHR",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-scalar"
-    },
-    {
       "id": "core.import.name-resolution",
       "kind": "semantic-area",
       "surface": "IMPORT / DEF / dictionary resolution",
@@ -2415,6 +2368,346 @@
       "algebraic_family": "dictionary"
     },
     {
+      "id": "core.print",
+      "kind": "coreword",
+      "surface": "PRINT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §5.2",
+        "SPECIFICATION.md §7.11",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "PRINT is the outbound rendering boundary: it renders the consumed value and appends a host effect after capability gating.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "core.precompute",
+      "kind": "coreword",
+      "surface": "PRECOMPUTE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §8.2",
+        "SPECIFICATION.md §12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/interpreter_definition_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Definition-time staging composes the block transformer into dictionary installation while preserving the resulting user-word observation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.state-transformer.composition",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.del",
+      "kind": "coreword",
+      "surface": "DEL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §8.3",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "DEL removes user dictionary bindings; for fresh definitions, DEF followed by DEL restores name resolution to Unknown, while module dictionaries remain intact.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.lookup",
+      "kind": "coreword",
+      "surface": "LOOKUP",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.8",
+        "SPECIFICATION.md §8"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "LOOKUP observes the active dictionary/name-resolution state and emits structured documentation/diagnostics without changing the dictionary.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.forc",
+      "kind": "coreword",
+      "surface": "FORC",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.8",
+        "SPECIFICATION.md §8.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "FORC is the dependency-graph override modifier consumed by protected destructive dictionary transitions such as redefining or deleting referenced user words.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.modifier.consumption.eat",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "modifier"
+    },
+    {
+      "id": "core.import-only",
+      "kind": "coreword",
+      "surface": "IMPORT-ONLY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "IMPORT-ONLY is the selective visibility operator on module dictionaries: it exposes exactly selected module/sample words and treats Core-listed boundary selectors as no-ops.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.unimport",
+      "kind": "coreword",
+      "surface": "UNIMPORT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "UNIMPORT shrinks a module visibility set while preserving referenced module words, acting as the inverse of full import when no references pin the module.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.unimport-only",
+      "kind": "coreword",
+      "surface": "UNIMPORT-ONLY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.md §7.14",
+        "SPECIFICATION.md §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "UNIMPORT-ONLY hides selected module/sample words and rejects selectors pinned by user-word dependencies.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "core.spawn",
+      "kind": "coreword",
+      "surface": "SPAWN",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.3"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.await",
+      "kind": "coreword",
+      "surface": "AWAIT",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.4"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.status",
+      "kind": "coreword",
+      "surface": "STATUS",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.5"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.kill",
+      "kind": "coreword",
+      "surface": "KILL",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.6"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "core.monitor",
+      "kind": "coreword",
+      "surface": "MONITOR",
+      "classification": "Exploratory",
+      "spec_sections": [
+        "SPECIFICATION.md §10.7"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
+      ],
+      "law_tests": [
+        "rust/tests/child_runtime_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Exploratory",
+      "notes": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
+      "semantic_role": "Exploratory",
+      "primitive": false,
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer"
+    },
+    {
       "id": "exploratory.child-runtime",
       "kind": "semantic-area",
       "surface": "SPAWN/AWAIT",
@@ -2439,6 +2732,1506 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer"
+    },
+    {
+      "id": "module.json.parse",
+      "kind": "moduleword",
+      "surface": "JSON@PARSE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses JSON text into Ajisai record/vector/scalar values, projecting malformed input to Bubble/NIL.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.stringify",
+      "kind": "moduleword",
+      "surface": "JSON@STRINGIFY",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Serializes Ajisai values through canonical JSON text observation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "module.json.get",
+      "kind": "moduleword",
+      "surface": "JSON@GET",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Looks up a record/object key and projects absent keys through the Bubble/NIL domain.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.keys",
+      "kind": "moduleword",
+      "surface": "JSON@KEYS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects an object domain to its insertion-ordered key sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.set",
+      "kind": "moduleword",
+      "surface": "JSON@SET",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Returns a pointwise-updated record/object map while preserving the finite-map domain model.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.has",
+      "kind": "moduleword",
+      "surface": "JSON@HAS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Observes membership of a key in a record/object map as a K3 truth value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.values",
+      "kind": "moduleword",
+      "surface": "JSON@VALUES",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects an object codomain to its insertion-ordered value sequence.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.merge",
+      "kind": "moduleword",
+      "surface": "JSON@MERGE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Combines two finite object maps with right-hand keys taking precedence on conflict.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.delete",
+      "kind": "moduleword",
+      "surface": "JSON@DELETE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs",
+        "rust/tests/record_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Removes a key from a finite object map without mutating module dictionaries.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary"
+    },
+    {
+      "id": "module.json.export",
+      "kind": "moduleword",
+      "surface": "JSON@EXPORT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Exports a JSON serialization through a host file-write boundary, gated by host IO capability.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.io.input",
+      "kind": "moduleword",
+      "surface": "IO@INPUT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Reads text from the host input buffer; the value observation is capability-gated host input.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.io.output",
+      "kind": "moduleword",
+      "surface": "IO@OUTPUT",
+      "classification": "HostedEffect",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/src/json_io_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "HostedEffect",
+      "notes": "Writes a rendered value to the host output buffer as an outbound IO effect.",
+      "semantic_role": "HostedEffect",
+      "primitive": false,
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "hosted-effect"
+    },
+    {
+      "id": "module.time.datetime",
+      "kind": "moduleword",
+      "surface": "TIME@DATETIME",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Renders an instant/offset pair to a civil datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "module.time.timestamp",
+      "kind": "moduleword",
+      "surface": "TIME@TIMESTAMP",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Resolves a civil datetime tuple and UTC offset to an instant scalar.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "module.time.date",
+      "kind": "moduleword",
+      "surface": "TIME@DATE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects a civil datetime tuple to its date tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.time",
+      "kind": "moduleword",
+      "surface": "TIME@TIME",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects a civil datetime tuple to its time-of-day tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.year",
+      "kind": "moduleword",
+      "surface": "TIME@YEAR",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the year component from a date/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.month",
+      "kind": "moduleword",
+      "surface": "TIME@MONTH",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the month component from a date/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.day",
+      "kind": "moduleword",
+      "surface": "TIME@DAY",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the day component from a date/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.hour",
+      "kind": "moduleword",
+      "surface": "TIME@HOUR",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the hour component from a time/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.minute",
+      "kind": "moduleword",
+      "surface": "TIME@MINUTE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the minute component from a time/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.second",
+      "kind": "moduleword",
+      "surface": "TIME@SECOND",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the second component from a time/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.time.weekday",
+      "kind": "moduleword",
+      "surface": "TIME@WEEKDAY",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Computes the ISO weekday scalar from a date/datetime tuple.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.time.add-days",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-DAYS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Shifts a date/datetime tuple by an exact whole-day scalar.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.time.diff-days",
+      "kind": "moduleword",
+      "surface": "TIME@DIFF-DAYS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Computes an exact whole-day difference between date/datetime tuples.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.time.format",
+      "kind": "moduleword",
+      "surface": "TIME@FORMAT",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Formats a date/datetime tuple as ISO-8601 text.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "module.time.parse-iso",
+      "kind": "moduleword",
+      "surface": "TIME@PARSE-ISO",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Parses ISO-8601 civil text into a datetime tuple, projecting invalid input to Bubble/NIL.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar"
+    },
+    {
+      "id": "module.time.add-months",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-MONTHS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Shifts a date/datetime tuple by exact whole months with month-end clamping.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.time.add-years",
+      "kind": "moduleword",
+      "surface": "TIME@ADD-YEARS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
+        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/datetime_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Shifts a date/datetime tuple by exact whole years with leap-day clamping.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.crypto.hash",
+      "kind": "moduleword",
+      "surface": "CRYPTO@HASH",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1",
+        "SPECIFICATION.md §11"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/hash_tests.rs",
+        "rust/tests/effect_observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Computes a deterministic digest of the canonical serialized stack value; unlike CSPRNG it is pure and has no host read effect.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.observation.digest",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "module.algo.sort",
+      "kind": "moduleword",
+      "surface": "ALGO@SORT",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §7.4.3",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-ter",
+        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/tests/structural_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Sorts indexed sequences by the budgeted order observation; undecidable comparisons project to K3 Unknown rather than a partial order.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.algo.unique",
+      "kind": "moduleword",
+      "surface": "ALGO@UNIQUE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/algo_ops_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Removes later duplicates from an indexed sequence, preserving first-occurrence order under equality observation.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.algo.contains",
+      "kind": "moduleword",
+      "surface": "ALGO@CONTAINS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/algo_ops_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Observes whether an indexed sequence contains a value equal to the query.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "module.algo.index-of",
+      "kind": "moduleword",
+      "surface": "ALGO@INDEX-OF",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/algo_ops_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the first equal element position from an indexed sequence, or Bubble/NIL if absent.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "structure-lift"
+    },
+    {
+      "id": "module.math.sqrt-eps",
+      "kind": "moduleword",
+      "surface": "MATH@SQRT-EPS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Computes a square-root interval with an explicit exact width budget.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.interval",
+      "kind": "moduleword",
+      "surface": "MATH@INTERVAL",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Constructs an exact rational interval [lower, upper].",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.lower",
+      "kind": "moduleword",
+      "surface": "MATH@LOWER",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the lower endpoint of an exact number or interval.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.upper",
+      "kind": "moduleword",
+      "surface": "MATH@UPPER",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects the upper endpoint of an exact number or interval.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.width",
+      "kind": "moduleword",
+      "surface": "MATH@WIDTH",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Computes interval width as upper minus lower.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.gosper",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.is-exact",
+      "kind": "moduleword",
+      "surface": "MATH@IS-EXACT",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Observes whether a number/interval denotes a degenerate exact value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "k3-truth"
+    },
+    {
+      "id": "module.math.abs",
+      "kind": "moduleword",
+      "surface": "MATH@ABS",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Absolute value derived from sign/order and exact arithmetic.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.neg",
+      "kind": "moduleword",
+      "surface": "MATH@NEG",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Additive inverse over exact numeric values.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.gosper"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.sign",
+      "kind": "moduleword",
+      "surface": "MATH@SIGN",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Projects exact numeric order against zero to -1/0/1.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.min",
+      "kind": "moduleword",
+      "surface": "MATH@MIN",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Selects the smaller operand using budgeted order, projecting undecidable comparisons to Unknown.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.max",
+      "kind": "moduleword",
+      "surface": "MATH@MAX",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Selects the larger operand using budgeted order, projecting undecidable comparisons to Unknown.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.pow",
+      "kind": "moduleword",
+      "surface": "MATH@POW",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Integer-exponent exact power over continued-fraction/rational values.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.gosper",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.gcd",
+      "kind": "moduleword",
+      "surface": "MATH@GCD",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Greatest common divisor on exact integer inputs, with domain failures projected through Bubble/NIL.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "module.math.lcm",
+      "kind": "moduleword",
+      "surface": "MATH@LCM",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.md §4.2",
+        "SPECIFICATION.md §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/math_ops_tests.rs",
+        "rust/tests/algebraic_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Least common multiple on exact integer inputs, with domain failures projected through Bubble/NIL.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "surface.hash",
+      "kind": "source_directive",
+      "surface": "#",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Line-comment source directive: lexical-only, ignored before runtime token evaluation; not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "COMMENT-LINE"
+    },
+    {
+      "id": "surface.dollar",
+      "kind": "control_directive",
+      "surface": "$",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "COND clause separator/control directive; parser-level sugar for guard/body partitioning, not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "COND-CLAUSE"
+    },
+    {
+      "id": "surface.left-bracket",
+      "kind": "delimiter_sugar",
+      "surface": "[",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Vector opening delimiter; parser-level structure for vector literal construction, not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "BEGIN-VECTOR"
+    },
+    {
+      "id": "surface.right-bracket",
+      "kind": "delimiter_sugar",
+      "surface": "]",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Vector closing delimiter; parser-level structure for vector literal construction, not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "END-VECTOR"
+    },
+    {
+      "id": "surface.left-brace",
+      "kind": "delimiter_sugar",
+      "surface": "{",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Block opening delimiter; parser-level structure for quotation/code-block construction, not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "BEGIN-BLOCK"
+    },
+    {
+      "id": "surface.right-brace",
+      "kind": "delimiter_sugar",
+      "surface": "}",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Block closing delimiter; parser-level structure for quotation/code-block construction, not a runtime word.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "END-BLOCK"
+    },
+    {
+      "id": "surface.semicolon",
+      "kind": "modifier_sugar",
+      "surface": ";",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Modifier shorthand equivalent to `. ,` / TOP EAT under the desugar laws.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": ". ,"
+    },
+    {
+      "id": "surface.semicolon-semicolon",
+      "kind": "modifier_sugar",
+      "surface": ";;",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Modifier shorthand equivalent to `.. ,,` / STAK KEEP under the desugar laws.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": ".. ,,"
+    },
+    {
+      "id": "surface.left-paren",
+      "kind": "reserved_marker",
+      "surface": "(",
+      "classification": "Surface",
+      "spec_sections": [
+        "SPECIFICATION.md §3.9"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
+      ],
+      "law_tests": [
+        "rust/tests/desugar_laws.rs",
+        "rust/src/surface_forms.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Reserved continued-fraction serialization marker; invalid in source and classified as lexical reserved marker rather than runtime vocabulary.",
+      "semantic_role": "Sugar",
+      "primitive": false,
+      "derived_from": [],
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "RESERVED-BEGIN"
     },
     {
       "id": "alias.plus",
@@ -2876,19 +4669,6 @@
     }
   ],
   "unclassified_allowlist": [
-    "core.print",
-    "core.precompute",
-    "core.del",
-    "core.lookup",
-    "core.forc",
-    "core.import-only",
-    "core.unimport",
-    "core.unimport-only",
-    "core.spawn",
-    "core.await",
-    "core.status",
-    "core.kill",
-    "core.monitor",
     "module.music.seq",
     "module.music.sim",
     "module.music.slot",
@@ -2918,63 +4698,6 @@
     "module.music.sine",
     "module.music.square",
     "module.music.saw",
-    "module.music.tri",
-    "module.json.parse",
-    "module.json.stringify",
-    "module.json.get",
-    "module.json.keys",
-    "module.json.set",
-    "module.json.has",
-    "module.json.values",
-    "module.json.merge",
-    "module.json.delete",
-    "module.json.export",
-    "module.io.input",
-    "module.io.output",
-    "module.time.datetime",
-    "module.time.timestamp",
-    "module.time.date",
-    "module.time.time",
-    "module.time.year",
-    "module.time.month",
-    "module.time.day",
-    "module.time.hour",
-    "module.time.minute",
-    "module.time.second",
-    "module.time.weekday",
-    "module.time.add-days",
-    "module.time.diff-days",
-    "module.time.format",
-    "module.time.parse-iso",
-    "module.time.add-months",
-    "module.time.add-years",
-    "module.crypto.hash",
-    "module.algo.sort",
-    "module.algo.unique",
-    "module.algo.contains",
-    "module.algo.index-of",
-    "module.math.sqrt-eps",
-    "module.math.interval",
-    "module.math.lower",
-    "module.math.upper",
-    "module.math.width",
-    "module.math.is-exact",
-    "module.math.abs",
-    "module.math.neg",
-    "module.math.sign",
-    "module.math.min",
-    "module.math.max",
-    "module.math.pow",
-    "module.math.gcd",
-    "module.math.lcm",
-    "surface.hash",
-    "surface.dollar",
-    "surface.left-bracket",
-    "surface.right-bracket",
-    "surface.left-brace",
-    "surface.right-brace",
-    "surface.semicolon",
-    "surface.semicolon-semicolon",
-    "surface.left-paren"
+    "module.music.tri"
   ]
 }
