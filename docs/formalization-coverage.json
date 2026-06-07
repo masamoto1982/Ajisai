@@ -5,181 +5,799 @@
       "id": "algebra.k3.domain",
       "algebraic_family": "k3-truth",
       "kind": "domain",
-      "description": "Kleene three-valued truth domain {T,F,U}; a direct-sum component of V, disjoint from numbers."
+      "description": "Kleene three-valued truth domain {T,F,U}; a direct-sum component of V, disjoint from numbers.",
+      "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "TRUE",
+        "FALSE",
+        "EQ/LT/GT",
+        "EQ",
+        "NEQ",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE",
+        "COMPARE-WITHIN",
+        "COND",
+        "FILTER"
+      ],
+      "can_derive": [
+        "TRUE",
+        "FALSE",
+        "EQ/LT/GT",
+        "EQ",
+        "NEQ",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE",
+        "COMPARE-WITHIN",
+        "COND",
+        "FILTER",
+        "ANY",
+        "ALL",
+        "COUNT",
+        "STARTS-WITH?",
+        "ENDS-WITH?",
+        "BOOL",
+        "JSON@HAS",
+        "ALGO@SORT"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.k3.meet",
       "algebraic_family": "k3-truth",
       "kind": "operation",
-      "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from."
+      "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from.",
+      "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "AND"
+      ],
+      "can_derive": [
+        "AND"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.k3.join",
       "algebraic_family": "k3-truth",
       "kind": "operation",
-      "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from."
+      "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from.",
+      "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "OR"
+      ],
+      "can_derive": [
+        "OR"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.k3.involution",
       "algebraic_family": "k3-truth",
       "kind": "operation",
-      "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from."
+      "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from.",
+      "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "NOT"
+      ],
+      "can_derive": [
+        "NOT"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.exact-real.bihomographic",
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
-      "description": "Bihomographic (Gosper) transform over exact reals; ADD/SUB/MUL/DIV are coefficient instances."
+      "description": "Bihomographic (Gosper) transform over exact reals; ADD/SUB/MUL/DIV are coefficient instances.",
+      "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "ADD/SUB/MUL/DIV",
+        "ADD",
+        "SUB",
+        "MUL",
+        "DIV",
+        "MOD"
+      ],
+      "can_derive": [
+        "ADD/SUB/MUL/DIV",
+        "ADD",
+        "SUB",
+        "MUL",
+        "DIV",
+        "MOD"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.exact-real.budgeted-order",
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
-      "description": "Budgeted exact-real ordering; decides <, =, > within a budget or yields the logical U."
+      "description": "Budgeted exact-real ordering; decides <, =, > within a budget or yields the logical U.",
+      "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "EQ/LT/GT",
+        "EQ",
+        "NEQ",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE",
+        "COMPARE-WITHIN",
+        "ALGO@SORT",
+        "ALGO@UNIQUE",
+        "ALGO@CONTAINS",
+        "ALGO@INDEX-OF"
+      ],
+      "can_derive": [
+        "EQ/LT/GT",
+        "EQ",
+        "NEQ",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE",
+        "COMPARE-WITHIN",
+        "ALGO@SORT",
+        "ALGO@UNIQUE",
+        "ALGO@CONTAINS",
+        "ALGO@INDEX-OF",
+        "MATH@SQRT-EPS",
+        "MATH@INTERVAL",
+        "MATH@IS-EXACT",
+        "MATH@ABS",
+        "MATH@SIGN",
+        "MATH@MIN",
+        "MATH@MAX"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.exact-real.continued-fraction",
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
-      "description": "Continued-fraction construction of exact reals; canonical irrational observation, not an approximation."
+      "description": "Continued-fraction construction of exact reals; canonical irrational observation, not an approximation.",
+      "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "MOD",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "'math' IMPORT SQRT",
+        "COUNT",
+        ">CF",
+        "NUM",
+        "TIME@DATETIME",
+        "TIME@TIMESTAMP",
+        "TIME@YEAR",
+        "TIME@MONTH"
+      ],
+      "can_derive": [
+        "MOD",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "'math' IMPORT SQRT",
+        "COUNT",
+        ">CF",
+        "NUM",
+        "TIME@DATETIME",
+        "TIME@TIMESTAMP",
+        "TIME@YEAR",
+        "TIME@MONTH",
+        "TIME@DAY",
+        "TIME@HOUR",
+        "TIME@MINUTE",
+        "TIME@SECOND",
+        "TIME@WEEKDAY",
+        "MATH@SQRT-EPS",
+        "MATH@INTERVAL",
+        "MATH@LOWER"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.exact-real.gosper",
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
-      "description": "Gosper normalization over continued fractions; exact-real combination without rational fallback."
+      "description": "Gosper normalization over continued fractions; exact-real combination without rational fallback.",
+      "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "'math' IMPORT SQRT",
+        "TIME@ADD-DAYS",
+        "TIME@DIFF-DAYS",
+        "TIME@ADD-MONTHS",
+        "TIME@ADD-YEARS",
+        "MATH@WIDTH",
+        "MATH@ABS",
+        "MATH@NEG",
+        "MATH@POW"
+      ],
+      "can_derive": [
+        "'math' IMPORT SQRT",
+        "TIME@ADD-DAYS",
+        "TIME@DIFF-DAYS",
+        "TIME@ADD-MONTHS",
+        "TIME@ADD-YEARS",
+        "MATH@WIDTH",
+        "MATH@ABS",
+        "MATH@NEG",
+        "MATH@POW"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.exact-scalar.codepoint-sequence",
       "algebraic_family": "exact-scalar",
       "kind": "domain",
-      "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic."
+      "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic.",
+      "admission_reason": "Accepted as the shared exact-scalar schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "EVAL",
+        "string",
+        "CHARS",
+        "JOIN",
+        "TRIM",
+        "TRIM-LEFT",
+        "TRIM-RIGHT",
+        "TOKENIZE",
+        "SUBSTITUTE",
+        "STARTS-WITH?",
+        "ENDS-WITH?",
+        "NUM"
+      ],
+      "can_derive": [
+        "EVAL",
+        "string",
+        "CHARS",
+        "JOIN",
+        "TRIM",
+        "TRIM-LEFT",
+        "TRIM-RIGHT",
+        "TOKENIZE",
+        "SUBSTITUTE",
+        "STARTS-WITH?",
+        "ENDS-WITH?",
+        "NUM",
+        "STR",
+        "BOOL",
+        "CHR",
+        "PRINT",
+        "AWAIT",
+        "STATUS",
+        "KILL",
+        "JSON@PARSE"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.bubble.domain",
       "algebraic_family": "bubble",
       "kind": "domain",
-      "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN."
+      "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN.",
+      "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "NIL",
+        "OR-NIL",
+        "GET",
+        "REMOVE",
+        "NUM",
+        "CHR",
+        "JSON@PARSE",
+        "JSON@GET",
+        "TIME@PARSE-ISO",
+        "ALGO@INDEX-OF",
+        "MATH@GCD",
+        "MATH@LCM"
+      ],
+      "can_derive": [
+        "NIL",
+        "OR-NIL",
+        "GET",
+        "REMOVE",
+        "NUM",
+        "CHR",
+        "JSON@PARSE",
+        "JSON@GET",
+        "TIME@PARSE-ISO",
+        "ALGO@INDEX-OF",
+        "MATH@GCD",
+        "MATH@LCM"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.bubble.passthrough",
       "algebraic_family": "bubble",
       "kind": "operation",
-      "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged."
+      "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged.",
+      "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "ADD/SUB/MUL/DIV",
+        "ADD",
+        "SUB",
+        "MUL",
+        "DIV",
+        "MOD",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "EQ",
+        "NEQ",
+        "LT"
+      ],
+      "can_derive": [
+        "ADD/SUB/MUL/DIV",
+        "ADD",
+        "SUB",
+        "MUL",
+        "DIV",
+        "MOD",
+        "FLOOR",
+        "CEIL",
+        "ROUND",
+        "EQ",
+        "NEQ",
+        "LT",
+        "LTE",
+        "GT",
+        "GTE"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.bubble.handler",
       "algebraic_family": "bubble",
       "kind": "operation",
-      "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values."
+      "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values.",
+      "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "OR-NIL"
+      ],
+      "can_derive": [
+        "OR-NIL"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.structure-lift.indexed-sequence",
       "algebraic_family": "structure-lift",
       "kind": "domain",
-      "description": "Finite ordered index structure for vector values; GET/LENGTH/TAKE/SPLIT/CONCAT/REVERSE/RANGE/REORDER/COLLECT derive from this sequence algebra."
+      "description": "Finite ordered index structure for vector values; GET/LENGTH/TAKE/SPLIT/CONCAT/REVERSE/RANGE/REORDER/COLLECT derive from this sequence algebra.",
+      "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "FILTER",
+        "FOLD",
+        "UNFOLD",
+        "ANY",
+        "ALL",
+        "COUNT",
+        "SCAN",
+        "GET",
+        "INSERT",
+        "REPLACE",
+        "REMOVE",
+        "LENGTH"
+      ],
+      "can_derive": [
+        "FILTER",
+        "FOLD",
+        "UNFOLD",
+        "ANY",
+        "ALL",
+        "COUNT",
+        "SCAN",
+        "GET",
+        "INSERT",
+        "REPLACE",
+        "REMOVE",
+        "LENGTH",
+        "TAKE",
+        "SPLIT",
+        "CONCAT",
+        "REVERSE",
+        "RANGE",
+        "REORDER",
+        "COLLECT",
+        "SHAPE"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.structure-lift.applicative",
       "algebraic_family": "structure-lift",
       "kind": "operation",
-      "description": "Functorial/applicative lift of a scalar operation over a tensor index structure (map)."
+      "description": "Functorial/applicative lift of a scalar operation over a tensor index structure (map).",
+      "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "MAP",
+        "vector/tensor"
+      ],
+      "can_derive": [
+        "MAP",
+        "vector/tensor"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.structure-lift.zip",
       "algebraic_family": "structure-lift",
       "kind": "operation",
-      "description": "zipWith lift of a scalar binary operation with documented broadcast rules."
+      "description": "zipWith lift of a scalar binary operation with documented broadcast rules.",
+      "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "vector/tensor"
+      ],
+      "can_derive": [
+        "vector/tensor"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.structure-lift.reshape-group",
       "algebraic_family": "structure-lift",
       "kind": "operation",
-      "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, RANK, and FILL derive from this reshape-group action."
+      "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, RANK, and FILL derive from this reshape-group action.",
+      "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "SHAPE",
+        "RANK",
+        "RESHAPE",
+        "TRANSPOSE",
+        "FILL"
+      ],
+      "can_derive": [
+        "SHAPE",
+        "RANK",
+        "RESHAPE",
+        "TRANSPOSE",
+        "FILL"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.modifier.consumption.keep",
       "algebraic_family": "modifier",
       "kind": "operation",
-      "description": "Consumption policy that preserves operands; one axis of the modifier combinator."
+      "description": "Consumption policy that preserves operands; one axis of the modifier combinator.",
+      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "KEEP"
+      ],
+      "can_derive": [
+        "KEEP"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.modifier.consumption.eat",
       "algebraic_family": "modifier",
       "kind": "operation",
-      "description": "Consumption policy that removes operands after applying a word; one axis of the modifier combinator."
+      "description": "Consumption policy that removes operands after applying a word; one axis of the modifier combinator.",
+      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "EAT",
+        "FORC"
+      ],
+      "can_derive": [
+        "EAT",
+        "FORC"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.modifier.region.stack",
       "algebraic_family": "modifier",
       "kind": "operation",
-      "description": "Region selection over the whole operand stack; one axis of the modifier combinator."
+      "description": "Region selection over the whole operand stack; one axis of the modifier combinator.",
+      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "STAK"
+      ],
+      "can_derive": [
+        "STAK"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.modifier.region.top",
       "algebraic_family": "modifier",
       "kind": "operation",
-      "description": "Region selection over the top stack item; one axis of the modifier combinator."
+      "description": "Region selection over the top stack item; one axis of the modifier combinator.",
+      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "TOP"
+      ],
+      "can_derive": [
+        "TOP"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
       "kind": "operation",
-      "description": "Combinator that transforms a base state transformer (region x consumption x reconstruction)."
+      "description": "Combinator that transforms a base state transformer (region x consumption x reconstruction).",
+      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "KEEP",
+        "STAK",
+        "TOP",
+        "EAT"
+      ],
+      "can_derive": [
+        "KEEP",
+        "STAK",
+        "TOP",
+        "EAT"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.state-transformer.composition",
       "algebraic_family": "state-transformer",
       "kind": "operation",
-      "description": "Monoid composition of state transformers over Sigma = Stack x Dict x Eff."
+      "description": "Monoid composition of state transformers over Sigma = Stack x Dict x Eff.",
+      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "COND",
+        "EXEC",
+        "EVAL",
+        "MAP",
+        "FILTER",
+        "FOLD",
+        "UNFOLD",
+        "SCAN",
+        "IMPORT / DEF / dictionary resolution",
+        "PRECOMPUTE",
+        "DEL",
+        "IMPORT-ONLY"
+      ],
+      "can_derive": [
+        "COND",
+        "EXEC",
+        "EVAL",
+        "MAP",
+        "FILTER",
+        "FOLD",
+        "UNFOLD",
+        "SCAN",
+        "IMPORT / DEF / dictionary resolution",
+        "PRECOMPUTE",
+        "DEL",
+        "IMPORT-ONLY",
+        "UNIMPORT",
+        "UNIMPORT-ONLY",
+        "SPAWN",
+        "AWAIT",
+        "KILL",
+        "MONITOR",
+        "SPAWN/AWAIT",
+        "JSON@SET"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.state-transformer.identity",
       "algebraic_family": "state-transformer",
       "kind": "operation",
-      "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it."
+      "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it.",
+      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "PIPE",
+        "IDLE"
+      ],
+      "can_derive": [
+        "PIPE",
+        "IDLE"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.dictionary.lookup",
       "algebraic_family": "dictionary",
       "kind": "operation",
-      "description": "Deterministic dictionary lookup / name resolution over Dict."
+      "description": "Deterministic dictionary lookup / name resolution over Dict.",
+      "admission_reason": "Accepted as the shared dictionary schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "IMPORT / DEF / dictionary resolution",
+        "LOOKUP",
+        "IMPORT-ONLY",
+        "UNIMPORT",
+        "UNIMPORT-ONLY",
+        "JSON@GET",
+        "JSON@HAS"
+      ],
+      "can_derive": [
+        "IMPORT / DEF / dictionary resolution",
+        "LOOKUP",
+        "IMPORT-ONLY",
+        "UNIMPORT",
+        "UNIMPORT-ONLY",
+        "JSON@GET",
+        "JSON@HAS"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.dictionary.finite-partial-map",
       "algebraic_family": "dictionary",
       "kind": "domain",
-      "description": "Finite partial map with insertion order; the value-domain component records inhabit."
+      "description": "Finite partial map with insertion order; the value-domain component records inhabit.",
+      "admission_reason": "Accepted as the shared dictionary schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "record",
+        "PRECOMPUTE",
+        "DEL",
+        "FORC",
+        "IMPORT-ONLY",
+        "UNIMPORT",
+        "UNIMPORT-ONLY",
+        "JSON@PARSE",
+        "JSON@STRINGIFY",
+        "JSON@GET",
+        "JSON@KEYS",
+        "JSON@SET"
+      ],
+      "can_derive": [
+        "record",
+        "PRECOMPUTE",
+        "DEL",
+        "FORC",
+        "IMPORT-ONLY",
+        "UNIMPORT",
+        "UNIMPORT-ONLY",
+        "JSON@PARSE",
+        "JSON@STRINGIFY",
+        "JSON@GET",
+        "JSON@KEYS",
+        "JSON@SET",
+        "JSON@HAS",
+        "JSON@VALUES",
+        "JSON@MERGE",
+        "JSON@DELETE",
+        "MUSIC@SEQ-GROUP",
+        "MUSIC@SIM-GROUP",
+        "MUSIC@CHORD",
+        "MUSIC@HZ"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.eff.append",
       "algebraic_family": "state-transformer",
       "kind": "operation",
-      "description": "Append into the free-monoid effect log Eff, the third component of Sigma."
+      "description": "Append into the free-monoid effect log Eff, the third component of Sigma.",
+      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "NOW",
+        "RANDOM",
+        "SERIAL-*",
+        "PRINT",
+        "JSON@EXPORT",
+        "IO@OUTPUT",
+        "MUSIC@SLOT",
+        "MUSIC@GAIN",
+        "MUSIC@GAIN-RESET",
+        "MUSIC@PAN",
+        "MUSIC@PAN-RESET",
+        "MUSIC@FX-RESET"
+      ],
+      "can_derive": [
+        "NOW",
+        "RANDOM",
+        "SERIAL-*",
+        "PRINT",
+        "JSON@EXPORT",
+        "IO@OUTPUT",
+        "MUSIC@SLOT",
+        "MUSIC@GAIN",
+        "MUSIC@GAIN-RESET",
+        "MUSIC@PAN",
+        "MUSIC@PAN-RESET",
+        "MUSIC@FX-RESET",
+        "MUSIC@PLAY"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.observation.structured-diagnostic",
       "algebraic_family": "observation",
       "kind": "operation",
-      "description": "Structured diagnostic observation; never a leaked host/Rust error variant."
+      "description": "Structured diagnostic observation; never a leaked host/Rust error variant.",
+      "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "missing capability",
+        "LOOKUP",
+        "IO@INPUT",
+        "MUSIC@EXPLAIN"
+      ],
+      "can_derive": [
+        "missing capability",
+        "LOOKUP",
+        "IO@INPUT",
+        "MUSIC@EXPLAIN"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.observation.digest",
       "algebraic_family": "observation",
       "kind": "operation",
-      "description": "Deterministic digest observation over canonical serialized values; pure CRYPTO@HASH derives from it without a host read effect."
+      "description": "Deterministic digest observation over canonical serialized values; pure CRYPTO@HASH derives from it without a host read effect.",
+      "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "CRYPTO@HASH"
+      ],
+      "can_derive": [
+        "CRYPTO@HASH"
+      ],
+      "status": "accepted"
     },
     {
       "id": "capability.check",
       "algebraic_family": "hosted-effect",
       "kind": "capability",
-      "description": "Capability gate guarding a hosted effect; failure is a structured diagnostic, not a Core value."
+      "description": "Capability gate guarding a hosted effect; failure is a structured diagnostic, not a Core value.",
+      "admission_reason": "Accepted as the shared hosted-effect schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "NOW",
+        "RANDOM",
+        "SERIAL-*",
+        "missing capability",
+        "PRINT",
+        "JSON@EXPORT",
+        "IO@INPUT",
+        "IO@OUTPUT",
+        "MUSIC@SLOT",
+        "MUSIC@GAIN",
+        "MUSIC@GAIN-RESET",
+        "MUSIC@PAN"
+      ],
+      "can_derive": [
+        "NOW",
+        "RANDOM",
+        "SERIAL-*",
+        "missing capability",
+        "PRINT",
+        "JSON@EXPORT",
+        "IO@INPUT",
+        "IO@OUTPUT",
+        "MUSIC@SLOT",
+        "MUSIC@GAIN",
+        "MUSIC@GAIN-RESET",
+        "MUSIC@PAN",
+        "MUSIC@PAN-RESET",
+        "MUSIC@FX-RESET",
+        "MUSIC@PLAY"
+      ],
+      "status": "accepted"
     },
     {
       "id": "algebra.handle.domain",
       "algebraic_family": "state-transformer",
       "kind": "domain",
-      "description": "Child-runtime/supervisor handle value domain; currently Exploratory, outside the Core contract."
+      "description": "Child-runtime/supervisor handle value domain; currently Exploratory, outside the Core contract.",
+      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
+      "introduced_by": [
+        "SPAWN",
+        "AWAIT",
+        "STATUS",
+        "KILL",
+        "MONITOR",
+        "SPAWN/AWAIT"
+      ],
+      "can_derive": [
+        "SPAWN",
+        "AWAIT",
+        "STATUS",
+        "KILL",
+        "MONITOR",
+        "SPAWN/AWAIT"
+      ],
+      "status": "accepted"
     }
   ],
   "entries": [
@@ -295,7 +913,8 @@
       "derived_from": [
         "algebra.k3.meet"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
       "id": "core.or",
@@ -321,7 +940,8 @@
       "derived_from": [
         "algebra.k3.join"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
       "id": "core.not",
@@ -347,7 +967,8 @@
       "derived_from": [
         "algebra.k3.involution"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value"
     },
     {
       "id": "core.arithmetic.rational",
@@ -1361,7 +1982,9 @@
         "algebra.eff.append",
         "capability.check"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "time.read",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "hosted.csprng.deterministic",
@@ -1390,7 +2013,9 @@
         "algebra.eff.append",
         "capability.check"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "crypto.random",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "hosted.serial.effects",
@@ -1420,7 +2045,9 @@
         "algebra.eff.append",
         "capability.check"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "hosted.missing-capability.diagnostics",
@@ -1448,7 +2075,9 @@
         "capability.check",
         "algebra.observation.structured-diagnostic"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "diagnostic.capability",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "core.structural.vector-tensor",
@@ -2394,7 +3023,9 @@
         "capability.check",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "io.write",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "core.precompute",
@@ -2604,7 +3235,15 @@
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "reason": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "core.await",
@@ -2630,7 +3269,15 @@
         "algebra.state-transformer.composition",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "reason": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "core.status",
@@ -2655,7 +3302,15 @@
         "algebra.handle.domain",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "reason": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "core.kill",
@@ -2681,7 +3336,15 @@
         "algebra.state-transformer.composition",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "reason": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "core.monitor",
@@ -2706,7 +3369,15 @@
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "reason": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "exploratory.child-runtime",
@@ -2732,7 +3403,15 @@
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "reason": "Child-runtime semantics are modeled but not yet part of the Core portability contract.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.json.parse",
@@ -2996,7 +3675,9 @@
         "capability.check",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "serialization.export",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.io.input",
@@ -3023,7 +3704,9 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.observation.structured-diagnostic"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "io.read",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.io.output",
@@ -3050,7 +3733,9 @@
         "capability.check",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "io.write",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.time.datetime",
@@ -4316,7 +5001,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.gain",
@@ -4346,7 +5033,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.gain-reset",
@@ -4376,7 +5065,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.pan",
@@ -4406,7 +5097,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.pan-reset",
@@ -4436,7 +5129,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.fx-reset",
@@ -4466,7 +5161,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.play",
@@ -4496,7 +5193,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "hosted-effect"
+      "algebraic_family": "hosted-effect",
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation"
     },
     {
       "id": "module.music.seq-group",
@@ -4525,7 +5224,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds an explicit sequential music group from an indexed sequence of child music values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.sim-group",
@@ -4554,7 +5261,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.chord",
@@ -4583,7 +5298,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.hz",
@@ -4612,7 +5335,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.dur",
@@ -4641,7 +5372,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Wraps a positive exact scalar duration into an explicit music.duration record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.note",
@@ -4670,7 +5409,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Combines a music.pitch and music.duration record into a music.note record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.rest",
@@ -4699,7 +5446,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds a music.rest record from a music.duration record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.edo",
@@ -4728,7 +5483,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.edr",
@@ -4757,7 +5520,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.step",
@@ -4786,7 +5557,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Resolves a step index within a tuning record into a derived music.pitch record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.voice",
@@ -4815,7 +5594,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Tags a music group with the role of a single melodic voice.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.track",
@@ -4844,7 +5631,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Tags a music group with the role of an instrument track.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.measure",
@@ -4873,7 +5668,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Tags a music group with the role of a measure/bar.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.phrase",
@@ -4902,7 +5705,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Tags a music group with the role of a phrase.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.with-tuning",
@@ -4931,7 +5742,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.adsr",
@@ -4960,7 +5779,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.sine",
@@ -4989,7 +5816,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.square",
@@ -5018,7 +5853,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.saw",
@@ -5047,7 +5890,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.tri",
@@ -5076,7 +5927,15 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "reason": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization"
     },
     {
       "id": "module.music.explain",
@@ -5492,7 +6351,8 @@
       "semantic_role": "Sugar",
       "primitive": false,
       "derived_from": [],
-      "algebraic_family": "syntax-sugar"
+      "algebraic_family": "syntax-sugar",
+      "desugars_to": "STRING-QUOTE"
     },
     {
       "id": "alias.question",

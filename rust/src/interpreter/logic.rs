@@ -19,6 +19,54 @@ fn forces_k3_path(value: &Value) -> bool {
     value.is_nil() || value.is_unknown() || value.as_truth().is_some()
 }
 
+#[derive(Clone, Copy)]
+enum K3BinaryOp {
+    Meet,
+    Join,
+}
+
+impl K3BinaryOp {
+    fn combine(self, a: Ternary, b: Ternary) -> Ternary {
+        match self {
+            K3BinaryOp::Meet => logic_kleene::meet_k3(a, b),
+            K3BinaryOp::Join => logic_kleene::join_k3(a, b),
+        }
+    }
+
+    fn identity(self) -> Ternary {
+        match self {
+            K3BinaryOp::Meet => Ternary::True,
+            K3BinaryOp::Join => Ternary::False,
+        }
+    }
+
+    fn absorbing(self) -> Ternary {
+        match self {
+            K3BinaryOp::Meet => Ternary::False,
+            K3BinaryOp::Join => Ternary::True,
+        }
+    }
+}
+
+fn compute_k3_binary_value(op: K3BinaryOp, a: &Value, b: &Value) -> Value {
+    logic_kleene::into_value_with_diagnosis(
+        op.combine(Ternary::classify(a), Ternary::classify(b)),
+        &[a, b],
+    )
+}
+
+fn fold_k3_values(op: K3BinaryOp, items: &[Value]) -> Value {
+    let mut acc = op.identity();
+    for value in items {
+        acc = op.combine(acc, Ternary::classify(value));
+        if acc == op.absorbing() {
+            break;
+        }
+    }
+    let refs: Vec<&Value> = items.iter().collect();
+    logic_kleene::into_value_with_diagnosis(acc, &refs)
+}
+
 fn compute_inverted_fraction(f: &Fraction) -> Fraction {
     if f.is_zero() {
         Fraction::from(1)
@@ -36,7 +84,7 @@ fn compute_inverted_value(val: &Value, metrics: Option<&mut RuntimeMetrics>) -> 
         // ¬U = U: carry the operand's comparison diagnosis (agreedPrefix)
         // over to the result U (SPEC §4.5.0 / §7.4.1).
         return Ok(logic_kleene::into_value_with_diagnosis(
-            logic_kleene::not(Ternary::classify(val)),
+            logic_kleene::involution_k3(Ternary::classify(val)),
             &[val],
         ));
     }
@@ -123,12 +171,9 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
             // K3 (SPEC §7.5) when either operand is an operational NIL or
             // the logical Unknown (U); otherwise keep element-wise broadcast.
             if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
-                let result =
-                    logic_kleene::and(Ternary::classify(&a_val), Ternary::classify(&b_val));
-                interp.stack.push(logic_kleene::into_value_with_diagnosis(
-                    result,
-                    &[&a_val, &b_val],
-                ));
+                interp
+                    .stack
+                    .push(compute_k3_binary_value(K3BinaryOp::Meet, &a_val, &b_val));
                 return Ok(());
             }
 
@@ -167,19 +212,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            // STAK-mode K3 fold (SPEC §7.5): F absorbs, then NIL takes
-            // priority over U (SPEC §4.5.2), then U propagates, else T.
-            let mut acc = Ternary::True;
-            for v in &items {
-                acc = logic_kleene::and(acc, Ternary::classify(v));
-                if acc == Ternary::False {
-                    break;
-                }
-            }
-            let refs: Vec<&Value> = items.iter().collect();
-            interp
-                .stack
-                .push(logic_kleene::into_value_with_diagnosis(acc, &refs));
+            // STAK-mode K3 fold (SPEC §7.5): `AND = meet_K3` with F as
+            // the absorbing element and NIL-over-U priority centralized in
+            // `logic_kleene`.
+            interp.stack.push(fold_k3_values(K3BinaryOp::Meet, &items));
             Ok(())
         }
     }
@@ -209,11 +245,9 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
             // K3 (SPEC §7.5) when either operand is an operational NIL or
             // the logical Unknown (U); otherwise keep element-wise broadcast.
             if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
-                let result = logic_kleene::or(Ternary::classify(&a_val), Ternary::classify(&b_val));
-                interp.stack.push(logic_kleene::into_value_with_diagnosis(
-                    result,
-                    &[&a_val, &b_val],
-                ));
+                interp
+                    .stack
+                    .push(compute_k3_binary_value(K3BinaryOp::Join, &a_val, &b_val));
                 return Ok(());
             }
 
@@ -252,19 +286,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
 
-            // STAK-mode K3 fold (SPEC §7.5): T absorbs, then NIL takes
-            // priority over U (SPEC §4.5.2), then U propagates, else F.
-            let mut acc = Ternary::False;
-            for v in &items {
-                acc = logic_kleene::or(acc, Ternary::classify(v));
-                if acc == Ternary::True {
-                    break;
-                }
-            }
-            let refs: Vec<&Value> = items.iter().collect();
-            interp
-                .stack
-                .push(logic_kleene::into_value_with_diagnosis(acc, &refs));
+            // STAK-mode K3 fold (SPEC §7.5): `OR = join_K3` with T as
+            // the absorbing element and NIL-over-U priority centralized in
+            // `logic_kleene`.
+            interp.stack.push(fold_k3_values(K3BinaryOp::Join, &items));
             Ok(())
         }
     }
