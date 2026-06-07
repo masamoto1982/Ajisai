@@ -7,6 +7,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::continued_fraction::{CmpOutcome, ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
+use crate::types::interval::Interval;
 use crate::types::{Interpretation, Value, ValueData};
 
 /// One of the four ordering comparisons. Carries the dispatch
@@ -40,6 +41,31 @@ impl OrderingKind {
             OrderingKind::Le => o != Ordering::Greater,
             OrderingKind::Gt => o == Ordering::Greater,
             OrderingKind::Ge => o != Ordering::Less,
+        }
+    }
+
+    fn interval_decision(self, a: &Interval, b: &Interval) -> Option<bool> {
+        let (definitely_true, definitely_false) = match self {
+            OrderingKind::Lt => (a.hi.lt(&b.lo), a.lo.ge(&b.hi)),
+            OrderingKind::Le => (a.hi.le(&b.lo), a.lo.gt(&b.hi)),
+            OrderingKind::Gt => (a.lo.gt(&b.hi), a.hi.le(&b.lo)),
+            OrderingKind::Ge => (a.lo.ge(&b.hi), a.hi.lt(&b.lo)),
+        };
+        if definitely_true {
+            Some(true)
+        } else if definitely_false {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
+    fn surface(self) -> &'static str {
+        match self {
+            OrderingKind::Lt => "<",
+            OrderingKind::Le => "<=",
+            OrderingKind::Gt => ">",
+            OrderingKind::Ge => ">=",
         }
     }
 }
@@ -324,21 +350,11 @@ fn apply_binary_comparison(
     }
 }
 
-/// Three-valued interval comparison: `Some(true)` and `Some(false)` are
-/// decidable; `None` means the two intervals overlap in a way that depends on
-/// the unresolved precision of their endpoints. `definitely_true` and
-/// `definitely_false` encode the relation under test in terms of interval
-/// endpoints; they are independent so that callers can express LT/LTE/GT/GTE
-/// without re-deriving each truth table.
-fn interval_relation<F1, F2>(
-    interp: &mut Interpreter,
-    definitely_true: F1,
-    definitely_false: F2,
-) -> Option<Result<()>>
-where
-    F1: Fn(&crate::types::interval::Interval, &crate::types::interval::Interval) -> bool,
-    F2: Fn(&crate::types::interval::Interval, &crate::types::interval::Interval) -> bool,
-{
+/// Three-valued interval comparison for the same ordering schema used by the
+/// budgeted exact-real path: `Some(true)` and `Some(false)` are decidable;
+/// `None` means the intervals overlap in a way that depends on unresolved
+/// precision and therefore projects to logical `Unknown`.
+fn interval_relation_for_kind(interp: &mut Interpreter, kind: OrderingKind) -> Option<Result<()>> {
     if interp.stack.len() < 2 {
         return None;
     }
@@ -349,14 +365,7 @@ where
         (Some(ai), Some(bi)) => (ai, bi),
         _ => return None,
     };
-    let decided = if definitely_true(&ai, &bi) {
-        Some(true)
-    } else if definitely_false(&ai, &bi) {
-        Some(false)
-    } else {
-        None
-    };
-    Some(match decided {
+    Some(match kind.interval_decision(&ai, &bi) {
         Some(v) => {
             if interp.consumption_mode != ConsumptionMode::Keep {
                 interp.stack.pop();
@@ -377,68 +386,34 @@ where
     })
 }
 
-pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
+fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop
         && nil_passthrough_binary(interp)
     {
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) =
-            interval_relation(interp, |ai, bi| ai.hi.lt(&bi.lo), |ai, bi| ai.lo.ge(&bi.hi))
-        {
+        if let Some(res) = interval_relation_for_kind(interp, kind) {
             return res;
         }
     }
-    apply_binary_comparison(interp, OrderingKind::Lt, "<")
+    apply_binary_comparison(interp, kind, kind.surface())
+}
+
+pub fn op_lt(interp: &mut Interpreter) -> Result<()> {
+    apply_ordering_schema(interp, OrderingKind::Lt)
 }
 
 pub fn op_le(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) =
-            interval_relation(interp, |ai, bi| ai.hi.le(&bi.lo), |ai, bi| ai.lo.gt(&bi.hi))
-        {
-            return res;
-        }
-    }
-    apply_binary_comparison(interp, OrderingKind::Le, "<=")
+    apply_ordering_schema(interp, OrderingKind::Le)
 }
 
 pub fn op_gt(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) =
-            interval_relation(interp, |ai, bi| ai.lo.gt(&bi.hi), |ai, bi| ai.hi.le(&bi.lo))
-        {
-            return res;
-        }
-    }
-    apply_binary_comparison(interp, OrderingKind::Gt, ">")
+    apply_ordering_schema(interp, OrderingKind::Gt)
 }
 
 pub fn op_gte(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
-        return Ok(());
-    }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
-        if let Some(res) =
-            interval_relation(interp, |ai, bi| ai.lo.ge(&bi.hi), |ai, bi| ai.hi.lt(&bi.lo))
-        {
-            return res;
-        }
-    }
-    apply_binary_comparison(interp, OrderingKind::Ge, ">=")
+    apply_ordering_schema(interp, OrderingKind::Ge)
 }
 
 pub fn op_eq(interp: &mut Interpreter) -> Result<()> {

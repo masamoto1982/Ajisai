@@ -604,6 +604,7 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
+      "implementation_schema": "explicit_budgeted_order via op_compare_within",
       "classification": "Core"
     },
     {
@@ -621,6 +622,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
       "classification": "Core"
     },
     {
@@ -638,6 +640,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema",
       "classification": "Core"
     },
     {
@@ -655,6 +658,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "ordering_schema(Le) via apply_ordering_schema",
       "classification": "Core"
     },
     {
@@ -672,6 +676,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema",
       "classification": "Core"
     },
     {
@@ -689,6 +694,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema",
       "classification": "Core"
     },
     {
@@ -706,6 +712,7 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
+      "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq",
       "classification": "Core"
     },
     {

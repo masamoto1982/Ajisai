@@ -1285,7 +1285,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq"
     },
     {
       "id": "core.neq",
@@ -1313,7 +1314,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq"
     },
     {
       "id": "core.lt",
@@ -1344,7 +1346,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema"
     },
     {
       "id": "core.lte",
@@ -1372,7 +1375,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "ordering_schema(Le) via apply_ordering_schema"
     },
     {
       "id": "core.gt",
@@ -1400,7 +1404,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema"
     },
     {
       "id": "core.gte",
@@ -1428,7 +1433,8 @@
         "algebra.k3.domain",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema"
     },
     {
       "id": "core.compare-within",
@@ -1457,7 +1463,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "implementation_schema": "explicit_budgeted_order via op_compare_within"
     },
     {
       "id": "core.exact-real.sqrt",
