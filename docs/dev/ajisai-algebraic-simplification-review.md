@@ -47,19 +47,19 @@ The coverage metadata now distinguishes formalization progress (`status`) from a
 
 The success criterion of this theme is that Ajisai reads as *few semantic primitives + derived words that are traceable through `derived_from`*. To make that checkable rather than aspirational, `formalization-coverage.json` now declares the primitives explicitly in a top-level `algebra_primitives` registry, and every `derived_from` reference must resolve to a declared primitive (enforced by `check:formalization-coverage`).
 
-The current inventory is 22 primitives, grouped by algebraic family:
+The inventory grew as later rollout phases classified more surface and module words; the registry now declares 30 primitives, grouped by algebraic family:
 
 | Family | Primitives |
 | --- | --- |
 | `k3-truth` | `algebra.k3.domain`, `algebra.k3.meet`, `algebra.k3.join`, `algebra.k3.involution` |
 | `exact-arithmetic` | `algebra.exact-real.bihomographic`, `algebra.exact-real.budgeted-order`, `algebra.exact-real.continued-fraction`, `algebra.exact-real.gosper` |
 | `exact-scalar` | `algebra.exact-scalar.codepoint-sequence` |
-| `bubble` | `algebra.bubble.passthrough` |
-| `structure-lift` | `algebra.structure-lift.applicative`, `algebra.structure-lift.zip` |
-| `modifier` | `algebra.modifier.consumption.keep`, `algebra.modifier.region.stack` |
-| `state-transformer` | `algebra.state-transformer.combinator`, `algebra.state-transformer.composition`, `algebra.eff.append`, `algebra.handle.domain` |
+| `bubble` | `algebra.bubble.domain`, `algebra.bubble.passthrough`, `algebra.bubble.handler` |
+| `structure-lift` | `algebra.structure-lift.indexed-sequence`, `algebra.structure-lift.applicative`, `algebra.structure-lift.zip`, `algebra.structure-lift.reshape-group` |
+| `modifier` | `algebra.modifier.consumption.keep`, `algebra.modifier.consumption.eat`, `algebra.modifier.region.stack`, `algebra.modifier.region.top` |
+| `state-transformer` | `algebra.state-transformer.combinator`, `algebra.state-transformer.composition`, `algebra.state-transformer.identity`, `algebra.eff.append`, `algebra.handle.domain` |
 | `dictionary` | `algebra.dictionary.lookup`, `algebra.dictionary.finite-partial-map` |
-| `observation` | `algebra.observation.structured-diagnostic` |
+| `observation` | `algebra.observation.structured-diagnostic`, `algebra.observation.digest` |
 | `hosted-effect` | `capability.check` |
 
 Reading note: `derived_from` records what an entry *rests directly on*, regardless of role. A `Primitive` Ajisai word rests on its defining domain primitive (e.g. `TRUE` rests on `algebra.k3.domain`); a `Derived` word rests on the operation(s) it specializes (e.g. `AND` rests on `algebra.k3.meet`). The `semantic_role` field, not the presence of `derived_from`, is what distinguishes a primitive injection from a derived operation.
