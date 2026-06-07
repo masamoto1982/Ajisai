@@ -293,6 +293,32 @@ if (primitiveIds) {
     // not a hard error, so it does not break backward-compatible consumers.
     console.log(`[formalization-coverage] note: ${unused.length} declared primitive(s) unused: ${unused.join(', ')}`);
   }
+
+  // Non-fatal coherence note: an entry's algebraic_family should normally name
+  // a family it actually rests on, i.e. one of its derived_from primitives'
+  // families. `observation` and `syntax-sugar` are deliberate exceptions: they
+  // describe a projection/surface role rather than the family being rested on.
+  // Surfacing drift here would have caught e.g. a datetime word mislabeled with
+  // the text scalar family while resting only on arithmetic/structure primitives.
+  const primitiveFamily = new Map(
+    coverage.algebra_primitives.map((p) => [p.id, p.algebraic_family]),
+  );
+  const projectionFamilies = new Set(['observation', 'syntax-sugar']);
+  const incoherent = [];
+  for (const entry of coverage.entries) {
+    const family = entry.algebraic_family;
+    const refs = Array.isArray(entry.derived_from) ? entry.derived_from : [];
+    if (typeof family !== 'string' || refs.length === 0) continue;
+    if (projectionFamilies.has(family)) continue;
+    const restsOn = new Set(refs.map((ref) => primitiveFamily.get(ref)));
+    if (!restsOn.has(family)) {
+      incoherent.push(`${entry.id} (${family} <= ${[...restsOn].filter(Boolean).join(', ')})`);
+    }
+  }
+  if (incoherent.length > 0) {
+    console.log(`[formalization-coverage] note: ${incoherent.length} entry/families not among their derived_from families: ${incoherent.join('; ')}`);
+  }
+
   console.log(`[formalization-coverage] ${primitiveIds.size} algebra primitives declared`);
 }
 
