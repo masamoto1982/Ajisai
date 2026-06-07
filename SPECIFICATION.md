@@ -74,6 +74,8 @@ Ajisai values are observed through independent semantic axes:
 
 External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine-readable tooling must not branch on Rust enum names, `Debug` strings, display text, GUI colors, or storage layout. Protocol strings are lower camel case and are the canonical machine-readable surface.
 
+Machine-readable semantic metadata is part of this firewall. `docs/word-manifest.json` gives every surface word a generated `canonical` spelling and `semantic_role`; `docs/formalization-coverage.json` gives canonical entries their algebraic family, derivation edges, primitive registry, effect boundary, and exploratory debt metadata. Tooling must update the generator and coverage source rather than hand-authoring contradictory manifest semantics.
+
 The `truthValue` axis is present only on values carrying the `TruthValue` interpretation role (Section 12.2); such values also carry the `truthValued` capability. Its three protocol strings — `true`, `false`, `unknown` — are the **only** observable surface for the three-valued logic of Section 7.5. The third value `unknown` (U) is a logical truth value, not an operational absence: how it is represented internally (for example, whether it shares storage with a NIL node) is not observable, and consumers must not infer it from `semanticKind = absence`, from any `absence.reason`, or from display text. A consumer that needs to distinguish true, false, and unknown reads the `truthValue` axis and nothing else.
 
 ---
