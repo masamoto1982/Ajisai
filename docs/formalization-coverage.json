@@ -3076,7 +3076,7 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-arithmetic"
     },
     {
       "id": "module.time.timestamp",
@@ -3102,7 +3102,7 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-arithmetic"
     },
     {
       "id": "module.time.date",
