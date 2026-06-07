@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
 const outputPath = resolve(repoRoot, 'docs/word-manifest.json');
+const coveragePath = resolve(repoRoot, 'docs/formalization-coverage.json');
 
 function fail(message) {
   throw new Error(`[word-manifest] ${message}`);
@@ -62,6 +63,74 @@ function symbolSlug(value) {
     ')': 'right-paren',
   };
   return names[value] ?? slug(value);
+}
+
+
+function normalizeSurface(value) {
+  return typeof value === 'string' ? value.trim().toUpperCase() : '';
+}
+
+function coverageSurfaces(entry) {
+  const surfaces = [];
+  if (typeof entry.surface === 'string') surfaces.push(entry.surface);
+  if (Array.isArray(entry.surfaces)) surfaces.push(...entry.surfaces.filter((value) => typeof value === 'string'));
+  return surfaces;
+}
+
+function manifestEntryMatchesCoverage(entry, coverageEntry) {
+  if (entry.id === coverageEntry.id) return true;
+  const manifestSurface = normalizeSurface(entry.surface);
+  const aliases = Array.isArray(entry.coverage_aliases)
+    ? entry.coverage_aliases.map(normalizeSurface).filter(Boolean)
+    : [];
+  for (const surface of coverageSurfaces(coverageEntry)) {
+    const coverageSurface = normalizeSurface(surface);
+    if (coverageSurface === manifestSurface || aliases.includes(coverageSurface)) return true;
+    const tokens = coverageSurface.match(/[A-Z0-9@?>=<!&+*/%.,;#$'\[\]{}()-]+/g) ?? [];
+    if (tokens.includes(manifestSurface) || aliases.some((alias) => tokens.includes(alias))) return true;
+  }
+  return false;
+}
+
+function loadCoverageEntries() {
+  if (!existsSync(coveragePath)) return [];
+  const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'));
+  if (!Array.isArray(coverage.entries)) return [];
+  return coverage.entries;
+}
+
+function canonicalForEntry(entry, coverageEntry) {
+  if (typeof entry.canonical === 'string' && entry.canonical.trim() !== '') return entry.canonical;
+  if (typeof coverageEntry?.canonical === 'string' && coverageEntry.canonical.trim() !== '') return coverageEntry.canonical;
+  if (typeof coverageEntry?.desugars_to === 'string' && coverageEntry.desugars_to.trim() !== '') return coverageEntry.desugars_to;
+  if (typeof entry.concept === 'string' && entry.concept.trim() !== '') return entry.concept;
+  return entry.surface;
+}
+
+function semanticMetadataForEntry(entry, coverageEntries) {
+  const exact = coverageEntries.find((candidate) => candidate.id === entry.id);
+  const coverageEntry = exact ?? coverageEntries.find((candidate) => manifestEntryMatchesCoverage(entry, candidate));
+  const metadata = {
+    canonical: canonicalForEntry(entry, coverageEntry),
+  };
+  if (coverageEntry) {
+    metadata.coverage_entry_id = coverageEntry.id;
+    for (const key of [
+      'semantic_role',
+      'algebraic_family',
+      'derived_from',
+      'desugars_to',
+      'capability',
+      'effect_schema',
+      'reason',
+      'exit_options',
+      'review_gate',
+      'classification',
+    ]) {
+      if (key in coverageEntry) metadata[key] = coverageEntry[key];
+    }
+  }
+  return metadata;
 }
 
 function rustEnumVariantToSnake(value) {
@@ -189,6 +258,11 @@ const entries = [
   ...extractSurfaceForms(),
 ];
 
+const coverageEntries = loadCoverageEntries();
+for (const entry of entries) {
+  Object.assign(entry, semanticMetadataForEntry(entry, coverageEntries));
+}
+
 const seen = new Set();
 for (const entry of entries) {
   if (seen.has(entry.id)) fail(`duplicate manifest id ${entry.id}`);
@@ -203,6 +277,7 @@ const manifest = {
     'rust/src/core_word_aliases.rs',
     'rust/src/surface_forms.rs',
   ],
+  semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
     modulewords: entries.filter((entry) => entry.kind === 'moduleword').length,
