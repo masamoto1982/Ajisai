@@ -226,61 +226,62 @@
             border-radius: 3px;
         }
 
-        .example {
-            margin: 0.75rem 0 1.25rem;
-            border: var(--border-main);
-            border-radius: var(--radius-button);
-            overflow: hidden;
+        /* A topic's description sits on one row with the "Open in Playground"
+           button pinned to its right end. */
+        .topic-desc {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 0.5rem 0;
         }
 
-        .example pre {
+        .topic-desc p {
+            flex: 1 1 16rem;
+            min-width: 0;
             margin: 0;
-            padding: 0.85rem 1rem;
-            background: var(--color-light);
-            overflow-x: auto;
         }
 
-        .example pre code {
-            background: none;
-            padding: 0;
-            font-family: var(--font-stack-mono);
-            font-size: 0.9rem;
-            color: var(--color-text);
-            white-space: pre;
-        }
-
-        .example-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            border-top: var(--border-main);
-            background: #fff;
-        }
-
-        /* Every example carries its expected result, shown uniformly inside the
-           example box between the code and the action button. */
-        .example-result {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            border-top: var(--border-main);
-            background: #fff;
-            overflow-x: auto;
-        }
-
-        .example-result-label {
+        .topic-desc .btn {
             flex: 0 0 auto;
+        }
+
+        /* Examples and their expected values are presented as a table:
+           sample code, expected value, and notes. */
+        .ref-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0 1.5rem;
+        }
+
+        .ref-table th,
+        .ref-table td {
+            border: var(--border-main);
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .ref-table th {
+            background: var(--color-light);
+            font-weight: 600;
             font-size: 0.8rem;
             color: var(--color-text-light);
         }
 
-        .example-result-value {
+        .ref-table td code {
+            background: none;
+            padding: 0;
             font-family: var(--font-stack-mono);
             font-size: 0.85rem;
             color: var(--color-text);
             white-space: pre;
+        }
+
+        .ref-table td.notes {
+            font-size: 0.85rem;
+            color: var(--color-text-light);
         }
 
         .ref-note {
@@ -378,101 +379,113 @@
 
                 <section id="vectors" class="ref-page">
                     <h2>Values and Vectors</h2>
-                    <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces.</p>
-                    <div class="example">
-                        <pre><code>[ 1 2 3 ]</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 1 2 3 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
+                    <div class="topic-desc">
+                        <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
-                    <p>Numbers can be fractions (rationals).</p>
-                    <div class="example">
-                        <pre><code>[ 7/3 ]</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 7/3 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[ 1 2 3 ]</code></td>
+                                <td><code>[ 1 2 3 ]</code></td>
+                                <td class="notes">A vector pushed onto the stack.</td>
+                            </tr>
+                            <tr>
+                                <td><code>[ 7/3 ]</code></td>
+                                <td><code>[ 7/3 ]</code></td>
+                                <td class="notes">Numbers are kept as exact rationals.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </section>
 
                 <section id="arithmetic" class="ref-page">
                     <h2>Arithmetic</h2>
-                    <p>The four arithmetic operations act element-wise between vectors.</p>
-                    <div class="example">
-                        <pre><code>[ 1 2 3 ] [ 10 20 30 ] +</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 11 22 33 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
+                    <div class="topic-desc">
+                        <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
-
-                    <h3>Remainder <code>MOD</code></h3>
-                    <div class="example">
-                        <pre><code>[ 7 ] [ 3 ] MOD PRINT</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 1 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[ 1 2 3 ] [ 10 20 30 ] +</code></td>
+                                <td><code>[ 11 22 33 ]</code></td>
+                                <td class="notes">Element-wise addition.</td>
+                            </tr>
+                            <tr>
+                                <td><code>[ 7 ] [ 3 ] MOD PRINT</code></td>
+                                <td><code>[ 1 ]</code></td>
+                                <td class="notes">Remainder of 7 divided by 3.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </section>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
-                    <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
-                    <div class="example">
-                        <pre><code>[ 42 ] PRINT</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 42 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
+                    <div class="topic-desc">
+                        <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[ 42 ] PRINT</code></td>
+                                <td><code>[ 42 ]</code></td>
+                                <td class="notes">Writes the top of the stack to the output area.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </section>
 
                 <section id="range" class="ref-page">
                     <h2>Range</h2>
-                    <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
-                    <div class="example">
-                        <pre><code>[ 0 ] [ 5 ] RANGE PRINT</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 0 1 2 3 4 5 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
+                    <div class="topic-desc">
+                        <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[ 0 ] [ 5 ] RANGE PRINT</code></td>
+                                <td><code>[ 0 1 2 3 4 5 ]</code></td>
+                                <td class="notes">Inclusive range from 0 to 5.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </section>
 
                 <section id="define" class="ref-page">
                     <h2>Defining Words</h2>
-                    <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
-                    <div class="example">
-                        <pre><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
-[ 21 ] DOUBLE PRINT</code></pre>
-                        <div class="example-result">
-                            <span class="example-result-label">Result</span>
-                            <code class="example-result-value">[ 42 ]</code>
-                        </div>
-                        <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
+                    <div class="topic-desc">
+                        <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ 21 ] DOUBLE PRINT</code></td>
+                                <td><code>[ 42 ]</code></td>
+                                <td class="notes"><code>DOUBLE</code> multiplies the top vector by 2.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </section>
             </article>
 
@@ -497,12 +510,13 @@
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();
 
-        // 各用例の「Playground で開く」リンクに、コードブロック本文を埋め込んだ
-        // URL を設定する。アプリ本体は #code=<encodeURIComponent> を読み取って
-        // エディタへ流し込む（gui-application.ts: applyPlaygroundCodeFromUrl）。
+        // 各トピックの「Playground で開く」リンクに、そのトピックの表の先頭行
+        // （サンプルコード列）の本文を埋め込んだ URL を設定する。アプリ本体は
+        // #code=<encodeURIComponent> を読み取ってエディタへ流し込む
+        // （gui-application.ts: applyPlaygroundCodeFromUrl）。
         document.querySelectorAll('.js-open-playground').forEach(function (link) {
-            var example = link.closest('.example');
-            var codeEl = example && example.querySelector('pre code');
+            var section = link.closest('section');
+            var codeEl = section && section.querySelector('.ref-table tbody tr td:first-child code');
             if (!codeEl) return;
             var code = codeEl.textContent.replace(/\s+$/, '');
             link.setAttribute('href', '../index.html#code=' + encodeURIComponent(code));
