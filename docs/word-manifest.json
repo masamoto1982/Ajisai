@@ -6,6 +6,7 @@
     "rust/src/core_word_aliases.rs",
     "rust/src/surface_forms.rs"
   ],
+  "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "corewords": 85,
     "modulewords": 88,
@@ -19,595 +20,1413 @@
       "kind": "coreword",
       "surface": "TOP",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TOP",
+      "coverage_entry_id": "core.top",
+      "semantic_role": "Derived",
+      "algebraic_family": "modifier",
+      "derived_from": [
+        "algebra.modifier.region.top",
+        "algebra.state-transformer.combinator"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.stak",
       "kind": "coreword",
       "surface": "STAK",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "STAK",
+      "coverage_entry_id": "core.modifier.stak",
+      "semantic_role": "Derived",
+      "algebraic_family": "modifier",
+      "derived_from": [
+        "algebra.modifier.region.stack",
+        "algebra.state-transformer.combinator"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.eat",
       "kind": "coreword",
       "surface": "EAT",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "EAT",
+      "coverage_entry_id": "core.eat",
+      "semantic_role": "Derived",
+      "algebraic_family": "modifier",
+      "derived_from": [
+        "algebra.modifier.consumption.eat",
+        "algebra.state-transformer.combinator"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.keep",
       "kind": "coreword",
       "surface": "KEEP",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "KEEP",
+      "coverage_entry_id": "core.modifier.keep",
+      "semantic_role": "Derived",
+      "algebraic_family": "modifier",
+      "derived_from": [
+        "algebra.modifier.consumption.keep",
+        "algebra.state-transformer.combinator"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.get",
       "kind": "coreword",
       "surface": "GET",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "GET",
+      "coverage_entry_id": "core.get",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.insert",
       "kind": "coreword",
       "surface": "INSERT",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "INSERT",
+      "coverage_entry_id": "core.insert",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.replace",
       "kind": "coreword",
       "surface": "REPLACE",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "REPLACE",
+      "coverage_entry_id": "core.replace",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.remove",
       "kind": "coreword",
       "surface": "REMOVE",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "REMOVE",
+      "coverage_entry_id": "core.remove",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.length",
       "kind": "coreword",
       "surface": "LENGTH",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "LENGTH",
+      "coverage_entry_id": "core.length",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.take",
       "kind": "coreword",
       "surface": "TAKE",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TAKE",
+      "coverage_entry_id": "core.take",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.split",
       "kind": "coreword",
       "surface": "SPLIT",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SPLIT",
+      "coverage_entry_id": "core.split",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.concat",
       "kind": "coreword",
       "surface": "CONCAT",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "CONCAT",
+      "coverage_entry_id": "core.concat",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.reverse",
       "kind": "coreword",
       "surface": "REVERSE",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "REVERSE",
+      "coverage_entry_id": "core.reverse",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.range",
       "kind": "coreword",
       "surface": "RANGE",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "RANGE",
+      "coverage_entry_id": "core.range",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.reorder",
       "kind": "coreword",
       "surface": "REORDER",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "REORDER",
+      "coverage_entry_id": "core.reorder",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.collect",
       "kind": "coreword",
       "surface": "COLLECT",
       "category": "vector",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "COLLECT",
+      "coverage_entry_id": "core.collect",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.true",
       "kind": "coreword",
       "surface": "TRUE",
       "category": "constant",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TRUE",
+      "coverage_entry_id": "core.true",
+      "semantic_role": "Primitive",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.false",
       "kind": "coreword",
       "surface": "FALSE",
       "category": "constant",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FALSE",
+      "coverage_entry_id": "core.false",
+      "semantic_role": "Primitive",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.nil",
       "kind": "coreword",
       "surface": "NIL",
       "category": "constant",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL",
+      "coverage_entry_id": "core.nil",
+      "semantic_role": "Primitive",
+      "algebraic_family": "bubble",
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.cf",
       "kind": "coreword",
       "surface": ">CF",
       "category": "conversion",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": ">CF",
+      "coverage_entry_id": "core.cf",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.chars",
       "kind": "coreword",
       "surface": "CHARS",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "CHARS",
+      "coverage_entry_id": "core.chars",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.join",
       "kind": "coreword",
       "surface": "JOIN",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "JOIN",
+      "coverage_entry_id": "core.join",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.trim",
       "kind": "coreword",
       "surface": "TRIM",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TRIM",
+      "coverage_entry_id": "core.trim",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.trim-left",
       "kind": "coreword",
       "surface": "TRIM-LEFT",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TRIM-LEFT",
+      "coverage_entry_id": "core.trim-left",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.trim-right",
       "kind": "coreword",
       "surface": "TRIM-RIGHT",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TRIM-RIGHT",
+      "coverage_entry_id": "core.trim-right",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.tokenize",
       "kind": "coreword",
       "surface": "TOKENIZE",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TOKENIZE",
+      "coverage_entry_id": "core.tokenize",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.substitute",
       "kind": "coreword",
       "surface": "SUBSTITUTE",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SUBSTITUTE",
+      "coverage_entry_id": "core.substitute",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.starts-with",
       "kind": "coreword",
       "surface": "STARTS-WITH?",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "STARTS-WITH?",
+      "coverage_entry_id": "core.starts-with",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.ends-with",
       "kind": "coreword",
       "surface": "ENDS-WITH?",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "ENDS-WITH?",
+      "coverage_entry_id": "core.ends-with",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.num",
       "kind": "coreword",
       "surface": "NUM",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NUM",
+      "coverage_entry_id": "core.num",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.str",
       "kind": "coreword",
       "surface": "STR",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "STR",
+      "coverage_entry_id": "core.str",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.bool",
       "kind": "coreword",
       "surface": "BOOL",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "BOOL",
+      "coverage_entry_id": "core.bool",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.chr",
       "kind": "coreword",
       "surface": "CHR",
       "category": "cast",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "CHR",
+      "coverage_entry_id": "core.chr",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.add",
       "kind": "coreword",
       "surface": "ADD",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "ADD",
+      "coverage_entry_id": "core.add",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "exact_arithmetic_schema(Add) via apply_exact_arithmetic_schema",
+      "classification": "Core"
     },
     {
       "id": "core.sub",
       "kind": "coreword",
       "surface": "SUB",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SUB",
+      "coverage_entry_id": "core.sub",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "exact_arithmetic_schema(Sub) via apply_exact_arithmetic_schema",
+      "classification": "Core"
     },
     {
       "id": "core.mul",
       "kind": "coreword",
       "surface": "MUL",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "MUL",
+      "coverage_entry_id": "core.mul",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "exact_arithmetic_schema(Mul) via apply_exact_arithmetic_schema",
+      "classification": "Core"
     },
     {
       "id": "core.div",
       "kind": "coreword",
       "surface": "DIV",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "DIV",
+      "coverage_entry_id": "core.div",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "exact_arithmetic_schema(Div) via apply_exact_arithmetic_schema",
+      "classification": "Core"
     },
     {
       "id": "core.compare-within",
       "kind": "coreword",
       "surface": "COMPARE-WITHIN",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "COMPARE-WITHIN",
+      "coverage_entry_id": "core.compare-within",
+      "semantic_role": "Primitive",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "implementation_schema": "explicit_budgeted_order via op_compare_within",
+      "classification": "Core"
     },
     {
       "id": "core.eq",
       "kind": "coreword",
       "surface": "EQ",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "EQ",
+      "coverage_entry_id": "core.eq",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq",
+      "classification": "Core"
     },
     {
       "id": "core.lt",
       "kind": "coreword",
       "surface": "LT",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "LT",
+      "coverage_entry_id": "core.lt",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema",
+      "classification": "Core"
     },
     {
       "id": "core.lte",
       "kind": "coreword",
       "surface": "LTE",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "LTE",
+      "coverage_entry_id": "core.lte",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "ordering_schema(Le) via apply_ordering_schema",
+      "classification": "Core"
     },
     {
       "id": "core.gt",
       "kind": "coreword",
       "surface": "GT",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "GT",
+      "coverage_entry_id": "core.gt",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema",
+      "classification": "Core"
     },
     {
       "id": "core.gte",
       "kind": "coreword",
       "surface": "GTE",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "GTE",
+      "coverage_entry_id": "core.gte",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema",
+      "classification": "Core"
     },
     {
       "id": "core.neq",
       "kind": "coreword",
       "surface": "NEQ",
       "category": "comparison",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NEQ",
+      "coverage_entry_id": "core.neq",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain",
+        "algebra.bubble.passthrough"
+      ],
+      "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq",
+      "classification": "Core"
     },
     {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
       "category": "logic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "AND",
+      "coverage_entry_id": "core.and",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.k3.meet"
+      ],
+      "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values",
+      "classification": "Core"
     },
     {
       "id": "core.or",
       "kind": "coreword",
       "surface": "OR",
       "category": "logic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "OR",
+      "coverage_entry_id": "core.or",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.k3.join"
+      ],
+      "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values",
+      "classification": "Core"
     },
     {
       "id": "core.not",
       "kind": "coreword",
       "surface": "NOT",
       "category": "logic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NOT",
+      "coverage_entry_id": "core.not",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.k3.involution"
+      ],
+      "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value",
+      "classification": "Core"
     },
     {
       "id": "core.idle",
       "kind": "coreword",
       "surface": "IDLE",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "IDLE",
+      "coverage_entry_id": "core.idle",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.identity"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.cond",
       "kind": "coreword",
       "surface": "COND",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "COND",
+      "coverage_entry_id": "core.cond",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.k3.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.pipe",
       "kind": "coreword",
       "surface": "PIPE",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "PIPE",
+      "coverage_entry_id": "core.pipe",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.identity"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.or-nil",
       "kind": "coreword",
       "surface": "OR-NIL",
       "category": "modifier",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "OR-NIL",
+      "coverage_entry_id": "core.or-nil",
+      "semantic_role": "Derived",
+      "algebraic_family": "bubble",
+      "derived_from": [
+        "algebra.bubble.handler",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.map",
       "kind": "coreword",
       "surface": "MAP",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "MAP",
+      "coverage_entry_id": "core.map",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.applicative",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift",
+      "classification": "Core"
     },
     {
       "id": "core.filter",
       "kind": "coreword",
       "surface": "FILTER",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FILTER",
+      "coverage_entry_id": "core.filter",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(filter) -> predicate_application -> sequence_projection",
+      "classification": "Core"
     },
     {
       "id": "core.fold",
       "kind": "coreword",
       "surface": "FOLD",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FOLD",
+      "coverage_entry_id": "core.fold",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy",
+      "classification": "Core"
     },
     {
       "id": "core.unfold",
       "kind": "coreword",
       "surface": "UNFOLD",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "UNFOLD",
+      "coverage_entry_id": "core.unfold",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "state_seed -> block_application -> sequence_generation_policy",
+      "classification": "Core"
     },
     {
       "id": "core.any",
       "kind": "coreword",
       "surface": "ANY",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "ANY",
+      "coverage_entry_id": "core.any",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain"
+      ],
+      "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection",
+      "classification": "Core"
     },
     {
       "id": "core.all",
       "kind": "coreword",
       "surface": "ALL",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "ALL",
+      "coverage_entry_id": "core.all",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain"
+      ],
+      "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection",
+      "classification": "Core"
     },
     {
       "id": "core.count",
       "kind": "coreword",
       "surface": "COUNT",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "COUNT",
+      "coverage_entry_id": "core.count",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.k3.domain",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "implementation_schema": "predicate_fold(count) via traversal_scheme + exact count projection",
+      "classification": "Core"
     },
     {
       "id": "core.scan",
       "kind": "coreword",
       "surface": "SCAN",
       "category": "higher-order",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SCAN",
+      "coverage_entry_id": "core.scan",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "implementation_schema": "traversal_scheme(scan) -> block_application -> prefix_accumulator_policy",
+      "classification": "Core"
     },
     {
       "id": "core.print",
       "kind": "coreword",
       "surface": "PRINT",
       "category": "io",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "PRINT",
+      "coverage_entry_id": "core.print",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "capability": "io.write",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "core.precompute",
       "kind": "coreword",
       "surface": "PRECOMPUTE",
       "category": "Control / Staging",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "PRECOMPUTE",
+      "coverage_entry_id": "core.precompute",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.composition",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.def",
       "kind": "coreword",
       "surface": "DEF",
       "category": "dictionary",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "DEF",
+      "coverage_entry_id": "core.import.name-resolution",
+      "semantic_role": "Primitive",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.del",
       "kind": "coreword",
       "surface": "DEL",
       "category": "dictionary",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "DEL",
+      "coverage_entry_id": "core.del",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.lookup",
       "kind": "coreword",
       "surface": "LOOKUP",
       "category": "dictionary",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "LOOKUP",
+      "coverage_entry_id": "core.lookup",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.forc",
       "kind": "coreword",
       "surface": "FORC",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FORC",
+      "coverage_entry_id": "core.forc",
+      "semantic_role": "Derived",
+      "algebraic_family": "modifier",
+      "derived_from": [
+        "algebra.modifier.consumption.eat",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.shape",
       "kind": "coreword",
       "surface": "SHAPE",
       "category": "tensor",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SHAPE",
+      "coverage_entry_id": "core.shape",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.rank",
       "kind": "coreword",
       "surface": "RANK",
       "category": "tensor",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "RANK",
+      "coverage_entry_id": "core.rank",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.reshape",
       "kind": "coreword",
       "surface": "RESHAPE",
       "category": "tensor",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "RESHAPE",
+      "coverage_entry_id": "core.reshape",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.transpose",
       "kind": "coreword",
       "surface": "TRANSPOSE",
       "category": "tensor",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "TRANSPOSE",
+      "coverage_entry_id": "core.transpose",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.fill",
       "kind": "coreword",
       "surface": "FILL",
       "category": "tensor",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FILL",
+      "coverage_entry_id": "core.fill",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.structure-lift.reshape-group"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.mod",
       "kind": "coreword",
       "surface": "MOD",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "MOD",
+      "coverage_entry_id": "core.mod",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.bihomographic",
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.floor",
       "kind": "coreword",
       "surface": "FLOOR",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "FLOOR",
+      "coverage_entry_id": "core.floor",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.ceil",
       "kind": "coreword",
       "surface": "CEIL",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "CEIL",
+      "coverage_entry_id": "core.ceil",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.round",
       "kind": "coreword",
       "surface": "ROUND",
       "category": "arithmetic",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "ROUND",
+      "coverage_entry_id": "core.round",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.exec",
       "kind": "coreword",
       "surface": "EXEC",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "EXEC",
+      "coverage_entry_id": "core.exec",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.eval",
       "kind": "coreword",
       "surface": "EVAL",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "EVAL",
+      "coverage_entry_id": "core.eval",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.import",
       "kind": "coreword",
       "surface": "IMPORT",
       "category": "module",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "IMPORT",
+      "coverage_entry_id": "core.exact-real.sqrt",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.import-only",
       "kind": "coreword",
       "surface": "IMPORT-ONLY",
       "category": "module",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "IMPORT-ONLY",
+      "coverage_entry_id": "core.import-only",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.unimport",
       "kind": "coreword",
       "surface": "UNIMPORT",
       "category": "module",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "UNIMPORT",
+      "coverage_entry_id": "core.unimport",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.unimport-only",
       "kind": "coreword",
       "surface": "UNIMPORT-ONLY",
       "category": "module",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "UNIMPORT-ONLY",
+      "coverage_entry_id": "core.unimport-only",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "core.spawn",
       "kind": "coreword",
       "surface": "SPAWN",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SPAWN",
+      "coverage_entry_id": "core.spawn",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "reason": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "core.await",
       "kind": "coreword",
       "surface": "AWAIT",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "AWAIT",
+      "coverage_entry_id": "core.await",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "reason": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "core.status",
       "kind": "coreword",
       "surface": "STATUS",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "STATUS",
+      "coverage_entry_id": "core.status",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "reason": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "core.kill",
       "kind": "coreword",
       "surface": "KILL",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "KILL",
+      "coverage_entry_id": "core.kill",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "reason": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "core.monitor",
       "kind": "coreword",
       "surface": "MONITOR",
       "category": "control",
-      "source": "rust/src/builtins/builtin_word_definitions.rs"
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "MONITOR",
+      "coverage_entry_id": "core.monitor",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "reason": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.seq",
@@ -616,7 +1435,15 @@
       "short_surface": "SEQ",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SEQ",
+      "coverage_entry_id": "module.music.seq",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.music.sim",
@@ -625,7 +1452,15 @@
       "short_surface": "SIM",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SIM",
+      "coverage_entry_id": "module.music.sim",
+      "semantic_role": "Derived",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.music.slot",
@@ -634,7 +1469,21 @@
       "short_surface": "SLOT",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SLOT",
+      "coverage_entry_id": "module.music.slot",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.gain",
@@ -643,7 +1492,21 @@
       "short_surface": "GAIN",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@GAIN",
+      "coverage_entry_id": "module.music.gain",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.gain-reset",
@@ -652,7 +1515,21 @@
       "short_surface": "GAIN-RESET",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@GAIN-RESET",
+      "coverage_entry_id": "module.music.gain-reset",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.pan",
@@ -661,7 +1538,21 @@
       "short_surface": "PAN",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@PAN",
+      "coverage_entry_id": "module.music.pan",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.pan-reset",
@@ -670,7 +1561,21 @@
       "short_surface": "PAN-RESET",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@PAN-RESET",
+      "coverage_entry_id": "module.music.pan-reset",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.fx-reset",
@@ -679,7 +1584,21 @@
       "short_surface": "FX-RESET",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@FX-RESET",
+      "coverage_entry_id": "module.music.fx-reset",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.play",
@@ -688,7 +1607,21 @@
       "short_surface": "PLAY",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@PLAY",
+      "coverage_entry_id": "module.music.play",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "capability": "audio.output",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.music.seq-group",
@@ -697,7 +1630,25 @@
       "short_surface": "SEQ-GROUP",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SEQ-GROUP",
+      "coverage_entry_id": "module.music.seq-group",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds an explicit sequential music group from an indexed sequence of child music values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.sim-group",
@@ -706,7 +1657,25 @@
       "short_surface": "SIM-GROUP",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SIM-GROUP",
+      "coverage_entry_id": "module.music.sim-group",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.chord",
@@ -715,7 +1684,25 @@
       "short_surface": "CHORD",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@CHORD",
+      "coverage_entry_id": "module.music.chord",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.hz",
@@ -724,7 +1711,25 @@
       "short_surface": "HZ",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@HZ",
+      "coverage_entry_id": "module.music.hz",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.dur",
@@ -733,7 +1738,25 @@
       "short_surface": "DUR",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@DUR",
+      "coverage_entry_id": "module.music.dur",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Wraps a positive exact scalar duration into an explicit music.duration record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.note",
@@ -742,7 +1765,25 @@
       "short_surface": "NOTE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@NOTE",
+      "coverage_entry_id": "module.music.note",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Combines a music.pitch and music.duration record into a music.note record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.rest",
@@ -751,7 +1792,25 @@
       "short_surface": "REST",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@REST",
+      "coverage_entry_id": "module.music.rest",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds a music.rest record from a music.duration record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.edo",
@@ -760,7 +1819,25 @@
       "short_surface": "EDO",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@EDO",
+      "coverage_entry_id": "module.music.edo",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.edr",
@@ -769,7 +1846,25 @@
       "short_surface": "EDR",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@EDR",
+      "coverage_entry_id": "module.music.edr",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.step",
@@ -778,7 +1873,25 @@
       "short_surface": "STEP",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@STEP",
+      "coverage_entry_id": "module.music.step",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Resolves a step index within a tuning record into a derived music.pitch record.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.voice",
@@ -787,7 +1900,25 @@
       "short_surface": "VOICE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@VOICE",
+      "coverage_entry_id": "module.music.voice",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Tags a music group with the role of a single melodic voice.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.track",
@@ -796,7 +1927,25 @@
       "short_surface": "TRACK",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@TRACK",
+      "coverage_entry_id": "module.music.track",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Tags a music group with the role of an instrument track.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.measure",
@@ -805,7 +1954,25 @@
       "short_surface": "MEASURE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@MEASURE",
+      "coverage_entry_id": "module.music.measure",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Tags a music group with the role of a measure/bar.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.phrase",
@@ -814,7 +1981,25 @@
       "short_surface": "PHRASE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@PHRASE",
+      "coverage_entry_id": "module.music.phrase",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Tags a music group with the role of a phrase.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.with-tuning",
@@ -823,7 +2008,25 @@
       "short_surface": "WITH-TUNING",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@WITH-TUNING",
+      "coverage_entry_id": "module.music.with-tuning",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.explain",
@@ -832,7 +2035,16 @@
       "short_surface": "EXPLAIN",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@EXPLAIN",
+      "coverage_entry_id": "module.music.explain",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.observation.structured-diagnostic",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.music.adsr",
@@ -841,7 +2053,25 @@
       "short_surface": "ADSR",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@ADSR",
+      "coverage_entry_id": "module.music.adsr",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.sine",
@@ -850,7 +2080,25 @@
       "short_surface": "SINE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SINE",
+      "coverage_entry_id": "module.music.sine",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.square",
@@ -859,7 +2107,25 @@
       "short_surface": "SQUARE",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SQUARE",
+      "coverage_entry_id": "module.music.square",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.saw",
@@ -868,7 +2134,25 @@
       "short_surface": "SAW",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@SAW",
+      "coverage_entry_id": "module.music.saw",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.music.tri",
@@ -877,7 +2161,25 @@
       "short_surface": "TRI",
       "module": "MUSIC",
       "category": "music",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MUSIC@TRI",
+      "coverage_entry_id": "module.music.tri",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "reason": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
     },
     {
       "id": "module.json.parse",
@@ -886,7 +2188,17 @@
       "short_surface": "PARSE",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@PARSE",
+      "coverage_entry_id": "module.json.parse",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.stringify",
@@ -895,7 +2207,16 @@
       "short_surface": "STRINGIFY",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@STRINGIFY",
+      "coverage_entry_id": "module.json.stringify",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.get",
@@ -904,7 +2225,17 @@
       "short_surface": "GET",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@GET",
+      "coverage_entry_id": "module.json.get",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.keys",
@@ -913,7 +2244,16 @@
       "short_surface": "KEYS",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@KEYS",
+      "coverage_entry_id": "module.json.keys",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.set",
@@ -922,7 +2262,16 @@
       "short_surface": "SET",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@SET",
+      "coverage_entry_id": "module.json.set",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.has",
@@ -931,7 +2280,17 @@
       "short_surface": "HAS",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@HAS",
+      "coverage_entry_id": "module.json.has",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.values",
@@ -940,7 +2299,16 @@
       "short_surface": "VALUES",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@VALUES",
+      "coverage_entry_id": "module.json.values",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.merge",
@@ -949,7 +2317,16 @@
       "short_surface": "MERGE",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@MERGE",
+      "coverage_entry_id": "module.json.merge",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.delete",
@@ -958,7 +2335,16 @@
       "short_surface": "DELETE",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@DELETE",
+      "coverage_entry_id": "module.json.delete",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.json.export",
@@ -967,7 +2353,20 @@
       "short_surface": "EXPORT",
       "module": "JSON",
       "category": "json",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "JSON@EXPORT",
+      "coverage_entry_id": "module.json.export",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "capability": "serialization.export",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.io.input",
@@ -976,7 +2375,20 @@
       "short_surface": "INPUT",
       "module": "IO",
       "category": "io",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "IO@INPUT",
+      "coverage_entry_id": "module.io.input",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.observation.structured-diagnostic"
+      ],
+      "capability": "io.read",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.io.output",
@@ -985,7 +2397,20 @@
       "short_surface": "OUTPUT",
       "module": "IO",
       "category": "io",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "IO@OUTPUT",
+      "coverage_entry_id": "module.io.output",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "capability": "io.write",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.time.now",
@@ -997,7 +2422,19 @@
       "short_surface": "NOW",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@NOW",
+      "coverage_entry_id": "hosted.clock.deterministic",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "time.read",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.time.datetime",
@@ -1006,7 +2443,16 @@
       "short_surface": "DATETIME",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@DATETIME",
+      "coverage_entry_id": "module.time.datetime",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.timestamp",
@@ -1015,7 +2461,16 @@
       "short_surface": "TIMESTAMP",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@TIMESTAMP",
+      "coverage_entry_id": "module.time.timestamp",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.date",
@@ -1024,7 +2479,15 @@
       "short_surface": "DATE",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@DATE",
+      "coverage_entry_id": "module.time.date",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.time",
@@ -1033,7 +2496,15 @@
       "short_surface": "TIME",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@TIME",
+      "coverage_entry_id": "module.time.time",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.year",
@@ -1042,7 +2513,16 @@
       "short_surface": "YEAR",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@YEAR",
+      "coverage_entry_id": "module.time.year",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.month",
@@ -1051,7 +2531,16 @@
       "short_surface": "MONTH",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@MONTH",
+      "coverage_entry_id": "module.time.month",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.day",
@@ -1060,7 +2549,16 @@
       "short_surface": "DAY",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@DAY",
+      "coverage_entry_id": "module.time.day",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.hour",
@@ -1069,7 +2567,16 @@
       "short_surface": "HOUR",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@HOUR",
+      "coverage_entry_id": "module.time.hour",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.minute",
@@ -1078,7 +2585,16 @@
       "short_surface": "MINUTE",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@MINUTE",
+      "coverage_entry_id": "module.time.minute",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.second",
@@ -1087,7 +2603,16 @@
       "short_surface": "SECOND",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@SECOND",
+      "coverage_entry_id": "module.time.second",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.weekday",
@@ -1096,7 +2621,16 @@
       "short_surface": "WEEKDAY",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@WEEKDAY",
+      "coverage_entry_id": "module.time.weekday",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.add-days",
@@ -1105,7 +2639,16 @@
       "short_surface": "ADD-DAYS",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@ADD-DAYS",
+      "coverage_entry_id": "module.time.add-days",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.diff-days",
@@ -1114,7 +2657,16 @@
       "short_surface": "DIFF-DAYS",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@DIFF-DAYS",
+      "coverage_entry_id": "module.time.diff-days",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.format",
@@ -1123,7 +2675,16 @@
       "short_surface": "FORMAT",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@FORMAT",
+      "coverage_entry_id": "module.time.format",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.parse-iso",
@@ -1132,7 +2693,17 @@
       "short_surface": "PARSE-ISO",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@PARSE-ISO",
+      "coverage_entry_id": "module.time.parse-iso",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.add-months",
@@ -1141,7 +2712,16 @@
       "short_surface": "ADD-MONTHS",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@ADD-MONTHS",
+      "coverage_entry_id": "module.time.add-months",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.time.add-years",
@@ -1150,7 +2730,16 @@
       "short_surface": "ADD-YEARS",
       "module": "TIME",
       "category": "time",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "TIME@ADD-YEARS",
+      "coverage_entry_id": "module.time.add-years",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.crypto.csprng",
@@ -1162,7 +2751,19 @@
       "short_surface": "CSPRNG",
       "module": "CRYPTO",
       "category": "crypto",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "CRYPTO@CSPRNG",
+      "coverage_entry_id": "hosted.csprng.deterministic",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "crypto.random",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.crypto.hash",
@@ -1171,7 +2772,16 @@
       "short_surface": "HASH",
       "module": "CRYPTO",
       "category": "crypto",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "CRYPTO@HASH",
+      "coverage_entry_id": "module.crypto.hash",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.observation.digest",
+        "algebra.exact-scalar.codepoint-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.algo.sort",
@@ -1180,7 +2790,17 @@
       "short_surface": "SORT",
       "module": "ALGO",
       "category": "algo",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "ALGO@SORT",
+      "coverage_entry_id": "module.algo.sort",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.algo.unique",
@@ -1189,7 +2809,17 @@
       "short_surface": "UNIQUE",
       "module": "ALGO",
       "category": "algo",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "ALGO@UNIQUE",
+      "coverage_entry_id": "module.algo.unique",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.algo.contains",
@@ -1198,7 +2828,17 @@
       "short_surface": "CONTAINS",
       "module": "ALGO",
       "category": "algo",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "ALGO@CONTAINS",
+      "coverage_entry_id": "module.algo.contains",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.algo.index-of",
@@ -1207,7 +2847,17 @@
       "short_surface": "INDEX-OF",
       "module": "ALGO",
       "category": "algo",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "ALGO@INDEX-OF",
+      "coverage_entry_id": "module.algo.index-of",
+      "semantic_role": "Derived",
+      "algebraic_family": "structure-lift",
+      "derived_from": [
+        "algebra.structure-lift.indexed-sequence",
+        "algebra.exact-real.budgeted-order",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.sqrt",
@@ -1219,7 +2869,16 @@
       "short_surface": "SQRT",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@SQRT",
+      "coverage_entry_id": "core.exact-real.sqrt",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Core"
     },
     {
       "id": "module.math.sqrt-eps",
@@ -1228,7 +2887,16 @@
       "short_surface": "SQRT-EPS",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@SQRT-EPS",
+      "coverage_entry_id": "module.math.sqrt-eps",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.interval",
@@ -1237,7 +2905,16 @@
       "short_surface": "INTERVAL",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@INTERVAL",
+      "coverage_entry_id": "module.math.interval",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.lower",
@@ -1246,7 +2923,16 @@
       "short_surface": "LOWER",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@LOWER",
+      "coverage_entry_id": "module.math.lower",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.upper",
@@ -1255,7 +2941,16 @@
       "short_surface": "UPPER",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@UPPER",
+      "coverage_entry_id": "module.math.upper",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.width",
@@ -1264,7 +2959,16 @@
       "short_surface": "WIDTH",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@WIDTH",
+      "coverage_entry_id": "module.math.width",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.gosper",
+        "algebra.structure-lift.indexed-sequence"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.is-exact",
@@ -1273,7 +2977,16 @@
       "short_surface": "IS-EXACT",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@IS-EXACT",
+      "coverage_entry_id": "module.math.is-exact",
+      "semantic_role": "Derived",
+      "algebraic_family": "k3-truth",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.abs",
@@ -1282,7 +2995,16 @@
       "short_surface": "ABS",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@ABS",
+      "coverage_entry_id": "module.math.abs",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.neg",
@@ -1291,7 +3013,15 @@
       "short_surface": "NEG",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@NEG",
+      "coverage_entry_id": "module.math.neg",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.gosper"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.sign",
@@ -1300,7 +3030,16 @@
       "short_surface": "SIGN",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@SIGN",
+      "coverage_entry_id": "module.math.sign",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.min",
@@ -1309,7 +3048,16 @@
       "short_surface": "MIN",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@MIN",
+      "coverage_entry_id": "module.math.min",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.max",
@@ -1318,7 +3066,16 @@
       "short_surface": "MAX",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@MAX",
+      "coverage_entry_id": "module.math.max",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.budgeted-order",
+        "algebra.k3.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.pow",
@@ -1327,7 +3084,16 @@
       "short_surface": "POW",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@POW",
+      "coverage_entry_id": "module.math.pow",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.gosper",
+        "algebra.exact-real.continued-fraction"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.gcd",
@@ -1336,7 +3102,16 @@
       "short_surface": "GCD",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@GCD",
+      "coverage_entry_id": "module.math.gcd",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.math.lcm",
@@ -1345,7 +3120,16 @@
       "short_surface": "LCM",
       "module": "MATH",
       "category": "math",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@LCM",
+      "coverage_entry_id": "module.math.lcm",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.serial.list-ports",
@@ -1357,7 +3141,19 @@
       "short_surface": "LIST-PORTS",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@LIST-PORTS",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.open",
@@ -1369,7 +3165,19 @@
       "short_surface": "OPEN",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@OPEN",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.configure",
@@ -1381,7 +3189,19 @@
       "short_surface": "CONFIGURE",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@CONFIGURE",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.write",
@@ -1393,7 +3213,19 @@
       "short_surface": "WRITE",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@WRITE",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.read",
@@ -1405,7 +3237,19 @@
       "short_surface": "READ",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@READ",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.flush",
@@ -1417,7 +3261,19 @@
       "short_surface": "FLUSH",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@FLUSH",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "module.serial.close",
@@ -1429,147 +3285,281 @@
       "short_surface": "CLOSE",
       "module": "SERIAL",
       "category": "serial",
-      "source": "rust/src/interpreter/modules/module_builtins.rs"
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "SERIAL@CLOSE",
+      "coverage_entry_id": "hosted.serial.effects",
+      "semantic_role": "HostedEffect",
+      "algebraic_family": "hosted-effect",
+      "derived_from": [
+        "algebra.eff.append",
+        "capability.check"
+      ],
+      "capability": "serial.port",
+      "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
+      "classification": "HostedEffect"
     },
     {
       "id": "alias.plus",
       "kind": "symbol_alias",
       "surface": "+",
       "canonical": "ADD",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.plus",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "ADD",
+      "classification": "Surface"
     },
     {
       "id": "alias.minus",
       "kind": "symbol_alias",
       "surface": "-",
       "canonical": "SUB",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.minus",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "SUB",
+      "classification": "Surface"
     },
     {
       "id": "alias.asterisk",
       "kind": "symbol_alias",
       "surface": "*",
       "canonical": "MUL",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.asterisk",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "MUL",
+      "classification": "Surface"
     },
     {
       "id": "alias.slash",
       "kind": "symbol_alias",
       "surface": "/",
       "canonical": "DIV",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "core.import.name-resolution",
+      "semantic_role": "Primitive",
+      "algebraic_family": "dictionary",
+      "derived_from": [
+        "algebra.dictionary.lookup",
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "alias.percent",
       "kind": "symbol_alias",
       "surface": "%",
       "canonical": "MOD",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.percent",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "MOD",
+      "classification": "Surface"
     },
     {
       "id": "alias.equals",
       "kind": "symbol_alias",
       "surface": "=",
       "canonical": "EQ",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.equals",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "EQ",
+      "classification": "Surface"
     },
     {
       "id": "alias.less-than",
       "kind": "symbol_alias",
       "surface": "<",
       "canonical": "LT",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.less-than",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "LT",
+      "classification": "Surface"
     },
     {
       "id": "alias.less-than-or-equal",
       "kind": "symbol_alias",
       "surface": "<=",
       "canonical": "LTE",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.less-than-or-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "LTE",
+      "classification": "Surface"
     },
     {
       "id": "alias.greater-than",
       "kind": "symbol_alias",
       "surface": ">",
       "canonical": "GT",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.greater-than",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "GT",
+      "classification": "Surface"
     },
     {
       "id": "alias.greater-than-or-equal",
       "kind": "symbol_alias",
       "surface": ">=",
       "canonical": "GTE",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.greater-than-or-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "GTE",
+      "classification": "Surface"
     },
     {
       "id": "alias.not-equal",
       "kind": "symbol_alias",
       "surface": "<>",
       "canonical": "NEQ",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.not-equal",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "NEQ",
+      "classification": "Surface"
     },
     {
       "id": "alias.bang",
       "kind": "symbol_alias",
       "surface": "!",
       "canonical": "FORC",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.bang",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "FORC",
+      "classification": "Surface"
     },
     {
       "id": "alias.ampersand",
       "kind": "symbol_alias",
       "surface": "&",
       "canonical": "AND",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.ampersand",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "AND",
+      "classification": "Surface"
     },
     {
       "id": "alias.dot",
       "kind": "syntax_sugar",
       "surface": ".",
       "canonical": "TOP",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.dot",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "TOP",
+      "classification": "Surface"
     },
     {
       "id": "alias.dot-dot",
       "kind": "syntax_sugar",
       "surface": "..",
       "canonical": "STAK",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.dot-dot",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "STAK",
+      "classification": "Surface"
     },
     {
       "id": "alias.comma",
       "kind": "syntax_sugar",
       "surface": ",",
       "canonical": "EAT",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.comma",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "EAT",
+      "classification": "Surface"
     },
     {
       "id": "alias.comma-comma",
       "kind": "syntax_sugar",
       "surface": ",,",
       "canonical": "KEEP",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.comma-comma",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "KEEP",
+      "classification": "Surface"
     },
     {
       "id": "alias.quote",
       "kind": "input_helper",
       "surface": "'",
-      "canonical": null,
-      "source": "rust/src/core_word_aliases.rs"
+      "canonical": "STRING-QUOTE",
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.quote",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "STRING-QUOTE",
+      "classification": "Surface"
     },
     {
       "id": "alias.question",
       "kind": "symbol_alias",
       "surface": "?",
       "canonical": "LOOKUP",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.question",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "LOOKUP",
+      "classification": "Surface"
     },
     {
       "id": "alias.equals-equals",
       "kind": "syntax_sugar",
       "surface": "==",
       "canonical": "PIPE",
-      "source": "rust/src/core_word_aliases.rs"
+      "source": "rust/src/core_word_aliases.rs",
+      "coverage_entry_id": "alias.equals-equals",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "PIPE",
+      "classification": "Surface"
     },
     {
       "id": "surface.hash",
@@ -1577,7 +3567,14 @@
       "surface": "#",
       "concept": "COMMENT-LINE",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "COMMENT-LINE",
+      "coverage_entry_id": "surface.hash",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "COMMENT-LINE",
+      "classification": "Surface"
     },
     {
       "id": "surface.dollar",
@@ -1585,7 +3582,14 @@
       "surface": "$",
       "concept": "COND-CLAUSE",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "COND-CLAUSE",
+      "coverage_entry_id": "surface.dollar",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "COND-CLAUSE",
+      "classification": "Surface"
     },
     {
       "id": "surface.left-bracket",
@@ -1593,7 +3597,14 @@
       "surface": "[",
       "concept": "BEGIN-VECTOR",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "BEGIN-VECTOR",
+      "coverage_entry_id": "surface.left-bracket",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "BEGIN-VECTOR",
+      "classification": "Surface"
     },
     {
       "id": "surface.right-bracket",
@@ -1601,7 +3612,14 @@
       "surface": "]",
       "concept": "END-VECTOR",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "END-VECTOR",
+      "coverage_entry_id": "surface.right-bracket",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "END-VECTOR",
+      "classification": "Surface"
     },
     {
       "id": "surface.left-brace",
@@ -1609,7 +3627,14 @@
       "surface": "{",
       "concept": "BEGIN-BLOCK",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "BEGIN-BLOCK",
+      "coverage_entry_id": "surface.left-brace",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "BEGIN-BLOCK",
+      "classification": "Surface"
     },
     {
       "id": "surface.right-brace",
@@ -1617,7 +3642,14 @@
       "surface": "}",
       "concept": "END-BLOCK",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "END-BLOCK",
+      "coverage_entry_id": "surface.right-brace",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "END-BLOCK",
+      "classification": "Surface"
     },
     {
       "id": "surface.quote",
@@ -1625,7 +3657,14 @@
       "surface": "'",
       "concept": "STRING-QUOTE",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "STRING-QUOTE",
+      "coverage_entry_id": "alias.quote",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "STRING-QUOTE",
+      "classification": "Surface"
     },
     {
       "id": "surface.semicolon",
@@ -1633,7 +3672,14 @@
       "surface": ";",
       "concept": "TOP-EAT",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": ". ,",
+      "coverage_entry_id": "surface.semicolon",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": ". ,",
+      "classification": "Surface"
     },
     {
       "id": "surface.semicolon-semicolon",
@@ -1641,7 +3687,14 @@
       "surface": ";;",
       "concept": "STAK-KEEP",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": ".. ,,",
+      "coverage_entry_id": "surface.semicolon-semicolon",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": ".. ,,",
+      "classification": "Surface"
     },
     {
       "id": "surface.left-paren",
@@ -1649,7 +3702,14 @@
       "surface": "(",
       "concept": "RESERVED-BEGIN",
       "runtime_word": false,
-      "source": "rust/src/surface_forms.rs"
+      "source": "rust/src/surface_forms.rs",
+      "canonical": "RESERVED-BEGIN",
+      "coverage_entry_id": "surface.left-paren",
+      "semantic_role": "Sugar",
+      "algebraic_family": "syntax-sugar",
+      "derived_from": [],
+      "desugars_to": "RESERVED-BEGIN",
+      "classification": "Surface"
     }
   ]
 }

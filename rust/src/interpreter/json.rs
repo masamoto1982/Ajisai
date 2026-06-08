@@ -286,25 +286,24 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_json_export(interp: &mut Interpreter) -> Result<()> {
-    interp.require_host_capability(
+    interp.run_hosted_effect_schema(
         "JSON@EXPORT",
         crate::interpreter::HostCapability::JsonExport,
-    )?;
+        |interp| {
+            let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+            let val = extract_stack_value(interp, is_keep, 0)?;
 
-    let val = extract_stack_value(interp, is_keep, 0)?;
-
-    let (arena, root_id) = value_to_arena(&val);
-    let json_val = arena_node_to_json(&arena, root_id);
-    let json_compact = serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
-    interp.emit_host_effect(crate::interpreter::HostEffect::JsonExport(
-        json_compact.clone(),
-    ));
-    interp
-        .output_buffer
-        .push_str(&format!("JSONEXPORT:{}\n", json_compact));
-    Ok(())
+            let (arena, root_id) = value_to_arena(&val);
+            let json_val = arena_node_to_json(&arena, root_id);
+            let json_compact =
+                serde_json::to_string(&json_val).unwrap_or_else(|_| "null".to_string());
+            interp
+                .output_buffer
+                .push_str(&format!("JSONEXPORT:{}\n", json_compact));
+            Ok(crate::interpreter::HostEffect::JsonExport(json_compact))
+        },
+    )
 }
 
 /// Borrow the `[key, value]` pairs of a JSON object. Both the canonical

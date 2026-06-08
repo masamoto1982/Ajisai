@@ -95,9 +95,9 @@ fn truth_bool(b: bool) -> Value {
     v
 }
 
-/// K3 `AND`: `F` absorbs (even over U and NIL); otherwise NIL takes
+/// K3 meet (`AND`): `F` absorbs (even over U and NIL); otherwise NIL takes
 /// priority over U (SPEC §4.5.2); otherwise U propagates; else T.
-pub(crate) fn and(a: Ternary, b: Ternary) -> Ternary {
+pub(crate) fn meet_k3(a: Ternary, b: Ternary) -> Ternary {
     if a == Ternary::False || b == Ternary::False {
         Ternary::False
     } else if a == Ternary::Nil || b == Ternary::Nil {
@@ -109,9 +109,9 @@ pub(crate) fn and(a: Ternary, b: Ternary) -> Ternary {
     }
 }
 
-/// K3 `OR`: `T` absorbs (even over U and NIL); otherwise NIL takes
+/// K3 join (`OR`): `T` absorbs (even over U and NIL); otherwise NIL takes
 /// priority over U (SPEC §4.5.2); otherwise U propagates; else F.
-pub(crate) fn or(a: Ternary, b: Ternary) -> Ternary {
+pub(crate) fn join_k3(a: Ternary, b: Ternary) -> Ternary {
     if a == Ternary::True || b == Ternary::True {
         Ternary::True
     } else if a == Ternary::Nil || b == Ternary::Nil {
@@ -123,8 +123,8 @@ pub(crate) fn or(a: Ternary, b: Ternary) -> Ternary {
     }
 }
 
-/// K3 `NOT`: `¬T=F`, `¬F=T`, `¬U=U`; NIL passes through as NIL.
-pub(crate) fn not(a: Ternary) -> Ternary {
+/// K3 involution (`NOT`): `¬T=F`, `¬F=T`, `¬U=U`; NIL passes through as NIL.
+pub(crate) fn involution_k3(a: Ternary) -> Ternary {
     match a {
         Ternary::True => Ternary::False,
         Ternary::False => Ternary::True,
@@ -166,65 +166,65 @@ mod tests {
     #[test]
     fn k3_and_truth_table() {
         use Ternary::*;
-        assert_eq!(and(True, True), True);
-        assert_eq!(and(True, Unknown), Unknown);
-        assert_eq!(and(True, False), False);
-        assert_eq!(and(Unknown, True), Unknown);
-        assert_eq!(and(Unknown, Unknown), Unknown);
-        assert_eq!(and(Unknown, False), False);
-        assert_eq!(and(False, True), False);
-        assert_eq!(and(False, Unknown), False);
-        assert_eq!(and(False, False), False);
+        assert_eq!(meet_k3(True, True), True);
+        assert_eq!(meet_k3(True, Unknown), Unknown);
+        assert_eq!(meet_k3(True, False), False);
+        assert_eq!(meet_k3(Unknown, True), Unknown);
+        assert_eq!(meet_k3(Unknown, Unknown), Unknown);
+        assert_eq!(meet_k3(Unknown, False), False);
+        assert_eq!(meet_k3(False, True), False);
+        assert_eq!(meet_k3(False, Unknown), False);
+        assert_eq!(meet_k3(False, False), False);
     }
 
     // SPEC §7.5 OR truth table, all nine {T,F,U}^2 cells.
     #[test]
     fn k3_or_truth_table() {
         use Ternary::*;
-        assert_eq!(or(False, False), False);
-        assert_eq!(or(False, Unknown), Unknown);
-        assert_eq!(or(False, True), True);
-        assert_eq!(or(Unknown, False), Unknown);
-        assert_eq!(or(Unknown, Unknown), Unknown);
-        assert_eq!(or(Unknown, True), True);
-        assert_eq!(or(True, False), True);
-        assert_eq!(or(True, Unknown), True);
-        assert_eq!(or(True, True), True);
+        assert_eq!(join_k3(False, False), False);
+        assert_eq!(join_k3(False, Unknown), Unknown);
+        assert_eq!(join_k3(False, True), True);
+        assert_eq!(join_k3(Unknown, False), Unknown);
+        assert_eq!(join_k3(Unknown, Unknown), Unknown);
+        assert_eq!(join_k3(Unknown, True), True);
+        assert_eq!(join_k3(True, False), True);
+        assert_eq!(join_k3(True, Unknown), True);
+        assert_eq!(join_k3(True, True), True);
     }
 
     // SPEC §7.5 NOT truth table.
     #[test]
     fn k3_not_truth_table() {
         use Ternary::*;
-        assert_eq!(not(True), False);
-        assert_eq!(not(Unknown), Unknown);
-        assert_eq!(not(False), True);
+        assert_eq!(involution_k3(True), False);
+        assert_eq!(involution_k3(Unknown), Unknown);
+        assert_eq!(involution_k3(False), True);
     }
 
     // SPEC §4.5.2: NIL takes priority over U when neither is absorbed.
     #[test]
     fn nil_takes_priority_over_unknown() {
         use Ternary::*;
-        assert_eq!(and(Nil, Unknown), Nil);
-        assert_eq!(and(Unknown, Nil), Nil);
-        assert_eq!(or(Nil, Unknown), Nil);
-        assert_eq!(or(Unknown, Nil), Nil);
+        assert_eq!(meet_k3(Nil, Unknown), Nil);
+        assert_eq!(meet_k3(Unknown, Nil), Nil);
+        assert_eq!(join_k3(Nil, Unknown), Nil);
+        assert_eq!(join_k3(Unknown, Nil), Nil);
         // but an absorbing definite still wins over NIL
-        assert_eq!(and(False, Nil), False);
-        assert_eq!(or(True, Nil), True);
+        assert_eq!(meet_k3(False, Nil), False);
+        assert_eq!(join_k3(True, Nil), True);
     }
 
     // Existing NIL semantics (SPEC §7.12) are unchanged by the U addition.
     #[test]
     fn nil_semantics_preserved() {
         use Ternary::*;
-        assert_eq!(and(Nil, True), Nil);
-        assert_eq!(and(Nil, False), False);
-        assert_eq!(and(Nil, Nil), Nil);
-        assert_eq!(or(Nil, False), Nil);
-        assert_eq!(or(Nil, True), True);
-        assert_eq!(or(Nil, Nil), Nil);
-        assert_eq!(not(Nil), Nil);
+        assert_eq!(meet_k3(Nil, True), Nil);
+        assert_eq!(meet_k3(Nil, False), False);
+        assert_eq!(meet_k3(Nil, Nil), Nil);
+        assert_eq!(join_k3(Nil, False), Nil);
+        assert_eq!(join_k3(Nil, True), True);
+        assert_eq!(join_k3(Nil, Nil), Nil);
+        assert_eq!(involution_k3(Nil), Nil);
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn not_preserves_agreed_prefix() {
         let input = u_with_prefix(7);
-        let result = into_value_with_diagnosis(not(Ternary::classify(&input)), &[&input]);
+        let result = into_value_with_diagnosis(involution_k3(Ternary::classify(&input)), &[&input]);
         assert!(result.is_unknown());
         assert_eq!(result.truth_value(), Some("unknown"));
         assert_eq!(agreed_prefix_of(&result), Some(7));
@@ -263,8 +263,10 @@ mod tests {
     fn and_unknown_true_preserves_agreed_prefix() {
         let a = u_with_prefix(3);
         let b = t();
-        let result =
-            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        let result = into_value_with_diagnosis(
+            meet_k3(Ternary::classify(&a), Ternary::classify(&b)),
+            &[&a, &b],
+        );
         assert!(result.is_unknown());
         assert_eq!(agreed_prefix_of(&result), Some(3));
     }
@@ -274,8 +276,10 @@ mod tests {
     fn and_two_unknowns_keeps_left_diagnosis() {
         let a = u_with_prefix(11);
         let b = u_with_prefix(99);
-        let result =
-            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        let result = into_value_with_diagnosis(
+            meet_k3(Ternary::classify(&a), Ternary::classify(&b)),
+            &[&a, &b],
+        );
         assert!(result.is_unknown());
         assert_eq!(agreed_prefix_of(&result), Some(11));
     }
@@ -285,8 +289,10 @@ mod tests {
     fn or_two_unknowns_keeps_left_diagnosis() {
         let a = u_with_prefix(5);
         let b = u_with_prefix(8);
-        let result =
-            into_value_with_diagnosis(or(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        let result = into_value_with_diagnosis(
+            join_k3(Ternary::classify(&a), Ternary::classify(&b)),
+            &[&a, &b],
+        );
         assert!(result.is_unknown());
         assert_eq!(agreed_prefix_of(&result), Some(5));
     }
@@ -297,8 +303,10 @@ mod tests {
     fn bare_unknowns_stay_bare() {
         let a = u();
         let b = u();
-        let result =
-            into_value_with_diagnosis(and(Ternary::classify(&a), Ternary::classify(&b)), &[&a, &b]);
+        let result = into_value_with_diagnosis(
+            meet_k3(Ternary::classify(&a), Ternary::classify(&b)),
+            &[&a, &b],
+        );
         assert!(result.is_unknown());
         assert_eq!(agreed_prefix_of(&result), None);
     }
@@ -311,7 +319,7 @@ mod tests {
         let ff = f();
         // U(k) AND FALSE = FALSE (F absorbs); no agreedPrefix carried.
         let result = into_value_with_diagnosis(
-            and(Ternary::classify(&u_k), Ternary::classify(&ff)),
+            meet_k3(Ternary::classify(&u_k), Ternary::classify(&ff)),
             &[&u_k, &ff],
         );
         assert_eq!(result.truth_value(), Some("false"));
@@ -319,7 +327,7 @@ mod tests {
         // U(k) AND NIL = NIL (NIL priority, SPEC §4.5.2); stays operational NIL.
         let nn = n();
         let result = into_value_with_diagnosis(
-            and(Ternary::classify(&u_k), Ternary::classify(&nn)),
+            meet_k3(Ternary::classify(&u_k), Ternary::classify(&nn)),
             &[&u_k, &nn],
         );
         assert!(result.is_nil() && !result.is_unknown());
