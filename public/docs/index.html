@@ -204,9 +204,17 @@
             color: var(--color-text);
         }
 
-        .ref-article section {
-            margin-bottom: 2.5rem;
-            scroll-margin-top: 5rem;
+        /* 現在表示中の頁に対応する目次項目を強調する。 */
+        .ref-nav a.is-active {
+            background: var(--color-medium);
+            color: var(--color-text);
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 var(--color-primary);
+        }
+
+        /* 各 .ref-page は一枚の頁。JS が現在頁以外を hidden にする。 */
+        .ref-page[hidden] {
+            display: none;
         }
 
         .ref-article h2 {
@@ -364,14 +372,14 @@
 
         <main class="ref-main">
             <article class="ref-article">
-                <section id="intro">
+                <section id="intro" class="ref-page">
                     <h2>はじめに</h2>
                     <p>Ajisai は AI-first・ベクトル指向・分数データフローのスタック言語です。このリファレンスでは、各機能を短い用例とともに紹介します。</p>
                     <p>すべての用例には <strong>「Playground で開く」</strong> ボタンが付いています。押すとアプリ本体のエディタにコードが流し込まれるので、その場で実行して挙動を確かめられます。</p>
                     <p class="result-label">※ これはラフ版です。内容は段階的に充実させていきます。</p>
                 </section>
 
-                <section id="vectors">
+                <section id="vectors" class="ref-page">
                     <h2>値とベクトル</h2>
                     <p>Ajisai のあらゆる値はベクトルに包まれます。角括弧 <code>[ ]</code> で囲み、要素は空白で区切ります。</p>
                     <div class="example">
@@ -389,7 +397,7 @@
                     </div>
                 </section>
 
-                <section id="arithmetic">
+                <section id="arithmetic" class="ref-page">
                     <h2>演算</h2>
                     <p>四則演算はベクトル同士の要素ごとに作用します。</p>
                     <div class="example">
@@ -412,7 +420,7 @@
                     <pre class="result">[ 1 ]</pre>
                 </section>
 
-                <section id="output">
+                <section id="output" class="ref-page">
                     <h2>出力</h2>
                     <p><code>PRINT</code> はスタック最上段の値を出力エリアに表示します。</p>
                     <div class="example">
@@ -423,7 +431,7 @@
                     </div>
                 </section>
 
-                <section id="range">
+                <section id="range" class="ref-page">
                     <h2>範囲生成</h2>
                     <p><code>RANGE</code> は開始値と終了値から連続したベクトルを作ります。</p>
                     <div class="example">
@@ -436,7 +444,7 @@
                     <pre class="result">[ 0 1 2 3 4 5 ]</pre>
                 </section>
 
-                <section id="define">
+                <section id="define" class="ref-page">
                     <h2>Word の定義</h2>
                     <p>コード片に名前を付けて新しい Word を定義できます。定義は <code>DEF</code> で行います。</p>
                     <div class="example">
@@ -482,6 +490,57 @@
             var code = codeEl.textContent.replace(/\s+$/, '');
             link.setAttribute('href', '../index.html#code=' + encodeURIComponent(code));
         });
+
+        // navigation の各項目は、それぞれ一枚の頁（article 内の section）に対応する。
+        // 選択された頁だけを表示し、残りは隠す素朴なページ切り替え。URL ハッシュ
+        // （例: #vectors）が現在の頁を表すので、戻る/進むやブックマークも効く。
+        (function () {
+            var pages = Array.prototype.slice.call(document.querySelectorAll('.ref-page'));
+            var navLinks = Array.prototype.slice.call(
+                document.querySelectorAll('.ref-nav a[href^="#"]')
+            );
+            if (pages.length === 0) return;
+
+            var mobileQuery = window.matchMedia('(max-width: 768px)');
+
+            function pageIdFromLink(link) {
+                return (link.getAttribute('href') || '').replace(/^#/, '');
+            }
+
+            function showPage(id) {
+                var target = null;
+                pages.forEach(function (page) {
+                    if (page.id === id) target = page;
+                });
+                // 該当頁がなければ先頭頁にフォールバック。
+                if (!target) target = pages[0];
+
+                pages.forEach(function (page) {
+                    page.hidden = page !== target;
+                });
+                navLinks.forEach(function (link) {
+                    var active = pageIdFromLink(link) === target.id;
+                    link.classList.toggle('is-active', active);
+                    if (active) {
+                        link.setAttribute('aria-current', 'page');
+                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+                return target;
+            }
+
+            function syncFromHash(userInitiated) {
+                showPage(window.location.hash.replace(/^#/, ''));
+                // モバイルでは頁を切り替えたら先頭へ戻し、新しい頁を頭から読めるように。
+                if (userInitiated && mobileQuery.matches) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+
+            window.addEventListener('hashchange', function () { syncFromHash(true); });
+            syncFromHash(false);
+        })();
     </script>
 </body>
 </html>
