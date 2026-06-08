@@ -248,11 +248,18 @@
         }
 
         /* Examples and their expected values are presented as a table:
-           sample code, expected value, and notes. */
+           sample code, expected value, and notes. The table is wrapped in a
+           horizontally scrollable container so long code rows can be scrolled
+           (and copied) on narrow viewports instead of being clipped by the
+           page's hidden horizontal overflow. */
+        .ref-table-wrap {
+            overflow-x: auto;
+            margin: 0.75rem 0 1.5rem;
+        }
+
         .ref-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0.75rem 0 1.5rem;
         }
 
         .ref-table th,
@@ -383,6 +390,7 @@
                         <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
                         <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
                             <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
@@ -400,6 +408,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </section>
 
                 <section id="arithmetic" class="ref-page">
@@ -408,6 +417,7 @@
                         <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
                         <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
                             <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
@@ -425,6 +435,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </section>
 
                 <section id="output" class="ref-page">
@@ -433,6 +444,7 @@
                         <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
                         <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
                             <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
@@ -445,6 +457,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </section>
 
                 <section id="range" class="ref-page">
@@ -453,6 +466,7 @@
                         <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
                         <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
                             <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
@@ -465,6 +479,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </section>
 
                 <section id="define" class="ref-page">
@@ -473,6 +488,7 @@
                         <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
                         <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                     </div>
+                    <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
                             <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
@@ -486,6 +502,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </section>
             </article>
 
