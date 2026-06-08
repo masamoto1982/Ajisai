@@ -130,6 +130,12 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo check --features wasm --target wasm32-unknown-unknown
 
+      - name: Cache wasm-pack
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-pack
+          key: ${{ runner.os }}-wasm-pack-0.13.1
+
       - name: Detect stale committed wasm bundle (advisory)
         # Build the wasm bundle the same way the deploy workflow does and
         # compare against the committed copy. This is advisory only: even
@@ -141,7 +147,10 @@ jobs:
         run: |
           set -e
           if ! command -v wasm-pack >/dev/null 2>&1; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            bash ./scripts/install-wasm-pack.sh || {
+              echo "::warning::wasm-pack install failed during stale-bundle check; skipping diff."
+              exit 0
+            }
           fi
           bash ./scripts/rebuild-wasm.sh > /tmp/rebuild-wasm.log 2>&1 || {
             cat /tmp/rebuild-wasm.log
@@ -194,8 +203,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Cache wasm-pack
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-pack
+          key: ${{ runner.os }}-wasm-pack-0.13.1
+
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: bash ./scripts/install-wasm-pack.sh
 
       # Drives the real wasm-bindgen boundary (AjisaiInterpreter -> collect_stack)
       # in Node. Lives in a standalone crate so the main package's proptest

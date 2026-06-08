@@ -88,6 +88,35 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
 }
 
 #[tokio::test]
+async fn nil_produced_event_exposes_ai_structured_diagnosis_payload() {
+    let mut interp = Interpreter::new();
+    interp.execute("10 0 /").await.unwrap();
+
+    let trace = interp.drain_error_flow_trace();
+    let event = trace
+        .iter()
+        .find(|e| e.kind == ErrorFlowEventKind::NilProduced)
+        .expect("expected NilProduced event");
+
+    let payload = event
+        .ai_diagnostic_payload()
+        .expect("NilProduced event should expose AI diagnostic payload");
+    assert_eq!(payload.kind.as_deref(), Some("divisionByZero"));
+    assert_eq!(payload.recoverability, "fixInput");
+    assert_eq!(payload.semantic_area, "exact-real-arithmetic");
+    assert_eq!(payload.word.as_deref(), Some("DIV"));
+    assert_eq!(payload.semantic_role, "Derived");
+    assert_eq!(payload.algebraic_family, "exact-arithmetic");
+    assert_eq!(payload.nil_reason.as_deref(), Some("divisionByZero"));
+    assert!(payload.truth_value.is_none());
+    assert!(payload.effect.is_none());
+    assert!(payload
+        .next_checks
+        .iter()
+        .any(|check| check.label == "Check divisor"));
+}
+
+#[tokio::test]
 async fn error_flow_trace_records_direct_bubble_from_word() {
     let mut interp = Interpreter::new();
     interp.execute("10 0 /").await.unwrap();
