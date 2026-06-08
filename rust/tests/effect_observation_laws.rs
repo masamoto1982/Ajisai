@@ -227,6 +227,39 @@ fn run_one_axes(src: &str) -> test_support::observe::AxisObservation {
     })
 }
 
+/// **HostedEffect firewall:** a missing capability stops before request
+/// construction. The word emits only a structured diagnostic effect and leaves
+/// the data stack untouched; no outbound PRINT effect is appended.
+#[test]
+fn missing_capability_stops_before_hosted_request_construction() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("tokio current-thread runtime");
+    rt.block_on(async {
+        let host = Arc::new(DeterministicHostEnv::new(0, vec![], vec![]));
+        let mut interp = Interpreter::with_host(host);
+        let result = interp.execute("7 PRINT").await;
+        assert!(result.is_err(), "missing PRINT capability must error");
+
+        let effects = interp
+            .host_effects()
+            .iter()
+            .map(|e| (e.kind().to_string(), e.payload().to_string()))
+            .collect::<Vec<_>>();
+        assert_eq!(effects.len(), 1, "only diagnostic effect is emitted");
+        assert_eq!(effects[0].0, "diagnostic");
+        assert!(effects[0].1.contains("missingCapability"));
+        assert!(
+            !effects.iter().any(|(kind, _)| kind == "print"),
+            "PRINT effect must not be appended when capability is missing"
+        );
+
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1, "capability failure must not consume stack");
+        assert_eq!(observe_axes(&stack[0]).semantic_kind, "number");
+    });
+}
+
 // ───────────── non-determinism isolation: ⟦·⟧ modulo host (§5.2) ─────────────
 
 /// **Under a fixed host, otherwise non-deterministic words are reproducible.**

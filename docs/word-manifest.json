@@ -980,6 +980,7 @@
       ],
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1481,6 +1482,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1503,6 +1505,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1525,6 +1528,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1547,6 +1551,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1569,6 +1574,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1591,6 +1597,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -1613,6 +1620,7 @@
       ],
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -2357,6 +2365,7 @@
       ],
       "capability": "serialization.export",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -2378,6 +2387,7 @@
       ],
       "capability": "io.read",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -2399,6 +2409,7 @@
       ],
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -2422,6 +2433,7 @@
       ],
       "capability": "time.read",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -2750,6 +2762,7 @@
       ],
       "capability": "crypto.random",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3139,6 +3152,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3162,6 +3176,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3185,6 +3200,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3208,6 +3224,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3231,6 +3248,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3254,6 +3272,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
@@ -3277,6 +3296,7 @@
       ],
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
+      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
     },
     {
