@@ -298,11 +298,13 @@
         .ref-footer a { color: var(--color-text-light); }
         .ref-footer a:hover { color: var(--color-text); }
 
-        /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。 */
+        /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。
+           align-items: stretch（既定）により両カラムが同じ高さに伸び、nav の
+           背景色と分割線がコンテンツ領域の縦 100% を覆う。 */
         @media (min-width: 769px) {
             .ref-main {
                 flex-direction: row;
-                align-items: flex-start;
+                align-items: stretch;
             }
 
             .ref-nav {
@@ -311,9 +313,6 @@
                 max-width: 30%;
                 border-top: none;
                 border-right: var(--border-main);
-                position: sticky;
-                top: 0;
-                align-self: flex-start;
             }
 
             .ref-article {
