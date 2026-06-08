@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ajisai Reference - 用例をその場で Playground に流し込んで試せるリファレンス">
+    <meta name="description" content="Ajisai Reference - browse examples and try each one instantly in the Playground">
     <meta name="theme-color" content="#6b5b95">
     <title>Ajisai Reference</title>
 
@@ -188,31 +188,16 @@
             margin-bottom: 0.75rem;
         }
 
-        .ref-nav ul { list-style: none; }
-
-        .ref-nav li { margin: 0.35rem 0; }
-
-        .ref-nav a {
-            display: block;
-            padding: 0.3rem 0.5rem;
-            border-radius: 4px;
-            color: var(--color-text);
-        }
-
+        /* navigation is a plain list of links. Leave link colors (unvisited /
+           visited), underline, and hover to the user-agent default — minimal,
+           unadorned styling. */
+        .ref-nav a,
         .ref-nav a:hover {
-            background: var(--color-medium);
-            color: var(--color-text);
+            color: revert;
+            text-decoration: revert;
         }
 
-        /* 現在表示中の頁に対応する目次項目を強調する。 */
-        .ref-nav a.is-active {
-            background: var(--color-medium);
-            color: var(--color-text);
-            font-weight: 600;
-            box-shadow: inset 3px 0 0 var(--color-primary);
-        }
-
-        /* 各 .ref-page は一枚の頁。JS が現在頁以外を hidden にする。 */
+        /* Each .ref-page is one page; JS hides every page except the current one. */
         .ref-page[hidden] {
             display: none;
         }
@@ -373,101 +358,101 @@
         <main class="ref-main">
             <article class="ref-article">
                 <section id="intro" class="ref-page">
-                    <h2>はじめに</h2>
-                    <p>Ajisai は AI-first・ベクトル指向・分数データフローのスタック言語です。このリファレンスでは、各機能を短い用例とともに紹介します。</p>
-                    <p>すべての用例には <strong>「Playground で開く」</strong> ボタンが付いています。押すとアプリ本体のエディタにコードが流し込まれるので、その場で実行して挙動を確かめられます。</p>
-                    <p class="result-label">※ これはラフ版です。内容は段階的に充実させていきます。</p>
+                    <h2>Introduction</h2>
+                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. This reference introduces each feature with short examples.</p>
+                    <p>Every example has an <strong>"Open in Playground"</strong> button. Pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
+                    <p class="result-label">This is a rough draft. The content will be expanded gradually.</p>
                 </section>
 
                 <section id="vectors" class="ref-page">
-                    <h2>値とベクトル</h2>
-                    <p>Ajisai のあらゆる値はベクトルに包まれます。角括弧 <code>[ ]</code> で囲み、要素は空白で区切ります。</p>
+                    <h2>Values and Vectors</h2>
+                    <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces.</p>
                     <div class="example">
                         <pre><code>[ 1 2 3 ]</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p>数値は分数（有理数）として扱えます。</p>
+                    <p>Numbers can be fractions (rationals).</p>
                     <div class="example">
                         <pre><code>[ 7/3 ]</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
                 </section>
 
                 <section id="arithmetic" class="ref-page">
-                    <h2>演算</h2>
-                    <p>四則演算はベクトル同士の要素ごとに作用します。</p>
+                    <h2>Arithmetic</h2>
+                    <p>The four arithmetic operations act element-wise between vectors.</p>
                     <div class="example">
                         <pre><code>[ 1 2 3 ] [ 10 20 30 ] +</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result（例）</p>
+                    <p class="result-label">Result (example)</p>
                     <pre class="result">[ 11 22 33 ]</pre>
 
-                    <h3>剰余 <code>MOD</code></h3>
+                    <h3>Remainder <code>MOD</code></h3>
                     <div class="example">
                         <pre><code>[ 7 ] [ 3 ] MOD PRINT</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result（例）</p>
+                    <p class="result-label">Result (example)</p>
                     <pre class="result">[ 1 ]</pre>
                 </section>
 
                 <section id="output" class="ref-page">
-                    <h2>出力</h2>
-                    <p><code>PRINT</code> はスタック最上段の値を出力エリアに表示します。</p>
+                    <h2>Output</h2>
+                    <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
                     <div class="example">
                         <pre><code>[ 42 ] PRINT</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
                 </section>
 
                 <section id="range" class="ref-page">
-                    <h2>範囲生成</h2>
-                    <p><code>RANGE</code> は開始値と終了値から連続したベクトルを作ります。</p>
+                    <h2>Range</h2>
+                    <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
                     <div class="example">
                         <pre><code>[ 0 ] [ 5 ] RANGE PRINT</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result（例）</p>
+                    <p class="result-label">Result (example)</p>
                     <pre class="result">[ 0 1 2 3 4 5 ]</pre>
                 </section>
 
                 <section id="define" class="ref-page">
-                    <h2>Word の定義</h2>
-                    <p>コード片に名前を付けて新しい Word を定義できます。定義は <code>DEF</code> で行います。</p>
+                    <h2>Defining Words</h2>
+                    <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
                     <div class="example">
                         <pre><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
 [ 21 ] DOUBLE PRINT</code></pre>
                         <div class="example-actions">
-                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result（例）</p>
+                    <p class="result-label">Result (example)</p>
                     <pre class="result">[ 42 ]</pre>
                 </section>
             </article>
 
-            <nav class="ref-nav" aria-label="リファレンス目次">
-                <h2>目次</h2>
+            <nav class="ref-nav" aria-label="Reference contents">
+                <h2>Contents</h2>
                 <ul>
-                    <li><a href="#intro">はじめに</a></li>
-                    <li><a href="#vectors">値とベクトル</a></li>
-                    <li><a href="#arithmetic">演算</a></li>
-                    <li><a href="#output">出力</a></li>
-                    <li><a href="#range">範囲生成</a></li>
-                    <li><a href="#define">Word の定義</a></li>
+                    <li><a href="#intro">Introduction</a></li>
+                    <li><a href="#vectors">Values and Vectors</a></li>
+                    <li><a href="#arithmetic">Arithmetic</a></li>
+                    <li><a href="#output">Output</a></li>
+                    <li><a href="#range">Range</a></li>
+                    <li><a href="#define">Defining Words</a></li>
                 </ul>
             </nav>
         </main>
@@ -518,10 +503,10 @@
                 pages.forEach(function (page) {
                     page.hidden = page !== target;
                 });
+                // aria-current marks the link for the current page (accessibility
+                // only; no visual decoration is applied).
                 navLinks.forEach(function (link) {
-                    var active = pageIdFromLink(link) === target.id;
-                    link.classList.toggle('is-active', active);
-                    if (active) {
+                    if (pageIdFromLink(link) === target.id) {
                         link.setAttribute('aria-current', 'page');
                     } else {
                         link.removeAttribute('aria-current');
