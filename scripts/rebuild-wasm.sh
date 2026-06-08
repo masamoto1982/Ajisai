@@ -22,7 +22,7 @@ trap 'rm -rf "${scratch_dir}"' EXIT
 
 if ! command -v wasm-pack >/dev/null 2>&1; then
   echo "rebuild-wasm: wasm-pack is not installed." >&2
-  echo "  Install with:  cargo install wasm-pack" >&2
+  echo "  Install with:  bash ./scripts/install-wasm-pack.sh" >&2
   exit 1
 fi
 
