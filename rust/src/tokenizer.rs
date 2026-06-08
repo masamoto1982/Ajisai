@@ -463,13 +463,24 @@ fn parse_number_from_string(s: &str) -> Option<Token> {
         if chars.len() == 1 {
             return None;
         }
-        if !chars[i + 1].is_ascii_digit() {
+        // The sign must be followed by a digit or a leading-dot decimal
+        // (`-.5`, `+.5`); otherwise it is a word symbol, not a number.
+        let next_is_digit = chars[i + 1].is_ascii_digit();
+        let next_is_dot_digit =
+            chars[i + 1] == '.' && i + 2 < chars.len() && chars[i + 2].is_ascii_digit();
+        if !next_is_digit && !next_is_dot_digit {
             return None;
         }
         i += 1;
     }
 
-    if i >= chars.len() || !chars[i].is_ascii_digit() {
+    // A leading-dot decimal (`.5`, `-.5`) has an empty integer part: the dot
+    // must be followed by at least one digit (SPEC §3.2). Bare `.` / `..` are
+    // modifier sugar already handled before this function is reached.
+    let has_leading_dot_digits =
+        i < chars.len() && chars[i] == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit();
+
+    if !has_leading_dot_digits && (i >= chars.len() || !chars[i].is_ascii_digit()) {
         return None;
     }
 

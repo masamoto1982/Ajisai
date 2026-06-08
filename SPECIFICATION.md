@@ -1,7 +1,7 @@
 # Ajisai Language Specification
 
 Status: **Canonical**
-Version: **2026-06-02**
+Version: **2026-06-08**
 
 This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.
 
@@ -95,6 +95,8 @@ The `truthValue` axis is present only on values carrying the `TruthValue` interp
 | `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
 | `>` | Syntactic sugar for `GT` |
 | `>=` | Syntactic sugar for `GTE` |
+| `<` | Syntactic sugar for `LT` |
+| `<=` | Syntactic sugar for `LTE` |
 | `<>` | Syntactic sugar for `NEQ` |
 | `$` | COND clause separator |
 | `#` | Line comment: all characters from `#` to end of line are ignored |
@@ -491,6 +493,8 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `COLLECT` | — | Gather all current stack values into a single vector |
 | `SORT` | — | Sort elements in ascending order; yields `Unknown` if any required comparison is undecidable (Section 7.4.3) |
 
+`SORT` is a **Canonical Module + core-listed boundary word**: its canonical home is the `ALGO` module (Section 9.1) and it is additionally surfaced in the Core listing view, so a bare `SORT` resolves and `ALGO@SORT` names the same word. It is listed here for its vector role.
+
 ### 7.2 Tensor operations
 
 Tensor operations operate on nested vectors treated as multi-dimensional arrays.
@@ -598,6 +602,8 @@ The decided outcome is the exact sign of `a − b`; the six relations of Section
 
 The U outcome named in Section 7.4.1 is required not only of the comparison primitives themselves but of every Coreword whose result depends on a comparison. This section fixes how U flows through the four such words — `MIN`, `MAX`, `SORT`, and `COND` — so that an undecidable comparison never silently produces a wrong order, a spurious error, or a definite truth value it has not earned.
 
+Of these four, `COND` is a Canonical Core word; `MIN` and `MAX` are canonically owned by the `MATH` module and `SORT` by the `ALGO` module (Section 9.1). `SORT` is additionally Core-listed (Section 7.1); `MIN` / `MAX` are reached as bare names only after `IMPORT 'MATH'`, and always as `MATH@MIN` / `MATH@MAX`. The U-propagation contract below is a property of each word wherever it is invoked, independent of its canonical home.
+
 The common rule is **U-honesty**: when the comparison a word relies on is undecidable, the word must surface that undecidability (as U, or, for `COND`, as the absence of a satisfied clause) rather than fabricate a decision. None of these words may treat U as `true`, as `false`, or as a malformed-input error.
 
 **`MIN` / `MAX`.** These select one of two (or, in sequence form, several) numeric operands by the order relation. They accept the full numeric domain, including the lazy continued-fraction operands of Section 4.2, and decide the order through the same budgeted comparison as the relations (Section 7.4.1). When the governing comparison decides, the selected operand is returned unchanged. When it does not decide within the budget, the result is the logical `Unknown` (U), observed as `truthValue = unknown` and carrying `diagnosis.agreedPrefix` (Section 4.5.0) — because the program cannot be told *which* operand is the minimum/maximum when their order is unknown. `MIN` and `MAX` remain NIL-passthrough (Section 7.12): a NIL operand yields NIL, and NIL takes priority over a U-producing comparison per Section 4.5.2. In sequence form they short-circuit on the first undecidable pair, matching the `STAK`-mode rule of Section 7.4.1.
@@ -648,6 +654,9 @@ The absorbing elements are exact: `AND` returns F whenever either operand is F (
 | `SUBSTITUTE` | — | Replace every occurrence of a substring with another |
 | `STARTS-WITH?` | — | True if the string begins with the given prefix |
 | `ENDS-WITH?` | — | True if the string ends with the given suffix |
+| `>CF` | `>CF` | Tag a numeric scalar so it displays and serializes under the `ContinuedFraction` interpretation role (Section 12.2); value-preserving (`[ x ] -> [ x ]`) |
+
+`>CF` is the conversion-word surface form of Section 3.9: it changes only the requested display/serialization role of its operand (the nested-parentheses continued-fraction form of Section 3.2 / Section 4.2), never the value. It is a Canonical Core word.
 
 `TRIM` / `TRIM-LEFT` / `TRIM-RIGHT` / `TOKENIZE` / `SUBSTITUTE` /
 `STARTS-WITH?` / `ENDS-WITH?` are Canonical Core words also listed in the
@@ -670,6 +679,9 @@ listing is presentation-only and does not introduce a `TEXT` module.
 | `IDLE` | — | No-op; does nothing |
 | `EXEC` | — | Execute a code block |
 | `EVAL` | — | Parse and execute a string as Ajisai code |
+| `PRECOMPUTE` | — | Definition-time staging marker: evaluate a code block when a word is defined and splice the resulting values into the definition |
+
+`PRECOMPUTE` is a **definition-time-only** Canonical Core word, not a macro. It consumes a code block (`[ { body } ] -> [ value... ]`) and is meaningful only while a `DEF` body is being compiled: the block is evaluated once at definition time and its result values are staged into the compiled definition, so the cost is not paid on each later call. It is `Partial` (it raises on malformed use such as a non-block operand) with `nil_policy = RejectsNil`; using it outside a definition-time context is an error.
 
 ### 7.8 User word dictionary
 
@@ -681,14 +693,16 @@ listing is presentation-only and does not introduce a `TEXT` module.
 
 ### 7.9 IO and utilities
 
-| Canonical | Sugar | Description |
-|-----------|-------|-------------|
-| `PRINT` | — | Output the top stack value |
-| `NOW` | — | Push the current instant (exact seconds since the Unix epoch) |
-| `DATETIME` | — | Render an instant as a timezone-free civil datetime at a UTC offset |
-| `TIMESTAMP` | — | Resolve a timezone-free civil datetime to an instant at a UTC offset |
-| `CSPRNG` | — | Push a cryptographically secure random number |
-| `HASH` | — | Compute a hash of the top stack value |
+| Canonical | Canonical home | Sugar | Description |
+|-----------|----------------|-------|-------------|
+| `PRINT` | Core (listed in `IO`) | — | Output the top stack value |
+| `NOW` | `TIME` | — | Push the current instant (exact seconds since the Unix epoch) |
+| `DATETIME` | `TIME` | — | Render an instant as a timezone-free civil datetime at a UTC offset |
+| `TIMESTAMP` | `TIME` | — | Resolve a timezone-free civil datetime to an instant at a UTC offset |
+| `CSPRNG` | `CRYPTO` | — | Push a cryptographically secure random number |
+| `HASH` | `CRYPTO` | — | Compute a hash of the top stack value |
+
+Only `PRINT` is a Canonical Core word here; it is additionally boundary-listed in the `IO` view (Section 7). `NOW` / `DATETIME` / `TIMESTAMP` are canonically owned by the `TIME` module and `CSPRNG` / `HASH` by the `CRYPTO` module (Section 9.1): they are **not** Core-listed, so a bare name resolves only after `IMPORT`, and they are always reachable as `TIME@NOW`, `CRYPTO@HASH`, and so on. They are grouped here by utility role, not by canonical home.
 
 ### 7.10 Module loading
 
@@ -737,17 +751,19 @@ A contract entry has the following fields, in addition to the existing identific
 | `partiality` | `Total` / `Partial` / `Projecting` | `Total`: the operation is defined on every well-shaped input. `Partial`: the operation has well-shaped inputs for which it raises an error. `Projecting`: the operation is total because it projects all failures onto NIL with reason. |
 | `nil_policy` | `Passthrough` / `CreatesNil` / `RejectsNil` / `ConsumesNil` / `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` / `B` / `C` / `D` / `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. A `Partial` word is therefore at least `B` (it is not total); `Projecting` words are total by projection and may be `A`. |
-| `mass` | `Fixed { consumes, produces }` / `Dynamic` | The static flow-mass contract of Section 13.1: under the default `TOP`/`EAT` mode the word reads `consumes` operands and pushes `produces` results; under `KEEP` the `consumes` operands are additionally retained (bifurcation, Section 13.2). `Dynamic` marks a data-dependent arity (for example the `STAK` count-fold or runtime-shaped vector operations) that is not statically pinned. |
+| `mass` | `Fixed { consumes, produces }` / `Dynamic` | The static flow-mass contract of Section 13.1: under the default `TOP`/`EAT` mode the word reads `consumes` operands and pushes `produces` results; under `KEEP` the `consumes` operands are additionally retained (bifurcation, Section 13.2). `Dynamic` marks a word whose arity is not a statically pinned `Fixed` value — either because it is genuinely data-dependent (for example the `STAK` count-fold or runtime-shaped vector operations) or because it has not been probe-verified into the `Fixed` set. `Dynamic` is sound in both cases: the static mass-conservation validator simply abstains on `Dynamic` words, so marking a fixed-arity word `Dynamic` only forgoes static checking, it never asserts a wrong arity. |
 
 `partiality` and `nil_policy` are independent axes. For example, under the Bubble Rule `/` (division) is `Projecting` with `nil_policy = CreatesNil`: `/`, `GET`, `NUM`, and `CHR` are `Projecting`/`CreatesNil` for well-formed domain misses while malformed inputs remain ordinary errors.
 
 Comparison words (`EQ`, `NEQ`, `LT`, `LTE`, `GT`, `GTE`) are `Projecting`: they are total because every well-shaped input yields a `TruthValue` result, projecting the undecidable case onto the truth value `unknown` (U) rather than raising. Their `nil_policy` is `Passthrough` (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a `TruthValue` result and **not** a `reason`-bearing NIL, so they are no longer classified `CreatesNil` for that case. (The `reason = undecidable` NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)
 
-Logic words (`AND`, `OR`, `NOT`) are `Total` over the three-valued domain {`true`, `false`, `unknown`} (Section 7.5) and `Passthrough` for NIL operands, with `PreservesReason` so that the leftmost NIL reason survives and a NIL operand is never silently replaced by U (Section 4.5.2).
+Logic words (`AND`, `OR`, `NOT`) are `Total` over the three-valued domain {`true`, `false`, `unknown`} (Section 7.5). Their registry `nil_policy` is `Passthrough`: they pass NIL operands through per Section 7.12. The `nil_policy` field holds a single value, so reason-preservation is **not** a second simultaneous policy here but an additional behavioral requirement layered on `Passthrough` — the leftmost NIL reason must survive and a NIL operand is never silently replaced by U (Section 4.5.2). The distinct `PreservesReason` value is reserved for words whose *only* NIL contract is to carry a reason through unchanged: the pure no-op / marker words (`TOP`, `STAK`, `EAT`, `KEEP`, `TRUE`, `FALSE`, `NIL`, `IDLE`, `PIPE`, `OR-NIL`).
 
 `COMPARE-WITHIN` (Section 7.4.2) is `Projecting`: it is total over well-shaped input because it projects the budget-undecided case onto the logical `Unknown` (a result, not a reasoned NIL). Its `nil_policy` is `Passthrough` for the `a`/`b` operands. A non-positive or non-integer `budget` or non-numeric operands are malformed use and raise an error, so it is not `CreatesNil`.
 
-`MIN`, `MAX`, and `SORT` (Section 7.4.3) are `Projecting`: each is total over well-shaped numeric input because it projects an undecidable governing comparison onto the logical `Unknown` (a result, not a reasoned NIL). Their `nil_policy` is `Passthrough`, with NIL taking priority over a U-producing comparison (Section 4.5.2). `COND` (Section 7.7) treats a U guard as not-firing rather than producing U as a value, so its existing partiality and `CondExhausted` behavior are unchanged by Section 7.4.3.
+`MIN`, `MAX`, and `SORT` (Section 7.4.3) are `Projecting`: each is total over well-shaped numeric input because it projects an undecidable governing comparison onto the logical `Unknown` (a result, not a reasoned NIL). Their `nil_policy` is `Passthrough`, with NIL taking priority over a U-producing comparison (Section 4.5.2). `MIN` and `MAX` are canonically `MATH` words and `SORT` is canonically an `ALGO` word (Sections 7.4.3, 9.1); their contracts are registry entries on the same footing as Core contracts. `COND` (Section 7.7) treats a U guard as not-firing rather than producing U as a value, so its existing partiality and `CondExhausted` behavior are unchanged by Section 7.4.3.
+
+Other module-canonical words carry registry contracts on the same footing. `MATH@POW` is `Projecting` / `CreatesNil`: it projects `0` raised to a negative exponent onto Bubble/NIL (`reason = divisionByZero`) while malformed use raises an error. `MATH@GCD` and `MATH@LCM` are `Partial` / `Passthrough`: a non-integer numeric operand is malformed use and raises an error (cf. `CHR`), while NIL operands pass through. `ALGO@INDEX-OF` and `TIME@PARSE-ISO` are `Projecting` / `CreatesNil`, projecting a well-formed miss (value absent / unparseable text) onto Bubble/NIL with `reason = missingField` and `reason = invalidEncoding` respectively. Adding any Coreword — Core or module — without a contract entry is a conformance violation.
 
 Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.
 
@@ -869,6 +885,17 @@ The module provides the following words:
 Contract classification (Section 7.14): every `SERIAL` word has `purity = Effectful`, `deterministic = false`, `safe_preview = false`, and `safety_level = D`. The outbound words (`LIST-PORTS`, `OPEN`, `CONFIGURE`, `WRITE`, `FLUSH`, `CLOSE`) are `partiality = Partial`, `nil_policy = RejectsNil`. `READ` is `partiality = Projecting`, `nil_policy = CreatesNil`: it projects the no-data and disconnected conditions onto Bubble/NIL. Because they drive or observe external hardware, `SERIAL` words are never eligible for speculative reordering, caching, or `safe_preview` execution.
 
 Misuse raises an error rather than producing Bubble/NIL (Section 11.2 "malformed use → error"): a non-text port id, a byte outside `0`–`255`, a non-positive baud rate, or a missing operand raises `StructureError` or `StackUnderflow`. For `READ`, the absence of data is a well-formed outcome, not misuse: with no buffered bytes it projects Bubble/NIL with `reason = noData`, or `reason = portDisconnected` when the host has reported the port gone. The host-side outcome of a well-formed outbound command (for example a device that is physically disconnected) is reported through the host environment and does not change the runtime stack effect of the word.
+
+### 9.5 IO module (host-mediated standard input/output)
+
+The `IO` module (Section 9.1) provides host-mediated textual standard input and output. Like `SERIAL`, these words act only at the IO/semantic boundary (Section 5.2): the runtime does not perform the I/O itself; the host environment supplies the input buffer and consumes the output buffer.
+
+| Word | Stack effect | Description |
+|------|--------------|-------------|
+| `INPUT` | `-> [ text ]` | Read text from the host input buffer (observable host ingress) |
+| `OUTPUT` | `[ value ] ->` | Write a value to the host output buffer (effectful host egress) |
+
+`IO@INPUT` is `purity = Observable` (it reads external host state); `IO@OUTPUT` is `purity = Effectful`. Both are imported and resolved like any other module word (`IMPORT 'IO'`, or `IO@INPUT` / `IO@OUTPUT`). The Canonical Core word `PRINT` (Section 7.9) is boundary-listed in the `IO` view but is not the same word as `IO@OUTPUT`.
 
 ---
 

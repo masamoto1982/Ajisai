@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 85,
+    "corewords": 86,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 203
+    "total": 204
   },
   "entries": [
     {
@@ -1427,6 +1427,14 @@
       ],
       "review_gate": "before-core-stabilization",
       "classification": "Exploratory"
+    },
+    {
+      "id": "core.supervise",
+      "kind": "coreword",
+      "surface": "SUPERVISE",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SUPERVISE"
     },
     {
       "id": "module.music.seq",

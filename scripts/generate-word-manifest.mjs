@@ -142,7 +142,10 @@ function extractCoreWords() {
   const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
   const body = constArrayBody(readRepo(sourcePath), 'BUILTIN_SPECS');
   const entries = [];
-  const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];)/g;
+  // `constArrayBody` strips the trailing `\n];`, so the final entry has no
+  // `BuiltinSpec {` / `];` terminator after it; `$` lets the last block (e.g.
+  // SUPERVISE) match at end-of-body instead of being silently dropped.
+  const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];|$)/g;
   for (const match of body.matchAll(pattern)) {
     const item = match[1];
     const name = item.match(/\bname:\s*"([^"]+)"/)?.[1];
@@ -290,7 +293,19 @@ const manifest = {
 };
 
 const json = `${JSON.stringify(manifest, null, 2)}\n`;
-if (process.argv.includes('--stdout')) {
+if (process.argv.includes('--check')) {
+  // CI drift guard: fail if the committed manifest is out of sync with what
+  // the generator now produces, so a new/last BuiltinSpec (e.g. SUPERVISE)
+  // can never silently go missing again.
+  const existing = existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : '';
+  if (existing !== json) {
+    console.error(
+      '[word-manifest] docs/word-manifest.json is stale. Run `npm run word:manifest` and commit the result.',
+    );
+    process.exit(1);
+  }
+  console.log(`[word-manifest] docs/word-manifest.json is up to date (${entries.length} entries).`);
+} else if (process.argv.includes('--stdout')) {
   process.stdout.write(json);
 } else {
   writeFileSync(outputPath, json);

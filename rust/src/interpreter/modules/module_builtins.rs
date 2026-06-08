@@ -1285,6 +1285,14 @@ fn contract_override(module: &str, word: &str) -> Option<(Partiality, NilPolicy)
         // ALGO@INDEX-OF projects a well-formed miss (value absent from a
         // valid vector) onto Bubble/NIL with reason = missingField.
         ("ALGO", "INDEX-OF") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),
+        // MIN / MAX / SORT are total-by-projection (SPEC §7.4.3, §7.14): an
+        // undecidable governing comparison is projected onto the logical
+        // Unknown (U), so they are `Projecting`, not the pure-class default
+        // `Total`. NIL operands pass through (with NIL taking priority over a
+        // U-producing comparison, §4.5.2), so `nil_policy` stays `Passthrough`.
+        ("MATH", "MIN") | ("MATH", "MAX") | ("ALGO", "SORT") => {
+            Some((Partiality::Projecting, NilPolicy::Passthrough))
+        }
         // TIME@PARSE-ISO projects an unparseable-but-well-formed text value
         // onto Bubble/NIL with reason = invalidEncoding (cf. NUM).
         ("TIME", "PARSE-ISO") => Some((Partiality::Projecting, NilPolicy::CreatesNil)),

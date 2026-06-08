@@ -25,6 +25,7 @@
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
+    "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "simplify:report": "node scripts/ajisai-simplify-report.mjs",
     "primitive:test-map": "node scripts/generate-primitive-test-map.mjs"
