@@ -26,7 +26,8 @@
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
-    "simplify:report": "node scripts/ajisai-simplify-report.mjs"
+    "simplify:report": "node scripts/ajisai-simplify-report.mjs",
+    "primitive:test-map": "node scripts/generate-primitive-test-map.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

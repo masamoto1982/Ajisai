@@ -76,6 +76,9 @@ jobs:
       - name: Generate word manifest
         run: npm run word:manifest
 
+      - name: Generate primitive test map
+        run: npm run primitive:test-map
+
       - name: Check formalization coverage
         run: npm run check:formalization-coverage
 
