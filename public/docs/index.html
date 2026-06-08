@@ -258,22 +258,34 @@
             background: #fff;
         }
 
-        .result-label {
-            font-size: 0.85rem;
-            color: var(--color-text-light);
-            margin: 0.25rem 0;
+        /* Every example carries its expected result, shown uniformly inside the
+           example box between the code and the action button. */
+        .example-result {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            border-top: var(--border-main);
+            background: #fff;
+            overflow-x: auto;
         }
 
-        .result {
-            margin: 0;
-            padding: 0.6rem 1rem;
+        .example-result-label {
+            flex: 0 0 auto;
+            font-size: 0.8rem;
+            color: var(--color-text-light);
+        }
+
+        .example-result-value {
             font-family: var(--font-stack-mono);
             font-size: 0.85rem;
+            color: var(--color-text);
+            white-space: pre;
+        }
+
+        .ref-note {
+            font-size: 0.85rem;
             color: var(--color-text-light);
-            background: #fff;
-            border: var(--border-main);
-            border-radius: var(--radius-button);
-            overflow-x: auto;
         }
 
         .ref-footer {
@@ -361,7 +373,7 @@
                     <h2>Introduction</h2>
                     <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. This reference introduces each feature with short examples.</p>
                     <p>Every example has an <strong>"Open in Playground"</strong> button. Pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
-                    <p class="result-label">This is a rough draft. The content will be expanded gradually.</p>
+                    <p class="ref-note">This is a rough draft. The content will be expanded gradually.</p>
                 </section>
 
                 <section id="vectors" class="ref-page">
@@ -369,6 +381,10 @@
                     <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces.</p>
                     <div class="example">
                         <pre><code>[ 1 2 3 ]</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 1 2 3 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
@@ -376,6 +392,10 @@
                     <p>Numbers can be fractions (rationals).</p>
                     <div class="example">
                         <pre><code>[ 7/3 ]</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 7/3 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
@@ -387,22 +407,26 @@
                     <p>The four arithmetic operations act element-wise between vectors.</p>
                     <div class="example">
                         <pre><code>[ 1 2 3 ] [ 10 20 30 ] +</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 11 22 33 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result (example)</p>
-                    <pre class="result">[ 11 22 33 ]</pre>
 
                     <h3>Remainder <code>MOD</code></h3>
                     <div class="example">
                         <pre><code>[ 7 ] [ 3 ] MOD PRINT</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 1 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result (example)</p>
-                    <pre class="result">[ 1 ]</pre>
                 </section>
 
                 <section id="output" class="ref-page">
@@ -410,6 +434,10 @@
                     <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
                     <div class="example">
                         <pre><code>[ 42 ] PRINT</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 42 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
@@ -421,12 +449,14 @@
                     <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
                     <div class="example">
                         <pre><code>[ 0 ] [ 5 ] RANGE PRINT</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 0 1 2 3 4 5 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result (example)</p>
-                    <pre class="result">[ 0 1 2 3 4 5 ]</pre>
                 </section>
 
                 <section id="define" class="ref-page">
@@ -435,12 +465,14 @@
                     <div class="example">
                         <pre><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
 [ 21 ] DOUBLE PRINT</code></pre>
+                        <div class="example-result">
+                            <span class="example-result-label">Result</span>
+                            <code class="example-result-value">[ 42 ]</code>
+                        </div>
                         <div class="example-actions">
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="result-label">Result (example)</p>
-                    <pre class="result">[ 42 ]</pre>
                 </section>
             </article>
 
