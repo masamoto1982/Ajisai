@@ -195,6 +195,26 @@ export const createGUI = (): GUI => {
         }
     };
 
+    // Reference ページの用例から渡されたコードをエディタへ流し込む。
+    // 受け渡し形式: <playground-url>#code=<encodeURIComponent したソース>
+    // Ruby 公式トップのように、用例をそのまま試せる動線を実現するための入口。
+    const applyPlaygroundCodeFromUrl = (): void => {
+        const marker = '#code=';
+        const hash = window.location.hash;
+        if (!hash.startsWith(marker)) return;
+
+        try {
+            const code = decodeURIComponent(hash.slice(marker.length));
+            if (code.trim().length === 0) return;
+            // updateValue は入力モードへの切り替えも兼ねる。
+            editor.updateValue(code);
+            // 一度流し込んだら URL を綺麗にし、リロード時の再投入を防ぐ。
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (error) {
+            console.warn('[GUI] Failed to apply playground code from URL:', error);
+        }
+    };
+
     const initializeWorkers = async (): Promise<void> => {
         try {
             display.renderInfo('Initializing...', false);
@@ -344,6 +364,8 @@ export const createGUI = (): GUI => {
         }
 
         await initializeWorkers();
+
+        applyPlaygroundCodeFromUrl();
 
         console.log('[GUI] GUI initialization completed');
     };

@@ -1,23 +1,488 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ajisai Reference</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 2rem; line-height: 1.6; }
-    h1 { margin-bottom: 0.25rem; }
-    .muted { color: #666; margin-bottom: 1rem; }
-    ul { padding-left: 1.25rem; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ajisai Reference - 用例をその場で Playground に流し込んで試せるリファレンス">
+    <meta name="theme-color" content="#6b5b95">
+    <title>Ajisai Reference</title>
+
+    <!--
+      このページは public/ 配下の静的ファイルとして配信されるため、Vite が処理する
+      アプリ本体の CSS バンドルには依存できない。ヘッダー/フッターの意匠（移ろいの
+      グラデーションを含む）とデザイントークンは、ラフ版として最小限を本ファイルに
+      インライン複製している。意匠を本格運用する段階で共通化を検討する。
+    -->
+    <style>
+        :root {
+            --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
+
+            --radius-button: 6px;
+
+            --color-primary: #6b5b95;
+            --color-secondary: #aba9b1;
+
+            --color-text: #202122;
+            --color-text-light: #54595d;
+
+            --border-main: solid 1px #a2a9b1;
+
+            --color-light: #f8f9fa;
+            --color-medium: #eaecf0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            min-height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: var(--font-stack-primary);
+            background: #fff;
+            color: var(--color-text);
+            line-height: 1.7;
+        }
+
+        a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+
+        a:hover { color: var(--color-secondary); }
+
+        .ref-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
+           アプリ本体 base.css の意匠をラフ複製したもの。 */
+        @property --mv-h { syntax: "<number>"; inherits: false; initial-value: 20; }
+        @property --mv-gap { syntax: "<number>"; inherits: false; initial-value: 135; }
+        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 87%; }
+
+        @keyframes mv-hue { from { --mv-h: 20; } to { --mv-h: 380; } }
+        @keyframes mv-gap { 0% { --mv-gap: 110; } 50% { --mv-gap: 160; } 100% { --mv-gap: 110; } }
+        @keyframes mv-light { 0% { --mv-l: 87%; } 50% { --mv-l: 92%; } 100% { --mv-l: 87%; } }
+
+        .ref-header,
+        .ref-footer {
+            background: linear-gradient(
+                to right in oklch,
+                oklch(var(--mv-l) 0.1 var(--mv-h)) 0%,
+                oklch(var(--mv-l) 0.09 calc(var(--mv-h) + var(--mv-gap))) 100%
+            );
+            animation:
+                mv-hue 240s linear infinite,
+                mv-gap 190s ease-in-out infinite,
+                mv-light 170s ease-in-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ref-header, .ref-footer { animation: none; }
+        }
+
+        .ref-header {
+            border-bottom: var(--border-main);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            color: var(--color-text);
+        }
+
+        .app-brand-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .app-brand-block {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: inherit;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .ref-header h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .ref-tagline {
+            font-size: 0.875rem;
+            color: var(--color-text-light);
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 2.125rem;
+            padding: 0.5rem 1rem;
+            font-family: var(--font-stack-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            line-height: 1.2;
+            border: var(--border-main);
+            border-radius: var(--radius-button);
+            cursor: pointer;
+            color: var(--color-text);
+            background: #fff;
+        }
+
+        .btn:hover {
+            background: var(--color-light);
+            color: var(--color-text);
+        }
+
+        /* コンテンツ: 横軸 3:7。左 30% が navigation、右 70% が article。
+           モバイルでは縦積みで article → navigation の順に並ぶよう、DOM は
+           article を先に置き、デスクトップでは order で nav を左へ移す。 */
+        .ref-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ref-article {
+            padding: 1.5rem 2rem 3rem;
+            min-width: 0;
+        }
+
+        .ref-nav {
+            padding: 1.5rem 2rem;
+            border-top: var(--border-main);
+            background: var(--color-light);
+        }
+
+        .ref-nav h2 {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-light);
+            margin-bottom: 0.75rem;
+        }
+
+        .ref-nav ul { list-style: none; }
+
+        .ref-nav li { margin: 0.35rem 0; }
+
+        .ref-nav a {
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            color: var(--color-text);
+        }
+
+        .ref-nav a:hover {
+            background: var(--color-medium);
+            color: var(--color-text);
+        }
+
+        .ref-article section {
+            margin-bottom: 2.5rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .ref-article h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.3rem;
+            border-bottom: var(--border-main);
+        }
+
+        .ref-article h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.4rem;
+        }
+
+        .ref-article p { margin: 0.5rem 0; }
+
+        .ref-article code {
+            font-family: var(--font-stack-mono);
+            font-size: 0.9em;
+            background: var(--color-medium);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        .example {
+            margin: 0.75rem 0 1.25rem;
+            border: var(--border-main);
+            border-radius: var(--radius-button);
+            overflow: hidden;
+        }
+
+        .example pre {
+            margin: 0;
+            padding: 0.85rem 1rem;
+            background: var(--color-light);
+            overflow-x: auto;
+        }
+
+        .example pre code {
+            background: none;
+            padding: 0;
+            font-family: var(--font-stack-mono);
+            font-size: 0.9rem;
+            color: var(--color-text);
+            white-space: pre;
+        }
+
+        .example-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-top: var(--border-main);
+            background: #fff;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--color-text-light);
+            margin: 0.25rem 0;
+        }
+
+        .result {
+            margin: 0;
+            padding: 0.6rem 1rem;
+            font-family: var(--font-stack-mono);
+            font-size: 0.85rem;
+            color: var(--color-text-light);
+            background: #fff;
+            border: var(--border-main);
+            border-radius: var(--radius-button);
+            overflow-x: auto;
+        }
+
+        .ref-footer {
+            border-top: var(--border-main);
+            padding: 0.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            color: var(--color-text);
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .ref-footer a { color: var(--color-text-light); }
+        .ref-footer a:hover { color: var(--color-text); }
+
+        /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。 */
+        @media (min-width: 769px) {
+            .ref-main {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+
+            .ref-nav {
+                order: -1;
+                flex: 0 0 30%;
+                max-width: 30%;
+                border-top: none;
+                border-right: var(--border-main);
+                position: sticky;
+                top: 0;
+                align-self: flex-start;
+            }
+
+            .ref-article {
+                flex: 1 1 70%;
+            }
+        }
+
+        /* モバイル: header（固定表示）→ article → navigation → footer（固定表示）。
+           一つの section を読み終えると自然と navigation に到達する素朴な動線。 */
+        @media (max-width: 768px) {
+            .ref-header {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+
+            .ref-footer {
+                position: sticky;
+                bottom: 0;
+                z-index: 100;
+            }
+
+            .ref-header { padding: 0.75rem 1rem; }
+            .ref-article { padding: 1.25rem 1rem 2rem; }
+            .ref-nav { padding: 1.25rem 1rem; }
+        }
+    </style>
 </head>
 <body>
-  <h1>Ajisai Reference</h1>
-  <p class="muted">Ajisai の仕様・実装関連ドキュメントへの導線です。</p>
-  <ul>
-    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/SPECIFICATION.md" target="_blank" rel="noopener noreferrer">Specification</a></li>
-    <li><a href="https://github.com/masamoto1982/Ajisai/blob/main/README.md" target="_blank" rel="noopener noreferrer">README</a></li>
-    <li><a href="https://github.com/masamoto1982/Ajisai/tree/main/docs" target="_blank" rel="noopener noreferrer">Docs Directory</a></li>
-  </ul>
+    <div class="ref-container">
+        <header class="ref-header">
+            <div class="app-brand-meta">
+                <a href="../index.html" class="app-brand-block" aria-label="Ajisai">
+                    <img src="../images/QR_341216.png" alt="" class="logo" aria-hidden="true">
+                    <h1>Ajisai</h1>
+                </a>
+                <span class="ref-tagline">Reference</span>
+            </div>
+            <div class="header-actions">
+                <!-- Reference 側ではアプリ本体への動線として Playground ボタンを置く。 -->
+                <a href="../index.html" class="btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M5 3l14 9-14 9V3z"/>
+                    </svg>
+                    Playground
+                </a>
+            </div>
+        </header>
+
+        <main class="ref-main">
+            <article class="ref-article">
+                <section id="intro">
+                    <h2>はじめに</h2>
+                    <p>Ajisai は AI-first・ベクトル指向・分数データフローのスタック言語です。このリファレンスでは、各機能を短い用例とともに紹介します。</p>
+                    <p>すべての用例には <strong>「Playground で開く」</strong> ボタンが付いています。押すとアプリ本体のエディタにコードが流し込まれるので、その場で実行して挙動を確かめられます。</p>
+                    <p class="result-label">※ これはラフ版です。内容は段階的に充実させていきます。</p>
+                </section>
+
+                <section id="vectors">
+                    <h2>値とベクトル</h2>
+                    <p>Ajisai のあらゆる値はベクトルに包まれます。角括弧 <code>[ ]</code> で囲み、要素は空白で区切ります。</p>
+                    <div class="example">
+                        <pre><code>[ 1 2 3 ]</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                    <p>数値は分数（有理数）として扱えます。</p>
+                    <div class="example">
+                        <pre><code>[ 7/3 ]</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="arithmetic">
+                    <h2>演算</h2>
+                    <p>四則演算はベクトル同士の要素ごとに作用します。</p>
+                    <div class="example">
+                        <pre><code>[ 1 2 3 ] [ 10 20 30 ] +</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                    <p class="result-label">Result（例）</p>
+                    <pre class="result">[ 11 22 33 ]</pre>
+
+                    <h3>剰余 <code>MOD</code></h3>
+                    <div class="example">
+                        <pre><code>[ 7 ] [ 3 ] MOD PRINT</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                    <p class="result-label">Result（例）</p>
+                    <pre class="result">[ 1 ]</pre>
+                </section>
+
+                <section id="output">
+                    <h2>出力</h2>
+                    <p><code>PRINT</code> はスタック最上段の値を出力エリアに表示します。</p>
+                    <div class="example">
+                        <pre><code>[ 42 ] PRINT</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="range">
+                    <h2>範囲生成</h2>
+                    <p><code>RANGE</code> は開始値と終了値から連続したベクトルを作ります。</p>
+                    <div class="example">
+                        <pre><code>[ 0 ] [ 5 ] RANGE PRINT</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                    <p class="result-label">Result（例）</p>
+                    <pre class="result">[ 0 1 2 3 4 5 ]</pre>
+                </section>
+
+                <section id="define">
+                    <h2>Word の定義</h2>
+                    <p>コード片に名前を付けて新しい Word を定義できます。定義は <code>DEF</code> で行います。</p>
+                    <div class="example">
+                        <pre><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
+[ 21 ] DOUBLE PRINT</code></pre>
+                        <div class="example-actions">
+                            <a class="btn js-open-playground" href="../index.html">Playground で開く</a>
+                        </div>
+                    </div>
+                    <p class="result-label">Result（例）</p>
+                    <pre class="result">[ 42 ]</pre>
+                </section>
+            </article>
+
+            <nav class="ref-nav" aria-label="リファレンス目次">
+                <h2>目次</h2>
+                <ul>
+                    <li><a href="#intro">はじめに</a></li>
+                    <li><a href="#vectors">値とベクトル</a></li>
+                    <li><a href="#arithmetic">演算</a></li>
+                    <li><a href="#output">出力</a></li>
+                    <li><a href="#range">範囲生成</a></li>
+                    <li><a href="#define">Word の定義</a></li>
+                </ul>
+            </nav>
+        </main>
+
+        <footer class="ref-footer">
+            <span>&copy; <span id="footer-year"></span> <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">masamoto yamashiro</a></span>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+        // 各用例の「Playground で開く」リンクに、コードブロック本文を埋め込んだ
+        // URL を設定する。アプリ本体は #code=<encodeURIComponent> を読み取って
+        // エディタへ流し込む（gui-application.ts: applyPlaygroundCodeFromUrl）。
+        document.querySelectorAll('.js-open-playground').forEach(function (link) {
+            var example = link.closest('.example');
+            var codeEl = example && example.querySelector('pre code');
+            if (!codeEl) return;
+            var code = codeEl.textContent.replace(/\s+$/, '');
+            link.setAttribute('href', '../index.html#code=' + encodeURIComponent(code));
+        });
+    </script>
 </body>
 </html>
