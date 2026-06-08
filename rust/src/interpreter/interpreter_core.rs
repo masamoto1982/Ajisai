@@ -543,6 +543,29 @@ impl Interpreter {
         self.host_effects.push(effect);
     }
 
+    /// HostedEffect schema: capability.check → request construction → Eff append.
+    ///
+    /// The capability gate runs before the request builder, so missing-host
+    /// failures emit only the structured diagnostic and do not let the word
+    /// consume stack values or touch a host boundary. The builder constructs the
+    /// structured effect payload (and may update the legacy output channel kept
+    /// for adapters); the resulting `HostEffect` is then appended to the
+    /// language-independent effect log.
+    pub(crate) fn run_hosted_effect_schema<F>(
+        &mut self,
+        word: &str,
+        capability: super::HostCapability,
+        build_effect: F,
+    ) -> Result<()>
+    where
+        F: FnOnce(&mut Self) -> Result<super::HostEffect>,
+    {
+        self.require_host_capability(word, capability)?;
+        let effect = build_effect(self)?;
+        self.emit_host_effect(effect);
+        Ok(())
+    }
+
     pub(crate) fn require_host_capability(
         &mut self,
         word: &str,

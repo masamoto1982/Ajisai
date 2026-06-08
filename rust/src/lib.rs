@@ -3,6 +3,7 @@ pub mod core_word_aliases;
 pub mod coreword_registry;
 pub mod elastic;
 mod error;
+pub use error::{AjisaiError, ErrorCategory, NilReason};
 pub mod interpreter;
 pub mod semantic;
 pub mod surface_forms;

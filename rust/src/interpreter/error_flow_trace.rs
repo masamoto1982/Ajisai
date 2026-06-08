@@ -1,4 +1,4 @@
-use super::debug_diagnosis::DebugDiagnosis;
+use super::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::error::ErrorCategory;
 use crate::semantic::AbsenceMetadata;
 
@@ -18,6 +18,21 @@ pub struct ErrorFlowEvent {
     pub stack_len_after: usize,
     pub message: String,
     pub diagnosis: Option<DebugDiagnosis>,
+}
+
+impl ErrorFlowEvent {
+    pub fn ai_diagnostic_payload(&self) -> Option<AiDiagnosticPayload> {
+        self.diagnosis.as_ref().map(|diagnosis| {
+            diagnosis.ai_payload(
+                self.error_category.as_ref(),
+                self.absence
+                    .as_ref()
+                    .and_then(|absence| absence.reason.as_ref()),
+                None,
+                None,
+            )
+        })
+    }
 }
 
 impl ErrorFlowEventKind {

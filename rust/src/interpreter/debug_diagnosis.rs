@@ -50,10 +50,24 @@ pub enum CauseClass {
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct DebugCheck {
     pub label: String,
     pub detail: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct AiDiagnosticPayload {
+    pub kind: Option<String>,
+    pub recoverability: String,
+    pub semantic_area: String,
+    pub word: Option<String>,
+    pub semantic_role: String,
+    pub algebraic_family: String,
+    pub nil_reason: Option<String>,
+    pub truth_value: Option<String>,
+    pub effect: Option<String>,
+    pub next_checks: Vec<DebugCheck>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -258,6 +272,103 @@ impl DebugDiagnosis {
             next_checks: Vec::new(),
             agreed_prefix: Some(agreed_prefix),
         }
+    }
+    /// Build the AI-facing structured diagnostic payload used by tests, WASM
+    /// adapters, and review tooling. Human-readable `summary` stays separate;
+    /// this payload exposes stable protocol fields so agents can distinguish
+    /// NIL, UNKNOWN, host-effect violations, portability issues, and input
+    /// domain errors without matching display strings.
+    pub fn ai_payload(
+        &self,
+        category: Option<&ErrorCategory>,
+        nil_reason: Option<&NilReason>,
+        truth_value: Option<&str>,
+        effect: Option<&str>,
+    ) -> AiDiagnosticPayload {
+        let word = self.where_.word.as_deref();
+        AiDiagnosticPayload {
+            kind: category.map(|c| c.as_protocol_str().to_string()),
+            recoverability: recoverability_for(&self.why, category).to_string(),
+            semantic_area: semantic_area_for(word, &self.why).to_string(),
+            word: self.where_.word.clone(),
+            semantic_role: semantic_role_for(word).to_string(),
+            algebraic_family: algebraic_family_for(word, &self.why).to_string(),
+            nil_reason: nil_reason.map(|r| r.as_protocol_str().to_string()),
+            truth_value: truth_value.map(str::to_string),
+            effect: effect.map(str::to_string),
+            next_checks: self.next_checks.clone(),
+        }
+    }
+}
+
+fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'static str {
+    match category {
+        Some(ErrorCategory::DivisionByZero)
+        | Some(ErrorCategory::StructureError)
+        | Some(ErrorCategory::IndexOutOfBounds)
+        | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
+        Some(ErrorCategory::UnknownWord)
+        | Some(ErrorCategory::UnknownModule)
+        | Some(ErrorCategory::StackUnderflow)
+        | Some(ErrorCategory::ModeUnsupported)
+        | Some(ErrorCategory::CondExhausted) => "fixProgram",
+        Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
+        Some(ErrorCategory::ExecutionLimitExceeded) => "addBudgetOrFixRecursion",
+        Some(ErrorCategory::Custom) | None => match why {
+            CauseClass::Environment | CauseClass::Effect => "fixHost",
+            CauseClass::NilFlow => "handleUnknownOrNil",
+            _ => "inspectContext",
+        },
+    }
+}
+
+fn semantic_role_for(word: Option<&str>) -> &'static str {
+    let Some(word) = word else {
+        return "Unknown";
+    };
+    if let Some(meta) = crate::coreword_registry::get_coreword_metadata(word) {
+        return match meta.profile {
+            crate::coreword_registry::WordProfile::Hosted => "HostedEffect",
+            crate::coreword_registry::WordProfile::PlatformSpecific => "Extension",
+            crate::coreword_registry::WordProfile::Core => {
+                if matches!(word, "COMPARE-WITHIN") {
+                    "Primitive"
+                } else {
+                    "Derived"
+                }
+            }
+        };
+    }
+    "Unknown"
+}
+
+fn semantic_area_for(word: Option<&str>, why: &CauseClass) -> &'static str {
+    match word {
+        Some("ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "SQRT" | "FLOOR" | "CEIL" | "ROUND") => {
+            "exact-real-arithmetic"
+        }
+        Some("EQ" | "NEQ" | "LT" | "LTE" | "GT" | "GTE" | "COMPARE-WITHIN") => {
+            "exact-real-comparison"
+        }
+        Some("AND" | "OR" | "NOT") => "k3-truth",
+        Some(word) if word.contains('@') => "hosted-effect",
+        Some("PRINT") => "hosted-effect",
+        _ => match why {
+            CauseClass::Effect | CauseClass::Environment => "hosted-effect",
+            CauseClass::NilFlow => "unknown-or-absence",
+            CauseClass::StackShape | CauseClass::ValueShape => "stack-value-shape",
+            _ => "unknown",
+        },
+    }
+}
+
+fn algebraic_family_for(word: Option<&str>, why: &CauseClass) -> &'static str {
+    match semantic_area_for(word, why) {
+        "exact-real-arithmetic" => "exact-arithmetic",
+        "exact-real-comparison" => "observation",
+        "k3-truth" => "k3-truth",
+        "hosted-effect" => "hosted-effect",
+        other => other,
     }
 }
 

@@ -66,18 +66,21 @@ fn extract_bytes(val: &Value) -> Result<Vec<u8>> {
 }
 
 fn emit(interp: &mut Interpreter, command: serde_json::Value) -> Result<()> {
-    interp.require_host_capability("SERIAL", crate::interpreter::HostCapability::Serial)?;
-    let line = command.to_string();
-    // Structured observation channel (conformance suite, kind = "serial").
-    interp.emit_host_effect(crate::interpreter::HostEffect::Serial(line.clone()));
-    // Legacy string protocol kept in parallel for the Web/Tauri adapters.
-    if !interp.output_buffer.is_empty() && !interp.output_buffer.ends_with('\n') {
-        interp.output_buffer.push('\n');
-    }
-    interp.output_buffer.push_str("SERIAL:");
-    interp.output_buffer.push_str(&line);
-    interp.output_buffer.push('\n');
-    Ok(())
+    interp.run_hosted_effect_schema(
+        "SERIAL",
+        crate::interpreter::HostCapability::Serial,
+        |interp| {
+            let line = command.to_string();
+            // Legacy string protocol kept in parallel for the Web/Tauri adapters.
+            if !interp.output_buffer.is_empty() && !interp.output_buffer.ends_with('\n') {
+                interp.output_buffer.push('\n');
+            }
+            interp.output_buffer.push_str("SERIAL:");
+            interp.output_buffer.push_str(&line);
+            interp.output_buffer.push('\n');
+            Ok(crate::interpreter::HostEffect::Serial(line))
+        },
+    )
 }
 
 /// `-- ` : ask the host adapter to enumerate available ports. The result is

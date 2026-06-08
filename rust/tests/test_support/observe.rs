@@ -8,13 +8,15 @@
 //! display`. It never branches on a Rust enum name, `Debug` string, or display
 //! text — the semantic-firewall discipline the roadmap §1.2-3 mandates.
 //!
-//! The effect component `π_Eff` is intentionally out of scope here; the effect
-//! algebra is Phase 7. Phase 1 fixes the data-plane observation basis that all
-//! later phases build on.
+//! Later laws also use `observe_program` from this module to compare the
+//! effect trace and error category alongside the data-plane axes, keeping
+//! surface/canonical equivalence checks structured rather than string-fragment
+//! based.
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::display::format_with_hint;
 use ajisai_core::types::{Interpretation, Value};
+use ajisai_core::ErrorCategory;
 
 /// Every interpretation role of SPEC §12.2, in table order.
 pub const ALL_ROLES: [Interpretation; 8] = [
@@ -39,12 +41,44 @@ pub fn render(v: &Value, role: Interpretation) -> String {
 /// canonical lower-camel-case protocol strings. Capabilities are sorted so the
 /// observation is order-insensitive.
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosisObservation {
+    pub when: &'static str,
+    pub where_kind: &'static str,
+    pub word: Option<String>,
+    pub module: Option<String>,
+    pub why: &'static str,
+    pub agreed_prefix: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AbsenceObservation {
+    pub reason: Option<&'static str>,
+    pub origin: &'static str,
+    pub recoverability: &'static str,
+    pub diagnosis: Option<DiagnosisObservation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AxisObservation {
     pub semantic_kind: &'static str,
     pub shape: &'static str,
     pub capabilities: Vec<&'static str>,
     pub truth_value: Option<&'static str>,
     pub origin: &'static str,
+    pub absence: Option<AbsenceObservation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValueObservation {
+    pub render: String,
+    pub axes: AxisObservation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProgramObservation {
+    pub stack: Vec<ValueObservation>,
+    pub effects: Vec<(String, String)>,
+    pub error_category: Option<&'static str>,
 }
 
 /// Observe a value through the semantic axes only (firewall-clean).
@@ -55,13 +89,68 @@ pub fn observe_axes(v: &Value) -> AxisObservation {
         .map(|c| c.as_protocol_str())
         .collect();
     capabilities.sort_unstable();
+    let absence = v.absence_metadata().map(|absence| AbsenceObservation {
+        reason: absence
+            .reason
+            .as_ref()
+            .map(|reason| reason.as_protocol_str()),
+        origin: absence.origin.as_protocol_str(),
+        recoverability: absence.recoverability.as_protocol_str(),
+        diagnosis: absence
+            .diagnosis
+            .as_ref()
+            .map(|diagnosis| DiagnosisObservation {
+                when: diagnosis.when.as_protocol_str(),
+                where_kind: diagnosis.where_.kind.as_protocol_str(),
+                word: diagnosis.where_.word.clone(),
+                module: diagnosis.where_.module.clone(),
+                why: diagnosis.why.as_protocol_str(),
+                agreed_prefix: diagnosis.agreed_prefix,
+            }),
+    });
     AxisObservation {
         semantic_kind: v.semantic_kind().as_protocol_str(),
         shape: v.shape_kind().as_protocol_str(),
         capabilities,
         truth_value: v.truth_value(),
         origin: v.origin().as_protocol_str(),
+        absence,
     }
+}
+
+/// Observe a value as the structured stack payload used by law tests: stable
+/// render text plus protocol-level semantic axes, including absence/diagnosis
+/// metadata when present.
+pub fn observe_value(v: &Value) -> ValueObservation {
+    ValueObservation {
+        render: render(v, v.hint),
+        axes: observe_axes(v),
+    }
+}
+
+/// Run a program and capture the structured observation fields needed by
+/// surface/canonical equivalence laws: stack values, effect trace, and error
+/// category. Human-readable error messages are deliberately not observed.
+pub fn observe_program(src: &str) -> ProgramObservation {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("tokio current-thread runtime");
+    rt.block_on(async {
+        let mut interp = Interpreter::new();
+        let error_category = match interp.execute(src).await {
+            Ok(()) => None,
+            Err(err) => Some(ErrorCategory::from_error(&err).as_protocol_str()),
+        };
+        ProgramObservation {
+            stack: interp.get_stack().iter().map(observe_value).collect(),
+            effects: interp
+                .host_effects()
+                .iter()
+                .map(|effect| (effect.kind().to_string(), effect.payload().to_string()))
+                .collect(),
+            error_category,
+        }
+    })
 }
 
 /// Run an Ajisai program and return the final stack. Panics on execution error
