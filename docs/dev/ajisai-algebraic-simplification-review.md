@@ -175,6 +175,8 @@ Completed in this review for K3, exact arithmetic, structure lift, Bubble/OR-NIL
 
 Recommended follow-up: annotate law-test groups and conformance sections as either primitive-domain checks or derived-word examples. For example, K3 law tests should be treated as one algebra family with word-level examples.
 
+Realized in this pass as a reverse index rather than by re-tagging tests in place: `scripts/generate-primitive-test-map.mjs` (`npm run primitive:test-map`) inverts each word's `derived_from` / `law_tests` / `conformance_cases` into a primitive → tests map at `docs/primitive-test-map.json`, so every declared primitive is traceable to the concrete tests exercising the words that rest on it. `check:formalization-coverage` additionally emits a non-fatal note if any declared primitive is exercised by no test, so a newly admitted primitive cannot stay silently untested.
+
 ### Phase 4: Move small derived words toward shared primitive implementations
 
 Safe future candidates, after tests are clearly grouped:

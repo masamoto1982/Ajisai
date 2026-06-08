@@ -376,6 +376,26 @@ if (primitiveIds) {
     console.log(`[formalization-coverage] note: ${incoherent.length} entry/families not among their derived_from families: ${incoherent.join('; ')}`);
   }
 
+  // Non-fatal traceability note: every declared primitive should be reachable
+  // from at least one test. We invert derived_from -> {law_tests, conformance}
+  // (see scripts/generate-primitive-test-map.mjs) and flag primitives that no
+  // resting word exercises, so a newly admitted primitive cannot stay untested
+  // unnoticed.
+  const primitiveTested = new Map([...primitiveIds].map((id) => [id, false]));
+  for (const entry of coverage.entries) {
+    const hasTest =
+      (Array.isArray(entry.law_tests) && entry.law_tests.some((t) => hasNonEmptyString(t))) ||
+      (Array.isArray(entry.conformance_cases) && entry.conformance_cases.some((c) => hasNonEmptyString(c)));
+    if (!hasTest) continue;
+    for (const ref of Array.isArray(entry.derived_from) ? entry.derived_from : []) {
+      if (primitiveTested.has(ref)) primitiveTested.set(ref, true);
+    }
+  }
+  const untestedPrimitives = [...primitiveTested.entries()].filter(([, t]) => !t).map(([id]) => id);
+  if (untestedPrimitives.length > 0) {
+    console.log(`[formalization-coverage] note: ${untestedPrimitives.length} primitive(s) exercised by no test: ${untestedPrimitives.join(', ')}`);
+  }
+
   console.log(`[formalization-coverage] ${primitiveIds.size} algebra primitives declared`);
 }
 
