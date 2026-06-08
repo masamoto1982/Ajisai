@@ -73,8 +73,11 @@ jobs:
       - name: Generate conformance manifest
         run: npm run conformance:manifest
 
-      - name: Generate word manifest
-        run: npm run word:manifest
+      - name: Verify committed word manifest is in sync
+        # Drift guard: the committed docs/word-manifest.json must match what the
+        # generator produces from the Rust sources. Checking (instead of silently
+        # regenerating) is what catches a missing word like SUPERVISE.
+        run: npm run word:manifest:check
 
       - name: Generate primitive test map
         run: npm run primitive:test-map

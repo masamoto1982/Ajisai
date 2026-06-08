@@ -896,6 +896,39 @@ mod tests {
     }
 
     #[test]
+    fn aq_ver_contract_h_min_max_sort_project_undecidable_comparison() {
+        // SPEC §7.4.3 / §7.14: MIN, MAX, and SORT are total *by projection* —
+        // an undecidable governing comparison is projected onto the logical
+        // Unknown (U) rather than raising. They must therefore be Projecting,
+        // not the pure-class default Total, with Passthrough nil_policy (NIL
+        // takes priority over a U-producing comparison, §4.5.2) and safety A
+        // (Projecting words are total-by-projection, §7.14). This guards the
+        // contract_override in module_builtins from regressing to Total.
+        for name in &["MATH@MIN", "MATH@MAX", "ALGO@SORT"] {
+            let meta = get_coreword_metadata(name)
+                .unwrap_or_else(|| panic!("{} must be in registry", name));
+            assert_eq!(
+                meta.partiality,
+                Partiality::Projecting,
+                "{} must be Projecting (SPEC §7.4.3, §7.14)",
+                name
+            );
+            assert_eq!(
+                meta.nil_policy,
+                NilPolicy::Passthrough,
+                "{} must be Passthrough (SPEC §7.4.3)",
+                name
+            );
+            assert_eq!(
+                meta.safety_level,
+                SafetyLevel::A,
+                "{} stays SafetyLevel A (Projecting is total-by-projection, §7.14)",
+                name
+            );
+        }
+    }
+
+    #[test]
     fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
         let registry = get_builtin_word_registry();
         for word in registry

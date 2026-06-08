@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 85,
+    "corewords": 86,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 203
+    "total": 204
   },
   "entries": [
     {
@@ -1419,6 +1419,30 @@
         "algebra.state-transformer.composition"
       ],
       "reason": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
+      "exit_options": [
+        "Derived",
+        "HostedEffect",
+        "Extension",
+        "Remove"
+      ],
+      "review_gate": "before-core-stabilization",
+      "classification": "Exploratory"
+    },
+    {
+      "id": "core.supervise",
+      "kind": "coreword",
+      "surface": "SUPERVISE",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "SUPERVISE",
+      "coverage_entry_id": "core.supervise",
+      "semantic_role": "Exploratory",
+      "algebraic_family": "state-transformer",
+      "derived_from": [
+        "algebra.handle.domain",
+        "algebra.state-transformer.composition"
+      ],
+      "reason": "SUPERVISE runs a child group under a one-for-one restart policy, producing a supervisor handle over the supervised children; the API remains exploratory/quarantined.",
       "exit_options": [
         "Derived",
         "HostedEffect",

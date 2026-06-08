@@ -214,6 +214,21 @@ mod tokenizer_regression_tests {
     }
 
     #[test]
+    fn test_leading_dot_decimal_is_a_number() {
+        // SPEC §3.2 lists `.5` as a valid Decimal literal. The leading-dot
+        // form (and its signed variants) must tokenize as Number, not as a
+        // `Symbol(".5")` (which previously fell through the modifier path).
+        assert_eq!(tokenize(".5").unwrap(), vec![Token::Number(".5".into())]);
+        assert_eq!(tokenize("-.5").unwrap(), vec![Token::Number("-.5".into())]);
+        assert_eq!(tokenize("+.5").unwrap(), vec![Token::Number("+.5".into())]);
+
+        // Guard the modifier path: bare `.` / `..` must still be modifier
+        // sugar symbols, not numbers.
+        assert_eq!(tokenize(".").unwrap(), vec![Token::Symbol(".".into())]);
+        assert_eq!(tokenize("..").unwrap(), vec![Token::Symbol("..".into())]);
+    }
+
+    #[test]
     fn test_percent_symbol_token() {
         let result = tokenize("%").unwrap();
         assert_eq!(result, vec![Token::Symbol("%".into())]);
