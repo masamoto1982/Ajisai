@@ -322,18 +322,31 @@
         }
 
         /* モバイル: header（固定表示）→ article → navigation → footer（固定表示）。
-           一つの section を読み終えると自然と navigation に到達する素朴な動線。 */
+           ビューポートを固定し、間のコンテンツ領域（.ref-main）だけを縦スクロール
+           させる。これで header / footer は sticky に頼らず確実に固定され、一つの
+           section を読み終えると自然と navigation に到達する。 */
         @media (max-width: 768px) {
-            .ref-header {
-                position: sticky;
-                top: 0;
-                z-index: 100;
+            html, body {
+                height: 100%;
+                overflow: hidden;
             }
 
+            body {
+                height: 100vh;
+                height: 100dvh;
+                min-height: 0;
+            }
+
+            .ref-header,
             .ref-footer {
-                position: sticky;
-                bottom: 0;
-                z-index: 100;
+                flex: 0 0 auto;
+            }
+
+            .ref-main {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .ref-header { padding: 0.75rem 1rem; }
@@ -574,9 +587,27 @@
             if (pages.length === 0) return;
 
             var mobileQuery = window.matchMedia('(max-width: 768px)');
+            // モバイルではこのコンテンツ領域だけがスクロールする（body は固定）。
+            var contentArea = document.querySelector('.ref-main');
 
             function pageIdFromLink(link) {
                 return (link.getAttribute('href') || '').replace(/^#/, '');
+            }
+
+            function currentPageIndex() {
+                var id = window.location.hash.replace(/^#/, '');
+                for (var i = 0; i < pages.length; i++) {
+                    if (pages[i].id === id) return i;
+                }
+                return 0;
+            }
+
+            // 前後の頁へ移動する（端では何もしない）。hash を書き換えると
+            // hashchange 経由で syncFromHash が走り、頁切り替えと先頭スクロールを行う。
+            function goToPageDelta(delta) {
+                var next = currentPageIndex() + delta;
+                if (next < 0 || next >= pages.length) return;
+                window.location.hash = '#' + pages[next].id;
             }
 
             function showPage(id) {
@@ -605,13 +636,42 @@
             function syncFromHash(userInitiated) {
                 showPage(window.location.hash.replace(/^#/, ''));
                 // モバイルでは頁を切り替えたら先頭へ戻し、新しい頁を頭から読めるように。
-                if (userInitiated && mobileQuery.matches) {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (userInitiated && mobileQuery.matches && contentArea) {
+                    contentArea.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }
 
             window.addEventListener('hashchange', function () { syncFromHash(true); });
             syncFromHash(false);
+
+            // モバイル: 横スワイプでも頁を行き来できるようにする。左スワイプで次、
+            // 右スワイプで前の頁へ。横スクロール可能な表の上で始まったスワイプは
+            // 表のスクロールに譲る。
+            (function () {
+                if (!contentArea) return;
+                var SWIPE_MIN_X = 60;   // この距離以上の水平移動でスワイプとみなす
+                var startX = 0, startY = 0, tracking = false;
+
+                contentArea.addEventListener('touchstart', function (e) {
+                    if (e.touches.length !== 1 || e.target.closest('.ref-table-wrap')) {
+                        tracking = false;
+                        return;
+                    }
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    tracking = true;
+                }, { passive: true });
+
+                contentArea.addEventListener('touchend', function (e) {
+                    if (!tracking) return;
+                    tracking = false;
+                    var dx = e.changedTouches[0].clientX - startX;
+                    var dy = e.changedTouches[0].clientY - startY;
+                    // 水平移動が十分大きく、かつ縦より明確に大きいときだけ反応する。
+                    if (Math.abs(dx) < SWIPE_MIN_X || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+                    goToPageDelta(dx < 0 ? 1 : -1);
+                }, { passive: true });
+            })();
         })();
     </script>
 </body>
