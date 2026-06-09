@@ -48,6 +48,9 @@
             background: #fff;
             color: var(--color-text);
             line-height: 1.7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         a {
@@ -56,12 +59,6 @@
         }
 
         a:hover { color: var(--color-secondary); }
-
-        .ref-container {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
 
         /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
            アプリ本体 base.css の意匠をラフ複製したもの。 */
@@ -226,25 +223,12 @@
             border-radius: 3px;
         }
 
-        /* A topic's description sits on one row with the "Open in Playground"
-           button pinned to its right end. */
-        .topic-desc {
+        /* The "Open in Playground" button sits on its own line at the bottom
+           right of each section. */
+        .section-actions {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin: 0.5rem 0;
-        }
-
-        .topic-desc p {
-            flex: 1 1 16rem;
-            min-width: 0;
-            margin: 0;
-        }
-
-        .topic-desc .btn {
-            flex: 0 0 auto;
+            justify-content: flex-end;
+            margin: 0.5rem 0 0.25rem;
         }
 
         /* Examples and their expected values are presented as a table:
@@ -355,8 +339,7 @@
     </style>
 </head>
 <body>
-    <div class="ref-container">
-        <header class="ref-header">
+    <header class="ref-header">
             <div class="app-brand-meta">
                 <a href="../index.html" class="app-brand-block" aria-label="Ajisai">
                     <img src="../images/QR_341216.png" alt="" class="logo" aria-hidden="true">
@@ -386,10 +369,7 @@
 
                 <section id="vectors" class="ref-page">
                     <h2>Values and Vectors</h2>
-                    <div class="topic-desc">
-                        <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                    </div>
+                    <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -409,14 +389,14 @@
                         </tbody>
                     </table>
                     </div>
+                    <div class="section-actions">
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    </div>
                 </section>
 
                 <section id="arithmetic" class="ref-page">
                     <h2>Arithmetic</h2>
-                    <div class="topic-desc">
-                        <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                    </div>
+                    <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -436,14 +416,14 @@
                         </tbody>
                     </table>
                     </div>
+                    <div class="section-actions">
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    </div>
                 </section>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
-                    <div class="topic-desc">
-                        <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                    </div>
+                    <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -458,14 +438,14 @@
                         </tbody>
                     </table>
                     </div>
+                    <div class="section-actions">
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    </div>
                 </section>
 
                 <section id="range" class="ref-page">
                     <h2>Range</h2>
-                    <div class="topic-desc">
-                        <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                    </div>
+                    <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -480,14 +460,14 @@
                         </tbody>
                     </table>
                     </div>
+                    <div class="section-actions">
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    </div>
                 </section>
 
                 <section id="define" class="ref-page">
                     <h2>Defining Words</h2>
-                    <div class="topic-desc">
-                        <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                    </div>
+                    <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -503,11 +483,14 @@
                         </tbody>
                     </table>
                     </div>
+                    <div class="section-actions">
+                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    </div>
                 </section>
             </article>
 
-            <nav class="ref-nav" aria-label="Reference contents">
-                <h2>Contents</h2>
+            <nav class="ref-nav" aria-label="Index">
+                <h2>Index</h2>
                 <ul>
                     <li><a href="#intro">Introduction</a></li>
                     <li><a href="#vectors">Values and Vectors</a></li>
@@ -521,8 +504,7 @@
 
         <footer class="ref-footer">
             <span>&copy; <span id="footer-year"></span> <a href="https://github.com/masamoto1982/Ajisai" target="_blank" rel="noopener noreferrer">masamoto yamashiro</a></span>
-        </footer>
-    </div>
+    </footer>
 
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();
