@@ -15,7 +15,6 @@ import {
 export interface WordInfo {
     readonly dictionary: string;
     readonly name: string;
-    readonly description?: string | null;
     readonly protected?: boolean;
 }
 
@@ -38,7 +37,7 @@ export interface VocabularyCallbacks {
 
 export interface VocabularyManager {
     readonly renderBuiltInWords: () => void;
-    readonly updateUserWords: (userWordsInfo: Array<[string, string, string | null, boolean]>) => void;
+    readonly updateUserWords: (userWordsInfo: Array<[string, string, boolean]>) => void;
     readonly updateSearchFilter: (filter: string) => void;
     readonly setSelectedDictionary: (dictionary: string) => void;
 }
@@ -53,33 +52,10 @@ export const formatDictionaryTabName = (pathName: string): string => {
     return `${displayName} word`;
 };
 
-const SYMBOL_MAP: Readonly<Record<string, string>> = Object.freeze({
-    'VSTART': '[', 'VEND': ']', 'BSTART': '{', 'BEND': '}',
-    'NIL': 'nil', 'ADD': '+', 'SUB': '-', 'MUL': '*', 'DIV': '/',
-    'LT': '<', 'LTE': '<=', 'LE': '<=', 'GT': '>', 'GTE': '>=', 'GE': '>=',
-    'EQ': '=', 'NEQ': '<>',
-    'AND': 'and', 'OR': 'or', 'NOT': 'not',
-});
-
-const deserializeWordName = (name: string): string | null => {
-    if (name.match(/^W_[0-9A-F]+$/)) return null;
-    if (!name.includes('_')) return null;
-
-    const decoded = name.split('_').map(part => {
-        if (part.startsWith('STR_')) {
-            return `"${part.substring(4).replace(/_/g, ' ')}"`;
-        }
-        return SYMBOL_MAP[part] ?? part.toLowerCase();
-    }).join(' ');
-
-    return `≈ ${decoded}`;
-};
-
-const createWordInfoFromTuple = (wordData: [string, string, string | null, boolean]): WordInfo => ({
+const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo => ({
     dictionary: wordData[0],
     name: wordData[1],
-    description: wordData[2] || deserializeWordName(wordData[1]) || wordData[1],
-    protected: wordData[3] || false
+    protected: wordData[2] || false
 });
 
 
@@ -182,7 +158,7 @@ export const createVocabularyManager = (
 
 
     let searchFilter = '';
-    let cachedUserWords: Array<[string, string, string | null, boolean]> = [];
+    let cachedUserWords: Array<[string, string, boolean]> = [];
     let selectedDictionary = 'DEMO';
     // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
     // sorting them on every search keystroke was pure waste.
@@ -266,11 +242,9 @@ export const createVocabularyManager = (
         const fragment = document.createDocumentFragment();
         matched.forEach(wordData => {
             const name = wordData[0] as string;
-            const description = (wordData[1] as string) || name;
             const syntaxExample = (wordData[2] as string) || '';
             const button = createWordButtonElement(
                 name,
-                description,
                 `word-button core`,
                 () => onWordClick(name),
                 () => { renderWordInfo(elements.builtInWordInfo, syntaxExample || DEFAULT_WORD_INFO_MESSAGE, !syntaxExample); },
@@ -312,7 +286,6 @@ export const createVocabularyManager = (
 
             const button = createWordButtonElement(
                 wordInfo.name,
-                wordInfo.description || '',
                 className,
                 () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
@@ -359,7 +332,7 @@ export const createVocabularyManager = (
     };
 
     const updateUserWords = (
-        userWordsInfo: Array<[string, string, string | null, boolean]>
+        userWordsInfo: Array<[string, string, boolean]>
     ): void => {
 
         cachedUserWords = userWordsInfo || [];

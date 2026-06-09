@@ -137,7 +137,6 @@ const attachLongPress = (button: HTMLButtonElement, onLongPress: () => void): vo
 
 export const createWordButtonElement = (
     text: string,
-    title: string,
     className: string,
     onClick: () => void,
     onHover?: () => void,
@@ -149,7 +148,6 @@ export const createWordButtonElement = (
     button.type = 'button';
     button.textContent = text;
     button.className = className;
-    button.title = title;
 
     // Long-press must be wired before the click handler so its capture of a
     // fired long-press (via stopImmediatePropagation) runs first.

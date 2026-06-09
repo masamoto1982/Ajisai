@@ -32,8 +32,8 @@
 # === Nested Structures ===
 
 # Phrase definition
-[ '[ 440 550 660 ] SEQ PLAY' ] 'PHRASE-A' DEF
-[ '[ 330 392 440 ] SEQ PLAY' ] 'PHRASE-B' DEF
+{ [ 440 550 660 ] SEQ PLAY } 'PHRASE-A' DEF
+{ [ 330 392 440 ] SEQ PLAY } 'PHRASE-B' DEF
 
 # Execute phrases
 PHRASE-A
@@ -42,19 +42,19 @@ PHRASE-B
 # === Just Intonation Test ===
 
 # Define base frequency (C4 = 264 Hz, just intonation where A4 = 440 Hz)
-[ 264 ] 'C4' DEF
+{ [ 264 ] } 'C4' DEF
 
 # Define intervals (ratios)
-[ 1 ] 'DO' DEF
-[ 9/8 ] 'RE' DEF
-[ 5/4 ] 'MI' DEF
-[ 4/3 ] 'FA' DEF
-[ 3/2 ] 'SO' DEF
-[ 5/3 ] 'LA' DEF
-[ 15/8 ] 'TI' DEF
+{ [ 1 ] } 'DO' DEF
+{ [ 9/8 ] } 'RE' DEF
+{ [ 5/4 ] } 'MI' DEF
+{ [ 4/3 ] } 'FA' DEF
+{ [ 3/2 ] } 'SO' DEF
+{ [ 5/3 ] } 'LA' DEF
+{ [ 15/8 ] } 'TI' DEF
 
 # Define Hz conversion word
-[ 'C4 *' ] 'Hz' DEF
+{ C4 * } 'Hz' DEF
 
 # Play do-re-mi-so scale
 DO Hz RE Hz MI Hz SO Hz [ 4 ] .. CONCAT PLAY

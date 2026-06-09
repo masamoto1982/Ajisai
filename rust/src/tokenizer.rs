@@ -174,7 +174,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     }
 
     check_bracket_matching(input)?;
-    check_single_line_block_constraint(&tokens)?;
     check_cond_clause_per_line_constraint(&tokens)?;
     Ok(tokens)
 }
@@ -298,25 +297,6 @@ fn closing_bracket(open: char) -> char {
     }
 }
 
-fn check_single_line_block_constraint(tokens: &[Token]) -> Result<(), String> {
-    let mut depth: i32 = 0;
-
-    for token in tokens {
-        match token {
-            Token::BlockStart => depth += 1,
-            Token::BlockEnd => depth -= 1,
-            Token::LineBreak if depth > 0 => {
-                return Err(
-                    "ParseError: Code block must be on a single line. Use named words to break up long definitions.".to_string()
-                );
-            }
-            _ => {}
-        }
-    }
-
-    Ok(())
-}
-
 fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String> {
     let mut i: usize = 0;
     let mut cond_clause_blocks_in_line: usize = 0;
@@ -350,7 +330,13 @@ fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String>
                     }
                 }
 
-                i = j;
+                // Descend into the block (rather than skipping past its
+                // matching `}`) so the one-clause-per-line rule keeps applying
+                // to `$` clauses nested inside a multi-line `{ }` body. Each
+                // BlockStart is still visited exactly once, so no clause is
+                // double-counted, and LineBreaks inside the block reset the
+                // per-line counter as expected.
+                i += 1;
             }
             _ => {
                 i += 1;

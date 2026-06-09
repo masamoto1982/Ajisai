@@ -90,6 +90,15 @@ export class AjisaiInterpreter {
     update_serial_inbox(port_id: string, bytes: Uint8Array): void;
 }
 
+/**
+ * Install console_error_panic_hook so any panic on the WASM side
+ * surfaces in the browser console with a JS-friendly stack trace
+ * instead of an opaque `RuntimeError: unreachable executed` trap.
+ * Idempotent (`set_once`). Called from the TS loader exactly once
+ * right after wasm-bindgen `init`.
+ */
+export function init_panic_hook(): void;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -131,15 +140,16 @@ export interface InitOutput {
     readonly ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h7eb304f5618ba118: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h00a25bd0b22d07fb: (a: number, b: number, c: any, d: any) => void;
+    readonly init_panic_hook: () => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h4d3d0119ecf7124f: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h515e00adb21cde2b: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_destroy_closure: (a: number, b: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __wbindgen_destroy_closure: (a: number, b: number) => void;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_start: () => void;
 }

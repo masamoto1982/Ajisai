@@ -129,7 +129,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = interp.execute("! [ [ 3 ] * ] 'DOUBLE' DEF").await;
+        let result = interp.execute("! { [ 3 ] * } 'DOUBLE' DEF").await;
         assert!(result.is_ok());
         assert!(interp.output_buffer.contains("Warning"));
     }
@@ -543,15 +543,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_def_with_string_vector_body() {
-        // A vector of strings is a definition body whose elements are source
-        // lines. `[ '[ 2 ] *' ] 'DOUBLE' DEF` must define DOUBLE with the body
-        // `[ 2 ] *`, not a word built from the string's codepoints.
+    async fn test_def_with_code_block_body() {
+        // DEF is strictly `{ body } 'NAME' DEF`. The body is a code block, not
+        // a data array of source strings.
         let mut interp = Interpreter::new();
         interp
-            .execute("[ '[ 2 ] *' ] 'DOUBLE' DEF")
+            .execute("{ [ 2 ] * } 'DOUBLE' DEF")
             .await
-            .expect("DEF with string-vector body should succeed");
+            .expect("DEF with code-block body should succeed");
         let result = interp.execute("[ 21 ] DOUBLE").await;
         assert!(result.is_ok(), "DOUBLE should run: {:?}", result);
         assert_eq!(interp.stack.len(), 1);
@@ -570,13 +569,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_def_with_multiline_string_vector_body() {
-        // Each string element is a separate source line.
+    async fn test_def_with_multiline_code_block_body() {
+        // A multi-line `{ }` body executes one source line at a time:
+        // `[ 10 ] -> +1 -> *2 = 22`.
         let mut interp = Interpreter::new();
         interp
-            .execute("[ '[ 1 ] +' '[ 2 ] *' ] 'INCDOUBLE' DEF")
+            .execute("{\n[ 1 ] +\n[ 2 ] *\n} 'INCDOUBLE' DEF")
             .await
-            .expect("multi-line string-vector body should succeed");
+            .expect("multi-line code-block body should succeed");
         let result = interp.execute("[ 10 ] INCDOUBLE").await;
         assert!(result.is_ok(), "INCDOUBLE should run: {:?}", result);
         let val = interp.stack.last().expect("result present");
@@ -588,6 +588,76 @@ mod tests {
                 .numerator()
                 .to_string(),
             "22"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_def_rejects_data_array_body() {
+        // A data array `[ ... ]` is no longer accepted as a definition body;
+        // only a code block is. (Data-driven definition is reserved for a
+        // future `>CODE` conversion word.)
+        let mut interp = Interpreter::new();
+        let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await;
+        assert!(
+            result.is_err(),
+            "DEF with a data-array body should be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_def_multiline_dollar_cond_word() {
+        // The redesigned multi-line `$`-style COND body must define and branch
+        // correctly. Each clause is one line inside the outer `{ }` body.
+        let mut interp = Interpreter::new();
+        let src = "{\n\
+                   { [ 1 ] = $ [ 100 ] }\n\
+                   { [ 2 ] = $ [ 200 ] }\n\
+                   { IDLE   $ [ 0 ]   } COND\n\
+                   } 'CLS' DEF";
+        interp
+            .execute(src)
+            .await
+            .expect("multi-line $ COND word should define");
+
+        let check = |interp: &Interpreter| -> String {
+            let val = interp.stack.last().expect("result present");
+            val.child(0)
+                .expect("child")
+                .as_scalar()
+                .expect("scalar")
+                .numerator()
+                .to_string()
+        };
+
+        interp.execute("[ 1 ] CLS").await.expect("CLS [ 1 ]");
+        assert_eq!(check(&interp), "100");
+        interp.execute("[ 2 ] CLS").await.expect("CLS [ 2 ]");
+        assert_eq!(check(&interp), "200");
+        interp.execute("[ 9 ] CLS").await.expect("CLS [ 9 ]");
+        assert_eq!(check(&interp), "0");
+    }
+
+    #[tokio::test]
+    async fn test_def_ignores_leftover_string_like_value() {
+        // A leftover string-like value below the body must not shift argument
+        // interpretation: DEF reads exactly the top two positions (name, body).
+        let mut interp = Interpreter::new();
+        interp
+            .execute("'leftover' { [ 2 ] * } 'DOUBLE' DEF")
+            .await
+            .expect("leftover string must not disturb DEF args");
+        // The leftover value is still on the stack, untouched.
+        let result = interp.execute("[ 21 ] DOUBLE").await;
+        assert!(result.is_ok(), "DOUBLE should run: {:?}", result);
+        let val = interp.stack.last().expect("result present");
+        assert_eq!(
+            val.child(0)
+                .expect("child")
+                .as_scalar()
+                .expect("scalar")
+                .numerator()
+                .to_string(),
+            "42"
         );
     }
 }
