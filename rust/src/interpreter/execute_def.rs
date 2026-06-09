@@ -94,6 +94,39 @@ fn check_definition_descriptor_on_stack(stack: &[Value]) -> bool {
     is_string_like(last) && is_string_like(second_last)
 }
 
+fn is_text(val: &Value) -> bool {
+    val.hint == crate::types::Interpretation::Text
+}
+
+/// Interpret a definition body supplied as text rather than raw data.
+///
+/// A string is itself a codepoint vector, so without this handling a body such
+/// as `[ '[ 2 ] *' ]` would be serialized by `format_vector_to_source` as the
+/// literal codepoints (`[ 91 32 50 ... ]`) instead of the source line it spells
+/// out. Two text-shaped bodies are recognized here:
+///
+/// - a bare string body, treated as a single source line; and
+/// - a vector whose elements are all strings, treated as one source line each
+///   (joined by line breaks).
+///
+/// Returns `None` for any other value so the caller falls back to the standard
+/// data-to-source serialization.
+fn string_vector_to_source(val: &Value) -> Option<Result<String>> {
+    if is_text(val) {
+        return Some(extract_string_from_value(val));
+    }
+
+    if let ValueData::Vector(children) = &val.data {
+        if !children.is_empty() && children.iter().all(is_text) {
+            let lines: Result<Vec<String>> =
+                children.iter().map(extract_string_from_value).collect();
+            return Some(lines.map(|lines| lines.join("\n")));
+        }
+    }
+
+    None
+}
+
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
@@ -157,7 +190,12 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
             })
             .collect::<Vec<_>>()
             .join(" "),
-        ValueData::Vector(_) | ValueData::Record { .. } => format_vector_to_source(&def_val)?,
+        ValueData::Vector(_) | ValueData::Record { .. } => {
+            match string_vector_to_source(&def_val) {
+                Some(source) => source?,
+                None => format_vector_to_source(&def_val)?,
+            }
+        }
         _ => {
             return Err(AjisaiError::from(
                 "DEF requires a code block ({ ... } / ( ... )) or vector as definition body",

@@ -541,4 +541,53 @@ mod tests {
         assert!(err.contains("PRECOMPUTE"));
         assert!(err.contains("recursive dependency"));
     }
+
+    #[tokio::test]
+    async fn test_def_with_string_vector_body() {
+        // A vector of strings is a definition body whose elements are source
+        // lines. `[ '[ 2 ] *' ] 'DOUBLE' DEF` must define DOUBLE with the body
+        // `[ 2 ] *`, not a word built from the string's codepoints.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("[ '[ 2 ] *' ] 'DOUBLE' DEF")
+            .await
+            .expect("DEF with string-vector body should succeed");
+        let result = interp.execute("[ 21 ] DOUBLE").await;
+        assert!(result.is_ok(), "DOUBLE should run: {:?}", result);
+        assert_eq!(interp.stack.len(), 1);
+        let val = interp.stack.last().expect("result present");
+        assert!(val.is_vector(), "Expected vector result");
+        assert_eq!(val.len(), 1);
+        assert_eq!(
+            val.child(0)
+                .expect("child")
+                .as_scalar()
+                .expect("scalar")
+                .numerator()
+                .to_string(),
+            "42"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_def_with_multiline_string_vector_body() {
+        // Each string element is a separate source line.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("[ '[ 1 ] +' '[ 2 ] *' ] 'INCDOUBLE' DEF")
+            .await
+            .expect("multi-line string-vector body should succeed");
+        let result = interp.execute("[ 10 ] INCDOUBLE").await;
+        assert!(result.is_ok(), "INCDOUBLE should run: {:?}", result);
+        let val = interp.stack.last().expect("result present");
+        assert_eq!(
+            val.child(0)
+                .expect("child")
+                .as_scalar()
+                .expect("scalar")
+                .numerator()
+                .to_string(),
+            "22"
+        );
+    }
 }
