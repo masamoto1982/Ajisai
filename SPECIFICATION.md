@@ -103,12 +103,19 @@ The `truthValue` axis is present only on values carrying the `TruthValue` interp
 
 ### 3.2 Numeric literal formats
 
-| Format | Example |
-|--------|---------|
-| Integer | `42`, `-7` |
-| Fraction | `3/4`, `-5/2` |
-| Decimal | `3.14`, `.5`, `-1.0` |
-| Scientific notation | `1e5`, `1.5e-2`, `-3.0e4` |
+| Format | Examples |
+|--------|----------|
+| Integer | `42`, `-7`, `+7`, `007` |
+| Fraction | `3/4`, `-5/2`, `+3/4` |
+| Decimal | `3.14`, `.5`, `5.`, `-1.0`, `-.5` |
+| Scientific notation | `1e5`, `1.5e-2`, `-3.0e4`, `1.5E2`, `1e+5` |
+
+Every numeric literal may carry an optional leading sign (`+` or `-`); a leading `+` is accepted but has no effect. The accepted forms are:
+
+- **Integer** — one or more decimal digits. Leading zeros are allowed and insignificant (`007` denotes `7`).
+- **Fraction** — `<digits>/<digits>`. The denominator must be non-zero: `3/0` is **not** a valid literal and is rejected as an ordinary (malformed-literal) error. This is distinct from the runtime `DIV`-by-zero rule, under which the *operation* `3 0 DIV` projects to a `NIL` with reason `DivisionByZero` (Section 11.2); a literal `n/0` denotes no rational at all and never reaches that rule.
+- **Decimal** — an integer part, a `.`, and a fractional part, where at most one side may be empty: a leading-dot form (`.5`, `-.5`) has an empty integer part, and a trailing-dot form (`5.`) has an empty fractional part. A bare `.` is not a number — it is the `TOP` modifier (Section 3.9).
+- **Scientific notation** — an integer or decimal mantissa, the exponent marker `e` or `E`, an optional exponent sign (`+` or `-`), and one or more exponent digits (`1.5e-2`, `1e+5`, `1.5E2`).
 
 All numeric literals are parsed as exact real numbers and stored internally as continued fractions (see Section 4.2). The surface literal forms above are convenience syntax: `42`, `42/1`, `42.0`, and `4.2e1` all produce the same internal value. Integer, fraction, decimal, and scientific-notation literals yield finite continued fractions (rationals); irrational continued fractions are produced by words such as `MATH@SQRT`, not by surface literals.
 

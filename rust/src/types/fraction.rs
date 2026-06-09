@@ -344,27 +344,48 @@ impl Fraction {
         if let Some(pos) = s.find('/') {
             let num: BigInt = BigInt::from_str(&s[..pos]).map_err(|e| e.to_string())?;
             let den: BigInt = BigInt::from_str(&s[pos + 1..]).map_err(|e| e.to_string())?;
+            // A fraction literal denotes a rational (SPEC §3.2); `n/0` denotes
+            // none, so it is rejected here rather than reaching `Fraction::new`,
+            // which panics on a zero denominator. This is distinct from the
+            // runtime `DIV`-by-zero totality rule (a NIL `DivisionByZero`):
+            // that governs the *operation*, whereas this is a malformed
+            // *literal*.
+            if den.is_zero() {
+                return Err(format!(
+                    "zero denominator: '{s}' is not a valid fraction literal (the denominator must be non-zero)"
+                ));
+            }
             Ok(Fraction::new(num, den))
         } else if let Some(dot_pos) = s.find('.') {
-            let int_part_str = if s.starts_with('.') {
+            // Strip an optional leading sign up front so that signed
+            // leading-dot decimals (`-.5`, `+.5`) parse exactly like `.5`.
+            // (Numeric literals are ASCII, so byte and char indices coincide.)
+            let (neg, body, dot_pos) = if let Some(rest) = s.strip_prefix('-') {
+                (true, rest, dot_pos - 1)
+            } else if let Some(rest) = s.strip_prefix('+') {
+                (false, rest, dot_pos - 1)
+            } else {
+                (false, s, dot_pos)
+            };
+            let int_part_str = if body.starts_with('.') {
                 "0"
             } else {
-                &s[..dot_pos]
+                &body[..dot_pos]
             };
-            let frac_part_str = &s[dot_pos + 1..];
-            if frac_part_str.is_empty() {
-                return Self::from_str(int_part_str);
-            }
+            let frac_part_str = &body[dot_pos + 1..];
             let int_part: BigInt = BigInt::from_str(int_part_str).map_err(|e| e.to_string())?;
+            if frac_part_str.is_empty() {
+                // Trailing-dot decimal such as `5.` denotes the integer part.
+                return Ok(Fraction::new(
+                    if neg { -int_part } else { int_part },
+                    BigInt::one(),
+                ));
+            }
             let frac_num: BigInt = BigInt::from_str(frac_part_str).map_err(|e| e.to_string())?;
             let frac_den: BigInt = BigInt::from(10).pow(frac_part_str.len() as u32);
-            let total_num: BigInt = int_part.abs() * &frac_den + frac_num;
+            let total_num: BigInt = int_part * &frac_den + frac_num;
             Ok(Fraction::new(
-                if int_part < BigInt::zero() {
-                    -total_num
-                } else {
-                    total_num
-                },
+                if neg { -total_num } else { total_num },
                 frac_den,
             ))
         } else {
@@ -565,5 +586,53 @@ mod literal_parsing_tests {
         let right = Fraction::from_str("0.5").expect("literal parses");
         let sum = left.add(&right);
         assert_eq!(sum.to_string(), "1");
+    }
+
+    #[test]
+    fn zero_denominator_fraction_literal_is_an_error_not_a_panic() {
+        // `n/0` denotes no rational (SPEC §3.2). It must surface as a clean
+        // parse error, never a `Fraction::new` "Division by zero" panic.
+        for src in ["3/0", "0/0", "-5/0"] {
+            assert!(
+                Fraction::from_str(src).is_err(),
+                "`{src}` must be rejected as a malformed fraction literal"
+            );
+        }
+    }
+
+    #[test]
+    fn signed_leading_dot_decimals_parse() {
+        // The tokenizer accepts `-.5` / `+.5`; the converter must agree.
+        assert_eq!(
+            Fraction::from_str("-.5").unwrap(),
+            Fraction::from_str("-1/2").unwrap()
+        );
+        assert_eq!(
+            Fraction::from_str("+.5").unwrap(),
+            Fraction::from_str("1/2").unwrap()
+        );
+    }
+
+    #[test]
+    fn documented_surface_variants_are_accepted() {
+        // Forms now documented in SPEC §3.2 beyond the canonical examples:
+        // leading `+`, uppercase `E`, explicit `e+`, leading zeros, and
+        // trailing-dot decimals. All reduce to their canonical value.
+        let cases = [
+            ("+7", "7"),
+            ("+3/4", "3/4"),
+            ("007", "7"),
+            ("5.", "5"),
+            ("1.E5", "100000"),
+            ("1.5E2", "150"),
+            ("1e+5", "100000"),
+        ];
+        for (src, expected) in cases {
+            assert_eq!(
+                Fraction::from_str(src).unwrap(),
+                Fraction::from_str(expected).unwrap(),
+                "`{src}` should equal `{expected}`"
+            );
+        }
     }
 }
