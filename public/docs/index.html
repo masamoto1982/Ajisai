@@ -225,20 +225,24 @@
 
         /* The "Open in Playground" button sits on its own line at the bottom
            right of each section. */
-        .section-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin: 0.5rem 0 0.25rem;
+        /* Each sample is a self-contained unit: a one-row table (sample code,
+           expected value, notes) followed by its own "Open in Playground"
+           button at the bottom right. */
+        .sample {
+            margin: 1.25rem 0;
         }
 
-        /* Examples and their expected values are presented as a table:
-           sample code, expected value, and notes. The table is wrapped in a
-           horizontally scrollable container so long code rows can be scrolled
-           (and copied) on narrow viewports instead of being clipped by the
-           page's hidden horizontal overflow. */
+        .sample-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+        }
+
+        /* The table is wrapped in a horizontally scrollable container so long
+           code rows can be scrolled (and copied) on narrow viewports instead of
+           being clipped by the page's hidden horizontal overflow. */
         .ref-table-wrap {
             overflow-x: auto;
-            margin: 0.75rem 0 1.5rem;
         }
 
         .ref-table {
@@ -370,121 +374,159 @@
                 <section id="vectors" class="ref-page">
                     <h2>Values and Vectors</h2>
                     <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>[ 1 2 3 ]</code></td>
-                                <td><code>[ 1 2 3 ]</code></td>
-                                <td class="notes">A vector pushed onto the stack.</td>
-                            </tr>
-                            <tr>
-                                <td><code>[ 7/3 ]</code></td>
-                                <td><code>[ 7/3 ]</code></td>
-                                <td class="notes">Numbers are kept as exact rationals.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ]</code></td>
+                                    <td><code>[ 1 2 3 ]</code></td>
+                                    <td class="notes">A vector pushed onto the stack.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
-                    <div class="section-actions">
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td><code>[ 7/3 ]</code></td>
+                                    <td class="notes">Numbers are kept as exact rationals.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
                 </section>
 
                 <section id="arithmetic" class="ref-page">
                     <h2>Arithmetic</h2>
                     <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>[ 1 2 3 ] [ 10 20 30 ] +</code></td>
-                                <td><code>[ 11 22 33 ]</code></td>
-                                <td class="notes">Element-wise addition.</td>
-                            </tr>
-                            <tr>
-                                <td><code>[ 7 ] [ 3 ] MOD PRINT</code></td>
-                                <td><code>[ 1 ]</code></td>
-                                <td class="notes">Remainder of 7 divided by 3.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] [ 10 20 30 ] +</code></td>
+                                    <td><code>[ 11 22 33 ]</code></td>
+                                    <td class="notes">Element-wise addition.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
-                    <div class="section-actions">
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 7 ] [ 3 ] MOD PRINT</code></td>
+                                    <td><code>[ 1 ]</code></td>
+                                    <td class="notes">Remainder of 7 divided by 3.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
                 </section>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
                     <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>[ 42 ] PRINT</code></td>
-                                <td><code>[ 42 ]</code></td>
-                                <td class="notes">Writes the top of the stack to the output area.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <div class="section-actions">
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 42 ] PRINT</code></td>
+                                    <td><code>[ 42 ]</code></td>
+                                    <td class="notes">Writes the top of the stack to the output area.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
                 </section>
 
                 <section id="range" class="ref-page">
                     <h2>Range</h2>
                     <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>[ 0 ] [ 5 ] RANGE PRINT</code></td>
-                                <td><code>[ 0 1 2 3 4 5 ]</code></td>
-                                <td class="notes">Inclusive range from 0 to 5.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <div class="section-actions">
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 0 ] [ 5 ] RANGE PRINT</code></td>
+                                    <td><code>[ 0 1 2 3 4 5 ]</code></td>
+                                    <td class="notes">Inclusive range from 0 to 5.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
                 </section>
 
                 <section id="define" class="ref-page">
                     <h2>Defining Words</h2>
                     <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
 [ 21 ] DOUBLE PRINT</code></td>
-                                <td><code>[ 42 ]</code></td>
-                                <td class="notes"><code>DOUBLE</code> multiplies the top vector by 2.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <div class="section-actions">
-                        <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                                    <td><code>[ 42 ]</code></td>
+                                    <td class="notes"><code>DOUBLE</code> multiplies the top vector by 2.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
                     </div>
                 </section>
             </article>
@@ -509,13 +551,13 @@
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();
 
-        // 各トピックの「Playground で開く」リンクに、そのトピックの表の先頭行
-        // （サンプルコード列）の本文を埋め込んだ URL を設定する。アプリ本体は
+        // 各サンプルの「Playground で開く」リンクに、そのサンプルの表（先頭行・
+        // サンプルコード列）の本文を埋め込んだ URL を設定する。アプリ本体は
         // #code=<encodeURIComponent> を読み取ってエディタへ流し込む
         // （gui-application.ts: applyPlaygroundCodeFromUrl）。
         document.querySelectorAll('.js-open-playground').forEach(function (link) {
-            var section = link.closest('section');
-            var codeEl = section && section.querySelector('.ref-table tbody tr td:first-child code');
+            var sample = link.closest('.sample');
+            var codeEl = sample && sample.querySelector('.ref-table tbody tr td:first-child code');
             if (!codeEl) return;
             var code = codeEl.textContent.replace(/\s+$/, '');
             link.setAttribute('href', '../index.html#code=' + encodeURIComponent(code));
