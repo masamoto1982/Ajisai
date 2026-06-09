@@ -798,7 +798,9 @@ A bare name may legitimately appear under more than one canonical home (for exam
 { tokens... } 'NAME' 'description' DEF
 ```
 
-A code block followed by a name string defines a user word in the active dictionary. An optional description string may follow the name. Multiple consecutive code blocks on the stack are merged before definition. A vector may also serve as the definition body.
+A code block followed by a name string defines a user word in the active dictionary. An optional description string may follow the name. Multiple consecutive code blocks on the stack are merged before definition.
+
+A vector may also serve as the definition body. When the vector's elements are strings, each string is one source line of the definition (multiple strings become successive lines); the body of `[ '[ 2 ] *' ] 'DOUBLE' DEF` is therefore the source `[ 2 ] *`, not the codepoints of that text. A vector whose elements are not strings is serialized to source as ordinary data.
 
 ### 8.2 Rules
 
