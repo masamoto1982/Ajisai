@@ -1,132 +1,43 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
-use crate::interpreter::vector_exec::format_vector_to_source;
 use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
-use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, Value, ValueData};
+use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-fn extract_string_from_value(val: &Value) -> Result<String> {
-    fn collect_chars(val: &Value) -> Vec<char> {
-        match &val.data {
-            ValueData::Nil => vec![],
-            ValueData::Scalar(f) => f
-                .to_i64()
-                .and_then(|n| {
-                    if (0..=0x10FFFF).contains(&n) {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                })
-                .map(|c| vec![c])
-                .unwrap_or_default(),
-            ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().flat_map(collect_chars).collect(),
-            ValueData::Tensor { data, .. } => data
-                .iter()
-                .filter_map(|f| {
-                    f.to_i64().and_then(|n| {
-                        if (0..=0x10FFFF).contains(&n) {
-                            char::from_u32(n as u32)
-                        } else {
-                            None
-                        }
-                    })
-                })
-                .collect(),
-            ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec![],
-        }
-    }
-
-    let chars = collect_chars(val);
-    if chars.is_empty() {
-        return Err(AjisaiError::from("Cannot convert NIL to string"));
-    }
-
-    Ok(chars.into_iter().collect())
-}
-
-fn is_string_like(val: &Value) -> bool {
-    if val.is_nil() {
-        return false;
-    }
-
-    fn check_codepoints(val: &Value) -> bool {
-        match &val.data {
-            ValueData::Nil => false,
-            ValueData::Scalar(f) => f
-                .to_i64()
-                .map(|n| (0..=0x10FFFF).contains(&n))
-                .unwrap_or(false),
-            ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().all(check_codepoints),
-            ValueData::Tensor { data, .. } => data.iter().all(|f| {
-                f.to_i64()
-                    .map(|n| (0..=0x10FFFF).contains(&n))
-                    .unwrap_or(false)
-            }),
-            ValueData::ExactScalar(_) => false,
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => false,
-        }
-    }
-
-    check_codepoints(val)
-}
-
-fn check_definition_descriptor_on_stack(stack: &[Value]) -> bool {
-    if stack.len() < 3 {
-        return false;
-    }
-    let last = &stack[stack.len() - 1];
-    let second_last = &stack[stack.len() - 2];
-    is_string_like(last) && is_string_like(second_last)
-}
-
-fn is_text(val: &Value) -> bool {
-    val.hint == crate::types::Interpretation::Text
-}
-
-/// Interpret a definition body supplied as text rather than raw data.
+/// Serialize a code-block token stream back into Ajisai source text.
 ///
-/// A string is itself a codepoint vector, so without this handling a body such
-/// as `[ '[ 2 ] *' ]` would be serialized by `format_vector_to_source` as the
-/// literal codepoints (`[ 91 32 50 ... ]`) instead of the source line it spells
-/// out. Two text-shaped bodies are recognized here:
-///
-/// - a bare string body, treated as a single source line; and
-/// - a vector whose elements are all strings, treated as one source line each
-///   (joined by line breaks).
-///
-/// Returns `None` for any other value so the caller falls back to the standard
-/// data-to-source serialization.
-fn string_vector_to_source(val: &Value) -> Option<Result<String>> {
-    if is_text(val) {
-        return Some(extract_string_from_value(val));
-    }
-
-    if let ValueData::Vector(children) = &val.data {
-        if !children.is_empty() && children.iter().all(is_text) {
-            let lines: Result<Vec<String>> =
-                children.iter().map(extract_string_from_value).collect();
-            return Some(lines.map(|lines| lines.join("\n")));
-        }
-    }
-
-    None
+/// `LineBreak` tokens become real newlines so that a multi-line `{ }` body is
+/// re-tokenized into one `ExecutionLine` per source line (see
+/// `parse_definition_body`). This is the only body shape DEF accepts.
+fn code_block_tokens_to_source(tokens: &[Token]) -> String {
+    tokens
+        .iter()
+        .map(|t| match t {
+            Token::Number(n) => n.to_string(),
+            Token::String(s) => format!("'{}'", s),
+            Token::Symbol(s) => s.to_string(),
+            Token::VectorStart => "[".to_string(),
+            Token::VectorEnd => "]".to_string(),
+            Token::BlockStart => "{".to_string(),
+            Token::BlockEnd => "}".to_string(),
+            Token::Pipeline => "==".to_string(),
+            Token::NilCoalesce => "=>".to_string(),
+            Token::CondClauseSep => "$".to_string(),
+            Token::LineBreak => "\n".to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
+/// DEF is strictly two positional arguments: `{ body } 'NAME' DEF`.
+///
+/// The top of the stack is the name (a string), and directly below it is the
+/// body (a code block `{ }`). No value types are inspected to *guess* roles —
+/// position alone determines them — which is why a leftover string-like value
+/// on the stack can no longer shift argument interpretation. Definitions from
+/// data arrays are intentionally not accepted here; that path is reserved for
+/// the future `>CODE` conversion word.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode != OperationTargetMode::StackTop {
         return Err(AjisaiError::ModeUnsupported {
@@ -139,66 +50,16 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let mut description = None;
-
-    let has_description = check_definition_descriptor_on_stack(&interp.stack);
-
-    if has_description {
-        if let Some(desc_val) = interp.stack.pop() {
-            if let Ok(s) = extract_string_from_value(&desc_val) {
-                description = Some(s);
-            }
-        }
-    }
-
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
     let name_str = extract_word_name_from_value(&name_val)?;
 
-    let mut def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-
-    if let ValueData::CodeBlock(tokens) = &def_val.data {
-        let mut merged_tokens: Vec<Token> = tokens.to_vec();
-        while let Some(prev) = interp.stack.last() {
-            let Some(prev_tokens) = prev.as_code_block() else {
-                break;
-            };
-            let previous_block_tokens: Vec<Token> = prev_tokens.to_vec();
-            let _ = interp.stack.pop();
-            let mut composed: Vec<Token> = previous_block_tokens;
-            composed.push(Token::LineBreak);
-            composed.extend(merged_tokens);
-            merged_tokens = composed;
-        }
-        def_val = Value::from_code_block(merged_tokens);
-    }
+    let def_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let definition_str = match &def_val.data {
-        ValueData::CodeBlock(tokens) => tokens
-            .iter()
-            .map(|t| match t {
-                Token::Number(n) => n.to_string(),
-                Token::String(s) => format!("'{}'", s),
-                Token::Symbol(s) => s.to_string(),
-                Token::VectorStart => "[".to_string(),
-                Token::VectorEnd => "]".to_string(),
-                Token::BlockStart => "{".to_string(),
-                Token::BlockEnd => "}".to_string(),
-                Token::Pipeline => "==".to_string(),
-                Token::NilCoalesce => "=>".to_string(),
-                Token::CondClauseSep => "$".to_string(),
-                Token::LineBreak => "\n".to_string(),
-            })
-            .collect::<Vec<_>>()
-            .join(" "),
-        ValueData::Vector(_) | ValueData::Record { .. } => {
-            match string_vector_to_source(&def_val) {
-                Some(source) => source?,
-                None => format_vector_to_source(&def_val)?,
-            }
-        }
+        ValueData::CodeBlock(tokens) => code_block_tokens_to_source(tokens),
         _ => {
             return Err(AjisaiError::from(
-                "DEF requires a code block ({ ... } / ( ... )) or vector as definition body",
+                "DEF requires a code block { ... } as the definition body",
             ));
         }
     };
@@ -206,15 +67,10 @@ pub fn op_def(interp: &mut Interpreter) -> Result<()> {
     let tokens = crate::tokenizer::tokenize(&definition_str)
         .map_err(|e| AjisaiError::from(format!("Tokenization error in DEF: {}", e)))?;
 
-    op_def_inner(interp, &name_str, &tokens, description)
+    op_def_inner(interp, &name_str, &tokens)
 }
 
-pub(crate) fn op_def_inner(
-    interp: &mut Interpreter,
-    name: &str,
-    tokens: &[Token],
-    description: Option<String>,
-) -> Result<()> {
+pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token]) -> Result<()> {
     if let Some(message) =
         crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
     {
@@ -259,7 +115,7 @@ pub(crate) fn op_def_inner(
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             interp.force_flag = false;
             return Err(AjisaiError::from(format!(
-                "Cannot redefine '{}': referenced by {}. Use ! [ ... ] '{}' DEF to force.",
+                "Cannot redefine '{}': referenced by {}. Use ! {{ ... }} '{}' DEF to force.",
                 fq_name, dep_list, upper_name
             )));
         }
@@ -310,7 +166,7 @@ pub(crate) fn op_def_inner(
         tier: Tier::Contrib,
         stability: Stability::Stable,
         capabilities: Capabilities::PURE,
-        description,
+        description: None,
         dependencies: new_dependencies,
         original_source: None,
         namespace: Some(dict_name.clone()),

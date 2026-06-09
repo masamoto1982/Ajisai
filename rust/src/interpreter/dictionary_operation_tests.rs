@@ -8,7 +8,7 @@ mod tests {
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
         interp.execute("'music' IMPORT").await.unwrap();
-        let result = interp.execute("[ [ [ 1 ] + ] ] 'GET' DEF").await;
+        let result = interp.execute("{ [ 1 ] + } 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -54,7 +54,7 @@ mod tests {
         let builtin_words = vec!["INSERT", "REPLACE", "MAP", "FILTER", "PRINT"];
 
         for word in builtin_words {
-            let code = format!("[ [ 1 ] + ] '{}' DEF", word);
+            let code = format!("{{ [ 1 ] + }} '{}' DEF", word);
             let result = interp.execute(&code).await;
             assert!(
                 result.is_err(),
@@ -75,7 +75,7 @@ mod tests {
     async fn test_def_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ [ 2 ] * ] ] 'DOUBLE' .. DEF").await;
+        let result = interp.execute("{ [ 2 ] * } 'DOUBLE' .. DEF").await;
         assert!(result.is_err(), "DEF should reject Stack mode");
         let err_msg = result.unwrap_err().to_string();
         assert!(
@@ -89,10 +89,7 @@ mod tests {
     async fn test_del_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        interp
-            .execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF")
-            .await
-            .unwrap();
+        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'DOUBLE' .. DEL").await;
         assert!(result.is_err(), "DEL should reject Stack mode");
@@ -194,10 +191,7 @@ mod tests {
     async fn test_lookup_rejects_stack_mode() {
         let mut interp = Interpreter::new();
 
-        interp
-            .execute("[ [ [ 2 ] * ] ] 'DOUBLE' DEF")
-            .await
-            .unwrap();
+        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
 
         let result = interp.execute("'DOUBLE' .. ?").await;
         assert!(result.is_err(), "LOOKUP should reject Stack mode");
@@ -212,17 +206,12 @@ mod tests {
     fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
 
-        for (name, definition, description) in sample_words {
+        for (name, definition, _description) in sample_words {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
-            crate::interpreter::execute_def::op_def_inner(
-                interp,
-                name,
-                &tokens,
-                Some(description.to_string()),
-            )
-            .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
+            crate::interpreter::execute_def::op_def_inner(interp, name, &tokens)
+                .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
 
         interp

@@ -249,16 +249,9 @@ export const createModuleTabManager = (
                 const shortName = wordData[0];
                 const description = wordData[1] || shortName;
                 const imported = wordData[2];
-                const stateLine = imported
-                    ? 'Long-press to unimport this word.'
-                    : 'Inactive. Long-press to import this word.';
-                const moduleTitle = `${shortName}
-Built-in word from module ${moduleSheet.moduleName}.
-${stateLine}`;
                 const className = `word-button core module${imported ? '' : ' is-inactive'}`;
                 const button = createWordButtonElement(
                     shortName,
-                    moduleTitle,
                     className,
                     () => onWordClick(shortName),
                     () => { renderWordInfo(wordInfo as HTMLElement, description); },

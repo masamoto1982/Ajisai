@@ -7,17 +7,12 @@ mod tests {
     fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
 
-        for (name, definition, description) in sample_words {
+        for (name, definition, _description) in sample_words {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
-            crate::interpreter::execute_def::op_def_inner(
-                interp,
-                name,
-                &tokens,
-                Some(description.to_string()),
-            )
-            .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
+            crate::interpreter::execute_def::op_def_inner(interp, name, &tokens)
+                .unwrap_or_else(|e| panic!("Failed to define {}: {}", name, e));
         }
 
         interp

@@ -85,7 +85,7 @@ impl AjisaiInterpreter {
         let js_array = js_sys::Array::new();
 
         for dict_name in self.interpreter.user_dictionary_names() {
-            for (name, def) in self.interpreter.user_dictionary_words(&dict_name) {
+            for (name, _def) in self.interpreter.user_dictionary_words(&dict_name) {
                 let fq_name = format!("{}@{}", dict_name, name);
                 let is_protected = self
                     .interpreter
@@ -96,12 +96,6 @@ impl AjisaiInterpreter {
                 let item = js_sys::Array::new();
                 item.push(&dict_name.clone().into());
                 item.push(&name.clone().into());
-                item.push(
-                    &def.description
-                        .clone()
-                        .map(JsValue::from)
-                        .unwrap_or(JsValue::NULL),
-                );
                 item.push(&is_protected.into());
 
                 js_array.push(&item);
@@ -128,13 +122,12 @@ impl AjisaiInterpreter {
                 self.interpreter
                     .user_dictionary_words(&dict_name)
                     .into_iter()
-                    .map(move |(name, def)| UserWordData {
+                    .map(move |(name, _def)| UserWordData {
                         dictionary: Some(dict_name.clone()),
                         name: name.clone(),
                         definition: self
                             .interpreter
                             .lookup_word_definition_tokens(&format!("{}@{}", dict_name, name)),
-                        description: def.description.clone(),
                     })
             })
             .collect();
@@ -606,13 +599,8 @@ impl AjisaiInterpreter {
             let tokens = tokenizer::tokenize(&definition)
                 .map_err(|e| format!("Failed to tokenize definition for {}: {}", word.name, e))?;
 
-            interpreter::execute_def::op_def_inner(
-                &mut self.interpreter,
-                &word.name,
-                &tokens,
-                word.description.clone(),
-            )
-            .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
+            interpreter::execute_def::op_def_inner(&mut self.interpreter, &word.name, &tokens)
+                .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
         }
 
         self.interpreter

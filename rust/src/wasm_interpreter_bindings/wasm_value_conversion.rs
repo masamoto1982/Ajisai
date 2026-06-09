@@ -17,7 +17,6 @@ pub(crate) struct UserWordData {
     pub(crate) dictionary: Option<String>,
     pub(crate) name: String,
     pub(crate) definition: Option<String>,
-    pub(crate) description: Option<String>,
 }
 
 #[cfg(test)]

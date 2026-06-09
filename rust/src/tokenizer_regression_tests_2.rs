@@ -330,13 +330,17 @@ mod tokenizer_regression_tests_2 {
     }
 
     #[test]
-    fn test_multiline_code_block_error() {
+    fn test_multiline_code_block_allowed() {
+        // The single-line block constraint was removed: a `{ }` body may now
+        // span multiple lines, with each internal line break preserved as a
+        // statement separator inside the code block.
         let input = "{ ,, [ 1 ] =\n[ 10 ] } 'CHECK_ONE' DEF";
         let result = tokenize(input);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Code block must be on a single line"));
+        assert!(result.is_ok(), "multi-line code block should tokenize");
+        assert!(
+            result.unwrap().contains(&crate::types::Token::LineBreak),
+            "internal line break must be preserved as a statement separator"
+        );
     }
 
     #[test]

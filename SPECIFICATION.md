@@ -138,7 +138,7 @@ Examples:
 
 ### 3.4 Code blocks
 
-A sequence of tokens enclosed in `{...}`. A code block must be written on a single line.
+A sequence of tokens enclosed in `{...}`. A code block may span multiple lines; each internal line break is preserved as a statement separator, so a multi-line block executes one source line at a time. This makes multi-line word bodies — including `$`-style `COND` bodies — writable directly, without splitting a definition across separately named words.
 
 `(` and `)` are not Ajisai syntactic characters. They are reserved markers — `(` denotes the concept `RESERVED-BEGIN` and `)` denotes `RESERVED-END` (Section 3.9) — reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering `(` or `)` in source text is a tokenizer error.
 
@@ -148,13 +148,12 @@ A sequence of values enclosed in `[...]`.
 
 ### 3.6 COND clauses
 
-Inside a `COND` expression, clauses are separated by `$`. Each clause must occupy exactly one line.
+Inside a `COND` expression, clauses are separated by `$`. Each `$` clause must occupy exactly one line. This rule applies at every nesting level, so the clauses of a multi-line `COND` body written inside an enclosing `{ }` are each kept on their own line.
 
 ### 3.7 Syntax constraints
 
 - All bracket pairs (`[`, `{`) must be balanced.
-- Code blocks (`{...}`) must be on a single line.
-- Each COND clause must occupy exactly one line.
+- Each `$` `COND` clause must occupy exactly one line (at every nesting level).
 - The characters `(` and `)` are not valid in Ajisai source (Section 3.4).
 
 ### 3.8 Word name normalization
@@ -794,13 +793,22 @@ A bare name may legitimately appear under more than one canonical home (for exam
 ### 8.1 Definition syntax
 
 ```
-{ tokens... } 'NAME' DEF
-{ tokens... } 'NAME' 'description' DEF
+{ body... } 'NAME' DEF
 ```
 
-A code block followed by a name string defines a user word in the active dictionary. An optional description string may follow the name. Multiple consecutive code blocks on the stack are merged before definition.
+`DEF` takes exactly two positional arguments: the **name** (a string) on top of the stack, and directly below it the **body** (a code block `{ }`). Roles are determined by position alone — no value types are inspected to guess them — so a leftover value on the stack below the body cannot shift argument interpretation.
 
-A vector may also serve as the definition body. When the vector's elements are strings, each string is one source line of the definition (multiple strings become successive lines); the body of `[ '[ 2 ] *' ] 'DOUBLE' DEF` is therefore the source `[ 2 ] *`, not the codepoints of that text. A vector whose elements are not strings is serialized to source as ordinary data.
+The body must be a code block. It may span multiple lines (Section 3.4): each internal line break is a statement separator, so a multi-line body executes one source line at a time. This is how multi-line and `$`-style `COND` word bodies are written:
+
+```
+{
+  { [ 1 ] = $ [ 100 ] }
+  { [ 2 ] = $ [ 200 ] }
+  { IDLE   $ [ 0 ]   } COND
+} 'CLASSIFY' DEF
+```
+
+A data array `[ ... ]` is not accepted as a definition body; defining a word from data is reserved for a future data-to-code conversion word.
 
 ### 8.2 Rules
 

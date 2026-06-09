@@ -16,7 +16,7 @@ mod tests {
 
     fn define_word(interp: &mut Interpreter, name: &str, src: &str) {
         let tokens = tokenizer::tokenize(src).expect("tokenize");
-        op_def_inner(interp, name, &tokens, None).expect("define word");
+        op_def_inner(interp, name, &tokens).expect("define word");
     }
 
     fn vtu_hint(suitability: VtuSuitability) -> VtuHint {
@@ -75,7 +75,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(crate::elastic::ElasticMode::HedgedSafe);
         interp
-            .execute("{ 1 } { 2 + } 'SHADOW-OK' DEF")
+            .execute("{\n1\n2 +\n} 'SHADOW-OK' DEF")
             .await
             .expect("def");
 
