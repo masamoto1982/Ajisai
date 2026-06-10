@@ -495,7 +495,7 @@ mod nil_passthrough_tests {
         let stack = interp.get_stack();
         assert!(
             !stack.last().unwrap().is_nil(),
-            "OR-NIL should have replaced NIL with the fallback; got {}",
+            "VENT should have replaced NIL with the fallback; got {}",
             stack.last().unwrap()
         );
     }

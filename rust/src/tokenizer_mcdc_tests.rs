@@ -192,7 +192,7 @@ mod comment_newline_absorption {
 //     '~' => Some((Token::Pipeline, 1)),
 //     '^' => Some((Token::NilCoalesce, 1)),
 //
-// `~` (PIPE) and `^` (OR-NIL) are single-character word aliases. They are
+// `~` (FLOW) and `^` (VENT) are single-character word aliases. They are
 // recognized directly by `parse_token_from_single_char`, and `=` is now an
 // unconditional single-char `EQ` Symbol with no lookahead. We cover each
 // single-char branch plus the bare `=` Symbol.

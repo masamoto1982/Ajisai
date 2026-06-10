@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn lookup_output_is_ascii() {
-        for name in ["ADD", "MAP", "LOOKUP", "DEF", "OR-NIL", "TOP", "PRINT"] {
+        for name in ["ADD", "MAP", "LOOKUP", "DEF", "VENT", "TOP", "PRINT"] {
             let body = lookup_builtin_detail(name);
             assert!(
                 body.is_ascii(),

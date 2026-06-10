@@ -91,8 +91,8 @@ The `truthValue` axis is present only on values carrying the `TruthValue` interp
 | Symbol | Word name (all non-whitespace characters excluding reserved chars) |
 | `[` `]` | Vector boundaries |
 | `{` `}` | Code block boundaries |
-| `~` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
-| `^` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
+| `~` | Syntactic sugar for `FLOW` (visual pipeline marker, no-op at runtime) |
+| `^` | Syntactic sugar for `VENT` (NIL coalescing) |
 | `>` | Syntactic sugar for `GT` |
 | `>=` | Syntactic sugar for `GTE` |
 | `<` | Syntactic sugar for `LT` |
@@ -185,7 +185,7 @@ Not every surface form is a runtime word. A surface form is classified as one of
 | `=` `<>` `<` `<=` `>` `>=` | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` | Word alias | yes |
 | `&` `!` `?` | `AND` `FORC` `LOOKUP` | Word alias | yes |
 | `.` `..` `,` `,,` | `TOP` `STAK` `EAT` `KEEP` | Word alias | yes |
-| `~` `^` | `PIPE` `OR-NIL` | Word alias | yes |
+| `~` `^` | `FLOW` `VENT` | Word alias | yes |
 | `;` | `TOP-EAT` (`. ,`) | Modifier sugar | no |
 | `;;` | `STAK-KEEP` (`.. ,,`) | Modifier sugar | no |
 | `[` `]` | `BEGIN-VECTOR` `END-VECTOR` | Delimiter sugar | no |
@@ -354,7 +354,7 @@ A Bubble/NIL result carries its own direct reason (Section 11.2). Literal NIL ha
 
 Operations classified as **NIL-passthrough** in Section 7 do not raise `StructureError` when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.
 
-NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.12). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`^`) itself, whose entire purpose is to react to NIL.
+NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.12). It does not apply to control-flow words, type-conversion words, IO words, or to `VENT` (`^`) itself, whose entire purpose is to react to NIL.
 
 The intent is that pipelines propagate a Bubble/NIL through subsequent computation without crashing, so that a single `^` at the end of the pipeline can supply a fallback value.
 
@@ -426,8 +426,8 @@ All built-in words have English-word-based canonical names (see Section 7). The 
 
 | Canonical | Sugar | Behavior |
 |-----------|-------|----------|
-| `PIPE` | `~` | Visual pipeline separator; no runtime effect |
-| `OR-NIL` | `^` | If the top of the stack is NIL, replace it with the next stack value |
+| `FLOW` | `~` | Visual pipeline separator; no runtime effect |
+| `VENT` | `^` | If the top of the stack is NIL, replace it with the next stack value |
 | `FORC` | `!` | Overrides protection checks when redefining or deleting words that have dependents |
 | `LOOKUP` | `?` | Display the definition of a word (see Section 7.8) |
 
@@ -473,8 +473,8 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `MUL` | `*` | `EAT` | `,` |
 | `DIV` | `/` | `KEEP` | `,,` |
 | `MOD` | `%` | `FORC` | `!` |
-| `EQ` | `=` | `PIPE` | `~` |
-| `NEQ` | `<>` | `OR-NIL` | `^` |
+| `EQ` | `=` | `FLOW` | `~` |
+| `NEQ` | `<>` | `VENT` | `^` |
 | `LT` | `<` | `LOOKUP` | `?` |
 | `LTE` | `<=` | | |
 | `GT` | `>` | | |
@@ -779,7 +779,7 @@ Words not listed here retain their existing handling of NIL. In particular, the 
 | Conversion (most) | `STR` `BOOL` `CHARS` `JOIN` |
 | IO and utilities | `PRINT` `NOW` `DATETIME` `TIMESTAMP` `CSPRNG` `HASH` |
 | Child runtime | `SPAWN` `AWAIT` `STATUS` `KILL` `MONITOR` `SUPERVISE` |
-| NIL coalescing | `OR-NIL` (`^`) itself, whose entire purpose is to react to NIL |
+| NIL coalescing | `VENT` (`^`) itself, whose entire purpose is to react to NIL |
 
 `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
 
@@ -794,7 +794,7 @@ A contract entry has the following fields, in addition to the existing identific
 | Field | Domain | Meaning |
 |-------|--------|---------|
 | `partiality` | `Total` · `Partial` · `Projecting` | `Total`: the operation is defined on every well-shaped input. `Partial`: the operation has well-shaped inputs for which it raises an error. `Projecting`: the operation is total because it projects all failures onto NIL with reason. |
-| `nil_policy` | `Passthrough` · `CreatesNil` · `RejectsNil` · `ConsumesNil` · `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `OR-NIL`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
+| `nil_policy` | `Passthrough` · `CreatesNil` · `RejectsNil` · `ConsumesNil` · `PreservesReason` | How the word reacts to and produces NIL. `Passthrough` words follow Section 4.5.1; `CreatesNil` words project domain failures (e.g. division by zero); `RejectsNil` words raise `StructureError` on NIL; `ConsumesNil` words inspect or branch on NIL (e.g. `VENT`); `PreservesReason` words must not erase a reason that is already attached to a propagated NIL. |
 | `safety_level` | `A` · `B` · `C` · `D` · `Quarantined` | Increasing strength of safety guarantees. `A`: total, pure, deterministic; `B`: partial but with explicit error categories; `C`: observable or has external state read; `D`: effectful; `Quarantined`: not eligible for self-host execution. A `Partial` word is therefore at least `B` (it is not total); `Projecting` words are total by projection and may be `A`. |
 | `mass` | `Fixed { consumes, produces }` · `Dynamic` | The static flow-mass contract of Section 13.1: under the default `TOP` and `EAT` modes the word reads `consumes` operands and pushes `produces` results; under `KEEP` the `consumes` operands are additionally retained (bifurcation, Section 13.2). `Dynamic` marks a word whose arity is not a statically pinned `Fixed` value — either because it is genuinely data-dependent (for example the `STAK` count-fold or runtime-shaped vector operations) or because it has not been probe-verified into the `Fixed` set. `Dynamic` is sound in both cases: the static mass-conservation validator simply abstains on `Dynamic` words, so marking a fixed-arity word `Dynamic` only forgoes static checking, it never asserts a wrong arity. |
 
@@ -802,7 +802,7 @@ A contract entry has the following fields, in addition to the existing identific
 
 Comparison words (`EQ` `NEQ` `LT` `LTE` `GT` `GTE`) are `Projecting`: they are total because every well-shaped input yields a `TruthValue` result, projecting the undecidable case onto the truth value `unknown` (U) rather than raising. Their `nil_policy` is `Passthrough` (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a `TruthValue` result and **not** a `reason`-bearing NIL, so they are no longer classified `CreatesNil` for that case. (The `reason = undecidable` NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)
 
-Logic words (`AND` `OR` `NOT`) are `Total` over the three-valued truth domain of Section 7.5. Their registry `nil_policy` is `Passthrough`: they pass NIL operands through per Section 7.12. The `nil_policy` field holds a single value, so reason-preservation is **not** a second simultaneous policy here but an additional behavioral requirement layered on `Passthrough` — the leftmost NIL reason must survive and a NIL operand is never silently replaced by U (Section 4.5.2). The distinct `PreservesReason` value is reserved for words whose *only* NIL contract is to carry a reason through unchanged: the pure no-op and marker words `TOP` `STAK` `EAT` `KEEP` `TRUE` `FALSE` `NIL` `IDLE` `PIPE` `OR-NIL`.
+Logic words (`AND` `OR` `NOT`) are `Total` over the three-valued truth domain of Section 7.5. Their registry `nil_policy` is `Passthrough`: they pass NIL operands through per Section 7.12. The `nil_policy` field holds a single value, so reason-preservation is **not** a second simultaneous policy here but an additional behavioral requirement layered on `Passthrough` — the leftmost NIL reason must survive and a NIL operand is never silently replaced by U (Section 4.5.2). The distinct `PreservesReason` value is reserved for words whose *only* NIL contract is to carry a reason through unchanged: the pure no-op and marker words `TOP` `STAK` `EAT` `KEEP` `TRUE` `FALSE` `NIL` `IDLE` `FLOW` `VENT`.
 
 `COMPARE-WITHIN` (Section 7.4.2) is `Projecting`: it is total over well-shaped input because it projects the budget-undecided case onto the logical `Unknown` (a result, not a reasoned NIL). Its `nil_policy` is `Passthrough` for the *a* and *b* operands. A non-positive or non-integer `budget` or non-numeric operands are malformed use and raise an error, so it is not `CreatesNil`.
 
@@ -1033,7 +1033,7 @@ Initial Core words following this rule include:
 | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` | None: budget exhaustion on lazy continued fractions yields the truth value `unknown` (U), a `TruthValue` result, not a Bubble/NIL (Section 7.4.1). These words still pass NIL operands through (Section 7.12). | Non-numeric operands or malformed shapes |
 | `SERIAL@READ` | Receive buffer empty (`NilReason::NoData`); host reported the port disconnected with no remaining data (`NilReason::PortDisconnected`); both with `absence.origin = hostEnvironment` (Section 9.4) | Non-text port id, or a missing operand |
 
-`OR-NIL` (`^`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
+`VENT` (`^`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
 
 ### 11.3 Equal-value output
 
@@ -1041,7 +1041,7 @@ Operations that produce a value equal to their input are successful. Equal-value
 
 ### 11.4 Error propagation
 
-Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a *well-formed* operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single `OR-NIL` (`^`) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.
+Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a *well-formed* operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single `VENT` (`^`) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.
 
 ---
 

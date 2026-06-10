@@ -146,7 +146,7 @@ proptest! {
         assert_law("nil-passthrough", &format!("1 0 DIV {a} ADD"), "NIL");
     }
 
-    /// OR-NIL handler: a Bubble is replaced by the fallback (verified operand
+    /// VENT handler: a Bubble is replaced by the fallback (verified operand
     /// order `Bubble ^ fallback`, SPEC §6.4), a present value is kept.
     #[test]
     fn or_nil_handler(a in small()) {

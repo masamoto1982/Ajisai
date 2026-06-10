@@ -185,7 +185,7 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
 
         '$' => Some((Token::CondClauseSep, 1)),
 
-        // Word aliases `~` -> PIPE (visual pipeline marker) and `^` -> OR-NIL
+        // Word aliases `~` -> FLOW (visual pipeline marker) and `^` -> VENT
         // (NIL coalescing). Emitted directly as their dedicated tokens; the
         // canonical names live in core_word_aliases.rs.
         '~' => Some((Token::Pipeline, 1)),

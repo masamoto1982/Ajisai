@@ -211,7 +211,7 @@ mod tests {
             .await
             .expect("unparseable text is a Bubble, not an error");
         assert!(interp.stack[0].is_nil());
-        // a fallback datetime can be supplied with OR-NIL
+        // a fallback datetime can be supplied with VENT
         let mut interp2 = Interpreter::new();
         interp2
             .execute("'time' IMPORT [ 1970 1 1 0 0 0 ] '13-99' PARSE-ISO ^")

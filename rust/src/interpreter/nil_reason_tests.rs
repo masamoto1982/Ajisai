@@ -163,7 +163,7 @@ async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
     let stack = interp.get_stack();
     assert!(
         !stack.last().unwrap().is_nil(),
-        "top should not be NIL after OR-NIL fallback"
+        "top should not be NIL after VENT fallback"
     );
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }

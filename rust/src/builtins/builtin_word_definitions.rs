@@ -918,12 +918,12 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ..SPEC_DEFAULT
         },
 
-    // === Pipeline / coalescing ===
+    // === FLOW (pipeline) / VENT (coalescing) ===
     BuiltinSpec {
 
-        name: "PIPE",
+        name: "FLOW",
         category: "modifier",
-        hover_summary: "PIPE — pipeline marker",
+        hover_summary: "FLOW — pipeline marker",
         hover_syntax: "xs ~ { ... } MAP",
         summary: "Pipeline visual marker (no-op).",
         role: "Whitespace separator with no runtime effect; helps visually\nanchor pipelines.",
@@ -934,9 +934,9 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         },
     BuiltinSpec {
 
-        name: "OR-NIL",
+        name: "VENT",
         category: "modifier",
-        hover_summary: "OR-NIL — coalesce NIL to alternative",
+        hover_summary: "VENT — coalesce NIL to alternative",
         hover_syntax: "NIL ^ [ 0 ]",
         summary:
             "Bubble/NIL fallback operator: substitute an alternative if value is NIL.",
@@ -1652,7 +1652,7 @@ mod tests {
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
             "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "TOP",
-            "STAK", "EAT", "KEEP", "FORC", "LOOKUP", "PIPE", "OR-NIL",
+            "STAK", "EAT", "KEEP", "FORC", "LOOKUP", "FLOW", "VENT",
         ];
 
         for name in required {
