@@ -61,25 +61,39 @@
         a:hover { color: var(--color-secondary); }
 
         /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
-           アプリ本体 base.css の意匠をラフ複製したもの。 */
-        @property --mv-h { syntax: "<number>"; inherits: false; initial-value: 20; }
-        @property --mv-gap { syntax: "<number>"; inherits: false; initial-value: 135; }
-        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 87%; }
+           紫陽花らしい青紫・赤紫・淡緑・淡水色の範囲に収め、0% と 100% を
+           同一にしてループ時の急な色変化を避ける。 */
+        @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
+        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 215; }
+        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
+        @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
+        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.07; }
 
-        @keyframes mv-hue { from { --mv-h: 20; } to { --mv-h: 380; } }
-        @keyframes mv-gap { 0% { --mv-gap: 110; } 50% { --mv-gap: 160; } 100% { --mv-gap: 110; } }
-        @keyframes mv-light { 0% { --mv-l: 87%; } 50% { --mv-l: 92%; } 100% { --mv-l: 87%; } }
+        @keyframes mv-hydrangea-hues {
+            0%, 100% { --mv-h-a: 265; --mv-h-b: 215; }
+            20% { --mv-h-a: 300; --mv-h-b: 255; }
+            35% { --mv-h-a: 325; --mv-h-b: 285; }
+            50% { --mv-h-a: 285; --mv-h-b: 245; }
+            70% { --mv-h-a: 205; --mv-h-b: 155; }
+            85% { --mv-h-a: 155; --mv-h-b: 205; }
+        }
+        @keyframes mv-chroma {
+            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.07; }
+            40% { --mv-c-a: 0.095; --mv-c-b: 0.08; }
+            60% { --mv-c-a: 0.06; --mv-c-b: 0.065; }
+        }
+        @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
 
         .ref-header,
         .ref-footer {
             background: linear-gradient(
                 to right in oklch,
-                oklch(var(--mv-l) 0.1 var(--mv-h)) 0%,
-                oklch(var(--mv-l) 0.09 calc(var(--mv-h) + var(--mv-gap))) 100%
+                oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
+                oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
             );
             animation:
-                mv-hue 240s linear infinite,
-                mv-gap 190s ease-in-out infinite,
+                mv-hydrangea-hues 260s ease-in-out infinite,
+                mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
         }
 
@@ -91,11 +105,18 @@
             border-bottom: var(--border-main);
             padding: 1rem 2rem;
             display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+            color: var(--color-text);
+        }
+
+        .app-header-top {
+            display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            flex-wrap: wrap;
-            color: var(--color-text);
+            width: 100%;
         }
 
         .app-brand-meta {
@@ -349,7 +370,7 @@
                 -webkit-overflow-scrolling: touch;
             }
 
-            .ref-header { padding: 0.75rem 1rem; }
+            .ref-header { padding: 1rem 2rem; }
             .ref-article { padding: 1.25rem 1rem 2rem; }
             .ref-nav { padding: 1.25rem 1rem; }
         }
@@ -357,6 +378,7 @@
 </head>
 <body>
     <header class="ref-header">
+        <div class="app-header-top">
             <div class="app-brand-meta">
                 <a href="../index.html" class="app-brand-block" aria-label="Ajisai">
                     <img src="../images/QR_341216.png" alt="" class="logo" aria-hidden="true">
@@ -364,16 +386,17 @@
                 </a>
                 <span class="ref-tagline">Reference</span>
             </div>
-            <div class="header-actions">
-                <!-- Reference 側ではアプリ本体への動線として Playground ボタンを置く。 -->
-                <a href="../index.html" class="btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M5 3l14 9-14 9V3z"/>
-                    </svg>
-                    Playground
-                </a>
-            </div>
-        </header>
+        </div>
+        <div class="header-actions">
+            <!-- Reference 側ではアプリ本体への動線として Playground ボタンを置く。 -->
+            <a href="../index.html" class="btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M5 3l14 9-14 9V3z"/>
+                </svg>
+                Playground
+            </a>
+        </div>
+    </header>
 
         <main class="ref-main">
             <article class="ref-article">
