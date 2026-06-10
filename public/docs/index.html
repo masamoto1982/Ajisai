@@ -61,25 +61,38 @@
         a:hover { color: var(--color-secondary); }
 
         /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
-           アプリ本体 base.css の意匠をラフ複製したもの。 */
-        @property --mv-h { syntax: "<number>"; inherits: false; initial-value: 20; }
-        @property --mv-gap { syntax: "<number>"; inherits: false; initial-value: 135; }
-        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 87%; }
+           紫陽花らしい青紫・赤紫・淡緑・淡水色の範囲に収め、0% と 100% を
+           同一にしてループ時の急な色変化を避ける。 */
+        @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
+        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 215; }
+        @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
+        @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
+        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.07; }
 
-        @keyframes mv-hue { from { --mv-h: 20; } to { --mv-h: 380; } }
-        @keyframes mv-gap { 0% { --mv-gap: 110; } 50% { --mv-gap: 160; } 100% { --mv-gap: 110; } }
-        @keyframes mv-light { 0% { --mv-l: 87%; } 50% { --mv-l: 92%; } 100% { --mv-l: 87%; } }
+        @keyframes mv-hydrangea-hues {
+            0%, 100% { --mv-h-a: 265; --mv-h-b: 215; }
+            20% { --mv-h-a: 290; --mv-h-b: 245; }
+            40% { --mv-h-a: 325; --mv-h-b: 285; }
+            60% { --mv-h-a: 155; --mv-h-b: 205; }
+            80% { --mv-h-a: 205; --mv-h-b: 155; }
+        }
+        @keyframes mv-chroma {
+            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.07; }
+            40% { --mv-c-a: 0.095; --mv-c-b: 0.08; }
+            60% { --mv-c-a: 0.06; --mv-c-b: 0.065; }
+        }
+        @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
 
         .ref-header,
         .ref-footer {
             background: linear-gradient(
                 to right in oklch,
-                oklch(var(--mv-l) 0.1 var(--mv-h)) 0%,
-                oklch(var(--mv-l) 0.09 calc(var(--mv-h) + var(--mv-gap))) 100%
+                oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
+                oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
             );
             animation:
-                mv-hue 240s linear infinite,
-                mv-gap 190s ease-in-out infinite,
+                mv-hydrangea-hues 260s ease-in-out infinite,
+                mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
         }
 

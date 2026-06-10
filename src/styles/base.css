@@ -91,61 +91,104 @@ select:focus-visible {
 }
 
 
-/* "移ろい": header and footer share a slowly shifting OKLCH gradient. A single
- * base hue rotates uniformly around the full colour wheel (hue 380 is hue 20,
- * so the cycle never visibly restarts), and the second endpoint co-rotates at a
- * fixed offset (--mv-gap) so the pair turns together like a hue-rotate. Because
- * both stops share one rotation, the gradient's internal OKLCH interpolation
- * keeps a constant direction and never flips — the old counter-rotation let the
- * angular gap cross 180°, which flipped the shorter-arc interpolation and made
- * the mid-tones jump across the wheel. The gap itself breathes within (0,180)
- * and a slower wave drifts the lightness, so the pair's relationship still
- * keeps changing without ever crossing the interpolation seam. */
-@property --mv-h {
+/* "移ろい": header and footer share a slowly shifting OKLCH gradient
+ * constrained to hydrangea-like hues: blue-purple, red-purple, pale green,
+ * and pale aqua. The two gradient endpoints are animated as a matched pair,
+ * with nearby hues at every keyframe so the gradient interpolation never takes
+ * a warm orange/yellow shortcut. The 100% keyframe exactly repeats 0%, keeping
+ * the infinite loop from producing a visible colour jump. */
+@property --mv-h-a {
     syntax: "<number>";
     inherits: false;
-    initial-value: 20;
+    initial-value: 265;
 }
 
-@property --mv-gap {
+@property --mv-h-b {
     syntax: "<number>";
     inherits: false;
-    initial-value: 135;
+    initial-value: 215;
 }
 
 @property --mv-l {
     syntax: "<percentage>";
     inherits: false;
-    initial-value: 87%;
+    initial-value: 90%;
 }
 
-@keyframes mv-hue {
-    from { --mv-h: 20; }
-    to   { --mv-h: 380; }
+@property --mv-c-a {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0.085;
 }
 
-@keyframes mv-gap {
-    0%   { --mv-gap: 110; }
-    50%  { --mv-gap: 160; }
-    100% { --mv-gap: 110; }
+@property --mv-c-b {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0.07;
+}
+
+@keyframes mv-hydrangea-hues {
+    0%,
+    100% {
+        --mv-h-a: 265;
+        --mv-h-b: 215;
+    }
+
+    20% {
+        --mv-h-a: 290;
+        --mv-h-b: 245;
+    }
+
+    40% {
+        --mv-h-a: 325;
+        --mv-h-b: 285;
+    }
+
+    60% {
+        --mv-h-a: 155;
+        --mv-h-b: 205;
+    }
+
+    80% {
+        --mv-h-a: 205;
+        --mv-h-b: 155;
+    }
+}
+
+@keyframes mv-chroma {
+    0%,
+    100% {
+        --mv-c-a: 0.085;
+        --mv-c-b: 0.07;
+    }
+
+    40% {
+        --mv-c-a: 0.095;
+        --mv-c-b: 0.08;
+    }
+
+    60% {
+        --mv-c-a: 0.06;
+        --mv-c-b: 0.065;
+    }
 }
 
 @keyframes mv-light {
-    0%   { --mv-l: 87%; }
-    50%  { --mv-l: 92%; }
-    100% { --mv-l: 87%; }
+    0%,
+    100% { --mv-l: 90%; }
+    50%  { --mv-l: 93%; }
 }
 
 header,
 footer {
     background: linear-gradient(
         to right in oklch,
-        oklch(var(--mv-l) 0.1 var(--mv-h)) 0%,
-        oklch(var(--mv-l) 0.09 calc(var(--mv-h) + var(--mv-gap))) 100%
+        oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
+        oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
     );
     animation:
-        mv-hue 240s linear infinite,
-        mv-gap 190s ease-in-out infinite,
+        mv-hydrangea-hues 260s ease-in-out infinite,
+        mv-chroma 210s ease-in-out infinite,
         mv-light 170s ease-in-out infinite;
 }
 
