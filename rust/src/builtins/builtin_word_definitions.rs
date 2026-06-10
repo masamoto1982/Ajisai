@@ -924,7 +924,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "PIPE",
         category: "modifier",
         hover_summary: "PIPE — pipeline marker",
-        hover_syntax: "xs == { ... } MAP",
+        hover_syntax: "xs ~ { ... } MAP",
         summary: "Pipeline visual marker (no-op).",
         role: "Whitespace separator with no runtime effect; helps visually\nanchor pipelines.",
 
@@ -937,7 +937,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "OR-NIL",
         category: "modifier",
         hover_summary: "OR-NIL — coalesce NIL to alternative",
-        hover_syntax: "NIL => [ 0 ]",
+        hover_syntax: "NIL ^ [ 0 ]",
         summary:
             "Bubble/NIL fallback operator: substitute an alternative if value is NIL.",
         role: "Modifier that replaces a Bubble/NIL with a fallback value.",
@@ -1636,7 +1636,7 @@ mod tests {
     fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
         let forbidden = [
             "+", "-", "*", "/", "%", "=", "<", "<=", ">", ">=", "<>", ".", "..", ",", ",,", "~",
-            "!", "'", "$", "?", "==", "=>",
+            "!", "'", "$", "?", "^",
         ];
 
         for spec in super::builtin_specs() {

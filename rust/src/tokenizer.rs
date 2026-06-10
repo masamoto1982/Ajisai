@@ -65,18 +65,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
         }
 
         if chars[i] == '=' {
-            if i + 1 < chars.len() && chars[i + 1] == '=' {
-                tokens.push(Token::Pipeline);
-                i += 2;
-                continue;
-            }
-
-            if i + 1 < chars.len() && chars[i + 1] == '>' {
-                tokens.push(Token::NilCoalesce);
-                i += 2;
-                continue;
-            }
-
             tokens.push(Token::Symbol("=".into()));
             i += 1;
             continue;
@@ -181,7 +169,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '$'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '$' | '~' | '^'
     )
 }
 
@@ -196,6 +184,12 @@ fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
         '}' => Some((Token::BlockEnd, 1)),
 
         '$' => Some((Token::CondClauseSep, 1)),
+
+        // Word aliases `~` -> PIPE (visual pipeline marker) and `^` -> OR-NIL
+        // (NIL coalescing). Emitted directly as their dedicated tokens; the
+        // canonical names live in core_word_aliases.rs.
+        '~' => Some((Token::Pipeline, 1)),
+        '^' => Some((Token::NilCoalesce, 1)),
 
         _ => None,
     }

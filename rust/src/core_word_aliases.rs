@@ -129,13 +129,13 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Look up and display word definition",
     },
     CoreWordAlias {
-        alias: "==",
+        alias: "~",
         canonical: Some("PIPE"),
         kind: CoreWordAliasKind::SyntaxSugar,
         summary: "Pipeline visual marker (no-op)",
     },
     CoreWordAlias {
-        alias: "=>",
+        alias: "^",
         canonical: Some("OR-NIL"),
         kind: CoreWordAliasKind::SyntaxSugar,
         summary: "NIL coalescing",

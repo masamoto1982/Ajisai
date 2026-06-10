@@ -430,20 +430,20 @@ async fn malformed_use_raises_error_not_bubble() {
     );
 }
 
-// --- OR-NIL (=>) replaces Bubble/NIL with a fallback (SPEC §11.2) ---------
+// --- OR-NIL (^) replaces Bubble/NIL with a fallback (SPEC §11.2) ---------
 
 #[tokio::test]
 async fn or_nil_supplies_fallback_and_clears_reason() {
     // bare NIL replaced by the fallback
-    let stack = run_ok("NIL => [ 0 ]").await;
+    let stack = run_ok("NIL ^ [ 0 ]").await;
     assert_eq!(format!("{}", stack[0]), "[ 0/1 ]");
 
     // non-NIL value passes through unchanged
-    let stack = run_ok("[ 42 ] => [ 0 ]").await;
+    let stack = run_ok("[ 42 ] ^ [ 0 ]").await;
     assert_eq!(format!("{}", stack[0]), "[ 42/1 ]");
 
     // a reasoned Bubble (division by zero) is replaced; no NIL survives
-    let stack = run_ok("1 0 DIV => [ 7 ]").await;
+    let stack = run_ok("1 0 DIV ^ [ 7 ]").await;
     assert!(!is_nil(&stack[0]), "OR-NIL must consume the Bubble");
     assert_eq!(format!("{}", stack[0]), "[ 7/1 ]");
 }

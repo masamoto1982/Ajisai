@@ -214,7 +214,7 @@ mod tests {
         // a fallback datetime can be supplied with OR-NIL
         let mut interp2 = Interpreter::new();
         interp2
-            .execute("'time' IMPORT [ 1970 1 1 0 0 0 ] '13-99' PARSE-ISO =>")
+            .execute("'time' IMPORT [ 1970 1 1 0 0 0 ] '13-99' PARSE-ISO ^")
             .await
             .expect("should succeed");
         assert_eq!(

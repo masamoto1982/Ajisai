@@ -349,7 +349,7 @@ fn bench_interpreter_word_lookup_overhead(c: &mut Criterion) {
     c.bench_function("interp_many_word_lookups", |b| {
         b.iter(|| {
             let mut interp = Interpreter::new();
-            rt.block_on(interp.execute("'algo' IMPORT [ 3 1 2 ] SORT == ,, LENGTH"))
+            rt.block_on(interp.execute("'algo' IMPORT [ 3 1 2 ] SORT ~ ,, LENGTH"))
                 .unwrap();
             black_box(&interp);
         })

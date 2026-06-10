@@ -91,8 +91,8 @@ The `truthValue` axis is present only on values carrying the `TruthValue` interp
 | Symbol | Word name (all non-whitespace characters excluding reserved chars) |
 | `[` `]` | Vector boundaries |
 | `{` `}` | Code block boundaries |
-| `==` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
-| `=>` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
+| `~` | Syntactic sugar for `PIPE` (visual pipeline marker, no-op at runtime) |
+| `^` | Syntactic sugar for `OR-NIL` (NIL coalescing) |
 | `>` | Syntactic sugar for `GT` |
 | `>=` | Syntactic sugar for `GTE` |
 | `<` | Syntactic sugar for `LT` |
@@ -185,7 +185,7 @@ Not every surface form is a runtime word. A surface form is classified as one of
 | `=` `<>` `<` `<=` `>` `>=` | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` | Word alias | yes |
 | `&` `!` `?` | `AND` `FORC` `LOOKUP` | Word alias | yes |
 | `.` `..` `,` `,,` | `TOP` `STAK` `EAT` `KEEP` | Word alias | yes |
-| `==` `=>` | `PIPE` `OR-NIL` | Word alias | yes |
+| `~` `^` | `PIPE` `OR-NIL` | Word alias | yes |
 | `;` | `TOP-EAT` (`. ,`) | Modifier sugar | no |
 | `;;` | `STAK-KEEP` (`.. ,,`) | Modifier sugar | no |
 | `[` `]` | `BEGIN-VECTOR` `END-VECTOR` | Delimiter sugar | no |
@@ -354,9 +354,9 @@ A Bubble/NIL result carries its own direct reason (Section 11.2). Literal NIL ha
 
 Operations classified as **NIL-passthrough** in Section 7 do not raise `StructureError` when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.
 
-NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.12). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL.
+NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.12). It does not apply to control-flow words, type-conversion words, IO words, or to `OR-NIL` (`^`) itself, whose entire purpose is to react to NIL.
 
-The intent is that pipelines propagate a Bubble/NIL through subsequent computation without crashing, so that a single `=>` at the end of the pipeline can supply a fallback value.
+The intent is that pipelines propagate a Bubble/NIL through subsequent computation without crashing, so that a single `^` at the end of the pipeline can supply a fallback value.
 
 When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.
 
@@ -426,8 +426,8 @@ All built-in words have English-word-based canonical names (see Section 7). The 
 
 | Canonical | Sugar | Behavior |
 |-----------|-------|----------|
-| `PIPE` | `==` | Visual pipeline separator; no runtime effect |
-| `OR-NIL` | `=>` | If the top of the stack is NIL, replace it with the next stack value |
+| `PIPE` | `~` | Visual pipeline separator; no runtime effect |
+| `OR-NIL` | `^` | If the top of the stack is NIL, replace it with the next stack value |
 | `FORC` | `!` | Overrides protection checks when redefining or deleting words that have dependents |
 | `LOOKUP` | `?` | Display the definition of a word (see Section 7.8) |
 
@@ -464,7 +464,7 @@ Categories such as `CAST` `TEXT` `TENSOR` `RUNTIME` are documentation-only label
 
 ### 7.0 English-word-based naming
 
-All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+` `-` `*` `/` `%` `=` `<` `<=` `&` `==` `=>` `?` `!` `.` `..` `,` `,,`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
+All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as `+` `-` `*` `/` `%` `=` `<` `<=` `&` `~` `^` `?` `!` `.` `..` `,` `,,`) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.
 
 | Canonical | Sugar | Canonical | Sugar |
 |-----------|-------|-----------|-------|
@@ -473,8 +473,8 @@ All built-in words — both Core words and module dictionary words — use Engli
 | `MUL` | `*` | `EAT` | `,` |
 | `DIV` | `/` | `KEEP` | `,,` |
 | `MOD` | `%` | `FORC` | `!` |
-| `EQ` | `=` | `PIPE` | `==` |
-| `NEQ` | `<>` | `OR-NIL` | `=>` |
+| `EQ` | `=` | `PIPE` | `~` |
+| `NEQ` | `<>` | `OR-NIL` | `^` |
 | `LT` | `<` | `LOOKUP` | `?` |
 | `LTE` | `<=` | | |
 | `GT` | `>` | | |
@@ -779,7 +779,7 @@ Words not listed here retain their existing handling of NIL. In particular, the 
 | Conversion (most) | `STR` `BOOL` `CHARS` `JOIN` |
 | IO and utilities | `PRINT` `NOW` `DATETIME` `TIMESTAMP` `CSPRNG` `HASH` |
 | Child runtime | `SPAWN` `AWAIT` `STATUS` `KILL` `MONITOR` `SUPERVISE` |
-| NIL coalescing | `OR-NIL` (`=>`) itself, whose entire purpose is to react to NIL |
+| NIL coalescing | `OR-NIL` (`^`) itself, whose entire purpose is to react to NIL |
 
 `NUM` and `CHR` can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.
 
@@ -1033,7 +1033,7 @@ Initial Core words following this rule include:
 | `EQ` `NEQ` `LT` `LTE` `GT` `GTE` | None: budget exhaustion on lazy continued fractions yields the truth value `unknown` (U), a `TruthValue` result, not a Bubble/NIL (Section 7.4.1). These words still pass NIL operands through (Section 7.12). | Non-numeric operands or malformed shapes |
 | `SERIAL@READ` | Receive buffer empty (`NilReason::NoData`); host reported the port disconnected with no remaining data (`NilReason::PortDisconnected`); both with `absence.origin = hostEnvironment` (Section 9.4) | Non-text port id, or a missing operand |
 
-`OR-NIL` (`=>`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
+`OR-NIL` (`^`) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.
 
 ### 11.3 Equal-value output
 
@@ -1041,7 +1041,7 @@ Operations that produce a value equal to their input are successful. Equal-value
 
 ### 11.4 Error propagation
 
-Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a *well-formed* operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single `OR-NIL` (`=>`) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.
+Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a *well-formed* operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single `OR-NIL` (`^`) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.
 
 ---
 

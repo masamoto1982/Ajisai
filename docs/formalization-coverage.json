@@ -6445,9 +6445,9 @@
       "desugars_to": "LOOKUP"
     },
     {
-      "id": "alias.equals-equals",
+      "id": "alias.tilde",
       "kind": "syntax_sugar",
-      "surface": "==",
+      "surface": "~",
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.md §3.9"

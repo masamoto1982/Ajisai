@@ -135,7 +135,7 @@ Spec links: [§4.5.2 NIL versus Unknown](SPECIFICATION.md#452-nil-versus-unknown
 [ 1 2 3 ] [ 4 5 6 ] +      # => [ 5 7 9 ]
 
 # Bubble/NIL fallback
-1 0 DIV => 99              # division-by-zero Bubble becomes fallback value
+1 0 DIV ^ 99               # division-by-zero Bubble becomes fallback value
 
 # Importing a module word
 'math' IMPORT 2 SQRT       # lazy exact continued fraction for √2

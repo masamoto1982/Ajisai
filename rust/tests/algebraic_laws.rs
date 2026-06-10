@@ -147,12 +147,12 @@ proptest! {
     }
 
     /// OR-NIL handler: a Bubble is replaced by the fallback (verified operand
-    /// order `Bubble => fallback`, SPEC §6.4), a present value is kept.
+    /// order `Bubble ^ fallback`, SPEC §6.4), a present value is kept.
     #[test]
     fn or_nil_handler(a in small()) {
-        assert_law("or-nil-bubble", &format!("1 0 DIV => {a}"), &format!("{a}"));
+        assert_law("or-nil-bubble", &format!("1 0 DIV ^ {a}"), &format!("{a}"));
         // A non-NIL value is its own left-biased result regardless of fallback.
-        assert_law("or-nil-present", &format!("{a} => 999"), &format!("{a}"));
+        assert_law("or-nil-present", &format!("{a} ^ 999"), &format!("{a}"));
     }
 }
 

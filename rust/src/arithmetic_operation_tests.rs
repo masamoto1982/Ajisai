@@ -491,7 +491,7 @@ mod nil_passthrough_tests {
 
     #[tokio::test]
     async fn or_nil_can_supply_fallback_after_passthrough() {
-        let interp = run("[ 10 ] [ 0 ] / 1 + 0 =>").await;
+        let interp = run("[ 10 ] [ 0 ] / 1 + 0 ^").await;
         let stack = interp.get_stack();
         assert!(
             !stack.last().unwrap().is_nil(),

@@ -3573,12 +3573,12 @@
       "classification": "Surface"
     },
     {
-      "id": "alias.equals-equals",
+      "id": "alias.tilde",
       "kind": "syntax_sugar",
-      "surface": "==",
+      "surface": "~",
       "canonical": "PIPE",
       "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.equals-equals",
+      "coverage_entry_id": "alias.tilde",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
       "derived_from": [],

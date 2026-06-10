@@ -73,8 +73,8 @@ async fn lookup_alias_canonicalizes_to_english_word() {
     use crate::core_word_aliases::canonicalize_core_word_name;
     assert_eq!(canonicalize_core_word_name("+"), "ADD");
     assert_eq!(canonicalize_core_word_name("?"), "LOOKUP");
-    assert_eq!(canonicalize_core_word_name("=="), "PIPE");
-    assert_eq!(canonicalize_core_word_name("=>"), "OR-NIL");
+    assert_eq!(canonicalize_core_word_name("~"), "PIPE");
+    assert_eq!(canonicalize_core_word_name("^"), "OR-NIL");
 }
 
 /// Lexical / structural surface forms are documented as named concepts but are

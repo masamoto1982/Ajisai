@@ -81,7 +81,7 @@ mod tests {
     async fn index_of_can_fall_back_with_or_nil() {
         let mut interp = Interpreter::new();
         interp
-            .execute("'algo' IMPORT -1 [ 1 2 3 ] 9 INDEX-OF =>")
+            .execute("'algo' IMPORT -1 [ 1 2 3 ] 9 INDEX-OF ^")
             .await
             .expect("should succeed");
         assert_eq!(interp.stack[0].as_scalar().unwrap().to_i64().unwrap(), -1);
