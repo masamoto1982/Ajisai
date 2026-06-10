@@ -955,7 +955,7 @@
                 <section id="nil" class="ref-page">
                     <h2>NIL and the Bubble Rule</h2>
                     <p>The failure model in one line: <strong>could not produce a value → a bubble; used incorrectly → an error.</strong> A well-formed operation that cannot produce a result projects onto <code>NIL</code> — a "bubble" carrying a structured reason — while malformed use (wrong types, missing operands) raises an ordinary error.</p>
-                    <p>Bubbles flow: arithmetic and comparison are NIL-passthrough, so a <code>NIL</code> operand makes the result <code>NIL</code> without crashing the pipeline. At the end, <code>OR-NIL</code> (<code>=&gt;</code>) supplies a fallback.</p>
+                    <p>Bubbles flow: arithmetic and comparison are NIL-passthrough, so a <code>NIL</code> operand makes the result <code>NIL</code> without crashing the pipeline. At the end, <code>VENT</code> (<code>^</code>) supplies a fallback.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1040,9 +1040,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>1 0 / =&gt; 99</code></td>
+                                    <td><code>1 0 / ^ 99</code></td>
                                     <td><code>99/1</code></td>
-                                    <td class="notes"><code>OR-NIL</code> (<code>=&gt;</code>) replaces a bubble with the fallback value.</td>
+                                    <td class="notes"><code>VENT</code> (<code>^</code>) replaces a bubble with the fallback value.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1059,7 +1059,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>7 2 / =&gt; 99</code></td>
+                                    <td><code>7 2 / ^ 99</code></td>
                                     <td><code>7/2</code></td>
                                     <td class="notes">When the result is a real value, the fallback is not used.</td>
                                 </tr>
@@ -1762,7 +1762,7 @@ COND</code></td>
 
                 <section id="pipeline" class="ref-page">
                     <h2>Pipelines</h2>
-                    <p><code>PIPE</code> (<code>==</code>) is a purely visual pipeline marker — it has no runtime effect. Use it to punctuate the stages of a dataflow so a long line reads as a pipeline.</p>
+                    <p><code>FLOW</code> (<code>~</code>) is a purely visual pipeline marker — it has no runtime effect. Use it to punctuate the stages of a dataflow so a long line reads as a pipeline.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1771,9 +1771,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] == REVERSE</code></td>
+                                    <td><code>[ 1 2 3 ] ~ REVERSE</code></td>
                                     <td><code>[ 3/1 2/1 1/1 ]</code></td>
-                                    <td class="notes">Identical to the same code without <code>==</code>.</td>
+                                    <td class="notes">Identical to the same code without <code>~</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1782,7 +1782,7 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">A typical shape: compute == transform == compare, with a single <code>OR-NIL</code> (<code>=&gt;</code>) fallback at the end of the line to absorb any bubble produced along the way.</p>
+                    <p class="ref-note">A typical shape: compute ~ transform ~ compare, with a single <code>VENT</code> (<code>^</code>) fallback at the end of the line to absorb any bubble produced along the way.</p>
                 </section>
 
                 <section id="output" class="ref-page">

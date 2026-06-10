@@ -280,7 +280,7 @@
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "NIL",
-        "OR-NIL",
+        "VENT",
         "GET",
         "REMOVE",
         "NUM",
@@ -294,7 +294,7 @@
       ],
       "can_derive": [
         "NIL",
-        "OR-NIL",
+        "VENT",
         "GET",
         "REMOVE",
         "NUM",
@@ -354,10 +354,10 @@
       "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values.",
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
-        "OR-NIL"
+        "VENT"
       ],
       "can_derive": [
-        "OR-NIL"
+        "VENT"
       ],
       "status": "accepted"
     },
@@ -586,11 +586,11 @@
       "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it.",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
-        "PIPE",
+        "FLOW",
         "IDLE"
       ],
       "can_derive": [
-        "PIPE",
+        "FLOW",
         "IDLE"
       ],
       "status": "accepted"
@@ -1610,9 +1610,9 @@
       "algebraic_family": "modifier"
     },
     {
-      "id": "core.pipe",
+      "id": "core.flow",
       "kind": "coreword",
-      "surface": "PIPE",
+      "surface": "FLOW",
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.md §6.4",
@@ -1635,9 +1635,9 @@
       "algebraic_family": "state-transformer"
     },
     {
-      "id": "core.or-nil",
+      "id": "core.vent",
       "kind": "coreword",
-      "surface": "OR-NIL",
+      "surface": "VENT",
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.md §6.4",
@@ -6445,9 +6445,9 @@
       "desugars_to": "LOOKUP"
     },
     {
-      "id": "alias.equals-equals",
+      "id": "alias.tilde",
       "kind": "syntax_sugar",
-      "surface": "==",
+      "surface": "~",
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.md §3.9"
@@ -6460,12 +6460,12 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Surface sugar for PIPE; desugaring is observation-transparent.",
+      "notes": "Surface sugar for FLOW; desugaring is observation-transparent.",
       "semantic_role": "Sugar",
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
-      "desugars_to": "PIPE"
+      "desugars_to": "FLOW"
     }
   ],
   "unclassified_allowlist": []

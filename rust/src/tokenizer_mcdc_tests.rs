@@ -187,52 +187,55 @@ mod comment_newline_absorption {
 }
 
 // AQ-VER-002-D
-// DUT: rust/src/tokenizer.rs:50, 56 inside the '=' branch
+// DUT: rust/src/tokenizer.rs `parse_token_from_single_char`
 //
-//     if i + 1 < chars.len() && chars[i + 1] == '=' { Pipeline; }
-//     if i + 1 < chars.len() && chars[i + 1] == '>' { NilCoalesce; }
+//     '~' => Some((Token::Pipeline, 1)),
+//     '^' => Some((Token::NilCoalesce, 1)),
 //
-// Per multi-char operator we have two short-circuit conditions:
-//   A = (i + 1 < chars.len())
-//   B = (chars[i + 1] == X)  for X in {'=','>'}
-//
-// MC/DC for `A && B` per operator:
-//   (T,T) -> match
-//   (T,F) -> no match (B's independent effect, A held T)
-//   (F,_) -> no match (A's independent effect, B masked)
-//
-// We cover both `==` -> Pipeline and `=>` -> NilCoalesce, plus the
-// fall-through to bare `=` Symbol when neither lookahead succeeds.
-mod equals_lookahead {
+// `~` (FLOW) and `^` (VENT) are single-character word aliases. They are
+// recognized directly by `parse_token_from_single_char`, and `=` is now an
+// unconditional single-char `EQ` Symbol with no lookahead. We cover each
+// single-char branch plus the bare `=` Symbol.
+mod single_char_aliases {
     use super::*;
 
     #[test]
-    fn aq_ver_002_d_pipeline_match_when_both_conditions_true() {
-        // (A=T, B=T) for the '==' branch.
-        let tokens = tokenize("a == b").unwrap();
+    fn aq_ver_002_d_tilde_is_pipeline() {
+        let tokens = tokenize("a ~ b").unwrap();
         assert_eq!(tokens, vec![sym("a"), Token::Pipeline, sym("b")]);
     }
 
     #[test]
-    fn aq_ver_002_d_nilcoalesce_match_when_both_conditions_true() {
-        // (A=T, B=T) for the '=>' branch.
-        let tokens = tokenize("a => b").unwrap();
+    fn aq_ver_002_d_caret_is_nilcoalesce() {
+        let tokens = tokenize("a ^ b").unwrap();
         assert_eq!(tokens, vec![sym("a"), Token::NilCoalesce, sym("b")]);
     }
 
     #[test]
-    fn aq_ver_002_d_falls_through_when_lookahead_char_mismatches() {
-        // (A=T, B=F) for both lookaheads: '=' followed by space. The two
-        // checks both see B=F (chars[i+1] is not '=' nor '>'), so we fall
-        // through to the bare '=' Symbol.
+    fn aq_ver_002_d_tilde_caret_need_no_surrounding_whitespace() {
+        // `~` and `^` are special characters, so they break adjacent symbols.
+        let tokens = tokenize("a~b^c").unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                sym("a"),
+                Token::Pipeline,
+                sym("b"),
+                Token::NilCoalesce,
+                sym("c")
+            ]
+        );
+    }
+
+    #[test]
+    fn aq_ver_002_d_equals_is_bare_symbol() {
+        // `=` no longer has any lookahead: it is always the bare EQ Symbol.
         let tokens = tokenize("= a").unwrap();
         assert_eq!(tokens, vec![sym("="), sym("a")]);
     }
 
     #[test]
-    fn aq_ver_002_d_falls_through_when_at_eof() {
-        // (A=F): bare '=' at end of input. Both lookahead conditions fail
-        // on A's short-circuit, so we emit the bare Symbol.
+    fn aq_ver_002_d_equals_at_eof_is_bare_symbol() {
         let tokens = tokenize("=").unwrap();
         assert_eq!(tokens, vec![sym("=")]);
     }

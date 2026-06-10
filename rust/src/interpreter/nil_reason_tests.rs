@@ -159,11 +159,11 @@ async fn bare_nil_literal_has_no_reason() {
 async fn or_nil_consumes_direct_bubble_nil_and_substitutes_fallback() {
     let mut interp = Interpreter::new();
     interp.execute("1 0 /").await.unwrap();
-    interp.execute("42 =>").await.unwrap();
+    interp.execute("42 ^").await.unwrap();
     let stack = interp.get_stack();
     assert!(
         !stack.last().unwrap().is_nil(),
-        "top should not be NIL after OR-NIL fallback"
+        "top should not be NIL after VENT fallback"
     );
     assert_eq!(format!("{}", stack.last().unwrap()), "42/1");
 }
@@ -217,7 +217,7 @@ async fn bubble_rule_division_by_zero_without_safe_has_direct_reason() {
 #[tokio::test]
 async fn bubble_rule_division_by_zero_recovers_with_or_nil() {
     let mut interp = Interpreter::new();
-    interp.execute("10 0 / => 99").await.unwrap();
+    interp.execute("10 0 / ^ 99").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
     assert_eq!(format!("{}", top), "99/1");
@@ -235,7 +235,7 @@ async fn bubble_rule_get_out_of_range_without_safe_has_direct_reason() {
 #[tokio::test]
 async fn bubble_rule_get_out_of_range_recovers_with_or_nil() {
     let mut interp = Interpreter::new();
-    interp.execute("[ 10 20 ] [ 99 ] GET => 0").await.unwrap();
+    interp.execute("[ 10 20 ] [ 99 ] GET ^ 0").await.unwrap();
     let top = interp.get_stack().last().expect("top value");
     assert!(!top.is_nil());
     assert_eq!(format!("{}", top), "0/1");
@@ -262,7 +262,7 @@ async fn bubble_rule_num_parse_failure_has_direct_reason_and_fallback() {
     assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
 
     let mut interp = Interpreter::new();
-    interp.execute("'abc' NUM => 0").await.unwrap();
+    interp.execute("'abc' NUM ^ 0").await.unwrap();
     assert_eq!(format!("{}", interp.get_stack().last().unwrap()), "0/1");
 }
 
@@ -275,7 +275,7 @@ async fn bubble_rule_chr_invalid_codepoint_has_direct_reason_and_fallback() {
     assert_eq!(top.nil_reason(), Some(&NilReason::InvalidEncoding));
 
     let mut interp = Interpreter::new();
-    interp.execute("1114112 CHR => 'fallback'").await.unwrap();
+    interp.execute("1114112 CHR ^ 'fallback'").await.unwrap();
     assert_eq!(
         format!("{}", interp.get_stack().last().unwrap()),
         "'fallback'"

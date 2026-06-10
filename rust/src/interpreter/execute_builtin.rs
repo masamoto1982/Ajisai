@@ -379,8 +379,8 @@ impl Interpreter {
             Token::VectorEnd => "]".to_string(),
             Token::BlockStart => "{".to_string(),
             Token::BlockEnd => "}".to_string(),
-            Token::Pipeline => "==".to_string(),
-            Token::NilCoalesce => "=>".to_string(),
+            Token::Pipeline => "~".to_string(),
+            Token::NilCoalesce => "^".to_string(),
             Token::CondClauseSep => "$".to_string(),
             Token::LineBreak => "\n".to_string(),
         }

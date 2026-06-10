@@ -4,7 +4,7 @@
 //! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
 //! desugaring of SPEC §3.9 / §7.0 is *observationally transparent*. Every
 //! symbolic alias renders identically to its English-word canonical form, the
-//! `PIPE` (`==`) marker is a no-op, the `TOP-EAT` shorthand `;` equals `. ,`,
+//! `FLOW` (`~`) marker is a no-op, the `TOP-EAT` shorthand `;` equals `. ,`,
 //! and word names are case-normalized (§3.8). Each law is the compressed form
 //! of infinitely many tokenizer conformance cases: if desugaring were not
 //! `⟦desugar(s)⟧ = ⟦s⟧`, some generated pair would render differently.
@@ -62,10 +62,10 @@ proptest! {
         assert_law("alias-gte", &format!("{a} {b} >="), &format!("{a} {b} GTE"));
     }
 
-    // ── PIPE (`==`) is a no-op visual separator (§6.4) ──
+    // ── FLOW (`~`) is a no-op visual separator (§6.4) ──
     #[test]
     fn pipe_is_noop(a in small(), b in small()) {
-        assert_law("pipe-noop", &format!("{a} {b} == ADD"), &format!("{a} {b} ADD"));
+        assert_law("pipe-noop", &format!("{a} {b} ~ ADD"), &format!("{a} {b} ADD"));
     }
 
     // ── Word-name case normalization (§3.8): add ≡ Add ≡ ADD ──

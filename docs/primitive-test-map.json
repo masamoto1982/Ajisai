@@ -378,8 +378,8 @@
         "core.get",
         "core.nil",
         "core.num",
-        "core.or-nil",
         "core.remove",
+        "core.vent",
         "module.algo.index-of",
         "module.json.get",
         "module.json.parse",
@@ -460,7 +460,7 @@
       "law_test_count": 1,
       "conformance_case_count": 1,
       "derived_words": [
-        "core.or-nil"
+        "core.vent"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
@@ -760,7 +760,7 @@
       "algebraic_family": "state-transformer",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 24,
+      "derived_word_count": 25,
       "law_test_count": 8,
       "conformance_case_count": 6,
       "derived_words": [
@@ -779,6 +779,7 @@
         "core.precompute",
         "core.scan",
         "core.spawn",
+        "core.supervise",
         "core.unfold",
         "core.unimport",
         "core.unimport-only",
@@ -817,8 +818,8 @@
       "law_test_count": 2,
       "conformance_case_count": 0,
       "derived_words": [
-        "core.idle",
-        "core.pipe"
+        "core.flow",
+        "core.idle"
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
@@ -1036,7 +1037,7 @@
       "algebraic_family": "state-transformer",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 6,
+      "derived_word_count": 7,
       "law_test_count": 1,
       "conformance_case_count": 0,
       "derived_words": [
@@ -1045,6 +1046,7 @@
         "core.monitor",
         "core.spawn",
         "core.status",
+        "core.supervise",
         "exploratory.child-runtime"
       ],
       "law_tests": [

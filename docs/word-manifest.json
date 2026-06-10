@@ -795,13 +795,13 @@
       "classification": "Core"
     },
     {
-      "id": "core.pipe",
+      "id": "core.flow",
       "kind": "coreword",
-      "surface": "PIPE",
+      "surface": "FLOW",
       "category": "modifier",
       "source": "rust/src/builtins/builtin_word_definitions.rs",
-      "canonical": "PIPE",
-      "coverage_entry_id": "core.pipe",
+      "canonical": "FLOW",
+      "coverage_entry_id": "core.flow",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
       "derived_from": [
@@ -810,13 +810,13 @@
       "classification": "Core"
     },
     {
-      "id": "core.or-nil",
+      "id": "core.vent",
       "kind": "coreword",
-      "surface": "OR-NIL",
+      "surface": "VENT",
       "category": "modifier",
       "source": "rust/src/builtins/builtin_word_definitions.rs",
-      "canonical": "OR-NIL",
-      "coverage_entry_id": "core.or-nil",
+      "canonical": "VENT",
+      "coverage_entry_id": "core.vent",
       "semantic_role": "Derived",
       "algebraic_family": "bubble",
       "derived_from": [
@@ -3573,16 +3573,16 @@
       "classification": "Surface"
     },
     {
-      "id": "alias.equals-equals",
+      "id": "alias.tilde",
       "kind": "syntax_sugar",
-      "surface": "==",
-      "canonical": "PIPE",
+      "surface": "~",
+      "canonical": "FLOW",
       "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.equals-equals",
+      "coverage_entry_id": "alias.tilde",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
       "derived_from": [],
-      "desugars_to": "PIPE",
+      "desugars_to": "FLOW",
       "classification": "Surface"
     },
     {
