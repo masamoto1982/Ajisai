@@ -12,6 +12,11 @@
       アプリ本体の CSS バンドルには依存できない。ヘッダー/フッターの意匠（移ろいの
       グラデーションを含む）とデザイントークンは、ラフ版として最小限を本ファイルに
       インライン複製している。意匠を本格運用する段階で共通化を検討する。
+
+      執筆規約: docs/dev/ajisai-authoring-style.md / docs/dev/reference-writing-style.md。
+      - Ajisai のトークンは必ず <code> で囲む（灰色背景 = Ajisai チャネル）。
+      - 期待値はサンプル表の Expected value 列に置く（行内コメント矢印は使わない）。
+      - Expected value は conformance スイートと同じ観測（最終スタックの表示文字列）。
     -->
     <style>
         :root {
@@ -279,6 +284,11 @@
             color: var(--color-text-light);
         }
 
+        /* Word/sugar summary tables (not samples): same look, slightly tighter. */
+        .word-table {
+            margin: 0.75rem 0 1.25rem;
+        }
+
         .ref-note {
             font-size: 0.85rem;
             color: var(--color-text-light);
@@ -379,14 +389,17 @@
             <article class="ref-article">
                 <section id="intro" class="ref-page">
                     <h2>Introduction</h2>
-                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. This reference introduces each feature with short examples.</p>
-                    <p>Every example has an <strong>"Open in Playground"</strong> button. Pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
-                    <p class="ref-note">This is a rough draft. The content will be expanded gradually.</p>
+                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is an <strong>exact real</strong> — internally a continued fraction — so arithmetic never rounds.</p>
+                    <p>This reference introduces each feature with short, verified examples. Every example has an <strong>"Open in Playground"</strong> button; pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
+                    <h3>How to read the examples</h3>
+                    <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
+                    <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code> and <code>UNKNOWN</code>; the absence of a value displays as <code>NIL</code>.</p>
+                    <p>In the text of this reference, anything with a gray background is an Ajisai token. Nearly every ASCII symbol in Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>,,</code> is <code>KEEP</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
                 </section>
 
                 <section id="vectors" class="ref-page">
                     <h2>Values and Vectors</h2>
-                    <p>Every value in Ajisai is wrapped in a vector. Enclose elements in square brackets <code>[ ]</code> and separate them with spaces. Numbers can be exact fractions (rationals).</p>
+                    <p>A vector encloses values in square brackets <code>[ ]</code>, separated by spaces. A vector literal evaluates to itself, and vectors may nest freely.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -396,8 +409,27 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 1 2 3 ]</code></td>
-                                    <td><code>[ 1 2 3 ]</code></td>
-                                    <td class="notes">A vector pushed onto the stack.</td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">A vector pushed onto the stack. Integers display as exact fractions over 1.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
+                                    <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
+                                    <td class="notes">Nesting is preserved; nested vectors act as tensors.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -416,7 +448,222 @@
                                 <tr>
                                     <td><code>[ 7/3 ]</code></td>
                                     <td><code>[ 7/3 ]</code></td>
-                                    <td class="notes">Numbers are kept as exact rationals.</td>
+                                    <td class="notes">Fractions are first-class literals and stay exact.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">There is no empty-vector literal: use <code>NIL</code> for the absence of a value.</p>
+                </section>
+
+                <section id="numbers" class="ref-page">
+                    <h2>Exact Numbers</h2>
+                    <p>Every numeric value is an exact real, stored as a continued fraction. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact representation — <code>0.5</code> <em>is</em> one half, not a binary approximation.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>0.5 0.25 +</code></td>
+                                    <td><code>3/4</code></td>
+                                    <td class="notes">Decimal literals are exact rationals.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 3 /</code></td>
+                                    <td><code>1/3</code></td>
+                                    <td class="notes">Division yields an exact rational, never a rounded float.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>2 3 / 1 3 / +</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">Two thirds plus one third is exactly one.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1000000000000 1000000000000 *</code></td>
+                                    <td><code>1000000000000000000000000/1</code></td>
+                                    <td class="notes">Arbitrary-precision integers never fall back to floating point.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 9 SQRT</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes">A perfect-square root is the exact rational answer.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 2 SQRT 2 LT</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">An irrational like √2 is a lazy continued fraction; comparisons against it are computed exactly.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">An irrational value itself renders as a nested continued fraction such as <code>( 1 ( 2 ( 2 ( 2 ...) ) ) )</code>, truncated at a display budget. The nested form is display output only — it is not source syntax, and <code>(</code> <code>)</code> are rejected in programs.</p>
+                </section>
+
+                <section id="stack" class="ref-page">
+                    <h2>Stack and Modifiers</h2>
+                    <p>Words take their operands from the stack and push their results back. Two pairs of <strong>modifiers</strong>, written before a word, control where the operands come from and whether they survive:</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Canonical</th><th>Sugar</th><th>Effect</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>TOP</code></td><td><code>.</code></td><td class="notes">Operate on the top value(s) of the stack (default).</td></tr>
+                                <tr><td><code>STAK</code></td><td><code>..</code></td><td class="notes">Fold the operation across many stack values; the count on top of the stack says how many.</td></tr>
+                                <tr><td><code>EAT</code></td><td><code>,</code></td><td class="notes">Consume the operands (default).</td></tr>
+                                <tr><td><code>KEEP</code></td><td><code>,,</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 +</code></td>
+                                    <td><code>7/1</code></td>
+                                    <td class="notes">Default mode: both operands are consumed and the sum is pushed.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>3 4 KEEP ADD</code></td>
+                                    <td><code>3/1 4/1 7/1</code></td>
+                                    <td class="notes"><code>KEEP</code> (<code>,,</code>) retains the operands; the result is pushed on top.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 2 3 3 STAK ADD</code></td>
+                                    <td><code>6/1</code></td>
+                                    <td class="notes"><code>STAK</code> (<code>..</code>) folds <code>ADD</code> across the three values below the count.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 2 3 3 STAK KEEP ADD</code></td>
+                                    <td><code>1/1 2/1 3/1 6/1</code></td>
+                                    <td class="notes">Modifiers combine: fold across the stack and keep the operands too.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -429,7 +676,21 @@
 
                 <section id="arithmetic" class="ref-page">
                     <h2>Arithmetic</h2>
-                    <p>The four arithmetic operations act element-wise between vectors. <code>MOD</code> gives the remainder.</p>
+                    <p>The arithmetic words act element-wise between vectors, and a one-element vector broadcasts across a longer one. Each word has a canonical English name; the symbol is sugar:</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Canonical</th><th>Sugar</th><th>Meaning</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>ADD</code></td><td><code>+</code></td><td class="notes">Addition</td></tr>
+                                <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">Subtraction</td></tr>
+                                <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">Multiplication</td></tr>
+                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">Exact-real division</td></tr>
+                                <tr><td><code>MOD</code></td><td><code>%</code></td><td class="notes">Remainder</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -438,8 +699,8 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 ] [ 10 20 30 ] +</code></td>
-                                    <td><code>[ 11 22 33 ]</code></td>
+                                    <td><code>[ 1 2 3 ] [ 4 5 6 ] +</code></td>
+                                    <td><code>[ 5/1 7/1 9/1 ]</code></td>
                                     <td class="notes">Element-wise addition.</td>
                                 </tr>
                             </tbody>
@@ -457,8 +718,27 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 7 ] [ 3 ] MOD PRINT</code></td>
-                                    <td><code>[ 1 ]</code></td>
+                                    <td><code>[ 1 2 3 ] [ 10 ] *</code></td>
+                                    <td><code>[ 10/1 20/1 30/1 ]</code></td>
+                                    <td class="notes">A singleton vector broadcasts across the other operand.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>7 3 MOD</code></td>
+                                    <td><code>1/1</code></td>
                                     <td class="notes">Remainder of 7 divided by 3.</td>
                                 </tr>
                             </tbody>
@@ -468,11 +748,27 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <p class="ref-note">The rounding words <code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> also live here. Division by zero does not crash — see <a href="#nil">NIL and the Bubble Rule</a>.</p>
                 </section>
 
-                <section id="output" class="ref-page">
-                    <h2>Output</h2>
-                    <p><code>PRINT</code> shows the value at the top of the stack in the output area.</p>
+                <section id="comparison" class="ref-page">
+                    <h2>Comparison and Truth Values</h2>
+                    <p>All six ordering relations exist as words. The result is a <strong>truth value</strong>, which is its own kind of value — a Boolean is not a number.</p>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Canonical</th><th>Sugar</th><th>Meaning</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>EQ</code></td><td><code>=</code></td><td class="notes">Equal</td></tr>
+                                <tr><td><code>NEQ</code></td><td><code>&lt;&gt;</code></td><td class="notes">Not equal</td></tr>
+                                <tr><td><code>LT</code></td><td><code>&lt;</code></td><td class="notes">Less than</td></tr>
+                                <tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td class="notes">Less than or equal</td></tr>
+                                <tr><td><code>GT</code></td><td><code>&gt;</code></td><td class="notes">Greater than</td></tr>
+                                <tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td class="notes">Greater than or equal</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -481,9 +777,148 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 42 ] PRINT</code></td>
-                                    <td><code>[ 42 ]</code></td>
-                                    <td class="notes">Writes the top of the stack to the output area.</td>
+                                    <td><code>5 3 GT</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">A decided comparison yields a Boolean.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE 1 EQ</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">A truth value is not the number 1.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</code></td>
+                                    <td><code>UNKNOWN</code></td>
+                                    <td class="notes">√2 − √2 cannot be told apart from 0 within the comparison budget, so the honest answer is the third truth value.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>5 3 10 COMPARE-WITHIN</code></td>
+                                    <td><code>1/1</code></td>
+                                    <td class="notes">Three-way compare with an explicit budget: the sign of a − b, or <code>UNKNOWN</code> if undecided within the budget.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">Comparing exact lazy values (like square roots) cannot always terminate, so every comparison runs under a budget. Equal irrationals exhaust it and yield <code>UNKNOWN</code> — a logical truth value, distinct from <code>NIL</code>.</p>
+                </section>
+
+                <section id="logic" class="ref-page">
+                    <h2>Three-Valued Logic</h2>
+                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> implement strong Kleene three-valued logic over true, false, and unknown. The absorbing cases are exact: false absorbs <code>AND</code>, true absorbs <code>OR</code>; unknown propagates everywhere else.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE FALSE AND</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">Logical AND of two definite values.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE FALSE OR</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">Logical OR.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TRUE NOT</code></td>
+                                    <td><code>FALSE</code></td>
+                                    <td class="notes">Logical NOT.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ TRUE AND</code></td>
+                                    <td><code>UNKNOWN</code></td>
+                                    <td class="notes">Unknown flows through the Kleene tables: true AND unknown is unknown.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -494,9 +929,10 @@
                     </div>
                 </section>
 
-                <section id="range" class="ref-page">
-                    <h2>Range</h2>
-                    <p><code>RANGE</code> builds a continuous vector from a start value and an end value.</p>
+                <section id="nil" class="ref-page">
+                    <h2>NIL and the Bubble Rule</h2>
+                    <p>The failure model in one line: <strong>could not produce a value → a bubble; used incorrectly → an error.</strong> A well-formed operation that cannot produce a result projects onto <code>NIL</code> — a "bubble" carrying a structured reason — while malformed use (wrong types, missing operands) raises an ordinary error.</p>
+                    <p>Bubbles flow: arithmetic and comparison are NIL-passthrough, so a <code>NIL</code> operand makes the result <code>NIL</code> without crashing the pipeline. At the end, <code>OR-NIL</code> (<code>=&gt;</code>) supplies a fallback.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -505,9 +941,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 0 ] [ 5 ] RANGE PRINT</code></td>
-                                    <td><code>[ 0 1 2 3 4 5 ]</code></td>
-                                    <td class="notes">Inclusive range from 0 to 5.</td>
+                                    <td><code>1 0 /</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">Division by zero is a bubble with reason, not a trap.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -516,11 +952,685 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>NIL 1 +</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">NIL passes through arithmetic, keeping its reason traceable.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 ] [ 5 ] GET</code></td>
+                                    <td><code>[ 10/1 20/1 30/1 ] NIL</code></td>
+                                    <td class="notes">An out-of-range index on a valid vector is a bubble (reason: index out of bounds).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'ABC' NUM</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">Text that cannot be parsed as a number is a bubble (reason: invalid encoding).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>1 0 / =&gt; 99</code></td>
+                                    <td><code>99/1</code></td>
+                                    <td class="notes"><code>OR-NIL</code> (<code>=&gt;</code>) replaces a bubble with the fallback value.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>7 2 / =&gt; 99</code></td>
+                                    <td><code>7/2</code></td>
+                                    <td class="notes">When the result is a real value, the fallback is not used.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="vector-ops" class="ref-page">
+                    <h2>Vector Operations</h2>
+                    <p>Vectors are 0-indexed; a negative index counts from the end. Reading words such as <code>GET</code> and <code>LENGTH</code> leave the source vector on the stack and push the answer on top of it.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 ] [ 0 ] GET</code></td>
+                                    <td><code>[ 10/1 20/1 30/1 ] 10/1</code></td>
+                                    <td class="notes">Index 0 is the first element; the source vector is retained.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 10 20 30 ] [ -1 ] GET</code></td>
+                                    <td><code>[ 10/1 20/1 30/1 ] 30/1</code></td>
+                                    <td class="notes">Negative indices count from the end.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] LENGTH</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ] 3/1</code></td>
+                                    <td class="notes">Element count, with the source vector retained.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 ] [ 3 4 ] CONCAT</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 4/1 ]</code></td>
+                                    <td class="notes">Concatenate two vectors.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] REVERSE</code></td>
+                                    <td><code>[ 3/1 2/1 1/1 ]</code></td>
+                                    <td class="notes">Reverse the element order.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 5 ] RANGE</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 4/1 5/1 ]</code></td>
+                                    <td class="notes">Inclusive integer sequence from start to end.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 0 10 2 ] RANGE</code></td>
+                                    <td><code>[ 0/1 2/1 4/1 6/1 8/1 10/1 ]</code></td>
+                                    <td class="notes">A third element gives the step; a negative step descends.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 5 ] [ 3 ] TAKE</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">Keep the first N elements.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'algo' IMPORT [ 3 1 2 ] SORT</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes">Ascending sort. <code>SORT</code> is owned by the <code>ALGO</code> module.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code></td>
+                                    <td><code>[ 2/1 2/1 ]</code></td>
+                                    <td class="notes">The size of each dimension of a nested vector.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] RANK</code></td>
+                                    <td><code>2/1</code></td>
+                                    <td class="notes">The number of dimensions.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">Further structural words: <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code> <code>SPLIT</code> <code>REORDER</code> <code>COLLECT</code> <code>RESHAPE</code> <code>TRANSPOSE</code> <code>FILL</code>.</p>
+                </section>
+
+                <section id="higher-order" class="ref-page">
+                    <h2>Higher-Order Words</h2>
+                    <p>A code block <code>{ }</code> is a first-class value. The higher-order words apply a block — or the quoted name of a defined word — across the elements of a vector.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] { [ 2 ] * } MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">Apply the block to each element.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">A defined word can be passed by its quoted name.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] { [ 2 ] MOD [ 0 ] = } FILTER</code></td>
+                                    <td><code>[ 2/1 4/1 ]</code></td>
+                                    <td class="notes">Keep the elements for which the predicate is true (here: the even ones).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] [ 0 ] '+' FOLD</code></td>
+                                    <td><code>[ 10/1 ]</code></td>
+                                    <td class="notes">Reduce with an initial accumulator: 0 + 1 + 2 + 3 + 4.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 ] [ 0 ] '+' SCAN</code></td>
+                                    <td><code>[ 1/1 3/1 6/1 10/1 ]</code></td>
+                                    <td class="notes">Like <code>FOLD</code>, but keeps every intermediate accumulator (running totals).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 4 5 ] { [ 2 ] MOD [ 0 ] = } COUNT</code></td>
+                                    <td><code>[ 2/1 ]</code></td>
+                                    <td class="notes">Count the elements satisfying the predicate.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">True if at least one element satisfies the predicate; short-circuits.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 2 4 6 8 ] { [ 2 ] MOD [ 0 ] = } ALL</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">True if every element satisfies the predicate; short-circuits on the first false.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><code>UNFOLD</code> generates a sequence from a seed and a generator block; <code>EXEC</code> runs a block; <code>EVAL</code> runs a string as code.</p>
+                </section>
+
+                <section id="cond" class="ref-page">
+                    <h2>Conditionals</h2>
+                    <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is definitely true. In the clause form, <code>$</code> separates the guard from the body and each clause occupies exactly one line; <code>IDLE</code> (a no-op) makes an always-true else guard.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 0 ]
+{ [ 0 ] &lt; $ 'negative' }
+{ [ 0 ] = $ 'zero' }
+{ IDLE $ 'positive' }
+COND</code></td>
+                                    <td><code>'zero'</code></td>
+                                    <td class="notes">Clause form: guard left of <code>$</code>, body right; one clause per line.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { IDLE } { 'positive' } COND</code></td>
+                                    <td><code>'negative'</code></td>
+                                    <td class="notes">Pair form: alternating guard and body blocks.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">A guard that evaluates to <code>UNKNOWN</code> does <em>not</em> fire its clause; evaluation falls through as if it were false. If no clause matches and there is no else clause, <code>COND</code> raises an error.</p>
+                </section>
+
+                <section id="strings" class="ref-page">
+                    <h2>Strings</h2>
+                    <p>A string is quoted with <code>'</code> and displays in quotes. Strings convert to and from numbers and characters with the cast words.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'hello'</code></td>
+                                    <td><code>'hello'</code></td>
+                                    <td class="notes">A string literal evaluates to itself.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>42 STR</code></td>
+                                    <td><code>'42'</code></td>
+                                    <td class="notes">Number to string.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'1/3' NUM</code></td>
+                                    <td><code>1/3</code></td>
+                                    <td class="notes">String to exact number; unparseable text yields <code>NIL</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>65 CHR</code></td>
+                                    <td><code>'A'</code></td>
+                                    <td class="notes">Unicode code point to character.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 'hel' 'lo' ] JOIN</code></td>
+                                    <td><code>'hello'</code></td>
+                                    <td class="notes">Join a vector of strings.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'  hi  ' TRIM</code></td>
+                                    <td><code>'hi'</code></td>
+                                    <td class="notes">Strip whitespace from both ends; <code>TRIM-LEFT</code> and <code>TRIM-RIGHT</code> take one side.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'hello world' 'world' 'ajisai' SUBSTITUTE</code></td>
+                                    <td><code>'hello ajisai'</code></td>
+                                    <td class="notes">Replace every occurrence of a substring.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'banana' 'ba' STARTS-WITH?</code></td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">Prefix test; <code>ENDS-WITH?</code> tests the suffix.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note"><code>CHARS</code> splits a string into its characters and <code>TOKENIZE</code> splits by a separator; both produce code-point values that <code>JOIN</code> assembles back into text.</p>
                 </section>
 
                 <section id="define" class="ref-page">
                     <h2>Defining Words</h2>
-                    <p>You can give a name to a snippet of code to define a new word. Definitions use <code>DEF</code>.</p>
+                    <p>A new word is defined from a code block and a name: <code>{ body } 'NAME' DEF</code>. The body runs each time the word is called.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -529,10 +1639,162 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ '[ 2 ] *' ] 'DOUBLE' DEF
-[ 21 ] DOUBLE PRINT</code></td>
-                                    <td><code>[ 42 ]</code></td>
-                                    <td class="notes"><code>DOUBLE</code> multiplies the top vector by 2.</td>
+                                    <td><code>{ [ 10 ] + } 'ADD10' DEF
+5 ADD10</code></td>
+                                    <td><code>[ 15/1 ]</code></td>
+                                    <td class="notes">Define <code>ADD10</code>, then call it.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>{ [ 2 ] * } 'DBL' DEF
+[ 1 2 3 ] 'DBL' MAP</code></td>
+                                    <td><code>[ 2/1 4/1 6/1 ]</code></td>
+                                    <td class="notes">User words combine with the higher-order words by quoted name.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>Managing words</h3>
+                    <p><code>DEL</code> deletes a user word by quoted name. Dependencies are tracked: redefining or deleting a word that other words depend on requires the force modifier <code>FORC</code> (<code>!</code>). Built-in words can never be redefined or deleted. <code>LOOKUP</code> (<code>?</code>) shows the definition of a word — for a user word it returns the original source for editing.</p>
+                    <p class="ref-note">Word names are case-insensitive (<code>add10</code> and <code>ADD10</code> are the same word) and conventionally follow an action-object style such as <code>APPLY-GAIN</code>.</p>
+                </section>
+
+                <section id="modules" class="ref-page">
+                    <h2>Modules</h2>
+                    <p>Module words become visible with <code>IMPORT</code>: the quoted module name is case-insensitive. <code>IMPORT-ONLY</code> brings in selected words; <code>UNIMPORT</code> and <code>UNIMPORT-ONLY</code> hide them again without deleting anything.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 9 SQRT</code></td>
+                                    <td><code>3/1</code></td>
+                                    <td class="notes">After <code>IMPORT</code>, the module's words resolve as bare names.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'algo' IMPORT [ 3 1 2 ] SORT</code></td>
+                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
+                                    <td class="notes"><code>SORT</code> is canonically an <code>ALGO</code> word.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <h3>Available modules</h3>
+                    <div class="ref-table-wrap word-table">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Module</th><th>Purpose</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>MATH</code></td><td class="notes">Square root, exact-rational interval arithmetic, and scalar utilities</td></tr>
+                                <tr><td><code>ALGO</code></td><td class="notes">Sorting and other deterministic algorithms</td></tr>
+                                <tr><td><code>JSON</code></td><td class="notes">JSON parsing, generation, and manipulation</td></tr>
+                                <tr><td><code>IO</code></td><td class="notes">Standard input/output</td></tr>
+                                <tr><td><code>TIME</code></td><td class="notes">Exact, timezone-free date and time values</td></tr>
+                                <tr><td><code>CRYPTO</code></td><td class="notes">Cryptographically secure random and hash</td></tr>
+                                <tr><td><code>MUSIC</code></td><td class="notes">Audio sequencing and synthesis</td></tr>
+                                <tr><td><code>SERIAL</code></td><td class="notes">Host-mediated serial port access</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="pipeline" class="ref-page">
+                    <h2>Pipelines</h2>
+                    <p><code>PIPE</code> (<code>==</code>) is a purely visual pipeline marker — it has no runtime effect. Use it to punctuate the stages of a dataflow so a long line reads as a pipeline.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>[ 1 2 3 ] == REVERSE</code></td>
+                                    <td><code>[ 3/1 2/1 1/1 ]</code></td>
+                                    <td class="notes">Identical to the same code without <code>==</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">A typical shape: compute == transform == compare, with a single <code>OR-NIL</code> (<code>=&gt;</code>) fallback at the end of the line to absorb any bubble produced along the way.</p>
+                </section>
+
+                <section id="output" class="ref-page">
+                    <h2>Output</h2>
+                    <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> (<code>,,</code>) the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>42 ,, PRINT</code></td>
+                                    <td><code>42/1</code></td>
+                                    <td class="notes">The value goes to the output area and, thanks to <code>,,</code>, stays on the stack.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>42 PRINT</code></td>
+                                    <td>—</td>
+                                    <td class="notes">Default mode consumes the operand: the stack ends empty and the value appears only in the output area.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -549,10 +1811,20 @@
                 <ul>
                     <li><a href="#intro">Introduction</a></li>
                     <li><a href="#vectors">Values and Vectors</a></li>
+                    <li><a href="#numbers">Exact Numbers</a></li>
+                    <li><a href="#stack">Stack and Modifiers</a></li>
                     <li><a href="#arithmetic">Arithmetic</a></li>
-                    <li><a href="#output">Output</a></li>
-                    <li><a href="#range">Range</a></li>
+                    <li><a href="#comparison">Comparison and Truth Values</a></li>
+                    <li><a href="#logic">Three-Valued Logic</a></li>
+                    <li><a href="#nil">NIL and the Bubble Rule</a></li>
+                    <li><a href="#vector-ops">Vector Operations</a></li>
+                    <li><a href="#higher-order">Higher-Order Words</a></li>
+                    <li><a href="#cond">Conditionals</a></li>
+                    <li><a href="#strings">Strings</a></li>
                     <li><a href="#define">Defining Words</a></li>
+                    <li><a href="#modules">Modules</a></li>
+                    <li><a href="#pipeline">Pipelines</a></li>
+                    <li><a href="#output">Output</a></li>
                 </ul>
             </nav>
         </main>
