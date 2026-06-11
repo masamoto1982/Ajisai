@@ -2,6 +2,12 @@
 
 Ajisaiのドキュメント（`?` (LOOKUP) で表示するビルトイン説明、およびヘッダーの Reference ボタンから開くページ群）における執筆規約。目的は **Ajisaiプログラムと自然言語の説明を視覚的・形式的に区別する** こと。
 
+## 位置づけ
+
+- **非正典。** 本書は書き方の規約であり、言語意味論を定義しない。言語意味論の正準文書は `SPECIFICATION.html`（Specification Authority 節）のみ。
+- Reference・LOOKUP・hover は正準仕様から派生する文書面であり、仕様と矛盾する場合は仕様が優先する。
+- 表記全般の共通規律は `docs/dev/ajisai-authoring-style.md` に従う。
+
 ## 規約
 
 1. ドキュメント本文は Markdown で記述する。

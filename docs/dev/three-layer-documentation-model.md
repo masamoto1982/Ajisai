@@ -1,12 +1,12 @@
 # Ajisai Three-Layer Documentation Model
 
 Status: proposal (revision of the草案 dated 2026-05).
-Authority: non-canonical. SPECIFICATION.md remains the canonical source for language semantics. This document defines the **structure and policy of user-facing guidance**, not language behavior.
+Authority: non-canonical. `SPECIFICATION.html` remains the canonical source for language semantics; its Specification Authority section (§2.4–§2.5) defines Reference, LOOKUP, and hover as derived documentation under the specification's authority. This document defines the **structure and policy of user-facing guidance**, not language behavior.
 
 Related existing documents:
 
 - `docs/dev/reference-writing-style.md` — current writing convention. Will be amended to align with this model (see §7).
-- `SPECIFICATION.md` §7.14 — Coreword contract metadata (`partiality`, `nil_policy`, `safety_level`). Stability/contract claims in any guidance layer must agree with §7.14.
+- `SPECIFICATION.html` §7.14 — Coreword contract metadata (`partiality`, `nil_policy`, `safety_level`). Stability/contract claims in any guidance layer must agree with §7.14.
 
 ---
 
@@ -33,7 +33,7 @@ Reference is the **entire body of Ajisai-the-language documentation**. It is del
 Reference covers:
 
 1. **Getting started** — install, the editor surface, first program.
-2. **Concept guide** — value model, stack, modifiers, fractional dataflow, error model. Mirrors SPECIFICATION.md sections in tutorial form.
+2. **Concept guide** — value model, stack, modifiers, fractional dataflow, error model. Mirrors SPECIFICATION.html sections in tutorial form.
 3. **Word catalog** — one page per built-in word. Generated from the same data that drives LOOKUP, plus a `concept` field that LOOKUP does not display.
 4. **Module reference** — per-module pages.
 5. **Developer notes** — debugging model, runtime invariants, version/stability notes.
@@ -62,7 +62,7 @@ Failure / NIL Behavior
 Side Effects
 Modifier Interaction (when non-standard)
 Related Words
-Stability          ← must equal SPECIFICATION.md §7.14 contract
+Stability          ← must equal SPECIFICATION.html §7.14 contract
 Implementation Notes (optional)
 ```
 
@@ -185,7 +185,7 @@ Behavior:
 
 ### 3.6 Sugar handling
 
-For words that have sugar listed in SPECIFICATION.md §6.5, the `Syntax:` and `Examples:` blocks always show **both** the canonical and shorthand forms. For words without sugar, only `Canonical:` appears (no empty `Shorthand:` heading).
+For words that have sugar listed in SPECIFICATION.html §6.5, the `Syntax:` and `Examples:` blocks always show **both** the canonical and shorthand forms. For words without sugar, only `Canonical:` appears (no empty `Shorthand:` heading).
 
 LOOKUP's example for the word **must reflect runtime semantics**. `LOOKUP` itself pops the word name from the stack, so the canonical example is `'ADD' LOOKUP`, not `ADD LOOKUP`.
 
@@ -304,7 +304,7 @@ The current codebase already passes `BuiltinSpec` through the WASM boundary (see
 
 ### 5.3 Single source of truth: stability
 
-`stability` must mirror the contract entry from SPECIFICATION.md §7.14 (`partiality`, `nil_policy`, `safety_level`). The recommended display rule:
+`stability` must mirror the contract entry from SPECIFICATION.html §7.14 (`partiality`, `nil_policy`, `safety_level`). The recommended display rule:
 
 - `stable` ⇔ §7.14 says `safety_level: A` or `B` and the word is not deprecated.
 - `experimental` ⇔ `safety_level: C` or `D`.

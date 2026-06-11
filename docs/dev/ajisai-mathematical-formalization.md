@@ -1,6 +1,6 @@
 # Ajisai の数学的定式化 — denotational / algebraic semantics
 
-> Status: **Non-canonical / descriptive.** 正典は `SPECIFICATION.md` のみ。
+> Status: **Non-canonical / descriptive.** 正典は `SPECIFICATION.html` のみ。
 > 本書は仕様に対する**第二の権威ではなく**、仕様が定める現象を数学の言葉で
 > 記述するモデルである(§16.1「第二の設計権威を導入しない」を尊重する)。
 > Active coverage tracking lives in `docs/formalization-coverage.json`; current language observations live in `tests/conformance/index.html`.
@@ -10,7 +10,7 @@
 
 ## 0. 動機 — 外延的同一性から内包的同一性へ
 
-`PORTABILITY.md` と `SPECIFICATION.md`「Conformance and Identity」は、
+`PORTABILITY.md` と `SPECIFICATION.html`「Conformance and Identity」は、
 Ajisai の同一性を **conformance suite が固定する入出力対応**で定義する。
 これは数学的には、意味関数
 

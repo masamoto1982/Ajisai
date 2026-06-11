@@ -233,6 +233,8 @@ Version: <strong>2026-06-11</strong></p>
 <li>WASM/TypeScript observable contracts derived from this file</li>
 </ol>
 
+<p>Items 2 and 3 are canonical only insofar as they conform to item 1. Implementation code is an expression of this specification, never an independent source of meaning: when the Rust core, the WASM boundary, or the GUI shell disagrees with this file, this file takes precedence and the implementation is corrected (Section 2.5).</p>
+
 <h3 id="22-non-canonical">2.2 Non-canonical</h3>
 
 <p>Any roadmap, handover note, TODO note, or design memo is non-canonical unless explicitly promoted here. Secondary documents must not define competing semantics and must not be treated as specification.</p>
@@ -280,6 +282,65 @@ Version: <strong>2026-06-11</strong></p>
 <p>Machine-readable semantic metadata is part of this firewall. <code>docs/word-manifest.json</code> gives every surface word a generated <code>canonical</code> spelling and <code>semantic_role</code>; <code>docs/formalization-coverage.json</code> gives canonical entries their algebraic family, derivation edges, primitive registry, effect boundary, and exploratory debt metadata. Tooling must update the generator and coverage source rather than hand-authoring contradictory manifest semantics.</p>
 
 <p>The <code>truthValue</code> axis is present only on values carrying the <code>TruthValue</code> interpretation role (Section 12.2); such values also carry the <code>truthValued</code> capability. Its three protocol strings — <code>true</code> <code>false</code> <code>unknown</code> — are the <strong>only</strong> observable surface for the three-valued logic of Section 7.5. The third value <code>unknown</code> (U) is a logical truth value, not an operational absence: how it is represented internally (for example, whether it shares storage with a NIL node) is not observable, and consumers must not infer it from <code>semanticKind = absence</code>, from any <code>absence.reason</code>, or from display text. A consumer that needs to distinguish true, false, and unknown reads the <code>truthValue</code> axis and nothing else.</p>
+
+<h3 id="24-documentation-layers">2.4 Documentation layers and their responsibilities</h3>
+
+<p>Ajisai is written down in four layers. Each layer has a single responsibility; the layers complement one another and do not compete for authority. The goal of this separation is implementation-independent semantic identity: a port implemented faithfully from these documents — without consulting the Rust, WASM, or TypeScript sources — must reproduce the same language.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Layer</th><th>Lives in</th><th>Responsibility</th><th>Authority</th></tr>
+</thead>
+<tbody>
+<tr><td>Mathematical formalization</td><td>Math blocks in this document · <code>docs/dev/ajisai-mathematical-formalization.md</code> · coverage in <code>docs/formalization-coverage.json</code></td><td>The most compact account of the intended semantics</td><td>Descriptive; constrains and motivates this document but never overrides it</td></tr>
+<tr><td>Specification</td><td><code>SPECIFICATION.html</code> (this document)</td><td>The canonical normative account, implementable by humans and AI</td><td>Canonical (Section 2.1)</td></tr>
+<tr><td>Reference</td><td><code>public/docs/</code> · <code>LOOKUP</code> (<code>?</code>) · hover text</td><td>Derived documentation for learning, search, and per-word confirmation</td><td>Derived; this document wins on conflict</td></tr>
+<tr><td>Authoring discipline</td><td><code>docs/dev/ajisai-authoring-style.md</code> and its sibling style documents</td><td>Notation rules for writing about Ajisai</td><td>Non-canonical; defines no semantics</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4 id="241-mathematical-formalization">2.4.1 Mathematical formalization</h4>
+
+<p>Mathematical formalization is not decorative. It is the most compact description of Ajisai's intended semantics, and it is what keeps that meaning independent of any particular implementation. The formalization exists to:</p>
+
+<ul>
+<li>give Ajisai a semantic identity that does not depend on the Rust core, the WASM boundary, the TypeScript shell, or any other host technology;</li>
+<li>make the classification of surface words — primitive, derived, sugar, hosted effect, exploratory — verifiable rather than asserted (tracked in <code>docs/formalization-coverage.json</code>);</li>
+<li>state the algebraic and observational properties a ported implementation must preserve;</li>
+<li>ground the conformance suite and law tests in something stronger than a finite list of sample programs.</li>
+</ul>
+
+<p>The formalization does not replace this specification and does not replace the Reference, and it is not a second design authority (Section 16, item 1). The canonical implementable account remains this specification, which translates the formalization into normative language rules. The companion document <code>docs/dev/ajisai-mathematical-formalization.md</code> is a non-normative model of the phenomena this document defines.</p>
+
+<h4 id="242-the-specification">2.4.2 The specification</h4>
+
+<p>This document is the canonical normative account of Ajisai. It translates the formalized semantics into rules that an implementer — human or AI — can build from directly. It defines the value model, the surface syntax, the meaning of every word and modifier, the semantics of the stack and dictionary and effects and NIL and the Bubble Rule, the boundary with host capabilities, the criteria for conformance, and the authority that every other document and every implementation follows. Implementation code is a realization of these rules, not a competing definition of them; the precedence rule of Section 2.1 applies.</p>
+
+<h4 id="243-reference-documentation">2.4.3 Reference documentation</h4>
+
+<p>The Reference (<code>public/docs/</code>), the <code>LOOKUP</code> (<code>?</code>) help text, and the hover text are derived documentation: they exist so that users and implementers can learn, search, and confirm Ajisai's vocabulary and concepts. They are generated from or kept synchronized with the same source data as the rest of the documentation — <code>docs/word-manifest.json</code> and the builtin contract metadata (Sections 2.3 and 7.14) — so they cannot drift silently. Their authority is derivative: the Reference provides approachable explanations, per-word entries, and practical examples beyond what this document carries, but it explains how to use the language and never decides what the language means. Where a Reference page and this document disagree, this document wins and the Reference page is corrected.</p>
+
+<h4 id="244-authoring-discipline">2.4.4 Authoring discipline</h4>
+
+<p><code>docs/dev/ajisai-authoring-style.md</code> is the non-canonical authoring discipline for all authoritative writing about Ajisai, including this document. It defines no language semantics. Its subject is notation: every Ajisai-meaningful token appears in prose as marked-up code; mathematics travels in its own channel, visibly distinct from the Ajisai code channel; LaTeX-style <code>$...$</code> math delimiters are avoided because <code>$</code> is itself an Ajisai token; and marks such as <code>.</code> · <code>,</code> · <code>/</code> are Ajisai words or sugar and are kept distinct from ordinary punctuation and mathematical operators. These are rules against misreading, not rules of meaning — they ensure the semantics defined here cannot be obscured by ambiguous presentation. The full rules live in that document and are not duplicated here; the sibling documents <code>docs/dev/reference-writing-style.md</code> and <code>docs/dev/three-layer-documentation-model.md</code> govern the Reference surfaces under the same principle.</p>
+
+<h3 id="25-authority-order">2.5 Authority order</h3>
+
+<p>When sources appear to disagree, they are trusted in this order:</p>
+
+<ol>
+<li>This file (<code>SPECIFICATION.html</code>)</li>
+<li>The mathematical formalization, to the extent it is integrated into or referenced from this document</li>
+<li>The conformance suite and law tests (<code>tests/conformance/</code>)</li>
+<li>Generated source data: <code>docs/word-manifest.json</code> and the builtin contract metadata</li>
+<li>The Reference (<code>public/docs/</code>) and the <code>LOOKUP</code> and hover surfaces</li>
+<li>The style documents: authoring style, Reference writing style, documentation model</li>
+<li>The current implementation code (Rust, WASM, TypeScript, GUI)</li>
+</ol>
+
+<p>The formalization constrains and motivates the specification; the specification is the canonical normative account for implementers. If a mathematical note, a derived Reference page, or an implementation detail appears to conflict with this document, this document wins until the conflict is resolved by updating this document itself. This order resolves conflicts between sources; it does not make the lower layers optional — an implementation still demonstrates conformance through the suite (Conformance and Identity), and derived documentation is still corrected rather than abandoned.</p>
 
 <h2 id="3-syntax">3. Syntax</h2>
 
