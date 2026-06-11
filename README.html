@@ -164,9 +164,9 @@
 </head>
 <body>
 <main>
-    <p class="doc-nav"><a href="SPECIFICATION.html">Specification</a> · <a href="public/docs/index.html">Reference</a> · <a href="https://masamoto1982.github.io/Ajisai/">Playground</a></p>
+    <p class="doc-nav"><a href="SPECIFICATION.html">Specification</a> · <a href="docs/index.html">Reference</a> · <a href="https://masamoto1982.github.io/Ajisai/">Playground</a></p>
 
-    <p><img src="public/images/QR_341201.png" alt="Ajisai QR Code" class="logo"></p>
+    <p><img src="images/QR_341201.png" alt="Ajisai QR Code" class="logo"></p>
 
     <h1 id="ajisai">Ajisai</h1>
 
@@ -183,7 +183,7 @@
 
     <ul>
         <li>Playground: <a href="https://masamoto1982.github.io/Ajisai/">https://masamoto1982.github.io/Ajisai/</a></li>
-        <li>Desktop build channel: Tauri wrapper in <a href="src-tauri/"><code>src-tauri/</code></a></li>
+        <li>Desktop build channel: Tauri wrapper in <a href="https://github.com/masamoto1982/Ajisai/tree/main/src-tauri"><code>src-tauri/</code></a></li>
         <li>Canonical language definition: <a href="SPECIFICATION.html"><code>SPECIFICATION.html</code></a></li>
     </ul>
 
@@ -246,7 +246,7 @@
 
     <p>This is part of Ajisai's Virtual Tensor Unit direction: optimize movement and shape operations without weakening exactness.</p>
 
-    <p>Spec links: <a href="SPECIFICATION.html#43-vector">§4.3 Vector</a> · <a href="SPECIFICATION.html#431-internal-representation-classes">§4.3.1 Internal representation classes</a> · <a href="SPECIFICATION.html#71-vector-operations">§7.1 Vector operations</a> · <a href="SPECIFICATION.html#72-tensor-operations">§7.2 Tensor operations</a> · <a href="docs/dev/virtual-tensor-unit-design.md">VTU design note</a></p>
+    <p>Spec links: <a href="SPECIFICATION.html#43-vector">§4.3 Vector</a> · <a href="SPECIFICATION.html#431-internal-representation-classes">§4.3.1 Internal representation classes</a> · <a href="SPECIFICATION.html#71-vector-operations">§7.1 Vector operations</a> · <a href="SPECIFICATION.html#72-tensor-operations">§7.2 Tensor operations</a> · <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/dev/virtual-tensor-unit-design.md">VTU design note</a></p>
 
     <h3 id="modifiers">4) Modifiers: how a word touches the stream</h3>
 
@@ -324,7 +324,7 @@
     </table>
     </div>
 
-    <p>More examples are available in <a href="examples/"><code>examples/</code></a> and in the <a href="public/docs/index.html">Reference</a>.</p>
+    <p>More examples are available in <a href="https://github.com/masamoto1982/Ajisai/tree/main/examples"><code>examples/</code></a> and in the <a href="docs/index.html">Reference</a>.</p>
 
     <p>Spec links: <a href="SPECIFICATION.html#3-syntax">§3 Syntax</a> · <a href="SPECIFICATION.html#7-built-in-words">§7 Built-in Words</a> · <a href="SPECIFICATION.html#92-import-and-unimport-syntax">§9.2 Import and unimport syntax</a></p>
 
@@ -340,7 +340,7 @@
         <li>Tauri shell: desktop integration and host capabilities</li>
     </ul>
 
-    <p>Runtime-specific behavior such as persistence, file I/O, and host hooks is abstracted through <a href="src/platform/"><code>src/platform/</code></a>.</p>
+    <p>Runtime-specific behavior such as persistence, file I/O, and host hooks is abstracted through <a href="https://github.com/masamoto1982/Ajisai/tree/main/src/platform"><code>src/platform/</code></a>.</p>
 
     <p>Spec links: <a href="SPECIFICATION.html#1-language-identity">§1 Language Identity</a> · <a href="SPECIFICATION.html#12-semantic-plane">§12 Semantic Plane</a> · <a href="SPECIFICATION.html#13-fractional-dataflow-internal-invariants">§13 Fractional-Dataflow Internal Invariants</a></p>
 
@@ -368,7 +368,7 @@ npm run build:wasm
 # Tauri desktop build
 npm run tauri:build</code></pre>
 
-    <p>Quality process documents live in <a href="docs/quality/"><code>docs/quality/</code></a>, including the <a href="docs/quality/QUALITY_POLICY.md">quality policy</a>, <a href="docs/quality/VERIFICATION_PLAN.md">verification plan</a>, and <a href="docs/quality/RELEASE_VERIFICATION_CHECKLIST.md">release verification checklist</a>.</p>
+    <p>Quality process documents live in <a href="https://github.com/masamoto1982/Ajisai/tree/main/docs/quality"><code>docs/quality/</code></a>, including the <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/quality/QUALITY_POLICY.md">quality policy</a>, <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/quality/VERIFICATION_PLAN.md">verification plan</a>, and <a href="https://github.com/masamoto1982/Ajisai/blob/main/docs/quality/RELEASE_VERIFICATION_CHECKLIST.md">release verification checklist</a>.</p>
 
     <h2 id="repository-map">Repository map</h2>
 
@@ -379,20 +379,20 @@ npm run tauri:build</code></pre>
         </thead>
         <tbody>
             <tr><td><a href="SPECIFICATION.html"><code>SPECIFICATION.html</code></a></td><td>Canonical language specification</td></tr>
-            <tr><td><a href="rust/src/"><code>rust/src/</code></a></td><td>Rust interpreter core and value model</td></tr>
-            <tr><td><a href="src/"><code>src/</code></a></td><td>TypeScript GUI/runtime shell</td></tr>
-            <tr><td><a href="src-tauri/"><code>src-tauri/</code></a></td><td>Desktop wrapper</td></tr>
-            <tr><td><a href="examples/"><code>examples/</code></a></td><td>Ajisai sample programs</td></tr>
-            <tr><td><a href="public/docs/"><code>public/docs/</code></a></td><td>Hand-authored HTML Reference</td></tr>
-            <tr><td><a href="docs/dev/"><code>docs/dev/</code></a></td><td>Non-canonical design notes and implementation guidance</td></tr>
-            <tr><td><a href="docs/quality/"><code>docs/quality/</code></a></td><td>Quality, traceability, and verification policy</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/rust/src"><code>rust/src/</code></a></td><td>Rust interpreter core and value model</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/src"><code>src/</code></a></td><td>TypeScript GUI/runtime shell</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/src-tauri"><code>src-tauri/</code></a></td><td>Desktop wrapper</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/examples"><code>examples/</code></a></td><td>Ajisai sample programs</td></tr>
+            <tr><td><a href="docs/index.html"><code>public/docs/</code></a></td><td>Hand-authored HTML Reference</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/docs/dev"><code>docs/dev/</code></a></td><td>Non-canonical design notes and implementation guidance</td></tr>
+            <tr><td><a href="https://github.com/masamoto1982/Ajisai/tree/main/docs/quality"><code>docs/quality/</code></a></td><td>Quality, traceability, and verification policy</td></tr>
         </tbody>
     </table>
     </div>
 
     <h2 id="license">License</h2>
 
-    <p>MIT (<a href="LICENSE"><code>LICENSE</code></a>)</p>
+    <p>MIT (<a href="https://github.com/masamoto1982/Ajisai/blob/main/LICENSE"><code>LICENSE</code></a>)</p>
 </main>
 </body>
 </html>
