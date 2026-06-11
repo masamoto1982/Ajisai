@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ajisai Language Specification - the single canonical design authority for the Ajisai language">
+    <title>Ajisai Language Specification</title>
+
+    <!--
+      Authoring rule (docs/dev/ajisai-authoring-style.md): the specification and
+      the README are authored directly in HTML, not Markdown. The point is not
+      decoration - HTML makes tables and embedded diagram sources (e.g.
+      PlantUML) first-class authoring tools. Keep this page plain: no ornament
+      beyond what the Reference (public/docs/) already uses.
+      - Every Ajisai token is wrapped in <code> (gray background = Ajisai channel).
+      - Mathematics is set off in its own block, never in the gray code channel.
+    -->
+    <style>
+/* Plain document styling shared by SPECIFICATION.html and README.html.
+           Modeled on the Reference (public/docs/index.html): unadorned,
+           bordered tables, gray <code> background reserved for Ajisai tokens. */
+        :root {
+            --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
+            --color-primary: #6b5b95;
+            --color-text: #202122;
+            --color-text-light: #54595d;
+            --border-main: solid 1px #a2a9b1;
+            --color-light: #f8f9fa;
+            --color-medium: #eaecf0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--font-stack-primary);
+            background: #fff;
+            color: var(--color-text);
+            line-height: 1.7;
+        }
+
+        main {
+            max-width: 60rem;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 4rem;
+        }
+
+        a { color: var(--color-primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin: 0.5rem 0 1rem;
+            padding-bottom: 0.3rem;
+            border-bottom: var(--border-main);
+        }
+
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin: 2.5rem 0 0.75rem;
+            padding-bottom: 0.3rem;
+            border-bottom: var(--border-main);
+        }
+
+        h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; }
+        h4 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        h5 { font-size: 0.95rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+
+        p { margin: 0.5rem 0 0.75rem; }
+
+        code {
+            font-family: var(--font-stack-mono);
+            font-size: 0.9em;
+            background: var(--color-medium);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        pre {
+            background: var(--color-light);
+            border: var(--border-main);
+            padding: 0.75rem 1rem;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        pre code { background: none; padding: 0; font-size: 0.85rem; }
+
+        blockquote {
+            margin: 1rem 0;
+            padding: 0.25rem 1rem;
+            border-left: 3px solid #a2a9b1;
+            background: var(--color-light);
+            color: var(--color-text-light);
+        }
+
+        ul, ol { margin: 0.5rem 0 0.75rem; padding-left: 1.5rem; }
+        li { margin: 0.2rem 0; }
+
+        .ref-table-wrap { overflow-x: auto; margin: 0.75rem 0 1.25rem; }
+
+        .ref-table { width: 100%; border-collapse: collapse; }
+
+        .ref-table th,
+        .ref-table td {
+            border: var(--border-main);
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .ref-table th {
+            background: var(--color-light);
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--color-text-light);
+        }
+
+        .ref-table td.notes { font-size: 0.85rem; color: var(--color-text-light); }
+
+        .toc {
+            background: var(--color-light);
+            border: var(--border-main);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .toc h2 {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-light);
+            margin: 0 0 0.5rem;
+            border: none;
+            padding: 0;
+        }
+
+        .toc ul { margin: 0; padding-left: 1.25rem; }
+
+        .doc-nav { font-size: 0.875rem; color: var(--color-text-light); margin-top: 0; }
+
+        /* Homemade tech-stack badges (README): uniform, no external services. */
+        .badges { margin: 0.75rem 0; }
+
+        .badge {
+            display: inline-block;
+            border: var(--border-main);
+            border-radius: 3px;
+            background: var(--color-light);
+            color: var(--color-text-light);
+            font-size: 0.8rem;
+            padding: 0.1rem 0.6rem;
+            margin-right: 0.4rem;
+        }
+
+        .logo { width: 120px; height: 120px; object-fit: contain; }
+    </style>
+</head>
+<body>
+<main>
+    <p class="doc-nav"><a href="README.html">README</a> · <a href="public/docs/index.html">Reference</a> · <a href="https://masamoto1982.github.io/Ajisai/">Playground</a></p>
+
+    <h1 id="ajisai-language-specification">Ajisai Language Specification</h1>
+
+<p>Status: <strong>Canonical</strong><br>
+Version: <strong>2026-06-11</strong></p>
+
+<p>This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.</p>
+
+<p>Ajisai is a typed, vector-oriented dataflow language. Its safety story is the conjunction of:</p>
+
+<ul>
+<li><strong>Value-shape safety</strong> — operations check that operands have the structural shape they require (Scalar, Vector, Record, NIL, CodeBlock, handles).</li>
+<li><strong>Encoding safety</strong> — string and code values carry encoding contracts on top of their underlying fraction sequences.</li>
+<li><strong>Contract safety</strong> — every Coreword carries machine-readable contract metadata in the registry: <code>requires</code> and <code>ensures</code> clauses, partiality, NIL policy, and effect classification.</li>
+<li><strong>Bubble Rule safety</strong> — a well-formed operation that cannot produce a value projects the failure onto NIL with a structured reason, while malformed use raises an ordinary error (Section 11.2).</li>
+</ul>
+
+<p>These layers compose. A change is conformant only if it preserves all of them.</p>
+
+<nav class="toc">
+<h2>Contents</h2>
+<ul>
+<li><a href="#1-language-identity">1. Language Identity</a></li>
+<li><a href="#2-specification-authority">2. Specification Authority</a></li>
+<li><a href="#3-syntax">3. Syntax</a></li>
+<li><a href="#4-value-model">4. Value Model</a></li>
+<li><a href="#5-stack">5. Stack</a></li>
+<li><a href="#6-modifiers">6. Modifiers</a></li>
+<li><a href="#7-built-in-words">7. Built-in Words</a></li>
+<li><a href="#714-coreword-contract-metadata">7.14 Coreword contract metadata</a></li>
+<li><a href="#8-user-words">8. User Words</a></li>
+<li><a href="#9-module-system">9. Module System</a></li>
+<li><a href="#10-child-runtime">10. Child Runtime</a></li>
+<li><a href="#11-error-model">11. Error Model</a></li>
+<li><a href="#12-semantic-plane">12. Semantic Plane</a></li>
+<li><a href="#13-fractional-dataflow-internal-invariants">13. Fractional-Dataflow Internal Invariants</a></li>
+<li><a href="#14-ai-first-implementation-rules">14. AI-first Implementation Rules</a></li>
+<li><a href="#15-test-discipline">15. Test Discipline</a></li>
+<li><a href="#16-conformance-checklist">16. Conformance Checklist</a></li>
+<li><a href="#appendix-a-gates-and-water-levels-non-normative-index">Appendix A. Gates and Water Levels (non-normative index)</a></li>
+<li><a href="#portability-profiles">Portability Profiles</a></li>
+<li><a href="#conformance-and-identity">Conformance and Identity</a></li>
+</ul>
+</nav>
+
+<h2 id="1-language-identity">1. Language Identity</h2>
+
+<p>Ajisai is an <strong>AI-first, vector-oriented, fractional-dataflow language</strong>.</p>
+
+<p>Every numeric value is an <strong>exact real</strong>, represented internally as a (possibly lazy) <strong>continued fraction</strong>. Finite continued fractions cover the rationals; lazy infinite continued fractions cover the algebraic and transcendental irrationals admitted by the runtime (e.g. <code>SQRT</code>). All arithmetic is performed on the continued-fraction representation directly, without intermediate rounding. Surface numeric literals (Section 3.2) are convenience forms for the same underlying representation.</p>
+
+<p>Runtime stack:</p>
+
+<ul>
+<li>Rust interpreter core</li>
+<li>WASM boundary</li>
+<li>TypeScript GUI/runtime shell</li>
+</ul>
+
+<p>Ajisai is designed for mechanical reasoning, automated refactoring, and structurally searchable implementation.</p>
+
+<h2 id="2-specification-authority">2. Specification Authority</h2>
+
+<h3 id="21-canonical">2.1 Canonical</h3>
+
+<ol>
+<li>This file (<code>SPECIFICATION.html</code>)</li>
+<li>Rust implementation behavior conforming to this file</li>
+<li>WASM/TypeScript observable contracts derived from this file</li>
+</ol>
+
+<h3 id="22-non-canonical">2.2 Non-canonical</h3>
+
+<p>Any roadmap, handover note, TODO note, or design memo is non-canonical unless explicitly promoted here. Secondary documents must not define competing semantics and must not be treated as specification.</p>
+
+<h3 id="23-semantic-firewall">2.3 Semantic Firewall</h3>
+
+<p>Ajisai separates internal representation from observable semantics. Internal representation may change freely; observable semantics must be accessed through semantic axes and protocol fields. Machine-readable consumers must use protocol fields only. Human-readable strings are non-canonical and may change.</p>
+
+<p>The following are not part of Ajisai's observable semantics:</p>
+
+<ul>
+<li>Rust enum variant names</li>
+<li>Rust <code>Debug</code> output</li>
+<li>internal value representation</li>
+<li>display strings</li>
+<li>GUI colors</li>
+<li>CSS class names</li>
+<li>dictionary storage layout</li>
+<li>module file layout</li>
+</ul>
+
+<p>Ajisai values are observed through independent semantic axes:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Axis</th><th>Protocol field</th><th>Initial protocol strings</th></tr>
+</thead>
+<tbody>
+<tr><td>semantic kind</td><td><code>semanticKind</code></td><td><code>number</code> <code>collection</code> <code>record</code> <code>code</code> <code>process</code> <code>supervisor</code> <code>absence</code> <code>unknown</code></td></tr>
+<tr><td>shape</td><td><code>shape</code></td><td><code>scalar</code> <code>vector</code> <code>tensor</code> <code>record</code> <code>codeBlock</code> <code>handle</code> <code>absence</code> <code>unknown</code></td></tr>
+<tr><td>capabilities</td><td><code>capabilities</code></td><td><code>numeric</code> <code>exactNumeric</code> <code>iterable</code> <code>indexable</code> <code>callable</code> <code>stackItem</code> <code>nilPassthrough</code> <code>diagnosable</code> <code>serializable</code> <code>displayable</code> <code>userEditable</code> <code>moduleOwned</code> <code>coreOwned</code> <code>aiExplainable</code> <code>truthValued</code></td></tr>
+<tr><td>truth value</td><td><code>truthValue</code></td><td><code>true</code> <code>false</code> <code>unknown</code></td></tr>
+<tr><td>origin</td><td><code>origin</code></td><td><code>literal</code> <code>computed</code> <code>coreWord</code> <code>builtinWord</code> <code>moduleWord</code> <code>userWord</code> <code>safeProjection</code> <code>nilPropagation</code> <code>hostEnvironment</code> <code>optimizer</code> <code>unknown</code></td></tr>
+<tr><td>absence metadata</td><td><code>absence</code></td><td>structured object</td></tr>
+<tr><td>diagnostic context</td><td><code>diagnosis</code></td><td>structured object</td></tr>
+<tr><td>display</td><td><code>display</code></td><td>human-readable only; non-canonical</td></tr>
+<tr><td>serialization</td><td><code>serialization</code></td><td>explicit format contract only</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>External APIs, WASM payloads, GUI logic, AI diagnostics, and user-facing machine-readable tooling must not branch on Rust enum names, <code>Debug</code> strings, display text, GUI colors, or storage layout. Protocol strings are lower camel case and are the canonical machine-readable surface.</p>
+
+<p>Machine-readable semantic metadata is part of this firewall. <code>docs/word-manifest.json</code> gives every surface word a generated <code>canonical</code> spelling and <code>semantic_role</code>; <code>docs/formalization-coverage.json</code> gives canonical entries their algebraic family, derivation edges, primitive registry, effect boundary, and exploratory debt metadata. Tooling must update the generator and coverage source rather than hand-authoring contradictory manifest semantics.</p>
+
+<p>The <code>truthValue</code> axis is present only on values carrying the <code>TruthValue</code> interpretation role (Section 12.2); such values also carry the <code>truthValued</code> capability. Its three protocol strings — <code>true</code> <code>false</code> <code>unknown</code> — are the <strong>only</strong> observable surface for the three-valued logic of Section 7.5. The third value <code>unknown</code> (U) is a logical truth value, not an operational absence: how it is represented internally (for example, whether it shares storage with a NIL node) is not observable, and consumers must not infer it from <code>semanticKind = absence</code>, from any <code>absence.reason</code>, or from display text. A consumer that needs to distinguish true, false, and unknown reads the <code>truthValue</code> axis and nothing else.</p>
+
+<h2 id="3-syntax">3. Syntax</h2>
+
+<h3 id="31-token-types">3.1 Token types</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Token</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Number</td><td>Numeric literal (see 3.2)</td></tr>
+<tr><td>String</td><td>Single-quoted text <code>'...'</code></td></tr>
+<tr><td>Symbol</td><td>Word name (all non-whitespace characters excluding reserved chars)</td></tr>
+<tr><td><code>[</code> <code>]</code></td><td>Vector boundaries</td></tr>
+<tr><td><code>{</code> <code>}</code></td><td>Code block boundaries</td></tr>
+<tr><td><code>~</code></td><td>Syntactic sugar for <code>FLOW</code> (visual pipeline marker, no-op at runtime)</td></tr>
+<tr><td><code>^</code></td><td>Syntactic sugar for <code>VENT</code> (NIL coalescing)</td></tr>
+<tr><td><code>&gt;</code></td><td>Syntactic sugar for <code>GT</code></td></tr>
+<tr><td><code>&gt;=</code></td><td>Syntactic sugar for <code>GTE</code></td></tr>
+<tr><td><code>&lt;</code></td><td>Syntactic sugar for <code>LT</code></td></tr>
+<tr><td><code>&lt;=</code></td><td>Syntactic sugar for <code>LTE</code></td></tr>
+<tr><td><code>&lt;&gt;</code></td><td>Syntactic sugar for <code>NEQ</code></td></tr>
+<tr><td><code>$</code></td><td>COND clause separator</td></tr>
+<tr><td><code>#</code></td><td>Line comment: all characters from <code>#</code> to end of line are ignored</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="32-numeric-literal-formats">3.2 Numeric literal formats</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Format</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Integer</td><td><code>42</code> <code>-7</code> <code>+7</code> <code>007</code></td></tr>
+<tr><td>Fraction</td><td><code>3/4</code> <code>-5/2</code> <code>+3/4</code></td></tr>
+<tr><td>Decimal</td><td><code>3.14</code> <code>.5</code> <code>5.</code> <code>-1.0</code> <code>-.5</code></td></tr>
+<tr><td>Scientific notation</td><td><code>1e5</code> <code>1.5e-2</code> <code>-3.0e4</code> <code>1.5E2</code> <code>1e+5</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Every numeric literal may carry an optional leading sign (<code>+</code> or <code>-</code>); a leading <code>+</code> is accepted but has no effect. The accepted forms are:</p>
+
+<ul>
+<li><strong>Integer</strong> — one or more decimal digits. Leading zeros are allowed and insignificant (<code>007</code> denotes <code>7</code>).</li>
+<li><strong>Fraction</strong> — <code>&lt;digits&gt;/&lt;digits&gt;</code>. The denominator must be non-zero: <code>3/0</code> is <strong>not</strong> a valid literal and is rejected as an ordinary (malformed-literal) error. This is distinct from the runtime <code>DIV</code>-by-zero rule, under which the <em>operation</em> <code>3 0 DIV</code> projects to a <code>NIL</code> with reason <code>DivisionByZero</code> (Section 11.2); a literal <code>n/0</code> denotes no rational at all and never reaches that rule.</li>
+<li><strong>Decimal</strong> — an integer part, a <code>.</code>, and a fractional part, where at most one side may be empty: a leading-dot form (<code>.5</code> and <code>-.5</code>) has an empty integer part, and a trailing-dot form (<code>5.</code>) has an empty fractional part. A bare <code>.</code> is not a number — it is the <code>TOP</code> modifier (Section 3.9).</li>
+<li><strong>Scientific notation</strong> — an integer or decimal mantissa, the exponent marker <code>e</code> or <code>E</code>, an optional exponent sign (<code>+</code> or <code>-</code>), and one or more exponent digits (<code>1.5e-2</code> <code>1e+5</code> <code>1.5E2</code>).</li>
+</ul>
+
+<p>All numeric literals are parsed as exact real numbers and stored internally as continued fractions (see Section 4.2). The surface literal forms above are convenience syntax: <code>42</code> <code>42/1</code> <code>42.0</code> <code>4.2e1</code> all produce the same internal value. Integer, fraction, decimal, and scientific-notation literals yield finite continued fractions (rationals); irrational continued fractions are produced by words such as <code>MATH@SQRT</code>, not by surface literals.</p>
+
+<p>The nested-parentheses form <code>( a0 ( a1 ( a2 ... )))</code> is the canonical serialization and AI-readable debug form for continued fractions (Section 4.2). It is not a source-code literal: Ajisai source uses the surface forms above, and the nested form appears only in display and serialization output under the <code>ContinuedFraction</code> interpretation role (Section 12.2).</p>
+
+<h3 id="33-string-literals">3.3 String literals</h3>
+
+<p>A string literal begins with <code>'</code> and ends with the last <code>'</code> before a token boundary. A token boundary is whitespace, end of input, or any special character other than <code>'</code> (such as <code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>#</code> <code>=</code> <code>$</code>).</p>
+
+<p>Any <code>'</code> that appears before a non-boundary character is a literal quote character in the string content.</p>
+
+<p>Examples:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Source</th><th>String value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>'hello'</code></td><td><code>hello</code></td></tr>
+<tr><td><code>'it's'</code></td><td><code>it's</code></td></tr>
+<tr><td><code>'hel''lo'</code></td><td><code>hel''lo</code></td></tr>
+<tr><td><code>'これは'テスト'です'</code></td><td><code>これは'テスト'です</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="34-code-blocks">3.4 Code blocks</h3>
+
+<p>A sequence of tokens enclosed in <code>{...}</code>. A code block may span multiple lines; each internal line break is preserved as a statement separator, so a multi-line block executes one source line at a time. This makes multi-line word bodies — including <code>$</code>-style <code>COND</code> bodies — writable directly, without splitting a definition across separately named words.</p>
+
+<p><code>(</code> and <code>)</code> are not Ajisai syntactic characters. They are reserved markers — <code>(</code> denotes the concept <code>RESERVED-BEGIN</code> and <code>)</code> denotes <code>RESERVED-END</code> (Section 3.9) — reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering <code>(</code> or <code>)</code> in source text is a tokenizer error.</p>
+
+<h3 id="35-vectors">3.5 Vectors</h3>
+
+<p>A sequence of values enclosed in <code>[...]</code>.</p>
+
+<h3 id="36-cond-clauses">3.6 COND clauses</h3>
+
+<p>Inside a <code>COND</code> expression, clauses are separated by <code>$</code>. Each <code>$</code> clause must occupy exactly one line. This rule applies at every nesting level, so the clauses of a multi-line <code>COND</code> body written inside an enclosing <code>{ }</code> are each kept on their own line.</p>
+
+<h3 id="37-syntax-constraints">3.7 Syntax constraints</h3>
+
+<ul>
+<li>All bracket pairs (<code>[</code> <code>{</code>) must be balanced.</li>
+<li>Each <code>$</code> <code>COND</code> clause must occupy exactly one line (at every nesting level).</li>
+<li>The characters <code>(</code> and <code>)</code> are not valid in Ajisai source (Section 3.4).</li>
+</ul>
+
+<h3 id="38-word-name-normalization">3.8 Word name normalization</h3>
+
+<p>Word names are normalized to uppercase at runtime. <code>add</code> and <code>ADD</code> refer to the same word.</p>
+
+<h3 id="39-surface-forms">3.9 Surface forms</h3>
+
+<p>Ajisai source syntax is word-based. Every visible <em>symbolic</em> form is an alias or sugar for a named, English-based <strong>canonical concept</strong>.</p>
+
+<p>Not every surface form is a runtime word. A surface form is classified as one of the following kinds:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Kind</th><th>Meaning</th><th>Runtime word?</th></tr>
+</thead>
+<tbody>
+<tr><td>Word alias</td><td>Symbol form of a runtime word (canonicalized at runtime)</td><td>yes</td></tr>
+<tr><td>Modifier sugar</td><td>Compound shorthand for stack modifiers</td><td>no</td></tr>
+<tr><td>Delimiter sugar</td><td>Parser-level structural delimiter</td><td>no</td></tr>
+<tr><td>Literal sugar</td><td>String-literal delimiter</td><td>no</td></tr>
+<tr><td>Source directive</td><td>Consumed lexically by the tokenizer</td><td>no</td></tr>
+<tr><td>Control directive</td><td>Meaningful only inside a specific construct</td><td>no</td></tr>
+<tr><td>Reserved marker</td><td>Never a runtime token; rejected in source</td><td>no</td></tr>
+<tr><td>Conversion word</td><td><code>&gt;</code> followed by letters; canonical home is a runtime word</td><td>yes</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Word aliases</strong> are canonicalized to their English name at runtime (Section 7.0); the canonical name is the authoritative identifier. The remaining kinds denote concepts that are <em>not</em> runtime words: they are handled at the lexical or parser level and are never produced by <code>DEF</code>, never canonicalized to a runtime word, and (for reserved markers) never valid in source at all.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Surface</th><th>Canonical concept</th><th>Kind</th><th>Runtime word?</th></tr>
+</thead>
+<tbody>
+<tr><td><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code></td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> <code>MOD</code></td><td>Word alias</td><td>yes</td></tr>
+<tr><td><code>=</code> <code>&lt;&gt;</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></td><td><code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code></td><td>Word alias</td><td>yes</td></tr>
+<tr><td><code>&amp;</code> <code>!</code> <code>?</code></td><td><code>AND</code> <code>FORC</code> <code>LOOKUP</code></td><td>Word alias</td><td>yes</td></tr>
+<tr><td><code>.</code> <code>..</code> <code>,</code> <code>,,</code></td><td><code>TOP</code> <code>STAK</code> <code>EAT</code> <code>KEEP</code></td><td>Word alias</td><td>yes</td></tr>
+<tr><td><code>~</code> <code>^</code></td><td><code>FLOW</code> <code>VENT</code></td><td>Word alias</td><td>yes</td></tr>
+<tr><td><code>;</code></td><td><code>TOP-EAT</code> (<code>. ,</code>)</td><td>Modifier sugar</td><td>no</td></tr>
+<tr><td><code>;;</code></td><td><code>STAK-KEEP</code> (<code>.. ,,</code>)</td><td>Modifier sugar</td><td>no</td></tr>
+<tr><td><code>[</code> <code>]</code></td><td><code>BEGIN-VECTOR</code> <code>END-VECTOR</code></td><td>Delimiter sugar</td><td>no</td></tr>
+<tr><td><code>{</code> <code>}</code></td><td><code>BEGIN-BLOCK</code> <code>END-BLOCK</code></td><td>Delimiter sugar</td><td>no</td></tr>
+<tr><td><code>'</code></td><td><code>STRING-QUOTE</code></td><td>Literal sugar</td><td>no</td></tr>
+<tr><td><code>#</code></td><td><code>COMMENT-LINE</code></td><td>Source directive</td><td>no</td></tr>
+<tr><td><code>$</code></td><td><code>COND-CLAUSE</code></td><td>Control directive</td><td>no</td></tr>
+<tr><td><code>(</code> <code>)</code></td><td><code>RESERVED-BEGIN</code> <code>RESERVED-END</code></td><td>Reserved marker</td><td>no</td></tr>
+<tr><td><code>&gt;CF</code></td><td><code>&gt;CF</code> (continued-fraction conversion)</td><td>Conversion word</td><td>yes</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>;</code> and <code>;;</code> are pure shorthand: <code>;</code> expands to <code>. ,</code> and <code>;;</code> expands to <code>.. ,,</code>. The concept names <code>TOP-EAT</code> and <code>STAK-KEEP</code> name the compound forms; they are not stand-alone runtime words.</p>
+
+<p><code>&gt;</code> followed by an ASCII letter (e.g. <code>&gt;CF</code>) is a single <strong>conversion-word</strong> token, not the <code>&gt;</code> (<code>GT</code>) comparison alias followed by a word. Its canonical home is the runtime conversion word of the same name; <code>&gt;</code> and <code>&gt;=</code> remain the aliases of <code>GT</code> and <code>GTE</code>.</p>
+
+<h2 id="4-value-model">4. Value Model</h2>
+
+<h3 id="41-value-types">4.1 Value types</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Scalar</td><td>An exact real number, represented internally as a (possibly lazy) continued fraction</td></tr>
+<tr><td>Boolean</td><td>A definite logical truth value, <code>true</code> or <code>false</code> (Section 7.5). A Boolean is a distinct value kind, <strong>not</strong> a number: <code>TRUE</code> is not the Scalar <code>1</code> and <code>FALSE</code> is not the Scalar <code>0</code>, so <code>TRUE 1 EQ</code> is <code>false</code>. The third truth value Unknown (U) is not a Boolean; it is the logical-undecidability value of Section 7.4.1, observed as <code>truthValue = unknown</code>.</td></tr>
+<tr><td>Vector</td><td>An ordered, indexable sequence of values (may be nested)</td></tr>
+<tr><td>Record</td><td>An ordered set of named fields (string keys)</td></tr>
+<tr><td>NIL</td><td>The absence of a value</td></tr>
+<tr><td>CodeBlock</td><td>An executable sequence of tokens</td></tr>
+<tr><td>ProcessHandle</td><td>A reference to a running child runtime</td></tr>
+<tr><td>SupervisorHandle</td><td>A reference to a supervisor</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>A Boolean carries the <code>TruthValue</code> interpretation role (Section 12.2) and the <code>truthValued</code> capability (Section 2.3); it renders uniformly as <code>TRUE</code> or <code>FALSE</code> (display-only, non-canonical). Equality and ordering treat a Boolean as distinct from every Scalar: value identity never conflates a truth value with a number. Inside element-wise numeric operations over vectors, truth lanes are represented numerically as <code>1</code> and <code>0</code>; the distinctness rule above governs Scalar-level value identity (notably <code>EQ</code>), not numeric broadcast over vector lanes.</p>
+
+<h3 id="42-scalar-exact-real-continued-fraction-arithmetic">4.2 Scalar: exact-real continued-fraction arithmetic</h3>
+
+<p>All numeric values are exact reals represented as <strong>continued fractions</strong> (CF). A scalar is a sequence of integer partial quotients [<em>a</em>₀; <em>a</em>₁, <em>a</em>₂, …], finite for rationals and lazy (potentially infinite) for irrationals.</p>
+
+<h4 id="421-canonical-form">4.2.1 Canonical form</h4>
+
+<p>A continued fraction is in canonical form when:</p>
+
+<ol>
+<li><em>a</em>₀ is any integer.</li>
+<li><em>a</em>₁, <em>a</em>₂, … are strictly positive integers.</li>
+<li>If the sequence is finite and has length <em>n</em> ≥ 2, then the last partial quotient <em>a</em>ₙ₋₁ is greater than 1 (no trailing 1).</li>
+<li>The sequence terminates iff the value is rational.</li>
+</ol>
+
+<p>These rules give every real value a unique canonical CF, so equality of canonical CFs decides equality of values whenever the comparison terminates (Section 7.4).</p>
+
+<h4 id="422-internal-representation">4.2.2 Internal representation</h4>
+
+<p>A scalar is internally one of the following representations. Which representation is used is not observable; only the canonical CF sequence and its value are.</p>
+
+<ul>
+<li><strong>Rational</strong> — a finite CF, stored equivalently as either a small <code>(i64, i64)</code> reduced fraction or a <code>(BigInt, BigInt)</code> reduced fraction. Partial quotients are generated on demand by floor-division Euclidean algorithm.</li>
+<li><strong>AlgebraicSqrt</strong> — <code>SQRT</code> of a non-negative rational. The CF expansion is eventually periodic (Lagrange's theorem) and produced lazily.</li>
+<li><strong>Gosper</strong> — an unevaluated bihomographic transform (<em>a·xy</em> + <em>b·x</em> + <em>c·y</em> + <em>d</em>) / (<em>e·xy</em> + <em>f·x</em> + <em>g·y</em> + <em>h</em>) of one or two operand CFs, used by arithmetic (Section 7.3). Partial quotients of the result are emitted as soon as the next quotient is unambiguously determined by the current Möbius coefficients.</li>
+<li><strong>LazyCf</strong> — any other lazy CF stream (reserved for future words; not produced by the Coreword set defined in this document).</li>
+</ul>
+
+<p>Möbius coefficients used by Gosper transforms are stored as arbitrary-precision integers (BigInt) at all times. Implementations must not use bounded-width coefficient storage that can overflow during normal evaluation.</p>
+
+<h4 id="423-display-and-serialization">4.2.3 Display and serialization</h4>
+
+<p>The canonical AI-readable serialization of a scalar is the <strong>nested right-associative</strong> form:</p>
+
+<pre><code>( a0 ( a1 ( a2 ... ( a_{n-1} ) ... )))</code></pre>
+
+<p>with one integer per nesting level and one closing <code>)</code> per opening <code>(</code>. A lazy infinite CF is serialized by emitting partial quotients up to an implementation-defined display budget and terminating with the marker <code>...)</code> before the unproduced quotients' closing parens; the truncated display is non-canonical and must not be parsed back as an exact value.</p>
+
+<p>This nested form is <strong>not</strong> Ajisai source syntax (Section 3.4). It appears only in display and serialization output under the <code>ContinuedFraction</code> interpretation role (Section 12.2) and in AI-targeted diagnostics. Under the <code>RawNumber</code> role a rational scalar renders as a reduced <code>numerator/denominator</code> (Section 12.2); the surface literal style of Section 3.2 is convenience input syntax only and is not retained for display.</p>
+
+<h4 id="424-equivalence-of-representations">4.2.4 Equivalence of representations</h4>
+
+<p>Two scalars are equal as values iff they produce the same canonical CF sequence. A <code>Rational</code> scalar and a <code>Gosper</code> or <code>AlgebraicSqrt</code> scalar may compare equal whenever their generated partial quotients agree at every position. The internal representation tag is not part of value identity and must not be branched on by Corewords or external consumers.</p>
+
+<h4 id="425-nearest-integer-continued-fractions-comparison-expansion">4.2.5 Nearest-integer continued fractions (comparison expansion)</h4>
+
+<p>The comparison procedure of Section 7.4.1 expands operands as nearest-integer continued fractions. This is an internal expansion: the <strong>regular</strong> continued fraction of Sections 4.2.1–4.2.4 remains the sole basis for value identity, canonical form, display, and serialization. The nearest-integer expansion changes only how comparison consumes a value and, consequently, the unit of the comparison budget (see the end of this subsection and Section 7.4.1.1).</p>
+
+<p>The <strong>regular</strong> continued fraction (RCF) of Section 4.2.1 takes each partial quotient by <em>floor</em>, leaving a remainder in [0, 1) and forcing every quotient after <em>a</em>₀ to be a strictly positive integer. The <strong>nearest-integer continued fraction</strong> (NICF) instead takes each partial quotient by <em>rounding to the nearest integer</em>, leaving a remainder in (−1/2, 1/2]. An NICF is a <em>semiregular</em> continued fraction</p>
+
+<blockquote><p><em>x</em> = <em>b</em>₀ + <em>ε</em>₁ / (<em>b</em>₁ + <em>ε</em>₂ / (<em>b</em>₂ + <em>ε</em>₃ / ( … )))</p></blockquote>
+
+<p>where each <em>b</em>ᵢ is the nearest integer to the current tail, each <em>ε</em>ᵢ ∈ {+1, −1} is the sign of the corresponding remainder, and <em>b</em>ᵢ ≥ 2 for <em>i</em> ≥ 1. Because each step removes more of the value than a floor step can, NICF expansions are never longer than the RCF and are typically shorter: by a classical result the NICF converges at least as fast as the RCF and on average meaningfully faster (larger effective partial quotients per term). Over exact-rational, near-equal, and surd corpora the NICF reduces the agreed-prefix depth by roughly 22–28% on the mean, including ~28% on the surd (lazy-CF) case that actually exhausts the comparison budget.</p>
+
+<p><strong>Tie-break (normative).</strong> Each partial quotient is <em>b</em>ᵢ = round(<em>t</em>) of the current tail <em>t</em>, where round sends a value whose fractional part is exactly 1/2 <strong>down</strong> to the lower integer; equivalently the post-step remainder lies in the half-open interval (−1/2, 1/2], and <em>b</em>ᵢ = ⌈(2·<em>num</em> − <em>den</em>) / (2·<em>den</em>)⌉ for a tail <em>num</em>/<em>den</em> with <em>den</em> &gt; 0. This makes the NICF digit sequence of every value deterministic, so two conforming implementations agree on it.</p>
+
+<p>NICF changes which expansion the <strong>comparison procedure</strong> consumes (Section 7.4.1.1). It does <strong>not</strong> change the following observable surfaces, which remain defined by the RCF:</p>
+
+<ul>
+<li><strong>Value identity and canonical form.</strong> The canonical CF of a value remains its RCF (Section 4.2.1); two values are equal iff their RCFs agree (Section 4.2.4). NICF is never the canonical form and is never the basis of equality.</li>
+<li><strong>Display and serialization.</strong> The nested form of Section 4.2.3 always renders the RCF. NICF digits, signs, and the <em>ε</em>ᵢ are never serialized and must not be parsed.</li>
+<li><strong>The internal representation tag</strong> (Section 4.2.2 / 4.2.4) remains non-observable: which stored representation backs a value must not be branched on.</li>
+</ul>
+
+<p>What NICF <em>does</em> make observable, indirectly, is the <strong>unit of the comparison budget</strong> (Sections 7.4.1.1, 7.4.2): a budget term, and hence an <code>agreedPrefix</code> count, is a <em>semiregular (NICF) term</em>. NICF introduces no new numeric type, no new Coreword, and no new protocol field.</p>
+
+<h3 id="43-vector">4.3 Vector</h3>
+
+<p>An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: <code>-1</code> is the last element.</p>
+
+<h4 id="431-internal-representation-classes">4.3.1 Internal representation classes</h4>
+
+<p>A Vector value is internally represented in one of two classes:</p>
+
+<ul>
+<li><strong>nested</strong> — a tree of <code>Value</code> elements (<code>Vec&lt;Value&gt;</code>). Any element type may appear, including mixed types (Scalars, Vectors, Strings, NIL, etc.).</li>
+<li><strong>dense</strong> — a SIMD-oriented <code>DenseTensor</code> backed by Structure-of-Arrays numerator and denominator buffers, a shape, and a validity mask. Every valid lane is an exact small Fraction; an invalid lane represents NIL occupancy without rebuilding the dense representation into nested <code>Vec&lt;Value&gt;</code> form.</li>
+</ul>
+
+<p>The class is chosen at construction time. Observable semantics — display, ordering, equality, NIL-ness, the results of <code>SHAPE</code> and of <code>LENGTH</code>, indexing, and iteration order — are identical between the two classes. Operations are free to take a fast path when the input is dense.</p>
+
+<p>Dense Tensor exactness rule:</p>
+
+<ul>
+<li>Lanes admit only scalars whose canonical CF (Section 4.2) is finite and whose equivalent reduced rational fits within <code>(i64 numerator, i64 denominator)</code>. These are stored in normalized form.</li>
+<li>Scalars whose CF is infinite (irrational), or whose rational-equivalent requires BigInt storage, are exact values but are not admitted to the small-lane <code>DenseTensor</code> representation. They live in the nested <code>Vec&lt;Value&gt;</code> class until a CF-capable SoA representation is introduced.</li>
+<li>Implementations must not truncate, round, or otherwise approximate a scalar to fit a dense lane. Any value that does not satisfy the lane admission rule causes the construction to fall back to the nested class.</li>
+</ul>
+
+<p><strong>No-Rebuild Principle:</strong> a dense Vector never degrades to a nested Vector solely because a lane becomes NIL. NIL occupancy is represented by clearing the corresponding validity-mask bit. Internal diagnostic reasons for invalid lanes are stored outside the dense payload in an execution-context sparse registry keyed by tensor identity and lane index; they are not embedded in <code>DenseTensor</code>.</p>
+
+<p>Equality across classes: a dense Vector and a nested Vector compare equal when (1) flattening the nested Vector into its leaf Fractions/NIL lanes yields the same lane sequence and validity as the dense buffer, and (2) the shape inferred from the nested Vector matches the dense Vector's shape. No language-visible word distinguishes the two classes; they are interchangeable from the user's perspective.</p>
+
+<p>This dual representation exists for the Virtual Tensor Unit (VTU) data-movement optimizations (see <code>docs/dev/virtual-tensor-unit-design.md</code>). It does not introduce approximate numeric types: all numeric leaves remain exact-real continued fractions (Section 4.2). The small-lane <code>DenseTensor</code> is an optimization for the rational sub-domain only; SIMD vectorization of CF arithmetic over lazy lanes is out of scope for this specification.</p>
+
+<h3 id="44-record">4.4 Record</h3>
+
+<p>A collection of named fields. Each field has a string key and an associated value. Field insertion order is preserved.</p>
+
+<h3 id="45-nil">4.5 NIL</h3>
+
+<p>NIL represents the absence of a value. It is produced by well-formed operations that yield no meaningful result (Section 11.2).</p>
+
+<h4 id="450-diagnostic-absence-metadata">4.5.0 Diagnostic absence metadata</h4>
+
+<p>NIL is a diagnostic absence value. NIL identity is separate from its reason, origin, recoverability, and diagnostic context. Surface display, equality, hashing, and serialization treat all NIL values uniformly unless a protocol explicitly asks for diagnostic metadata.</p>
+
+<p>For any NIL value:</p>
+
+<ul>
+<li><code>semanticKind</code> is <code>absence</code></li>
+<li><code>shape</code> is <code>absence</code></li>
+<li><code>capabilities</code> includes <code>diagnosable</code> and <code>nilPassthrough</code></li>
+<li>the human-readable display text <code>NIL</code> is non-canonical and must not be used for machine decisions</li>
+</ul>
+
+<p>NIL metadata is exposed as an optional structured <code>absence</code> object with these fields:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Field</th><th>Meaning</th><th>Machine-readable contract</th></tr>
+</thead>
+<tbody>
+<tr><td><code>reason</code></td><td>Direct reason the value became NIL</td><td>Optional lower camel case protocol string</td></tr>
+<tr><td><code>origin</code></td><td>Path by which the NIL was produced</td><td>Required lower camel case protocol string</td></tr>
+<tr><td><code>recoverability</code></td><td>UI/AI hint for next action</td><td>Required lower camel case protocol string</td></tr>
+<tr><td><code>diagnosis</code></td><td>Three-layer debug diagnosis</td><td>Optional structured object</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>NIL?</code> checks only whether a value is absent. It must not branch on <code>absence.reason</code>. Reason-specific code must use explicit diagnostic accessors such as <code>NIL-REASON</code> or <code>NIL-ORIGIN</code> or <code>NIL-RECOVERABLE?</code> or <code>NIL-DIAGNOSIS</code> when such words are available.</p>
+
+<p>The diagnostic object uses the existing three-layer model:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Diagnostic field</th><th>Meaning</th><th>Contract</th></tr>
+</thead>
+<tbody>
+<tr><td><code>when</code></td><td>phase where the event occurred</td><td>lower camel case protocol string</td></tr>
+<tr><td><code>where.kind</code></td><td>locus kind</td><td>lower camel case protocol string</td></tr>
+<tr><td><code>where.word</code> · <code>where.module</code> · <code>where.dictionary</code></td><td>optional locus details</td><td>strings, not enum names</td></tr>
+<tr><td><code>why</code></td><td>cause class</td><td>lower camel case protocol string</td></tr>
+<tr><td><code>summary</code></td><td>human-readable explanation</td><td>non-canonical; do not parse</td></tr>
+<tr><td><code>evidence</code></td><td>human-readable evidence list</td><td>non-canonical; do not parse</td></tr>
+<tr><td><code>nextChecks</code></td><td>suggested checks for UI/AI display</td><td>structured label/detail strings</td></tr>
+<tr><td><code>agreedPrefix</code></td><td>for a continued-fraction comparison that produced <code>Unknown</code> (Section 7.4.1): the number of leading partial quotients that matched before the budget was exhausted</td><td>optional non-negative integer; machine-readable</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>A Bubble/NIL result carries its own direct reason (Section 11.2). Literal NIL has <code>origin = literal</code> and no <code>reason</code> unless a future protocol explicitly adds one.</p>
+
+<h4 id="451-nil-passthrough">4.5.1 NIL passthrough</h4>
+
+<p>Operations classified as <strong>NIL-passthrough</strong> in Section 7 do not raise <code>StructureError</code> when a NIL operand is encountered. Instead, they produce NIL. The rule is uniform across consumption modes and target modes: if any operand consumed by the operation is NIL, the operation consumes its operands as it normally would and pushes a single NIL result.</p>
+
+<p>NIL-passthrough applies to arithmetic, comparison, and the unary numeric rounding words (see Section 7.12). It does not apply to control-flow words, type-conversion words, IO words, or to <code>VENT</code> (<code>^</code>) itself, whose entire purpose is to react to NIL.</p>
+
+<p>The intent is that pipelines propagate a Bubble/NIL through subsequent computation without crashing, so that a single <code>^</code> at the end of the pipeline can supply a fallback value.</p>
+
+<p>When a NIL-passthrough operation receives one or more NIL operands, the resulting NIL inherits the reason of the leftmost NIL operand that carried a reason. This makes the cause traceable through long pipelines.</p>
+
+<h4 id="452-nil-versus-unknown">4.5.2 NIL versus Unknown</h4>
+
+<p>NIL and the logical truth value <code>Unknown</code> (U, Section 7.5) are distinct and must not be conflated. <strong>NIL is an operational absence</strong>: a diagnostic bubble that records <em>why</em> a value is missing (division by zero, out-of-range <code>GET</code>, parse failure). <strong>U is a logical undecidability</strong>: a definite member of the three-valued truth domain that records that a proposition could not be settled true or false (notably a continued-fraction comparison that did not decide within its budget, Section 7.4.1). U carries the <code>TruthValue</code> role and is observed as <code>truthValue = unknown</code>; NIL is observed as <code>semanticKind = absence</code>.</p>
+
+<p>When NIL and U meet in the same operation, <strong>NIL takes priority</strong>. NIL carries a diagnostic <code>reason</code> that must be preserved (<code>PreservesReason</code>, Section 7.14), so the stronger, reason-bearing operational information is never erased by the logical value. Concretely, a logic word (Section 7.5) that receives both a NIL operand and a U operand applies its NIL handling and produces NIL, not U, unless an absorbing definite operand (<code>false</code> for <code>AND</code> and <code>true</code> for <code>OR</code>) settles the result first.</p>
+
+<h3 id="46-codeblock">4.6 CodeBlock</h3>
+
+<p>An executable sequence of tokens. CodeBlocks are first-class values: they can be stored on the stack, passed to higher-order words, and executed with <code>EXEC</code>.</p>
+
+<h3 id="47-processhandle-and-supervisorhandle">4.7 ProcessHandle and SupervisorHandle</h3>
+
+<p>References to child runtimes and supervisors respectively. Created by <code>SPAWN</code> and <code>SUPERVISE</code>. Used with the child runtime API (see Section 10).</p>
+
+<h2 id="5-stack">5. Stack</h2>
+
+<h3 id="51-structure">5.1 Structure</h3>
+
+<p>Ajisai maintains a single mutable stack of values. Execution proceeds by pushing and popping values. The stack is ordered; the most recently pushed value is the top.</p>
+
+<h3 id="52-two-plane-architecture">5.2 Two-plane architecture</h3>
+
+<p>The runtime is divided into two planes:</p>
+
+<p><strong>Data plane</strong>: Holds <code>ValueData</code> payloads. All arithmetic, comparison, and structural operations execute entirely on the data plane. The data plane contains no display or formatting metadata.</p>
+
+<p><strong>Semantic plane</strong>: Holds interpretation roles and presentation metadata keyed by stack position. Consulted only at explicit semantic boundaries: rendering, output operations, and module side effects.</p>
+
+<p>These planes are strictly separate. Semantic plane contents do not influence data plane computations.</p>
+
+<h3 id="53-execution-step-limit">5.3 Execution step limit</h3>
+
+<p>Each execution has a step budget. The default limit is 100,000 steps. Exceeding the limit raises <code>ExecutionLimitExceeded</code>. This is a runtime safety control, not a language semantic constraint.</p>
+
+<h2 id="6-modifiers">6. Modifiers</h2>
+
+<p>Modifiers precede a word and alter its execution behavior. Multiple modifiers may be combined.</p>
+
+<h3 id="61-target-modifiers">6.1 Target modifiers</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>TOP</code></td><td><code>.</code></td><td>The word operates on the top value(s) of the stack (default)</td></tr>
+<tr><td><code>STAK</code></td><td><code>..</code></td><td>The entire stack contents are treated as the operand</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="62-consumption-modifiers">6.2 Consumption modifiers</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>EAT</code></td><td><code>,</code></td><td>Operands are removed from the stack after the operation (default)</td></tr>
+<tr><td><code>KEEP</code></td><td><code>,,</code></td><td>Operands are retained; the result is also pushed</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="63-modifier-combinations">6.3 Modifier combinations</h3>
+
+<p>All modifier combinations are explicit and mechanically testable. Combined forms such as <code>.,,</code> and <code>..,,</code> are valid.</p>
+
+<h3 id="64-additional-syntax-forms">6.4 Additional syntax forms</h3>
+
+<p>All built-in words have English-word-based canonical names (see Section 7). The forms below are syntactic sugar that the tokenizer maps to the corresponding canonical word; either spelling is accepted in source code and behaves identically at runtime.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FLOW</code></td><td><code>~</code></td><td>Visual pipeline separator; no runtime effect</td></tr>
+<tr><td><code>VENT</code></td><td><code>^</code></td><td>If the top of the stack is NIL, replace it with the next stack value</td></tr>
+<tr><td><code>FORC</code></td><td><code>!</code></td><td>Overrides protection checks when redefining or deleting words that have dependents</td></tr>
+<tr><td><code>LOOKUP</code></td><td><code>?</code></td><td>Display the definition of a word (see Section 7.8)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="7-built-in-words">7. Built-in Words</h2>
+
+<p>Ajisai vocabulary follows the rule: <strong>Core is permanent, Module is detachable, User is editable.</strong></p>
+
+<p>Built-in words are predefined and cannot be redefined or deleted.</p>
+
+<ul>
+<li><strong>Core words</strong> belong to the Ajisai runtime itself. They are always available and cannot be deleted, hidden, unimported, or redefined.</li>
+<li><strong>Module words</strong> belong to a module dictionary. Their definitions are built in and cannot be redefined or destructively deleted, but their visibility in the current vocabulary is controlled with <code>IMPORT</code> <code>IMPORT-ONLY</code> <code>UNIMPORT</code> <code>UNIMPORT-ONLY</code>.</li>
+<li><strong>User words</strong> belong to a user dictionary. They are editable, and deletion or redefinition is controlled by dependency checks and the force modifier where applicable.</li>
+</ul>
+
+<p>Every built-in word has exactly one <strong>canonical home</strong>, either Core or a specific module. The canonical home determines where the implementation lives and, for module-canonical words, which module name <code>IMPORT</code> activates them under.</p>
+
+<p>Independent of canonical home, every built-in word has a set of <strong>listings</strong> identifying which dictionary views surface the word for browsing or documentation. The Core listing view and any module listing view are not necessarily disjoint: a word may be listed in both. Such a word is called a <strong>boundary word</strong>, recognising that it has both a semantic role (Core) and a capability role (module).</p>
+
+<p>Listings are presentation-only. A listing does not change name resolution, IMPORT semantics, or qualified-name resolution: bare names resolve through the Core vocabulary first and then through imported modules; <code>MODULE@WORD</code> resolves only to that module's canonical entries.</p>
+
+<p>Boundary classes:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Boundary class</th><th>Canonical home</th><th>Listings</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Core-only words</td><td>Core</td><td>Core only</td><td>—</td></tr>
+<tr><td>Canonical Core + module-listed boundary words</td><td>Core</td><td>Core and one or more module or category listing views</td><td><code>PRINT</code> in <code>IO</code> · <code>STR</code> <code>NUM</code> <code>BOOL</code> in the <code>CAST</code> category · <code>SHAPE</code> <code>RANK</code> in the <code>TENSOR</code> category · <code>SPAWN</code> <code>AWAIT</code> in the <code>RUNTIME</code> category</td></tr>
+<tr><td>Canonical Module + core-listed boundary words</td><td>a module</td><td>that module and the Core listing view</td><td><code>SORT</code> (canonical home <code>ALGO</code>)</td></tr>
+<tr><td>Module-only words</td><td>a module</td><td>that module only</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>IMPORT</code> <code>IMPORT-ONLY</code> <code>UNIMPORT</code> <code>UNIMPORT-ONLY</code> are Canonical Core words and remain Core-only — they are not module-listed and are not affected by listings.</p>
+
+<p>Categories such as <code>CAST</code> <code>TEXT</code> <code>TENSOR</code> <code>RUNTIME</code> are documentation-only labels used to group Core words by capability surface. They are <strong>not</strong> modules, are not registered in <code>MODULE_SPECS</code>, and cannot be supplied to <code>IMPORT</code>.</p>
+
+<h3 id="70-english-word-based-naming">7.0 English-word-based naming</h3>
+
+<p>All built-in words — both Core words and module dictionary words — use English-word-based canonical names. Symbol forms (such as <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code> <code>=</code> <code>&lt;</code> <code>&lt;=</code> <code>&amp;</code> <code>~</code> <code>^</code> <code>?</code> <code>!</code> <code>.</code> <code>..</code> <code>,</code> <code>,,</code>) are syntactic sugar that the tokenizer maps to canonical English names. The canonical name is the authoritative identifier; the symbol form is convenience surface syntax. Any new built-in word must be introduced under an English-word-based canonical name.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Canonical</th><th>Sugar</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ADD</code></td><td><code>+</code></td><td><code>TOP</code></td><td><code>.</code></td></tr>
+<tr><td><code>SUB</code></td><td><code>-</code></td><td><code>STAK</code></td><td><code>..</code></td></tr>
+<tr><td><code>MUL</code></td><td><code>*</code></td><td><code>EAT</code></td><td><code>,</code></td></tr>
+<tr><td><code>DIV</code></td><td><code>/</code></td><td><code>KEEP</code></td><td><code>,,</code></td></tr>
+<tr><td><code>MOD</code></td><td><code>%</code></td><td><code>FORC</code></td><td><code>!</code></td></tr>
+<tr><td><code>EQ</code></td><td><code>=</code></td><td><code>FLOW</code></td><td><code>~</code></td></tr>
+<tr><td><code>NEQ</code></td><td><code>&lt;&gt;</code></td><td><code>VENT</code></td><td><code>^</code></td></tr>
+<tr><td><code>LT</code></td><td><code>&lt;</code></td><td><code>LOOKUP</code></td><td><code>?</code></td></tr>
+<tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td></td><td></td></tr>
+<tr><td><code>GT</code></td><td><code>&gt;</code></td><td></td><td></td></tr>
+<tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td></td><td></td></tr>
+<tr><td><code>AND</code></td><td><code>&amp;</code></td><td></td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="71-vector-operations">7.1 Vector operations</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LENGTH</code></td><td>—</td><td>Number of elements in a vector, or total count of all stack values</td></tr>
+<tr><td><code>GET</code></td><td>—</td><td>Retrieve element at a given index</td></tr>
+<tr><td><code>INSERT</code></td><td>—</td><td>Insert element at a given index</td></tr>
+<tr><td><code>REPLACE</code></td><td>—</td><td>Replace element at a given index</td></tr>
+<tr><td><code>REMOVE</code></td><td>—</td><td>Remove element at a given index</td></tr>
+<tr><td><code>CONCAT</code></td><td>—</td><td>Concatenate two or more vectors</td></tr>
+<tr><td><code>REVERSE</code></td><td>—</td><td>Reverse the order of elements</td></tr>
+<tr><td><code>RANGE</code></td><td>—</td><td>Generate a sequence of integers from start to end with optional step</td></tr>
+<tr><td><code>TAKE</code></td><td>—</td><td>Take the first N elements</td></tr>
+<tr><td><code>SPLIT</code></td><td>—</td><td>Split a vector into sub-vectors by given sizes</td></tr>
+<tr><td><code>REORDER</code></td><td>—</td><td>Reorder elements according to an index list; supports duplication and negative indices</td></tr>
+<tr><td><code>COLLECT</code></td><td>—</td><td>Gather all current stack values into a single vector</td></tr>
+<tr><td><code>SORT</code></td><td>—</td><td>Sort elements in ascending order; yields <code>Unknown</code> if any required comparison is undecidable (Section 7.4.3)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>SORT</code> is a <strong>Canonical Module + core-listed boundary word</strong>: its canonical home is the <code>ALGO</code> module (Section 9.1) and it is additionally surfaced in the Core listing view, so a bare <code>SORT</code> resolves and <code>ALGO@SORT</code> names the same word. It is listed here for its vector role.</p>
+
+<h3 id="72-tensor-operations">7.2 Tensor operations</h3>
+
+<p>Tensor operations operate on nested vectors treated as multi-dimensional arrays.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SHAPE</code></td><td>—</td><td>Return the size of each dimension as a vector</td></tr>
+<tr><td><code>RANK</code></td><td>—</td><td>Return the number of dimensions</td></tr>
+<tr><td><code>RESHAPE</code></td><td>—</td><td>Reshape to new dimension sizes</td></tr>
+<tr><td><code>TRANSPOSE</code></td><td>—</td><td>Transpose a 2D tensor</td></tr>
+<tr><td><code>FILL</code></td><td>—</td><td>Create a tensor of given shape filled with a value</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Tensor operation implementations must follow the staged pipeline:</p>
+
+<ol>
+<li>Flatten input</li>
+<li>Compute shape, stride, and index metadata</li>
+<li>Transform indices or selections</li>
+<li>Rebuild output</li>
+</ol>
+
+<p>Ad hoc recursive shape mutation in intermediate stages is prohibited.</p>
+
+<h3 id="73-arithmetic">7.3 Arithmetic</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ADD</code></td><td><code>+</code></td><td>Addition</td></tr>
+<tr><td><code>SUB</code></td><td><code>-</code></td><td>Subtraction</td></tr>
+<tr><td><code>MUL</code></td><td><code>*</code></td><td>Multiplication</td></tr>
+<tr><td><code>DIV</code></td><td><code>/</code></td><td>Exact-real division</td></tr>
+<tr><td><code>MOD</code></td><td><code>%</code></td><td>Remainder</td></tr>
+<tr><td><code>FLOOR</code></td><td>—</td><td>Floor (largest integer ≤ value)</td></tr>
+<tr><td><code>CEIL</code></td><td>—</td><td>Ceiling (smallest integer ≥ value)</td></tr>
+<tr><td><code>ROUND</code></td><td>—</td><td>Round to nearest integer</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Arithmetic on scalars is performed directly on the continued-fraction representation by <strong>Gosper's bihomographic algorithm</strong>: each operation forms a Möbius (for unary) or bihomographic (for binary) transform of its operands and emits partial quotients of the result as soon as the next quotient is unambiguously determined by the current coefficients. No intermediate value is materialized as an approximate real or as a truncated rational. Coefficients are BigInt at all times (Section 4.2.2).</p>
+
+<p><code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond <em>a</em>₀.</p>
+
+<p><code>MOD</code> is defined by the identity <em>x</em> − ⌊<em>x</em> / <em>y</em>⌋ · <em>y</em> (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
+
+<h3 id="74-comparison">7.4 Comparison</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LT</code></td><td><code>&lt;</code></td><td>Less than</td></tr>
+<tr><td><code>LTE</code></td><td><code>&lt;=</code></td><td>Less than or equal</td></tr>
+<tr><td><code>GT</code></td><td><code>&gt;</code></td><td>Greater than</td></tr>
+<tr><td><code>GTE</code></td><td><code>&gt;=</code></td><td>Greater than or equal</td></tr>
+<tr><td><code>EQ</code></td><td><code>=</code></td><td>Equal</td></tr>
+<tr><td><code>NEQ</code></td><td><code>&lt;&gt;</code></td><td>Not equal</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Comparisons return a truth value with the <code>TruthValue</code> interpretation role: <code>true</code> or <code>false</code>, or — when the comparison is not decidable within the comparison budget (see below) — <code>unknown</code> (U, the third value of the three-valued logic of Section 7.5).</p>
+
+<p>The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. <code>GT</code> and <code>GTE</code> are the strict mirrors of <code>LT</code> and <code>LTE</code>; <code>NEQ</code> is the negation of <code>EQ</code>. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (<code>TOP</code> or <code>STAK</code> crossed with <code>EAT</code> or <code>KEEP</code>).</p>
+
+<p>Under <code>STAK</code> mode, an ordering comparison describes a sequence property of the consumed values — it is <code>true</code> iff the sequence satisfies the property:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Word</th><th><code>STAK</code>-mode sequence property</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LT</code></td><td>strictly increasing</td></tr>
+<tr><td><code>LTE</code></td><td>non-decreasing</td></tr>
+<tr><td><code>GT</code></td><td>strictly decreasing</td></tr>
+<tr><td><code>GTE</code></td><td>non-increasing</td></tr>
+<tr><td><code>EQ</code></td><td>all values equal</td></tr>
+<tr><td><code>NEQ</code></td><td>all adjacent pairs unequal</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4 id="741-decidability-and-comparison-budget">7.4.1 Decidability and comparison budget</h4>
+
+<p>Comparison on continued fractions (Section 4.2) proceeds by emitting partial quotients of the two operands in parallel and stopping at the first index where they differ; the sign of the difference at that index determines the order (with the usual alternating-parity rule of CF comparison). For two finite CFs this always terminates. For lazy CFs, two distinct irrationals always differ at some finite index, but two equal irrationals never differ — the procedure does not terminate by itself.</p>
+
+<p>To preserve totality, every comparison operation runs under an implementation-defined <strong>partial-quotient budget</strong>. If the budget is exhausted before a difference is found:</p>
+
+<ul>
+<li>the comparison produces the truth value <code>unknown</code> (U), observed as <code>truthValue = unknown</code>, with the <code>TruthValue</code> interpretation role;</li>
+<li>U is a logical truth value, not an operational absence: the comparison does <strong>not</strong> produce a <code>reason = undecidable</code> NIL, and the Bubble Rule (Section 11.2) does not apply to it;</li>
+<li>U flows into the three-valued logic of Section 7.5 directly. It is not a NIL, so the NIL-passthrough machinery of Section 7.12 does not carry it; instead <code>AND</code> <code>OR</code> <code>NOT</code> settle it according to the Kleene truth tables.</li>
+</ul>
+
+<p>The U outcome is required for all six relations (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) and for any downstream Coreword whose result depends on a comparison (notably <code>MIN</code> <code>MAX</code> <code>SORT</code> and the <code>COND</code> clauses whose head reduces to such a comparison); the propagation rule for those words is fixed in Section 7.4.3. The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.</p>
+
+<p>The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried on the comparison's <code>Unknown</code> result in the machine-readable <code>diagnosis.agreedPrefix</code> field (Section 4.5.0): a non-negative integer. It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable <code>truthValue</code>.</p>
+
+<p><code>STAK</code>-mode ordering comparisons short-circuit on the first pair that yields U: the entire stack-mode result is U, regardless of how many subsequent pairs would have decided. (A NIL operand still short-circuits to NIL per Section 7.12; when both a NIL operand and a U-producing pair are present, NIL takes priority per Section 4.5.2.)</p>
+
+<h5 id="7411-nicf-accelerated-comparison">7.4.1.1 NICF-accelerated comparison</h5>
+
+<p>The comparison procedure of Section 7.4.1 decides the order of two operands by emitting their <strong>nearest-integer</strong> continued fractions (NICF, Section 4.2.5) in parallel and stopping at the first index where the semiregular expansions differ; the sign of the difference there determines the order, with the sign correction induced by the <code>εi</code> partial-numerator signs in place of the plain alternating parity. Because NICF converges at least as fast as RCF, two distinct values reveal their order at an NICF index no later — and usually earlier — than the RCF index, so a budget of fixed size decides at least as many comparisons and in practice meaningfully more (Section 4.2.5). The budget mechanism, the U outcome, and the totality guarantee of Section 7.4.1 are otherwise unchanged.</p>
+
+<p>The order computed over NICF is the true order of the values: it is <strong>identical</strong> to the order RCF would compute whenever RCF decides within any budget. NICF never flips a decided order; it only moves the budget <em>boundary</em> at which a pair of distinct values crosses from U to decided, in the favorable direction. Equal values never differ in either expansion, so they still yield U.</p>
+
+<p>**Budget unit and <code>agreedPrefix</code>.<strong> One budget term is one </strong>semiregular (NICF) term**, uniformly for the six relations (Section 7.4) and for <code>COMPARE-WITHIN</code> (Section 7.4.2). The <code>agreedPrefix</code> of a U result (Sections 4.5.0, 7.4.1) therefore counts matching NICF terms. Its contract is otherwise unchanged:</p>
+
+<ul>
+<li>a non-negative integer;</li>
+<li>monotone — a larger budget never decreases it;</li>
+<li><code>0</code> for operands that differ at the first term;</li>
+<li>diagnostic-only — it never affects <code>truthValue</code>;</li>
+<li>for <code>COMPARE-WITHIN</code>, equal to the consumed <code>budget</code> on U. Because the unit is uniformly NICF, there is no RCF-versus-NICF unit ambiguity to reconcile: a caller of <code>COMPARE-WITHIN</code> who names <code>budget = n</code> buys <code>n</code> semiregular terms, and that is the documented meaning. The correspondence between an NICF term count and an RCF term count is <strong>not</strong> observable and must not be relied upon.</li>
+</ul>
+
+<p><strong>Conformance requirement.</strong> Because the budget unit is user-observable through <code>COMPARE-WITHIN</code>, NICF expansion is not an optional per-implementation choice: a conforming implementation must emit NICF terms for <strong>every</strong> comparable scalar representation (Section 4.2.2) — <code>Rational</code> and <code>AlgebraicSqrt</code> and <code>Gosper</code> (which backs the results of arithmetic). For the homographic and bihomographic (<code>Gosper</code>) representations this is a local change to the partial-quotient emitter: a term is emitted when the <em>nearest integer</em> (rather than the floor) agrees across the transform's value-range endpoints, and the post-emit coefficient update is unchanged from the floor case — a negative semiregular remainder propagates its sign through the reciprocal continuation, so no separate <code>εi</code> bookkeeping is carried in the transform coefficients.</p>
+
+<h4 id="742-explicit-budget-comparison-compare-within">7.4.2 Explicit-budget comparison: <code>COMPARE-WITHIN</code></h4>
+
+<p>The six relations of Section 7.4 run under an implementation-defined budget that is not observable. <code>COMPARE-WITHIN</code> makes the half-decidability threshold a first-class, user-controlled parameter: the program names the depth at which an undecided comparison becomes <code>Unknown</code>.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>COMPARE-WITHIN</code></td><td>—</td><td>Three-way compare two values within an explicit partial-quotient budget</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Stack effect: <code>[ a ] [ b ] [ budget ] -&gt; [ -1 | 0 | 1 | UNKNOWN ]</code>.</p>
+
+<p><code>COMPARE-WITHIN</code> consumes two numeric values <em>a</em> and <em>b</em> and a positive integer <code>budget</code>, and emits partial quotients of <em>a</em> and <em>b</em> in parallel (Section 7.4.1) for at most <code>budget</code> steps. It produces:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Result</th><th>Condition</th></tr>
+</thead>
+<tbody>
+<tr><td>the scalar <code>-1</code> (role <code>RawNumber</code>)</td><td><em>a</em> &lt; <em>b</em></td></tr>
+<tr><td>the scalar <code>0</code></td><td><em>a</em> = <em>b</em></td></tr>
+<tr><td>the scalar <code>1</code></td><td><em>a</em> &gt; <em>b</em></td></tr>
+<tr><td>the logical <code>Unknown</code> (U, Section 7.5)</td><td>the order is not settled within <code>budget</code> partial quotients; the U result carries <code>diagnosis.agreedPrefix</code> (Section 4.5.0), which for this word equals the consumed <code>budget</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The decided outcome is the exact sign of <em>a</em> − <em>b</em>; the six relations of Section 7.4 are recoverable from it (<em>a</em> &lt; <em>b</em> iff <code>-1</code>, <em>a</em> ≤ <em>b</em> iff not <code>1</code>, and so on). For two finite (rational) operands the comparison always decides regardless of <code>budget</code>, because finite CFs differ at a bounded index; <code>budget</code> only governs lazy irrationals.</p>
+
+<p><code>COMPARE-WITHIN</code> is <code>Projecting</code> (Section 7.14): it is total over well-shaped input because it projects the undecided case onto U. It is NIL-passthrough (Section 7.12) for its <em>a</em> and <em>b</em> operands. A non-positive or non-integer <code>budget</code>, or a non-numeric <em>a</em> or <em>b</em>, is malformed use and raises an error (Section 11.2), not U. The implicit budget of the bare relations is an implementation-defined constant; <code>COMPARE-WITHIN</code> does not change it and is the only way to observe or override the depth.</p>
+
+<h4 id="743-propagation-of-u-through-comparison-dependent-words">7.4.3 Propagation of U through comparison-dependent words</h4>
+
+<p>The U outcome named in Section 7.4.1 is required not only of the comparison primitives themselves but of every Coreword whose result depends on a comparison. This section fixes how U flows through the four such words — <code>MIN</code> <code>MAX</code> <code>SORT</code> <code>COND</code> — so that an undecidable comparison never silently produces a wrong order, a spurious error, or a definite truth value it has not earned.</p>
+
+<p>Of these four, <code>COND</code> is a Canonical Core word; <code>MIN</code> and <code>MAX</code> are canonically owned by the <code>MATH</code> module and <code>SORT</code> by the <code>ALGO</code> module (Section 9.1). <code>SORT</code> is additionally Core-listed (Section 7.1); <code>MIN</code> and <code>MAX</code> are reached as bare names only after <code>IMPORT 'MATH'</code>, and always as <code>MATH@MIN</code> and <code>MATH@MAX</code>. The U-propagation contract below is a property of each word wherever it is invoked, independent of its canonical home.</p>
+
+<p>The common rule is <strong>U-honesty</strong>: when the comparison a word relies on is undecidable, the word must surface that undecidability (as U, or, for <code>COND</code>, as the absence of a satisfied clause) rather than fabricate a decision. None of these words may treat U as <code>true</code>, as <code>false</code>, or as a malformed-input error.</p>
+
+<p>**<code>MIN</code> and <code>MAX</code>.** These select one of two (or, in sequence form, several) numeric operands by the order relation. They accept the full numeric domain, including the lazy continued-fraction operands of Section 4.2, and decide the order through the same budgeted comparison as the relations (Section 7.4.1). When the governing comparison decides, the selected operand is returned unchanged. When it does not decide within the budget, the result is the logical <code>Unknown</code> (U), observed as <code>truthValue = unknown</code> and carrying <code>diagnosis.agreedPrefix</code> (Section 4.5.0) — because the program cannot be told <em>which</em> operand is the minimum/maximum when their order is unknown. <code>MIN</code> and <code>MAX</code> remain NIL-passthrough (Section 7.12): a NIL operand yields NIL, and NIL takes priority over a U-producing comparison per Section 4.5.2. In sequence form they short-circuit on the first undecidable pair, matching the <code>STAK</code>-mode rule of Section 7.4.1.</p>
+
+<p>**<code>SORT</code>.** Sorting is a transitive cascade of pairwise order comparisons; a single undecidable pair makes the position of those elements relative to each other unknown, and the sorted order as a whole is therefore not established. When every pairwise comparison the sort requires decides, <code>SORT</code> returns the elements in ascending order as before. When any required comparison is undecidable within the budget, <code>SORT</code> produces the logical <code>Unknown</code> (U) for the whole result, carrying <code>diagnosis.agreedPrefix</code> for the first undecidable pair encountered. <code>SORT</code> does not return a partially-sorted vector, and it does not fall back to a tie-break: a partial order is not a sort. (The earlier exact-fraction-only behavior is the decided case of this rule: finite rationals always decide, so a vector of rationals always sorts.) A NIL element is handled by <code>SORT</code>'s existing NIL policy and takes priority over a U-producing comparison per Section 4.5.2.</p>
+
+<p>**<code>COND</code>.** A <code>COND</code> clause fires when its guard evaluates to a definite <code>true</code>. Under three-valued logic a guard may now reduce to U (for example, a guard that is itself an undecidable comparison). A guard that yields U is <strong>not</strong> a definite <code>true</code>, so its clause does <strong>not</strong> fire; evaluation falls through to the next clause exactly as it would for a <code>false</code> guard, and ultimately to the <code>IDLE</code> else clause if no guard yields a definite <code>true</code>. A U guard is therefore neither an error nor a match: it is the K3-faithful reading of "this clause's condition could not be established." If no clause fires and there is no else clause, the existing <code>CondExhausted</code> outcome (Section 11) applies unchanged. This makes a U guard behave, for clause-selection purposes, like <code>false</code> — but the distinction is observable while the guard value is on the stack (it reads <code>truthValue = unknown</code>, not <code>false</code>), and it is only the <em>clause-firing decision</em> that treats "not definitely true" uniformly.</p>
+
+<p>In all four words the budget is the same implementation-defined constant used by the bare relations (Section 7.4.1); none of them expose or override it. <code>COMPARE-WITHIN</code> (Section 7.4.2) remains the only word that names the budget explicitly.</p>
+
+<h3 id="75-logic">7.5 Logic</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>AND</code></td><td><code>&amp;</code></td><td>Logical AND</td></tr>
+<tr><td><code>OR</code></td><td>—</td><td>Logical OR</td></tr>
+<tr><td><code>NOT</code></td><td>—</td><td>Logical NOT</td></tr>
+<tr><td><code>TRUE</code></td><td>—</td><td>Push truth value <code>true</code></td></tr>
+<tr><td><code>FALSE</code></td><td>—</td><td>Push truth value <code>false</code></td></tr>
+<tr><td><code>NIL</code></td><td>—</td><td>Push NIL</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>AND</code> <code>OR</code> <code>NOT</code> implement <strong>strong Kleene three-valued logic (K3)</strong> over the truth domain {T, F, U}, whose members are observed as the protocol strings <code>true</code> and <code>false</code> and <code>unknown</code>. U is a first-class logical truth value, observed as <code>truthValue = unknown</code> (Section 2.3), and arises in particular from undecidable continued-fraction comparisons (Section 7.4.1). The truth tables are:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th><code>AND</code></th><th>T</th><th>U</th><th>F</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>T</td><td>U</td><td>F</td></tr>
+<tr><td><strong>U</strong></td><td>U</td><td>U</td><td>F</td></tr>
+<tr><td><strong>F</strong></td><td>F</td><td>F</td><td>F</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th><code>OR</code></th><th>T</th><th>U</th><th>F</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>T</td><td>T</td><td>T</td></tr>
+<tr><td><strong>U</strong></td><td>T</td><td>U</td><td>U</td></tr>
+<tr><td><strong>F</strong></td><td>T</td><td>U</td><td>F</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th><code>NOT</code></th><th>result</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>T</strong></td><td>F</td></tr>
+<tr><td><strong>U</strong></td><td>U</td></tr>
+<tr><td><strong>F</strong></td><td>T</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The absorbing elements are exact: <code>AND</code> returns F whenever either operand is F (even if the other is U), and <code>OR</code> returns T whenever either operand is T (even if the other is U). U propagates in every other case where it appears.</p>
+
+<p><strong>Interaction with NIL.</strong> NIL (operational absence, Section 4.5) and U (logical undecidability) are distinct values; see Section 4.5.2. The absorbing rule that previously collapsed NIL — <code>AND</code> with a definite F yields F and <code>OR</code> with a definite T yields T — is unchanged and continues to apply to NIL operands. In all other cases involving a NIL operand the logic word produces NIL (preserving the leftmost reason, Section 4.5.1), and <code>NOT</code> of NIL is NIL. When an operation receives both a NIL operand and a U operand and no absorbing definite operand settles the result, <strong>NIL takes priority</strong> and the result is NIL, not U (Section 4.5.2). This keeps the reason-bearing diagnostic value from being erased by the logical value.</p>
+
+<h3 id="76-string-and-type-conversion">7.6 String and type conversion</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>STR</code></td><td>—</td><td>Convert value to its string representation</td></tr>
+<tr><td><code>NUM</code></td><td>—</td><td>Parse a string as a number</td></tr>
+<tr><td><code>BOOL</code></td><td>—</td><td>Convert to boolean</td></tr>
+<tr><td><code>CHR</code></td><td>—</td><td>Convert a number to its Unicode character</td></tr>
+<tr><td><code>CHARS</code></td><td>—</td><td>Split a string into a vector of individual characters</td></tr>
+<tr><td><code>JOIN</code></td><td>—</td><td>Join a vector of strings, with optional separator</td></tr>
+<tr><td><code>TRIM</code></td><td>—</td><td>Strip whitespace from both ends of a string</td></tr>
+<tr><td><code>TRIM-LEFT</code></td><td>—</td><td>Strip leading whitespace</td></tr>
+<tr><td><code>TRIM-RIGHT</code></td><td>—</td><td>Strip trailing whitespace</td></tr>
+<tr><td><code>TOKENIZE</code></td><td>—</td><td>Split a string by a separator into a vector of substrings</td></tr>
+<tr><td><code>SUBSTITUTE</code></td><td>—</td><td>Replace every occurrence of a substring with another</td></tr>
+<tr><td><code>STARTS-WITH?</code></td><td>—</td><td>True if the string begins with the given prefix</td></tr>
+<tr><td><code>ENDS-WITH?</code></td><td>—</td><td>True if the string ends with the given suffix</td></tr>
+<tr><td><code>&gt;CF</code></td><td><code>&gt;CF</code></td><td>Tag a numeric scalar so it displays and serializes under the <code>ContinuedFraction</code> interpretation role (Section 12.2); value-preserving (<code>[ x ] -&gt; [ x ]</code>)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>&gt;CF</code> is the conversion-word surface form of Section 3.9: it changes only the requested display/serialization role of its operand (the nested-parentheses continued-fraction form of Section 3.2 / Section 4.2), never the value. It is a Canonical Core word.</p>
+
+<p><code>TRIM</code> <code>TRIM-LEFT</code> <code>TRIM-RIGHT</code> <code>TOKENIZE</code> <code>SUBSTITUTE</code> <code>STARTS-WITH?</code> <code>ENDS-WITH?</code> are Canonical Core words also listed in the <code>TEXT</code> documentation category alongside <code>CHR</code> <code>CHARS</code> <code>JOIN</code>. The listing is presentation-only and does not introduce a <code>TEXT</code> module.</p>
+
+<h3 id="77-control-and-higher-order-words">7.7 Control and higher-order words</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MAP</code></td><td>—</td><td>Apply a code block to each element, collecting results</td></tr>
+<tr><td><code>FILTER</code></td><td>—</td><td>Keep elements for which a predicate returns true</td></tr>
+<tr><td><code>FOLD</code></td><td>—</td><td>Reduce a sequence to a single value using an accumulator</td></tr>
+<tr><td><code>UNFOLD</code></td><td>—</td><td>Generate a sequence by repeatedly applying a generator block</td></tr>
+<tr><td><code>ANY</code></td><td>—</td><td>True if at least one element satisfies the predicate</td></tr>
+<tr><td><code>ALL</code></td><td>—</td><td>True if all elements satisfy the predicate</td></tr>
+<tr><td><code>COUNT</code></td><td>—</td><td>Count elements satisfying the predicate</td></tr>
+<tr><td><code>SCAN</code></td><td>—</td><td>Like <code>FOLD</code> but returns all intermediate accumulator values</td></tr>
+<tr><td><code>COND</code></td><td>—</td><td>Evaluate clauses separated by <code>$</code>; execute the first whose guard is definitely true (a U guard does not fire, Section 7.4.3)</td></tr>
+<tr><td><code>IDLE</code></td><td>—</td><td>No-op; does nothing</td></tr>
+<tr><td><code>EXEC</code></td><td>—</td><td>Execute a code block</td></tr>
+<tr><td><code>EVAL</code></td><td>—</td><td>Parse and execute a string as Ajisai code</td></tr>
+<tr><td><code>PRECOMPUTE</code></td><td>—</td><td>Definition-time staging marker: evaluate a code block when a word is defined and splice the resulting values into the definition</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>PRECOMPUTE</code> is a <strong>definition-time-only</strong> Canonical Core word, not a macro. It consumes a code block (<code>[ { body } ] -&gt; [ value... ]</code>) and is meaningful only while a <code>DEF</code> body is being compiled: the block is evaluated once at definition time and its result values are staged into the compiled definition, so the cost is not paid on each later call. It is <code>Partial</code> (it raises on malformed use such as a non-block operand) with <code>nil_policy = RejectsNil</code>; using it outside a definition-time context is an error.</p>
+
+<h3 id="78-user-word-dictionary">7.8 User word dictionary</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DEF</code></td><td>—</td><td>Define a user word (see Section 8)</td></tr>
+<tr><td><code>DEL</code></td><td>—</td><td>Delete a user word (see Section 8)</td></tr>
+<tr><td><code>LOOKUP</code></td><td><code>?</code></td><td>Look up and display the definition of a word</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="79-io-and-utilities">7.9 IO and utilities</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Canonical home</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PRINT</code></td><td>Core (listed in <code>IO</code>)</td><td>—</td><td>Output the top stack value</td></tr>
+<tr><td><code>NOW</code></td><td><code>TIME</code></td><td>—</td><td>Push the current instant (exact seconds since the Unix epoch)</td></tr>
+<tr><td><code>DATETIME</code></td><td><code>TIME</code></td><td>—</td><td>Render an instant as a timezone-free civil datetime at a UTC offset</td></tr>
+<tr><td><code>TIMESTAMP</code></td><td><code>TIME</code></td><td>—</td><td>Resolve a timezone-free civil datetime to an instant at a UTC offset</td></tr>
+<tr><td><code>CSPRNG</code></td><td><code>CRYPTO</code></td><td>—</td><td>Push a cryptographically secure random number</td></tr>
+<tr><td><code>HASH</code></td><td><code>CRYPTO</code></td><td>—</td><td>Compute a hash of the top stack value</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Only <code>PRINT</code> is a Canonical Core word here; it is additionally boundary-listed in the <code>IO</code> view (Section 7). <code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code> are canonically owned by the <code>TIME</code> module and <code>CSPRNG</code> <code>HASH</code> by the <code>CRYPTO</code> module (Section 9.1): they are <strong>not</strong> Core-listed, so a bare name resolves only after <code>IMPORT</code>, and they are always reachable in qualified form (<code>TIME@NOW</code> and <code>CRYPTO@HASH</code> and so on). They are grouped here by utility role, not by canonical home.</p>
+
+<h3 id="710-module-loading">7.10 Module loading</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>IMPORT</code></td><td>—</td><td>Load all words from a module into the current scope</td></tr>
+<tr><td><code>IMPORT-ONLY</code></td><td>—</td><td>Load only the specified words from a module</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="711-child-runtime-words">7.11 Child runtime words</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>SPAWN</code></td><td>—</td><td>Create and start a child runtime from a code block; push a ProcessHandle</td></tr>
+<tr><td><code>AWAIT</code></td><td>—</td><td>Wait for a child to finish; push <code>[status result-stack]</code></td></tr>
+<tr><td><code>STATUS</code></td><td>—</td><td>Return the current state of a child runtime as a string</td></tr>
+<tr><td><code>KILL</code></td><td>—</td><td>Terminate a child runtime</td></tr>
+<tr><td><code>MONITOR</code></td><td>—</td><td>Mark a child runtime for monitoring</td></tr>
+<tr><td><code>SUPERVISE</code></td><td>—</td><td>Create a supervisor over a group of child runtimes</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="712-nil-passthrough-words">7.12 NIL-passthrough words</h3>
+
+<p>The following built-in words follow the NIL passthrough rule defined in Section 4.5.1. If any operand they consume is NIL, the result is NIL and no error is raised.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Category</th><th>Words</th></tr>
+</thead>
+<tbody>
+<tr><td>Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> <code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code></td></tr>
+<tr><td>Comparison</td><td><code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code> <code>EQ</code> <code>NEQ</code></td></tr>
+<tr><td>Logic</td><td><code>AND</code> <code>OR</code> <code>NOT</code> (three-valued; see below)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>AND</code> <code>OR</code> <code>NOT</code> implement strong Kleene three-valued logic (K3) over the truth domain {T, F, U}; the truth tables and the U value are defined in Section 7.5. The three-valued behavior listed here concerns NIL operands specifically: NIL combined with a definite false (for <code>AND</code>) or definite true (for <code>OR</code>) collapses to that definite value; in all other cases involving NIL the result is NIL, and <code>NOT</code> of NIL is NIL. The logical third value U is separate from NIL (Section 4.5.2); when both appear, NIL takes priority.</p>
+
+<p>The comparison words are NIL-passthrough for NIL operands as listed above. They do <strong>not</strong> produce a <code>reason = undecidable</code> NIL on budget exhaustion; that case now yields the truth value <code>unknown</code> (Section 7.4.1), which is a <code>TruthValue</code> result rather than an absence.</p>
+
+<p>Words not listed here retain their existing handling of NIL. In particular, the following are <strong>not</strong> NIL-passthrough:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Category</th><th>Words</th></tr>
+</thead>
+<tbody>
+<tr><td>Control flow</td><td><code>COND</code> <code>EXEC</code> <code>MAP</code> <code>FILTER</code> <code>FOLD</code> <code>UNFOLD</code> <code>ANY</code> <code>ALL</code> <code>COUNT</code> <code>SCAN</code></td></tr>
+<tr><td>Conversion (most)</td><td><code>STR</code> <code>BOOL</code> <code>CHARS</code> <code>JOIN</code></td></tr>
+<tr><td>IO and utilities</td><td><code>PRINT</code> <code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code> <code>CSPRNG</code> <code>HASH</code></td></tr>
+<tr><td>Child runtime</td><td><code>SPAWN</code> <code>AWAIT</code> <code>STATUS</code> <code>KILL</code> <code>MONITOR</code> <code>SUPERVISE</code></td></tr>
+<tr><td>NIL coalescing</td><td><code>VENT</code> (<code>^</code>) itself, whose entire purpose is to react to NIL</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>NUM</code> and <code>CHR</code> can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.</p>
+
+<h2 id="714-coreword-contract-metadata">7.14 Coreword contract metadata</h2>
+
+<p>Every Coreword (built-in or module-provided) has a machine-readable contract entry in the Coreword registry. The contract is the authoritative description of the word's input requirements, output guarantees, and runtime classification. Tests, documentation, and tooling consume this metadata; narrative text is non-canonical.</p>
+
+<p>A contract entry has the following fields, in addition to the existing identification fields (<code>name</code> <code>category</code>), effect-classification fields (<code>purity</code> <code>effects</code> <code>deterministic</code> <code>safe_preview</code>), and listing fields (<code>canonical_home</code> <code>listed_in_core</code> <code>listed_in_modules</code> <code>listed_in_categories</code>):</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Field</th><th>Domain</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>partiality</code></td><td><code>Total</code> · <code>Partial</code> · <code>Projecting</code></td><td><code>Total</code>: the operation is defined on every well-shaped input. <code>Partial</code>: the operation has well-shaped inputs for which it raises an error. <code>Projecting</code>: the operation is total because it projects all failures onto NIL with reason.</td></tr>
+<tr><td><code>nil_policy</code></td><td><code>Passthrough</code> · <code>CreatesNil</code> · <code>RejectsNil</code> · <code>ConsumesNil</code> · <code>PreservesReason</code></td><td>How the word reacts to and produces NIL. <code>Passthrough</code> words follow Section 4.5.1; <code>CreatesNil</code> words project domain failures (e.g. division by zero); <code>RejectsNil</code> words raise <code>StructureError</code> on NIL; <code>ConsumesNil</code> words inspect or branch on NIL (e.g. <code>VENT</code>); <code>PreservesReason</code> words must not erase a reason that is already attached to a propagated NIL.</td></tr>
+<tr><td><code>safety_level</code></td><td><code>A</code> · <code>B</code> · <code>C</code> · <code>D</code> · <code>Quarantined</code></td><td>Increasing strength of safety guarantees. <code>A</code>: total, pure, deterministic; <code>B</code>: partial but with explicit error categories; <code>C</code>: observable or has external state read; <code>D</code>: effectful; <code>Quarantined</code>: not eligible for self-host execution. A <code>Partial</code> word is therefore at least <code>B</code> (it is not total); <code>Projecting</code> words are total by projection and may be <code>A</code>.</td></tr>
+<tr><td><code>mass</code></td><td><code>Fixed { consumes, produces }</code> · <code>Dynamic</code></td><td>The static flow-mass contract of Section 13.1: under the default <code>TOP</code> and <code>EAT</code> modes the word reads <code>consumes</code> operands and pushes <code>produces</code> results; under <code>KEEP</code> the <code>consumes</code> operands are additionally retained (bifurcation, Section 13.2). <code>Dynamic</code> marks a word whose arity is not a statically pinned <code>Fixed</code> value — either because it is genuinely data-dependent (for example the <code>STAK</code> count-fold or runtime-shaped vector operations) or because it has not been probe-verified into the <code>Fixed</code> set. <code>Dynamic</code> is sound in both cases: the static mass-conservation validator simply abstains on <code>Dynamic</code> words, so marking a fixed-arity word <code>Dynamic</code> only forgoes static checking, it never asserts a wrong arity.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>partiality</code> and <code>nil_policy</code> are independent axes. For example, under the Bubble Rule <code>DIV</code> (<code>/</code>) is <code>Projecting</code> with <code>nil_policy = CreatesNil</code>: <code>DIV</code> <code>GET</code> <code>NUM</code> <code>CHR</code> are <code>Projecting</code> with <code>CreatesNil</code> for well-formed domain misses while malformed inputs remain ordinary errors.</p>
+
+<p>Comparison words (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) are <code>Projecting</code>: they are total because every well-shaped input yields a <code>TruthValue</code> result, projecting the undecidable case onto the truth value <code>unknown</code> (U) rather than raising. Their <code>nil_policy</code> is <code>Passthrough</code> (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a <code>TruthValue</code> result and <strong>not</strong> a <code>reason</code>-bearing NIL, so they are no longer classified <code>CreatesNil</code> for that case. (The <code>reason = undecidable</code> NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)</p>
+
+<p>Logic words (<code>AND</code> <code>OR</code> <code>NOT</code>) are <code>Total</code> over the three-valued truth domain of Section 7.5. Their registry <code>nil_policy</code> is <code>Passthrough</code>: they pass NIL operands through per Section 7.12. The <code>nil_policy</code> field holds a single value, so reason-preservation is <strong>not</strong> a second simultaneous policy here but an additional behavioral requirement layered on <code>Passthrough</code> — the leftmost NIL reason must survive and a NIL operand is never silently replaced by U (Section 4.5.2). The distinct <code>PreservesReason</code> value is reserved for words whose <em>only</em> NIL contract is to carry a reason through unchanged: the pure no-op and marker words <code>TOP</code> <code>STAK</code> <code>EAT</code> <code>KEEP</code> <code>TRUE</code> <code>FALSE</code> <code>NIL</code> <code>IDLE</code> <code>FLOW</code> <code>VENT</code>.</p>
+
+<p><code>COMPARE-WITHIN</code> (Section 7.4.2) is <code>Projecting</code>: it is total over well-shaped input because it projects the budget-undecided case onto the logical <code>Unknown</code> (a result, not a reasoned NIL). Its <code>nil_policy</code> is <code>Passthrough</code> for the <em>a</em> and <em>b</em> operands. A non-positive or non-integer <code>budget</code> or non-numeric operands are malformed use and raise an error, so it is not <code>CreatesNil</code>.</p>
+
+<p><code>MIN</code> and <code>MAX</code> and <code>SORT</code> (Section 7.4.3) are <code>Projecting</code>: each is total over well-shaped numeric input because it projects an undecidable governing comparison onto the logical <code>Unknown</code> (a result, not a reasoned NIL). Their <code>nil_policy</code> is <code>Passthrough</code>, with NIL taking priority over a U-producing comparison (Section 4.5.2). <code>MIN</code> and <code>MAX</code> are canonically <code>MATH</code> words and <code>SORT</code> is canonically an <code>ALGO</code> word (Sections 7.4.3, 9.1); their contracts are registry entries on the same footing as Core contracts. <code>COND</code> (Section 7.7) treats a U guard as not-firing rather than producing U as a value, so its existing partiality and <code>CondExhausted</code> behavior are unchanged by Section 7.4.3.</p>
+
+<p>Other module-canonical words carry registry contracts on the same footing. <code>MATH@POW</code> is <code>Projecting</code> with <code>CreatesNil</code>: it projects <code>0</code> raised to a negative exponent onto Bubble/NIL (<code>reason = divisionByZero</code>) while malformed use raises an error. <code>MATH@GCD</code> and <code>MATH@LCM</code> are <code>Partial</code> with <code>Passthrough</code>: a non-integer numeric operand is malformed use and raises an error (cf. <code>CHR</code>), while NIL operands pass through. <code>ALGO@INDEX-OF</code> and <code>TIME@PARSE-ISO</code> are <code>Projecting</code> with <code>CreatesNil</code>, projecting a well-formed miss (value absent or unparseable text) onto Bubble/NIL with <code>reason = missingField</code> and <code>reason = invalidEncoding</code> respectively. Adding any Coreword — Core or module — without a contract entry is a conformance violation.</p>
+
+<p>Contract metadata is reachable from both the Rust runtime and the WASM boundary. Adding a Coreword without a contract entry is a conformance violation.</p>
+
+<p>The listing fields work as follows:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Field</th><th>Domain</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>canonical_home</code></td><td><code>Core</code> · <code>Module(name)</code></td><td>Where the canonical implementation lives. For module-canonical words this is also the only module that can resolve the word as <code>MODULE@WORD</code> and the only module whose <code>IMPORT</code> brings the word into bare scope.</td></tr>
+<tr><td><code>listed_in_core</code></td><td><code>bool</code></td><td>Whether the word appears in the Core listing view. Does not affect resolution.</td></tr>
+<tr><td><code>listed_in_modules</code></td><td><code>[module_name]</code></td><td>Module listing views in which the word appears. A canonical module word always has its own module here. Boundary listings (e.g. <code>PRINT</code> in <code>IO</code>) are presentation-only.</td></tr>
+<tr><td><code>listed_in_categories</code></td><td><code>[category_label]</code></td><td>Documentation-only category labels (e.g. <code>CAST</code> <code>TEXT</code> <code>TENSOR</code> <code>RUNTIME</code>). Categories are not modules and cannot be <code>IMPORT</code>ed.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>IMPORT-ONLY</code> of a selector that is core-listed in the target module's view but not canonically owned by that module is a no-op: the word is already available as a Canonical Core word, so the selector is silently skipped with a single warning line. Selectors that match neither a canonical word nor a listing remain an error.</p>
+
+<p>A bare name may legitimately appear under more than one canonical home (for example core list <code>GET</code> and <code>JSON@GET</code>). In that case bare-name lookup resolves to the Canonical Core entry — matching the runtime's resolution order — while <code>MODULE@WORD</code> always reaches the module entry.</p>
+
+<h2 id="8-user-words">8. User Words</h2>
+
+<h3 id="81-definition-syntax">8.1 Definition syntax</h3>
+
+<pre><code>{ body... } 'NAME' DEF</code></pre>
+
+<p><code>DEF</code> takes exactly two positional arguments: the <strong>name</strong> (a string) on top of the stack, and directly below it the <strong>body</strong> (a code block <code>{ }</code>). Roles are determined by position alone — no value types are inspected to guess them — so a leftover value on the stack below the body cannot shift argument interpretation.</p>
+
+<p>The body must be a code block. It may span multiple lines (Section 3.4): each internal line break is a statement separator, so a multi-line body executes one source line at a time. This is how multi-line and <code>$</code>-style <code>COND</code> word bodies are written:</p>
+
+<pre><code>{
+  { [ 1 ] = $ [ 100 ] }
+  { [ 2 ] = $ [ 200 ] }
+  { IDLE   $ [ 0 ]   } COND
+} 'CLASSIFY' DEF</code></pre>
+
+<p>A data array <code>[ ... ]</code> is not accepted as a definition body; defining a word from data is reserved for a future data-to-code conversion word.</p>
+
+<h3 id="82-rules">8.2 Rules</h3>
+
+<ul>
+<li>User words are stored per active dictionary (namespace).</li>
+<li>Built-in words cannot be redefined.</li>
+<li>A user word that has active dependents requires the force modifier <code>!</code> to be redefined.</li>
+<li>Dependencies are tracked automatically at definition time.</li>
+</ul>
+
+<h3 id="83-deletion-syntax">8.3 Deletion syntax</h3>
+
+<pre><code>'NAME' DEL
+'DICT@NAME' DEL</code></pre>
+
+<p>Deletes a user word. The force modifier <code>!</code> is required if other words depend on the word being deleted.</p>
+
+<p><code>DEL</code> never destroys module dictionaries or module words. To remove module words from the current vocabulary, use <code>UNIMPORT</code> or <code>UNIMPORT-ONLY</code>; the module dictionary remains cached as the definition source.</p>
+
+<h3 id="84-recursion">8.4 Recursion</h3>
+
+<p>User words may call themselves or other user words recursively. There is no hard-coded call-depth limit as a language semantic rule.</p>
+
+<h3 id="85-naming-conventions">8.5 Naming conventions</h3>
+
+<p>Word names follow action-object convention (e.g. <code>APPLY-GAIN</code> and <code>RESOLVE-PATH</code>). The runtime emits a warning for:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Warned form</th><th>Names</th></tr>
+</thead>
+<tbody>
+<tr><td>Ambiguous prefixes</td><td><code>DO-</code> <code>HANDLE-</code> <code>PROCESS-</code> <code>MANAGE-</code> <code>UTIL-</code> <code>HELPER-</code></td></tr>
+<tr><td>Ambiguous standalone names</td><td><code>CALC</code> <code>RUN</code> <code>EXEC2</code> <code>TEMP</code> <code>MAIN</code> <code>TEST</code> <code>STUFF</code> <code>THING</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Acceptable forms: <code>IS-*</code> and <code>HAS-*</code> predicates; hyphen-separated action-object names; short unambiguous names (6 characters or fewer).</p>
+
+<h2 id="9-module-system">9. Module System</h2>
+
+<h3 id="91-available-modules">9.1 Available modules</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Module</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>MUSIC</code></td><td>Audio sequencing and synthesis</td></tr>
+<tr><td><code>JSON</code></td><td>JSON parsing, generation, and manipulation</td></tr>
+<tr><td><code>IO</code></td><td>Standard input/output</td></tr>
+<tr><td><code>TIME</code></td><td>Exact, timezone-free date/time values (instant, datetime, date, time); timezone is supplied only at instant↔civil conversion as a UTC offset in hours</td></tr>
+<tr><td><code>CRYPTO</code></td><td>Cryptographically secure random and hash</td></tr>
+<tr><td><code>ALGO</code></td><td>Sorting and other deterministic algorithms</td></tr>
+<tr><td><code>MATH</code></td><td>Square root, exact-rational interval arithmetic, and scalar utilities (<code>ABS</code> <code>NEG</code> <code>SIGN</code> <code>MIN</code> <code>MAX</code> <code>POW</code> <code>GCD</code> <code>LCM</code>)</td></tr>
+<tr><td><code>SERIAL</code></td><td>Host-mediated serial port output</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="92-import-and-unimport-syntax">9.2 Import and unimport syntax</h3>
+
+<pre><code>'MODULE-NAME' IMPORT
+'MODULE-NAME' [ 'WORD1' 'WORD2' ] IMPORT-ONLY
+'MODULE-NAME' UNIMPORT
+'MODULE-NAME' [ 'WORD1' 'WORD2' ] UNIMPORT-ONLY</code></pre>
+
+<p><code>IMPORT</code> loads all public words from a module into the current vocabulary. <code>IMPORT-ONLY</code> loads only the specified module words or sample words.</p>
+
+<p><code>UNIMPORT</code> hides unreferenced imported words from the current vocabulary without deleting the module dictionary. If a user word references a module word or module sample word, <code>UNIMPORT</code> keeps that referenced item visible and shrinks the module import to an explicit partial-import state.</p>
+
+<p><code>UNIMPORT-ONLY</code> hides only the specified module words or sample words. It fails if a selected item is referenced by a user word; use dictionary-level <code>UNIMPORT</code> when the desired operation is to clean up unused module imports while preserving referenced items.</p>
+
+<p>Selectors that name Core words merely listed in a module view are no-ops for <code>IMPORT-ONLY</code> and <code>UNIMPORT-ONLY</code>, because Core words are always available and cannot be imported or unimported through a module.</p>
+
+<h3 id="93-module-provided-sample-words">9.3 Module-provided sample words</h3>
+
+<p>Modules may provide sample words for demonstration. Sample words are part of the module dictionary for import visibility: they can be introduced with <code>IMPORT</code> or <code>IMPORT-ONLY</code> and hidden with <code>UNIMPORT</code> or <code>UNIMPORT-ONLY</code>, but they are not destructively deleted with <code>DEL</code>.</p>
+
+<h3 id="94-serial-module-host-mediated-serial-output">9.4 SERIAL module (host-mediated serial output)</h3>
+
+<p>The <code>SERIAL</code> module exposes a serial port to Ajisai programs. Serial access is a property of the host environment, not of the runtime: the runtime never opens, writes, reads, or closes a port itself. Outbound words are effectful and produce a single host command at the IO/semantic boundary (Section 5.2); the host environment consumes that command and performs the actual port operation. The serial transport itself (a browser Web Serial implementation, a native serial backend, or none) is a host capability outside this specification. The absence of a serial-capable host is an environment condition, not a language semantic error.</p>
+
+<p>A serial connection is identified by an <strong>opaque port-id text value</strong> that the host environment assigns when the user grants access. Programs treat the port id as a connection handle and thread it along the stack. The port id is <code>Text</code>; the runtime does not interpret its contents.</p>
+
+<p><strong>Receive model.</strong> Inbound data is delivered to a program through a per-run <em>receive buffer</em> (inbox). The host environment injects the bytes received on each open port before a run begins; <code>READ</code> drains the inbox for a port. A run therefore observes exactly the bytes that arrived since the previous run — an event-poll model, not a blocking read. Within a single run the inbox is fixed, so a run is deterministic with respect to its injected input. Each <code>READ</code> consumes the buffered bytes for its port; a subsequent <code>READ</code> in the same run with no further data projects <code>noData</code> (Section 11.2).</p>
+
+<p>The module provides the following words:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Word</th><th>Stack effect</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>LIST-PORTS</code></td><td><code>--</code></td><td>Request host enumeration of available ports</td></tr>
+<tr><td><code>OPEN</code></td><td><code>port-id -- port-id</code></td><td>Open the named port; the port id remains on the stack as the connection handle</td></tr>
+<tr><td><code>CONFIGURE</code></td><td><code>port-id baud-rate -- port-id</code></td><td>Set the baud rate of an open port</td></tr>
+<tr><td><code>WRITE</code></td><td><code>port-id bytes -- port-id</code></td><td>Send a byte vector (each element an integer <code>0</code>–<code>255</code>) to an open port</td></tr>
+<tr><td><code>READ</code></td><td><code>port-id -- bytes</code></td><td>Drain the port's receive buffer, returning a byte vector; Bubble/NIL when none is available</td></tr>
+<tr><td><code>FLUSH</code></td><td><code>port-id -- port-id</code></td><td>Flush the port's outgoing data</td></tr>
+<tr><td><code>CLOSE</code></td><td><code>port-id --</code></td><td>Close the port and release the connection</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Contract classification (Section 7.14): every <code>SERIAL</code> word has <code>purity = Effectful</code> and <code>deterministic = false</code> and <code>safe_preview = false</code> and <code>safety_level = D</code>. The outbound words (<code>LIST-PORTS</code> <code>OPEN</code> <code>CONFIGURE</code> <code>WRITE</code> <code>FLUSH</code> <code>CLOSE</code>) are <code>partiality = Partial</code> with <code>nil_policy = RejectsNil</code>. <code>READ</code> is <code>partiality = Projecting</code> with <code>nil_policy = CreatesNil</code>: it projects the no-data and disconnected conditions onto Bubble/NIL. Because they drive or observe external hardware, <code>SERIAL</code> words are never eligible for speculative reordering, caching, or <code>safe_preview</code> execution.</p>
+
+<p>Misuse raises an error rather than producing Bubble/NIL (Section 11.2 "malformed use → error"): a non-text port id, a byte outside <code>0</code>–<code>255</code>, a non-positive baud rate, or a missing operand raises <code>StructureError</code> or <code>StackUnderflow</code>. For <code>READ</code>, the absence of data is a well-formed outcome, not misuse: with no buffered bytes it projects Bubble/NIL with <code>reason = noData</code> — or <code>reason = portDisconnected</code> when the host has reported the port gone. The host-side outcome of a well-formed outbound command (for example a device that is physically disconnected) is reported through the host environment and does not change the runtime stack effect of the word.</p>
+
+<h3 id="95-io-module-host-mediated-standard-inputoutput">9.5 IO module (host-mediated standard input/output)</h3>
+
+<p>The <code>IO</code> module (Section 9.1) provides host-mediated textual standard input and output. Like <code>SERIAL</code>, these words act only at the IO/semantic boundary (Section 5.2): the runtime does not perform the I/O itself; the host environment supplies the input buffer and consumes the output buffer.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Word</th><th>Stack effect</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>INPUT</code></td><td><code>-&gt; [ text ]</code></td><td>Read text from the host input buffer (observable host ingress)</td></tr>
+<tr><td><code>OUTPUT</code></td><td><code>[ value ] -&gt;</code></td><td>Write a value to the host output buffer (effectful host egress)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>IO@INPUT</code> is <code>purity = Observable</code> (it reads external host state); <code>IO@OUTPUT</code> is <code>purity = Effectful</code>. Both are imported and resolved like any other module word (via <code>IMPORT 'IO'</code>, or in qualified form as <code>IO@INPUT</code> and <code>IO@OUTPUT</code>). The Canonical Core word <code>PRINT</code> (Section 7.9) is boundary-listed in the <code>IO</code> view but is not the same word as <code>IO@OUTPUT</code>.</p>
+
+<h2 id="10-child-runtime">10. Child Runtime</h2>
+
+<h3 id="101-overview">10.1 Overview</h3>
+
+<p>A child runtime is an isolated interpreter instance spawned from a code block. At spawn time, the child receives a snapshot of the parent dictionary. The child does not share the parent's stack or dictionary during execution. Parent and child are isolated.</p>
+
+<h3 id="102-child-states">10.2 Child states</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>State</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>running</code></td><td>Currently executing</td></tr>
+<tr><td><code>completed</code></td><td>Finished normally</td></tr>
+<tr><td><code>failed</code></td><td>Terminated with an error</td></tr>
+<tr><td><code>killed</code></td><td>Terminated by <code>KILL</code></td></tr>
+<tr><td><code>timeout</code></td><td>Step limit exceeded</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="103-spawn">10.3 SPAWN</h3>
+
+<p>Accepts a code block from the stack. Starts the child runtime. Pushes a ProcessHandle.</p>
+
+<h3 id="104-await">10.4 AWAIT</h3>
+
+<p>Accepts a ProcessHandle. Blocks until the child finishes. Pushes <code>[status result-stack]</code> where <code>status</code> is a string and <code>result-stack</code> is a vector of the child's final stack values.</p>
+
+<h3 id="105-status">10.5 STATUS</h3>
+
+<p>Accepts a ProcessHandle. Returns the current state as a string without blocking.</p>
+
+<h3 id="106-kill">10.6 KILL</h3>
+
+<p>Accepts a ProcessHandle. Terminates the child runtime immediately.</p>
+
+<h3 id="107-monitor-and-supervise">10.7 MONITOR and SUPERVISE</h3>
+
+<p><code>MONITOR</code> marks a child runtime for observation. <code>SUPERVISE</code> creates a SupervisorHandle that manages a group of child runtimes.</p>
+
+<h2 id="11-error-model">11. Error Model</h2>
+
+<h3 id="111-user-level-error-categories">11.1 User-level error categories</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Error</th><th>Trigger condition</th></tr>
+</thead>
+<tbody>
+<tr><td><code>StackUnderflow</code></td><td>Insufficient values on the stack for the operation</td></tr>
+<tr><td><code>StructureError</code></td><td>Value type does not match what the operation requires</td></tr>
+<tr><td><code>UnknownWord</code></td><td>Referenced word is not defined in any accessible dictionary</td></tr>
+<tr><td><code>UnknownModule</code></td><td>Referenced module is not available</td></tr>
+<tr><td><code>DivisionByZero</code></td><td>Divisor is zero</td></tr>
+<tr><td><code>IndexOutOfBounds</code></td><td>Index is outside the valid range of the vector</td></tr>
+<tr><td><code>VectorLengthMismatch</code></td><td>Operation requires equal-length vectors but lengths differ</td></tr>
+<tr><td><code>ExecutionLimitExceeded</code></td><td>Step budget exhausted</td></tr>
+<tr><td><code>ModeUnsupported</code></td><td>The modifier combination is not supported for this word</td></tr>
+<tr><td><code>BuiltinProtection</code></td><td>Attempt to redefine or delete a built-in word</td></tr>
+<tr><td><code>CondExhausted</code></td><td>COND expression has no matching clause</td></tr>
+<tr><td><code>Custom</code></td><td>Explicit error raised by user code</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="112-bubble-rule">11.2 Bubble Rule</h3>
+
+<p>The Bubble Rule is the user-level failure model for well-formed partial operations:</p>
+
+<blockquote><p>If an operation is well-formed but cannot produce a value, it produces a Bubble/NIL with a reason. If the operation is malformed, it raises an error.</p></blockquote>
+
+<p>In Japanese user-facing guidance this is summarized as: 「できなかった → 泡 / そもそも使い方が違う → エラー」. Internally, Bubble/NIL is represented by <code>Value::Nil</code> with <code>AbsenceMetadata</code> and a direct <code>NilReason</code>. A malformed operation raises an ordinary error, which propagates rather than becoming a value.</p>
+
+<p>Initial Core words following this rule include:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Word</th><th>Bubble/NIL case</th><th>Error case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DIV</code> (<code>/</code>)</td><td>Division by zero (<code>NilReason::DivisionByZero</code>); divisor indistinguishable from zero within the comparison budget (<code>NilReason::Undecidable</code>)</td><td>Non-numeric operands or malformed shapes</td></tr>
+<tr><td><code>GET</code></td><td>Valid vector target with an out-of-range index (<code>NilReason::IndexOutOfBounds</code>)</td><td>Non-vector target or non-numeric index</td></tr>
+<tr><td><code>NUM</code></td><td>Text cannot be parsed as a number (<code>NilReason::InvalidEncoding</code>)</td><td>Input shape is not convertible text</td></tr>
+<tr><td><code>CHR</code></td><td>Numeric code point is outside the valid Unicode scalar range (<code>NilReason::InvalidEncoding</code>)</td><td>Operand is not numeric, or numeric operand is not an integer</td></tr>
+<tr><td><code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code></td><td>None: budget exhaustion on lazy continued fractions yields the truth value <code>unknown</code> (U), a <code>TruthValue</code> result, not a Bubble/NIL (Section 7.4.1). These words still pass NIL operands through (Section 7.12).</td><td>Non-numeric operands or malformed shapes</td></tr>
+<tr><td><code>SERIAL@READ</code></td><td>Receive buffer empty (<code>NilReason::NoData</code>); host reported the port disconnected with no remaining data (<code>NilReason::PortDisconnected</code>); both with <code>absence.origin = hostEnvironment</code> (Section 9.4)</td><td>Non-text port id, or a missing operand</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><code>VENT</code> (<code>^</code>) replaces Bubble/NIL with a fallback value. Existing NIL passthrough behavior preserves the reason as Bubble/NIL flows through later operations.</p>
+
+<h3 id="113-equal-value-output">11.3 Equal-value output</h3>
+
+<p>Operations that produce a value equal to their input are successful. Equal-value output is not an error.</p>
+
+<h3 id="114-error-propagation">11.4 Error propagation</h3>
+
+<p>Ajisai has no modifier or mode that converts a raised error into a value. A malformed operation (Section 11.2) raises an error that propagates to the top level and halts the current evaluation; it is never projected onto NIL. Partial failure of a <em>well-formed</em> operation is handled entirely by the Bubble Rule (Section 11.2), which produces a reasoned Bubble/NIL that downstream NIL-passthrough words (Section 7.12) carry without raising, so a pipeline can end with a single <code>VENT</code> (<code>^</code>) fallback. The distinction is deliberate: "could not produce a value" becomes a bubble, while "used incorrectly" stays an error.</p>
+
+<h2 id="12-semantic-plane">12. Semantic Plane</h2>
+
+<h3 id="121-purpose">12.1 Purpose</h3>
+
+<p>The semantic plane holds an <strong>interpretation role</strong> for each stack position. A role is the meaning the runtime assigned to a value, not a formatting switch: rendering for both humans and AI is a pure function of <code>(data, role)</code>. The semantic plane is separate from the data plane and does not influence computation.</p>
+
+<h3 id="122-interpretation-roles">12.2 Interpretation roles</h3>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Role</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Unassigned</code></td><td>No role has been assigned. The value is rendered in its raw structural form. The runtime never infers a richer meaning (such as "string-like") at render time; interpretation is decided once, at construction.</td></tr>
+<tr><td><code>RawNumber</code></td><td>A plain number. A rational scalar renders as a reduced <code>numerator/denominator</code>, integers included (<code>3</code> renders as <code>3/1</code>). There is no decimal surface form and no per-value style: the display is uniform and matches the exact-real internal model.</td></tr>
+<tr><td><code>ContinuedFraction</code></td><td>Display a numeric scalar as the nested right-associative continued-fraction form <code>( a0 ( a1 ( a2 ... )))</code> (Section 4.2.3); lazy CFs render with a <code>...)</code> truncation marker</td></tr>
+<tr><td><code>Interval</code></td><td>A 2-element vector interpreted as the closed interval [<em>lo</em>, <em>hi</em>]</td></tr>
+<tr><td><code>Text</code></td><td>A codepoint sequence interpreted as text</td></tr>
+<tr><td><code>TruthValue</code></td><td>A three-state truth value drawn from the truth domain of Section 7.5. The definite states <code>true</code> and <code>false</code> are carried by a Boolean value (Section 4.1) — a distinct value kind, not a number; the third state <code>unknown</code> (U) is the logical-undecidability value of Section 7.4.1. Observed through the <code>truthValue</code> axis (protocol strings <code>true</code> <code>false</code> <code>unknown</code> — Section 2.3); carries the <code>truthValued</code> capability. Displays as <code>TRUE</code> or <code>FALSE</code> or <code>UNKNOWN</code> (display-only, non-canonical). How U is represented internally is not observable.</td></tr>
+<tr><td><code>Timestamp</code></td><td>An integer interpreted as a formatted datetime</td></tr>
+<tr><td><code>Nil</code></td><td>A diagnostic absence value, displayed as <code>NIL</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Interpretation roles are applied only at explicit semantic boundaries: rendering, <code>PRINT</code>, and module-level output operations. A value's role and the surface style of any literal that produced it are independent: surface literal forms (Section 3.2) are convenience input syntax and are never retained as display state. Two values are displayed identically whenever their data and role are equal.</p>
+
+<p>The <code>ContinuedFraction</code> role is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this role; the <code>RawNumber</code> role may lose information for lazy irrationals.</p>
+
+<h2 id="13-fractional-dataflow-internal-invariants">13. Fractional-Dataflow Internal Invariants</h2>
+
+<h3 id="131-static-mass-conservation">13.1 Static Mass Conservation</h3>
+
+<p>Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior: arity, consumption, and production are carried by the <code>mass</code> contract field (Section 7.14), bifurcation by the <code>KEEP</code> modifier (Section 13.2), and NIL-projection by <code>nil_policy</code>. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.</p>
+
+<p>The ordinary runtime must not maintain per-value <code>FlowToken</code> objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes. A word whose <code>mass</code> is <code>Dynamic</code> has a data-dependent arity that the static validator does not certify; flows through such words are validated only up to that point.</p>
+
+<h3 id="132-bifurcation">13.2 Bifurcation</h3>
+
+<p>The <code>,,</code> (keep/bifurcation) modifier retains source context while also pushing the result. Its mass relationship is specified by the relevant Coreword Contract and is statically checked with the surrounding flow. Runtime execution only performs the value-level stack effects that the contract has already proven.</p>
+
+<h2 id="14-ai-first-implementation-rules">14. AI-first Implementation Rules</h2>
+
+<h3 id="141-mandatory">14.1 Mandatory</h3>
+
+<ul>
+<li>Prefer explicit, structurally searchable function and module names.</li>
+<li>Keep Rust source files under 500 lines.</li>
+<li>Keep control flow shallow and phase-separated.</li>
+<li>Separate semantic changes from structural cleanup in change management.</li>
+<li>Maintain single canonical implementations; do not allow dual-mode drift.</li>
+<li>Source code comments are allowed when they clarify intent, invariants, traceability, or non-obvious behavior. When source code is changed, nearby comments must be reviewed and updated so they remain accurate. Comments that merely restate obvious code should be avoided.</li>
+</ul>
+
+<h3 id="142-advisory">14.2 Advisory</h3>
+
+<ul>
+<li>Prefer small helper extraction for duplicated control scaffolding.</li>
+<li>Prefer deterministic, low-ambiguity error classification.</li>
+<li>Prefer mechanically enforceable tests over narrative documentation.</li>
+</ul>
+
+<h2 id="15-test-discipline">15. Test Discipline</h2>
+
+<h3 id="151-per-coreword-contract-coverage">15.1 Per-Coreword contract coverage</h3>
+
+<p>For each Coreword, the test suite must exercise:</p>
+
+<ul>
+<li>inputs that satisfy <code>requires</code> (success path)</li>
+<li>inputs that violate <code>requires</code> (failure path)</li>
+<li>the documented <code>nil_policy</code> (NIL passthrough or NIL creation, as appropriate)</li>
+<li>the documented <code>partiality</code> (every error category in the partial case; the projection target in the projecting case)</li>
+<li>effect-boundary expectations from <code>purity</code> (e.g. effectful words must not be reachable in <code>safe_preview</code>)</li>
+</ul>
+
+<h3 id="152-nil-reason-coverage">15.2 NIL reason coverage</h3>
+
+<p>Every NIL-producing path must have at least one test that asserts both the surface NIL and the structured <code>absence</code> metadata. Tests must verify protocol strings, not Rust <code>Debug</code> output.</p>
+
+<h3 id="153-mcdc-style-coverage-for-compound-decisions">15.3 MC/DC-style coverage for compound decisions</h3>
+
+<p>Words whose behavior depends on more than one independent condition (e.g. <code>/</code> decides on left-operand validity, right-operand validity, right-operand zero-ness, and NIL-passthrough applicability) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.</p>
+
+<p>The three-valued logic words (<code>AND</code> <code>OR</code> <code>NOT</code> — Section 7.5) must cover every cell of the K3 truth tables — <code>AND</code> and <code>OR</code> over the nine {T, F, U}² combinations, <code>NOT</code> over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding <code>unknown</code> (U), and distinct irrationals deciding at a finite prefix.</p>
+
+<p><code>COMPARE-WITHIN</code> (Section 7.4.2) must cover: each decided sign (<code>-1</code> <code>0</code> <code>1</code>); the budget-undecided case yielding <code>unknown</code> with <code>diagnosis.agreedPrefix</code> equal to the consumed <code>budget</code>; finite operands deciding regardless of <code>budget</code>; the same lazy-irrational pair deciding at a large <code>budget</code> but yielding U at a small <code>budget</code>; NIL operand passthrough; and the malformed-<code>budget</code> / non-numeric-operand error paths.</p>
+
+<p>NICF-accelerated comparison (Section 7.4.1.1) must cover: (i) a reference set of decided comparisons producing an identical <code>truthValue</code> whether reasoned about via the RCF or computed via the NICF expansion — across <code>Rational</code> and <code>AlgebraicSqrt</code> and <code>Gosper</code> operands — so the acceleration never changes a decided order; (ii) <code>agreedPrefix</code> being monotone non-decreasing in the budget under NICF; and (iii) the normative tie-break of Section 4.2.5 yielding the specified semiregular digit on the singular <code>1/2</code>-remainder cases, including the round-half-down boundary.</p>
+
+<p>The propagation of U through comparison-dependent words (Section 7.4.3) must cover, for <code>MIN</code> and <code>MAX</code>: a decided comparison selecting the correct operand; an undecidable comparison yielding <code>unknown</code> with <code>diagnosis.agreedPrefix</code>; NIL-operand passthrough with NIL taking priority over a U-producing comparison; and the sequence-form short-circuit on the first undecidable pair. For <code>SORT</code>: a fully-decidable input (notably any vector of rationals) sorting to ascending order; an input with at least one undecidable pair yielding <code>unknown</code> for the whole result (never a partially-sorted vector) carrying <code>diagnosis.agreedPrefix</code>; and NIL handling. For <code>COND</code>: a definite-<code>true</code> guard firing its clause; a U guard <strong>not</strong> firing and falling through to the next clause; a U guard before a later definite-<code>true</code> guard selecting the later clause; and a U guard with no other match reaching the <code>IDLE</code> else clause, or <code>CondExhausted</code> when none exists.</p>
+
+<h2 id="16-conformance-checklist">16. Conformance Checklist</h2>
+
+<p>A change is conformant only if all of the following hold:</p>
+
+<ol>
+<li>It does not introduce a second design authority.</li>
+<li>It does not treat equal-value output as a runtime error.</li>
+<li>It does not impose hard-coded call-depth limits as language semantics.</li>
+<li>It preserves data-plane/semantic-plane separation.</li>
+<li>It keeps vector/tensor staged pipeline boundaries explicit.</li>
+<li>It improves or preserves AI-first structural clarity.</li>
+<li>Every built-in word (Core or module) introduced or renamed has an English-word-based canonical name; any symbolic form is registered as syntactic sugar that maps to that canonical name.</li>
+<li>Every introduced or modified Coreword has a contract entry covering <code>partiality</code> and <code>nil_policy</code> and <code>safety_level</code> (Section 7.14).</li>
+<li>Every NIL-producing path attaches appropriate structured <code>absence</code> metadata (Section 4.5.0).</li>
+<li>Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.</li>
+<li>Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion in the comparison words produces the truth value <code>unknown</code> (U) rather than an error or a non-deterministic answer (Section 7.4.1).</li>
+<li>Source text contains no <code>(</code> or <code>)</code> outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).</li>
+</ol>
+
+<h2 id="appendix-a-gates-and-water-levels-non-normative-index">Appendix A. Gates and Water Levels (non-normative index)</h2>
+
+<p>This appendix is <strong>non-normative</strong>. It introduces no new rules, types, words, or protocol fields. It is a vocabulary index that maps the water metaphor used in user-facing material onto the normative mechanisms already defined above. Where this appendix and any numbered section disagree, the numbered section governs.</p>
+
+<p>Ajisai does not have a global "safe mode" that wraps evaluation. Ordinary value flow is <strong>safe by design</strong>: a well-formed operation that cannot produce a value yields a Bubble/NIL (Section 11.2), an observation that cannot decide a truth value yields the logical <code>Unknown</code> (Stagnation; Sections 4.5.2, 7.4.1), and a malformed use raises a channel error (Section 11.1). A raised channel error propagates and halts the current evaluation; Ajisai has no modifier or mode that converts an error into a value (Section 11.4).</p>
+
+<p>Two further families of controls complete the metaphor:</p>
+
+<p><strong>Gates — where flow may cross a boundary.</strong> A gate controls whether flow may cross a trust or effect boundary. Gates are not a new subsystem; they are the existing boundaries:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Gate (vocabulary)</th><th>Direction</th><th>Normative mechanism</th></tr>
+</thead>
+<tbody>
+<tr><td>Host effects (serial, future IO)</td><td>outward</td><td>IO/semantic boundary; effects are emitted as host commands and the host performs them; absence of a capable host is an environment condition, not a semantic error (Sections 5.2, 9.4)</td></tr>
+<tr><td>Module dictionary import</td><td>inward</td><td><code>IMPORT</code> <code>IMPORT-ONLY</code> <code>UNIMPORT</code> visibility control and dependency tracking across the Core, Module, and User boundary (Sections 7, 9)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Water Levels — how much flow may run.</strong> A water level bounds the amount of work or expansion. These are the existing budgets and limits:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Water Level (vocabulary)</th><th>Normative mechanism</th><th>Outcome on reaching the level</th></tr>
+</thead>
+<tbody>
+<tr><td>Evaluation step budget</td><td>step limit, default 100,000 (Section 5.3)</td><td>raises <code>ExecutionLimitExceeded</code> (Section 11.1)</td></tr>
+<tr><td>Comparison and observation depth</td><td>comparison budget (Section 7.4.1); explicitly via <code>COMPARE-WITHIN</code> (Section 7.4.2)</td><td>yields the logical <code>Unknown</code> (U, Stagnation), <strong>not</strong> a Bubble/NIL (Sections 4.5.2, 7.4.3)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The defining distinction of Section 4.5.2 is preserved by this vocabulary: a gate refusal or a step-budget exhaustion is an operational or environment condition, whereas an exhausted comparison budget is a <em>logical</em> <code>Unknown</code>, never an operational absence.</p>
+
+<h2 id="portability-profiles">Portability Profiles</h2>
+
+<h3 id="core-profile">Core Profile</h3>
+
+<p>Host-independent semantics only: tokenization, vector evaluation, exact arithmetic, vectors, code blocks, the higher-order words (<code>MAP</code> <code>FILTER</code> <code>FOLD</code>), NIL and the logical Unknown, user definitions.</p>
+
+<h3 id="hosted-profile">Hosted Profile</h3>
+
+<p>Words requiring host capabilities: <code>NOW</code> <code>CSPRNG</code> and the <code>SERIAL</code> module, audio, JSON export, persistence, file I/O.</p>
+
+<h3 id="platform-profile">Platform Profile</h3>
+
+<p>Concrete runtime bindings: Web/WASM, Tauri, CLI, WASI, native desktop.</p>
+
+<h2 id="conformance-and-identity">Conformance and Identity</h2>
+
+<p>An implementation is an Ajisai implementation if and only if it passes the conformance suite (tests/conformance/). The suite defines, language-independently, the correspondence between Ajisai source programs and their observable results, including the ordered sequence of host effects. This correspondence is the phenomenon of Ajisai; everything not fixed by the suite is implementation freedom.</p>
+
+</main>
+</body>
+</html>

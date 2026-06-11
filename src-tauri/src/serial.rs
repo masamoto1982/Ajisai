@@ -1,6 +1,6 @@
 //! Native serial backend for the Tauri desktop channel (Phase 3).
 //!
-//! Mirrors the Web Serial adapter's contract (see SPECIFICATION.md §9.4 and
+//! Mirrors the Web Serial adapter's contract (see SPECIFICATION.html §9.4 and
 //! `docs/dev/web-serial-module-design.md`): the Ajisai WASM core stays
 //! platform-agnostic and only emits `SERIAL:` commands / drains an injected
 //! inbox. Here those commands are fulfilled with the `serialport` crate, and a

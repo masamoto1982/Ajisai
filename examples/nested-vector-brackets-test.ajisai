@@ -1,6 +1,6 @@
 // Test: Nested Vector Bracket Normalization
 // Purpose: Verify that vector input bracket types are normalized and display always uses [ ].
-// Notes (post SPECIFICATION.md 2026-05-13):
+// Notes (post SPECIFICATION.html 2026-05-13):
 // - The only valid vector bracket pair in Ajisai source is [ ].
 // - { } delimits a code block (Section 3.4).
 // - ( ) is not valid in Ajisai source (Section 3.4); it is reserved for the

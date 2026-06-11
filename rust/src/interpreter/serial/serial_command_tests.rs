@@ -96,7 +96,7 @@ async fn open_underflow_errors() {
     assert!(result.is_err(), "OPEN with empty stack must underflow");
 }
 
-// Conformance with SPECIFICATION.md §9.4 / §7.14: every SERIAL word is an
+// Conformance with SPECIFICATION.html §9.4 / §7.14: every SERIAL word is an
 // effectful, partial, NIL-rejecting, safety-D hardware word that is never
 // deterministic or safe-preview eligible.
 #[test]
