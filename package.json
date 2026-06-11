@@ -28,7 +28,8 @@
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "simplify:report": "node scripts/ajisai-simplify-report.mjs",
-    "primitive:test-map": "node scripts/generate-primitive-test-map.mjs"
+    "primitive:test-map": "node scripts/generate-primitive-test-map.mjs",
+    "vendor:katex": "rm -rf public/vendor/katex && mkdir -p public/vendor/katex/contrib public/vendor/katex/fonts && cp node_modules/katex/dist/katex.min.css node_modules/katex/dist/katex.min.js public/vendor/katex/ && cp node_modules/katex/dist/contrib/auto-render.min.js public/vendor/katex/contrib/ && cp node_modules/katex/dist/fonts/*.woff2 public/vendor/katex/fonts/"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
@@ -36,6 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "eslint": "^10.4.1",
+    "katex": "^0.17.0",
     "ts-prune": "^0.10.3",
     "typescript": "^5.3.3",
     "vite": "^5.0.0",

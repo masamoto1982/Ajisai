@@ -17,6 +17,10 @@
       - Ajisai のトークンは必ず <code> で囲む（灰色背景 = Ajisai チャネル）。
       - 期待値はサンプル表の Expected value 列に置く（行内コメント矢印は使わない）。
       - Expected value は conformance スイートと同じ観測（最終スタックの表示文字列）。
+      - 数式は LaTeX として KaTeX（自己ホスト: ../vendor/katex/）で組版する。
+        区切りはインライン \( ... \)・ディスプレイ \[ ... \] のみ。$ 区切りは
+        Ajisai トークン（COND 節区切り）と衝突するため使わない。code/pre は
+        スキャン対象外なので Ajisai チャネルが数式描画に巻き込まれることはない。
     -->
     <style>
         :root {
@@ -385,6 +389,19 @@
             .ref-nav { padding: 1.25rem 1rem; }
         }
     </style>
+
+    <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4). -->
+    <link rel="stylesheet" href="../vendor/katex/katex.min.css">
+    <script defer src="../vendor/katex/katex.min.js"></script>
+    <script defer src="../vendor/katex/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                throwOnError: false
+            });"></script>
 </head>
 <body>
     <header class="ref-header">
@@ -591,7 +608,7 @@
                                 <tr>
                                     <td><code>'math' IMPORT 2 SQRT 2 LT</code></td>
                                     <td><code>TRUE</code></td>
-                                    <td class="notes">An irrational like √2 is a lazy continued fraction; comparisons against it are computed exactly.</td>
+                                    <td class="notes">An irrational like \(\sqrt{2}\) is a lazy continued fraction; comparisons against it are computed exactly.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -840,7 +857,7 @@
                                 <tr>
                                     <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</code></td>
                                     <td><code>UNKNOWN</code></td>
-                                    <td class="notes">√2 − √2 cannot be told apart from 0 within the comparison budget, so the honest answer is the third truth value.</td>
+                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\) cannot be told apart from 0 within the comparison budget, so the honest answer is the third truth value.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -859,7 +876,7 @@
                                 <tr>
                                     <td><code>5 3 10 COMPARE-WITHIN</code></td>
                                     <td><code>1/1</code></td>
-                                    <td class="notes">Three-way compare with an explicit budget: the sign of a − b, or <code>UNKNOWN</code> if undecided within the budget.</td>
+                                    <td class="notes">Three-way compare with an explicit budget: the sign of \(a - b\), or <code>UNKNOWN</code> if undecided within the budget.</td>
                                 </tr>
                             </tbody>
                         </table>
