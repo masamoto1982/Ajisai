@@ -52,7 +52,7 @@ Because a formula and an Ajisai snippet share glyphs (`/` is both a division bar
 Rules for the mathematics channel:
 
 1. **Do not put mathematics in the gray Ajisai code span.** That background belongs to Ajisai tokens; sharing it destroys the signal of Section 3.
-2. **Do not use `$…$` / `$$…$$` math delimiters — on any surface.** `$` is itself an Ajisai token (the `COND` clause separator, Section 3 of the specification), so the delimiter collides with the very language being described. This bans only the dollar **delimiters**, not LaTeX: the HTML surfaces typeset LaTeX through KaTeX using backslash delimiters (Section 4.1), and `\` is not an Ajisai token, so those delimiters collide with nothing.
+2. **Use the delimiters of the surface.** The HTML surfaces typeset LaTeX through KaTeX using backslash delimiters — `\(…\)` inline, `\[…\]` display (Section 4.1); `\` is not an Ajisai token, so those delimiters collide with nothing. Markdown surfaces may use the `$…$` / `$$…$$` delimiters their renderers support (Section 4.2): since the `COND` clause separator moved from `$` to `|`, `$` is no longer an Ajisai token and the historical collision is gone. (`|` **is** now an Ajisai token — see Sections 6 and 8.)
 3. **Set display formulas off from prose** in their own block, the way the specification writes the continued-fraction forms.
 4. **A glyph shared by both channels is disambiguated by channel alone.** When the same expression is shown both as mathematics and as the Ajisai that realizes it, present them as two distinct things — for example a math display beside an Ajisai snippet, or two columns — never blended into one run of text.
 
@@ -65,7 +65,7 @@ The specification (`SPECIFICATION.html`) and the Reference (`public/docs/`) type
 | Aspect | Rule |
 |--------|------|
 | Delimiters | inline `\(…\)` · display `\[…\]` — nothing else |
-| Dollar delimiters | never configured, never used (`$` is the `COND` clause separator) |
+| Dollar delimiters | not configured on the HTML surfaces; one delimiter pair per surface keeps scanning deterministic |
 | Library | KaTeX with its auto-render extension, **self-hosted** at `public/vendor/katex/` — no CDN, matching the repository's no-external-services stance |
 | Refreshing the vendored copy | `npm run vendor:katex` (copies from the `katex` devDependency; woff2 fonts only) |
 | Ajisai channel exclusion | auto-render is configured with `ignoredTags` covering `code` and `pre`, so the gray Ajisai channel is structurally unreachable by math rendering — the channel separation is enforced by tooling, not just by discipline |
@@ -75,9 +75,12 @@ The specification (`SPECIFICATION.html`) and the Reference (`public/docs/`) type
 
 The LaTeX source inside the HTML is part of the artifact: it must state exactly the mathematics intended, because machine readers consume the source, not the rendering.
 
-### 4.2 Markdown surfaces stay Unicode text
+### 4.2 Markdown surfaces use GitHub math
 
-The README and the `docs/dev/` working documents are Markdown and get no KaTeX runtime. There, mathematics stays as Unicode text math (`≤`, `≥`, `∈`, `→`, `√`, `ε`, subscript digits) set off from prose. GitHub's own `$…$` Markdown math is **not** used, per rule 2 above. Heavy mathematics belongs on the HTML surfaces anyway (three-layer model); if a Markdown document accumulates formulas that suffer from the Unicode limitation, that is a sign the content belongs in the specification or the Reference.
+The README and the `docs/dev/` working documents are Markdown and get no KaTeX runtime, but GitHub renders `$…$` (inline) and `$$…$$` (display) LaTeX natively. Use it: with the `COND` clause separator moved from `$` to `|`, the dollar sign is no longer an Ajisai token and the historical collision is gone. Two cautions remain:
+
+- **Code spans win.** An Ajisai snippet containing `|` (or any other token) is always inside `` `…` ``, where Markdown math does not reach — the channel rule of Section 3 already guarantees this.
+- **Unicode text math is still acceptable** for a stray `≤` or `√` in running prose where a full math span would be noise. Heavy mathematics belongs on the HTML surfaces anyway (three-layer model); if a Markdown document accumulates formulas, that is a sign the content belongs in the specification or the Reference.
 
 ## 5. Tables for enumerable structure
 
@@ -97,8 +100,8 @@ Keep paragraphs for the definition of a single concept, the rationale behind a r
 ## 6. Rules
 
 1. **Mark every Ajisai-meaningful token as code** so it carries the gray background (Section 3). Non-negotiable baseline.
-2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background and never use `$` math delimiters. On the HTML surfaces, typeset it as LaTeX via KaTeX with `\(…\)` / `\[…\]` (Section 4.1).
-3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `==` `=>` `?` `!`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
+2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background. On the HTML surfaces, typeset it as LaTeX via KaTeX with `\(…\)` / `\[…\]` (Section 4.1); on Markdown surfaces, GitHub's `$…$` math is available (Section 4.2).
+3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word or sugar (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `==` `=>` `?` `!` `|`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
 4. **Promote an inline list of three or more code tokens to a table.**
 5. **One concept axis per column.**
 6. **Do not encode results with inline comment arrows.** `# → [ 1 ]` blurs code and result; use separate columns or blocks.
@@ -131,7 +134,7 @@ When a single cell must hold more than one token, separate them with something t
 - a middle dot `·`, which is not an Ajisai token; or
 - a single space between adjacent code spans (`` `MAP` `FILTER` ``).
 
-Never separate in-cell tokens with `,`, `/`, or `|` — the first two are words, and `|` collides with Markdown table syntax.
+Never separate in-cell tokens with `,`, `/`, or `|` — all three are Ajisai words or sugar (`|` is the `COND` clause separator), and `|` additionally collides with Markdown table syntax.
 
 ## 9. Surfaces and required formats: the specification is HTML, the README is Markdown
 

@@ -3601,14 +3601,14 @@
       "classification": "Surface"
     },
     {
-      "id": "surface.dollar",
+      "id": "surface.pipe",
       "kind": "control_directive",
-      "surface": "$",
+      "surface": "|",
       "concept": "COND-CLAUSE",
       "runtime_word": false,
       "source": "rust/src/surface_forms.rs",
       "canonical": "COND-CLAUSE",
-      "coverage_entry_id": "surface.dollar",
+      "coverage_entry_id": "surface.pipe",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
       "derived_from": [],

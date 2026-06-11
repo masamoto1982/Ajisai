@@ -38,6 +38,13 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 - GUI tracks layout state (`currentMode`, `currentLeftMode`, `currentRightMode`).
 - Desktop and mobile layouts sync via selectors and `body[data-active-area]`.
 
+## Stack math view (KaTeX)
+- The Stack area has a "Math view" toggle (top-right of the panel, persisted in `localStorage`) that re-renders stack values as KaTeX-typeset mathematics: rationals as fractions, rank-1/rank-2 numeric vectors and tensors as matrices, `approximate` nodes with a leading approx sign.
+- **Presentation only.** The canonical display strings (`3/1`, bracketed vectors, the nested continued-fraction form) remain the default rendering and the conformance observation; the math view never changes a value or its protocol string.
+- **Structure-driven, never text-scanning.** LaTeX is derived from the structured `Value` protocol (`src/gui/value-latex.ts`, pure and unit-tested); `katex.renderToString` runs only on that generated TeX. The Output area is user text and is deliberately not math-rendered — auto-render-style delimiter scanning is never used in the GUI.
+- Values without a faithful flat math reading (strings, NIL, booleans, ragged or rank>=3 data, oversized matrices, text-hinted byte tensors) return `null` and fall back to the canonical text node.
+- Lazy continued fractions cross the WASM boundary as display strings (SPEC §12.2), which must not be parsed back, so the math view does not yet show a nested `\cfrac`; that would need a structured partial-quotient field on the protocol first.
+
 ## Technical composition
 - GUI implemented as modular TS components under `src/gui/`.
 - Entry bootstrap (`src/entry/entry-bootstrap.ts`) detects runtime and loads `entry-web.ts` / `entry-tauri.ts`; common startup is in `entry-common.ts`.

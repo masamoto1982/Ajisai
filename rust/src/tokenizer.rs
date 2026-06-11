@@ -169,21 +169,21 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
-        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '$' | '~' | '^'
+        '[' | ']' | '{' | '}' | '(' | ')' | '#' | '\'' | '>' | '=' | '|' | '~' | '^'
     )
 }
 
 fn parse_token_from_single_char(c: char) -> Option<(Token, usize)> {
     // DelimiterSugar / ControlDirective surface forms (see surface_forms.rs):
     // `[` -> BEGIN-VECTOR, `]` -> END-VECTOR, `{` -> BEGIN-BLOCK,
-    // `}` -> END-BLOCK, `$` -> COND-CLAUSE. None of these are runtime words.
+    // `}` -> END-BLOCK, `|` -> COND-CLAUSE. None of these are runtime words.
     match c {
         '[' => Some((Token::VectorStart, 1)),
         ']' => Some((Token::VectorEnd, 1)),
         '{' => Some((Token::BlockStart, 1)),
         '}' => Some((Token::BlockEnd, 1)),
 
-        '$' => Some((Token::CondClauseSep, 1)),
+        '|' => Some((Token::CondClauseSep, 1)),
 
         // Word aliases `~` -> FLOW (visual pipeline marker) and `^` -> VENT
         // (NIL coalescing). Emitted directly as their dedicated tokens; the
@@ -319,14 +319,14 @@ fn check_cond_clause_per_line_constraint(tokens: &[Token]) -> Result<(), String>
                     cond_clause_blocks_in_line += 1;
                     if cond_clause_blocks_in_line > 1 {
                         return Err(
-                            "COND: $ clauses must be written one clause per line".to_string()
+                            "COND: | clauses must be written one clause per line".to_string()
                         );
                     }
                 }
 
                 // Descend into the block (rather than skipping past its
                 // matching `}`) so the one-clause-per-line rule keeps applying
-                // to `$` clauses nested inside a multi-line `{ }` body. Each
+                // to `|` clauses nested inside a multi-line `{ }` body. Each
                 // BlockStart is still visited exactly once, so no clause is
                 // double-counted, and LineBreaks inside the block reset the
                 // per-line counter as expected.

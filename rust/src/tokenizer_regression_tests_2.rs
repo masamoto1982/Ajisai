@@ -345,11 +345,11 @@ mod tokenizer_regression_tests_2 {
 
     #[test]
     fn test_multiple_dollar_clauses_in_single_line_error() {
-        let result = tokenize("{ [ 0 ] < $ 'negative' } { IDLE $ 'positive' }");
+        let result = tokenize("{ [ 0 ] < | 'negative' } { IDLE | 'positive' }");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
-            .contains("COND: $ clauses must be written one clause per line"));
+            .contains("COND: | clauses must be written one clause per line"));
     }
 
     #[test]

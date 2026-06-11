@@ -18,9 +18,9 @@
       - 期待値はサンプル表の Expected value 列に置く（行内コメント矢印は使わない）。
       - Expected value は conformance スイートと同じ観測（最終スタックの表示文字列）。
       - 数式は LaTeX として KaTeX（自己ホスト: ../vendor/katex/）で組版する。
-        区切りはインライン \( ... \)・ディスプレイ \[ ... \] のみ。$ 区切りは
-        Ajisai トークン（COND 節区切り）と衝突するため使わない。code/pre は
-        スキャン対象外なので Ajisai チャネルが数式描画に巻き込まれることはない。
+        区切りはインライン \( ... \)・ディスプレイ \[ ... \] のみ。これらは
+        Ajisai のどの表層形とも衝突しない。code/pre はスキャン対象外なので
+        Ajisai チャネルが数式描画に巻き込まれることはない。
     -->
     <style>
         :root {
@@ -1464,7 +1464,7 @@
 
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
-                    <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is definitely true. In the clause form, <code>$</code> separates the guard from the body and each clause occupies exactly one line; <code>IDLE</code> (a no-op) makes an always-true else guard.</p>
+                    <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is definitely true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>IDLE</code> (a no-op) makes an always-true else guard.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1474,12 +1474,12 @@
                             <tbody>
                                 <tr>
                                     <td><code>[ 0 ]
-{ [ 0 ] &lt; $ 'negative' }
-{ [ 0 ] = $ 'zero' }
-{ IDLE $ 'positive' }
+{ [ 0 ] &lt; | 'negative' }
+{ [ 0 ] = | 'zero' }
+{ IDLE | 'positive' }
 COND</code></td>
                                     <td><code>'zero'</code></td>
-                                    <td class="notes">Clause form: guard left of <code>$</code>, body right; one clause per line.</td>
+                                    <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line.</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -15,10 +15,10 @@ ADD12 PRINT
 [ 40 ] INC PRINT
 # 期待: [ 42 ]
 
-# 4) Multi-line $-style COND word
+# 4) Multi-line |-style COND word
 {
-  { [ 5 ] > $ [ 'big' ] }
-  { IDLE   $ [ 'small' ] } COND
+  { [ 5 ] > | [ 'big' ] }
+  { IDLE   | [ 'small' ] } COND
 } 'SIZE' DEF
 [ 7 ] SIZE PRINT
 # 期待: [ 'big' ]

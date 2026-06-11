@@ -400,7 +400,7 @@ mod tokenizer_regression_tests {
 
     #[test]
     fn test_dollar_tokenized_as_cond_clause_separator() {
-        let result = tokenize("{ IDLE $ 'ok' }").unwrap();
+        let result = tokenize("{ IDLE | 'ok' }").unwrap();
         assert_eq!(
             result,
             vec![

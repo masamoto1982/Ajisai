@@ -16,10 +16,10 @@
       - Mathematics is set off in its own channel, never in the gray code channel.
         It is typeset as LaTeX via the self-hosted KaTeX copy in vendor/katex/
         (public/vendor/katex/ in the repository), with \( ... \) inline and
-        \[ ... \] display delimiters. $-style delimiters are never used: $ is
-        itself an Ajisai token (the COND clause separator). Without JavaScript
-        the raw LaTeX source remains visible, which is the intended
-        machine-readable fallback.
+        \[ ... \] display delimiters. These delimiters collide with no Ajisai
+        surface form and are the canonical math-channel markers on the HTML
+        surfaces. Without JavaScript the raw LaTeX source remains visible,
+        which is the intended machine-readable fallback.
     -->
     <style>
 /* Plain document styling for SPECIFICATION.html.
@@ -168,9 +168,10 @@
     </style>
 
     <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4).
-         Delimiters: \( ... \) inline, \[ ... \] display. $-delimiters are
-         deliberately not configured. code/pre are never scanned, so the gray
-         Ajisai channel is structurally excluded from math rendering. -->
+         Delimiters: \( ... \) inline, \[ ... \] display — the canonical
+         math-channel markers on the HTML surfaces. code/pre are never scanned,
+         so the gray Ajisai channel is structurally excluded from math
+         rendering. -->
     <link rel="stylesheet" href="vendor/katex/katex.min.css">
     <script defer src="vendor/katex/katex.min.js"></script>
     <script defer src="vendor/katex/contrib/auto-render.min.js"
@@ -348,7 +349,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h4 id="244-authoring-discipline">2.4.4 Authoring discipline</h4>
 
-<p><code>docs/dev/ajisai-authoring-style.md</code> is the non-canonical authoring discipline for all authoritative writing about Ajisai, including this document. It defines no language semantics. Its subject is notation: every Ajisai-meaningful token appears in prose as marked-up code; mathematics travels in its own channel, visibly distinct from the Ajisai code channel — on the HTML surfaces it is typeset as LaTeX via KaTeX, delimited by <code>\(...\)</code> (inline) and <code>\[...\]</code> (display), while <code>$...$</code>-style delimiters remain prohibited because <code>$</code> is itself an Ajisai token; and marks such as <code>.</code> · <code>,</code> · <code>/</code> are Ajisai words or sugar and are kept distinct from ordinary punctuation and mathematical operators. These are rules against misreading, not rules of meaning — they ensure the semantics defined here cannot be obscured by ambiguous presentation. The full rules live in that document and are not duplicated here; the sibling documents <code>docs/dev/reference-writing-style.md</code> and <code>docs/dev/three-layer-documentation-model.md</code> govern the Reference surfaces under the same principle.</p>
+<p><code>docs/dev/ajisai-authoring-style.md</code> is the non-canonical authoring discipline for all authoritative writing about Ajisai, including this document. It defines no language semantics. Its subject is notation: every Ajisai-meaningful token appears in prose as marked-up code; mathematics travels in its own channel, visibly distinct from the Ajisai code channel — on the HTML surfaces it is typeset as LaTeX via KaTeX, delimited by <code>\(...\)</code> (inline) and <code>\[...\]</code> (display), which collide with no Ajisai surface form, while Markdown surfaces may use the <code>$...$</code> delimiters their renderers support; and marks such as <code>.</code> · <code>,</code> · <code>/</code> · <code>|</code> are Ajisai words or sugar and are kept distinct from ordinary punctuation and mathematical operators. These are rules against misreading, not rules of meaning — they ensure the semantics defined here cannot be obscured by ambiguous presentation. The full rules live in that document and are not duplicated here; the sibling documents <code>docs/dev/reference-writing-style.md</code> and <code>docs/dev/three-layer-documentation-model.md</code> govern the Reference surfaces under the same principle.</p>
 
 <h3 id="25-authority-order">2.5 Authority order</h3>
 
@@ -388,7 +389,7 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>&lt;</code></td><td>Syntactic sugar for <code>LT</code></td></tr>
 <tr><td><code>&lt;=</code></td><td>Syntactic sugar for <code>LTE</code></td></tr>
 <tr><td><code>&lt;&gt;</code></td><td>Syntactic sugar for <code>NEQ</code></td></tr>
-<tr><td><code>$</code></td><td>COND clause separator</td></tr>
+<tr><td><code>|</code></td><td>COND clause separator</td></tr>
 <tr><td><code>#</code></td><td>Line comment: all characters from <code>#</code> to end of line are ignored</td></tr>
 </tbody>
 </table>
@@ -425,7 +426,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h3 id="33-string-literals">3.3 String literals</h3>
 
-<p>A string literal begins with <code>'</code> and ends with the last <code>'</code> before a token boundary. A token boundary is whitespace, end of input, or any special character other than <code>'</code> (such as <code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>#</code> <code>=</code> <code>$</code>).</p>
+<p>A string literal begins with <code>'</code> and ends with the last <code>'</code> before a token boundary. A token boundary is whitespace, end of input, or any special character other than <code>'</code> (such as <code>[</code> <code>]</code> <code>{</code> <code>}</code> <code>#</code> <code>=</code> <code>|</code>).</p>
 
 <p>Any <code>'</code> that appears before a non-boundary character is a literal quote character in the string content.</p>
 
@@ -447,7 +448,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h3 id="34-code-blocks">3.4 Code blocks</h3>
 
-<p>A sequence of tokens enclosed in <code>{...}</code>. A code block may span multiple lines; each internal line break is preserved as a statement separator, so a multi-line block executes one source line at a time. This makes multi-line word bodies — including <code>$</code>-style <code>COND</code> bodies — writable directly, without splitting a definition across separately named words.</p>
+<p>A sequence of tokens enclosed in <code>{...}</code>. A code block may span multiple lines; each internal line break is preserved as a statement separator, so a multi-line block executes one source line at a time. This makes multi-line word bodies — including <code>|</code>-style <code>COND</code> bodies — writable directly, without splitting a definition across separately named words.</p>
 
 <p><code>(</code> and <code>)</code> are not Ajisai syntactic characters. They are reserved markers — <code>(</code> denotes the concept <code>RESERVED-BEGIN</code> and <code>)</code> denotes <code>RESERVED-END</code> (Section 3.9) — reserved at the lexical level to prevent accidental reuse and to keep the nested continued-fraction serialization form (Section 4.2) unambiguous; encountering <code>(</code> or <code>)</code> in source text is a tokenizer error.</p>
 
@@ -457,13 +458,13 @@ Version: <strong>2026-06-11</strong></p>
 
 <h3 id="36-cond-clauses">3.6 COND clauses</h3>
 
-<p>Inside a <code>COND</code> expression, clauses are separated by <code>$</code>. Each <code>$</code> clause must occupy exactly one line. This rule applies at every nesting level, so the clauses of a multi-line <code>COND</code> body written inside an enclosing <code>{ }</code> are each kept on their own line.</p>
+<p>Inside a <code>COND</code> expression, clauses are separated by <code>|</code>. Each <code>|</code> clause must occupy exactly one line. This rule applies at every nesting level, so the clauses of a multi-line <code>COND</code> body written inside an enclosing <code>{ }</code> are each kept on their own line.</p>
 
 <h3 id="37-syntax-constraints">3.7 Syntax constraints</h3>
 
 <ul>
 <li>All bracket pairs (<code>[</code> <code>{</code>) must be balanced.</li>
-<li>Each <code>$</code> <code>COND</code> clause must occupy exactly one line (at every nesting level).</li>
+<li>Each <code>|</code> <code>COND</code> clause must occupy exactly one line (at every nesting level).</li>
 <li>The characters <code>(</code> and <code>)</code> are not valid in Ajisai source (Section 3.4).</li>
 </ul>
 
@@ -514,7 +515,7 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>{</code> <code>}</code></td><td><code>BEGIN-BLOCK</code> <code>END-BLOCK</code></td><td>Delimiter sugar</td><td>no</td></tr>
 <tr><td><code>'</code></td><td><code>STRING-QUOTE</code></td><td>Literal sugar</td><td>no</td></tr>
 <tr><td><code>#</code></td><td><code>COMMENT-LINE</code></td><td>Source directive</td><td>no</td></tr>
-<tr><td><code>$</code></td><td><code>COND-CLAUSE</code></td><td>Control directive</td><td>no</td></tr>
+<tr><td><code>|</code></td><td><code>COND-CLAUSE</code></td><td>Control directive</td><td>no</td></tr>
 <tr><td><code>(</code> <code>)</code></td><td><code>RESERVED-BEGIN</code> <code>RESERVED-END</code></td><td>Reserved marker</td><td>no</td></tr>
 <tr><td><code>&gt;CF</code></td><td><code>&gt;CF</code> (continued-fraction conversion)</td><td>Conversion word</td><td>yes</td></tr>
 </tbody>
@@ -1190,7 +1191,7 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>ALL</code></td><td>—</td><td>True if all elements satisfy the predicate</td></tr>
 <tr><td><code>COUNT</code></td><td>—</td><td>Count elements satisfying the predicate</td></tr>
 <tr><td><code>SCAN</code></td><td>—</td><td>Like <code>FOLD</code> but returns all intermediate accumulator values</td></tr>
-<tr><td><code>COND</code></td><td>—</td><td>Evaluate clauses separated by <code>$</code>; execute the first whose guard is definitely true (a U guard does not fire, Section 7.4.3)</td></tr>
+<tr><td><code>COND</code></td><td>—</td><td>Evaluate clauses separated by <code>|</code>; execute the first whose guard is definitely true (a U guard does not fire, Section 7.4.3)</td></tr>
 <tr><td><code>IDLE</code></td><td>—</td><td>No-op; does nothing</td></tr>
 <tr><td><code>EXEC</code></td><td>—</td><td>Execute a code block</td></tr>
 <tr><td><code>EVAL</code></td><td>—</td><td>Parse and execute a string as Ajisai code</td></tr>
@@ -1370,12 +1371,12 @@ Version: <strong>2026-06-11</strong></p>
 
 <p><code>DEF</code> takes exactly two positional arguments: the <strong>name</strong> (a string) on top of the stack, and directly below it the <strong>body</strong> (a code block <code>{ }</code>). Roles are determined by position alone — no value types are inspected to guess them — so a leftover value on the stack below the body cannot shift argument interpretation.</p>
 
-<p>The body must be a code block. It may span multiple lines (Section 3.4): each internal line break is a statement separator, so a multi-line body executes one source line at a time. This is how multi-line and <code>$</code>-style <code>COND</code> word bodies are written:</p>
+<p>The body must be a code block. It may span multiple lines (Section 3.4): each internal line break is a statement separator, so a multi-line body executes one source line at a time. This is how multi-line and <code>|</code>-style <code>COND</code> word bodies are written:</p>
 
 <pre><code>{
-  { [ 1 ] = $ [ 100 ] }
-  { [ 2 ] = $ [ 200 ] }
-  { IDLE   $ [ 0 ]   } COND
+  { [ 1 ] = | [ 100 ] }
+  { [ 2 ] = | [ 200 ] }
+  { IDLE   | [ 0 ]   } COND
 } 'CLASSIFY' DEF</code></pre>
 
 <p>A data array <code>[ ... ]</code> is not accepted as a definition body; defining a word from data is reserved for a future data-to-code conversion word.</p>

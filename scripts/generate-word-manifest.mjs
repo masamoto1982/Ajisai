@@ -52,7 +52,7 @@ function symbolSlug(value) {
     '~': 'tilde',
     '^': 'caret',
     '#': 'hash',
-    '$': 'dollar',
+    '|': 'pipe',
     '[': 'left-bracket',
     ']': 'right-bracket',
     '{': 'left-brace',
