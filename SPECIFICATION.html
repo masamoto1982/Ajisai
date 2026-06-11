@@ -13,7 +13,13 @@
       PlantUML) first-class authoring tools. Keep this page plain: no ornament
       beyond what the Reference (public/docs/) already uses.
       - Every Ajisai token is wrapped in <code> (gray background = Ajisai channel).
-      - Mathematics is set off in its own block, never in the gray code channel.
+      - Mathematics is set off in its own channel, never in the gray code channel.
+        It is typeset as LaTeX via the self-hosted KaTeX copy in vendor/katex/
+        (public/vendor/katex/ in the repository), with \( ... \) inline and
+        \[ ... \] display delimiters. $-style delimiters are never used: $ is
+        itself an Ajisai token (the COND clause separator). Without JavaScript
+        the raw LaTeX source remains visible, which is the intended
+        machine-readable fallback.
     -->
     <style>
 /* Plain document styling for SPECIFICATION.html.
@@ -157,7 +163,25 @@
         }
 
         .logo { width: 120px; height: 120px; object-fit: contain; }
+
+        .math-display { margin: 0.75rem 0 1rem; overflow-x: auto; }
     </style>
+
+    <!-- KaTeX (self-hosted, see docs/dev/ajisai-authoring-style.md Section 4).
+         Delimiters: \( ... \) inline, \[ ... \] display. $-delimiters are
+         deliberately not configured. code/pre are never scanned, so the gray
+         Ajisai channel is structurally excluded from math rendering. -->
+    <link rel="stylesheet" href="vendor/katex/katex.min.css">
+    <script defer src="vendor/katex/katex.min.js"></script>
+    <script defer src="vendor/katex/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                throwOnError: false
+            });"></script>
 </head>
 <body>
 <main>
@@ -324,7 +348,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h4 id="244-authoring-discipline">2.4.4 Authoring discipline</h4>
 
-<p><code>docs/dev/ajisai-authoring-style.md</code> is the non-canonical authoring discipline for all authoritative writing about Ajisai, including this document. It defines no language semantics. Its subject is notation: every Ajisai-meaningful token appears in prose as marked-up code; mathematics travels in its own channel, visibly distinct from the Ajisai code channel; LaTeX-style <code>$...$</code> math delimiters are avoided because <code>$</code> is itself an Ajisai token; and marks such as <code>.</code> · <code>,</code> · <code>/</code> are Ajisai words or sugar and are kept distinct from ordinary punctuation and mathematical operators. These are rules against misreading, not rules of meaning — they ensure the semantics defined here cannot be obscured by ambiguous presentation. The full rules live in that document and are not duplicated here; the sibling documents <code>docs/dev/reference-writing-style.md</code> and <code>docs/dev/three-layer-documentation-model.md</code> govern the Reference surfaces under the same principle.</p>
+<p><code>docs/dev/ajisai-authoring-style.md</code> is the non-canonical authoring discipline for all authoritative writing about Ajisai, including this document. It defines no language semantics. Its subject is notation: every Ajisai-meaningful token appears in prose as marked-up code; mathematics travels in its own channel, visibly distinct from the Ajisai code channel — on the HTML surfaces it is typeset as LaTeX via KaTeX, delimited by <code>\(...\)</code> (inline) and <code>\[...\]</code> (display), while <code>$...$</code>-style delimiters remain prohibited because <code>$</code> is itself an Ajisai token; and marks such as <code>.</code> · <code>,</code> · <code>/</code> are Ajisai words or sugar and are kept distinct from ordinary punctuation and mathematical operators. These are rules against misreading, not rules of meaning — they ensure the semantics defined here cannot be obscured by ambiguous presentation. The full rules live in that document and are not duplicated here; the sibling documents <code>docs/dev/reference-writing-style.md</code> and <code>docs/dev/three-layer-documentation-model.md</code> govern the Reference surfaces under the same principle.</p>
 
 <h3 id="25-authority-order">2.5 Authority order</h3>
 
@@ -527,16 +551,18 @@ Version: <strong>2026-06-11</strong></p>
 
 <h3 id="42-scalar-exact-real-continued-fraction-arithmetic">4.2 Scalar: exact-real continued-fraction arithmetic</h3>
 
-<p>All numeric values are exact reals represented as <strong>continued fractions</strong> (CF). A scalar is a sequence of integer partial quotients [<em>a</em>₀; <em>a</em>₁, <em>a</em>₂, …], finite for rationals and lazy (potentially infinite) for irrationals.</p>
+<p>All numeric values are exact reals represented as <strong>continued fractions</strong> (CF). A scalar is a sequence of integer partial quotients \([a_0;\, a_1, a_2, \dots]\), finite for rationals and lazy (potentially infinite) for irrationals:</p>
+
+<p class="math-display">\[ [a_0;\, a_1, a_2, \dots] \;=\; a_0 + \cfrac{1}{a_1 + \cfrac{1}{a_2 + \cfrac{1}{\ddots}}} \]</p>
 
 <h4 id="421-canonical-form">4.2.1 Canonical form</h4>
 
 <p>A continued fraction is in canonical form when:</p>
 
 <ol>
-<li><em>a</em>₀ is any integer.</li>
-<li><em>a</em>₁, <em>a</em>₂, … are strictly positive integers.</li>
-<li>If the sequence is finite and has length <em>n</em> ≥ 2, then the last partial quotient <em>a</em>ₙ₋₁ is greater than 1 (no trailing 1).</li>
+<li>\(a_0\) is any integer.</li>
+<li>\(a_1, a_2, \dots\) are strictly positive integers.</li>
+<li>If the sequence is finite and has length \(n \ge 2\), then the last partial quotient \(a_{n-1}\) is greater than 1 (no trailing 1).</li>
 <li>The sequence terminates iff the value is rational.</li>
 </ol>
 
@@ -549,7 +575,7 @@ Version: <strong>2026-06-11</strong></p>
 <ul>
 <li><strong>Rational</strong> — a finite CF, stored equivalently as either a small <code>(i64, i64)</code> reduced fraction or a <code>(BigInt, BigInt)</code> reduced fraction. Partial quotients are generated on demand by floor-division Euclidean algorithm.</li>
 <li><strong>AlgebraicSqrt</strong> — <code>SQRT</code> of a non-negative rational. The CF expansion is eventually periodic (Lagrange's theorem) and produced lazily.</li>
-<li><strong>Gosper</strong> — an unevaluated bihomographic transform (<em>a·xy</em> + <em>b·x</em> + <em>c·y</em> + <em>d</em>) / (<em>e·xy</em> + <em>f·x</em> + <em>g·y</em> + <em>h</em>) of one or two operand CFs, used by arithmetic (Section 7.3). Partial quotients of the result are emitted as soon as the next quotient is unambiguously determined by the current Möbius coefficients.</li>
+<li><strong>Gosper</strong> — an unevaluated bihomographic transform \(\dfrac{a\,xy + b\,x + c\,y + d}{e\,xy + f\,x + g\,y + h}\) of one or two operand CFs, used by arithmetic (Section 7.3). Partial quotients of the result are emitted as soon as the next quotient is unambiguously determined by the current Möbius coefficients.</li>
 <li><strong>LazyCf</strong> — any other lazy CF stream (reserved for future words; not produced by the Coreword set defined in this document).</li>
 </ul>
 
@@ -573,19 +599,19 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>The comparison procedure of Section 7.4.1 expands operands as nearest-integer continued fractions. This is an internal expansion: the <strong>regular</strong> continued fraction of Sections 4.2.1–4.2.4 remains the sole basis for value identity, canonical form, display, and serialization. The nearest-integer expansion changes only how comparison consumes a value and, consequently, the unit of the comparison budget (see the end of this subsection and Section 7.4.1.1).</p>
 
-<p>The <strong>regular</strong> continued fraction (RCF) of Section 4.2.1 takes each partial quotient by <em>floor</em>, leaving a remainder in [0, 1) and forcing every quotient after <em>a</em>₀ to be a strictly positive integer. The <strong>nearest-integer continued fraction</strong> (NICF) instead takes each partial quotient by <em>rounding to the nearest integer</em>, leaving a remainder in (−1/2, 1/2]. An NICF is a <em>semiregular</em> continued fraction</p>
+<p>The <strong>regular</strong> continued fraction (RCF) of Section 4.2.1 takes each partial quotient by <em>floor</em>, leaving a remainder in \([0, 1)\) and forcing every quotient after \(a_0\) to be a strictly positive integer. The <strong>nearest-integer continued fraction</strong> (NICF) instead takes each partial quotient by <em>rounding to the nearest integer</em>, leaving a remainder in \((-\tfrac{1}{2}, \tfrac{1}{2}]\). An NICF is a <em>semiregular</em> continued fraction</p>
 
-<blockquote><p><em>x</em> = <em>b</em>₀ + <em>ε</em>₁ / (<em>b</em>₁ + <em>ε</em>₂ / (<em>b</em>₂ + <em>ε</em>₃ / ( … )))</p></blockquote>
+<p class="math-display">\[ x \;=\; b_0 + \cfrac{\varepsilon_1}{b_1 + \cfrac{\varepsilon_2}{b_2 + \cfrac{\varepsilon_3}{\ddots}}} \]</p>
 
-<p>where each <em>b</em>ᵢ is the nearest integer to the current tail, each <em>ε</em>ᵢ ∈ {+1, −1} is the sign of the corresponding remainder, and <em>b</em>ᵢ ≥ 2 for <em>i</em> ≥ 1. Because each step removes more of the value than a floor step can, NICF expansions are never longer than the RCF and are typically shorter: by a classical result the NICF converges at least as fast as the RCF and on average meaningfully faster (larger effective partial quotients per term). Over exact-rational, near-equal, and surd corpora the NICF reduces the agreed-prefix depth by roughly 22–28% on the mean, including ~28% on the surd (lazy-CF) case that actually exhausts the comparison budget.</p>
+<p>where each \(b_i\) is the nearest integer to the current tail, each \(\varepsilon_i \in \{+1, -1\}\) is the sign of the corresponding remainder, and \(b_i \ge 2\) for \(i \ge 1\). Because each step removes more of the value than a floor step can, NICF expansions are never longer than the RCF and are typically shorter: by a classical result the NICF converges at least as fast as the RCF and on average meaningfully faster (larger effective partial quotients per term). Over exact-rational, near-equal, and surd corpora the NICF reduces the agreed-prefix depth by roughly 22–28% on the mean, including ~28% on the surd (lazy-CF) case that actually exhausts the comparison budget.</p>
 
-<p><strong>Tie-break (normative).</strong> Each partial quotient is <em>b</em>ᵢ = round(<em>t</em>) of the current tail <em>t</em>, where round sends a value whose fractional part is exactly 1/2 <strong>down</strong> to the lower integer; equivalently the post-step remainder lies in the half-open interval (−1/2, 1/2], and <em>b</em>ᵢ = ⌈(2·<em>num</em> − <em>den</em>) / (2·<em>den</em>)⌉ for a tail <em>num</em>/<em>den</em> with <em>den</em> &gt; 0. This makes the NICF digit sequence of every value deterministic, so two conforming implementations agree on it.</p>
+<p><strong>Tie-break (normative).</strong> Each partial quotient is \(b_i = \operatorname{round}(t)\) of the current tail \(t\), where round sends a value whose fractional part is exactly \(\tfrac{1}{2}\) <strong>down</strong> to the lower integer; equivalently the post-step remainder lies in the half-open interval \((-\tfrac{1}{2}, \tfrac{1}{2}]\), and \(b_i = \left\lceil \dfrac{2\,\mathit{num} - \mathit{den}}{2\,\mathit{den}} \right\rceil\) for a tail \(\mathit{num}/\mathit{den}\) with \(\mathit{den} > 0\). This makes the NICF digit sequence of every value deterministic, so two conforming implementations agree on it.</p>
 
 <p>NICF changes which expansion the <strong>comparison procedure</strong> consumes (Section 7.4.1.1). It does <strong>not</strong> change the following observable surfaces, which remain defined by the RCF:</p>
 
 <ul>
 <li><strong>Value identity and canonical form.</strong> The canonical CF of a value remains its RCF (Section 4.2.1); two values are equal iff their RCFs agree (Section 4.2.4). NICF is never the canonical form and is never the basis of equality.</li>
-<li><strong>Display and serialization.</strong> The nested form of Section 4.2.3 always renders the RCF. NICF digits, signs, and the <em>ε</em>ᵢ are never serialized and must not be parsed.</li>
+<li><strong>Display and serialization.</strong> The nested form of Section 4.2.3 always renders the RCF. NICF digits, signs, and the \(\varepsilon_i\) are never serialized and must not be parsed.</li>
 <li><strong>The internal representation tag</strong> (Section 4.2.2 / 4.2.4) remains non-observable: which stored representation backs a value must not be branched on.</li>
 </ul>
 
@@ -922,9 +948,9 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Arithmetic on scalars is performed directly on the continued-fraction representation by <strong>Gosper's bihomographic algorithm</strong>: each operation forms a Möbius (for unary) or bihomographic (for binary) transform of its operands and emits partial quotients of the result as soon as the next quotient is unambiguously determined by the current coefficients. No intermediate value is materialized as an approximate real or as a truncated rational. Coefficients are BigInt at all times (Section 4.2.2).</p>
 
-<p><code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond <em>a</em>₀.</p>
+<p><code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond \(a_0\).</p>
 
-<p><code>MOD</code> is defined by the identity <em>x</em> − ⌊<em>x</em> / <em>y</em>⌋ · <em>y</em> (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
+<p><code>MOD</code> is defined by the identity \(x - \lfloor x / y \rfloor \cdot y\) (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
 
 <h3 id="74-comparison">7.4 Comparison</h3>
 
@@ -986,7 +1012,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h5 id="7411-nicf-accelerated-comparison">7.4.1.1 NICF-accelerated comparison</h5>
 
-<p>The comparison procedure of Section 7.4.1 decides the order of two operands by emitting their <strong>nearest-integer</strong> continued fractions (NICF, Section 4.2.5) in parallel and stopping at the first index where the semiregular expansions differ; the sign of the difference there determines the order, with the sign correction induced by the <code>εi</code> partial-numerator signs in place of the plain alternating parity. Because NICF converges at least as fast as RCF, two distinct values reveal their order at an NICF index no later — and usually earlier — than the RCF index, so a budget of fixed size decides at least as many comparisons and in practice meaningfully more (Section 4.2.5). The budget mechanism, the U outcome, and the totality guarantee of Section 7.4.1 are otherwise unchanged.</p>
+<p>The comparison procedure of Section 7.4.1 decides the order of two operands by emitting their <strong>nearest-integer</strong> continued fractions (NICF, Section 4.2.5) in parallel and stopping at the first index where the semiregular expansions differ; the sign of the difference there determines the order, with the sign correction induced by the \(\varepsilon_i\) partial-numerator signs in place of the plain alternating parity. Because NICF converges at least as fast as RCF, two distinct values reveal their order at an NICF index no later — and usually earlier — than the RCF index, so a budget of fixed size decides at least as many comparisons and in practice meaningfully more (Section 4.2.5). The budget mechanism, the U outcome, and the totality guarantee of Section 7.4.1 are otherwise unchanged.</p>
 
 <p>The order computed over NICF is the true order of the values: it is <strong>identical</strong> to the order RCF would compute whenever RCF decides within any budget. NICF never flips a decided order; it only moves the budget <em>boundary</em> at which a pair of distinct values crosses from U to decided, in the favorable direction. Equal values never differ in either expansion, so they still yield U.</p>
 
@@ -1000,7 +1026,7 @@ Version: <strong>2026-06-11</strong></p>
 <li>for <code>COMPARE-WITHIN</code>, equal to the consumed <code>budget</code> on U. Because the unit is uniformly NICF, there is no RCF-versus-NICF unit ambiguity to reconcile: a caller of <code>COMPARE-WITHIN</code> who names <code>budget = n</code> buys <code>n</code> semiregular terms, and that is the documented meaning. The correspondence between an NICF term count and an RCF term count is <strong>not</strong> observable and must not be relied upon.</li>
 </ul>
 
-<p><strong>Conformance requirement.</strong> Because the budget unit is user-observable through <code>COMPARE-WITHIN</code>, NICF expansion is not an optional per-implementation choice: a conforming implementation must emit NICF terms for <strong>every</strong> comparable scalar representation (Section 4.2.2) — <code>Rational</code> and <code>AlgebraicSqrt</code> and <code>Gosper</code> (which backs the results of arithmetic). For the homographic and bihomographic (<code>Gosper</code>) representations this is a local change to the partial-quotient emitter: a term is emitted when the <em>nearest integer</em> (rather than the floor) agrees across the transform's value-range endpoints, and the post-emit coefficient update is unchanged from the floor case — a negative semiregular remainder propagates its sign through the reciprocal continuation, so no separate <code>εi</code> bookkeeping is carried in the transform coefficients.</p>
+<p><strong>Conformance requirement.</strong> Because the budget unit is user-observable through <code>COMPARE-WITHIN</code>, NICF expansion is not an optional per-implementation choice: a conforming implementation must emit NICF terms for <strong>every</strong> comparable scalar representation (Section 4.2.2) — <code>Rational</code> and <code>AlgebraicSqrt</code> and <code>Gosper</code> (which backs the results of arithmetic). For the homographic and bihomographic (<code>Gosper</code>) representations this is a local change to the partial-quotient emitter: a term is emitted when the <em>nearest integer</em> (rather than the floor) agrees across the transform's value-range endpoints, and the post-emit coefficient update is unchanged from the floor case — a negative semiregular remainder propagates its sign through the reciprocal continuation, so no separate \(\varepsilon_i\) bookkeeping is carried in the transform coefficients.</p>
 
 <h4 id="742-explicit-budget-comparison-compare-within">7.4.2 Explicit-budget comparison: <code>COMPARE-WITHIN</code></h4>
 
@@ -1019,7 +1045,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Stack effect: <code>[ a ] [ b ] [ budget ] -&gt; [ -1 | 0 | 1 | UNKNOWN ]</code>.</p>
 
-<p><code>COMPARE-WITHIN</code> consumes two numeric values <em>a</em> and <em>b</em> and a positive integer <code>budget</code>, and emits partial quotients of <em>a</em> and <em>b</em> in parallel (Section 7.4.1) for at most <code>budget</code> steps. It produces:</p>
+<p><code>COMPARE-WITHIN</code> consumes two numeric values \(a\) and \(b\) and a positive integer <code>budget</code>, and emits partial quotients of \(a\) and \(b\) in parallel (Section 7.4.1) for at most <code>budget</code> steps. It produces:</p>
 
 <div class="ref-table-wrap">
 <table class="ref-table">
@@ -1027,17 +1053,17 @@ Version: <strong>2026-06-11</strong></p>
 <tr><th>Result</th><th>Condition</th></tr>
 </thead>
 <tbody>
-<tr><td>the scalar <code>-1</code> (role <code>RawNumber</code>)</td><td><em>a</em> &lt; <em>b</em></td></tr>
-<tr><td>the scalar <code>0</code></td><td><em>a</em> = <em>b</em></td></tr>
-<tr><td>the scalar <code>1</code></td><td><em>a</em> &gt; <em>b</em></td></tr>
+<tr><td>the scalar <code>-1</code> (role <code>RawNumber</code>)</td><td>\(a &lt; b\)</td></tr>
+<tr><td>the scalar <code>0</code></td><td>\(a = b\)</td></tr>
+<tr><td>the scalar <code>1</code></td><td>\(a &gt; b\)</td></tr>
 <tr><td>the logical <code>Unknown</code> (U, Section 7.5)</td><td>the order is not settled within <code>budget</code> partial quotients; the U result carries <code>diagnosis.agreedPrefix</code> (Section 4.5.0), which for this word equals the consumed <code>budget</code></td></tr>
 </tbody>
 </table>
 </div>
 
-<p>The decided outcome is the exact sign of <em>a</em> − <em>b</em>; the six relations of Section 7.4 are recoverable from it (<em>a</em> &lt; <em>b</em> iff <code>-1</code>, <em>a</em> ≤ <em>b</em> iff not <code>1</code>, and so on). For two finite (rational) operands the comparison always decides regardless of <code>budget</code>, because finite CFs differ at a bounded index; <code>budget</code> only governs lazy irrationals.</p>
+<p>The decided outcome is the exact sign of \(a - b\); the six relations of Section 7.4 are recoverable from it (\(a &lt; b\) iff <code>-1</code>, \(a \le b\) iff not <code>1</code>, and so on). For two finite (rational) operands the comparison always decides regardless of <code>budget</code>, because finite CFs differ at a bounded index; <code>budget</code> only governs lazy irrationals.</p>
 
-<p><code>COMPARE-WITHIN</code> is <code>Projecting</code> (Section 7.14): it is total over well-shaped input because it projects the undecided case onto U. It is NIL-passthrough (Section 7.12) for its <em>a</em> and <em>b</em> operands. A non-positive or non-integer <code>budget</code>, or a non-numeric <em>a</em> or <em>b</em>, is malformed use and raises an error (Section 11.2), not U. The implicit budget of the bare relations is an implementation-defined constant; <code>COMPARE-WITHIN</code> does not change it and is the only way to observe or override the depth.</p>
+<p><code>COMPARE-WITHIN</code> is <code>Projecting</code> (Section 7.14): it is total over well-shaped input because it projects the undecided case onto U. It is NIL-passthrough (Section 7.12) for its \(a\) and \(b\) operands. A non-positive or non-integer <code>budget</code>, or a non-numeric \(a\) or \(b\), is malformed use and raises an error (Section 11.2), not U. The implicit budget of the bare relations is an implementation-defined constant; <code>COMPARE-WITHIN</code> does not change it and is the only way to observe or override the depth.</p>
 
 <h4 id="743-propagation-of-u-through-comparison-dependent-words">7.4.3 Propagation of U through comparison-dependent words</h4>
 
@@ -1073,7 +1099,7 @@ Version: <strong>2026-06-11</strong></p>
 </table>
 </div>
 
-<p><code>AND</code> <code>OR</code> <code>NOT</code> implement <strong>strong Kleene three-valued logic (K3)</strong> over the truth domain {T, F, U}, whose members are observed as the protocol strings <code>true</code> and <code>false</code> and <code>unknown</code>. U is a first-class logical truth value, observed as <code>truthValue = unknown</code> (Section 2.3), and arises in particular from undecidable continued-fraction comparisons (Section 7.4.1). The truth tables are:</p>
+<p><code>AND</code> <code>OR</code> <code>NOT</code> implement <strong>strong Kleene three-valued logic (K3)</strong> over the truth domain \(\{T, F, U\}\), whose members are observed as the protocol strings <code>true</code> and <code>false</code> and <code>unknown</code>. U is a first-class logical truth value, observed as <code>truthValue = unknown</code> (Section 2.3), and arises in particular from undecidable continued-fraction comparisons (Section 7.4.1). The truth tables are:</p>
 
 <div class="ref-table-wrap">
 <table class="ref-table">
@@ -1259,7 +1285,7 @@ Version: <strong>2026-06-11</strong></p>
 </table>
 </div>
 
-<p><code>AND</code> <code>OR</code> <code>NOT</code> implement strong Kleene three-valued logic (K3) over the truth domain {T, F, U}; the truth tables and the U value are defined in Section 7.5. The three-valued behavior listed here concerns NIL operands specifically: NIL combined with a definite false (for <code>AND</code>) or definite true (for <code>OR</code>) collapses to that definite value; in all other cases involving NIL the result is NIL, and <code>NOT</code> of NIL is NIL. The logical third value U is separate from NIL (Section 4.5.2); when both appear, NIL takes priority.</p>
+<p><code>AND</code> <code>OR</code> <code>NOT</code> implement strong Kleene three-valued logic (K3) over the truth domain \(\{T, F, U\}\); the truth tables and the U value are defined in Section 7.5. The three-valued behavior listed here concerns NIL operands specifically: NIL combined with a definite false (for <code>AND</code>) or definite true (for <code>OR</code>) collapses to that definite value; in all other cases involving NIL the result is NIL, and <code>NOT</code> of NIL is NIL. The logical third value U is separate from NIL (Section 4.5.2); when both appear, NIL takes priority.</p>
 
 <p>The comparison words are NIL-passthrough for NIL operands as listed above. They do <strong>not</strong> produce a <code>reason = undecidable</code> NIL on budget exhaustion; that case now yields the truth value <code>unknown</code> (Section 7.4.1), which is a <code>TruthValue</code> result rather than an absence.</p>
 
@@ -1308,7 +1334,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Logic words (<code>AND</code> <code>OR</code> <code>NOT</code>) are <code>Total</code> over the three-valued truth domain of Section 7.5. Their registry <code>nil_policy</code> is <code>Passthrough</code>: they pass NIL operands through per Section 7.12. The <code>nil_policy</code> field holds a single value, so reason-preservation is <strong>not</strong> a second simultaneous policy here but an additional behavioral requirement layered on <code>Passthrough</code> — the leftmost NIL reason must survive and a NIL operand is never silently replaced by U (Section 4.5.2). The distinct <code>PreservesReason</code> value is reserved for words whose <em>only</em> NIL contract is to carry a reason through unchanged: the pure no-op and marker words <code>TOP</code> <code>STAK</code> <code>EAT</code> <code>KEEP</code> <code>TRUE</code> <code>FALSE</code> <code>NIL</code> <code>IDLE</code> <code>FLOW</code> <code>VENT</code>.</p>
 
-<p><code>COMPARE-WITHIN</code> (Section 7.4.2) is <code>Projecting</code>: it is total over well-shaped input because it projects the budget-undecided case onto the logical <code>Unknown</code> (a result, not a reasoned NIL). Its <code>nil_policy</code> is <code>Passthrough</code> for the <em>a</em> and <em>b</em> operands. A non-positive or non-integer <code>budget</code> or non-numeric operands are malformed use and raise an error, so it is not <code>CreatesNil</code>.</p>
+<p><code>COMPARE-WITHIN</code> (Section 7.4.2) is <code>Projecting</code>: it is total over well-shaped input because it projects the budget-undecided case onto the logical <code>Unknown</code> (a result, not a reasoned NIL). Its <code>nil_policy</code> is <code>Passthrough</code> for the \(a\) and \(b\) operands. A non-positive or non-integer <code>budget</code> or non-numeric operands are malformed use and raise an error, so it is not <code>CreatesNil</code>.</p>
 
 <p><code>MIN</code> and <code>MAX</code> and <code>SORT</code> (Section 7.4.3) are <code>Projecting</code>: each is total over well-shaped numeric input because it projects an undecidable governing comparison onto the logical <code>Unknown</code> (a result, not a reasoned NIL). Their <code>nil_policy</code> is <code>Passthrough</code>, with NIL taking priority over a U-producing comparison (Section 4.5.2). <code>MIN</code> and <code>MAX</code> are canonically <code>MATH</code> words and <code>SORT</code> is canonically an <code>ALGO</code> word (Sections 7.4.3, 9.1); their contracts are registry entries on the same footing as Core contracts. <code>COND</code> (Section 7.7) treats a U guard as not-firing rather than producing U as a value, so its existing partiality and <code>CondExhausted</code> behavior are unchanged by Section 7.4.3.</p>
 
@@ -1606,7 +1632,7 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>Unassigned</code></td><td>No role has been assigned. The value is rendered in its raw structural form. The runtime never infers a richer meaning (such as "string-like") at render time; interpretation is decided once, at construction.</td></tr>
 <tr><td><code>RawNumber</code></td><td>A plain number. A rational scalar renders as a reduced <code>numerator/denominator</code>, integers included (<code>3</code> renders as <code>3/1</code>). There is no decimal surface form and no per-value style: the display is uniform and matches the exact-real internal model.</td></tr>
 <tr><td><code>ContinuedFraction</code></td><td>Display a numeric scalar as the nested right-associative continued-fraction form <code>( a0 ( a1 ( a2 ... )))</code> (Section 4.2.3); lazy CFs render with a <code>...)</code> truncation marker</td></tr>
-<tr><td><code>Interval</code></td><td>A 2-element vector interpreted as the closed interval [<em>lo</em>, <em>hi</em>]</td></tr>
+<tr><td><code>Interval</code></td><td>A 2-element vector interpreted as the closed interval \([\mathit{lo}, \mathit{hi}]\)</td></tr>
 <tr><td><code>Text</code></td><td>A codepoint sequence interpreted as text</td></tr>
 <tr><td><code>TruthValue</code></td><td>A three-state truth value drawn from the truth domain of Section 7.5. The definite states <code>true</code> and <code>false</code> are carried by a Boolean value (Section 4.1) — a distinct value kind, not a number; the third state <code>unknown</code> (U) is the logical-undecidability value of Section 7.4.1. Observed through the <code>truthValue</code> axis (protocol strings <code>true</code> <code>false</code> <code>unknown</code> — Section 2.3); carries the <code>truthValued</code> capability. Displays as <code>TRUE</code> or <code>FALSE</code> or <code>UNKNOWN</code> (display-only, non-canonical). How U is represented internally is not observable.</td></tr>
 <tr><td><code>Timestamp</code></td><td>An integer interpreted as a formatted datetime</td></tr>
@@ -1674,7 +1700,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Words whose behavior depends on more than one independent condition (e.g. <code>/</code> decides on left-operand validity, right-operand validity, right-operand zero-ness, and NIL-passthrough applicability) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.</p>
 
-<p>The three-valued logic words (<code>AND</code> <code>OR</code> <code>NOT</code> — Section 7.5) must cover every cell of the K3 truth tables — <code>AND</code> and <code>OR</code> over the nine {T, F, U}² combinations, <code>NOT</code> over the three {T, F, U} inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding <code>unknown</code> (U), and distinct irrationals deciding at a finite prefix.</p>
+<p>The three-valued logic words (<code>AND</code> <code>OR</code> <code>NOT</code> — Section 7.5) must cover every cell of the K3 truth tables — <code>AND</code> and <code>OR</code> over the nine \(\{T, F, U\}^2\) combinations, <code>NOT</code> over the three \(\{T, F, U\}\) inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal irrationals yielding <code>unknown</code> (U), and distinct irrationals deciding at a finite prefix.</p>
 
 <p><code>COMPARE-WITHIN</code> (Section 7.4.2) must cover: each decided sign (<code>-1</code> <code>0</code> <code>1</code>); the budget-undecided case yielding <code>unknown</code> with <code>diagnosis.agreedPrefix</code> equal to the consumed <code>budget</code>; finite operands deciding regardless of <code>budget</code>; the same lazy-irrational pair deciding at a large <code>budget</code> but yielding U at a small <code>budget</code>; NIL operand passthrough; and the malformed-<code>budget</code> / non-numeric-operand error paths.</p>
 

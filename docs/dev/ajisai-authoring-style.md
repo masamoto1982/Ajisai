@@ -47,16 +47,37 @@ Because a formula and an Ajisai snippet share glyphs (`/` is both a division bar
 | Channel | How it is set | A `/` in it means |
 |---------|---------------|-------------------|
 | Ajisai code | inline `` `…` `` (gray) or a fenced Ajisai block | the `DIV` word |
-| Mathematics | a math display, set off from prose; Unicode operators and italic single-letter variables | the division operator |
+| Mathematics | LaTeX typeset by KaTeX on the HTML surfaces (Section 4.1); Unicode text math on Markdown surfaces (Section 4.2) | the division operator |
 
 Rules for the mathematics channel:
 
 1. **Do not put mathematics in the gray Ajisai code span.** That background belongs to Ajisai tokens; sharing it destroys the signal of Section 3.
-2. **Do not use `$…$` / `$$…$$` math delimiters.** `$` is itself an Ajisai token (the `COND` clause separator, Section 3 of the specification), so the delimiter collides with the very language being described. Present math as Unicode text instead.
-3. **Set display formulas off from prose** in their own block, the way the specification already writes the continued-fraction forms. Use Unicode operators (`≤`, `≥`, `∈`, `→`, `√`, `ε`) and italic single-letter variables.
+2. **Do not use `$…$` / `$$…$$` math delimiters — on any surface.** `$` is itself an Ajisai token (the `COND` clause separator, Section 3 of the specification), so the delimiter collides with the very language being described. This bans only the dollar **delimiters**, not LaTeX: the HTML surfaces typeset LaTeX through KaTeX using backslash delimiters (Section 4.1), and `\` is not an Ajisai token, so those delimiters collide with nothing.
+3. **Set display formulas off from prose** in their own block, the way the specification writes the continued-fraction forms.
 4. **A glyph shared by both channels is disambiguated by channel alone.** When the same expression is shown both as mathematics and as the Ajisai that realizes it, present them as two distinct things — for example a math display beside an Ajisai snippet, or two columns — never blended into one run of text.
 
 The goal is that a reader (human or machine) can always tell, from presentation alone, whether a `/` is the operator or the word.
+
+### 4.1 LaTeX via KaTeX on the HTML surfaces
+
+The specification (`SPECIFICATION.html`) and the Reference (`public/docs/`) typeset their mathematics channel as **LaTeX rendered by KaTeX**. The essence of Ajisai is the written-down mathematics (Section 1); presenting continued fractions, intervals, and partial-quotient formulas as flat Unicode text undersells exactly the part of the artifact that matters most. Rendered LaTeX also *strengthens* the channel separation of this section: a typeset formula is unmistakably not a gray Ajisai code span and not prose. Use it actively — whenever a formula, a variable, an interval, or a set would otherwise be hand-built from Unicode glyphs and `<em>` italics, write it as LaTeX instead.
+
+| Aspect | Rule |
+|--------|------|
+| Delimiters | inline `\(…\)` · display `\[…\]` — nothing else |
+| Dollar delimiters | never configured, never used (`$` is the `COND` clause separator) |
+| Library | KaTeX with its auto-render extension, **self-hosted** at `public/vendor/katex/` — no CDN, matching the repository's no-external-services stance |
+| Refreshing the vendored copy | `npm run vendor:katex` (copies from the `katex` devDependency; woff2 fonts only) |
+| Ajisai channel exclusion | auto-render is configured with `ignoredTags` covering `code` and `pre`, so the gray Ajisai channel is structurally unreachable by math rendering — the channel separation is enforced by tooling, not just by discipline |
+| Continued fractions | use `\cfrac` for the nested display forms; the NICF formula in specification Section 4.2.5 is the model |
+| Variables and names | single letters italic by default (`\(a_0\)`, `\(b_i\)`, `\(\varepsilon_i\)`); multi-letter names as `\mathit{…}` (`\(\mathit{num}/\mathit{den}\)`) |
+| No-JS degradation | without JavaScript the raw `\(…\)` LaTeX source remains visible; this is acceptable — LaTeX source is itself a precise, AI-readable notation |
+
+The LaTeX source inside the HTML is part of the artifact: it must state exactly the mathematics intended, because machine readers consume the source, not the rendering.
+
+### 4.2 Markdown surfaces stay Unicode text
+
+The README and the `docs/dev/` working documents are Markdown and get no KaTeX runtime. There, mathematics stays as Unicode text math (`≤`, `≥`, `∈`, `→`, `√`, `ε`, subscript digits) set off from prose. GitHub's own `$…$` Markdown math is **not** used, per rule 2 above. Heavy mathematics belongs on the HTML surfaces anyway (three-layer model); if a Markdown document accumulates formulas that suffer from the Unicode limitation, that is a sign the content belongs in the specification or the Reference.
 
 ## 5. Tables for enumerable structure
 
@@ -76,7 +97,7 @@ Keep paragraphs for the definition of a single concept, the rationale behind a r
 ## 6. Rules
 
 1. **Mark every Ajisai-meaningful token as code** so it carries the gray background (Section 3). Non-negotiable baseline.
-2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background and never use `$` math delimiters.
+2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background and never use `$` math delimiters. On the HTML surfaces, typeset it as LaTeX via KaTeX with `\(…\)` / `\[…\]` (Section 4.1).
 3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `==` `=>` `?` `!`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
 4. **Promote an inline list of three or more code tokens to a table.**
 5. **One concept axis per column.**
@@ -120,9 +141,9 @@ Never separate in-cell tokens with `,`, `/`, or `|` — the first two are words,
 
 Each surface applies this style with its own tooling:
 
-- **Specification** (`SPECIFICATION.html`) — hand-authored HTML. The gray background is supplied by the page's `code` styling; enumerable structure lives in `ref-table` tables. When editing a section for any reason, promote its inline token lists to tables; do not renumber sections or restructure headings solely to insert a table.
+- **Specification** (`SPECIFICATION.html`) — hand-authored HTML. The gray background is supplied by the page's `code` styling; enumerable structure lives in `ref-table` tables; mathematics is LaTeX rendered by the self-hosted KaTeX (Section 4.1). When editing a section for any reason, promote its inline token lists to tables and its Unicode text math to LaTeX; do not renumber sections or restructure headings solely to insert a table.
 - **README** (`README.md`) — GitHub-flavored Markdown. Inline code gives the gray background; tables are native. Worked examples live in sample tables (sample code, expected value, notes), never as code comments with inline result arrows. Tech-stack badges are homemade, uniform SVGs kept in the repository (`docs/assets/badges/`) — no borrowed third-party badge images.
-- **Reference** (`public/docs/`) — hand-authored HTML. The gray background is supplied by the page's `code` styling, and examples already live in tables (sample code, expected value, notes). New pages follow the same channels.
+- **Reference** (`public/docs/`) — hand-authored HTML. The gray background is supplied by the page's `code` styling, and examples already live in tables (sample code, expected value, notes); mathematics is LaTeX rendered by the self-hosted KaTeX (Section 4.1). New pages follow the same channels.
 
 Representative specification candidates for table promotion (illustrative, not exhaustive): the Core-word category lists, the NIL-passthrough word enumerations in the Bubble Rule section, and any sentence that names four or more words in a row.
 
