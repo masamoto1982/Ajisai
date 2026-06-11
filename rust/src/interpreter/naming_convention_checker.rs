@@ -20,8 +20,8 @@ pub(crate) fn check_reserved_word_name(name: &str) -> Option<String> {
         };
     }
 
-    if name == "$" {
-        return Some("Cannot define '$': '$' is tokenizer-level syntax.".to_string());
+    if name == "|" {
+        return Some("Cannot define '|': '|' is tokenizer-level syntax.".to_string());
     }
 
     None

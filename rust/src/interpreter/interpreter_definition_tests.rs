@@ -606,18 +606,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_def_multiline_dollar_cond_word() {
-        // The redesigned multi-line `$`-style COND body must define and branch
+        // The redesigned multi-line `|`-style COND body must define and branch
         // correctly. Each clause is one line inside the outer `{ }` body.
         let mut interp = Interpreter::new();
         let src = "{\n\
-                   { [ 1 ] = $ [ 100 ] }\n\
-                   { [ 2 ] = $ [ 200 ] }\n\
-                   { IDLE   $ [ 0 ]   } COND\n\
+                   { [ 1 ] = | [ 100 ] }\n\
+                   { [ 2 ] = | [ 200 ] }\n\
+                   { IDLE   | [ 0 ]   } COND\n\
                    } 'CLS' DEF";
         interp
             .execute(src)
             .await
-            .expect("multi-line $ COND word should define");
+            .expect("multi-line | COND word should define");
 
         let check = |interp: &Interpreter| -> String {
             let val = interp.stack.last().expect("result present");

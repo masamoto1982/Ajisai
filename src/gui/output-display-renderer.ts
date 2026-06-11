@@ -1,6 +1,9 @@
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import type { Value, ExecuteResult } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { getPlatform } from '../platform';
+import { valueToLatex } from './value-latex';
 
 export interface DisplayElements {
     outputDisplay: HTMLElement;
@@ -186,6 +189,40 @@ const formatVector = (value: unknown, depth: number): string => {
     return `${open}${close}`;
 };
 
+
+// Math view (docs/dev/gui-current-design-memory.md): an alternate KaTeX
+// rendering of stack values, derived from the structured protocol form.
+// Presentation only — the canonical display strings stay untouched and
+// remain the conformance observation; the toggle swaps the view, never
+// the value. Output text is never scanned for delimiters.
+const MATH_VIEW_STORAGE_KEY = 'ajisai-stack-math-view';
+
+const readMathViewPreference = (): boolean => {
+    try {
+        return globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY) === '1';
+    } catch {
+        return false;
+    }
+};
+
+const writeMathViewPreference = (enabled: boolean): void => {
+    try {
+        globalThis.localStorage?.setItem(MATH_VIEW_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {
+        // Preference is a convenience; rendering works without persistence.
+    }
+};
+
+const renderMathValueNode = (item: Value): HTMLElement | null => {
+    const tex = valueToLatex(item);
+    if (tex === null) return null;
+    const node = document.createElement('span');
+    node.className = 'stack-node stack-node-math';
+    // Trusted markup: KaTeX output for TeX generated from the structured
+    // value by valueToLatex, never from user-supplied text.
+    node.innerHTML = katex.renderToString(tex, { throwOnError: false });
+    return node;
+};
 
 const renderStackValueNode = (item: Value, depth: number): HTMLElement => {
     const node = document.createElement('span');
@@ -468,9 +505,32 @@ const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisp
 
 export const createDisplay = (elements: DisplayElements): Display => {
     let mainOutput = '';
+    let mathViewEnabled = readMathViewPreference();
+    let lastStack: Value[] = [];
+
+    const createMathViewToggle = (): void => {
+        const panel = elements.stackDisplay.parentElement;
+        if (!panel || panel.querySelector('.stack-math-toggle')) return;
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'stack-math-toggle';
+        toggle.textContent = 'Math view';
+        toggle.setAttribute('aria-pressed', String(mathViewEnabled));
+        toggle.classList.toggle('is-active', mathViewEnabled);
+        toggle.addEventListener('click', () => {
+            mathViewEnabled = !mathViewEnabled;
+            writeMathViewPreference(mathViewEnabled);
+            toggle.setAttribute('aria-pressed', String(mathViewEnabled));
+            toggle.classList.toggle('is-active', mathViewEnabled);
+            renderStack(lastStack);
+        });
+        panel.insertBefore(toggle, elements.stackDisplay);
+    };
 
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
+        createMathViewToggle();
         AUDIO_ENGINE.init().catch(console.error);
     };
 
@@ -550,10 +610,11 @@ export const createDisplay = (elements: DisplayElements): Display => {
     };
 
     const renderStack = (stack: Value[]): void => {
+        lastStack = Array.isArray(stack) ? stack : [];
         const display = elements.stackDisplay;
         clearElement(display);
 
-        if (!Array.isArray(stack) || stack.length === 0) {
+        if (lastStack.length === 0) {
             display.classList.add('is-empty');
             const message = document.createElement('div');
             message.className = 'empty-words-message';
@@ -567,11 +628,12 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const container = document.createElement('div');
         container.className = 'area-content-flow stack-content-flow';
 
-        stack.forEach((item, index) => {
+        lastStack.forEach((item, index) => {
             const elem = document.createElement('span');
             elem.className = 'stack-item';
             try {
-                elem.appendChild(renderStackValueNode(item, 1));
+                const mathNode = mathViewEnabled ? renderMathValueNode(item) : null;
+                elem.appendChild(mathNode ?? renderStackValueNode(item, 1));
             } catch {
                 console.error(`Error formatting item ${index}`);
                 elem.textContent = 'ERROR';

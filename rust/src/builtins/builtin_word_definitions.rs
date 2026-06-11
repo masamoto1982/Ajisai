@@ -905,7 +905,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "COND",
         category: "control",
         hover_summary: "COND — evaluate guard/body clauses",
-        hover_syntax: "1 { TRUE $ 'y' } { IDLE $ 'n' } COND",
+        hover_syntax: "1 { TRUE | 'y' } { IDLE | 'n' } COND",
         executor_key: Some(BuiltinExecutorKey::Cond),
         summary:
             "Evaluate guard/body clauses in order, executing the first match.",
@@ -1636,7 +1636,7 @@ mod tests {
     fn builtin_specs_do_not_contain_symbol_aliases_or_input_helpers() {
         let forbidden = [
             "+", "-", "*", "/", "%", "=", "<", "<=", ">", ">=", "<>", ".", "..", ",", ",,", "~",
-            "!", "'", "$", "?", "^",
+            "!", "'", "|", "?", "^",
         ];
 
         for spec in super::builtin_specs() {

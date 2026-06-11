@@ -83,7 +83,7 @@ fn collect_cond_pairs_from_stack(
 
     if !all_with_sep && !none_with_sep {
         return Err(AjisaiError::from(
-            "COND: mixed clause styles are not allowed; use either {guard}{body} pairs or {guard $ body} clauses consistently",
+            "COND: mixed clause styles are not allowed; use either {guard}{body} pairs or {guard | body} clauses consistently",
         ));
     }
 
@@ -123,14 +123,14 @@ fn split_cond_clause_block(tokens: &[Token]) -> Result<(Vec<Token>, Vec<Token>)>
 
     if separator_indexes.len() != 1 {
         return Err(AjisaiError::from(
-            "COND: a $ clause must contain exactly one '$' separator",
+            "COND: a | clause must contain exactly one '|' separator",
         ));
     }
 
     let separator_index: usize = separator_indexes[0];
     if separator_index == 0 || separator_index + 1 >= tokens.len() {
         return Err(AjisaiError::from(
-            "COND: both guard and body are required around '$'",
+            "COND: both guard and body are required around '|'",
         ));
     }
 

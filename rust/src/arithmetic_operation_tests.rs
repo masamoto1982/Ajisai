@@ -1642,13 +1642,13 @@ mod u_propagation_tests {
 
     // ── COND ─────────────────────────────────────────────────────────────
     //
-    // Syntax: `[ value ] { guard $ body } { IDLE $ body } COND`. The guard is
+    // Syntax: `[ value ] { guard | body } { IDLE | body } COND`. The guard is
     // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. The
     // value `2 SQRT 2 SQRT SUB` (≈ √2−√2) compares Unknown against 0.
 
     #[tokio::test]
     async fn cond_fires_clause_with_definite_true_guard() {
-        let interp = run("[ 0 ]\n{ [ 0 ] = $ 'zero' }\n{ IDLE $ 'other' }\nCOND").await;
+        let interp = run("[ 0 ]\n{ [ 0 ] = | 'zero' }\n{ IDLE | 'other' }\nCOND").await;
         assert_eq!(format!("{}", top(&interp)), "'zero'");
     }
 
@@ -1658,7 +1658,7 @@ mod u_propagation_tests {
         // is in fact Unknown against every rational); it must NOT fire. The
         // second guard `TRUE` is value-independent and definitely fires.
         let interp = run(
-            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\n{ TRUE $ 'second' }\n{ IDLE $ 'else' }\nCOND",
+            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND",
         )
         .await;
         assert_eq!(
@@ -1672,7 +1672,7 @@ mod u_propagation_tests {
     async fn cond_u_guard_then_else_clause() {
         // The only non-else guard is U ⇒ does not fire ⇒ IDLE/else runs.
         let interp = run(
-            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\n{ IDLE $ 'else' }\nCOND",
+            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND",
         )
         .await;
         assert_eq!(format!("{}", top(&interp)), "'else'");
@@ -1683,7 +1683,7 @@ mod u_propagation_tests {
         // U guard does not fire and there is no else clause ⇒ CondExhausted.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = $ 'fired-on-U' }\nCOND")
+            .execute("'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND")
             .await;
         assert!(
             result.is_err(),

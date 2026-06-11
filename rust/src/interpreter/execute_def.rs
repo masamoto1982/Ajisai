@@ -23,7 +23,7 @@ fn code_block_tokens_to_source(tokens: &[Token]) -> String {
             Token::BlockEnd => "}".to_string(),
             Token::Pipeline => "~".to_string(),
             Token::NilCoalesce => "^".to_string(),
-            Token::CondClauseSep => "$".to_string(),
+            Token::CondClauseSep => "|".to_string(),
             Token::LineBreak => "\n".to_string(),
         })
         .collect::<Vec<_>>()

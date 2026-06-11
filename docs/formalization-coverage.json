@@ -4788,9 +4788,9 @@
       "desugars_to": "COMMENT-LINE"
     },
     {
-      "id": "surface.dollar",
+      "id": "surface.pipe",
       "kind": "control_directive",
-      "surface": "$",
+      "surface": "|",
       "classification": "Surface",
       "spec_sections": [
         "SPECIFICATION.html §3.9"

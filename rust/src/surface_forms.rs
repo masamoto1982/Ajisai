@@ -26,7 +26,7 @@ pub enum SurfaceFormKind {
     ModifierSugar,
     /// Source-level directive consumed by the tokenizer, e.g. `#`.
     SourceDirective,
-    /// Control-flow directive meaningful only inside a construct, e.g. `$`.
+    /// Control-flow directive meaningful only inside a construct, e.g. `|`.
     ControlDirective,
     /// Reserved marker that is never a runtime token, e.g. `(` `)`.
     ReservedMarker,
@@ -65,11 +65,11 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         summary: "Line comment: characters from `#` to end of line are ignored",
     },
     SurfaceForm {
-        surface: "$",
+        surface: "|",
         concept: "COND-CLAUSE",
         kind: SurfaceFormKind::ControlDirective,
         runtime_word: false,
-        summary: "COND clause separator (guard $ body)",
+        summary: "COND clause separator (guard | body)",
     },
     SurfaceForm {
         surface: "[",
@@ -166,7 +166,7 @@ pub fn surface_form_kind_label(kind: SurfaceFormKind) -> &'static str {
 }
 
 /// One-line diagnostic describing a surface form, e.g.
-/// `'$' is control directive sugar for COND-CLAUSE.`
+/// `'|' is control directive sugar for COND-CLAUSE.`
 pub fn describe_surface_form(surface: &str) -> Option<String> {
     lookup_surface_form(surface).map(|f| {
         format!(
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn lookup_returns_named_concepts() {
         assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
-        assert_eq!(lookup_surface_form("$").unwrap().concept, "COND-CLAUSE");
+        assert_eq!(lookup_surface_form("|").unwrap().concept, "COND-CLAUSE");
         assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
         assert_eq!(lookup_surface_form("]").unwrap().concept, "END-VECTOR");
         assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-BLOCK");
@@ -220,7 +220,7 @@ mod tests {
         assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
         assert_ne!(canonicalize_core_word_name(";"), "TOP-EAT");
         assert_ne!(canonicalize_core_word_name(";;"), "STAK-KEEP");
-        assert_ne!(canonicalize_core_word_name("$"), "COND-CLAUSE");
+        assert_ne!(canonicalize_core_word_name("|"), "COND-CLAUSE");
     }
 
     #[test]
@@ -236,8 +236,8 @@ mod tests {
     #[test]
     fn describe_is_diagnostic_friendly() {
         assert_eq!(
-            describe_surface_form("$").unwrap(),
-            "'$' is control directive sugar for COND-CLAUSE."
+            describe_surface_form("|").unwrap(),
+            "'|' is control directive sugar for COND-CLAUSE."
         );
         assert_eq!(
             describe_surface_form("]").unwrap(),
