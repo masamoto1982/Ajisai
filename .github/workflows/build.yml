@@ -61,12 +61,12 @@ jobs:
       - name: Build with Vite
         run: npx vite build
 
-      - name: Copy HTML documents into the site
-        # SPECIFICATION.html and README.html are authored HTML documents
+      - name: Copy the specification into the site
+        # SPECIFICATION.html is an authored HTML document
         # (docs/dev/ajisai-authoring-style.md). GitHub's repository view shows
         # HTML as source, so the rendered surface is the Pages site:
-        # /SPECIFICATION.html and /README.html next to the Playground.
-        run: cp SPECIFICATION.html README.html dist/
+        # /SPECIFICATION.html next to the Playground.
+        run: cp SPECIFICATION.html dist/
 
       - name: Create .nojekyll file
         run: touch dist/.nojekyll
