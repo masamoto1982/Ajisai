@@ -6,6 +6,7 @@ The house style for **all authoritative writing about Ajisai** — the specifica
 
 - **Non-canonical.** This document governs **how** Ajisai is written about, not **what** is true of it. It defines no language semantics.
 - **Canonical source remains `SPECIFICATION.html`.** If this document ever appears to constrain meaning, the specification wins.
+- **The authority model itself is specified.** Section 2 of the specification (Specification Authority) defines the responsibilities of, and the order of trust among, the mathematical formalization, the specification, the Reference, and this authoring discipline; this document supplies the notation rules that model requires.
 - **Scope:** the specification, the README (`README.md`), the Reference (`public/docs/`), and any other authoritative text that names Ajisai words, symbols, or formulas.
 - Sibling conventions: `docs/dev/reference-writing-style.md` (the Reference site and `?`/LOOKUP text) and `docs/dev/three-layer-documentation-model.md` (user-facing guidance structure). This document is the shared notation discipline both of those, and the specification, adhere to.
 
