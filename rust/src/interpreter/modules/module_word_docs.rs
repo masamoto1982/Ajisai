@@ -1,3 +1,4 @@
+#[cfg(test)]
 use super::module_word_types::ModuleSpec;
 
 /// Authored four-section docs for a module word. The table below is the

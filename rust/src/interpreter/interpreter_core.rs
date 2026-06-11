@@ -75,7 +75,7 @@ pub(crate) enum ChildState {
 #[derive(Debug, Clone)]
 pub(crate) enum ExitReason {
     Normal,
-    Error(String),
+    Error,
     Killed,
     Timeout,
 }
@@ -100,7 +100,6 @@ pub(crate) struct ChildRuntime {
     pub exit_reason: Option<ExitReason>,
     pub result_snapshot: Option<Vec<Value>>,
     pub monitored: bool,
-    pub spawn_epoch: EpochSnapshot,
 }
 
 #[derive(Debug, Clone)]
@@ -148,18 +147,6 @@ pub struct RuntimeMetrics {
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
-
-    // ── Redundancy Layer ──────────────────────────────────────────────────
-    /// Number of pre-execution checkpoints captured.
-    pub redundancy_checkpoint_count: u64,
-    /// Number of times a checkpoint was activated to restore the stack.
-    pub redundancy_restore_count: u64,
-    /// Quantized-path failures that triggered a stage downgrade.
-    pub redundancy_degrade_quantized: u64,
-    /// Compiled-path failures that triggered a stage downgrade.
-    pub redundancy_degrade_compiled: u64,
-    /// Times the auto-degrade threshold was crossed (demotion to PlainOnly).
-    pub redundancy_auto_degrade_count: u64,
 
     // ── Virtual Tensor Unit / Energy-aware Execution ──────────────────────
     // These counters are observational proxies for energy / data-movement
@@ -258,7 +245,6 @@ pub struct Interpreter {
     pub(crate) active_user_dictionary: String,
 
     pub(crate) global_epoch: u64,
-    pub(crate) epoch_stack: SmallVec<[u64; 8]>,
     pub(crate) dictionary_epoch: u64,
     pub(crate) module_epoch: u64,
     pub(crate) execution_epoch: u64,
@@ -319,7 +305,6 @@ impl Interpreter {
             next_registration_order: 1,
             active_user_dictionary: "DEMO".to_string(),
             global_epoch: 0,
-            epoch_stack: SmallVec::new(),
             dictionary_epoch: 0,
             module_epoch: 0,
             execution_epoch: 0,
@@ -373,16 +358,6 @@ impl Interpreter {
     pub(crate) fn next_epoch(&mut self) -> u64 {
         self.global_epoch += 1;
         self.global_epoch
-    }
-
-    pub(crate) fn push_epoch_frame(&mut self) -> u64 {
-        let e = self.next_epoch();
-        self.epoch_stack.push(e);
-        e
-    }
-
-    pub(crate) fn pop_epoch_frame(&mut self) {
-        self.epoch_stack.pop();
     }
 
     pub(crate) fn clear_resolve_cache(&mut self) {

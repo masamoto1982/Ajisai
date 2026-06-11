@@ -29,10 +29,8 @@ pub mod mass_conservation;
 pub mod math_ops;
 pub mod modules;
 pub(crate) mod naming_convention_checker;
-pub(crate) mod optimization_hooks;
 pub mod quantized_block;
 pub mod random;
-pub mod redundancy_layer;
 mod resolve_cache;
 pub mod serial;
 mod shadow_validation;
@@ -115,9 +113,6 @@ pub use epoch::EpochSnapshot;
 pub use quantized_block::{
     is_quantizable_block, quantize_code_block, QuantizedArity, QuantizedBlock, QuantizedPurity,
 };
-pub use redundancy_layer::{
-    select_deterministic_route, DeterministicExecutionRoute, RedundancyCheckpoint,
-};
 
 #[cfg(test)]
 mod compiled_plan_tests;
@@ -131,6 +126,3 @@ mod fast_guarded_tests;
 mod perf_regression_tests;
 #[cfg(test)]
 mod quantized_block_tests;
-
-#[cfg(test)]
-mod redundancy_layer_tests;

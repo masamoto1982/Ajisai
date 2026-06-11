@@ -1333,7 +1333,6 @@ mod ragged_equality_tests {
 #[cfg(test)]
 mod exact_scalar_tests {
     use crate::interpreter::Interpreter;
-    use crate::types::continued_fraction::ExactReal;
     use crate::types::fraction::Fraction;
     use crate::types::ValueData;
     use num_bigint::BigInt;

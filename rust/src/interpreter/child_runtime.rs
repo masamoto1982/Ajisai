@@ -24,7 +24,7 @@ impl Interpreter {
             ExitReason::Normal => "completed",
             ExitReason::Killed => "killed",
             ExitReason::Timeout => "timeout",
-            ExitReason::Error(_) => "failed",
+            ExitReason::Error => "failed",
         };
         vec![
             Value::from_string(status),
@@ -35,10 +35,7 @@ impl Interpreter {
     fn map_error_to_exit_reason(error: AjisaiError) -> ExitReason {
         match error {
             AjisaiError::ExecutionLimitExceeded { .. } => ExitReason::Timeout,
-            AjisaiError::DivisionByZero => ExitReason::Error("DivisionByZero".to_string()),
-            AjisaiError::StackUnderflow => ExitReason::Error("StackUnderflow".to_string()),
-            AjisaiError::UnknownWord(_) => ExitReason::Error("UnknownWord".to_string()),
-            other => ExitReason::Error(other.to_string()),
+            _ => ExitReason::Error,
         }
     }
 
@@ -51,7 +48,6 @@ impl Interpreter {
             .clone();
 
         self.bump_execution_epoch();
-        let spawn_epoch = self.current_epoch_snapshot();
         let id = self.next_child_id;
         self.next_child_id += 1;
         self.child_runtimes.insert(
@@ -63,7 +59,6 @@ impl Interpreter {
                 exit_reason: None,
                 result_snapshot: None,
                 monitored: false,
-                spawn_epoch,
             },
         );
         self.stack.push(Value::from_process_handle(id));
@@ -213,7 +208,6 @@ impl Interpreter {
         let mut attempt = 0usize;
         loop {
             self.bump_execution_epoch();
-            let spawn_epoch = self.current_epoch_snapshot();
             let id = self.next_child_id;
             self.next_child_id += 1;
             let mut child = ChildRuntime {
@@ -223,7 +217,6 @@ impl Interpreter {
                 exit_reason: None,
                 result_snapshot: None,
                 monitored: false,
-                spawn_epoch,
             };
             self.run_child_to_completion(&mut child);
             let ok = matches!(child.state, ChildState::Completed);

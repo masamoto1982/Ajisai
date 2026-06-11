@@ -60,35 +60,6 @@ where
     Ok(())
 }
 
-fn apply_binary<F>(interp: &mut Interpreter, word: &str, op: F) -> Result<()>
-where
-    F: Fn(Fraction, Fraction) -> Fraction,
-{
-    require_stack_top(interp, word)?;
-    if nil_passthrough_binary(interp) {
-        return Ok(());
-    }
-    let operands = extract_operands(interp, 2)?;
-    let parsed = (
-        extract_scalar(&operands[0], word),
-        extract_scalar(&operands[1], word),
-    );
-    let (a, b) = match parsed {
-        (Ok(a), Ok(b)) => (a, b),
-        _ => {
-            if interp.consumption_mode != crate::interpreter::ConsumptionMode::Keep {
-                interp.stack.extend(operands);
-            }
-            return Err(AjisaiError::from(format!("{}: expected two numbers", word)));
-        }
-    };
-    push_result(interp, Value::from_fraction(op(a, b)));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::RawNumber);
-    Ok(())
-}
-
 pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
     apply_unary(interp, "ABS", |f| f.abs())
 }
