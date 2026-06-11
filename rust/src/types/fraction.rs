@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{One, Signed, ToPrimitive, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
 #[inline]

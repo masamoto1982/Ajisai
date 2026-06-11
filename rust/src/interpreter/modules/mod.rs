@@ -45,7 +45,7 @@ pub fn available_module_names() -> Vec<&'static str> {
 }
 
 /// Full word + sample catalog for a module, regardless of import state.
-pub fn module_catalog_words(module_name: &str) -> Option<Vec<CatalogWord>> {
+pub(crate) fn module_catalog_words(module_name: &str) -> Option<Vec<CatalogWord>> {
     module_builtins::module_catalog_words(module_name)
 }
 

@@ -13,7 +13,6 @@ pub mod fallback_bridge;
 pub mod hedged_executor;
 pub mod hedged_policy;
 pub mod hedged_result;
-pub mod hedged_snapshot;
 pub mod hedged_trace;
 pub mod purity_table;
 pub mod tracer;
@@ -32,5 +31,4 @@ pub use hedged_policy::{
     can_hedge_code_block, can_hedge_cond_guard, can_hedge_hof_kernel, can_hedge_word,
 };
 pub use hedged_result::{HedgedCandidateResult, HedgedRejectReason, HedgedWinner};
-pub use hedged_snapshot::HedgedSnapshot;
 pub use hedged_trace::{HedgedPath, HedgedTrace, HedgedTraceEvent};

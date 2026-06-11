@@ -65,7 +65,7 @@ use ajisai_core::types::continued_fraction::ExactReal;
 use ajisai_core::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{One, Signed, Zero};
+use num_traits::{Signed, Zero};
 
 // ───────────────────────── exact-rational NICF oracle ─────────────────────
 // (Independent of the Möbius stepper; same algorithm as nicf_feasibility.rs.)
