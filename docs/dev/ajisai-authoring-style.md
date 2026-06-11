@@ -5,8 +5,8 @@ The house style for **all authoritative writing about Ajisai** — the specifica
 ## Authority
 
 - **Non-canonical.** This document governs **how** Ajisai is written about, not **what** is true of it. It defines no language semantics.
-- **Canonical source remains `SPECIFICATION.md`.** If this document ever appears to constrain meaning, the specification wins.
-- **Scope:** the specification, the Reference (`public/docs/`), and any other authoritative text that names Ajisai words, symbols, or formulas.
+- **Canonical source remains `SPECIFICATION.html`.** If this document ever appears to constrain meaning, the specification wins.
+- **Scope:** the specification, the README (`README.html`), the Reference (`public/docs/`), and any other authoritative text that names Ajisai words, symbols, or formulas.
 - Sibling conventions: `docs/dev/reference-writing-style.md` (the Reference site and `?`/LOOKUP text) and `docs/dev/three-layer-documentation-model.md` (user-facing guidance structure). This document is the shared notation discipline both of those, and the specification, adhere to.
 
 ## 1. Why this style exists
@@ -111,14 +111,19 @@ When a single cell must hold more than one token, separate them with something t
 
 Never separate in-cell tokens with `,`, `/`, or `|` — the first two are words, and `|` collides with Markdown table syntax.
 
-## 9. Applies to both the specification and the Reference
+## 9. Surfaces and required formats: the specification and README are HTML
 
-This style is shared, but each surface applies it with its own tooling:
+**The specification and the README are mandatorily authored in HTML, not Markdown.** The canonical specification is `SPECIFICATION.html` and the project README is `README.html`; authoring either of them as Markdown is a style violation. The reason for the HTML requirement is **not** visual decoration: HTML makes the structural tools this style depends on — tables for enumerable structure (Section 5), and embedded diagram sources such as PlantUML — directly usable, where Markdown keeps them second-class. The pages stay plain and unadorned, in the same sober styling the Reference uses.
 
-- **Specification** (`SPECIFICATION.md`) — GitHub-rendered Markdown. Inline code gives the gray background; tables are native. Migration is incremental: when editing a section for any reason, promote its inline token lists to tables; do not renumber sections or restructure headings solely to insert a table.
+This style is shared, and every surface applies it with the same HTML toolbox:
+
+- **Specification** (`SPECIFICATION.html`) — hand-authored HTML. The gray background is supplied by the page's `code` styling; enumerable structure lives in `ref-table` tables. When editing a section for any reason, promote its inline token lists to tables; do not renumber sections or restructure headings solely to insert a table.
+- **README** (`README.html`) — hand-authored HTML. Worked examples live in sample tables (sample code, expected value, notes), never as code comments with inline result arrows. Tech-stack badges are homemade, uniform elements — no borrowed third-party badge images.
 - **Reference** (`public/docs/`) — hand-authored HTML. The gray background is supplied by the page's `code` styling, and examples already live in tables (sample code, expected value, notes). New pages follow the same channels.
 
 Representative specification candidates for table promotion (illustrative, not exhaustive): the Core-word category lists, the NIL-passthrough word enumerations in the Bubble Rule section, and any sentence that names four or more words in a row.
+
+Legacy references to `SPECIFICATION.md` or `README.md` in older commits and archived notes are obsolete; they denote the same documents, now `SPECIFICATION.html` and `README.html`.
 
 ## 10. Relationship to the other style documents
 

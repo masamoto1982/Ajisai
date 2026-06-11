@@ -807,8 +807,8 @@
       "surface": "TRUE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.5",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.5",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §4"
@@ -835,8 +835,8 @@
       "surface": "FALSE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.5",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.5",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §4"
@@ -863,9 +863,9 @@
       "surface": "NIL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.5",
-        "SPECIFICATION.md §7.12",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §4.5",
+        "SPECIFICATION.html §7.12",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §5"
@@ -894,7 +894,7 @@
       "surface": "AND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.5"
+        "SPECIFICATION.html §7.5"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §4"
@@ -922,7 +922,7 @@
       "surface": "OR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.5"
+        "SPECIFICATION.html §7.5"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §4"
@@ -949,7 +949,7 @@
       "surface": "NOT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.5"
+        "SPECIFICATION.html §7.5"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §4"
@@ -976,8 +976,8 @@
       "surface": "ADD/SUB/MUL/DIV",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1006,8 +1006,8 @@
       "surface": "ADD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1035,8 +1035,8 @@
       "surface": "SUB",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1062,8 +1062,8 @@
       "surface": "MUL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1091,8 +1091,8 @@
       "surface": "DIV",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1121,8 +1121,8 @@
       "surface": "MOD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1149,8 +1149,8 @@
       "surface": "FLOOR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1175,8 +1175,8 @@
       "surface": "CEIL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1201,8 +1201,8 @@
       "surface": "ROUND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
@@ -1227,7 +1227,7 @@
       "surface": "EQ/LT/GT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4"
+        "SPECIFICATION.html §7.4"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1260,8 +1260,8 @@
       "surface": "EQ",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1294,8 +1294,8 @@
       "surface": "NEQ",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1323,8 +1323,8 @@
       "surface": "LT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1355,8 +1355,8 @@
       "surface": "LTE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1384,8 +1384,8 @@
       "surface": "GT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1413,8 +1413,8 @@
       "surface": "GTE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4",
-        "SPECIFICATION.md §7.4.1"
+        "SPECIFICATION.html §7.4",
+        "SPECIFICATION.html §7.4.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1442,7 +1442,7 @@
       "surface": "COMPARE-WITHIN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.4.2"
+        "SPECIFICATION.html §7.4.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.3"
@@ -1472,8 +1472,8 @@
       "surface": "'math' IMPORT SQRT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.2.3",
-        "SPECIFICATION.md §7.3"
+        "SPECIFICATION.html §4.2.3",
+        "SPECIFICATION.html §7.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -1503,8 +1503,8 @@
       "surface": "KEEP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6",
-        "SPECIFICATION.md §13"
+        "SPECIFICATION.html §6",
+        "SPECIFICATION.html §13"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §6"
@@ -1533,8 +1533,8 @@
       "surface": "STAK",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6",
-        "SPECIFICATION.md §13"
+        "SPECIFICATION.html §6",
+        "SPECIFICATION.html §13"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §6"
@@ -1563,8 +1563,8 @@
       "surface": "TOP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6.3",
-        "SPECIFICATION.md §7.0"
+        "SPECIFICATION.html §6.3",
+        "SPECIFICATION.html §7.0"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1589,8 +1589,8 @@
       "surface": "EAT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6.3",
-        "SPECIFICATION.md §7.0"
+        "SPECIFICATION.html §6.3",
+        "SPECIFICATION.html §7.0"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1615,8 +1615,8 @@
       "surface": "FLOW",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6.4",
-        "SPECIFICATION.md §7.0"
+        "SPECIFICATION.html §6.4",
+        "SPECIFICATION.html §7.0"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1640,8 +1640,8 @@
       "surface": "VENT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §6.4",
-        "SPECIFICATION.md §7.12"
+        "SPECIFICATION.html §6.4",
+        "SPECIFICATION.html §7.12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1668,7 +1668,7 @@
       "surface": "IDLE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1692,7 +1692,7 @@
       "surface": "COND",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1717,7 +1717,7 @@
       "surface": "EXEC",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1741,7 +1741,7 @@
       "surface": "EVAL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1766,7 +1766,7 @@
       "surface": "MAP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1794,7 +1794,7 @@
       "surface": "FILTER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1821,7 +1821,7 @@
       "surface": "FOLD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1850,7 +1850,7 @@
       "surface": "UNFOLD",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1876,7 +1876,7 @@
       "surface": "ANY",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1902,7 +1902,7 @@
       "surface": "ALL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1928,7 +1928,7 @@
       "surface": "COUNT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1955,7 +1955,7 @@
       "surface": "SCAN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.7"
+        "SPECIFICATION.html §7.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9"
@@ -1981,8 +1981,8 @@
       "surface": "NOW",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §7.9",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §7.9",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -2012,8 +2012,8 @@
       "surface": "RANDOM",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §7.9",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §7.9",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -2044,8 +2044,8 @@
       "surface": "SERIAL-*",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §7.9",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §7.9",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -2077,7 +2077,7 @@
       "surface": "missing capability",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -2108,8 +2108,8 @@
       "surface": "vector/tensor",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2141,8 +2141,8 @@
       "surface": "GET",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2171,8 +2171,8 @@
       "surface": "INSERT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2196,8 +2196,8 @@
       "surface": "REPLACE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2221,8 +2221,8 @@
       "surface": "REMOVE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2247,8 +2247,8 @@
       "surface": "LENGTH",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2274,8 +2274,8 @@
       "surface": "TAKE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2301,8 +2301,8 @@
       "surface": "SPLIT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2326,8 +2326,8 @@
       "surface": "CONCAT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2353,8 +2353,8 @@
       "surface": "REVERSE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2380,8 +2380,8 @@
       "surface": "RANGE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2407,8 +2407,8 @@
       "surface": "REORDER",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2432,8 +2432,8 @@
       "surface": "COLLECT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.1"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2457,8 +2457,8 @@
       "surface": "SHAPE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2485,8 +2485,8 @@
       "surface": "RANK",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2513,8 +2513,8 @@
       "surface": "RESHAPE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2539,8 +2539,8 @@
       "surface": "TRANSPOSE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2565,8 +2565,8 @@
       "surface": "FILL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.3",
-        "SPECIFICATION.md §7.2"
+        "SPECIFICATION.html §4.3",
+        "SPECIFICATION.html §7.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §7"
@@ -2591,7 +2591,7 @@
       "surface": "record",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §4.4"
+        "SPECIFICATION.html §4.4"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2615,7 +2615,7 @@
       "surface": "string",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6"
+        "SPECIFICATION.html §7.6"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2639,7 +2639,7 @@
       "surface": ">CF",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §12.2"
+        "SPECIFICATION.html §12.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2663,8 +2663,8 @@
       "surface": "CHARS",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2688,8 +2688,8 @@
       "surface": "JOIN",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2713,8 +2713,8 @@
       "surface": "TRIM",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2738,8 +2738,8 @@
       "surface": "TRIM-LEFT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2763,8 +2763,8 @@
       "surface": "TRIM-RIGHT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2788,8 +2788,8 @@
       "surface": "TOKENIZE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2813,8 +2813,8 @@
       "surface": "SUBSTITUTE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2838,8 +2838,8 @@
       "surface": "STARTS-WITH?",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2864,8 +2864,8 @@
       "surface": "ENDS-WITH?",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2890,8 +2890,8 @@
       "surface": "NUM",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2917,8 +2917,8 @@
       "surface": "STR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2942,8 +2942,8 @@
       "surface": "BOOL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2968,8 +2968,8 @@
       "surface": "CHR",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.6",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §7.6",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -2994,10 +2994,10 @@
       "surface": "IMPORT / DEF / dictionary resolution",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.8",
-        "SPECIFICATION.md §7.10",
-        "SPECIFICATION.md §8",
-        "SPECIFICATION.md §9"
+        "SPECIFICATION.html §7.8",
+        "SPECIFICATION.html §7.10",
+        "SPECIFICATION.html §8",
+        "SPECIFICATION.html §9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3026,9 +3026,9 @@
       "surface": "PRINT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §5.2",
-        "SPECIFICATION.md §7.11",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §5.2",
+        "SPECIFICATION.html §7.11",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -3057,8 +3057,8 @@
       "surface": "PRECOMPUTE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §8.2",
-        "SPECIFICATION.md §12"
+        "SPECIFICATION.html §8.2",
+        "SPECIFICATION.html §12"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3083,8 +3083,8 @@
       "surface": "DEL",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §8.3",
-        "SPECIFICATION.md §9.2"
+        "SPECIFICATION.html §8.3",
+        "SPECIFICATION.html §9.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3109,8 +3109,8 @@
       "surface": "LOOKUP",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.8",
-        "SPECIFICATION.md §8"
+        "SPECIFICATION.html §7.8",
+        "SPECIFICATION.html §8"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3135,8 +3135,8 @@
       "surface": "FORC",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.8",
-        "SPECIFICATION.md §8.2"
+        "SPECIFICATION.html §7.8",
+        "SPECIFICATION.html §8.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3161,8 +3161,8 @@
       "surface": "IMPORT-ONLY",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.14",
-        "SPECIFICATION.md §9.2"
+        "SPECIFICATION.html §7.14",
+        "SPECIFICATION.html §9.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3188,8 +3188,8 @@
       "surface": "UNIMPORT",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.14",
-        "SPECIFICATION.md §9.2"
+        "SPECIFICATION.html §7.14",
+        "SPECIFICATION.html §9.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3215,8 +3215,8 @@
       "surface": "UNIMPORT-ONLY",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.md §7.14",
-        "SPECIFICATION.md §9.2"
+        "SPECIFICATION.html §7.14",
+        "SPECIFICATION.html §9.2"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
@@ -3242,7 +3242,7 @@
       "surface": "SPAWN",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.3"
+        "SPECIFICATION.html §10.3"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3275,7 +3275,7 @@
       "surface": "AWAIT",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.4"
+        "SPECIFICATION.html §10.4"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3309,7 +3309,7 @@
       "surface": "STATUS",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.5"
+        "SPECIFICATION.html §10.5"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3342,7 +3342,7 @@
       "surface": "KILL",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.6"
+        "SPECIFICATION.html §10.6"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3376,7 +3376,7 @@
       "surface": "MONITOR",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.7"
+        "SPECIFICATION.html §10.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3409,7 +3409,7 @@
       "surface": "SUPERVISE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §10.7"
+        "SPECIFICATION.html §10.7"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3442,8 +3442,8 @@
       "surface": "SPAWN/AWAIT",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §7.11",
-        "SPECIFICATION.md §10"
+        "SPECIFICATION.html §7.11",
+        "SPECIFICATION.html §10"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
@@ -3476,7 +3476,7 @@
       "surface": "JSON@PARSE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3503,7 +3503,7 @@
       "surface": "JSON@STRINGIFY",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3529,7 +3529,7 @@
       "surface": "JSON@GET",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3556,7 +3556,7 @@
       "surface": "JSON@KEYS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3582,7 +3582,7 @@
       "surface": "JSON@SET",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3608,7 +3608,7 @@
       "surface": "JSON@HAS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3635,7 +3635,7 @@
       "surface": "JSON@VALUES",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3661,7 +3661,7 @@
       "surface": "JSON@MERGE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3687,7 +3687,7 @@
       "surface": "JSON@DELETE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
@@ -3713,8 +3713,8 @@
       "surface": "JSON@EXPORT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -3743,8 +3743,8 @@
       "surface": "IO@INPUT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -3773,8 +3773,8 @@
       "surface": "IO@OUTPUT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -3803,7 +3803,7 @@
       "surface": "TIME@DATETIME",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3829,7 +3829,7 @@
       "surface": "TIME@TIMESTAMP",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3855,7 +3855,7 @@
       "surface": "TIME@DATE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3880,7 +3880,7 @@
       "surface": "TIME@TIME",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3905,7 +3905,7 @@
       "surface": "TIME@YEAR",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3931,7 +3931,7 @@
       "surface": "TIME@MONTH",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3957,7 +3957,7 @@
       "surface": "TIME@DAY",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -3983,7 +3983,7 @@
       "surface": "TIME@HOUR",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4009,7 +4009,7 @@
       "surface": "TIME@MINUTE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4035,7 +4035,7 @@
       "surface": "TIME@SECOND",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4061,7 +4061,7 @@
       "surface": "TIME@WEEKDAY",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4087,7 +4087,7 @@
       "surface": "TIME@ADD-DAYS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4113,7 +4113,7 @@
       "surface": "TIME@DIFF-DAYS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4139,7 +4139,7 @@
       "surface": "TIME@FORMAT",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4165,7 +4165,7 @@
       "surface": "TIME@PARSE-ISO",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4192,7 +4192,7 @@
       "surface": "TIME@ADD-MONTHS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4218,7 +4218,7 @@
       "surface": "TIME@ADD-YEARS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -4244,8 +4244,8 @@
       "surface": "CRYPTO@HASH",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
@@ -4271,8 +4271,8 @@
       "surface": "ALGO@SORT",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §7.4.3",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §7.4.3",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-ter",
@@ -4300,7 +4300,7 @@
       "surface": "ALGO@UNIQUE",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quater"
@@ -4326,7 +4326,7 @@
       "surface": "ALGO@CONTAINS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quater"
@@ -4352,7 +4352,7 @@
       "surface": "ALGO@INDEX-OF",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quater"
@@ -4378,8 +4378,8 @@
       "surface": "MATH@SQRT-EPS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4406,8 +4406,8 @@
       "surface": "MATH@INTERVAL",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4434,8 +4434,8 @@
       "surface": "MATH@LOWER",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4462,8 +4462,8 @@
       "surface": "MATH@UPPER",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4490,8 +4490,8 @@
       "surface": "MATH@WIDTH",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4518,8 +4518,8 @@
       "surface": "MATH@IS-EXACT",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4546,8 +4546,8 @@
       "surface": "MATH@ABS",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4574,8 +4574,8 @@
       "surface": "MATH@NEG",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4601,8 +4601,8 @@
       "surface": "MATH@SIGN",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4629,8 +4629,8 @@
       "surface": "MATH@MIN",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4657,8 +4657,8 @@
       "surface": "MATH@MAX",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4685,8 +4685,8 @@
       "surface": "MATH@POW",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4713,8 +4713,8 @@
       "surface": "MATH@GCD",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4741,8 +4741,8 @@
       "surface": "MATH@LCM",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §4.2",
-        "SPECIFICATION.md §9.1"
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.1",
@@ -4769,7 +4769,7 @@
       "surface": "#",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4793,7 +4793,7 @@
       "surface": "$",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4817,7 +4817,7 @@
       "surface": "[",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4841,7 +4841,7 @@
       "surface": "]",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4865,7 +4865,7 @@
       "surface": "{",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4889,7 +4889,7 @@
       "surface": "}",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4913,7 +4913,7 @@
       "surface": ";",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4937,7 +4937,7 @@
       "surface": ";;",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4961,7 +4961,7 @@
       "surface": "(",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -4985,8 +4985,8 @@
       "surface": "MUSIC@SEQ",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5012,8 +5012,8 @@
       "surface": "MUSIC@SIM",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5039,8 +5039,8 @@
       "surface": "MUSIC@SLOT",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5072,8 +5072,8 @@
       "surface": "MUSIC@GAIN",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5105,8 +5105,8 @@
       "surface": "MUSIC@GAIN-RESET",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5138,8 +5138,8 @@
       "surface": "MUSIC@PAN",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5171,8 +5171,8 @@
       "surface": "MUSIC@PAN-RESET",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5204,8 +5204,8 @@
       "surface": "MUSIC@FX-RESET",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5237,8 +5237,8 @@
       "surface": "MUSIC@PLAY",
       "classification": "HostedEffect",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5270,8 +5270,8 @@
       "surface": "MUSIC@SEQ-GROUP",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5307,8 +5307,8 @@
       "surface": "MUSIC@SIM-GROUP",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5344,8 +5344,8 @@
       "surface": "MUSIC@CHORD",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5381,8 +5381,8 @@
       "surface": "MUSIC@HZ",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5418,8 +5418,8 @@
       "surface": "MUSIC@DUR",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5455,8 +5455,8 @@
       "surface": "MUSIC@NOTE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5492,8 +5492,8 @@
       "surface": "MUSIC@REST",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5529,8 +5529,8 @@
       "surface": "MUSIC@EDO",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5566,8 +5566,8 @@
       "surface": "MUSIC@EDR",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5603,8 +5603,8 @@
       "surface": "MUSIC@STEP",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5640,8 +5640,8 @@
       "surface": "MUSIC@VOICE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5677,8 +5677,8 @@
       "surface": "MUSIC@TRACK",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5714,8 +5714,8 @@
       "surface": "MUSIC@MEASURE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5751,8 +5751,8 @@
       "surface": "MUSIC@PHRASE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5788,8 +5788,8 @@
       "surface": "MUSIC@WITH-TUNING",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5825,8 +5825,8 @@
       "surface": "MUSIC@ADSR",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5862,8 +5862,8 @@
       "surface": "MUSIC@SINE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5899,8 +5899,8 @@
       "surface": "MUSIC@SQUARE",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5936,8 +5936,8 @@
       "surface": "MUSIC@SAW",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -5973,8 +5973,8 @@
       "surface": "MUSIC@TRI",
       "classification": "Exploratory",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -6010,8 +6010,8 @@
       "surface": "MUSIC@EXPLAIN",
       "classification": "Module",
       "spec_sections": [
-        "SPECIFICATION.md §9.1",
-        "SPECIFICATION.md §11"
+        "SPECIFICATION.html §9.1",
+        "SPECIFICATION.html §11"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
@@ -6038,7 +6038,7 @@
       "surface": "+",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6061,7 +6061,7 @@
       "surface": "-",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6084,7 +6084,7 @@
       "surface": "*",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6107,7 +6107,7 @@
       "surface": "%",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6130,7 +6130,7 @@
       "surface": "=",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6153,7 +6153,7 @@
       "surface": "<",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6176,7 +6176,7 @@
       "surface": "<=",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6199,7 +6199,7 @@
       "surface": ">",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6222,7 +6222,7 @@
       "surface": ">=",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6245,7 +6245,7 @@
       "surface": "<>",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6268,7 +6268,7 @@
       "surface": "!",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6291,7 +6291,7 @@
       "surface": "&",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6314,7 +6314,7 @@
       "surface": ".",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6337,7 +6337,7 @@
       "surface": "..",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6360,7 +6360,7 @@
       "surface": ",",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6383,7 +6383,7 @@
       "surface": ",,",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6406,7 +6406,7 @@
       "surface": "'",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6427,7 +6427,7 @@
       "surface": "?",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"
@@ -6450,7 +6450,7 @@
       "surface": "~",
       "classification": "Surface",
       "spec_sections": [
-        "SPECIFICATION.md §3.9"
+        "SPECIFICATION.html §3.9"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-bis"

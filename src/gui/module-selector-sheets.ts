@@ -115,7 +115,7 @@ export const createModuleTabManager = (
 
     // Activation toggles are intentionally implemented as real IMPORT /
     // UNIMPORT / IMPORT-ONLY / UNIMPORT-ONLY executions so the GUI gesture is
-    // semantically identical to typing the word (SPECIFICATION.md §9.2).
+    // semantically identical to typing the word (SPECIFICATION.html §9.2).
     const runModuleCode = async (code: string, successMessage: string): Promise<void> => {
         if (!window.ajisaiInterpreter) return;
         try {

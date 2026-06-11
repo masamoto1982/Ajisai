@@ -8,7 +8,7 @@
 //! infinitely many conformance cases, so this file is the "equation-level
 //! continuous verification" companion to `tests/conformance/`.
 //!
-//! Scope: the laws asserted here are consistent with `SPECIFICATION.md`. They
+//! Scope: the laws asserted here are consistent with `SPECIFICATION.html`. They
 //! include the strong-Kleene K3 logic laws over {TRUE, FALSE, UNKNOWN}, which
 //! pass now that truth values are a distinct data-plane kind rendering
 //! uniformly as TRUE/FALSE/UNKNOWN (findings B1/B2) and irrationals render as

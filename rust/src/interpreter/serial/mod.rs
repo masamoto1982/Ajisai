@@ -9,7 +9,7 @@
 //! Inbound: `READ` drains the host-injected receive buffer (`serial_inbox` on
 //! the interpreter), returning a byte vector or a reasoned Bubble/NIL when no
 //! data is available. See `docs/dev/web-serial-module-design.md` and
-//! SPECIFICATION.md §9.4.
+//! SPECIFICATION.html §9.4.
 
 mod execute_serial_commands;
 
