@@ -16,6 +16,12 @@ const MAX_MATH_LANES = 64;
 
 const INTEGER_PATTERN = /^-?\d+$/;
 
+// Digit count at which a numerator or denominator stops being readable as
+// a digit string and the math view switches to scientific notation. Same
+// threshold as the text renderer's `formatFractionScientific`.
+const SCIENTIFIC_DIGIT_THRESHOLD = 10;
+const MANTISSA_DIGITS = 6;
+
 const checkFractionShape = (value: unknown): Fraction | null => {
     if (!value || typeof value !== 'object') return null;
     const candidate = value as { numerator?: unknown; denominator?: unknown };
@@ -25,8 +31,90 @@ const checkFractionShape = (value: unknown): Fraction | null => {
     return { numerator, denominator };
 };
 
+// Scientific reading of a huge ratio: mantissa times a power of ten,
+// computed exactly with BigInt long division and prefixed with \approx
+// whenever any precision is dropped — the math view never presents a
+// truncated value as exact.
+const scientificLatex = (numeratorStr: string, denominatorStr: string): string => {
+    let numerator = BigInt(numeratorStr);
+    let denominator = BigInt(denominatorStr);
+    if (denominator < 0n) {
+        denominator = -denominator;
+        numerator = -numerator;
+    }
+    const negative = numerator < 0n;
+    if (negative) numerator = -numerator;
+    if (numerator === 0n) return '0';
+
+    // Scale so the quotient carries one digit beyond the mantissa, then
+    // read mantissa and exponent off the quotient's decimal digits.
+    const digitGap = String(numerator).length - String(denominator).length;
+    const scale = MANTISSA_DIGITS + 1 - digitGap;
+    const scaled = scale >= 0
+        ? (numerator * 10n ** BigInt(scale)) / denominator
+        : numerator / (denominator * 10n ** BigInt(-scale));
+    const dividesExactly = scale >= 0
+        ? (numerator * 10n ** BigInt(scale)) % denominator === 0n
+        : numerator % (denominator * 10n ** BigInt(-scale)) === 0n;
+
+    const digits = String(scaled);
+    const exponent = digits.length - 1 - scale;
+    const kept = digits.slice(0, MANTISSA_DIGITS);
+    const dropped = digits.slice(MANTISSA_DIGITS);
+    const exact = dividesExactly && /^0*$/.test(dropped);
+
+    let significand = kept;
+    let exponentOut = exponent;
+    if (!exact && dropped.length > 0 && dropped[0]! >= '5') {
+        // Round half-up on the first dropped digit; a carry out of the top
+        // digit (9.99999... -> 10) bumps the exponent instead.
+        const rounded = String(BigInt(kept) + 1n);
+        if (rounded.length > kept.length) {
+            significand = '1';
+            exponentOut = exponent + 1;
+        } else {
+            significand = rounded;
+        }
+    }
+    significand = significand.replace(/0+$/, '') || '0';
+
+    // Huge components do not imply a huge value (a best rational
+    // approximation of sqrt(2) has ten-digit components and the value 1.41…),
+    // so a human-scale exponent renders as a plain decimal and only a
+    // genuinely large or tiny value gets the power of ten.
+    const sign = negative ? '-' : '';
+    let body: string;
+    if (exponentOut >= 0 && exponentOut <= 5) {
+        const integerLength = exponentOut + 1;
+        const padded = significand.padEnd(integerLength, '0');
+        const integerPart = padded.slice(0, integerLength);
+        const fractionalPart = padded.slice(integerLength);
+        body = `${sign}${integerPart}${fractionalPart ? `.${fractionalPart}` : ''}`;
+    } else if (exponentOut < 0 && exponentOut >= -4) {
+        body = `${sign}0.${'0'.repeat(-exponentOut - 1)}${significand}`;
+    } else {
+        const mantissa = significand.length > 1
+            ? `${significand[0]}.${significand.slice(1)}`
+            : significand;
+        body = mantissa === '1'
+            ? `${sign}10^{${exponentOut}}`
+            : `${sign}${mantissa} \\times 10^{${exponentOut}}`;
+    }
+    return exact ? body : `\\approx ${body}`;
+};
+
+const checkHugeDigits = (frac: Fraction): boolean => {
+    const numeratorDigits = frac.numerator.replace('-', '').length;
+    const denominatorDigits = frac.denominator.replace('-', '').length;
+    return numeratorDigits >= SCIENTIFIC_DIGIT_THRESHOLD
+        || denominatorDigits >= SCIENTIFIC_DIGIT_THRESHOLD;
+};
+
 // `3/1` reads as the integer 3; `-3/4` keeps its sign outside the bar.
+// Huge components switch to scientific notation so the rendering stays
+// inside the Stack area instead of running off its right edge.
 export const fractionToLatex = (frac: Fraction): string => {
+    if (checkHugeDigits(frac)) return scientificLatex(frac.numerator, frac.denominator);
     if (frac.denominator === '1') return frac.numerator;
     const negative = frac.numerator.startsWith('-');
     const magnitude = negative ? frac.numerator.slice(1) : frac.numerator;
@@ -114,9 +202,10 @@ export const valueToLatex = (item: Value): string | null => {
             if (frac === null) return null;
             const tex = fractionToLatex(frac);
             // Best rational approximation of an exact irrational under a
-            // lossy role (SPEC §2.3): make the approximation visible.
+            // lossy role (SPEC §2.3): make the approximation visible. The
+            // scientific form may already carry its own \approx.
             const approximate = (item.semantics as { approximate?: boolean } | undefined)?.approximate === true;
-            return approximate ? `\\approx ${tex}` : tex;
+            return approximate && !tex.startsWith('\\approx') ? `\\approx ${tex}` : tex;
         }
         case 'tensor':
             return tensorToLatex(item.value);

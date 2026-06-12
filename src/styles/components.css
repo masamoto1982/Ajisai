@@ -295,7 +295,13 @@
 
 .stack-node-math {
     display: inline-block;
-    padding: 0.1rem 0.15rem;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    vertical-align: middle;
+    /* Trailing breathing room so a wide rendering never touches the
+       Stack area's right edge. */
+    padding: 0.1rem 0.6rem 0.1rem 0.15rem;
 }
 
 

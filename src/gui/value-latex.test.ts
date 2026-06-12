@@ -39,9 +39,55 @@ describe('fractionToLatex', () => {
         expect(fractionToLatex(frac(-3, 4))).toBe('-\\frac{3}{4}');
     });
 
-    test('big integers pass through verbatim', () => {
+    test('nine-digit components stay exact', () => {
+        expect(fractionToLatex(frac('999999999', '7'))).toBe('\\frac{999999999}{7}');
+    });
+});
+
+describe('fractionToLatex: huge components switch to scientific notation', () => {
+    test('huge integer rounds to a six-digit mantissa with \\approx', () => {
+        expect(fractionToLatex(frac('12345678901'))).toBe('\\approx 1.23457 \\times 10^{10}');
+    });
+
+    test('exact power of ten needs no mantissa and no \\approx', () => {
+        expect(fractionToLatex(frac('1' + '0'.repeat(40)))).toBe('10^{40}');
+    });
+
+    test('exact short mantissa keeps no \\approx', () => {
+        expect(fractionToLatex(frac('5' + '0'.repeat(12)))).toBe('5 \\times 10^{12}');
+    });
+
+    test('huge ratio collapses to one scientific number', () => {
         const digits = '9'.repeat(40);
-        expect(fractionToLatex(frac(digits, '7'))).toBe(`\\frac{${digits}}{7}`);
+        expect(fractionToLatex(frac(digits, '7'))).toBe('\\approx 1.42857 \\times 10^{39}');
+    });
+
+    test('rounding can carry into the exponent', () => {
+        expect(fractionToLatex(frac('999999999999'))).toBe('\\approx 10^{12}');
+    });
+
+    test('negative huge value keeps its sign', () => {
+        expect(fractionToLatex(frac('-12345678901'))).toBe('\\approx -1.23457 \\times 10^{10}');
+    });
+
+    test('tiny ratio gets a negative exponent', () => {
+        expect(fractionToLatex(frac('1', '1' + '0'.repeat(12)))).toBe('10^{-12}');
+    });
+
+    test('human-scale value with huge components renders as a decimal', () => {
+        expect(fractionToLatex(frac('1414213562', '1000000000'))).toBe('\\approx 1.41421');
+    });
+
+    test('mid-scale value places the decimal point, not a power of ten', () => {
+        expect(fractionToLatex(frac('31415926535', '100000000'))).toBe('\\approx 314.159');
+    });
+
+    test('near-zero value uses leading zeros down to 10^-4', () => {
+        expect(fractionToLatex(frac('1234567891', '10000000000000'))).toBe('\\approx 0.000123457');
+    });
+
+    test('exact human-scale value carries no \\approx', () => {
+        expect(fractionToLatex(frac('1500000000', '1000000000'))).toBe('1.5');
     });
 });
 
@@ -50,9 +96,9 @@ describe('valueToLatex: scalars', () => {
         expect(valueToLatex(num(1, 2))).toBe('\\frac{1}{2}');
     });
 
-    test('approximate marker prefixes \\approx', () => {
+    test('approximate sqrt(2) renders as a decimal with a single \\approx', () => {
         const item = { ...num(1414213562, 1000000000), semantics: { approximate: true } } as Value;
-        expect(valueToLatex(item)).toBe('\\approx \\frac{1414213562}{1000000000}');
+        expect(valueToLatex(item)).toBe('\\approx 1.41421');
     });
 
     test('malformed numerator is refused (no TeX injection)', () => {
