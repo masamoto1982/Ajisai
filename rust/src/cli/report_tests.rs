@@ -34,6 +34,7 @@ fn ok_report_envelope_has_contract_fields() {
     assert_eq!(doc["status"], "ok");
     assert!(doc["stack"].is_array());
     assert_eq!(doc["stack"].as_array().unwrap().len(), 1);
+    assert_eq!(doc["stackDisplay"][0], "[ 3/1 ]");
     assert!(doc["diagnosis"].is_null());
     assert!(doc["aiDiagnostic"].is_null());
     assert!(doc["runtimeMetrics"]["vtu"].is_object());
