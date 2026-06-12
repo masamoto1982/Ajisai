@@ -197,11 +197,14 @@ const formatVector = (value: unknown, depth: number): string => {
 // the value. Output text is never scanned for delimiters.
 const MATH_VIEW_STORAGE_KEY = 'ajisai-stack-math-view';
 
+// Math view is the standard rendering; the toggle remains so the
+// canonical protocol strings are always one click away.
 const readMathViewPreference = (): boolean => {
     try {
-        return globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY) === '1';
+        const stored = globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY);
+        return stored === null || stored === undefined ? true : stored === '1';
     } catch {
-        return false;
+        return true;
     }
 };
 
