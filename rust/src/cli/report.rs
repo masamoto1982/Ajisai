@@ -26,8 +26,10 @@ pub(crate) const SCHEMA_VERSION: u64 = 1;
 pub(crate) struct Report {
     pub status: &'static str,
     pub stack: Json,
-    /// Human display strings for the stack (text mode only; not part of
-    /// the JSON envelope, which carries the structured `stack` instead).
+    /// Human display strings for the stack, bottom to top — the same text
+    /// the GUI and PRINT render. Carried in the JSON envelope as
+    /// `stackDisplay` so agents and the SKILL.md generator can show
+    /// "code → expected stack" pairs without re-deriving display rules.
     pub stack_display: Vec<String>,
     pub output: Vec<String>,
     pub message: Option<String>,
@@ -43,6 +45,7 @@ impl Report {
             "schemaVersion": SCHEMA_VERSION,
             "status": self.status,
             "stack": self.stack,
+            "stackDisplay": self.stack_display,
             "output": self.output,
             "message": self.message,
             "diagnosis": self.diagnosis.as_ref().map(diagnosis_json),

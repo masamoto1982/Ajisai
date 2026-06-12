@@ -79,6 +79,16 @@ jobs:
         # regenerating) is what catches a missing word like SUPERVISE.
         run: npm run word:manifest:check
 
+      - name: Verify committed SKILL.md is in sync
+        # SKILL.md is generated (never hand-written): the generator executes
+        # every embedded snippet through the ajisai CLI, so this step both
+        # catches a stale committed copy and proves the guide still matches
+        # the implementation. The cargo target dir is already warm from the
+        # test steps above, so the CLI build is incremental.
+        run: |
+          cargo build --bin ajisai --manifest-path rust/Cargo.toml
+          npm run check:skill
+
       - name: Generate primitive test map
         run: npm run primitive:test-map
 

@@ -39,6 +39,7 @@ does not prove it will.
   "schemaVersion": 1,
   "status": "ok | error",
   "stack": [ ... ],
+  "stackDisplay": [ "..." ],
   "output": [ "..." ],
   "message": null,
   "diagnosis": { ... } | null,
@@ -53,6 +54,7 @@ does not prove it will.
 | `schemaVersion` | number | Version of this envelope. Currently `1`. |
 | `status` | string | `"ok"` (exit 0) or `"error"` (exit 1). |
 | `stack` | array | Final data stack, bottom to top, as value protocol nodes (§3). Empty for `check`. |
+| `stackDisplay` | array of string | The same stack as display strings (the text the GUI / `PRINT` render), bottom to top. Convenience view of `stack`; the structured nodes stay authoritative. |
 | `output` | array of string | Ordered `PRINT` payloads produced during the run. Empty for `check`. |
 | `message` | string \| null | The raw error display string, when `status` is `"error"`. |
 | `diagnosis` | object \| null | Structured diagnosis of the failure (§4). Null when `status` is `"ok"`. |
