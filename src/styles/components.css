@@ -24,7 +24,8 @@
 }
 
 .area-selector select,
-.dictionary-sheet-select {
+.dictionary-sheet-select,
+.sheet-selector-native-trigger {
     font-family: var(--font-stack-mono);
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
@@ -39,9 +40,16 @@
 
 .area-selector select:focus,
 .dictionary-sheet-select:focus,
-.dictionary-sheet-select:focus-within {
+.dictionary-sheet-select:focus-within,
+.sheet-selector:focus-within .sheet-selector-native-trigger {
     outline: none;
     background: var(--color-light);
+}
+
+.dictionary-sheet-select.sheet-selector {
+    border: 0;
+    background: transparent;
+    transition: none;
 }
 
 
@@ -562,33 +570,25 @@
     padding: 0;
 }
 
+.sheet-selector-native-trigger {
+    display: block;
+    pointer-events: none;
+}
+
 .sheet-selector-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    font-family: var(--font-stack-mono);
-    font-size: 0.8rem;
-    line-height: normal;
+    position: absolute;
+    inset: 0;
     padding: 0.25rem 0.5rem;
     width: 100%;
-    text-align: left;
+    color: transparent;
     background: transparent;
-    color: var(--color-text);
     border: none;
     border-radius: var(--radius-main);
     cursor: pointer;
 }
 
-.sheet-selector-trigger::after {
-    content: '';
-    flex: 0 0 auto;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(45deg) translateY(-0.1rem);
-    opacity: 0.6;
+.sheet-selector-trigger:focus {
+    outline: none;
 }
 
 .sheet-selector-panel {
