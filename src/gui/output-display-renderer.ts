@@ -197,14 +197,14 @@ const formatVector = (value: unknown, depth: number): string => {
 // the value. Output text is never scanned for delimiters.
 const MATH_VIEW_STORAGE_KEY = 'ajisai-stack-math-view';
 
-// Math view is the standard rendering; the toggle remains so the
-// canonical protocol strings are always one click away.
+// The canonical protocol strings are the standard rendering; Math view is
+// an opt-in alternate so Ajisai's observable surface never depends on
+// KaTeX (portability: the GUI stays faithful without it).
 const readMathViewPreference = (): boolean => {
     try {
-        const stored = globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY);
-        return stored === null || stored === undefined ? true : stored === '1';
+        return globalThis.localStorage?.getItem(MATH_VIEW_STORAGE_KEY) === '1';
     } catch {
-        return true;
+        return false;
     }
 };
 
@@ -515,9 +515,12 @@ export const createDisplay = (elements: DisplayElements): Display => {
         const panel = elements.stackDisplay.parentElement;
         if (!panel || panel.querySelector('.stack-math-toggle')) return;
 
+        // Same `.btn` treatment and bottom-right placement as the Output
+        // area's Copy button: a flex-column panel with the button as its
+        // last child, self-aligned to the end.
         const toggle = document.createElement('button');
         toggle.type = 'button';
-        toggle.className = 'stack-math-toggle';
+        toggle.className = 'btn stack-math-toggle';
         toggle.textContent = 'Math view';
         toggle.setAttribute('aria-pressed', String(mathViewEnabled));
         toggle.classList.toggle('is-active', mathViewEnabled);
@@ -528,7 +531,7 @@ export const createDisplay = (elements: DisplayElements): Display => {
             toggle.classList.toggle('is-active', mathViewEnabled);
             renderStack(lastStack);
         });
-        panel.insertBefore(toggle, elements.stackDisplay);
+        panel.appendChild(toggle);
     };
 
     const init = (): void => {

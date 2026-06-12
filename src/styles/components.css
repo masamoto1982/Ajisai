@@ -272,22 +272,11 @@
     min-height: 0;
 }
 
-/* Math view (KaTeX) toggle: alternate rendering of stack values; the
-   canonical display strings remain the default and the conformance
-   observation. */
-.stack-math-toggle {
-    align-self: flex-end;
-    margin: 0 0 4px;
-    padding: 0.1rem 0.5rem;
-    background: #fff;
-    color: var(--color-text-light);
-    border: var(--border-main);
-    font-family: var(--font-stack-primary);
-    font-size: 0.7rem;
-    cursor: pointer;
-    border-radius: var(--radius-button);
-}
-
+/* Math view (KaTeX) toggle: opt-in alternate rendering of stack values;
+   the canonical display strings are the standard rendering and the
+   conformance observation. Sizing and placement come from `.btn` (the
+   same treatment as the Output area's Copy button); only the pressed
+   state is styled here. */
 .stack-math-toggle.is-active {
     border-color: var(--color-primary);
     color: var(--color-primary);
