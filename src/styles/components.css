@@ -272,14 +272,27 @@
     min-height: 0;
 }
 
-/* Math view (KaTeX) toggle: opt-in alternate rendering of stack values;
-   the canonical display strings are the standard rendering and the
-   conformance observation. Sizing and placement come from `.btn` (the
-   same treatment as the Output area's Copy button); only the pressed
-   state is styled here. */
-.stack-math-toggle.is-active {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+/* LaTeX checkbox: opt-in KaTeX rendering of stack values; unchecked, the
+   canonical display strings (the conformance observation) render as-is.
+   Bottom-right of the Stack area: the panel's own padding keeps it off
+   the frame while it stays visually attached to the area. */
+.stack-latex-toggle {
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0.125rem 0.125rem 0;
+    font-family: var(--font-stack-primary);
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    cursor: pointer;
+    user-select: none;
+}
+
+.stack-latex-toggle input {
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--color-primary);
 }
 
 .stack-node-math {

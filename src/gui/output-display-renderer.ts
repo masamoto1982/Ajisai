@@ -511,32 +511,36 @@ export const createDisplay = (elements: DisplayElements): Display => {
     let mathViewEnabled = readMathViewPreference();
     let lastStack: Value[] = [];
 
-    const createMathViewToggle = (): void => {
+    const createLatexToggle = (): void => {
         const panel = elements.stackDisplay.parentElement;
-        if (!panel || panel.querySelector('.stack-math-toggle')) return;
+        if (!panel || panel.querySelector('.stack-latex-toggle')) return;
 
-        // Same `.btn` treatment and bottom-right placement as the Output
-        // area's Copy button: a flex-column panel with the button as its
-        // last child, self-aligned to the end.
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'btn stack-math-toggle';
-        toggle.textContent = 'Math view';
-        toggle.setAttribute('aria-pressed', String(mathViewEnabled));
-        toggle.classList.toggle('is-active', mathViewEnabled);
-        toggle.addEventListener('click', () => {
-            mathViewEnabled = !mathViewEnabled;
+        // A labeled checkbox at the bottom-right of the Stack area: checked
+        // means the LaTeX (KaTeX) rendering, unchecked the canonical
+        // protocol strings. The unchecked mode is deliberately unnamed —
+        // a checkbox states only what checking it adds.
+        const wrapper = document.createElement('label');
+        wrapper.className = 'stack-latex-toggle';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = mathViewEnabled;
+        checkbox.addEventListener('change', () => {
+            mathViewEnabled = checkbox.checked;
             writeMathViewPreference(mathViewEnabled);
-            toggle.setAttribute('aria-pressed', String(mathViewEnabled));
-            toggle.classList.toggle('is-active', mathViewEnabled);
             renderStack(lastStack);
         });
-        panel.appendChild(toggle);
+
+        const caption = document.createElement('span');
+        caption.textContent = 'LaTeX';
+
+        wrapper.append(checkbox, caption);
+        panel.appendChild(wrapper);
     };
 
     const init = (): void => {
         elements.outputDisplay.style.whiteSpace = 'pre-wrap';
-        createMathViewToggle();
+        createLatexToggle();
         AUDIO_ENGINE.init().catch(console.error);
     };
 
