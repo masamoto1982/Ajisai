@@ -6,6 +6,13 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# Headless agent-facing CLI (docs/dev/agent-cli-output-contract.md).
+# Builds with the default native features (std + hosted); never depends on
+# the wasm feature.
+[[bin]]
+name = "ajisai"
+path = "src/bin/ajisai.rs"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 num-bigint = { version = "0.4", features = ["serde"] }

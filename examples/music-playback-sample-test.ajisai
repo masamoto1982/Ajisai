@@ -1,6 +1,9 @@
 # === Ajisai Music DSL Test Suite ===
 # This file tests the music DSL features: SEQ, SIM, PLAY
 
+# Music words live in the MUSIC module.
+'MUSIC' IMPORT
+
 # === Basic Tests ===
 
 # Single note

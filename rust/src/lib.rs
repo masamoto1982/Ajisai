@@ -10,6 +10,11 @@ pub mod surface_forms;
 mod tokenizer;
 pub mod types;
 
+// Headless agent-facing CLI (the `ajisai` bin target). Native-only: it is
+// host-adapter plumbing over the same interpreter the WASM bindings wrap.
+#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
+pub mod cli;
+
 #[cfg(feature = "wasm")]
 mod wasm_interpreter_bindings;
 
