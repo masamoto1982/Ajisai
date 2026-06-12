@@ -7,6 +7,9 @@ mod fraction_arithmetic;
 mod fraction_mcdc_tests;
 pub mod interval;
 mod value_operations;
+pub(crate) mod value_protocol;
+#[cfg(test)]
+mod value_protocol_tests;
 
 use self::fraction::Fraction;
 use crate::error::NilReason;

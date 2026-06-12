@@ -1,0 +1,275 @@
+# Agent CLI Output Contract (`ajisai --json`)
+
+Status: contract document (non-canonical for language semantics).
+Authority for Ajisai semantics: `SPECIFICATION.html` only.
+This file is the authority for the *shape* of the `ajisai` CLI's `--json`
+output, which AI agents and verification scripts consume.
+
+## 1. Commands and exit codes
+
+```
+ajisai run <file.ajisai> [--json]
+ajisai check <file.ajisai> [--json]    # tokenize + parse + resolve only; never executes
+ajisai version [--json]
+```
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Success. `status` is `"ok"`. |
+| 1 | Language error. `status` is `"error"` and `diagnosis` is non-null. |
+| 2 | CLI usage error (bad arguments, unreadable file). No JSON is emitted; the message goes to stderr. |
+
+Pipe-safety guarantee: with `--json`, stdout carries **exactly one JSON
+document and nothing else**. Program output (`PRINT` etc.) is collected into
+the `output` array, never written to stdout. Usage errors and the human
+(text-mode) error rendering go to stderr.
+
+`check` performs tokenization, a structural bracket scan, and a *static,
+best-effort* word resolution (builtins, canonical aliases, words the file
+defines with `DEF`, words imported from modules the file `IMPORT`s).
+Constructs that depend on runtime state — user dictionaries referenced as
+`DICT@WORD`, dynamically built definitions — are accepted without
+verification. `check` failing means the program cannot run; `check` passing
+does not prove it will.
+
+## 2. Top-level envelope (`run` and `check`)
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok | error",
+  "stack": [ ... ],
+  "output": [ "..." ],
+  "message": null,
+  "diagnosis": { ... } | null,
+  "errorFlowTrace": [ ... ],
+  "aiDiagnostic": { ... } | null,
+  "runtimeMetrics": { "vtu": { ... } }
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schemaVersion` | number | Version of this envelope. Currently `1`. |
+| `status` | string | `"ok"` (exit 0) or `"error"` (exit 1). |
+| `stack` | array | Final data stack, bottom to top, as value protocol nodes (§3). Empty for `check`. |
+| `output` | array of string | Ordered `PRINT` payloads produced during the run. Empty for `check`. |
+| `message` | string \| null | The raw error display string, when `status` is `"error"`. |
+| `diagnosis` | object \| null | Structured diagnosis of the failure (§4). Null when `status` is `"ok"`. |
+| `errorFlowTrace` | array | Ordered observation log of word errors **and NIL productions** (§6). May be non-empty even when `status` is `"ok"`: a division by zero, for example, bubbles to NIL (SPEC Bubble Rule) and the run succeeds, but the projection is traced here with a full diagnosis. |
+| `aiDiagnostic` | object \| null | Machine-oriented classification of the failure (§5). Null when `status` is `"ok"`. |
+| `runtimeMetrics` | object | VTU observation counters (§7). All zeros for `check`. |
+
+`version --json` emits only `{ "schemaVersion", "status", "version" }`.
+
+### Compatibility policy
+
+- **Additive changes** (new fields anywhere in the envelope) do **not** bump
+  `schemaVersion`. Consumers must ignore unknown fields.
+- **Breaking changes** (removing or renaming a field, changing a field's
+  type, changing exit-code semantics) bump `schemaVersion`.
+- Protocol *string values* (`why`, `when`, `kind`, `recoverability`,
+  `displayHint`, absence reasons, ...) come from the language's existing
+  protocol vocabulary (`as_protocol_str` in the Rust sources, the same
+  strings the WASM/GUI boundary uses). New variants may appear over time;
+  consumers must treat unrecognized values as opaque, not as errors.
+
+## 3. Stack value nodes
+
+The same wire shape the GUI receives from the WASM boundary, produced by the
+shared `types::value_protocol` mapping:
+
+```json
+{
+  "type": "number | string | boolean | datetime | vector | nil | truthValue | process_handle | supervisor_handle",
+  "value": ...,
+  "displayHint": "unassigned | rawNumber | interval | text | truthValue | timestamp | nil | continuedFraction",
+  "semantics": { ... }
+}
+```
+
+- `number` / `datetime` values are exact rationals:
+  `{ "numerator": "...", "denominator": "..." }` (decimal strings, arbitrary
+  precision — never floats).
+- `vector` values are arrays of nodes (tensors are hydrated to nested
+  vectors; interior nodes of rank ≥ 2 carry no `semantics`).
+- The logical Unknown (U) of the three-valued logic serializes as
+  `{ "type": "truthValue", "value": "unknown" }` — never as `nil`.
+- `semantics` (when present): `semanticKind`, `shape`, `capabilities`,
+  `origin`, optional `truthValue` (`"true" | "false" | "unknown"`), optional
+  `absence` (§6a), and optional `approximate: true` for exact-irrational
+  values rendered as a best rational approximation.
+
+## 4. `diagnosis`
+
+Serialization of the interpreter's `DebugDiagnosis` — identical naming to the
+WASM `diagnosis_to_js` boundary:
+
+```json
+{
+  "when": "tokenize | parseStructure | resolveWord | executeWord | nilPropagation | assertion | hostIo | optimizationValidation | unknown",
+  "why": "typoOrUnknownName | stackShape | valueShape | domain | index | vectorLength | nilFlow | environment | effect | userLogic | contractViolation | optimizerMismatch | internalInvariant | unknown",
+  "summary": "one-line human summary",
+  "where": { "kind": "userWord | coreWord | builtinWord | moduleWord | hostEnvironment | optimizer | unknown",
+             "word": "...?", "module": "...?", "dictionary": "...?" },
+  "evidence": [ "category=...", "stackLenBefore=...", ... ],
+  "nextChecks": [ { "label": "...", "detail": "..." } ],
+  "agreedPrefix": null
+}
+```
+
+- `nextChecks` is the agent's repair checklist: ordered, machine-stable
+  labels with human guidance. It is always present (possibly short, never
+  fabricated).
+- `agreedPrefix` is non-null only for continued-fraction comparisons that
+  returned Unknown within budget (SPEC §4.5.0 / §7.4.1): the number of
+  leading partial quotients that matched.
+- Missing host capability (e.g. `MUSIC@PLAY` under the terminal CLI, which
+  has no audio device) is reported as `when: "hostIo"`, `why: "environment"`,
+  `where.kind: "hostEnvironment"`, with the capability named in `evidence`
+  (`missingCapability=audio`). This marks an environment limitation, not a
+  program bug.
+
+## 5. `aiDiagnostic`
+
+Serialization of the interpreter's `AiDiagnosticPayload`: stable protocol
+fields so agents never have to parse display strings.
+
+```json
+{
+  "kind": "unknownWord | stackUnderflow | divisionByZero | ... | null",
+  "recoverability": "fixInput | fixProgram | fixHost | fixCapabilityOrForce | addBudgetOrFixRecursion | handleUnknownOrNil | inspectContext",
+  "semanticArea": "exact-real-arithmetic | exact-real-comparison | k3-truth | hosted-effect | unknown-or-absence | stack-value-shape | unknown",
+  "word": "... | null",
+  "semanticRole": "Primitive | Derived | HostedEffect | Extension | Unknown",
+  "algebraicFamily": "exact-arithmetic | observation | k3-truth | hosted-effect | ...",
+  "absenceReason": "divisionByZero | emptySequence | ... | null",
+  "truthValue": "true | false | unknown | null",
+  "effect": "... | null",
+  "nextChecks": [ { "label": "...", "detail": "..." } ]
+}
+```
+
+## 6. `errorFlowTrace`
+
+Ordered events, same shape as the WASM `collect_error_flow_trace`:
+
+```json
+{
+  "kind": "wordError | nilProduced",
+  "word": "...?",
+  "absence": { "reason": "...?", "origin": "...", "recoverability": "...", "diagnosis": { ... }? },
+  "stackLenBefore": 2,
+  "stackLenAfter": 1,
+  "message": "...",
+  "diagnosis": { ... }?
+}
+```
+
+(§6a) `absence` blocks — here and inside stack-value `semantics` — carry the
+machine-readable reason a value is NIL: `reason` (e.g. `divisionByZero`,
+`emptySequence`, `noData`), `origin`, and `recoverability`.
+
+## 7. `runtimeMetrics`
+
+```json
+{ "vtu": { "tensorFlattenCount": 0, "tensorFlattenedElements": 0,
+           "tensorRebuildCount": 0, "tensorRebuiltElements": 0,
+           "broadcastCount": 0, "unaryFlatCount": 0, "allocatedElements": 0,
+           "sameShapeElementwiseCount": 0, "projectedBroadcastCount": 0,
+           "simdKernelUseCount": 0, "sparseCandidateCount": 0,
+           "sparseCandidateElements": 0, "sparseCandidateNonzeroElements": 0,
+           "sparseSkippableZeroElements": 0, "candidateBlockCount": 0,
+           "rejectedBlockCount": 0, "fusionCandidateCount": 0,
+           "bulkKernelUseCount": 0 } }
+```
+
+The Virtual Tensor Unit observation counters
+(`docs/dev/virtual-tensor-unit-design.md`). They describe observed
+structural work (data movement, allocation, kernel selection) and are
+deterministic for a given program and input. They are **proxies** — they do
+not measure or assert energy consumption. Aggregation into a single score is
+a separate, versioned concern (Phase 3 of the AI-first work order) and will
+be added additively under this object.
+
+## 8. Examples (actual output)
+
+### 8.1 Successful run
+
+`[ 1 2 ] [ 3 4 ] + PRINT` →  exit 0:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "stack": [],
+  "output": [ "[ 4/1 6/1 ]" ],
+  "message": null,
+  "diagnosis": null,
+  "errorFlowTrace": [],
+  "aiDiagnostic": null,
+  "runtimeMetrics": { "vtu": { "tensorFlattenCount": 2, "tensorFlattenedElements": 4,
+    "tensorRebuildCount": 0, "tensorRebuiltElements": 0, "broadcastCount": 1,
+    "unaryFlatCount": 0, "allocatedElements": 2, "sameShapeElementwiseCount": 1,
+    "projectedBroadcastCount": 0, "simdKernelUseCount": 0, "sparseCandidateCount": 0,
+    "sparseCandidateElements": 0, "sparseCandidateNonzeroElements": 0,
+    "sparseSkippableZeroElements": 0, "candidateBlockCount": 0,
+    "rejectedBlockCount": 0, "fusionCandidateCount": 0, "bulkKernelUseCount": 0 } }
+}
+```
+
+### 8.2 Unknown word (exit 1)
+
+`[ 2 3 ] FROBNICATE` → exit 1, abbreviated:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "error",
+  "message": "Unknown word: FROBNICATE",
+  "diagnosis": {
+    "when": "resolveWord",
+    "why": "typoOrUnknownName",
+    "summary": "ResolveWord / FROBNICATE / TypoOrUnknownName (unknownWord) msg=\"Unknown word: FROBNICATE\"",
+    "where": { "kind": "unknown", "word": "FROBNICATE" },
+    "evidence": [ "category=unknownWord", "stackLenBefore=1", "stackLenAfter=1" ],
+    "nextChecks": [
+      { "label": "Check spelling", "detail": "word 名のスペルを確認する" },
+      { "label": "Check alias canonicalization", "detail": "alias 展開後の canonical word 名を確認する" },
+      { "label": "Check imports/definitions", "detail": "module import 漏れ、または user word 定義漏れを確認する" }
+    ],
+    "agreedPrefix": null
+  },
+  "aiDiagnostic": {
+    "kind": "unknownWord", "recoverability": "fixProgram",
+    "semanticArea": "unknown", "word": "FROBNICATE", "semanticRole": "Unknown",
+    "algebraicFamily": "unknown", "absenceReason": null, "truthValue": null,
+    "effect": null, "nextChecks": [ "... same as diagnosis.nextChecks ..." ]
+  }
+}
+```
+
+### 8.3 NIL bubble on a successful run
+
+`[ 1 ] [ 0 ] DIV` → exit 0, `status: "ok"`, stack `[ NIL ]`, and:
+
+```json
+"errorFlowTrace": [ {
+  "kind": "nilProduced",
+  "word": "DIV",
+  "absence": { "reason": "divisionByZero", "origin": "executionFailure", "recoverability": "recoverable" },
+  "stackLenBefore": 2,
+  "stackLenAfter": 1,
+  "message": "NIL produced by DIV reason=divisionByZero",
+  "diagnosis": { "why": "domain", "nextChecks": [ { "label": "Check divisor", "detail": "..." }, "..." ] }
+} ]
+```
+
+## 9. Reading order for agents
+
+1. Exit code. `0` → read `stack` / `output`; also scan `errorFlowTrace` for
+   `nilProduced` events if a NIL was unexpected.
+2. On `1`: read `diagnosis.why` + `diagnosis.where` to locate, then walk
+   `nextChecks` in order. `aiDiagnostic.recoverability` says *what kind of
+   change* fixes it (input vs program vs host).
+3. `message` is for humans; never parse it when a structured field exists.
