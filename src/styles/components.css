@@ -24,10 +24,15 @@
 }
 
 .area-selector select,
-.dictionary-sheet-select {
+.dictionary-sheet-select,
+.sheet-selector-native-trigger {
+    /* Chrome OS's monospace metrics render slightly high in compact controls.
+       Use shared asymmetric block padding so selector labels sit optically centered. */
+    --control-text-y-adjust: 0.0625rem;
     font-family: var(--font-stack-mono);
     font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    line-height: 1.2;
+    padding: calc(0.25rem + var(--control-text-y-adjust)) 0.5rem calc(0.25rem - var(--control-text-y-adjust));
     border: var(--border-main);
     border-radius: var(--radius-main);
     background: #fff;
@@ -38,9 +43,17 @@
 }
 
 .area-selector select:focus,
-.dictionary-sheet-select:focus {
+.dictionary-sheet-select:focus,
+.dictionary-sheet-select:focus-within,
+.sheet-selector:focus-within .sheet-selector-native-trigger {
     outline: none;
     background: var(--color-light);
+}
+
+.dictionary-sheet-select.sheet-selector {
+    border: 0;
+    background: transparent;
+    transition: none;
 }
 
 
@@ -507,13 +520,18 @@
 
 
 .word-button {
+    --control-text-y-adjust: 0.0625rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin: 2px;
-    padding: 0.2rem 0.4rem;
+    padding: calc(0.2rem + var(--control-text-y-adjust)) 0.4rem calc(0.2rem - var(--control-text-y-adjust));
     background: #fff;
     color: var(--color-text);
     border: var(--border-main);
     font-family: var(--font-stack-mono);
     font-size: 0.75rem;
+    line-height: 1.2;
     font-weight: 400;
     cursor: pointer;
     border-radius: var(--radius-word-button);
@@ -561,23 +579,25 @@
     padding: 0;
 }
 
+.sheet-selector-native-trigger {
+    display: block;
+    pointer-events: none;
+}
+
 .sheet-selector-trigger {
-    font-family: var(--font-stack-mono);
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    position: absolute;
+    inset: 0;
+    padding: calc(0.25rem + var(--control-text-y-adjust)) 0.5rem calc(0.25rem - var(--control-text-y-adjust));
     width: 100%;
-    text-align: left;
+    color: transparent;
     background: transparent;
-    color: var(--color-text);
     border: none;
     border-radius: var(--radius-main);
     cursor: pointer;
 }
 
-.sheet-selector-trigger::after {
-    content: ' \25be';
-    float: right;
-    opacity: 0.6;
+.sheet-selector-trigger:focus {
+    outline: none;
 }
 
 .sheet-selector-panel {

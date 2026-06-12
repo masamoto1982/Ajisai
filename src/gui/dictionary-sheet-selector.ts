@@ -52,6 +52,14 @@ export const createDictionarySheetSelector = (
     rootEl.classList.add('sheet-selector');
     rootEl.innerHTML = '';
 
+    // Keep the closed control visually identical to the app's native selects:
+    // the overlaid button owns the custom popup behavior, while this inert
+    // native select paints the browser-provided text, height, and chevron.
+    const nativeTrigger = document.createElement('select');
+    nativeTrigger.className = 'sheet-selector-native-trigger';
+    nativeTrigger.setAttribute('aria-hidden', 'true');
+    nativeTrigger.tabIndex = -1;
+
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.className = 'sheet-selector-trigger';
@@ -63,6 +71,7 @@ export const createDictionarySheetSelector = (
     panel.setAttribute('role', 'listbox');
     panel.hidden = true;
 
+    rootEl.appendChild(nativeTrigger);
     rootEl.appendChild(trigger);
     rootEl.appendChild(panel);
 
@@ -70,7 +79,22 @@ export const createDictionarySheetSelector = (
         entries.find(e => e.sheetId === sheetId)?.label ?? sheetId;
 
     const syncTrigger = (): void => {
-        trigger.textContent = currentValue ? labelFor(currentValue) : 'Select dictionary';
+        const label = currentValue ? labelFor(currentValue) : 'Select dictionary';
+        trigger.textContent = label;
+        nativeTrigger.value = currentValue;
+    };
+
+    const syncNativeTriggerOptions = (): void => {
+        nativeTrigger.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        for (const entry of entries) {
+            const optionEl = document.createElement('option');
+            optionEl.value = entry.sheetId;
+            optionEl.textContent = entry.label;
+            fragment.appendChild(optionEl);
+        }
+        nativeTrigger.appendChild(fragment);
+        nativeTrigger.value = currentValue;
     };
 
     const closePanel = (): void => {
@@ -86,6 +110,7 @@ export const createDictionarySheetSelector = (
     const selectSheet = (sheetId: string): void => {
         currentValue = sheetId;
         rootEl.dataset.value = sheetId;
+        syncNativeTriggerOptions();
         syncTrigger();
         renderPanel();
     };
@@ -189,6 +214,7 @@ export const createDictionarySheetSelector = (
             currentValue = entries[0]?.sheetId ?? '';
             rootEl.dataset.value = currentValue;
         }
+        syncNativeTriggerOptions();
         syncTrigger();
         renderPanel();
     };
