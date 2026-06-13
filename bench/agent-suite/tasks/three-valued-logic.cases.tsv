@@ -1,0 +1,7 @@
+# id	invocation	expect_kind	expect_value
+eq-rationals-equal	[ 2 ] [ 2 ] EQ?	stack	TRUE
+eq-rationals-unequal	[ 1 ] [ 2 ] EQ?	stack	FALSE
+eq-irrationals-unknown	'MATH' IMPORT 2 SQRT 8 SQRT 2 DIV EQ?	stack	UNKNOWN
+kleene-and-tf	TRUE FALSE BOTH-TRUE	stack	FALSE
+kleene-and-unknown	'MATH' IMPORT 2 SQRT 8 SQRT 2 DIV EQ? TRUE BOTH-TRUE	stack	UNKNOWN
+kleene-or-unknown	'MATH' IMPORT 2 SQRT 8 SQRT 2 DIV EQ? TRUE EITHER-TRUE	stack	TRUE
