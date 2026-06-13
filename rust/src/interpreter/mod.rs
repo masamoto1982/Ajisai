@@ -10,6 +10,7 @@ pub mod control;
 pub mod control_cond;
 pub mod datetime;
 pub mod debug_diagnosis;
+pub mod energy_proxy;
 pub mod epoch;
 pub mod error_flow_trace;
 pub mod execute_def;
@@ -70,6 +71,8 @@ mod dictionary_operation_tests;
 mod dictionary_resolution_tests;
 #[cfg(test)]
 mod dictionary_tier_tests;
+#[cfg(test)]
+mod energy_proxy_regression_tests;
 #[cfg(test)]
 mod error_flow_trace_tests;
 #[cfg(test)]
