@@ -244,11 +244,6 @@
     cursor: pointer;
 }
 
-.editor-suggestion-item.active,
-.editor-suggestion-item:hover {
-    background: rgba(0, 0, 0, 0.06);
-}
-
 .editor-suggestions--symbols {
     grid-template-columns: repeat(6, 1fr);
     gap: 2px;
