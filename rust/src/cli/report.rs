@@ -151,9 +151,11 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
 }
 
 pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
-    // The VTU observation counters (docs/dev/virtual-tensor-unit-design.md).
-    // Counter names describe observed structural work; they never assert an
-    // energy outcome.
+    // The VTU observation counters (docs/dev/virtual-tensor-unit-design.md)
+    // plus the aggregate energyProxyScore (docs/quality/energy-proxy-score.md).
+    // Counter names and the score describe observed structural work; they are
+    // a proxy and never assert an energy outcome in joules.
+    let proxy = crate::interpreter::energy_proxy::energy_proxy_report(metrics);
     json!({
         "vtu": {
             "tensorFlattenCount": metrics.vtu_tensor_flatten_count,
@@ -174,6 +176,11 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
             "rejectedBlockCount": metrics.vtu_rejected_block_count,
             "fusionCandidateCount": metrics.vtu_fusion_candidate_count,
             "bulkKernelUseCount": metrics.vtu_bulk_kernel_use_count,
+            // Aggregate structural-cost proxy. Not joules; comparable only
+            // within one proxyVersion. See docs/quality/energy-proxy-score.md.
+            "energyProxyScore": proxy.score,
+            "proxyVersion": proxy.proxy_version,
+            "suggestions": proxy.suggestions,
         },
     })
 }

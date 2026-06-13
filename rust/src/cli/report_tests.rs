@@ -37,8 +37,12 @@ fn ok_report_envelope_has_contract_fields() {
     assert!(doc["diagnosis"].is_null());
     assert!(doc["aiDiagnostic"].is_null());
     assert!(doc["runtimeMetrics"]["vtu"].is_object());
-    // All 18 VTU observation counters serialize.
-    assert_eq!(doc["runtimeMetrics"]["vtu"].as_object().unwrap().len(), 18);
+    // 18 VTU observation counters plus the aggregate energyProxyScore /
+    // proxyVersion / suggestions (docs/quality/energy-proxy-score.md).
+    assert_eq!(doc["runtimeMetrics"]["vtu"].as_object().unwrap().len(), 21);
+    assert!(doc["runtimeMetrics"]["vtu"]["energyProxyScore"].is_number());
+    assert_eq!(doc["runtimeMetrics"]["vtu"]["proxyVersion"], 1);
+    assert!(doc["runtimeMetrics"]["vtu"]["suggestions"].is_array());
 }
 
 #[test]

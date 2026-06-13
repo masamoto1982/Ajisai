@@ -181,16 +181,29 @@ machine-readable reason a value is NIL: `reason` (e.g. `divisionByZero`,
            "sparseCandidateElements": 0, "sparseCandidateNonzeroElements": 0,
            "sparseSkippableZeroElements": 0, "candidateBlockCount": 0,
            "rejectedBlockCount": 0, "fusionCandidateCount": 0,
-           "bulkKernelUseCount": 0 } }
+           "bulkKernelUseCount": 0,
+           "energyProxyScore": 0, "proxyVersion": 1, "suggestions": [ ] } }
 ```
 
-The Virtual Tensor Unit observation counters
+The 18 leading fields are the Virtual Tensor Unit observation counters
 (`docs/dev/virtual-tensor-unit-design.md`). They describe observed
 structural work (data movement, allocation, kernel selection) and are
-deterministic for a given program and input. They are **proxies** — they do
-not measure or assert energy consumption. Aggregation into a single score is
-a separate, versioned concern (Phase 3 of the AI-first work order) and will
-be added additively under this object.
+deterministic for a given program and input.
+
+- `energyProxyScore` — a single deterministic integer aggregating those
+  counters with fixed weights (`docs/quality/energy-proxy-score.md`).
+- `proxyVersion` — the scoring-formula version. Scores are comparable only
+  within one `proxyVersion`; it increments whenever a weight or the formula
+  changes.
+- `suggestions` — array of strings: mechanical, counter-derived observations
+  about structural patterns that usually admit a cheaper equivalent program
+  (e.g. fusable stages, repeated flat/nested round-trips). May be empty.
+
+These are **proxies**: they describe structural work and are *not* a joule
+measurement. Counter names and the score never assert an energy outcome
+(per the standing policy in `docs/dev/virtual-tensor-unit-design.md`). The
+score exists so that "same output, more structural work" is a CI-visible
+regression (`energy_proxy_regression_tests.rs`).
 
 ## 8. Examples (actual output)
 
