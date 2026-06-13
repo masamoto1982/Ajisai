@@ -77,6 +77,38 @@ const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
     ':', ';', '.', ',', "'", '"',
 ]);
 
+const CARET_MIRROR_STYLE_PROPERTIES = [
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderRightWidth',
+    'borderTopWidth',
+    'boxSizing',
+    'fontFamily',
+    'fontSize',
+    'fontStyle',
+    'fontVariant',
+    'fontWeight',
+    'letterSpacing',
+    'lineHeight',
+    'paddingBottom',
+    'paddingLeft',
+    'paddingRight',
+    'paddingTop',
+    'tabSize',
+    'textIndent',
+    'textTransform',
+    'wordSpacing',
+] as const;
+
+const copyCaretMirrorStyle = (
+    mirror: HTMLDivElement,
+    style: CSSStyleDeclaration
+): void => {
+    CARET_MIRROR_STYLE_PROPERTIES.forEach(property => {
+        mirror.style[property] = style[property];
+    });
+};
+
 const extractToken = (
     text: string,
     cursorPosition: number
@@ -144,12 +176,31 @@ export const createEditor = (
     const computeCursorCoords = (el: HTMLTextAreaElement): { top: number; left: number } => {
         const style = getComputedStyle(el);
         const lineHeight = parseFloat(style.lineHeight) || 20;
-        const paddingTop = parseFloat(style.paddingTop) || 0;
-        const text = el.value.substring(0, el.selectionStart);
-        const lines = text.split('\n');
-        const lineIndex = lines.length - 1;
-        const top = paddingTop + lineIndex * lineHeight + lineHeight;
-        const left = 0;
+        const mirror = document.createElement('div');
+        const marker = document.createElement('span');
+
+        copyCaretMirrorStyle(mirror, style);
+        mirror.style.position = 'absolute';
+        mirror.style.visibility = 'hidden';
+        mirror.style.whiteSpace = 'pre-wrap';
+        mirror.style.wordBreak = 'break-word';
+        mirror.style.overflowWrap = 'break-word';
+        mirror.style.overflow = 'hidden';
+        mirror.style.left = '-9999px';
+        mirror.style.top = '0';
+        mirror.style.width = `${el.offsetWidth}px`;
+        mirror.style.minHeight = '0';
+
+        mirror.textContent = el.value.substring(0, el.selectionStart);
+        marker.textContent = '\u200b';
+        mirror.appendChild(marker);
+        document.body.appendChild(mirror);
+
+        const top = el.offsetTop + marker.offsetTop - el.scrollTop + lineHeight;
+        const left = el.offsetLeft;
+
+        mirror.remove();
+
         return { top, left };
     };
 
