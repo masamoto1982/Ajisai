@@ -1,0 +1,15 @@
+# id	invocation	expect_kind	expect_value
+open-balance	[ 0 ]	stack	[ 0/1 ]
+deposit-once	[ 0 ] [ 100 ] DEPOSIT	stack	[ 100/1 ]
+deposit-twice	[ 0 ] [ 100 ] DEPOSIT [ 50 ] DEPOSIT	stack	[ 150/1 ]
+deposit-zero	[ 50 ] [ 0 ] DEPOSIT	stack	[ 50/1 ]
+withdraw-ok	[ 100 ] [ 30 ] WITHDRAW	stack	[ 70/1 ]
+withdraw-exact	[ 100 ] [ 100 ] WITHDRAW	stack	[ 0/1 ]
+withdraw-overdraft	[ 50 ] [ 80 ] WITHDRAW	stack	NIL
+dep-wd-chain	[ 0 ] [ 100 ] DEPOSIT [ 30 ] WITHDRAW	stack	[ 70/1 ]
+dep-wd-wd	[ 0 ] [ 100 ] DEPOSIT [ 30 ] WITHDRAW [ 20 ] WITHDRAW	stack	[ 50/1 ]
+overdraft-bubbles	[ 50 ] [ 80 ] WITHDRAW [ 10 ] DEPOSIT	stack	NIL
+withdraw-to-zero-then-over	[ 100 ] [ 100 ] WITHDRAW [ 1 ] WITHDRAW	stack	NIL
+deposit-fraction	[ 0 ] [ 1 ] [ 2 ] / DEPOSIT	stack	[ 1/2 ]
+withdraw-fraction	[ 1 ] [ 1 ] [ 2 ] / WITHDRAW	stack	[ 1/2 ]
+big-balance	[ 0 ] [ 1000000000 ] DEPOSIT [ 1 ] DEPOSIT	stack	[ 1000000001/1 ]

@@ -1,0 +1,7 @@
+# id	invocation	expect_kind	expect_value
+div-ok	[ 20 ] [ 4 ] SAFE-DIV	stack	[ 5/1 ]
+div-zero-fallback	[ 20 ] [ 0 ] SAFE-DIV	stack	[ 0/1 ]
+reciprocal-ok	[ 1 ] [ 4 ] SAFE-DIV	stack	[ 1/4 ]
+reciprocal-zero	[ 1 ] [ 0 ] SAFE-DIV	stack	[ 0/1 ]
+pipeline-caught	[ 20 ] [ 0 ] SAFE-DIV [ 100 ] +	stack	[ 100/1 ]
+pipeline-raw-bubble	[ 20 ] [ 0 ] DIV [ 100 ] +	stack	NIL

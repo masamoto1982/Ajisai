@@ -1,0 +1,8 @@
+# id	invocation	expect_kind	expect_value
+sum3-basic	[ 1 ] [ 2 ] [ 3 ] SUM3	stack	[ 6/1 ]
+sum3-fractions	[ 1 ] [ 2 ] / [ 1 ] [ 3 ] / [ 1 ] [ 6 ] / SUM3	stack	[ 1/1 ]
+avg3-exact	[ 1 ] [ 2 ] [ 4 ] AVG3	stack	[ 7/3 ]
+avg3-whole	[ 2 ] [ 4 ] [ 6 ] AVG3	stack	[ 4/1 ]
+half-int	[ 1 ] HALF	stack	[ 1/2 ]
+half-frac	[ 1 ] [ 3 ] / HALF	stack	[ 1/6 ]
+no-float-drift	[ 1 ] [ 3 ] / [ 3 ] *	stack	[ 1/1 ]
