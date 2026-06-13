@@ -218,10 +218,10 @@ export const createEditor = (
         suggestionPanel.classList.toggle('editor-suggestions--symbols', isSymbolMode);
 
         suggestionPanel.innerHTML = '';
-        currentSuggestions.forEach((suggestion, index) => {
+        currentSuggestions.forEach((suggestion) => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = `editor-suggestion-item${index === selectedSuggestionIndex ? ' active' : ''}`;
+            button.className = 'editor-suggestion-item';
             button.textContent = suggestion;
             button.addEventListener('mousedown', (e) => {
                 e.preventDefault();
