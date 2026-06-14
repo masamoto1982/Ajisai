@@ -7,7 +7,6 @@ use crate::interpreter::{Interpreter, ModuleDictionary};
 use crate::types::{Tier, Value, ValueData, WordDefinition};
 
 use super::module_builtins::MODULE_SPECS;
-use super::module_samples::build_sample_words;
 
 pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &str) -> Result<()> {
     if interp.module_vocabulary.contains_key(module_name) {
@@ -39,14 +38,9 @@ pub(super) fn ensure_module_dictionary(interp: &mut Interpreter, module_name: &s
         );
     }
 
-    let sample_words = build_sample_words(module.name, module.sample_words)?;
-    interp.module_vocabulary.insert(
-        module_name.to_string(),
-        ModuleDictionary {
-            words,
-            sample_words,
-        },
-    );
+    interp
+        .module_vocabulary
+        .insert(module_name.to_string(), ModuleDictionary { words });
     interp.bump_module_epoch();
     Ok(())
 }

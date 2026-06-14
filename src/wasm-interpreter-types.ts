@@ -46,7 +46,6 @@ export interface AjisaiInterpreter {
     // Tuple shape: [shortName, description, imported, isSample]. Returns the
     // full module catalog (active + inactive words) regardless of import state.
     collect_module_catalog_words_info(module_name: string): Array<[string, string, boolean, boolean]>;
-    collect_module_sample_words_info(module_name: string): Array<[string, string | null]>;
     collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;
     // Tuple shape: [module, importAllPublic, words, samples]. Captures partial

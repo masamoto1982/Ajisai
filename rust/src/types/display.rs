@@ -132,10 +132,22 @@ mod tests {
         let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
             .expect("√2 is a valid algebraic sqrt");
         let s = format_exact_real(&sqrt2);
-        assert!(s.starts_with("( 1 ( 2 ( 2 "), "expected nested CF, got {s:?}");
-        assert!(s.contains("...)"), "lazy CF must carry the `...)` truncation marker, got {s:?}");
-        assert!(!s.contains("sqrt"), "must not use sqrt() display, got {s:?}");
-        assert!(!s.contains('~'), "must not use ~approximation display, got {s:?}");
+        assert!(
+            s.starts_with("( 1 ( 2 ( 2 "),
+            "expected nested CF, got {s:?}"
+        );
+        assert!(
+            s.contains("...)"),
+            "lazy CF must carry the `...)` truncation marker, got {s:?}"
+        );
+        assert!(
+            !s.contains("sqrt"),
+            "must not use sqrt() display, got {s:?}"
+        );
+        assert!(
+            !s.contains('~'),
+            "must not use ~approximation display, got {s:?}"
+        );
         let opens = s.matches('(').count();
         let closes = s.matches(')').count();
         assert_eq!(opens, closes, "unbalanced parens in {s:?}");

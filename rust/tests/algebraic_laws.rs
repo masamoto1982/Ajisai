@@ -47,7 +47,10 @@ fn eval(src: &str) -> String {
 fn assert_law(name: &str, lhs: &str, rhs: &str) {
     let l = eval(lhs);
     let r = eval(rhs);
-    assert_eq!(l, r, "law `{name}` broken:\n  {lhs:?} => {l}\n  {rhs:?} => {r}");
+    assert_eq!(
+        l, r,
+        "law `{name}` broken:\n  {lhs:?} => {l}\n  {rhs:?} => {r}"
+    );
 }
 
 // Small integer operands keep generated programs cheap while still exercising
