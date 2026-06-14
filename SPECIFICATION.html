@@ -216,7 +216,6 @@ Version: <strong>2026-06-11</strong></p>
 <li><a href="#5-stack">5. Stack</a></li>
 <li><a href="#6-modifiers">6. Modifiers</a></li>
 <li><a href="#7-built-in-words">7. Built-in Words</a></li>
-<li><a href="#714-coreword-contract-metadata">7.14 Coreword contract metadata</a></li>
 <li><a href="#8-user-words">8. User Words</a></li>
 <li><a href="#9-module-system">9. Module System</a></li>
 <li><a href="#10-child-runtime">10. Child Runtime</a></li>
@@ -1309,9 +1308,11 @@ Version: <strong>2026-06-11</strong></p>
 
 <p><code>NUM</code> and <code>CHR</code> can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.</p>
 
-<h2 id="714-coreword-contract-metadata">7.14 Coreword contract metadata</h2>
+<h3 id="714-coreword-contract-metadata">7.14 Coreword contract metadata</h3>
 
 <p>Every Coreword (built-in or module-provided) has a machine-readable contract entry in the Coreword registry. The contract is the authoritative description of the word's input requirements, output guarantees, and runtime classification. Tests, documentation, and tooling consume this metadata; narrative text is non-canonical.</p>
+
+<p><strong>Terminology.</strong> In this specification a <em>Coreword</em> is any built-in word that carries a contract entry — that is, a Core Word <em>or</em> a Module Word (Section 9.3). It is therefore broader than the <em>Core Words</em> dictionary tier, which names only the permanent runtime words. &ldquo;Coreword&rdquo; (contract registry) and &ldquo;Core Word&rdquo; (dictionary tier) are distinct terms and must not be conflated.</p>
 
 <p>A contract entry has the following fields, in addition to the existing identification fields (<code>name</code> <code>category</code>), effect-classification fields (<code>purity</code> <code>effects</code> <code>deterministic</code> <code>safe_preview</code>), and listing fields (<code>canonical_home</code> <code>listed_in_core</code> <code>listed_in_modules</code> <code>listed_in_categories</code>):</p>
 
@@ -1461,6 +1462,8 @@ Version: <strong>2026-06-11</strong></p>
 <h3 id="93-dictionary-word-tiers">9.3 Dictionary word tiers</h3>
 
 <p>Dictionary consists of Core Words, Module Words, and User Words. Core Words are built into Ajisai. Module Words are semi-built-in words officially provided and quality-controlled by Ajisai. User Words are words stored in user space and may be grouped by origin label.</p>
+
+<p>The <em>Core Words</em> tier named here is narrower than the term <em>Coreword</em> used for contract metadata (Section 7.14): a Coreword is any built-in word with a contract entry — a Core Word or a Module Word — whereas the Core Words tier is only the permanent runtime words.</p>
 
 <p>Example Words are bundled User Words provided by the reference environment. They demonstrate Ajisai features in executable form and serve as the initial template for unofficial user libraries. A user may export Example Words, modify the exported file, rename it to XXX, and import it again. The imported group is then treated as XXX Words.</p>
 

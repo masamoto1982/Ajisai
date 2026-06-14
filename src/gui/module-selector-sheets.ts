@@ -238,7 +238,7 @@ export const createModuleTabManager = (
         try {
             // Full catalog (active + inactive) so inactive words render greyed
             // and can be activated with a long-press, not just the imported set.
-            const catalog: Array<[string, string, boolean, boolean]> =
+            const catalog: Array<[string, string, boolean]> =
                 window.ajisaiInterpreter.collect_module_catalog_words_info(moduleSheet.moduleName);
 
             const sorted = [...catalog].sort((a, b) => compareWordName(a[0], b[0]));

@@ -43,8 +43,8 @@ export class AjisaiInterpreter {
     collect_imported_modules(): any;
     collect_input_helper_words_info(): any;
     /**
-     * Full word + sample catalog for a module, regardless of import state.
-     * Tuple shape: `(shortName, description, imported: bool, isSample: bool)`.
+     * Full word catalog for a module, regardless of import state.
+     * Tuple shape: `(shortName, description, imported: bool)`.
      * `imported` reflects the live import table so the GUI can render active
      * words normally and inactive words greyed-out within the same sheet.
      */
@@ -139,8 +139,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h4d3d0119ecf7124f: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h515e00adb21cde2b: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hde4976181243c651: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h210f32635103ed31: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

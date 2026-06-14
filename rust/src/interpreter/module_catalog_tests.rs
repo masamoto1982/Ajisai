@@ -29,9 +29,6 @@ mod tests {
         let names: Vec<&str> = catalog.iter().map(|w| w.short_name).collect();
         assert!(names.contains(&"PARSE"));
         assert!(names.contains(&"STRINGIFY"));
-        assert!(!catalog
-            .iter()
-            .any(|w| w.is_sample && w.short_name == "PARSE"));
     }
 
     #[test]
