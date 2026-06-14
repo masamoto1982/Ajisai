@@ -1186,7 +1186,6 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
 pub(crate) struct CatalogWord {
     pub short_name: &'static str,
     pub description: &'static str,
-    pub is_sample: bool,
 }
 
 /// All importable module names, in specification order.
@@ -1194,19 +1193,18 @@ pub(crate) fn available_module_names() -> Vec<&'static str> {
     MODULE_SPECS.iter().map(|m| m.name).collect()
 }
 
-/// Full word + sample catalog for a module, read directly from `MODULE_SPECS`
+/// Full word catalog for a module, read directly from `MODULE_SPECS`
 /// so it is available even when the module has never been imported. Returns
 /// `None` when the module name is unknown.
 pub(crate) fn module_catalog_words(module_name: &str) -> Option<Vec<CatalogWord>> {
     let upper = module_name.to_uppercase();
     let module = MODULE_SPECS.iter().find(|m| m.name == upper)?;
-    let mut out: Vec<CatalogWord> = module
+    let out: Vec<CatalogWord> = module
         .words
         .iter()
         .map(|w| CatalogWord {
             short_name: w.short_name,
             description: w.description,
-            is_sample: false,
         })
         .collect();
     Some(out)

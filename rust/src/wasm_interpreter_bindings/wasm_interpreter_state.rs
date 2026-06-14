@@ -219,7 +219,7 @@ impl AjisaiInterpreter {
     }
 
     /// Full word catalog for a module, regardless of import state.
-    /// Tuple shape: `(shortName, description, imported: bool, isSample: bool)`.
+    /// Tuple shape: `(shortName, description, imported: bool)`.
     /// `imported` reflects the live import table so the GUI can render active
     /// words normally and inactive words greyed-out within the same sheet.
     #[wasm_bindgen]
@@ -242,7 +242,6 @@ impl AjisaiInterpreter {
             item.push(&JsValue::from_str(word.short_name));
             item.push(&JsValue::from_str(word.description));
             item.push(&is_imported.into());
-            item.push(&word.is_sample.into());
             arr.push(&item);
         }
         arr.into()

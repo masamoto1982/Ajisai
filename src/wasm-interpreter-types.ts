@@ -43,9 +43,9 @@ export interface AjisaiInterpreter {
     collect_imported_modules(): string[];
     collect_available_modules(): string[];
     collect_module_words_info(module_name: string): Array<[string, string | null]>;
-    // Tuple shape: [shortName, description, imported, isSample]. Returns the
+    // Tuple shape: [shortName, description, imported]. Returns the
     // full module catalog (active + inactive words) regardless of import state.
-    collect_module_catalog_words_info(module_name: string): Array<[string, string, boolean, boolean]>;
+    collect_module_catalog_words_info(module_name: string): Array<[string, string, boolean]>;
     collect_dictionary_dependencies(): Array<[string, string[], string[]]>;
     restore_imported_modules(modules: string[]): void;
     // Tuple shape: [module, importAllPublic, words, samples]. Captures partial

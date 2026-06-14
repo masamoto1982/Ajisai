@@ -38,8 +38,8 @@ export const ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: num
 export const ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
 export const init_panic_hook: () => void;
-export const wasm_bindgen__convert__closures_____invoke__h4d3d0119ecf7124f: (a: number, b: number, c: any) => [number, number];
-export const wasm_bindgen__convert__closures_____invoke__h515e00adb21cde2b: (a: number, b: number, c: any, d: any) => void;
+export const wasm_bindgen__convert__closures_____invoke__hde4976181243c651: (a: number, b: number, c: any) => [number, number];
+export const wasm_bindgen__convert__closures_____invoke__h210f32635103ed31: (a: number, b: number, c: any, d: any) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;
