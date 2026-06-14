@@ -1450,17 +1450,21 @@ Version: <strong>2026-06-11</strong></p>
 'MODULE-NAME' UNIMPORT
 'MODULE-NAME' [ 'WORD1' 'WORD2' ] UNIMPORT-ONLY</code></pre>
 
-<p><code>IMPORT</code> loads all public words from a module into the current vocabulary. <code>IMPORT-ONLY</code> loads only the specified module words or sample words.</p>
+<p><code>IMPORT</code> loads all public Module Words from a module into the current vocabulary. <code>IMPORT-ONLY</code> loads only the specified Module Words.</p>
 
-<p><code>UNIMPORT</code> hides unreferenced imported words from the current vocabulary without deleting the module dictionary. If a user word references a module word or module sample word, <code>UNIMPORT</code> keeps that referenced item visible and shrinks the module import to an explicit partial-import state.</p>
+<p><code>UNIMPORT</code> hides unreferenced imported words from the current vocabulary without deleting the module dictionary. If a User Word references a Module Word, <code>UNIMPORT</code> keeps that referenced item visible and shrinks the module import to an explicit partial-import state.</p>
 
-<p><code>UNIMPORT-ONLY</code> hides only the specified module words or sample words. It fails if a selected item is referenced by a user word; use dictionary-level <code>UNIMPORT</code> when the desired operation is to clean up unused module imports while preserving referenced items.</p>
+<p><code>UNIMPORT-ONLY</code> hides only the specified Module Words. It fails if a selected item is referenced by a User Word; use dictionary-level <code>UNIMPORT</code> when the desired operation is to clean up unused module imports while preserving referenced items.</p>
 
 <p>Selectors that name Core words merely listed in a module view are no-ops for <code>IMPORT-ONLY</code> and <code>UNIMPORT-ONLY</code>, because Core words are always available and cannot be imported or unimported through a module.</p>
 
-<h3 id="93-module-provided-sample-words">9.3 Module-provided sample words</h3>
+<h3 id="93-dictionary-word-tiers">9.3 Dictionary word tiers</h3>
 
-<p>Modules may provide sample words for demonstration. Sample words are part of the module dictionary for import visibility: they can be introduced with <code>IMPORT</code> or <code>IMPORT-ONLY</code> and hidden with <code>UNIMPORT</code> or <code>UNIMPORT-ONLY</code>, but they are not destructively deleted with <code>DEL</code>.</p>
+<p>Dictionary consists of Core Words, Module Words, and User Words. Core Words are built into Ajisai. Module Words are semi-built-in words officially provided and quality-controlled by Ajisai. User Words are words stored in user space and may be grouped by origin label.</p>
+
+<p>Example Words are bundled User Words provided by the reference environment. They demonstrate Ajisai features in executable form and serve as the initial template for unofficial user libraries. A user may export Example Words, modify the exported file, rename it to XXX, and import it again. The imported group is then treated as XXX Words.</p>
+
+<p>Example Words are not Core Words, not Module Words, and not a separate Dictionary tier. Module Words do not contain example, sample, or demonstration words.</p>
 
 <h3 id="94-serial-module-host-mediated-serial-output">9.4 SERIAL module (host-mediated serial output)</h3>
 

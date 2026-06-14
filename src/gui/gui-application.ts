@@ -106,11 +106,6 @@ const collectAutocompleteWords = (): string[] => {
                 const name: string = word[0] ?? '';
                 moduleWords.push(name.startsWith(prefix) ? name.slice(prefix.length) : name);
             }
-            const sampleWords = INTERPRETER_CLIENT.collectModuleSampleWordsInfo(moduleName);
-            for (const word of sampleWords) {
-                const sampleName: string = word[0] ?? '';
-                moduleWords.push(sampleName);
-            }
         }
     } catch {  }
 

@@ -86,7 +86,7 @@ mod tests {
         assert!(result.is_err(), "referenced module word should be rejected");
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("Cannot unimport JSON@PARSE"), "got: {msg}");
-        assert!(msg.contains("DEMO@USE-PARSE"), "got: {msg}");
+        assert!(msg.contains("EXAMPLE@USE-PARSE"), "got: {msg}");
     }
 
     #[tokio::test]

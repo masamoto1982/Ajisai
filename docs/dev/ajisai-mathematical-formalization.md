@@ -632,9 +632,9 @@ SPEC §7.8/§8(ユーザ辞書・DEF/DEL)・§7.10/§9(モジュール・IMPORT)
 辞書を三層の有限写像とする(SPEC §4.6・§7.8・§9):
 
 ```
-Core : Name ⇀ Blk          (核語彙、不変)
-Mod  : Module → (Name ⇀ Blk)   (モジュール辞書、キャッシュ)
-Usr  : Dict   → (Name ⇀ Blk)   (ユーザ辞書、既定 DICT=DEMO)
+Core : Name ⇀ Blk              (Core Words、不変)
+Mod  : Module → (Name ⇀ Blk)   (Module Words、公式準組み込み語)
+Usr  : Dict   → (Name ⇀ Blk)   (User Words、既定 DICT=EXAMPLE; Example Words はこの一群)
 ```
 
 可視性状態 `Vis` は import 表 `Module ⇀ {all | W⊆Name}`(全公開取込か明示部分取込)と
@@ -649,20 +649,19 @@ Usr  : Dict   → (Name ⇀ Blk)   (ユーザ辞書、既定 DICT=DEMO)
 resolve : Name × Vis ⇀ Blk + Unknown
 ```
 
-とし、裸名の解決順は **Core → 取込済みモジュール語 → (モジュール sample / ユーザ語)**
+とし、裸名の解決順は **Core Words → 取込済み Module Words → User Words**
 で固定する(参照実装 `resolve_short_name`):
 
 ```
 resolve(w, Vis) =
   Core[w]                          if w ∈ dom Core            -- (1) 核が最優先
-  Mod[m][m@w]   (m: w を取込済みの最初のモジュール)            -- (2) 取込モジュール語
-  最小 registration_order の一致    if sample/user に一意一致    -- (3) 残りは登録順で決定的
+  Mod[m][m@w]   (m: w を取込済みの最初のモジュール)            -- (2) 取込 Module Words
+  最小 registration_order の一致    if User Words に一致       -- (3) 残りは登録順で決定的
   Unknown                          otherwise
 ```
 
-`(3)` で **モジュール sample とユーザ語が両方一致すると曖昧** として
-`Unknown`(=解決失敗)を返す。修飾名は層で解決する:`CORE@w` は核へ、`m@w` は
-モジュール `m` の取込済み語へ、`USER@d@w`・`DICT@…` は各辞書へ(`split_path`)。
+修飾名は層で解決する:`CORE@w` は核へ、`m@w` は
+モジュール `m` の取込済み Module Words へ、`USER@d@w`・`DICT@…` は各辞書へ(`split_path`)。
 **中心性質——決定性**: `resolve` は評価履歴に依らず `(Name, Vis)` のみの関数であり、
 同じ状態で同じ名は常に同じ束縛へ解決する。
 
@@ -671,8 +670,8 @@ resolve(w, Vis) =
 `DEF`/`DEL` を `Σ_dict` 上の変換子として与える(SPEC §8):
 
 ```
-⟦{b} 'w' DEF⟧ : Usr[DEMO][w] := b      (核語は不可=「built-in 再定義不可」)
-⟦'w' DEL⟧     : Usr[DEMO] ∖ w
+⟦{b} 'w' DEF⟧ : Usr[EXAMPLE][w] := b      (核語は不可=「built-in 再定義不可」)
+⟦'w' DEL⟧     : Usr[EXAMPLE] ∖ w
 ```
 
 定義時に本体トークンを `resolve` して**依存グラフ** `dependents : Name → 2^Name` を

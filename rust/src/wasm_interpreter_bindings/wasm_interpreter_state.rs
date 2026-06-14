@@ -218,7 +218,7 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// Full word + sample catalog for a module, regardless of import state.
+    /// Full word catalog for a module, regardless of import state.
     /// Tuple shape: `(shortName, description, imported: bool, isSample: bool)`.
     /// `imported` reflects the live import table so the GUI can render active
     /// words normally and inactive words greyed-out within the same sheet.
@@ -236,11 +236,7 @@ impl AjisaiInterpreter {
                 if entry.import_all_public {
                     return true;
                 }
-                if word.is_sample {
-                    entry.imported_samples.contains(&short_upper)
-                } else {
-                    entry.imported_words.contains(&short_upper)
-                }
+                entry.imported_words.contains(&short_upper)
             });
             let item = js_sys::Array::new();
             item.push(&JsValue::from_str(word.short_name));
@@ -268,11 +264,7 @@ impl AjisaiInterpreter {
                 words.push(&JsValue::from_str(w));
             }
             item.push(&words.into());
-            let samples = js_sys::Array::new();
-            for s in &entry.imported_samples {
-                samples.push(&JsValue::from_str(s));
-            }
-            item.push(&samples.into());
+            item.push(&js_sys::Array::new().into());
             arr.push(&item);
         }
         arr.into()
@@ -300,32 +292,6 @@ impl AjisaiInterpreter {
                 samples,
             );
         }
-    }
-
-    #[wasm_bindgen]
-    pub fn collect_module_sample_words_info(&self, module_name: &str) -> JsValue {
-        let upper = module_name.to_uppercase();
-        let arr = js_sys::Array::new();
-        let Some(imported) = self.interpreter.import_table.modules.get(&upper) else {
-            return arr.into();
-        };
-        if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
-            for (name, def) in &module_dict.sample_words {
-                if !imported.import_all_public && !imported.imported_samples.contains(name) {
-                    continue;
-                }
-                let item = js_sys::Array::new();
-                item.push(&JsValue::from_str(name));
-                item.push(
-                    &def.description
-                        .clone()
-                        .map(JsValue::from)
-                        .unwrap_or(JsValue::NULL),
-                );
-                arr.push(&item);
-            }
-        }
-        arr.into()
     }
 
     /// Tuple shape: `(name, description)`.
@@ -408,21 +374,12 @@ impl AjisaiInterpreter {
             if let Some(dict) = self.interpreter.user_dictionaries.get_mut(&dict_name) {
                 dict.words.remove(&short_name);
             }
-            if let Some(dict) = self.interpreter.module_vocabulary.get_mut(&dict_name) {
-                dict.sample_words.remove(&short_name);
-            }
             let _ = self.interpreter.rebuild_dependencies();
             return;
         }
 
         for dict in self.interpreter.user_dictionaries.values_mut() {
             if dict.words.remove(&upper_name).is_some() {
-                let _ = self.interpreter.rebuild_dependencies();
-                return;
-            }
-        }
-        for dict in self.interpreter.module_vocabulary.values_mut() {
-            if dict.sample_words.remove(&upper_name).is_some() {
                 let _ = self.interpreter.rebuild_dependencies();
                 return;
             }
@@ -589,7 +546,7 @@ impl AjisaiInterpreter {
             self.interpreter.active_user_dictionary = word
                 .dictionary
                 .clone()
-                .unwrap_or_else(|| "DEMO".to_string())
+                .unwrap_or_else(|| "EXAMPLE".to_string())
                 .to_uppercase();
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),

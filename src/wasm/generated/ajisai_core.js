@@ -131,12 +131,6 @@ export class AjisaiInterpreter {
      * @param {string} module_name
      * @returns {any}
      */
-    collect_module_sample_words_info(module_name) {
-        const ptr0 = passStringToWasm0(module_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.ajisaiinterpreter_collect_module_sample_words_info(this.__wbg_ptr, ptr0, len0);
-        return ret;
-    }
     /**
      * Tuple shape: `(name, description)`.
      * @param {string} module_name

@@ -37,31 +37,7 @@ fn parse_only_items(value: &Value, op_name: &str) -> Result<Vec<String>> {
     Ok(result)
 }
 
-fn emit_import_conflict_warnings(interp: &mut Interpreter, module_name: &str) {
-    let Some(module_dict) = interp.module_vocabulary.get(module_name) else {
-        return;
-    };
-
-    for short_name in module_dict.sample_words.keys() {
-        let mut collisions: Vec<String> = Vec::new();
-        for (dict_name, dict) in &interp.user_dictionaries {
-            if dict.words.contains_key(short_name) {
-                collisions.push(format!("{}@{}", dict_name, short_name));
-            }
-        }
-        if collisions.is_empty() {
-            continue;
-        }
-
-        let mut all_paths = vec![format!("{}@{}", module_name, short_name)];
-        all_paths.extend(collisions);
-        interp.output_buffer.push_str(&format!(
-            "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
-            short_name,
-            all_paths.join(" and ")
-        ));
-    }
-}
+fn emit_import_conflict_warnings(_interp: &mut Interpreter, _module_name: &str) {}
 
 fn expand_import_all_to_explicit_selection(
     interp: &mut Interpreter,
@@ -74,14 +50,10 @@ fn expand_import_all_to_explicit_selection(
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.to_string()))?;
 
     let mut imported_words = HashSet::new();
-    let mut imported_samples = HashSet::new();
     for qualified in module_dict.words.keys() {
         if let Some((_, short)) = qualified.split_once('@') {
             imported_words.insert(short.to_string());
         }
-    }
-    for short in module_dict.sample_words.keys() {
-        imported_samples.insert(short.clone());
     }
 
     let entry = interp
@@ -91,12 +63,10 @@ fn expand_import_all_to_explicit_selection(
         .or_insert_with(|| ImportedModule {
             import_all_public: false,
             imported_words: HashSet::new(),
-            imported_samples: HashSet::new(),
         });
     if entry.import_all_public {
         entry.import_all_public = false;
         entry.imported_words = imported_words;
-        entry.imported_samples = imported_samples;
     }
     Ok(())
 }
@@ -104,11 +74,10 @@ fn expand_import_all_to_explicit_selection(
 fn referenced_module_items_from_user_words(
     interp: &Interpreter,
     module_name: &str,
-) -> (HashSet<String>, HashSet<String>) {
+) -> HashSet<String> {
     let mut words = HashSet::new();
-    let mut samples = HashSet::new();
     let Some(module_dict) = interp.module_vocabulary.get(module_name) else {
-        return (words, samples);
+        return words;
     };
 
     let mut pending = Vec::new();
@@ -128,23 +97,9 @@ fn referenced_module_items_from_user_words(
         let qualified = format!("{}@{}", module_name, short);
         if module_dict.words.contains_key(&qualified) {
             words.insert(short);
-            continue;
-        }
-        if !module_dict.sample_words.contains_key(&short) || !samples.insert(short.clone()) {
-            continue;
-        }
-        if let Some(sample_def) = module_dict.sample_words.get(&short) {
-            for dep in &sample_def.dependencies {
-                if let Some((dep_module, dep_short)) = interp.split_qualified_name(dep) {
-                    if dep_module == module_name {
-                        pending.push(dep_short);
-                    }
-                }
-            }
         }
     }
-
-    (words, samples)
+    words
 }
 
 fn referenced_by_user_words(interp: &Interpreter, qualified_name: &str) -> Vec<String> {
@@ -186,10 +141,9 @@ pub(super) fn op_unimport(interp: &mut Interpreter) -> Result<()> {
     }
 
     interp.rebuild_dependencies()?;
-    let (referenced_words, referenced_samples) =
-        referenced_module_items_from_user_words(interp, &module_name);
+    let referenced_words = referenced_module_items_from_user_words(interp, &module_name);
 
-    if referenced_words.is_empty() && referenced_samples.is_empty() {
+    if referenced_words.is_empty() {
         interp.import_table.modules.remove(&module_name);
     } else {
         let entry = interp
@@ -199,11 +153,9 @@ pub(super) fn op_unimport(interp: &mut Interpreter) -> Result<()> {
             .or_insert_with(|| ImportedModule {
                 import_all_public: false,
                 imported_words: HashSet::new(),
-                imported_samples: HashSet::new(),
             });
         entry.import_all_public = false;
         entry.imported_words = referenced_words.clone();
-        entry.imported_samples = referenced_samples.clone();
     }
 
     interp.bump_module_epoch();
@@ -211,10 +163,7 @@ pub(super) fn op_unimport(interp: &mut Interpreter) -> Result<()> {
     interp
         .output_buffer
         .push_str(&format!("Unimported unused words from {}.\n", module_name));
-    let mut kept: Vec<String> = referenced_words
-        .into_iter()
-        .chain(referenced_samples)
-        .collect();
+    let mut kept: Vec<String> = referenced_words.into_iter().collect();
     kept.sort();
     if !kept.is_empty() {
         interp.output_buffer.push_str(&format!(
@@ -244,15 +193,13 @@ pub(super) fn op_unimport_only(interp: &mut Interpreter) -> Result<()> {
         .module_vocabulary
         .get(&module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
-    let mut validated: Vec<(String, bool)> = Vec::new();
+    let mut validated: Vec<String> = Vec::new();
     let mut listing_only_skips: Vec<String> = Vec::new();
     for item in selected {
         let short = item.to_uppercase();
         let qualified = format!("{}@{}", module_name, short);
         if module_dict.words.contains_key(&qualified) {
-            validated.push((short, true));
-        } else if module_dict.sample_words.contains_key(&short) {
-            validated.push((short, false));
+            validated.push(short);
         } else if crate::coreword_registry::is_listing_only_for_module(&short, &module_name) {
             listing_only_skips.push(short);
         } else {
@@ -282,7 +229,7 @@ pub(super) fn op_unimport_only(interp: &mut Interpreter) -> Result<()> {
     }
 
     interp.rebuild_dependencies()?;
-    for (short, _) in &validated {
+    for short in &validated {
         let qualified = format!("{}@{}", module_name, short);
         let dependents = referenced_by_user_words(interp, &qualified);
         if !dependents.is_empty() {
@@ -296,14 +243,10 @@ pub(super) fn op_unimport_only(interp: &mut Interpreter) -> Result<()> {
 
     expand_import_all_to_explicit_selection(interp, &module_name)?;
     if let Some(entry) = interp.import_table.modules.get_mut(&module_name) {
-        for (short, is_word) in validated {
-            if is_word {
-                entry.imported_words.remove(&short);
-            } else {
-                entry.imported_samples.remove(&short);
-            }
+        for short in validated {
+            entry.imported_words.remove(&short);
         }
-        if entry.imported_words.is_empty() && entry.imported_samples.is_empty() {
+        if entry.imported_words.is_empty() {
             interp.import_table.modules.remove(&module_name);
         }
     }
@@ -321,15 +264,11 @@ pub(super) fn import_all_public(interp: &mut Interpreter, module_name: &str) -> 
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.to_string()))?;
 
     let mut imported_words = HashSet::new();
-    let mut imported_samples = HashSet::new();
 
     for qualified in module_dict.words.keys() {
         if let Some((_, short)) = qualified.split_once('@') {
             imported_words.insert(short.to_string());
         }
-    }
-    for short in module_dict.sample_words.keys() {
-        imported_samples.insert(short.clone());
     }
 
     let entry = interp
@@ -339,12 +278,10 @@ pub(super) fn import_all_public(interp: &mut Interpreter, module_name: &str) -> 
         .or_insert_with(|| ImportedModule {
             import_all_public: false,
             imported_words: HashSet::new(),
-            imported_samples: HashSet::new(),
         });
 
     entry.import_all_public = true;
     entry.imported_words = imported_words;
-    entry.imported_samples = imported_samples;
     emit_import_conflict_warnings(interp, module_name);
     Ok(())
 }
@@ -390,15 +327,13 @@ pub(super) fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         .module_vocabulary
         .get(&module_name)
         .ok_or_else(|| AjisaiError::UnknownModule(module_name.clone()))?;
-    let mut validated: Vec<(String, bool)> = Vec::new();
+    let mut validated: Vec<String> = Vec::new();
     let mut listing_only_skips: Vec<String> = Vec::new();
     for item in selected {
         let short = item.to_uppercase();
         let qualified = format!("{}@{}", module_name, short);
         if module_dict.words.contains_key(&qualified) {
-            validated.push((short, true));
-        } else if module_dict.sample_words.contains_key(&short) {
-            validated.push((short, false));
+            validated.push(short);
         } else if crate::coreword_registry::is_listing_only_for_module(&short, &module_name) {
             // Boundary word: listed in this module's view but canonically a
             // Core word. Already available without IMPORT, so silently skip
@@ -425,15 +360,10 @@ pub(super) fn op_import_only(interp: &mut Interpreter) -> Result<()> {
         .or_insert_with(|| ImportedModule {
             import_all_public: false,
             imported_words: HashSet::new(),
-            imported_samples: HashSet::new(),
         });
 
-    for (short, is_word) in validated {
-        if is_word {
-            entry.imported_words.insert(short.clone());
-        } else {
-            entry.imported_samples.insert(short.clone());
-        }
+    for short in validated {
+        entry.imported_words.insert(short.clone());
     }
 
     emit_import_conflict_warnings(interp, &module_name);
@@ -449,15 +379,15 @@ pub(super) fn restore_module(interp: &mut Interpreter, module_name: &str) -> boo
 
 /// Restore a precise import state for one module (used by GUI persistence).
 /// Unlike `restore_module`, this reinstates a partial import (the exact
-/// `imported_words` / `imported_samples` sets produced by IMPORT-ONLY /
-/// UNIMPORT-ONLY) rather than forcing a full IMPORT. Returns false when the
+/// `imported_words` set produced by IMPORT-ONLY / UNIMPORT-ONLY) rather than
+/// forcing a full IMPORT. Returns false when the
 /// module name is unknown.
 pub(super) fn restore_import_entry(
     interp: &mut Interpreter,
     module_name: &str,
     import_all_public: bool,
     words: Vec<String>,
-    samples: Vec<String>,
+    _samples: Vec<String>,
 ) -> bool {
     let upper = module_name.to_uppercase();
     if ensure_module_dictionary(interp, &upper).is_err() {
@@ -466,7 +396,6 @@ pub(super) fn restore_import_entry(
     let entry = ImportedModule {
         import_all_public,
         imported_words: words.into_iter().map(|w| w.to_uppercase()).collect(),
-        imported_samples: samples.into_iter().map(|s| s.to_uppercase()).collect(),
     };
     interp.import_table.modules.insert(upper, entry);
     interp.bump_module_epoch();

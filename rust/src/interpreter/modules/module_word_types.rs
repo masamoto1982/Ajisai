@@ -23,15 +23,7 @@ pub(super) struct ModuleWord {
 }
 
 #[derive(Clone)]
-pub(super) struct SampleWord {
-    pub name: &'static str,
-    pub definition: &'static str,
-    pub description: &'static str,
-}
-
-#[derive(Clone)]
 pub(super) struct ModuleSpec {
     pub name: &'static str,
     pub words: &'static [ModuleWord],
-    pub sample_words: &'static [SampleWord],
 }

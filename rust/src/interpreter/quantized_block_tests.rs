@@ -1080,7 +1080,10 @@ fn vtu_phase_iii_eq_dense_tensor_singleton_matches_scalar() {
     let truthy = |v: &Value| -> bool {
         v.as_truth()
             .or_else(|| v.as_scalar().map(|f| !f.is_zero()))
-            .or_else(|| v.child(0).and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero()))))
+            .or_else(|| {
+                v.child(0)
+                    .and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero())))
+            })
             .unwrap_or(false)
     };
     assert!(truthy(t), "5 = 5 should be truthy");
@@ -1094,7 +1097,10 @@ fn vtu_phase_iii_lt_dense_tensor_against_scalar() {
     let truthy = t
         .as_truth()
         .or_else(|| t.as_scalar().map(|f| !f.is_zero()))
-        .or_else(|| t.child(0).and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero()))))
+        .or_else(|| {
+            t.child(0)
+                .and_then(|c| c.as_truth().or_else(|| c.as_scalar().map(|f| !f.is_zero())))
+        })
         .unwrap_or(false);
     assert!(truthy, "1 < 2 should be truthy");
 }

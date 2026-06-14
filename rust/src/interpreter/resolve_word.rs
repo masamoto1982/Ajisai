@@ -51,7 +51,7 @@ impl Interpreter {
     pub(crate) fn sync_user_words_cache(&mut self) {
         self.user_words = self
             .user_dictionaries
-            .get("DEMO")
+            .get("EXAMPLE")
             .map(|dict| dict.words.clone())
             .unwrap_or_default();
     }
@@ -61,14 +61,6 @@ impl Interpreter {
             .modules
             .get(module_name)
             .map(|m| m.import_all_public || m.imported_words.contains(short_name))
-            .unwrap_or(false)
-    }
-
-    fn is_module_sample_imported(&self, module_name: &str, short_name: &str) -> bool {
-        self.import_table
-            .modules
-            .get(module_name)
-            .map(|m| m.import_all_public || m.imported_samples.contains(short_name))
             .unwrap_or(false)
     }
 
@@ -89,20 +81,6 @@ impl Interpreter {
             }
         }
 
-        let mut module_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
-        for (module_name, dict) in &self.module_vocabulary {
-            if !self.is_module_sample_imported(module_name, &upper) {
-                continue;
-            }
-            if let Some(def) = dict.sample_words.get(&upper) {
-                module_matches.push((
-                    format!("{}@{}", module_name, upper),
-                    def.clone(),
-                    def.registration_order,
-                ));
-            }
-        }
-
         let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {
             if let Some(def) = dict.words.get(&upper) {
@@ -112,16 +90,6 @@ impl Interpreter {
                     def.registration_order,
                 ));
             }
-        }
-
-        if !module_matches.is_empty() && !user_matches.is_empty() {
-            return None;
-        }
-
-        if !module_matches.is_empty() {
-            module_matches.sort_by_key(|(_, _, order)| *order);
-            let (name, def, _) = module_matches.into_iter().next().unwrap();
-            return Some((name, def));
         }
 
         if !user_matches.is_empty() {
@@ -141,13 +109,6 @@ impl Interpreter {
         }
 
         let mut paths = Vec::new();
-        for (module_name, dict) in &self.module_vocabulary {
-            if self.is_module_sample_imported(module_name, &upper)
-                && dict.sample_words.contains_key(&upper)
-            {
-                paths.push(format!("{}@{}", module_name, upper));
-            }
-        }
         for (dict_name, dict) in &self.user_dictionaries {
             if dict.words.contains_key(&upper) {
                 paths.push(format!("{}@{}", dict_name, upper));
@@ -187,11 +148,6 @@ impl Interpreter {
                             return Some((qualified, def.clone()));
                         }
                     }
-                    if self.is_module_sample_imported(ns, &word) {
-                        if let Some(def) = module_dict.sample_words.get(&word) {
-                            return Some((format!("{}@{}", ns, word), def.clone()));
-                        }
-                    }
                     return None;
                 }
                 if let Some(user_dict) = self.user_dictionaries.get(ns.as_str()) {
@@ -223,11 +179,6 @@ impl Interpreter {
                         if self.is_module_word_imported(second, &word) {
                             if let Some(def) = module_dict.words.get(&qualified) {
                                 return Some((qualified, def.clone()));
-                            }
-                        }
-                        if self.is_module_sample_imported(second, &word) {
-                            if let Some(def) = module_dict.sample_words.get(&word) {
-                                return Some((format!("{}@{}", second, word), def.clone()));
                             }
                         }
                     }
@@ -275,9 +226,6 @@ impl Interpreter {
                     if let Some(def) = module.words.get(&qualified).cloned() {
                         return Some((qualified, def));
                     }
-                    if let Some(def) = module.sample_words.get(&word).cloned() {
-                        return Some((format!("{}@{}", ns, word), def));
-                    }
                 }
             }
         }
@@ -309,12 +257,6 @@ impl Interpreter {
             }
         }
 
-        for (module_name, module_dict) in &self.module_vocabulary {
-            for (name, def) in &module_dict.sample_words {
-                all_words.push((format!("{}@{}", module_name, name), Arc::clone(def)));
-            }
-        }
-
         let mut dictionary_edges: HashMap<String, HashSet<String>> = HashMap::new();
 
         for (word_name, word_def) in &all_words {
@@ -340,11 +282,6 @@ impl Interpreter {
             if let Some((dict_name, short_name)) = self.split_qualified_name(word_name) {
                 if let Some(dict) = self.user_dictionaries.get_mut(&dict_name) {
                     if let Some(def) = dict.words.get_mut(&short_name) {
-                        Arc::make_mut(def).dependencies = dependencies.clone();
-                    }
-                }
-                if let Some(module_dict) = self.module_vocabulary.get_mut(&dict_name) {
-                    if let Some(def) = module_dict.sample_words.get_mut(&short_name) {
                         Arc::make_mut(def).dependencies = dependencies.clone();
                     }
                 }
@@ -394,13 +331,6 @@ impl Interpreter {
             for (name, def) in &dict.words {
                 if def.dependencies.contains(word_name) {
                     result.insert(format!("{}@{}", dict_name, name));
-                }
-            }
-        }
-        for (module_name, module_dict) in &self.module_vocabulary {
-            for (name, def) in &module_dict.sample_words {
-                if def.dependencies.contains(word_name) {
-                    result.insert(format!("{}@{}", module_name, name));
                 }
             }
         }

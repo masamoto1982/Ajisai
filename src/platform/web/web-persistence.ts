@@ -18,13 +18,10 @@ interface InterpreterState {
     userWords: unknown;
     importedModules?: unknown;
     importState?: unknown;
-    demoWordsVersion?: number;
+    exampleWordsVersion?: number;
     activeDictionarySheet?: string;
     activeUserDictionary?: string;
     updatedAt: string;
-
-    customWords?: unknown;
-    sampleWordsVersion?: number;
 }
 
 const promisifyRequest = <T>(request: IDBRequest<T>): Promise<T> =>
@@ -158,10 +155,10 @@ class WebPersistence implements Persistence {
             }
             return {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
-                userWords: (result.userWords ?? result.customWords) as InterpreterStateSnapshot['userWords'],
+                userWords: result.userWords as InterpreterStateSnapshot['userWords'],
                 importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
                 importState: result.importState as InterpreterStateSnapshot['importState'],
-                demoWordsVersion: result.demoWordsVersion ?? result.sampleWordsVersion,
+                exampleWordsVersion: result.exampleWordsVersion,
                 activeDictionarySheet: result.activeDictionarySheet,
                 activeUserDictionary: result.activeUserDictionary
             };

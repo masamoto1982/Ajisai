@@ -4,10 +4,10 @@
 mod tests {
     use crate::interpreter::Interpreter;
 
-    fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
+    fn restore_example_words(interp: &mut Interpreter, example_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
 
-        for (name, definition, _description) in sample_words {
+        for (name, definition, _description) in example_words {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
@@ -23,8 +23,8 @@ mod tests {
     #[tokio::test]
     async fn test_path_short_name_no_collision() {
         let mut interp = Interpreter::new();
-        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
-        restore_sample_words(&mut interp, &sample_words);
+        let example_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
         let result = interp.execute("SAY-HELLO-WORLD").await;
@@ -39,14 +39,14 @@ mod tests {
     #[tokio::test]
     async fn test_path_dict_at_word() {
         let mut interp = Interpreter::new();
-        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
-        restore_sample_words(&mut interp, &sample_words);
+        let example_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("DEMO@SAY-HELLO-WORLD").await;
+        let result = interp.execute("EXAMPLE@SAY-HELLO-WORLD").await;
         assert!(
             result.is_ok(),
-            "DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            "EXAMPLE@SAY-HELLO-WORLD should resolve: {:?}",
             result.err()
         );
         assert_eq!(interp.stack.len(), 1);
@@ -55,14 +55,14 @@ mod tests {
     #[tokio::test]
     async fn test_path_user_dict_word() {
         let mut interp = Interpreter::new();
-        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
-        restore_sample_words(&mut interp, &sample_words);
+        let example_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("USER@DEMO@SAY-HELLO-WORLD").await;
+        let result = interp.execute("USER@EXAMPLE@SAY-HELLO-WORLD").await;
         assert!(
             result.is_ok(),
-            "USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            "USER@EXAMPLE@SAY-HELLO-WORLD should resolve: {:?}",
             result.err()
         );
         assert_eq!(interp.stack.len(), 1);
@@ -71,14 +71,14 @@ mod tests {
     #[tokio::test]
     async fn test_path_fully_qualified_user() {
         let mut interp = Interpreter::new();
-        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
-        restore_sample_words(&mut interp, &sample_words);
+        let example_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("DICT@USER@DEMO@SAY-HELLO-WORLD").await;
+        let result = interp.execute("DICT@USER@EXAMPLE@SAY-HELLO-WORLD").await;
         assert!(
             result.is_ok(),
-            "DICT@USER@DEMO@SAY-HELLO-WORLD should resolve: {:?}",
+            "DICT@USER@EXAMPLE@SAY-HELLO-WORLD should resolve: {:?}",
             result.err()
         );
         assert_eq!(interp.stack.len(), 1);
@@ -155,14 +155,14 @@ mod tests {
     #[tokio::test]
     async fn test_path_case_insensitive_user() {
         let mut interp = Interpreter::new();
-        let sample_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
-        restore_sample_words(&mut interp, &sample_words);
+        let example_words = vec![("SAY-HELLO-WORLD", "[ 42 ]", "test word")];
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
-        let result = interp.execute("demo@say-hello-world").await;
+        let result = interp.execute("example@say-hello-world").await;
         assert!(
             result.is_ok(),
-            "demo@say-hello-world should resolve: {:?}",
+            "example@say-hello-world should resolve: {:?}",
             result.err()
         );
         assert_eq!(interp.stack.len(), 1);
@@ -209,10 +209,10 @@ mod tests {
             result.err()
         );
 
-        let result = interp.execute("DEMO@SEQ").await;
+        let result = interp.execute("EXAMPLE@SEQ").await;
         assert!(
             result.is_ok(),
-            "DEMO@SEQ should resolve: {:?}",
+            "EXAMPLE@SEQ should resolve: {:?}",
             result.err()
         );
         if let Some(val) = interp.stack.last() {
@@ -220,7 +220,7 @@ mod tests {
                 .as_scalar()
                 .cloned()
                 .or_else(|| val.child(0).and_then(|c| c.as_scalar().cloned()));
-            let scalar = scalar_owned.expect("DEMO@SEQ should be numeric");
+            let scalar = scalar_owned.expect("EXAMPLE@SEQ should be numeric");
             assert_eq!(scalar.to_i64().unwrap(), 999);
         }
     }
@@ -287,12 +287,12 @@ mod tests {
         assert_eq!(layers, vec!["MUSIC"]);
         assert_eq!(word, "PLAY");
 
-        let (layers, word) = Interpreter::split_path("USER@DEMO@SAY-HELLO");
-        assert_eq!(layers, vec!["USER", "DEMO"]);
+        let (layers, word) = Interpreter::split_path("USER@EXAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["USER", "EXAMPLE"]);
         assert_eq!(word, "SAY-HELLO");
 
-        let (layers, word) = Interpreter::split_path("DICT@USER@DEMO@SAY-HELLO");
-        assert_eq!(layers, vec!["DICT", "USER", "DEMO"]);
+        let (layers, word) = Interpreter::split_path("DICT@USER@EXAMPLE@SAY-HELLO");
+        assert_eq!(layers, vec!["DICT", "USER", "EXAMPLE"]);
         assert_eq!(word, "SAY-HELLO");
 
         let (layers, word) = Interpreter::split_path("SAY-HELLO");

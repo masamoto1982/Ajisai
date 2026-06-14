@@ -9,7 +9,7 @@ use crate::interpreter::{
 };
 use crate::types::{Capabilities, Stability};
 
-use super::module_word_types::{ModuleSpec, ModuleWord, SampleWord};
+use super::module_word_types::{ModuleSpec, ModuleWord};
 
 macro_rules! module_word {
     ($name:expr, $word_shape:expr, $description:expr, $executor:expr, $purity:expr, $effects:expr, $det:expr, $preview:expr, $preserves:expr, $stability:expr, $caps:expr) => {
@@ -1144,52 +1144,42 @@ const SERIAL_WORDS: &[ModuleWord] = &[
     ),
 ];
 
-const MUSIC_SAMPLES: &[SampleWord] = &[];
-
 pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {
         name: "MUSIC",
         words: MUSIC_WORDS,
-        sample_words: MUSIC_SAMPLES,
     },
     ModuleSpec {
         name: "JSON",
         words: JSON_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "IO",
         words: IO_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "TIME",
         words: TIME_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "CRYPTO",
         words: CRYPTO_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "ALGO",
         words: ALGO_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "MATH",
         words: MATH_WORDS,
-        sample_words: &[],
     },
     ModuleSpec {
         name: "SERIAL",
         words: SERIAL_WORDS,
-        sample_words: &[],
     },
 ];
 
-/// One catalog entry for a module: a word or sample word as declared in
+/// One catalog entry for a module word as declared in
 /// `MODULE_SPECS`, independent of whether it is currently imported. The GUI
 /// uses this to render the full module dictionary (active + inactive words)
 /// so an inactive word can be surfaced greyed-out and toggled with IMPORT-ONLY.
@@ -1219,13 +1209,6 @@ pub(crate) fn module_catalog_words(module_name: &str) -> Option<Vec<CatalogWord>
             is_sample: false,
         })
         .collect();
-    for sample in module.sample_words {
-        out.push(CatalogWord {
-            short_name: sample.name,
-            description: sample.description,
-            is_sample: true,
-        });
-    }
     Some(out)
 }
 
@@ -1452,14 +1435,6 @@ mod tests {
                     "module {} word {} has a multi-line description",
                     module.name,
                     word.short_name
-                );
-            }
-            for sample in module.sample_words {
-                assert!(
-                    !sample.description.contains('\n'),
-                    "module {} sample {} has a multi-line description",
-                    module.name,
-                    sample.name
                 );
             }
         }
