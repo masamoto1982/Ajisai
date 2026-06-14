@@ -61,7 +61,7 @@ mod tests {
         interp.execute("{ 1 } 'X' DEF").await.unwrap();
         let def = interp
             .user_dictionaries
-            .get("DEMO")
+            .get("EXAMPLE")
             .and_then(|d| d.words.get("X"))
             .unwrap();
         assert_eq!(def.tier, Tier::Contrib);

@@ -3172,7 +3172,7 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "IMPORT-ONLY is the selective visibility operator on module dictionaries: it exposes exactly selected module/sample words and treats Core-listed boundary selectors as no-ops.",
+      "notes": "IMPORT-ONLY is the selective visibility operator on module dictionaries: it exposes exactly selected Module Words and treats Core-listed boundary selectors as no-ops.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -3226,7 +3226,7 @@
       ],
       "conformance_cases": [],
       "status": "Formalized",
-      "notes": "UNIMPORT-ONLY hides selected module/sample words and rejects selectors pinned by user-word dependencies.",
+      "notes": "UNIMPORT-ONLY hides selected Module Words and rejects selectors pinned by user-word dependencies.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

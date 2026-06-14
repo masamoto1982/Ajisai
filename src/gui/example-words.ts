@@ -1,9 +1,9 @@
 import type { UserWord } from '../wasm-interpreter-types';
 
 
-export const DEMO_WORDS_VERSION = 10;
+export const EXAMPLE_WORDS_VERSION = 10;
 
-export const DEMO_USER_WORDS: UserWord[] = [
+export const EXAMPLE_USER_WORDS: UserWord[] = [
     {
         name: 'SAY-HELLO',
         definition: "'Hello' ,, PRINT",

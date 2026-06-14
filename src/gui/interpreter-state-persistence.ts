@@ -1,7 +1,7 @@
 
 
 import type { AjisaiInterpreter, Value, UserWord, ImportStateEntry } from '../wasm-interpreter-types';
-import { DEMO_USER_WORDS, DEMO_WORDS_VERSION } from './demo-words';
+import { EXAMPLE_USER_WORDS, EXAMPLE_WORDS_VERSION } from './example-words';
 import { getPlatform } from '../platform';
 import { Result, ok, err } from './functional-result-helpers';
 
@@ -12,7 +12,7 @@ export interface InterpreterState {
     // Detailed per-module import state. Preferred over `importedModules` on
     // restore so partial imports (IMPORT-ONLY / UNIMPORT-ONLY) survive reload.
     readonly importState?: ImportStateEntry[];
-    readonly demoWordsVersion?: number;
+    readonly exampleWordsVersion?: number;
     readonly activeDictionarySheet?: string;
     readonly activeUserDictionary?: string;
 }
@@ -78,7 +78,7 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
         userWords,
         importedModules: interpreter.collect_imported_modules(),
         importState: interpreter.collect_import_state(),
-        demoWordsVersion: DEMO_WORDS_VERSION,
+        exampleWordsVersion: EXAMPLE_WORDS_VERSION,
         activeDictionarySheet: selections.activeDictionarySheet,
         activeUserDictionary: selections.activeUserDictionary
     };
@@ -97,6 +97,12 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 
 const buildExportFilename = (name: string): string => `${name}.json`;
 const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
+const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
+const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
+const isRemovedUserWordDictionary = (dictionary: string | null | undefined): boolean =>
+    REMOVED_USER_WORD_DICTIONARIES.has((dictionary || '').toUpperCase());
+const containsRemovedUserWordDictionary = (words: readonly UserWord[]): boolean =>
+    words.some(word => isRemovedUserWordDictionary(word.dictionary));
 
 const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     try {
@@ -191,24 +197,24 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
         window.addEventListener('pagehide', flushPendingSave);
     }
 
-    const loadDemoWords = async (): Promise<void> => {
+    const loadExampleWords = async (): Promise<void> => {
         try {
-            await window.ajisaiInterpreter.restore_user_words(DEMO_USER_WORDS);
+            await window.ajisaiInterpreter.restore_user_words(EXAMPLE_USER_WORDS);
             await saveCurrentState();
-            console.log('Demo user words loaded.');
+            console.log('Example Words loaded.');
 
-            const wordNames = DEMO_USER_WORDS.map(w => w.name).join(', ');
-            showInfo?.(`Sample words loaded: ${wordNames}`, false);
+            const wordNames = EXAMPLE_USER_WORDS.map(w => w.name).join(', ');
+            showInfo?.(`Example Words loaded: ${wordNames}`, false);
         } catch (error) {
-            console.error('Failed to load sample words:', error);
+            console.error('Failed to load Example Words:', error);
         }
     };
 
     const loadDatabaseData = async (): Promise<RestoredSelection> => {
         if (!window.ajisaiInterpreter) return {};
         if (!dbInitialized) {
-            console.warn('Database not initialized, loading sample words instead.');
-            await loadDemoWords();
+            console.warn('Database not initialized, loading Example Words instead.');
+            await loadExampleWords();
             return {};
         }
 
@@ -228,37 +234,23 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
-
-                    const savedVersion = state.demoWordsVersion || 0;
-                    let wordsToRestore = state.userWords;
-
-                    if (savedVersion < DEMO_WORDS_VERSION) {
-
-                        const oldSampleNames = new Set([
-
-                            'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5',
-
-                            'GREETING', 'WORLD', 'HELLO-WORLD',
-                        ]);
-                        const newSampleWordNames = new Set(
-                            DEMO_USER_WORDS.map(w => w.name.toUpperCase())
-                        );
-
-
-                        const userWords = state.userWords.filter(
-                            (w: UserWord) =>
-                                !oldSampleNames.has(w.name.toUpperCase()) &&
-                                !newSampleWordNames.has(w.name.toUpperCase())
-                        );
-                        wordsToRestore = [...DEMO_USER_WORDS, ...userWords];
-                        console.log(`Sample words migrated: v${savedVersion} → v${DEMO_WORDS_VERSION}`);
+                    if (containsRemovedUserWordDictionary(state.userWords)) {
+                        console.warn('Removed legacy user word dictionary found in saved state; resetting to Example Words.');
+                        await loadExampleWords();
+                        return {
+                            activeDictionarySheet: state.activeDictionarySheet,
+                            activeUserDictionary: 'EXAMPLE'
+                        };
                     }
+
+                    const savedVersion = state.exampleWordsVersion || 0;
+                    const wordsToRestore = state.userWords;
 
                     await window.ajisaiInterpreter.restore_user_words(wordsToRestore);
 
 
                     const savedWordKeys = new Set(
-                        wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'DEMO', w.name))
+                        wordsToRestore.map((w: UserWord) => buildWordKey(w.dictionary || 'EXAMPLE', w.name))
                     );
                     const currentWords = window.ajisaiInterpreter.collect_user_words_info();
                     for (const [dictionary, name] of currentWords) {
@@ -269,13 +261,13 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     }
 
 
-                    if (savedVersion < DEMO_WORDS_VERSION) {
+                    if (savedVersion < EXAMPLE_WORDS_VERSION) {
                         await saveCurrentState();
                     }
 
                     console.log('Interpreter state restored.');
                 } else {
-                    await loadDemoWords();
+                    await loadExampleWords();
                 }
 
                 return {
@@ -283,7 +275,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     activeUserDictionary: state.activeUserDictionary
                 };
             } else {
-                await loadDemoWords();
+                await loadExampleWords();
                 return {};
             }
         } catch (error) {
@@ -299,7 +291,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             return;
         }
 
-        const selectedDictionary = (document.getElementById('user-dictionary-select') as HTMLSelectElement | null)?.value || 'DEMO';
+        const selectedDictionary = (document.getElementById('user-dictionary-select') as HTMLSelectElement | null)?.value || 'EXAMPLE';
         const suggestedName = selectedDictionary.toLowerCase();
         const requestedName = window.prompt('Export file name', suggestedName)?.trim();
         if (!requestedName) {
@@ -327,9 +319,15 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
+                const dictionary = filenameToDictionaryName(openedFile.filename);
+                if (isRemovedUserWordDictionary(dictionary)) {
+                    showError?.(new Error('DEMO is no longer accepted as a User Words label. Rename the file before importing.'));
+                    return;
+                }
+
                 const importedWords = parseResult.value.map(word => ({
                     ...word,
-                    dictionary: (word.dictionary || openedFile.filename.replace(/\.json$/i, '')).toUpperCase()
+                    dictionary
                 }));
                 await window.ajisaiInterpreter.restore_user_words(importedWords);
 
@@ -380,7 +378,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             } else {
                 console.warn('Database not initialized, skipping clear operation.');
             }
-            await loadDemoWords();
+            await loadExampleWords();
             updateDisplays?.();
         } catch (error) {
             console.error('Failed to perform full reset:', error);

@@ -203,10 +203,10 @@ mod tests {
         );
     }
 
-    fn restore_sample_words(interp: &mut Interpreter, sample_words: &[(&str, &str, &str)]) {
+    fn restore_example_words(interp: &mut Interpreter, example_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
 
-        for (name, definition, _description) in sample_words {
+        for (name, definition, _description) in example_words {
             let tokens = tokenizer::tokenize(definition)
                 .unwrap_or_else(|e| panic!("Failed to tokenize {}: {}", name, e));
 
@@ -223,12 +223,12 @@ mod tests {
     async fn test_del_sample_user_words() {
         let mut interp = Interpreter::new();
 
-        let sample_words = vec![
+        let example_words = vec![
             ("C4", "264", "純正律 C4"),
             ("D4", "C4 9 * 8 /", "純正律 D4"),
             ("E4", "C4 5 * 4 /", "純正律 E4"),
         ];
-        restore_sample_words(&mut interp, &sample_words);
+        restore_example_words(&mut interp, &example_words);
 
         assert!(interp.user_words.contains_key("C4"));
         assert!(interp.user_words.contains_key("D4"));
@@ -250,16 +250,16 @@ mod tests {
     async fn test_del_sample_user_words_with_fqn() {
         let mut interp = Interpreter::new();
 
-        let sample_words = vec![
+        let example_words = vec![
             ("C4", "264", "純正律 C4"),
             ("D4", "C4 9 * 8 /", "純正律 D4"),
             ("E4", "C4 5 * 4 /", "純正律 E4"),
         ];
-        restore_sample_words(&mut interp, &sample_words);
+        restore_example_words(&mut interp, &example_words);
 
         assert!(interp.user_words.contains_key("D4"));
 
-        let result = interp.execute("'DEMO@D4' DEL").await;
+        let result = interp.execute("'EXAMPLE@D4' DEL").await;
         assert!(
             result.is_ok(),
             "Should delete D4 via FQN: {:?}",
@@ -267,16 +267,16 @@ mod tests {
         );
         assert!(!interp.user_words.contains_key("D4"));
 
-        let result = interp.execute("'DEMO@NONEXISTENT' DEL").await;
+        let result = interp.execute("'EXAMPLE@NONEXISTENT' DEL").await;
         assert!(result.is_err(), "Should error for non-existent FQN word");
 
-        let result = interp.execute("'DEMO@C4' DEL").await;
+        let result = interp.execute("'EXAMPLE@C4' DEL").await;
         assert!(
             result.is_err(),
             "Should not delete C4 via FQN (has dependents)"
         );
 
-        let result = interp.execute("! 'DEMO@C4' DEL").await;
+        let result = interp.execute("! 'EXAMPLE@C4' DEL").await;
         assert!(
             result.is_ok(),
             "Should force delete C4 via FQN: {:?}",
@@ -286,14 +286,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_execute_restored_sample_words() {
+    async fn test_execute_restored_example_words() {
         let mut interp = Interpreter::new();
 
-        let sample_words = vec![
+        let example_words = vec![
             ("C4", "264", "純正律 C4"),
             ("D4", "C4 9 * 8 /", "純正律 D4"),
         ];
-        restore_sample_words(&mut interp, &sample_words);
+        restore_example_words(&mut interp, &example_words);
 
         let result = interp.execute("C4").await;
         assert!(
@@ -335,14 +335,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_sample_words_scalar_output() {
+    async fn test_example_words_scalar_output() {
         let mut interp = Interpreter::new();
 
-        let sample_words = vec![
+        let example_words = vec![
             ("C4", "264", "純正律 C4"),
             ("D4", "C4 9 * 8 /", "純正律 D4"),
         ];
-        restore_sample_words(&mut interp, &sample_words);
+        restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
         let _ = interp.execute("C4").await.unwrap();
@@ -480,7 +480,7 @@ mod tests {
 
         assert!(
             interp.user_words.contains_key("C4"),
-            "User word C4 should remain in DEMO after IMPORT"
+            "User word C4 should remain in EXAMPLE after IMPORT"
         );
         assert!(
             !output.contains("MUSIC@C4"),
@@ -523,7 +523,7 @@ mod tests {
         let result = interp.execute("MUSIC@C4").await;
         assert!(
             result.is_err(),
-            "MUSIC@C4 should not exist after resetting sample words"
+            "MUSIC@C4 should not exist after resetting Example Words"
         );
 
         let result = interp.execute("MUSIC@SEQ").await;

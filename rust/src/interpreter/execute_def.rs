@@ -94,12 +94,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
-    let mut collision_modules = Vec::new();
-    for (module_name, module_dict) in &interp.module_vocabulary {
-        if module_dict.sample_words.contains_key(&upper_name) {
-            collision_modules.push(module_name.clone());
-        }
-    }
+    let collision_modules: Vec<String> = Vec::new();
 
     let dict_name = interp.active_user_dictionary.clone();
     let fq_name = format!("{}@{}", dict_name, upper_name);

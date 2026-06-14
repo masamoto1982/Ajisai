@@ -352,14 +352,6 @@ impl Interpreter {
                 }
             }
             if let Some(module) = self.module_vocabulary.get_mut(ns) {
-                if let Some(old_def) = module.sample_words.get(word).cloned() {
-                    let mut updated = (*old_def).clone();
-                    updated.execution_plans = Some(plan_set.clone());
-                    module
-                        .sample_words
-                        .insert(word.to_string(), std::sync::Arc::new(updated));
-                    return;
-                }
                 let qualified = format!("{}@{}", ns, word);
                 if let Some(old_def) = module.words.get(&qualified).cloned() {
                     let mut updated = (*old_def).clone();

@@ -43,13 +43,19 @@ export interface VocabularyManager {
 }
 
 const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
-    'DEMO': 'Demonstration',
+    'EXAMPLE': 'Example Words',
 });
+const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
 
 export const formatDictionaryTabName = (pathName: string): string => {
     const displayName = DICTIONARY_DISPLAY_NAMES[pathName]
-        ?? pathName.charAt(0).toUpperCase() + pathName.slice(1).toLowerCase();
-    return `${displayName} word`;
+        ?? pathName
+            .toLowerCase()
+            .split(/[-_\s]+/)
+            .filter(Boolean)
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+    return displayName.endsWith(' Words') ? displayName : `${displayName} Words`;
 };
 
 const createWordInfoFromTuple = (wordData: [string, string, boolean]): WordInfo => ({
@@ -159,7 +165,7 @@ export const createVocabularyManager = (
 
     let searchFilter = '';
     let cachedUserWords: Array<[string, string, boolean]> = [];
-    let selectedDictionary = 'DEMO';
+    let selectedDictionary = 'EXAMPLE';
     // Core words are fixed once WASM is loaded; fetching + canonical-filtering +
     // sorting them on every search keystroke was pure waste.
     let sortedCoreWordsCache: unknown[][] | null = null;
@@ -287,7 +293,7 @@ export const createVocabularyManager = (
             const button = createWordButtonElement(
                 wordInfo.name,
                 className,
-                () => onWordClick(wordInfo.dictionary === 'DEMO' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
+                () => onWordClick(wordInfo.dictionary === 'EXAMPLE' ? wordInfo.name : `${wordInfo.dictionary}@${wordInfo.name}`),
                 () => {
                     const lookupName = `${wordInfo.dictionary}@${wordInfo.name}`;
                     const definition = window.ajisaiInterpreter?.lookup_word_definition(lookupName) ?? '';
@@ -336,16 +342,18 @@ export const createVocabularyManager = (
     ): void => {
 
         cachedUserWords = userWordsInfo || [];
-        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary))).sort();
+        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary)))
+            .filter(dictionary => !REMOVED_USER_WORD_DICTIONARIES.has(dictionary.toUpperCase()))
+            .sort();
         elements.userDictionarySelect.innerHTML = '';
-        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['DEMO']) {
+        for (const dictionary of dictionaries.length > 0 ? dictionaries : ['EXAMPLE']) {
             const option = document.createElement('option');
             option.value = dictionary;
             option.textContent = formatDictionaryTabName(dictionary);
             elements.userDictionarySelect.appendChild(option);
         }
         if (!dictionaries.includes(selectedDictionary)) {
-            selectedDictionary = dictionaries.includes('DEMO') ? 'DEMO' : (dictionaries[0] || 'DEMO');
+            selectedDictionary = dictionaries.includes('EXAMPLE') ? 'EXAMPLE' : (dictionaries[0] || 'EXAMPLE');
         }
         elements.userDictionarySelect.value = selectedDictionary;
         renderUserWordButtons(elements.userWordsDisplay, selectDictionaryWords());

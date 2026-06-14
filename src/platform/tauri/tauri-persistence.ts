@@ -102,7 +102,7 @@ export class TauriPersistence implements Persistence {
             userWords: state.userWords,
             importedModules: state.importedModules,
             importState: state.importState,
-            demoWordsVersion: state.demoWordsVersion,
+            exampleWordsVersion: state.exampleWordsVersion,
             activeDictionarySheet: state.activeDictionarySheet,
             activeUserDictionary: state.activeUserDictionary,
             updatedAt: new Date().toISOString()
@@ -123,7 +123,7 @@ export class TauriPersistence implements Persistence {
             userWords: state.userWords as InterpreterStateSnapshot['userWords'],
             importedModules: state.importedModules as InterpreterStateSnapshot['importedModules'],
             importState: state.importState as InterpreterStateSnapshot['importState'],
-            demoWordsVersion: state.demoWordsVersion,
+            exampleWordsVersion: state.exampleWordsVersion,
             activeDictionarySheet: state.activeDictionarySheet,
             activeUserDictionary: state.activeUserDictionary
         };

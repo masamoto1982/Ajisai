@@ -1474,10 +1474,7 @@ mod exact_scalar_tests {
             .await
             .unwrap();
         let cmp = &interp2.get_stack()[0];
-        assert!(
-            cmp.as_truth() == Some(true),
-            "(√2 mod 1) < 1 must be TRUE"
-        );
+        assert!(cmp.as_truth() == Some(true), "(√2 mod 1) < 1 must be TRUE");
     }
 }
 

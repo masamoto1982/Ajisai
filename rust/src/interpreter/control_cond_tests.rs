@@ -225,11 +225,11 @@ mod tests {
 }
 
 #[cfg(test)]
-mod demo_word_tests {
+mod example_words_tests {
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
 
-    async fn setup_demo_words(interp: &mut Interpreter) {
+    async fn setup_example_words(interp: &mut Interpreter) {
         interp
             .execute("{ 'Hello' ,, PRINT } 'SAY-HELLO' DEF")
             .await
@@ -266,7 +266,7 @@ mod demo_word_tests {
     #[tokio::test]
     async fn test_greet_branch_1() {
         let mut interp = Interpreter::new();
-        setup_demo_words(&mut interp).await;
+        setup_example_words(&mut interp).await;
 
         let r = interp.execute("[ 1 ] GREET").await;
         assert!(r.is_ok(), "GREET 1 failed: {:?}", r);
@@ -277,7 +277,7 @@ mod demo_word_tests {
     #[tokio::test]
     async fn test_greet_branch_2() {
         let mut interp = Interpreter::new();
-        setup_demo_words(&mut interp).await;
+        setup_example_words(&mut interp).await;
 
         let r = interp.execute("[ 2 ] GREET").await;
         assert!(r.is_ok(), "GREET 2 failed: {:?}", r);
@@ -288,7 +288,7 @@ mod demo_word_tests {
     #[tokio::test]
     async fn test_greet_else_branch() {
         let mut interp = Interpreter::new();
-        setup_demo_words(&mut interp).await;
+        setup_example_words(&mut interp).await;
 
         let r = interp.execute("[ 99 ] GREET").await;
         assert!(r.is_ok(), "GREET 99 failed: {:?}", r);
@@ -299,7 +299,7 @@ mod demo_word_tests {
     #[tokio::test]
     async fn test_greet_all() {
         let mut interp = Interpreter::new();
-        setup_demo_words(&mut interp).await;
+        setup_example_words(&mut interp).await;
 
         let r = interp.execute("[ 1 2 3 ] GREET-ALL").await;
         assert!(r.is_ok(), "GREET-ALL failed: {:?}", r);

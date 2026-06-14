@@ -42,14 +42,12 @@ pub(crate) struct UserDictionary {
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleDictionary {
     pub words: HashMap<String, Arc<WordDefinition>>,
-    pub sample_words: HashMap<String, Arc<WordDefinition>>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct ImportedModule {
     pub import_all_public: bool,
     pub imported_words: HashSet<String>,
-    pub imported_samples: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -303,7 +301,7 @@ impl Interpreter {
             module_vocabulary: HashMap::new(),
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
-            active_user_dictionary: "DEMO".to_string(),
+            active_user_dictionary: "EXAMPLE".to_string(),
             global_epoch: 0,
             dictionary_epoch: 0,
             module_epoch: 0,
@@ -489,7 +487,7 @@ impl Interpreter {
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();
         self.next_registration_order = 1;
-        self.active_user_dictionary = "DEMO".to_string();
+        self.active_user_dictionary = "EXAMPLE".to_string();
         self.semantic_registry.clear();
         self.child_runtimes.clear();
         self.next_child_id = 1;

@@ -247,7 +247,9 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
 pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<NodeId, String> {
     match json {
         JsonValue::Null => Ok(arena.alloc_nil(Interpretation::Nil)),
-        JsonValue::Bool(v) => Ok(arena.alloc_node(NodeKind::Boolean(v), Interpretation::TruthValue)),
+        JsonValue::Bool(v) => {
+            Ok(arena.alloc_node(NodeKind::Boolean(v), Interpretation::TruthValue))
+        }
         JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
                 Ok(arena.alloc_scalar(Fraction::from(i), Interpretation::RawNumber))

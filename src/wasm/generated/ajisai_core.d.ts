@@ -49,7 +49,6 @@ export class AjisaiInterpreter {
      * words normally and inactive words greyed-out within the same sheet.
      */
     collect_module_catalog_words_info(module_name: string): any;
-    collect_module_sample_words_info(module_name: string): any;
     /**
      * Tuple shape: `(name, description)`.
      */
@@ -118,7 +117,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_imported_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_module_catalog_words_info: (a: number, b: number, c: number) => any;
-    readonly ajisaiinterpreter_collect_module_sample_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
