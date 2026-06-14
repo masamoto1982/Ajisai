@@ -97,6 +97,12 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
 
 const buildExportFilename = (name: string): string => `${name}.json`;
 const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
+const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
+const filenameToDictionaryName = (filename: string): string => filename.replace(/\.json$/i, '').toUpperCase();
+const isRemovedUserWordDictionary = (dictionary: string | null | undefined): boolean =>
+    REMOVED_USER_WORD_DICTIONARIES.has((dictionary || '').toUpperCase());
+const containsRemovedUserWordDictionary = (words: readonly UserWord[]): boolean =>
+    words.some(word => isRemovedUserWordDictionary(word.dictionary));
 
 const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
     try {
@@ -228,6 +234,15 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                 }
 
                 if (state.userWords && state.userWords.length > 0) {
+                    if (containsRemovedUserWordDictionary(state.userWords)) {
+                        console.warn('Removed legacy user word dictionary found in saved state; resetting to Example Words.');
+                        await loadExampleWords();
+                        return {
+                            activeDictionarySheet: state.activeDictionarySheet,
+                            activeUserDictionary: 'EXAMPLE'
+                        };
+                    }
+
                     const savedVersion = state.exampleWordsVersion || 0;
                     const wordsToRestore = state.userWords;
 
@@ -304,7 +319,12 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const dictionary = openedFile.filename.replace(/\.json$/i, '').toUpperCase();
+                const dictionary = filenameToDictionaryName(openedFile.filename);
+                if (isRemovedUserWordDictionary(dictionary)) {
+                    showError?.(new Error('DEMO is no longer accepted as a User Words label. Rename the file before importing.'));
+                    return;
+                }
+
                 const importedWords = parseResult.value.map(word => ({
                     ...word,
                     dictionary

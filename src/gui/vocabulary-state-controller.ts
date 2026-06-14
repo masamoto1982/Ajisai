@@ -45,6 +45,7 @@ export interface VocabularyManager {
 const DICTIONARY_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze({
     'EXAMPLE': 'Example Words',
 });
+const REMOVED_USER_WORD_DICTIONARIES = new Set(['DEMO']);
 
 export const formatDictionaryTabName = (pathName: string): string => {
     const displayName = DICTIONARY_DISPLAY_NAMES[pathName]
@@ -341,7 +342,9 @@ export const createVocabularyManager = (
     ): void => {
 
         cachedUserWords = userWordsInfo || [];
-        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary))).sort();
+        const dictionaries = Array.from(new Set(cachedUserWords.map(([dictionary]) => dictionary)))
+            .filter(dictionary => !REMOVED_USER_WORD_DICTIONARIES.has(dictionary.toUpperCase()))
+            .sort();
         elements.userDictionarySelect.innerHTML = '';
         for (const dictionary of dictionaries.length > 0 ? dictionaries : ['EXAMPLE']) {
             const option = document.createElement('option');
