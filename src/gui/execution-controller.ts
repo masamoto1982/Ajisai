@@ -43,7 +43,8 @@ const stableStringify = (value: unknown): string => JSON.stringify(value ?? null
 
 const detectExecutionSurfaceChanges = (
     before: ReturnType<typeof createExecutionSnapshot>,
-    result: ExecuteResult
+    result: ExecuteResult,
+    afterStack: ReturnType<AjisaiInterpreter['collect_stack']>
 ): ExecutionSurfaceChanges => {
     const userWordsChanged = stableStringify(before.userWords) !== stableStringify(result.userWords ?? before.userWords);
     const importedModulesChanged = stableStringify(before.importedModules)
@@ -51,7 +52,7 @@ const detectExecutionSurfaceChanges = (
 
     return {
         outputChanged: Boolean((result.output ?? '').trim()),
-        stackChanged: stableStringify(before.stack) !== stableStringify(result.stack ?? before.stack),
+        stackChanged: stableStringify(before.stack) !== stableStringify(afterStack),
         dictionaryChanged: userWordsChanged || importedModulesChanged,
         dictionarySheetId: userWordsChanged ? 'user' : undefined
     };
@@ -143,6 +144,8 @@ export const createExecutionController = (
             return;
         }
 
+        let executionChanges: ExecutionSurfaceChanges | null = null;
+
         try {
             showInfo('Executing...', false);
 
@@ -157,13 +160,20 @@ export const createExecutionController = (
             }
 
             applyExecutionResult(result, code);
-            updateAfterExecution(detectExecutionSurfaceChanges(currentState, result));
+            executionChanges = detectExecutionSurfaceChanges(
+                currentState,
+                result,
+                interpreter.collect_stack()
+            );
 
         } catch (error) {
             resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
         updateDisplays(code);
+        if (executionChanges) {
+            updateAfterExecution(executionChanges);
+        }
         await saveState();
     };
 
