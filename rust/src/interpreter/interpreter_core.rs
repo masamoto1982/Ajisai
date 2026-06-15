@@ -282,6 +282,11 @@ pub struct Interpreter {
     /// re-importing or copying a word group does not duplicate its code in
     /// memory.
     pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::ExecutionLine]>>,
+
+    /// When set, `recompute_word_identities` is a no-op. Bulk operations (e.g.
+    /// restoring or importing many words) set this for the duration of the
+    /// batch and recompute once at the end, avoiding O(N^2) identity hashing.
+    pub(crate) defer_identity_recompute: bool,
 }
 
 impl Interpreter {
@@ -342,6 +347,7 @@ impl Interpreter {
             owning_dictionary_context: None,
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
+            defer_identity_recompute: false,
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -507,6 +513,7 @@ impl Interpreter {
         self.owning_dictionary_context = None;
         self.word_identities.clear();
         self.body_store.clear();
+        self.defer_identity_recompute = false;
         self.import_table.modules.clear();
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();

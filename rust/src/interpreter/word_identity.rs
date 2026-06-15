@@ -225,6 +225,22 @@ impl Interpreter {
         self.word_identities.get(fq_name)
     }
 
+    /// Reclaim content-store bodies no longer referenced by any definition.
+    /// An entry whose only remaining strong reference is the store itself
+    /// (`strong_count == 1`) is orphaned — deleted or replaced by a redefine —
+    /// and is dropped. A body still shared by one or more live definitions has
+    /// a higher count and is kept. Run only at quiescent points (after a
+    /// definition, deletion, or dependency rebuild), where no transient body
+    /// clones are in flight; deferred during bulk operations like the rest of
+    /// the content-store maintenance.
+    pub(crate) fn gc_body_store(&mut self) {
+        if self.defer_identity_recompute {
+            return;
+        }
+        self.body_store
+            .retain(|_, body| std::sync::Arc::strong_count(body) > 1);
+    }
+
     fn build_word_shape(&self, def: &WordDefinition, user_set: &HashSet<String>) -> Vec<Atom> {
         let mut atoms = Vec::new();
         for line in def.lines.iter() {
@@ -280,6 +296,11 @@ impl Interpreter {
     /// Recompute content identities for every user word (Section 8.6). Cheap
     /// enough to run after any change to the user-word graph.
     pub(crate) fn recompute_word_identities(&mut self) {
+        // Deferred during bulk operations; the batch recomputes once at the end.
+        if self.defer_identity_recompute {
+            return;
+        }
+
         // 1. Snapshot all user words: (fully-qualified name, dictionary, def).
         let mut words: Vec<(String, String, Arc<WordDefinition>)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {

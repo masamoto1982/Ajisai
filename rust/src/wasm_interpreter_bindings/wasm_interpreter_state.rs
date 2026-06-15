@@ -561,6 +561,25 @@ impl AjisaiInterpreter {
         let words: Vec<UserWordData> = serde_wasm_bindgen::from_value(words_js)
             .map_err(|e| format!("Failed to deserialize words: {}", e))?;
 
+        // Defer per-word identity recomputation during the bulk restore and
+        // recompute once below via rebuild_dependencies. This turns O(N^2)
+        // identity hashing on import into O(N). The flag is always cleared,
+        // even on error, so later interactive definitions recompute normally.
+        self.interpreter.defer_identity_recompute = true;
+        let restore_result = self.define_restored_words(words);
+        self.interpreter.defer_identity_recompute = false;
+        restore_result?;
+
+        self.interpreter
+            .rebuild_dependencies()
+            .map_err(|e| e.to_string())?;
+
+        let _ = self.interpreter.collect_output();
+
+        Ok(())
+    }
+
+    fn define_restored_words(&mut self, words: Vec<UserWordData>) -> Result<(), String> {
         for word in words {
             self.interpreter.active_user_dictionary = word
                 .dictionary
@@ -578,13 +597,6 @@ impl AjisaiInterpreter {
             interpreter::execute_def::op_def_inner(&mut self.interpreter, &word.name, &tokens)
                 .map_err(|e| format!("Failed to restore word {}: {}", word.name, e))?;
         }
-
-        self.interpreter
-            .rebuild_dependencies()
-            .map_err(|e| e.to_string())?;
-
-        let _ = self.interpreter.collect_output();
-
         Ok(())
     }
 }
