@@ -44,6 +44,7 @@ pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_exec;
 pub mod vector_ops;
+mod word_identity;
 
 pub mod interpreter_core;
 

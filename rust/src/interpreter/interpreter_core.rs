@@ -271,6 +271,11 @@ pub struct Interpreter {
     /// self-referential regardless of which other dictionaries are loaded.
     /// `None` at top level, where resolution falls back to the global order.
     pub(crate) owning_dictionary_context: Option<String>,
+
+    /// Content identity of each user word, keyed by fully-qualified name
+    /// (Section 8.6). Derived state: recomputed whenever the user-word graph
+    /// changes.
+    pub(crate) word_identities: HashMap<String, String>,
 }
 
 impl Interpreter {
@@ -329,6 +334,7 @@ impl Interpreter {
             resolve_cache: HashMap::new(),
             validation_policy: ValidationPolicy::default(),
             owning_dictionary_context: None,
+            word_identities: HashMap::new(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -492,6 +498,7 @@ impl Interpreter {
         self.call_stack.clear();
         self.call_depth = 0;
         self.owning_dictionary_context = None;
+        self.word_identities.clear();
         self.import_table.modules.clear();
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();

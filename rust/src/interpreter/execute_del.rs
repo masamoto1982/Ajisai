@@ -131,6 +131,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         .output_buffer
         .push_str(&format!("Deleted word: {}\n", fq_name));
 
+    interp.recompute_word_identities();
     interp.bump_dictionary_epoch();
     interp.force_flag = false;
     Ok(())

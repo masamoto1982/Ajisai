@@ -191,6 +191,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .words
         .insert(upper_name.clone(), Arc::new(new_def));
     interp.sync_user_words_cache();
+    interp.recompute_word_identities();
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));

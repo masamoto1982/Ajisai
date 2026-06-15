@@ -340,6 +340,7 @@ impl Interpreter {
         }
 
         self.sync_user_words_cache();
+        self.recompute_word_identities();
         Ok(())
     }
 
