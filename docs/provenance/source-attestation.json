@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:1b024ddd498c31d82886998622c0a1dce10658b188b889e46936b24adc987c09",
+  "rootIdentity": "sha256:8b638d9eb75127b12663cf6836d65569010c4c81647064d9b473943d9235eb5b",
   "fileCount": 255,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1059,8 +1059,8 @@
     },
     {
       "path": "src/gui/execution-controller.ts",
-      "sha256": "4e3b6bcab9fb0dbdc2411d2aaab1e552d06ffdbcc82c82fad3010d3d3b318f3c",
-      "bytes": 7645
+      "sha256": "1fb3b4a2d8e383113b2ee0cb2c0ce3510573eabdff65aadda60ce23ba29d17d9",
+      "bytes": 8556
     },
     {
       "path": "src/gui/functional-result-helpers.ts",
@@ -1084,18 +1084,18 @@
     },
     {
       "path": "src/gui/gui-event-bindings.ts",
-      "sha256": "3fc9ffa39c176eeae8396f9fbafda7639718cebae1eb852257a8faee45b3ebff",
-      "bytes": 9167
+      "sha256": "eef8b4252a34fe103622d386f6182c4b7b6bd2b176a904a48e5175a3c49092a3",
+      "bytes": 9369
     },
     {
       "path": "src/gui/gui-layout-state.test.ts",
-      "sha256": "9d3cf1468cc72637a1cca023c838b8d06b649212c2e0430d017bb87bc5de0468",
-      "bytes": 3441
+      "sha256": "82fba6b35c3983154717c2f077cfda517d118551cb685f996f72daf3e969515a",
+      "bytes": 6936
     },
     {
       "path": "src/gui/gui-layout-state.ts",
-      "sha256": "77ec64160f9ebb11029353a27a2da87a9ecaf21da18de8f47403a035cd335ade",
-      "bytes": 7669
+      "sha256": "31c6035a8bcf21fd8373f80456d617bbafcd864e39c7ded4e87480018d2dd87b",
+      "bytes": 8862
     },
     {
       "path": "src/gui/interpreter-execution-utils.ts",

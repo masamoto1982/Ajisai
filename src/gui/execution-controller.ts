@@ -47,14 +47,29 @@ const detectExecutionSurfaceChanges = (
     afterStack: ReturnType<AjisaiInterpreter['collect_stack']>
 ): ExecutionSurfaceChanges => {
     const userWordsChanged = stableStringify(before.userWords) !== stableStringify(result.userWords ?? before.userWords);
-    const importedModulesChanged = stableStringify(before.importedModules)
-        !== stableStringify(result.importedModules ?? before.importedModules);
+
+    const beforeModules: string[] = before.importedModules ?? [];
+    const afterModules: string[] = result.importedModules ?? beforeModules;
+    const importedModulesChanged = stableStringify(beforeModules) !== stableStringify(afterModules);
+    // The module whose import state just flipped: prefer a newly imported
+    // module, otherwise the one that was just unimported, so the dictionary
+    // lands on the sheet the user actually changed.
+    const changedModule = afterModules.find(name => !beforeModules.includes(name))
+        ?? beforeModules.find(name => !afterModules.includes(name));
+
+    // Errors and diagnostics render into the Output surface, so a failed run
+    // changes Output even when the program emitted no text of its own.
+    const hasError = result.status !== 'OK' || Boolean(result.error);
 
     return {
-        outputChanged: Boolean((result.output ?? '').trim()),
+        outputChanged: hasError || Boolean((result.output ?? '').trim()),
         stackChanged: stableStringify(before.stack) !== stableStringify(afterStack),
         dictionaryChanged: userWordsChanged || importedModulesChanged,
-        dictionarySheetId: userWordsChanged ? 'user' : undefined
+        // Defining your own word lands on the 'user' sheet; a module import or
+        // unimport lands on that module's sheet. User words win when both move.
+        dictionarySheetId: userWordsChanged
+            ? 'user'
+            : (changedModule ? `module-${changedModule}` : undefined)
     };
 };
 

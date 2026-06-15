@@ -197,8 +197,10 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             }
 
             if (tapCount >= 3) {
+                // Run; the post-execution auto-navigation (applyExecutionAreaState)
+                // chooses the destination surface from what actually changed, so
+                // we deliberately do not force a switch to Stack here.
                 executionController.executeCode(editor.extractValue());
-                switchArea('stack');
                 tapCount = 0;
                 lastTapAt = 0;
                 return;
