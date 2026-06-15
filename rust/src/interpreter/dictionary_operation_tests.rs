@@ -47,6 +47,53 @@ mod tests {
         }
     }
 
+    /// Section 8.6: a word group imported into its own dictionary must be
+    /// self-referential. When the same names already exist in another dictionary
+    /// (e.g. the bundled Example Words), references inside the imported group
+    /// must bind to the group's own words for both dependency tracking and
+    /// execution — not to the earlier-loaded dictionary.
+    #[tokio::test]
+    async fn test_imported_dictionary_is_self_referential() {
+        let mut interp = Interpreter::new();
+
+        // EXAMPLE dictionary: SAY pushes [ 1 ], GREET calls SAY.
+        interp.execute("{ [ 1 ] } 'SAY' DEF").await.unwrap();
+        interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
+
+        // TEST dictionary duplicates the names; here SAY pushes [ 2 ].
+        interp.active_user_dictionary = "TEST".to_string();
+        interp.execute("{ [ 2 ] } 'SAY' DEF").await.unwrap();
+        interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
+
+        interp.rebuild_dependencies().unwrap();
+
+        // Dependency graph: TEST@GREET depends on TEST@SAY (not EXAMPLE@SAY),
+        // so TEST@SAY is shown as referenced rather than unreferenced.
+        let test_say_deps = interp.dependents.get("TEST@SAY");
+        assert!(
+            test_say_deps.is_some_and(|d| d.contains("TEST@GREET")),
+            "TEST@SAY should be referenced by TEST@GREET; got {:?}",
+            test_say_deps
+        );
+        assert!(
+            !test_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+            "EXAMPLE@GREET must not depend on TEST@SAY"
+        );
+        let example_say_deps = interp.dependents.get("EXAMPLE@SAY");
+        assert!(
+            example_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+            "EXAMPLE@SAY should be referenced by EXAMPLE@GREET; got {:?}",
+            example_say_deps
+        );
+
+        // Execution: TEST@GREET runs TEST@SAY ([ 2 ]), not EXAMPLE@SAY ([ 1 ]).
+        interp.stack.clear();
+        interp.execute("TEST@GREET").await.unwrap();
+        let top = interp.stack.last().expect("result present");
+        let only = top.child(0).expect("vector has one child");
+        assert_eq!(only.as_scalar().unwrap().to_i64().unwrap(), 2);
+    }
+
     #[tokio::test]
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();

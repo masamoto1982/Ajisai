@@ -81,6 +81,17 @@ impl Interpreter {
             }
         }
 
+        // Section 8.6: a bare name resolves through the owning dictionary's
+        // words before any other user dictionary, so an imported word group is
+        // self-referential regardless of which other dictionaries are loaded.
+        if let Some(owning) = &self.owning_dictionary_context {
+            if let Some(dict) = self.user_dictionaries.get(owning) {
+                if let Some(def) = dict.words.get(&upper) {
+                    return Some((format!("{}@{}", owning, upper), def.clone()));
+                }
+            }
+        }
+
         let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {
             if let Some(def) = dict.words.get(&upper) {
@@ -260,6 +271,11 @@ impl Interpreter {
         let mut dictionary_edges: HashMap<String, HashSet<String>> = HashMap::new();
 
         for (word_name, word_def) in &all_words {
+            // Section 8.6: scan each word's references through its own dictionary
+            // first, so dependents are recorded against the word's own
+            // dictionary rather than a same-named word elsewhere.
+            self.owning_dictionary_context =
+                self.split_qualified_name(word_name).map(|(dict, _)| dict);
             let mut dependencies = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
@@ -295,6 +311,8 @@ impl Interpreter {
                 }
             }
         }
+
+        self.owning_dictionary_context = None;
 
         for dict in self.user_dictionaries.keys() {
             self.dictionary_dependencies

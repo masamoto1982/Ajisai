@@ -264,6 +264,13 @@ pub struct Interpreter {
     pub(crate) elastic_cache: crate::elastic::CacheManager,
     pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
     pub(crate) validation_policy: ValidationPolicy,
+
+    /// Owning user dictionary of the word currently being defined,
+    /// dependency-scanned, or executed. Bare names resolve through this
+    /// dictionary's words first (Section 8.6), so an imported word group is
+    /// self-referential regardless of which other dictionaries are loaded.
+    /// `None` at top level, where resolution falls back to the global order.
+    pub(crate) owning_dictionary_context: Option<String>,
 }
 
 impl Interpreter {
@@ -321,6 +328,7 @@ impl Interpreter {
             elastic_cache: crate::elastic::CacheManager::new(),
             resolve_cache: HashMap::new(),
             validation_policy: ValidationPolicy::default(),
+            owning_dictionary_context: None,
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -483,6 +491,7 @@ impl Interpreter {
         self.module_state.clear();
         self.call_stack.clear();
         self.call_depth = 0;
+        self.owning_dictionary_context = None;
         self.import_table.modules.clear();
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();
