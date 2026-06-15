@@ -12,9 +12,10 @@
 // SHA-256 via Node's built-in `node:crypto` — no new dependency — because
 // provenance faces a deliberate attacker.
 
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, posix, relative, resolve, sep } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
 const outputPath = resolve(repoRoot, 'docs/provenance/source-attestation.json');
@@ -23,12 +24,18 @@ const pinPath = resolve(repoRoot, 'docs/provenance/source-root.txt');
 // --- Tracked surface -------------------------------------------------------
 // Declared explicitly so the trusted base is auditable in review. Keep this in
 // sync with docs/dev/source-provenance-attestation-design.md when it changes.
-const TRACKED_DIRS = ['rust/src', 'src', 'src-tauri/src', 'scripts'];
-const TRACKED_FILES = [
+//
+// The candidate set is enumerated from `git ls-files` (committed files only),
+// then narrowed to these roots. Enumerating from git — rather than walking the
+// working tree — makes the attestation deterministic across environments: build
+// steps that drop gitignored files (e.g. cargo creating rust/Cargo.lock, or
+// node_modules) cannot perturb the root. A backdoor that adds a new source file
+// must `git add` it for the build to use it, which also enrolls it here.
+const TRACKED_DIR_PREFIXES = ['rust/src/', 'src/', 'src-tauri/src/', 'scripts/'];
+const TRACKED_FILES = new Set([
   'SPECIFICATION.html',
   'package.json',
   'rust/Cargo.toml',
-  'rust/Cargo.lock',
   'src-tauri/Cargo.toml',
   'src-tauri/tauri.conf.json',
   'vite.config.ts',
@@ -36,68 +43,44 @@ const TRACKED_FILES = [
   'eslint.config.js',
   '.github/workflows/build.yml',
   '.github/workflows/test.yml',
-];
+]);
 
-// Directory names that never carry trust-critical source (generated/vendored);
-// their integrity is covered by the source they are produced from.
-const EXCLUDE_DIR_NAMES = new Set(['node_modules', 'dist', 'target', 'vendor']);
-// Path prefixes (repo-relative, posix) excluded because they are generated.
-const EXCLUDE_PREFIXES = ['src/wasm/generated'];
+// Path prefixes (repo-relative, posix) excluded because they are generated from
+// tracked source (their integrity is covered by that source).
+const EXCLUDE_PREFIXES = ['src/wasm/generated/'];
 
 function fail(message) {
   console.error(`[provenance] ${message}`);
   process.exit(1);
 }
 
-function toPosix(absPath) {
-  return relative(repoRoot, absPath).split(sep).join(posix.sep);
-}
-
-function isExcluded(relPosix) {
-  return EXCLUDE_PREFIXES.some((prefix) => relPosix === prefix || relPosix.startsWith(`${prefix}/`));
+function isTracked(relPosix) {
+  if (EXCLUDE_PREFIXES.some((prefix) => relPosix.startsWith(prefix))) return false;
+  if (TRACKED_FILES.has(relPosix)) return true;
+  return TRACKED_DIR_PREFIXES.some((prefix) => relPosix.startsWith(prefix));
 }
 
 function sha256Hex(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
-function walkDir(absDir, acc) {
-  for (const entry of readdirSync(absDir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (EXCLUDE_DIR_NAMES.has(entry.name)) continue;
-      const childAbs = resolve(absDir, entry.name);
-      if (isExcluded(toPosix(childAbs))) continue;
-      walkDir(childAbs, acc);
-    } else if (entry.isFile()) {
-      const childAbs = resolve(absDir, entry.name);
-      const relPosix = toPosix(childAbs);
-      if (isExcluded(relPosix)) continue;
-      acc.push(relPosix);
-    }
-  }
+function gitTrackedFiles() {
+  // -z: NUL-separated, so paths with unusual characters stay intact.
+  const out = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z'], {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return out.split('\0').filter(Boolean);
 }
 
 function collectFiles() {
-  const paths = [];
-  for (const dir of TRACKED_DIRS) {
-    const abs = resolve(repoRoot, dir);
-    if (!existsSync(abs) || !statSync(abs).isDirectory()) {
-      fail(`tracked directory missing: ${dir}`);
-    }
-    walkDir(abs, paths);
-  }
-  for (const file of TRACKED_FILES) {
-    const abs = resolve(repoRoot, file);
-    // Lock/config files may legitimately be absent in some checkouts; a tracked
-    // file that genuinely should exist will surface as a real diff downstream.
-    if (existsSync(abs) && statSync(abs).isFile()) {
-      paths.push(toPosix(abs));
-    }
-  }
-  // Deterministic order independent of filesystem enumeration.
+  const paths = gitTrackedFiles().filter(isTracked);
+  // Deterministic order independent of git's enumeration.
   const unique = [...new Set(paths)].sort();
   return unique.map((relPosix) => {
-    const bytes = readFileSync(resolve(repoRoot, relPosix));
+    const abs = resolve(repoRoot, relPosix);
+    if (!existsSync(abs)) fail(`tracked file missing from working tree: ${relPosix}`);
+    const bytes = readFileSync(abs);
     return { path: relPosix, sha256: sha256Hex(bytes), bytes: bytes.length };
   });
 }
@@ -126,9 +109,9 @@ function buildManifest() {
     algorithm: 'sha256',
     rootIdentity,
     fileCount: files.length,
-    trackedDirs: TRACKED_DIRS,
-    trackedFiles: TRACKED_FILES,
-    excludeDirNames: [...EXCLUDE_DIR_NAMES].sort(),
+    enumeratedFrom: 'git ls-files (committed files only)',
+    trackedDirPrefixes: TRACKED_DIR_PREFIXES,
+    trackedFiles: [...TRACKED_FILES].sort(),
     excludePrefixes: EXCLUDE_PREFIXES,
     files,
   };

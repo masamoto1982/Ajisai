@@ -2,35 +2,29 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:45911c4038cc7188a5cd1b2018bd483ea5709b460b007b4de85db2a3b9ec8654",
+  "rootIdentity": "sha256:2cebc41b09ecc05bcb345c90f71f42b6649121b402bea5c13a852b2bc8bfcd20",
   "fileCount": 253,
-  "trackedDirs": [
-    "rust/src",
-    "src",
-    "src-tauri/src",
-    "scripts"
+  "enumeratedFrom": "git ls-files (committed files only)",
+  "trackedDirPrefixes": [
+    "rust/src/",
+    "src/",
+    "src-tauri/src/",
+    "scripts/"
   ],
   "trackedFiles": [
+    ".github/workflows/build.yml",
+    ".github/workflows/test.yml",
     "SPECIFICATION.html",
+    "eslint.config.js",
     "package.json",
     "rust/Cargo.toml",
-    "rust/Cargo.lock",
     "src-tauri/Cargo.toml",
     "src-tauri/tauri.conf.json",
-    "vite.config.ts",
     "tsconfig.json",
-    "eslint.config.js",
-    ".github/workflows/build.yml",
-    ".github/workflows/test.yml"
-  ],
-  "excludeDirNames": [
-    "dist",
-    "node_modules",
-    "target",
-    "vendor"
+    "vite.config.ts"
   ],
   "excludePrefixes": [
-    "src/wasm/generated"
+    "src/wasm/generated/"
   ],
   "files": [
     {
@@ -990,8 +984,8 @@
     },
     {
       "path": "scripts/generate-source-attestation.mjs",
-      "sha256": "e3c3e4c4a5e862636e363f73b8663c12560e4fff5186cefefe2b94235cd7381c",
-      "bytes": 7055
+      "sha256": "511fb8352d14397b30b9b3dd48de33ee2e537da0c9f839ec0886d003fd3b3867",
+      "bytes": 6752
     },
     {
       "path": "scripts/generate-word-manifest.mjs",

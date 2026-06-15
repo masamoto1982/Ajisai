@@ -31,9 +31,15 @@ digest changes, the aggregated root identity changes, and a drift guard fires.
 
 A deterministic attestation over the trust-critical source files:
 
-- `scripts/generate-source-attestation.mjs` walks a curated set of tracked
-  roots, computes a per-file SHA-256 digest, sorts by path, and derives a
-  Merkle-style **root identity** over the `(path, digest)` list.
+- `scripts/generate-source-attestation.mjs` enumerates candidate files from
+  `git ls-files` (committed files only), narrows them to a curated set of
+  tracked roots, computes a per-file SHA-256 digest, sorts by path, and derives
+  a Merkle-style **root identity** over the `(path, digest)` list. Enumerating
+  from git rather than walking the working tree makes the root deterministic
+  across environments: build steps that drop gitignored files (cargo creating
+  `rust/Cargo.lock`, `node_modules`, `target/`) cannot perturb it. A backdoor
+  that adds a new source file must `git add` it for the build to use it, which
+  also enrolls it in the attested set.
 - `docs/provenance/source-attestation.json` is the committed manifest: schema
   version, algorithm, the tracked globs, every file with its digest and size,
   and the root identity.
