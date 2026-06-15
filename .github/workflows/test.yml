@@ -70,6 +70,14 @@ jobs:
       - name: Semantic firewall
         run: npm run check:semantic-firewall
 
+      - name: Verify source provenance attestation
+        # Injection tripwire: the committed content-addressed attestation over the
+        # trust-critical source surface must match the working tree, and the root
+        # pin must agree. A backdoor that changes any tracked source without a
+        # regenerated, reviewed attestation fails here.
+        # See docs/dev/source-provenance-attestation-design.md.
+        run: npm run provenance:check
+
       - name: Generate conformance manifest
         run: npm run conformance:manifest
 

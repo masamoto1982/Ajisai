@@ -128,6 +128,20 @@ Ajisai already has, not new subsystems:
 
 Spec links: [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§5.2 Two-plane architecture](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#52-two-plane-architecture), [§5.3 Execution step limit](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#53-execution-step-limit), [§7.4.1 Decidability and comparison budget](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§9 Module System](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#9-module-system), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule), [§11.4 Error propagation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#114-error-propagation), [Appendix A Gates and Water Levels](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#appendix-a-gates-and-water-levels-non-normative-index)
 
+### Supply-chain integrity: content-addressed source provenance
+
+The same content-addressing that gives each word a stable identity (§8.6) is
+lifted to the whole trust-critical source surface. `npm run provenance:attest`
+records a SHA-256 digest of every tracked source file and a Merkle-style **root
+identity** in [`docs/provenance/`](docs/provenance/); `npm run provenance:check`
+(run in CI) fails the moment any tracked source drifts from that recorded
+identity. This is the defensible form of "detect a backdoor the instant it is
+injected": rather than embedding something that constantly phones home (which
+the pure core has no capability to do), the injection shows up as a content-hash
+mismatch, with no network involved. See [the design
+note](docs/dev/source-provenance-attestation-design.md) for the threat model and
+how to anchor the root pin externally.
+
 ---
 
 ## A small taste
