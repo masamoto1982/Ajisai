@@ -163,6 +163,38 @@ mod tests {
         assert_eq!(first, second, "recursive identity must be reproducible");
     }
 
+    /// Section 8.6: adding a later word with the same spelling as a formerly
+    /// unresolved reference must not recapture the existing body or change its
+    /// content identity. Dependencies are fixed at definition time.
+    #[tokio::test]
+    async fn test_unresolved_reference_identity_is_not_recaptured() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ MISSING } 'CALLER' DEF").await.unwrap();
+        let before = interp
+            .word_identity("A@CALLER")
+            .cloned()
+            .expect("identity should be computed for caller");
+
+        interp.execute("{ [ 1 ] } 'MISSING' DEF").await.unwrap();
+
+        let after = interp
+            .word_identity("A@CALLER")
+            .cloned()
+            .expect("identity should remain computed for caller");
+        assert_eq!(
+            before, after,
+            "a later definition must not recapture a previously free symbol"
+        );
+        assert!(
+            !interp
+                .dependents
+                .get("A@MISSING")
+                .is_some_and(|deps| deps.contains("A@CALLER")),
+            "the existing caller must not become dependent on the later word"
+        );
+    }
+
     /// Section 8.6 content store: textually identical bodies defined under
     /// different names/dictionaries share a single stored body in memory rather
     /// than being duplicated.
@@ -224,7 +256,11 @@ mod tests {
         // Identical body in another dictionary shares one store entry.
         interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 1 ] } 'Y' DEF").await.unwrap();
-        assert_eq!(interp.body_store.len(), 1, "identical bodies share one entry");
+        assert_eq!(
+            interp.body_store.len(),
+            1,
+            "identical bodies share one entry"
+        );
 
         // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
         interp.active_user_dictionary = "A".to_string();

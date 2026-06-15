@@ -257,14 +257,24 @@ impl Interpreter {
                         let canon = canonicalize_core_word_name(s);
                         match self.resolve_word_entry_readonly(&canon) {
                             Some((resolved, rdef)) => {
-                                if user_set.contains(&resolved) {
-                                    // A user-word dependency: encoded by identity.
+                                if def.dependencies.contains(&resolved) {
+                                    // A user-word dependency fixed at definition time:
+                                    // encode the recorded target rather than treating a
+                                    // later same-named word as a fresh capture.
                                     Atom::Ref(resolved)
                                 } else if rdef.is_builtin {
                                     // Core / module word: stable global vocabulary,
                                     // encoded by its canonical resolved name.
                                     let mut b = vec![b'G'];
                                     b.extend_from_slice(resolved.as_bytes());
+                                    Atom::Raw(b)
+                                } else if user_set.contains(&resolved) {
+                                    // A user word not recorded in this definition's
+                                    // dependency set was not resolved when the word was
+                                    // authored. Keep it as a free symbol so adding an
+                                    // unrelated word cannot recapture existing content.
+                                    let mut b = vec![b'F'];
+                                    b.extend_from_slice(canon.as_bytes());
                                     Atom::Raw(b)
                                 } else {
                                     Atom::Ref(resolved)
