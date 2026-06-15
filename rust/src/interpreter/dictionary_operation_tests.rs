@@ -189,6 +189,54 @@ mod tests {
         );
     }
 
+    /// Deferring identity recomputation during a bulk operation skips per-word
+    /// recomputes; a single recompute at the end (here via rebuild) restores
+    /// correctness. This is what makes import O(N) rather than O(N^2).
+    #[tokio::test]
+    async fn test_deferred_identity_recompute() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+
+        interp.defer_identity_recompute = true;
+        interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
+        assert!(
+            interp.word_identity("A@LEAF").is_none(),
+            "identity recompute should be deferred"
+        );
+
+        interp.defer_identity_recompute = false;
+        interp.rebuild_dependencies().unwrap();
+        assert!(
+            interp.word_identity("A@LEAF").is_some(),
+            "identity should be computed once after the batch"
+        );
+    }
+
+    /// Section 8.6 content store: bodies orphaned by a redefine are reclaimed,
+    /// while bodies still shared by a live definition are kept.
+    #[tokio::test]
+    async fn test_body_store_gc() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ [ 1 ] } 'X' DEF").await.unwrap();
+        assert_eq!(interp.body_store.len(), 1);
+
+        // Identical body in another dictionary shares one store entry.
+        interp.active_user_dictionary = "B".to_string();
+        interp.execute("{ [ 1 ] } 'Y' DEF").await.unwrap();
+        assert_eq!(interp.body_store.len(), 1, "identical bodies share one entry");
+
+        // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ [ 9 ] } 'X' DEF").await.unwrap();
+        assert_eq!(interp.body_store.len(), 2, "shared [1] kept, [9] added");
+
+        // Redefining B@Y away orphans [1]; it is reclaimed, leaving [9] and [8].
+        interp.active_user_dictionary = "B".to_string();
+        interp.execute("{ [ 8 ] } 'Y' DEF").await.unwrap();
+        assert_eq!(interp.body_store.len(), 2, "orphaned [1] reclaimed");
+    }
+
     #[tokio::test]
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();
