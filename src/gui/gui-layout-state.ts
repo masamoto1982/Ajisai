@@ -80,6 +80,13 @@ export const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => 
     }
 };
 
+export interface ExecutionSurfaceChanges {
+    readonly outputChanged: boolean;
+    readonly stackChanged: boolean;
+    readonly dictionaryChanged: boolean;
+    readonly dictionarySheetId?: string;
+}
+
 export interface ApplyAreaStateDeps {
     readonly elements: GUIElements;
     readonly state: LayoutState;
@@ -114,6 +121,46 @@ export const applyAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void =
     } else {
         applyDesktopAreaState(deps, mode);
     }
+};
+
+export const applyExecutionAreaState = (
+    deps: ApplyAreaStateDeps,
+    changes: ExecutionSurfaceChanges
+): void => {
+    if (deps.mobile.isMobile()) {
+        let nextMode: ViewMode | null = null;
+        if (changes.dictionaryChanged) {
+            nextMode = 'dictionary';
+        } else if (changes.outputChanged) {
+            nextMode = 'output';
+        } else if (changes.stackChanged) {
+            nextMode = 'stack';
+        }
+        if (nextMode) {
+            deps.state.currentMode = nextMode;
+            applyMobileAreaState(deps, nextMode);
+        }
+        return;
+    }
+
+    if (changes.outputChanged) {
+        deps.state.currentLeftMode = 'output';
+    }
+    if (changes.stackChanged) {
+        deps.state.currentRightMode = 'stack';
+    }
+    if (changes.dictionaryChanged) {
+        deps.state.currentRightMode = 'dictionary';
+        if (changes.dictionarySheetId) {
+            deps.elements.dictionarySheetSelect.value = changes.dictionarySheetId;
+            deps.switchDictionarySheet(changes.dictionarySheetId);
+        }
+    }
+
+    deps.state.currentMode = deps.state.currentRightMode;
+    syncDesktopLayout(deps.elements, deps.state);
+    document.body.dataset.activeArea = deps.state.currentRightMode;
+    syncSelectorState(deps.elements, deps.state.currentLeftMode, deps.state.currentRightMode);
 };
 
 export const updateHighlights = (elements: GUIElements, content: string): void => {

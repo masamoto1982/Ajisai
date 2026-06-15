@@ -18,6 +18,7 @@ import {
 import {
     updateHighlights,
     updateEditorPlaceholder,
+    applyExecutionAreaState,
     LayoutState,
     ApplyAreaStateDeps
 } from './gui-layout-state';
@@ -321,7 +322,11 @@ export const createGUI = (): GUI => {
             updateDisplays: updateAllDisplays,
             saveState: () => persistence.saveCurrentState(),
             fullReset: () => persistence.fullReset(),
-            updateView: (mode) => layoutController.setArea(mode)
+            updateView: (mode) => layoutController.setArea(mode),
+            updateAfterExecution: (changes) => {
+                applyExecutionAreaState(buildApplyAreaStateDeps(), changes);
+                syncDictionarySearchVisibility();
+            }
         });
 
         bindGuiEvents({
