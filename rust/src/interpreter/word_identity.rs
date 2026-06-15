@@ -49,6 +49,53 @@ fn content_digest(bytes: &[u8]) -> String {
     format!("#{:0>32}{:0>32}", a.to_str_radix(16), b.to_str_radix(16))
 }
 
+/// Canonical content key for a word body, independent of references' identities
+/// (references are keyed by their canonical spelling). Two textually identical
+/// bodies — e.g. the same definition exported and re-imported into another
+/// dictionary — produce the same key and can share one stored body (§8.6
+/// content store). Exact-rational numbers are normalized so `1` and `1/1` agree.
+pub(crate) fn body_content_key(lines: &[crate::types::ExecutionLine]) -> String {
+    let mut bytes = Vec::new();
+    for line in lines {
+        bytes.push(0x1d);
+        for tok in line.body_tokens.iter() {
+            bytes.push(0x1f);
+            match tok {
+                Token::Number(n) => match Fraction::from_str(n) {
+                    Ok(frac) => {
+                        let (num, den) = frac.to_bigint_pair();
+                        bytes.push(b'N');
+                        bytes.extend_from_slice(num.to_str_radix(16).as_bytes());
+                        bytes.push(b'/');
+                        bytes.extend_from_slice(den.to_str_radix(16).as_bytes());
+                    }
+                    Err(_) => {
+                        bytes.push(b'n');
+                        bytes.extend_from_slice(n.as_bytes());
+                    }
+                },
+                Token::String(s) => {
+                    bytes.push(b'S');
+                    bytes.extend_from_slice(s.as_bytes());
+                }
+                Token::Symbol(s) => {
+                    bytes.push(b'Y');
+                    bytes.extend_from_slice(canonicalize_core_word_name(s).as_bytes());
+                }
+                Token::VectorStart => bytes.push(b'['),
+                Token::VectorEnd => bytes.push(b']'),
+                Token::BlockStart => bytes.push(b'{'),
+                Token::BlockEnd => bytes.push(b'}'),
+                Token::Pipeline => bytes.push(b'~'),
+                Token::NilCoalesce => bytes.push(b'^'),
+                Token::CondClauseSep => bytes.push(b'|'),
+                Token::LineBreak => bytes.push(b'\n'),
+            }
+        }
+    }
+    content_digest(&bytes)
+}
+
 /// One canonical element of a word body.
 enum Atom {
     /// A reference to another user word (a dependency), by fully-qualified name.

@@ -276,6 +276,12 @@ pub struct Interpreter {
     /// (Section 8.6). Derived state: recomputed whenever the user-word graph
     /// changes.
     pub(crate) word_identities: HashMap<String, String>,
+
+    /// Content store for definition bodies (Section 8.6), keyed by content key.
+    /// Textually identical bodies share a single `Arc<[ExecutionLine]>`, so
+    /// re-importing or copying a word group does not duplicate its code in
+    /// memory.
+    pub(crate) body_store: HashMap<String, std::sync::Arc<[crate::types::ExecutionLine]>>,
 }
 
 impl Interpreter {
@@ -335,6 +341,7 @@ impl Interpreter {
             validation_policy: ValidationPolicy::default(),
             owning_dictionary_context: None,
             word_identities: HashMap::new(),
+            body_store: HashMap::new(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -499,6 +506,7 @@ impl Interpreter {
         self.call_depth = 0;
         self.owning_dictionary_context = None;
         self.word_identities.clear();
+        self.body_store.clear();
         self.import_table.modules.clear();
         self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();
