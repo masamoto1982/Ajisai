@@ -54,18 +54,27 @@ const syncDesktopLayout = (elements: GUIElements, state: LayoutState): void => {
     elements.dictionaryArea.hidden = state.currentRightMode !== 'dictionary';
 };
 
-const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
+// SPEC §12.3 (Observation surfaces) / Portability Profiles "Presentation Profile".
+// Pure transition core of the desktop presentation profile: it maps a selection
+// of one observation surface onto the (left, right) column configuration. The two
+// coupling rules below are the spec's Semantic-coupling invariant (Invariant 6),
+// not layout cosmetics — they keep the surfaces that conflict in intent (Output
+// vs. Dictionary) out of the reachable configuration space, which is exactly what
+// makes the reachable subspace closed under idempotent selection (Invariant 5).
+// Exported so the conformance suite (layout/presentation-profile.test.ts) can
+// verify the shipped logic is a model of the Presentation Profile LTS.
+export const updateDesktopModes = (state: LayoutState, mode: ViewMode): void => {
     if (LEFT_TAB_MODES.includes(mode)) {
         state.currentLeftMode = mode;
         if (mode === 'output') {
-            // Running code surfaces Output on the left, so pull the right column to Stack so execution results are immediately visible.
+            // Running code surfaces Output on the left, so pull the right column to Stack so execution results are immediately visible (Presentation Profile Invariant 6.ii: execution is observable).
             state.currentRightMode = 'stack';
         }
     }
     if (RIGHT_TAB_MODES.includes(mode)) {
         state.currentRightMode = mode;
         if (mode === 'dictionary') {
-            // Opening the dictionary returns the left column to Input so that clicked words can be inserted.
+            // Opening the dictionary returns the left column to Input so that clicked words can be inserted (Presentation Profile Invariant 6.iii: selection feeds editing).
             state.currentLeftMode = 'input';
         }
     }

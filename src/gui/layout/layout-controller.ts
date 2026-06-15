@@ -17,6 +17,10 @@ export type LayoutControllerDeps = {
     readonly syncDictionarySearchVisibility: () => void;
 };
 
+// `setArea` realizes a Presentation Profile transition (SPEC Portability
+// Profiles): selecting one observation surface (SPEC §12.3) drives the
+// device-appropriate transition core via `applyAreaState`. Invariants 1–6 of
+// the Presentation Profile are verified in `./presentation-profile.test.ts`.
 export const createLayoutController = (deps: LayoutControllerDeps): LayoutController => {
     const setArea = (mode: ViewMode): void => {
         deps.state.currentMode = mode;
