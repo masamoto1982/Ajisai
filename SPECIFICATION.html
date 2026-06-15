@@ -1667,6 +1667,41 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>The <code>ContinuedFraction</code> role is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this role; the <code>RawNumber</code> role may lose information for lazy irrationals.</p>
 
+<h3 id="123-observation-surfaces">12.3 Observation surfaces</h3>
+
+<p>Section 12.1 fixes how a single value is rendered: a pure function of <code>(data, role)</code>. The same discipline extends from one value to the whole machine. The observable state of a running Ajisai program is the tuple</p>
+
+\[ R \;=\; (\, B,\; S,\; O,\; V \,) \]
+
+<p>whose components are each defined elsewhere in this document:</p>
+
+<ul>
+<li><strong>\(B\)</strong> — the <em>edit buffer</em>: source text that has been entered but not yet evaluated (Section 3).</li>
+<li><strong>\(S\)</strong> — the stack as the sequence of <code>(data, role)</code> pairs carried by the data and semantic planes (Sections 5.2, 12.1, 12.2).</li>
+<li><strong>\(O\)</strong> — the ordered host-effect log produced by output operations and module side effects (the ordered sequence of host effects of <em>Conformance and Identity</em>).</li>
+<li><strong>\(V\)</strong> — the vocabulary store: the Core, Module, and User dictionaries (Sections 7, 8, 9).</li>
+</ul>
+
+<p>Ajisai exposes \(R\) through exactly four <strong>observation surfaces</strong>, each a total, pure projection of \(R\):</p>
+
+\[
+\pi_{\mathrm{Input}}(R)=B, \qquad
+\pi_{\mathrm{Stack}}(R)=\big\langle\, \rho(d_i, r_i) \,\big\rangle_i, \qquad
+\pi_{\mathrm{Output}}(R)=O, \qquad
+\pi_{\mathrm{Dict}}(R)=V
+\]
+
+<p>where \(\rho\) is the <code>(data, role)</code> renderer of Section 12.1 applied pointwise to each stack entry \((d_i, r_i)\). The four surfaces are named Input, Output, Stack, and Dictionary.</p>
+
+<p>Two properties hold by construction and are normative:</p>
+
+<ul>
+<li><strong>Totality.</strong> Each \(\pi\) is defined on every reachable state \(R\). There is no state in which a surface has no content; an empty buffer, an empty stack, an empty effect log, or a dictionary holding only Core words are ordinary values of \(B, S, O, V\), not undefined cases.</li>
+<li><strong>Purity.</strong> Each \(\pi\) depends only on \(R\). Whenever two states have equal \(R\) their four surfaces are identical — the whole-machine generalization of Section 12.2's rule that values with equal data and role display identically.</li>
+</ul>
+
+<p>The observation surfaces are <strong>device-independent</strong>. They define <em>what</em> can be observed about a running program, not how it is laid out or which surfaces are shown together; spatial arrangement, panelization, and styling remain non-observable presentation (Section 2.3). A host with no display still realizes all four projections — surfacing \(\pi_{\mathrm{Output}}\) through <code>PRINT</code> / <code>IO</code> / <code>SERIAL</code> (Sections 7.9, 9.4, 9.5), \(\pi_{\mathrm{Dict}}\) through <code>LOOKUP</code> (Section 7.8), and \(\pi_{\mathrm{Stack}}\) and \(\pi_{\mathrm{Input}}\) through host queries — rather than as on-screen areas. How the four surfaces are made simultaneously or successively visible on a given device is the subject of the Presentation Profile (Portability Profiles).</p>
+
 <h2 id="13-fractional-dataflow-internal-invariants">13. Fractional-Dataflow Internal Invariants</h2>
 
 <h3 id="131-static-mass-conservation">13.1 Static Mass Conservation</h3>
@@ -1800,6 +1835,44 @@ Version: <strong>2026-06-11</strong></p>
 <h3 id="platform-profile">Platform Profile</h3>
 
 <p>Concrete runtime bindings: Web/WASM, Tauri, CLI, WASI, native desktop.</p>
+
+<h3 id="presentation-profile">Presentation Profile</h3>
+
+<p>The Core, Hosted, and Platform profiles classify <em>capabilities</em>. The Presentation Profile classifies <em>observation</em>: it governs how the four observation surfaces of Section 12.3 are revealed on a particular device. Like the Hosted and Platform profiles it ranks below the Core semantics — a conforming Ajisai need not present any surface visually — and a host with a display selects exactly one Presentation Profile.</p>
+
+<p>A presentation profile is a <strong>labeled transition system</strong></p>
+
+\[ M \;=\; (\, C,\; \Sigma,\; \rightarrow,\; c_0 \,) \]
+
+<p>over the surface set \(A = \{\,\mathrm{Input},\ \mathrm{Output},\ \mathrm{Stack},\ \mathrm{Dictionary}\,\}\), where:</p>
+
+<ul>
+<li>a <strong>visibility configuration</strong> is the visible subset \(c \subseteq A\); the reachable configurations form \(C \subseteq \mathcal{P}(A)\);</li>
+<li>\(\Sigma\) is the alphabet of abstract user operations (for example <code>show(a)</code>, <code>run</code>, <code>open-dictionary</code>, <code>advance</code>, <code>retreat</code>);</li>
+<li>\(\rightarrow \,\subseteq\, C \times \Sigma \times C\) is the transition relation;</li>
+<li>\(c_0 \in C\) is the initial configuration.</li>
+</ul>
+
+<p>The concrete \(C\), \(\Sigma\), initial configuration, and geometry are implementation freedom. The following <strong>invariants</strong> are normative; a presentation profile conforms if and only if it is a model of an LTS satisfying all of them.</p>
+
+<ol>
+<li><strong>Partition.</strong> For every \(c \in C\), each surface is either visible or hidden — \(c\) and \(A \setminus c\) partition \(A\). A hidden surface is concealed, never destroyed.</li>
+<li><strong>Reachability.</strong> Every surface is exposable from everywhere: for each \(a \in A\) and each \(c \in C\) there is a finite operation sequence \(w \in \Sigma^{*}\) with \(c \xrightarrow{\,w\,} c'\) and \(a \in c'\). No surface can become permanently unreachable.</li>
+<li><strong>Non-emptiness.</strong> Every reachable configuration shows at least one surface: \(c \neq \varnothing\) for all \(c \in C\). The user is never shown nothing.</li>
+<li><strong>Determinism.</strong> \(\rightarrow\) is a partial function: \(c \xrightarrow{\sigma} c'\) and \(c \xrightarrow{\sigma} c''\) imply \(c' = c''\).</li>
+<li><strong>Idempotent selection.</strong> Selecting an already-visible surface is a no-op: if \(a \in c\) then \(c \xrightarrow{\mathrm{show}(a)} c\).</li>
+<li><strong>Semantic coupling.</strong> Three constraints tie visibility to intent rather than geometry:
+  <ul>
+  <li><em>Editing is observable</em> — any configuration in which source text can be entered has \(\mathrm{Input} \in c\).</li>
+  <li><em>Execution is observable</em> — every <code>run</code> transition \(c \xrightarrow{\mathrm{run}} c'\) yields \(\mathrm{Stack} \in c'\), so the produced \((\textit{data}, \textit{role})\) stack of Section 12.3 is surfaced.</li>
+  <li><em>Selection feeds editing</em> — any operation that inserts a selected dictionary word writes to the edit buffer \(B\), and the profile keeps the resulting \(\pi_{\mathrm{Input}}\) reachable (Invariant 2 applied to Input).</li>
+  </ul>
+</li>
+</ol>
+
+<p>Invariants 1–6 capture the behavior that defines the Ajisai editing experience while leaving every device-specific accident free. Whether surfaces are tiled in columns or shown one at a time, the breakpoint at which a layout switches, gesture thresholds, and tap counts are tuning, not semantics — the same standing as the execution step limit of Section 5.3, which is a runtime safety control rather than a language-semantic constraint. Two hosts satisfying Invariants 1–6 present the same language even when their screens differ.</p>
+
+<p><strong>Degenerate profile.</strong> A host with no display realizes the empty presentation profile: \(M\) is trivial and no surface is ever tiled, yet the projections of Section 12.3 remain defined and are surfaced through host words instead of panels. This is why presentation is profile-grade rather than Core: the four projections are mandatory; the visibility LTS over them is host-conditional.</p>
 
 <h2 id="conformance-and-identity">Conformance and Identity</h2>
 
