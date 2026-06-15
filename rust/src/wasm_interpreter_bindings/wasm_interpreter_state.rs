@@ -105,6 +105,26 @@ impl AjisaiInterpreter {
         js_array.into()
     }
 
+    /// Content identity (Section 8.6) of each user word, as `[fqName, id]`
+    /// pairs. The host uses these to deduplicate identical definitions on
+    /// import and to key shared word groups by content rather than by name.
+    #[wasm_bindgen]
+    pub fn collect_word_identities(&self) -> JsValue {
+        let js_array = js_sys::Array::new();
+        for dict_name in self.interpreter.user_dictionary_names() {
+            for (name, _def) in self.interpreter.user_dictionary_words(&dict_name) {
+                let fq_name = format!("{}@{}", dict_name, name);
+                if let Some(id) = self.interpreter.word_identity(&fq_name) {
+                    let item = js_sys::Array::new();
+                    item.push(&fq_name.clone().into());
+                    item.push(&id.clone().into());
+                    js_array.push(&item);
+                }
+            }
+        }
+        js_array.into()
+    }
+
     pub(crate) fn collect_imported_modules_array(&self) -> JsValue {
         let arr = js_sys::Array::new();
         for name in self.interpreter.import_table.modules.keys() {

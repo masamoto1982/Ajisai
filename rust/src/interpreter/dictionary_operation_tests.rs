@@ -47,6 +47,122 @@ mod tests {
         }
     }
 
+    /// Section 8.6: a word group imported into its own dictionary must be
+    /// self-referential. When the same names already exist in another dictionary
+    /// (e.g. the bundled Example Words), references inside the imported group
+    /// must bind to the group's own words for both dependency tracking and
+    /// execution — not to the earlier-loaded dictionary.
+    #[tokio::test]
+    async fn test_imported_dictionary_is_self_referential() {
+        let mut interp = Interpreter::new();
+
+        // EXAMPLE dictionary: SAY pushes [ 1 ], GREET calls SAY.
+        interp.execute("{ [ 1 ] } 'SAY' DEF").await.unwrap();
+        interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
+
+        // TEST dictionary duplicates the names; here SAY pushes [ 2 ].
+        interp.active_user_dictionary = "TEST".to_string();
+        interp.execute("{ [ 2 ] } 'SAY' DEF").await.unwrap();
+        interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
+
+        interp.rebuild_dependencies().unwrap();
+
+        // Dependency graph: TEST@GREET depends on TEST@SAY (not EXAMPLE@SAY),
+        // so TEST@SAY is shown as referenced rather than unreferenced.
+        let test_say_deps = interp.dependents.get("TEST@SAY");
+        assert!(
+            test_say_deps.is_some_and(|d| d.contains("TEST@GREET")),
+            "TEST@SAY should be referenced by TEST@GREET; got {:?}",
+            test_say_deps
+        );
+        assert!(
+            !test_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+            "EXAMPLE@GREET must not depend on TEST@SAY"
+        );
+        let example_say_deps = interp.dependents.get("EXAMPLE@SAY");
+        assert!(
+            example_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+            "EXAMPLE@SAY should be referenced by EXAMPLE@GREET; got {:?}",
+            example_say_deps
+        );
+
+        // Execution: TEST@GREET runs TEST@SAY ([ 2 ]), not EXAMPLE@SAY ([ 1 ]).
+        interp.stack.clear();
+        interp.execute("TEST@GREET").await.unwrap();
+        let top = interp.stack.last().expect("result present");
+        let only = top.child(0).expect("vector has one child");
+        assert_eq!(only.as_scalar().unwrap().to_i64().unwrap(), 2);
+    }
+
+    /// Section 8.6: identical content yields one identity regardless of name or
+    /// dictionary (the basis for automatic deduplication on import).
+    #[tokio::test]
+    async fn test_identical_content_shares_identity() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
+        interp.active_user_dictionary = "B".to_string();
+        interp.execute("{ [ 1 ] } 'LEED' DEF").await.unwrap();
+        interp.execute("{ [ 2 ] } 'OTHER' DEF").await.unwrap();
+        interp.rebuild_dependencies().unwrap();
+
+        let a_leaf = interp.word_identity("A@LEAF").cloned();
+        let b_leed = interp.word_identity("B@LEED").cloned();
+        let b_other = interp.word_identity("B@OTHER").cloned();
+        assert!(a_leaf.is_some(), "identity should be computed");
+        assert_eq!(a_leaf, b_leed, "identical bodies must share an identity");
+        assert_ne!(a_leaf, b_other, "different bodies must differ");
+    }
+
+    /// Section 8.6: a word's identity depends on the content of its dependency,
+    /// not on the dependency's name. Two words that call differently-named but
+    /// identical helpers must share an identity.
+    #[tokio::test]
+    async fn test_identity_is_name_independent() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
+        interp.execute("{ LEAF } 'USE' DEF").await.unwrap();
+        interp.active_user_dictionary = "B".to_string();
+        interp.execute("{ [ 1 ] } 'LEED' DEF").await.unwrap();
+        interp.execute("{ LEED } 'USE' DEF").await.unwrap();
+        interp.rebuild_dependencies().unwrap();
+
+        let a_use = interp.word_identity("A@USE").cloned();
+        let b_use = interp.word_identity("B@USE").cloned();
+        assert!(a_use.is_some());
+        assert_eq!(
+            a_use, b_use,
+            "callers of identical helpers must share an identity regardless of the helper's name"
+        );
+    }
+
+    /// Section 8.6: a recursive word's identity is well-defined (cycle hashing)
+    /// and reproducible across independent interpreters.
+    #[tokio::test]
+    async fn test_recursive_identity_is_stable() {
+        async fn rec_id() -> Option<String> {
+            let mut interp = Interpreter::new();
+            interp.active_user_dictionary = "R".to_string();
+            interp.execute("{ REC } 'REC' DEF").await.unwrap();
+            interp.rebuild_dependencies().unwrap();
+            // The self-reference must be recorded, then hashed as a cycle.
+            assert!(
+                interp
+                    .dependents
+                    .get("R@REC")
+                    .is_some_and(|d| d.contains("R@REC")),
+                "recursive self-reference should be tracked"
+            );
+            interp.word_identity("R@REC").cloned()
+        }
+
+        let first = rec_id().await;
+        let second = rec_id().await;
+        assert!(first.is_some(), "recursive word should have an identity");
+        assert_eq!(first, second, "recursive identity must be reproducible");
+    }
+
     #[tokio::test]
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();

@@ -103,6 +103,13 @@ impl Interpreter {
         }
         self.call_depth += 1;
 
+        // Section 8.6: resolve this word's bare references through its own
+        // dictionary first, both while compiling its execution plan and while
+        // running its body. Saved and restored so nested calls into other
+        // dictionaries see their own dictionary's context.
+        let owning_dict = self.split_qualified_name(&resolved_name).map(|(dict, _)| dict);
+        let prev_owning = std::mem::replace(&mut self.owning_dictionary_context, owning_dict);
+
         let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
         self.call_stack.push(resolved_name.clone());
@@ -154,6 +161,7 @@ impl Interpreter {
             self.execute_guard_structure(&def.lines)
         };
         self.call_stack.pop();
+        self.owning_dictionary_context = prev_owning;
         self.call_depth -= 1;
         result
     }

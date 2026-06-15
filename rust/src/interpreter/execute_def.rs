@@ -133,6 +133,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
     let lines = parse_definition_body(&staged_tokens)?;
 
+    // Section 8.6: resolve this word's references through its own dictionary
+    // first, so the dependency it records is its own dictionary's word rather
+    // than a same-named word in another (e.g. earlier-loaded) dictionary.
+    let prev_owning = interp
+        .owning_dictionary_context
+        .replace(dict_name.clone());
     let mut new_dependencies = HashSet::new();
     for line in &lines {
         for token in line.body_tokens.iter() {
@@ -146,6 +152,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             }
         }
     }
+    interp.owning_dictionary_context = prev_owning;
 
     for dep_name in &new_dependencies {
         interp
@@ -184,6 +191,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .words
         .insert(upper_name.clone(), Arc::new(new_def));
     interp.sync_user_words_cache();
+    interp.recompute_word_identities();
     interp
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
