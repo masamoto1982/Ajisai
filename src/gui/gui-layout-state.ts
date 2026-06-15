@@ -22,7 +22,7 @@ const DESKTOP_EDITOR_PLACEHOLDER = [
 const MOBILE_EDITOR_PLACEHOLDER = [
     'Enter code here',
     '',
-    'Run & move to Stack → Triple-tap the editor',
+    'Run → Triple-tap the editor',
     'Stack → Output → Double-tap Stack area',
     'Output → Editor → Double-tap Output area',
     'Input assist → Tap words below',
@@ -123,6 +123,27 @@ export const applyAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void =
     }
 };
 
+const revealChangedDictionarySheet = (deps: ApplyAreaStateDeps, sheetId?: string): void => {
+    if (!sheetId) return;
+    deps.elements.dictionarySheetSelect.value = sheetId;
+    deps.switchDictionarySheet(sheetId);
+};
+
+// Execution-driven transition (distinct from the manual-selection core in
+// `updateDesktopModes`): the surfaces an execution touched decide where the
+// layout moves, per the desktop intent —
+//   * Stack changed       → right column shows Stack.
+//   * Output changed       → left column shows Output.
+//   * both changed         → left=Output, right=Stack.
+//   * neither changed      → both columns stay as they were.
+//   * Dictionary changed   → right column shows the changed Words sheet
+//                            (Dictionary outranks Stack for the right column,
+//                            since defining/importing a word is the more
+//                            notable structural change).
+// The single-surface (mobile) profile cannot show two surfaces at once, so it
+// surfaces the single most notable change in the same priority order
+// (Dictionary > Output > Stack); when nothing changed it stays put, mirroring
+// the desktop "keep both" rule.
 export const applyExecutionAreaState = (
     deps: ApplyAreaStateDeps,
     changes: ExecutionSurfaceChanges
@@ -137,6 +158,9 @@ export const applyExecutionAreaState = (
             nextMode = 'stack';
         }
         if (nextMode) {
+            if (nextMode === 'dictionary') {
+                revealChangedDictionarySheet(deps, changes.dictionarySheetId);
+            }
             deps.state.currentMode = nextMode;
             applyMobileAreaState(deps, nextMode);
         }
@@ -151,10 +175,7 @@ export const applyExecutionAreaState = (
     }
     if (changes.dictionaryChanged) {
         deps.state.currentRightMode = 'dictionary';
-        if (changes.dictionarySheetId) {
-            deps.elements.dictionarySheetSelect.value = changes.dictionarySheetId;
-            deps.switchDictionarySheet(changes.dictionarySheetId);
-        }
+        revealChangedDictionarySheet(deps, changes.dictionarySheetId);
     }
 
     deps.state.currentMode = deps.state.currentRightMode;
