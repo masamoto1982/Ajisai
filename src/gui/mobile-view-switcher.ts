@@ -21,7 +21,16 @@ export interface MobileHandlerOptions {
 
 const MOBILE_BREAKPOINT = 768;
 const SWIPE_THRESHOLD = 50;
-const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
+
+// SPEC §12.3 (Observation surfaces) / Portability Profiles "Presentation Profile".
+// On a single-surface device the four observation surfaces are cycled in this
+// fixed order; `VIEW_ORDER` and `resolveNextViewMode` are the pure transition
+// core of the mobile presentation profile (a model of the Presentation Profile
+// LTS). They are exported so the conformance suite
+// (layout/presentation-profile.test.ts) can exercise the shipped logic directly.
+// The 768px breakpoint and 50px swipe threshold are device tuning, not
+// semantics (SPEC §5.3 standing), and are intentionally kept out of that core.
+export const VIEW_ORDER: ViewMode[] = ['input', 'output', 'stack', 'dictionary'];
 
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 
@@ -41,7 +50,7 @@ const detectSwipeDirection = (
     return null;
 };
 
-const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
+export const resolveNextViewMode = (currentMode: ViewMode, direction: 'left' | 'right'): ViewMode => {
     const currentIndex = VIEW_ORDER.indexOf(currentMode);
     const nextIndex = direction === 'left'
         ? (currentIndex + 1) % VIEW_ORDER.length

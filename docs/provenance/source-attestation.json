@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:d64e1461bc282655b58849ed4da3adfeb1e4bfe1bae578ffa5e3b166517aecc4",
-  "fileCount": 253,
+  "rootIdentity": "sha256:093d4dced5ec194f9c35780d13912c8aa633390a382a350222bff42951214b04",
+  "fileCount": 254,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -1089,8 +1089,8 @@
     },
     {
       "path": "src/gui/gui-layout-state.ts",
-      "sha256": "7d8b7b874178b4aefbe5b1d0008813143525f3c26fa67956909fbe427c19acb7",
-      "bytes": 5267
+      "sha256": "4ba146ef1b47aa4fd731cab911404cdad666daac37e8c99f936a7f828ca02656",
+      "bytes": 6130
     },
     {
       "path": "src/gui/interpreter-execution-utils.ts",
@@ -1109,18 +1109,23 @@
     },
     {
       "path": "src/gui/layout/layout-controller.ts",
-      "sha256": "d086061ef7ba6809cac2f3ad6ac59e8036d8aa29172960b200ead68885e7e236",
-      "bytes": 1354
+      "sha256": "7dce803444ecfe4814eafbaf34671ec61db7cda5ff80402cb98d1afc77d167af",
+      "bytes": 1659
     },
     {
       "path": "src/gui/layout/layout-model.ts",
-      "sha256": "8ee2bd11fbaf1c13c689fd9b858e8f74559c1771ebf0edc4dff6aff38a110444",
-      "bytes": 251
+      "sha256": "d8afa2a5e84a7f8f15eeb81c77bc3b357abb401321aef50e6ba52dc16d047d1c",
+      "bytes": 834
+    },
+    {
+      "path": "src/gui/layout/presentation-profile.test.ts",
+      "sha256": "5b5dc0ae7b055cc699d4b70e0740fc34b7d275dcd9b05ca74faec9a32e4c8f76",
+      "bytes": 9962
     },
     {
       "path": "src/gui/mobile-view-switcher.ts",
-      "sha256": "e3c3b52a2f19fcfab81f47727ab9eb6dae83c7eaab4787c3f4402a6dfbe294b4",
-      "bytes": 3919
+      "sha256": "92c09b735c17b05912de5f25e98b688aef41379d682f1ef6331e640923c4833f",
+      "bytes": 4544
     },
     {
       "path": "src/gui/module-selector-sheets.ts",
