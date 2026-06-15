@@ -11,6 +11,7 @@ import {
 } from './interpreter-execution-utils';
 import { createStepExecutor, StepExecutor } from './step-executor';
 import type { ViewMode } from './mobile-view-switcher';
+import type { ExecutionSurfaceChanges } from './gui-layout-state';
 
 export interface ExecutionCallbacks {
     readonly extractEditorValue: () => string;
@@ -24,6 +25,7 @@ export interface ExecutionCallbacks {
     readonly saveState: () => Promise<void>;
     readonly fullReset: () => Promise<void>;
     readonly updateView: (mode: ViewMode) => void;
+    readonly updateAfterExecution: (changes: ExecutionSurfaceChanges) => void;
 }
 
 export interface ExecutionController {
@@ -36,6 +38,25 @@ export interface ExecutionController {
 
 const checkIsResetCommand = (code: string): boolean =>
     code.trim().toUpperCase() === 'RESET';
+
+const stableStringify = (value: unknown): string => JSON.stringify(value ?? null);
+
+const detectExecutionSurfaceChanges = (
+    before: ReturnType<typeof createExecutionSnapshot>,
+    result: ExecuteResult,
+    afterStack: ReturnType<AjisaiInterpreter['collect_stack']>
+): ExecutionSurfaceChanges => {
+    const userWordsChanged = stableStringify(before.userWords) !== stableStringify(result.userWords ?? before.userWords);
+    const importedModulesChanged = stableStringify(before.importedModules)
+        !== stableStringify(result.importedModules ?? before.importedModules);
+
+    return {
+        outputChanged: Boolean((result.output ?? '').trim()),
+        stackChanged: stableStringify(before.stack) !== stableStringify(afterStack),
+        dictionaryChanged: userWordsChanged || importedModulesChanged,
+        dictionarySheetId: userWordsChanged ? 'user' : undefined
+    };
+};
 
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
@@ -52,7 +73,8 @@ export const createExecutionController = (
         updateDisplays,
         saveState,
         fullReset,
-        updateView
+        updateView,
+        updateAfterExecution
     } = callbacks;
 
     const stepExecutor: StepExecutor = createStepExecutor(interpreter, {
@@ -122,8 +144,9 @@ export const createExecutionController = (
             return;
         }
 
+        let executionChanges: ExecutionSurfaceChanges | null = null;
+
         try {
-            updateView('output');
             showInfo('Executing...', false);
 
             const currentState = createExecutionSnapshot(interpreter);
@@ -137,12 +160,20 @@ export const createExecutionController = (
             }
 
             applyExecutionResult(result, code);
+            executionChanges = detectExecutionSurfaceChanges(
+                currentState,
+                result,
+                interpreter.collect_stack()
+            );
 
         } catch (error) {
             resolveExecutionException('ExecController', error, showInfo, showError);
         }
 
         updateDisplays(code);
+        if (executionChanges) {
+            updateAfterExecution(executionChanges);
+        }
         await saveState();
     };
 
