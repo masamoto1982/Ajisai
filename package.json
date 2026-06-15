@@ -23,6 +23,8 @@
     "dev:tauri": "AJISAI_BUILD_TARGET=tauri vite",
     "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build",
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
+    "provenance:attest": "node scripts/generate-source-attestation.mjs",
+    "provenance:check": "node scripts/generate-source-attestation.mjs --check",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
