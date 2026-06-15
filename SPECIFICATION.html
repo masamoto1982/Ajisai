@@ -1388,7 +1388,7 @@ Version: <strong>2026-06-11</strong></p>
 <li>User words are stored per active dictionary (namespace).</li>
 <li>Built-in words cannot be redefined.</li>
 <li>A user word that has active dependents requires the force modifier <code>!</code> to be redefined.</li>
-<li>Dependencies are tracked automatically at definition time.</li>
+<li>Dependencies are tracked automatically at definition time, by content identity rather than by name (Section 8.6).</li>
 </ul>
 
 <h3 id="83-deletion-syntax">8.3 Deletion syntax</h3>
@@ -1421,6 +1421,20 @@ Version: <strong>2026-06-11</strong></p>
 </div>
 
 <p>Acceptable forms: <code>IS-*</code> and <code>HAS-*</code> predicates; hyphen-separated action-object names; short unambiguous names (6 characters or fewer).</p>
+
+<h3 id="86-word-identity-and-content-addressing">8.6 Word identity and content addressing</h3>
+
+<p>Every user word has a stable <strong>identity</strong> derived from its content, not from its name. The identity is a cryptographic hash computed over the word's normalized body together with the identities of the words it references: <code>id = H(normalize(body) &oplus; { id(dep) : dep &isin; references })</code>. Before hashing, every resolved reference in the body is replaced by the identity of its target, so a word's identity is independent of which names happen to be in scope when it is defined or executed. Normalization fixes a canonical form for the body — token spelling, whitespace and line breaks, the exact-rational numeric form of Section 4, and string escaping — so that semantically identical bodies always produce the same identity. A word's <strong>name</strong>, its description, and its authoring timestamp are metadata: they do not participate in the identity, and changing them does not change the identity.</p>
+
+<p><strong>Codebase and naming are separate.</strong> The set of identified definitions forms the <em>codebase</em>. A <em>dictionary</em> (Section 9.3) is a mapping from names to identities. Renaming a word is a naming-layer edit that leaves its identity unchanged. Two independently authored words with identical normalized content share a single identity automatically.</p>
+
+<p><strong>Recursion.</strong> A self-referential or mutually recursive group of words (Section 8.4) forms a reference cycle that cannot be hashed as a plain dependency tree. Such a strongly connected component is hashed as a unit, with its members referenced by position within the component, so cyclic definitions have well-defined, reproducible identities.</p>
+
+<p><strong>Editing and propagation.</strong> Editing a word produces a <em>new</em> identity for the new content; the previous identity is unaffected. Words that referenced the previous identity remain pinned to it until they are explicitly updated. An <code>update</code> re-points a dictionary's names from old identities to new ones and may be propagated to dependents on request. Adding, editing, or removing an unrelated word never changes the identity of words that did not change.</p>
+
+<p><strong>Name resolution for user words.</strong> Dependencies are stored as identities, fixed at definition time. A bare name in a stored body is a display-time label, resolved through the owning dictionary's naming map; it is never re-resolved against a global, mutable vocabulary at execution time. Consequently, adding a Core word, importing a module, or loading another user dictionary cannot recapture an existing reference. A reference to a word in another user dictionary is expressed with a qualified name (<code>DICT@WORD</code>) at authoring time and is likewise stored as an identity. Dependent and dependency relationships (Section 8.2) are computed from stored identities and are therefore exact and stable.</p>
+
+<p><strong>Sharing.</strong> Exporting a word group serializes its definitions keyed by identity together with the naming map that labels them. Importing merges definitions by identity, so identical definitions deduplicate automatically and name clashes are confined to the naming layer (Section 9.3). An imported group behaves identically in every environment, regardless of which other dictionaries or modules are present. The hash function is a defined canonical function so that independent conforming implementations agree on identities; its exact byte encoding is an implementation contract derived from this file (Section 2.1) and dictionary storage layout remains non-canonical (Section 2.3).</p>
 
 <h2 id="9-module-system">9. Module System</h2>
 
@@ -1465,7 +1479,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>The <em>Core Words</em> tier named here is narrower than the term <em>Coreword</em> used for contract metadata (Section 7.14): a Coreword is any built-in word with a contract entry — a Core Word or a Module Word — whereas the Core Words tier is only the permanent runtime words.</p>
 
-<p>Example Words are bundled User Words provided by the reference environment. They demonstrate Ajisai features in executable form and serve as the initial template for unofficial user libraries. A user may export Example Words, modify the exported file, rename it to XXX, and import it again. The imported group is then treated as XXX Words.</p>
+<p>Example Words are bundled User Words provided by the reference environment. They demonstrate Ajisai features in executable form and serve as the initial template for unofficial user libraries. A user may export Example Words, modify the exported file, rename it to XXX, and import it again. The imported group is then treated as XXX Words. Because user words are identified by content (Section 8.6), an imported group is self-referential and behaves identically regardless of which other dictionaries are loaded, and identical definitions deduplicate automatically on import.</p>
 
 <p>Example Words are not Core Words, not Module Words, and not a separate Dictionary tier. Module Words do not contain example, sample, or demonstration words.</p>
 
