@@ -163,6 +163,32 @@ mod tests {
         assert_eq!(first, second, "recursive identity must be reproducible");
     }
 
+    /// Section 8.6 content store: textually identical bodies defined under
+    /// different names/dictionaries share a single stored body in memory rather
+    /// than being duplicated.
+    #[tokio::test]
+    async fn test_identical_bodies_share_one_stored_body() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "A".to_string();
+        interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
+        interp.active_user_dictionary = "B".to_string();
+        interp.execute("{ [ 1 ] } 'TWIN' DEF").await.unwrap();
+        interp.execute("{ [ 2 ] } 'OTHER' DEF").await.unwrap();
+
+        let a_leaf = interp.user_dictionaries["A"].words["LEAF"].lines.clone();
+        let b_twin = interp.user_dictionaries["B"].words["TWIN"].lines.clone();
+        let b_other = interp.user_dictionaries["B"].words["OTHER"].lines.clone();
+
+        assert!(
+            std::sync::Arc::ptr_eq(&a_leaf, &b_twin),
+            "identical bodies must share one interned stored body"
+        );
+        assert!(
+            !std::sync::Arc::ptr_eq(&a_leaf, &b_other),
+            "different bodies must not share a stored body"
+        );
+    }
+
     #[tokio::test]
     async fn test_cannot_override_other_builtin_words() {
         let mut interp = Interpreter::new();

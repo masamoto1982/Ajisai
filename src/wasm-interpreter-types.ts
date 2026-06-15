@@ -27,6 +27,9 @@ export interface AjisaiInterpreter {
     collect_stack(): Value[];
     // Tuple shape: [dictionary, name, isProtected].
     collect_user_words_info(): Array<[string, string, boolean]>;
+    // Content identity per user word (SPECIFICATION.html §8.6).
+    // Tuple shape: [fullyQualifiedName, contentId].
+    collect_word_identities(): Array<[string, string]>;
     // Tuple shape: [name, hover_summary, hover_syntax].
     // hover_summary is the native button title ("WORD — short verb phrase");
     // hover_syntax is the inline word-info preview (shortest useful invocation,

@@ -133,6 +133,19 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
     let lines = parse_definition_body(&staged_tokens)?;
 
+    // Content store (Section 8.6): share one stored body across textually
+    // identical definitions so copying or re-importing a word group does not
+    // duplicate its code.
+    let body_key = crate::interpreter::word_identity::body_content_key(&lines);
+    let lines: Arc<[ExecutionLine]> = match interp.body_store.get(&body_key) {
+        Some(shared) => shared.clone(),
+        None => {
+            let arc: Arc<[ExecutionLine]> = lines.into();
+            interp.body_store.insert(body_key, arc.clone());
+            arc
+        }
+    };
+
     // Section 8.6: resolve this word's references through its own dictionary
     // first, so the dependency it records is its own dictionary's word rather
     // than a same-named word in another (e.g. earlier-loaded) dictionary.
@@ -140,7 +153,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .owning_dictionary_context
         .replace(dict_name.clone());
     let mut new_dependencies = HashSet::new();
-    for line in &lines {
+    for line in lines.iter() {
         for token in line.body_tokens.iter() {
             if let Token::Symbol(s) = token {
                 let upper_s = crate::core_word_aliases::canonicalize_core_word_name(s);

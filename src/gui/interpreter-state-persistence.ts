@@ -84,16 +84,53 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
     };
 };
 
-const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string): UserWord[] => {
-    const userWordsInfo = interpreter.collect_user_words_info();
-    return userWordsInfo
-        .filter(([dictionary]) => dictionary === dictionaryName)
-        .map(wordData => ({
-            dictionary: wordData[0],
-            name: wordData[1],
-            definition: interpreter.lookup_word_definition(`${wordData[0]}@${wordData[1]}`)
-        }));
+// Identity-keyed export/import (SPECIFICATION.html §8.6). The export document
+// carries each word's content identity so a shared group is content-addressed:
+// re-importing it is recognised as a no-op (deduplicated), and a definition
+// edited without re-exporting is detected via an identity mismatch.
+const EXPORT_FORMAT_VERSION = 2;
+
+interface ExportWord {
+    readonly name: string;
+    readonly definition: string | null;
+    readonly id?: string;
+}
+
+interface ExportDocument {
+    readonly formatVersion: number;
+    readonly dictionary: string;
+    readonly words: ExportWord[];
+}
+
+const collectWordIdentityMap = (interpreter: AjisaiInterpreter): Map<string, string> => {
+    const map = new Map<string, string>();
+    for (const [fqName, id] of interpreter.collect_word_identities()) {
+        map.set(fqName.toUpperCase(), id);
+    }
+    return map;
 };
+
+const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string): ExportDocument => {
+    const identities = collectWordIdentityMap(interpreter);
+    const words: ExportWord[] = interpreter.collect_user_words_info()
+        .filter(([dictionary]) => dictionary === dictionaryName)
+        .map(([dictionary, name]) => {
+            const id = identities.get(buildWordKey(dictionary, name));
+            return {
+                name,
+                definition: interpreter.lookup_word_definition(`${dictionary}@${name}`),
+                ...(id ? { id } : {})
+            };
+        });
+    return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: dictionaryName, words };
+};
+
+interface ParsedImport {
+    readonly words: UserWord[];
+    // Embedded content identities keyed by upper-cased word name, or null for
+    // legacy (v1) array files that predate content addressing.
+    readonly embeddedIds: Map<string, string> | null;
+}
 
 const buildExportFilename = (name: string): string => `${name}.json`;
 const buildWordKey = (dictionary: string, name: string): string => `${dictionary}@${name}`.toUpperCase();
@@ -104,16 +141,32 @@ const isRemovedUserWordDictionary = (dictionary: string | null | undefined): boo
 const containsRemovedUserWordDictionary = (words: readonly UserWord[]): boolean =>
     words.some(word => isRemovedUserWordDictionary(word.dictionary));
 
-const parseUserWords = (jsonString: string): Result<UserWord[], Error> => {
+const parseImportDocument = (jsonString: string): Result<ParsedImport, Error> => {
+    let parsed: unknown;
     try {
-        const parsed = JSON.parse(jsonString);
-        if (!Array.isArray(parsed)) {
-            return err(new Error('Invalid file format. Expected an array of words.'));
-        }
-        return ok(parsed as UserWord[]);
+        parsed = JSON.parse(jsonString);
     } catch (e) {
         return err(e instanceof Error ? e : new Error(String(e)));
     }
+
+    // Legacy v1: a bare array of words, with no content identities.
+    if (Array.isArray(parsed)) {
+        return ok({ words: parsed as UserWord[], embeddedIds: null });
+    }
+
+    // v2: an export document carrying per-word content identities.
+    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as ExportDocument).words)) {
+        const embeddedIds = new Map<string, string>();
+        const words: UserWord[] = (parsed as ExportDocument).words.map(word => {
+            if (word.id) {
+                embeddedIds.set(word.name.toUpperCase(), word.id);
+            }
+            return { name: word.name, definition: word.definition ?? null };
+        });
+        return ok({ words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null });
+    }
+
+    return err(new Error('Invalid file format. Expected an array of words or an export document.'));
 };
 
 export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persistence => {
@@ -312,7 +365,7 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             }
 
             try {
-                const parseResult = parseUserWords(openedFile.text);
+                const parseResult = parseImportDocument(openedFile.text);
 
                 if (!parseResult.ok) {
                     showError?.(parseResult.error);
@@ -325,15 +378,51 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
                     return;
                 }
 
-                const importedWords = parseResult.value.map(word => ({
+                const { words, embeddedIds } = parseResult.value;
+                const importedWords = words.map(word => ({
                     ...word,
                     dictionary
                 }));
+
+                // Content-addressed dedup (§8.6): compare identities before and
+                // after the merge. Words whose identity is unchanged were already
+                // present with identical content and count as deduplicated.
+                const before = collectWordIdentityMap(window.ajisaiInterpreter);
                 await window.ajisaiInterpreter.restore_user_words(importedWords);
+                const after = collectWordIdentityMap(window.ajisaiInterpreter);
+
+                let added = 0;
+                let deduplicated = 0;
+                const idMismatches: string[] = [];
+                for (const word of importedWords) {
+                    const fqName = buildWordKey(dictionary, word.name);
+                    if (before.has(fqName) && before.get(fqName) === after.get(fqName)) {
+                        deduplicated++;
+                    } else {
+                        added++;
+                    }
+                    if (embeddedIds) {
+                        const expected = embeddedIds.get(word.name.toUpperCase());
+                        const actual = after.get(fqName);
+                        if (expected && actual && expected !== actual) {
+                            idMismatches.push(word.name);
+                        }
+                    }
+                }
 
                 updateDisplays?.();
                 await saveCurrentState();
-                showInfo?.(`${importedWords.length} user words imported and saved`, true);
+
+                const summary = deduplicated > 0
+                    ? `${added} user words imported, ${deduplicated} unchanged (deduplicated by content identity)`
+                    : `${added} user words imported and saved`;
+                showInfo?.(summary, true);
+                if (idMismatches.length > 0) {
+                    showInfo?.(
+                        `Content identity mismatch (definition edited without re-export): ${idMismatches.join(', ')}`,
+                        true
+                    );
+                }
 
             } catch (error) {
                 showError?.(error as Error);
