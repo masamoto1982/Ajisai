@@ -64,7 +64,6 @@ export interface FileIO {
 
 export interface Runtime {
     readonly kind: 'web' | 'tauri';
-    readonly version: string;
     readonly buildTimestamp: string;
     onReady(callback: () => void): void;
 }
