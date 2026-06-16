@@ -3,7 +3,6 @@ import { GUI_INSTANCE } from '../gui/gui-application';
 import { initWasm } from '../wasm-module-loader';
 import type { WasmModule, AjisaiInterpreter } from '../wasm-interpreter-types';
 
-declare const __AJISAI_CHANGE_NOTE__: string;
 declare const __AJISAI_BUILD_TIMESTAMP__: string;
 
 declare global {
@@ -27,7 +26,7 @@ export function setBuildVersionLabel(): void {
     if (!versionElement) return;
 
     const timestamp = __AJISAI_BUILD_TIMESTAMP__ || formatTimestamp(new Date());
-    versionElement.textContent = `ver.${timestamp} (${__AJISAI_CHANGE_NOTE__})`;
+    versionElement.textContent = `ver.${timestamp}`;
 }
 
 export async function initializeApplication(): Promise<void> {

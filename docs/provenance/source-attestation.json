@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:9ad3bb2057327e8032e8af6f533157b4782d8f11bfa72f7735228c6b38ffd745",
+  "rootIdentity": "sha256:d97a857979cc347f3fac85d1fc010aaf2aeb6e0c98dbf890deb493dfcb8b0a04",
   "fileCount": 257,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1034,8 +1034,8 @@
     },
     {
       "path": "src/entry/entry-common.ts",
-      "sha256": "3ad5256f5d3be6f43d183a75561b04a9a8f8eec58b6f3d85888bbca03961b11e",
-      "bytes": 2605
+      "sha256": "fb1cd3def8d169c9ea584b5dd5a92cf92fc408f5fcb2e5ef94cc36735e60f919",
+      "bytes": 2531
     },
     {
       "path": "src/gui/code-input-editor.ts",
@@ -1189,8 +1189,8 @@
     },
     {
       "path": "src/platform/platform-adapter.ts",
-      "sha256": "ab455fd81f5bdc9d18ef30d300811b94ff8717563903311b159b6b1cb4048896",
-      "bytes": 3957
+      "sha256": "d5956a4d9cb656f5d540edc7e45102103f0dfd8743837286fe0558d13be8e582",
+      "bytes": 3927
     },
     {
       "path": "src/platform/runtime-kind.test.ts",
@@ -1214,8 +1214,8 @@
     },
     {
       "path": "src/platform/tauri/tauri-platform-adapter.ts",
-      "sha256": "768d934d66915980cbb8b79b848a1e1a061ea9ff5e84cd5f0d52a6294eab01a7",
-      "bytes": 881
+      "sha256": "c1f4df9d4b0f72793b2e014e6a1f53b051f8475c0cbd4cfa109eb485126f7f9d",
+      "bytes": 794
     },
     {
       "path": "src/platform/tauri/tauri-serial.ts",
@@ -1234,8 +1234,8 @@
     },
     {
       "path": "src/platform/web/web-platform-adapter.ts",
-      "sha256": "660983989872c2e44ccdbe1a7079f969120b475754e68b31acae89386a259efc",
-      "bytes": 850
+      "sha256": "deb4f5c4d7fdc35ac197873a1f889c2f0199eae64e8c63a55e768ba0a5e9d4fa",
+      "bytes": 763
     },
     {
       "path": "src/platform/web/web-serial.ts",
@@ -1309,8 +1309,8 @@
     },
     {
       "path": "vite.config.ts",
-      "sha256": "4e3037652a72370347cb2d4131f52d5656b33be4e835082879ae747b4982110e",
-      "bytes": 3610
+      "sha256": "3ff0da91a4ed42f69386b9ffd7f5be2bc49eebab3fc0d12d5bba0f57da575d3d",
+      "bytes": 1600
     }
   ]
 }
