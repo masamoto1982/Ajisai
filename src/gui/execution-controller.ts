@@ -6,10 +6,12 @@ import type {
 } from '../wasm-interpreter-types';
 import {
     createExecutionSnapshot,
+    collectUserWords,
     syncInterpreterState,
     resolveExecutionException
 } from './interpreter-execution-utils';
 import { createStepExecutor, StepExecutor } from './step-executor';
+import { detectExecutionSurfaceChanges } from './execution-surface-changes';
 import type { ViewMode } from './mobile-view-switcher';
 import type { ExecutionSurfaceChanges } from './gui-layout-state';
 
@@ -38,40 +40,6 @@ export interface ExecutionController {
 
 const checkIsResetCommand = (code: string): boolean =>
     code.trim().toUpperCase() === 'RESET';
-
-const stableStringify = (value: unknown): string => JSON.stringify(value ?? null);
-
-const detectExecutionSurfaceChanges = (
-    before: ReturnType<typeof createExecutionSnapshot>,
-    result: ExecuteResult,
-    afterStack: ReturnType<AjisaiInterpreter['collect_stack']>
-): ExecutionSurfaceChanges => {
-    const userWordsChanged = stableStringify(before.userWords) !== stableStringify(result.userWords ?? before.userWords);
-
-    const beforeModules: string[] = before.importedModules ?? [];
-    const afterModules: string[] = result.importedModules ?? beforeModules;
-    const importedModulesChanged = stableStringify(beforeModules) !== stableStringify(afterModules);
-    // The module whose import state just flipped: prefer a newly imported
-    // module, otherwise the one that was just unimported, so the dictionary
-    // lands on the sheet the user actually changed.
-    const changedModule = afterModules.find(name => !beforeModules.includes(name))
-        ?? beforeModules.find(name => !afterModules.includes(name));
-
-    // Errors and diagnostics render into the Output surface, so a failed run
-    // changes Output even when the program emitted no text of its own.
-    const hasError = result.status !== 'OK' || Boolean(result.error);
-
-    return {
-        outputChanged: hasError || Boolean((result.output ?? '').trim()),
-        stackChanged: stableStringify(before.stack) !== stableStringify(afterStack),
-        dictionaryChanged: userWordsChanged || importedModulesChanged,
-        // Defining your own word lands on the 'user' sheet; a module import or
-        // unimport lands on that module's sheet. User words win when both move.
-        dictionarySheetId: userWordsChanged
-            ? 'user'
-            : (changedModule ? `module-${changedModule}` : undefined)
-    };
-};
 
 export const createExecutionController = (
     interpreter: AjisaiInterpreter,
@@ -175,10 +143,19 @@ export const createExecutionController = (
             }
 
             applyExecutionResult(result, code);
+            // Read the post-execution surfaces back from the SAME interpreter
+            // instance (already updated by syncInterpreterState) so they are
+            // compared like-for-like with the pre-execution snapshot. Comparing
+            // against the worker's `result` instead skews the dictionary
+            // comparison across instances and misfires on every run.
             executionChanges = detectExecutionSurfaceChanges(
                 currentState,
-                result,
-                interpreter.collect_stack()
+                {
+                    stack: interpreter.collect_stack(),
+                    userWords: collectUserWords(interpreter),
+                    importedModules: interpreter.collect_imported_modules()
+                },
+                result
             );
 
         } catch (error) {
