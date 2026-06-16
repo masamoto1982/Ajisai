@@ -55,6 +55,12 @@ export class AjisaiInterpreter {
     collect_module_words_info(module_name: string): any;
     collect_stack(): any;
     collect_user_words_info(): any;
+    /**
+     * Content identity (Section 8.6) of each user word, as `[fqName, id]`
+     * pairs. The host uses these to deduplicate identical definitions on
+     * import and to key shared word groups by content rather than by name.
+     */
+    collect_word_identities(): any;
     execute(code: string): Promise<any>;
     execute_step(code: string): any;
     extract_io_output_buffer(): string;
@@ -120,6 +126,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
+    readonly ajisaiinterpreter_collect_word_identities: (a: number) => any;
     readonly ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number, number];
@@ -139,8 +146,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__hde4976181243c651: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h210f32635103ed31: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h776bc9e3bcad1357: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h4d66c855cf10ebd9: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

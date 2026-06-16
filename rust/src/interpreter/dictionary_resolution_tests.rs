@@ -225,6 +225,73 @@ mod tests {
         }
     }
 
+    /// Section 8.6 (content-first resolution): a bare name that matches several
+    /// user dictionaries with *identical content* is the same word, so it
+    /// resolves without an ambiguity error.
+    #[tokio::test]
+    async fn test_cross_dictionary_same_content_resolves() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "XXX".to_string();
+        interp.execute("{ [ 42 ] } 'TEST' DEF").await.unwrap();
+        interp.active_user_dictionary = "YYY".to_string();
+        interp.execute("{ [ 42 ] } 'TEST' DEF").await.unwrap();
+        interp.rebuild_dependencies().unwrap();
+        let _ = interp.collect_output();
+
+        interp.stack.clear();
+        let result = interp.execute("TEST").await;
+        assert!(
+            result.is_ok(),
+            "identical content across dictionaries must resolve without ambiguity: {:?}",
+            result.err()
+        );
+    }
+
+    /// Section 8.6 (content-first resolution): a bare name that matches several
+    /// user dictionaries with *divergent content* is a true ambiguity. It must
+    /// raise an error naming both qualified paths instead of silently picking
+    /// the oldest registration. The qualified paths still resolve.
+    #[tokio::test]
+    async fn test_cross_dictionary_divergent_content_is_ambiguous() {
+        let mut interp = Interpreter::new();
+        interp.active_user_dictionary = "XXX".to_string();
+        interp.execute("{ [ 1 ] } 'TEST' DEF").await.unwrap();
+        interp.active_user_dictionary = "YYY".to_string();
+        interp.execute("{ [ 2 ] } 'TEST' DEF").await.unwrap();
+        interp.rebuild_dependencies().unwrap();
+        let _ = interp.collect_output();
+
+        interp.stack.clear();
+        let result = interp.execute("TEST").await;
+        assert!(
+            result.is_err(),
+            "divergent content across dictionaries must be ambiguous"
+        );
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("Ambiguous"),
+            "error should report ambiguity, got: {}",
+            msg
+        );
+        assert!(
+            msg.contains("XXX@TEST") && msg.contains("YYY@TEST"),
+            "error should list both qualified paths, got: {}",
+            msg
+        );
+
+        // Qualified paths disambiguate and resolve.
+        interp.stack.clear();
+        assert!(
+            interp.execute("XXX@TEST").await.is_ok(),
+            "qualified XXX@TEST should resolve"
+        );
+        interp.stack.clear();
+        assert!(
+            interp.execute("YYY@TEST").await.is_ok(),
+            "qualified YYY@TEST should resolve"
+        );
+    }
+
     #[tokio::test]
     async fn test_builtin_not_ambiguous() {
         let mut interp = Interpreter::new();
