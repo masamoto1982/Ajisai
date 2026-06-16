@@ -15,7 +15,7 @@ const collectSerialInbox = (): SerialInboxEntry[] | undefined => {
     return entries.length > 0 ? entries : undefined;
 };
 
-const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
+export const collectUserWords = (interpreter: AjisaiInterpreter): UserWord[] => {
     const userWordsInfo = interpreter.collect_user_words_info();
     return userWordsInfo.map(wordData => ({
         dictionary: wordData[0],
