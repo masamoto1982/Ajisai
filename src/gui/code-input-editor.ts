@@ -331,6 +331,10 @@ export const createEditor = (
         element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
 
         element.addEventListener('keydown', (e) => {
+            if (e.isComposing || e.keyCode === 229) {
+                return;
+            }
+
             if (e.key === ' ' && e.ctrlKey) {
                 e.preventDefault();
                 refreshSuggestions();
