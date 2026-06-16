@@ -129,6 +129,28 @@ const extractToken = (
     };
 };
 
+const INDENT_UNIT = '  ';
+const OPENING_BRACKETS: ReadonlySet<string> = new Set(['[', '{', '(']);
+
+const extractLeadingWhitespace = (line: string): string =>
+    line.match(/^[ \t]*/)?.[0] ?? '';
+
+const lastSignificantChar = (line: string): string =>
+    line.replace(/\s+$/, '').slice(-1);
+
+// Auto-indent insertion for a newline: preserve the current line's leading
+// whitespace, and add one extra indent level when that line ends with an
+// opening bracket. `textBeforeCursor` is everything to the left of the caret.
+export const computeAutoIndentInsertion = (textBeforeCursor: string): string => {
+    const lineStart = textBeforeCursor.lastIndexOf('\n') + 1;
+    const currentLine = textBeforeCursor.slice(lineStart);
+    const baseIndent = extractLeadingWhitespace(currentLine);
+    const extraIndent = OPENING_BRACKETS.has(lastSignificantChar(currentLine))
+        ? INDENT_UNIT
+        : '';
+    return `\n${baseIndent}${extraIndent}`;
+};
+
 export const createEditor = (
     element: HTMLTextAreaElement,
     callbacks: EditorCallbacks = {}
@@ -276,6 +298,18 @@ export const createEditor = (
         emitContentChange();
     };
 
+    const applyAutoIndent = (): void => {
+        const { start, end } = lookupSelectionRange(element);
+        const insertion = computeAutoIndentInsertion(element.value.slice(0, start));
+        const newText = insertAt(element.value, start, end, insertion);
+        updateElementValue(element, newText);
+        const newPos = start + insertion.length;
+        updateSelectionRange(element, newPos, newPos);
+        syncLastKnownSelection();
+        emitContentChange();
+        refreshSuggestions();
+    };
+
     const registerEventListeners = (): void => {
         element.addEventListener('focus', () => {
             syncLastKnownSelection();
@@ -303,6 +337,21 @@ export const createEditor = (
             if (e.key === ' ' && e.ctrlKey) {
                 e.preventDefault();
                 refreshSuggestions();
+                return;
+            }
+
+            // Auto-indent on plain Enter only. Modifier combos (Shift/Ctrl/Alt)
+            // are reserved for execution shortcuts in gui-event-bindings, and
+            // Enter applies a suggestion while the panel is open, so both paths
+            // are deliberately excluded to avoid competing with input assist.
+            if (
+                e.key === 'Enter' &&
+                !e.isComposing &&
+                !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey &&
+                currentSuggestions.length === 0
+            ) {
+                e.preventDefault();
+                applyAutoIndent();
                 return;
             }
 
