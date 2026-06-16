@@ -39,8 +39,8 @@
     },
     {
       "path": "SPECIFICATION.html",
-      "sha256": "17db4b1344cafc9d1abaef9de8207914234b2503f1d2ea8ae54eebefbe92daaf",
-      "bytes": 157902
+      "sha256": "f21d57b903d794d65e80a45e01cdc02d46347562cfd9669f2dd07ce7de65ea17",
+      "bytes": 159106
     },
     {
       "path": "eslint.config.js",
@@ -379,8 +379,8 @@
     },
     {
       "path": "rust/src/interpreter/dictionary_resolution_tests.rs",
-      "sha256": "7a3cd74bea19ce2259c5a21d97d17a22916d1fbf96ce5c9fa597f7fd44a5868e",
-      "bytes": 10015
+      "sha256": "47cc08e8c9d08db84ef7e656672a1eaa16de257402021b3cf6a7f0f3bee89f56",
+      "bytes": 12662
     },
     {
       "path": "rust/src/interpreter/dictionary_tier_tests.rs",
@@ -684,8 +684,8 @@
     },
     {
       "path": "rust/src/interpreter/resolve_word.rs",
-      "sha256": "4daee7b50c6e20457ec03c93356684498725efcca29a22dfb5013edb9f7b81aa",
-      "bytes": 13726
+      "sha256": "dd86352f33b27972f472480ec94b6a3bb2937389c5222859b31876dc46e83f09",
+      "bytes": 16949
     },
     {
       "path": "rust/src/interpreter/serial/execute_serial_commands.rs",

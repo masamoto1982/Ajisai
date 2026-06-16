@@ -19,6 +19,7 @@ export const ajisaiinterpreter_collect_module_catalog_words_info: (a: number, b:
 export const ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_collect_stack: (a: number) => any;
 export const ajisaiinterpreter_collect_user_words_info: (a: number) => any;
+export const ajisaiinterpreter_collect_word_identities: (a: number) => any;
 export const ajisaiinterpreter_execute: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_execute_step: (a: number, b: number, c: number) => any;
 export const ajisaiinterpreter_extract_io_output_buffer: (a: number) => [number, number];
@@ -38,8 +39,8 @@ export const ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: num
 export const ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
 export const ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
 export const init_panic_hook: () => void;
-export const wasm_bindgen__convert__closures_____invoke__hde4976181243c651: (a: number, b: number, c: any) => [number, number];
-export const wasm_bindgen__convert__closures_____invoke__h210f32635103ed31: (a: number, b: number, c: any, d: any) => void;
+export const wasm_bindgen__convert__closures_____invoke__h776bc9e3bcad1357: (a: number, b: number, c: any) => [number, number];
+export const wasm_bindgen__convert__closures_____invoke__h4d66c855cf10ebd9: (a: number, b: number, c: any, d: any) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;

@@ -4,6 +4,21 @@ use std::sync::Arc;
 
 use super::{DictionaryDependencyInfo, Interpreter};
 
+/// Outcome of resolving a bare name against the user dictionaries (the final
+/// fallback stage of `resolve_short_name`). Section 8.6 makes user words
+/// content-addressed, so a bare name that matches several dictionaries is only
+/// ambiguous when those matches carry *distinct* content identities.
+pub(crate) enum UserBareOutcome {
+    /// No user dictionary holds the name.
+    None,
+    /// Every match collapses to a single content identity — the same word.
+    /// Carries the display fq-name (lowest `registration_order`) and its body.
+    Unique(String, Arc<WordDefinition>),
+    /// Two or more distinct content identities share the name — a true
+    /// ambiguity. Carries every matching fq-name for the diagnostic.
+    Ambiguous(Vec<String>),
+}
+
 impl Interpreter {
     pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
         let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
@@ -92,10 +107,26 @@ impl Interpreter {
             }
         }
 
-        let mut user_matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
+        // Final fallback: other user dictionaries. Section 8.6 — group matches
+        // by content identity so that a name shared across dictionaries resolves
+        // when (and only when) the matches are the same word.
+        match self.resolve_user_bare(&upper) {
+            UserBareOutcome::Unique(name, def) => Some((name, def)),
+            // A true ambiguity resolves to None here; the caller's error path
+            // (`check_ambiguity`) turns that into the "qualified path" diagnostic.
+            UserBareOutcome::Ambiguous(_) => None,
+            UserBareOutcome::None => None,
+        }
+    }
+
+    /// Resolve a bare (already uppercased) name against the user dictionaries by
+    /// content identity. Shared by `resolve_short_name`'s final fallback and
+    /// `check_ambiguity` so the two never drift apart.
+    pub(crate) fn resolve_user_bare(&self, upper: &str) -> UserBareOutcome {
+        let mut matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
         for (dict_name, dict) in &self.user_dictionaries {
-            if let Some(def) = dict.words.get(&upper) {
-                user_matches.push((
+            if let Some(def) = dict.words.get(upper) {
+                matches.push((
                     format!("{}@{}", dict_name, upper),
                     def.clone(),
                     def.registration_order,
@@ -103,33 +134,50 @@ impl Interpreter {
             }
         }
 
-        if !user_matches.is_empty() {
-            user_matches.sort_by_key(|(_, _, order)| *order);
-            let (name, def, _) = user_matches.into_iter().next().unwrap();
-            return Some((name, def));
+        if matches.is_empty() {
+            return UserBareOutcome::None;
         }
 
-        None
+        // Stable display order: the earliest registration represents the group.
+        matches.sort_by_key(|(_, _, order)| *order);
+
+        // Collapse the matches by their content identity (Section 8.6).
+        let mut distinct: HashSet<String> = HashSet::new();
+        let mut any_missing_identity = false;
+        for (fq, _, _) in &matches {
+            match self.word_identity(fq) {
+                Some(id) => {
+                    distinct.insert(id.clone());
+                }
+                // Conservative fallback: a match without a computed identity
+                // (e.g. before a quiescent recompute) is not treated as
+                // divergent — we fall back to the historical earliest-registered
+                // representative rather than raise a spurious ambiguity. At
+                // quiescent points identities are fresh, so this is not hit in
+                // practice.
+                None => any_missing_identity = true,
+            }
+        }
+
+        if any_missing_identity || distinct.len() <= 1 {
+            let (name, def, _) = matches.into_iter().next().unwrap();
+            return UserBareOutcome::Unique(name, def);
+        }
+
+        UserBareOutcome::Ambiguous(matches.into_iter().map(|(fq, _, _)| fq).collect())
     }
 
     pub(crate) fn check_ambiguity(&self, name: &str) -> Vec<String> {
         let upper = name.to_uppercase();
 
+        // Core / Module words win the bare-name ladder and are never ambiguous.
         if self.core_vocabulary.contains_key(&upper) {
             return vec![];
         }
 
-        let mut paths = Vec::new();
-        for (dict_name, dict) in &self.user_dictionaries {
-            if dict.words.contains_key(&upper) {
-                paths.push(format!("{}@{}", dict_name, upper));
-            }
-        }
-
-        if paths.len() > 1 {
-            paths
-        } else {
-            vec![]
+        match self.resolve_user_bare(&upper) {
+            UserBareOutcome::Ambiguous(paths) => paths,
+            UserBareOutcome::Unique(..) | UserBareOutcome::None => vec![],
         }
     }
 
@@ -257,6 +305,14 @@ impl Interpreter {
     }
 
     pub fn rebuild_dependencies(&mut self) -> crate::error::Result<()> {
+        // Quiescent recompute point (also reached after import, which does not
+        // bump the dictionary epoch on its own). Invalidate the resolve cache so
+        // a name that was previously cached as a single resolution cannot be
+        // revived once a divergent same-named word is introduced and the bare
+        // name becomes ambiguous (Section 8.6). Entries written by the scan
+        // below are tagged with the fresh epoch and stay valid.
+        self.bump_dictionary_epoch();
+
         self.dependents.clear();
         self.dictionary_dependencies.clear();
 
