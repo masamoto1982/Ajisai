@@ -25,9 +25,9 @@ const pinPath = resolve(repoRoot, 'docs/provenance/source-root.txt');
 // Declared explicitly so the trusted base is auditable in review. Keep this in
 // sync with docs/dev/source-provenance-attestation-design.md when it changes.
 //
-// The candidate set is enumerated from `git ls-files` (committed files only),
-// then narrowed to these roots. Enumerating from git — rather than walking the
-// working tree — makes the attestation deterministic across environments: build
+// The candidate set is enumerated from `git ls-files`, then narrowed to these
+// roots. Hashing the git index blobs — rather than working-tree bytes — makes
+// the attestation deterministic across environments: build
 // steps that drop gitignored files (e.g. cargo creating rust/Cargo.lock, or
 // node_modules) cannot perturb the root. A backdoor that adds a new source file
 // must `git add` it for the build to use it, which also enrolls it here.
@@ -73,14 +73,23 @@ function gitTrackedFiles() {
   return out.split('\0').filter(Boolean);
 }
 
+function readGitIndexBlob(relPosix) {
+  try {
+    return execFileSync('git', ['-C', repoRoot, 'show', `:${relPosix}`], {
+      encoding: 'buffer',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch {
+    fail(`tracked file missing from git index: ${relPosix}`);
+  }
+}
+
 function collectFiles() {
   const paths = gitTrackedFiles().filter(isTracked);
   // Deterministic order independent of git's enumeration.
   const unique = [...new Set(paths)].sort();
   return unique.map((relPosix) => {
-    const abs = resolve(repoRoot, relPosix);
-    if (!existsSync(abs)) fail(`tracked file missing from working tree: ${relPosix}`);
-    const bytes = readFileSync(abs);
+    const bytes = readGitIndexBlob(relPosix);
     return { path: relPosix, sha256: sha256Hex(bytes), bytes: bytes.length };
   });
 }
@@ -109,7 +118,7 @@ function buildManifest() {
     algorithm: 'sha256',
     rootIdentity,
     fileCount: files.length,
-    enumeratedFrom: 'git ls-files (committed files only)',
+    enumeratedFrom: 'git ls-files with git index blob contents',
     trackedDirPrefixes: TRACKED_DIR_PREFIXES,
     trackedFiles: [...TRACKED_FILES].sort(),
     excludePrefixes: EXCLUDE_PREFIXES,
@@ -136,7 +145,7 @@ const pin = pinContent(manifest);
 
 if (process.argv.includes('--check')) {
   // Drift guard / injection tripwire: fail if the committed attestation no
-  // longer matches what the working tree produces, or if the pin disagrees with
+  // longer matches what the git index produces, or if the pin disagrees with
   // the recomputed root. See the design note for external anchoring of the pin.
   let failed = false;
 

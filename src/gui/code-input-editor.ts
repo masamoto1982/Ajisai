@@ -67,6 +67,7 @@ const lookupSelectionRange = (element: HTMLTextAreaElement): { start: number; en
 
 const MAX_SUGGESTIONS = 10;
 const MIN_SUGGESTION_TRIGGER_LENGTH = 3;
+const INDENT_UNIT = '    ';
 const MOBILE_BREAKPOINT = 768;
 const checkIsMobile = (): boolean => window.innerWidth <= MOBILE_BREAKPOINT;
 const QUICK_SYMBOL_SUGGESTIONS: readonly string[] = Object.freeze([
@@ -107,6 +108,21 @@ const copyCaretMirrorStyle = (
     CARET_MIRROR_STYLE_PROPERTIES.forEach(property => {
         mirror.style[property] = style[property];
     });
+};
+
+
+export const computeAutoIndentInsertion = (
+    text: string,
+    cursorPosition: number
+): string => {
+    const safeCursor = Math.max(0, Math.min(cursorPosition, text.length));
+    const lineStart = text.lastIndexOf('\n', safeCursor - 1) + 1;
+    const linePrefix = text.slice(lineStart, safeCursor);
+    const baseIndent = linePrefix.match(/^[\t ]*/)?.[0] ?? '';
+    const trimmedPrefix = linePrefix.trimEnd();
+    const shouldIncreaseIndent = /[([{]$/.test(trimmedPrefix);
+
+    return `\n${baseIndent}${shouldIncreaseIndent ? INDENT_UNIT : ''}`;
 };
 
 const extractToken = (
@@ -265,6 +281,21 @@ export const createEditor = (
         renderSuggestions();
     };
 
+
+    const applyAutoIndent = (): void => {
+        const { start, end } = lookupSelectionRange(element);
+        const insertion = computeAutoIndentInsertion(element.value, start);
+        const newText = insertAt(element.value, start, end, insertion);
+        const newPos = start + insertion.length;
+
+        updateElementValue(element, newText);
+        updateSelectionRange(element, newPos, newPos);
+        syncLastKnownSelection();
+        hideSuggestions();
+        emitContentChange();
+        refreshSuggestions();
+    };
+
     const applySuggestion = (suggestion: string): void => {
         const { start, end } = extractToken(element.value, element.selectionStart);
         const newText = insertAt(element.value, start, end, suggestion);
@@ -300,27 +331,43 @@ export const createEditor = (
         element.addEventListener('touchend', syncLastKnownSelection, { passive: true });
 
         element.addEventListener('keydown', (e) => {
+            if (e.isComposing || e.keyCode === 229) {
+                return;
+            }
+
             if (e.key === ' ' && e.ctrlKey) {
                 e.preventDefault();
                 refreshSuggestions();
                 return;
             }
 
-            if (currentSuggestions.length === 0) return;
+            if (currentSuggestions.length > 0) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+                    renderSuggestions();
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
+                    renderSuggestions();
+                    return;
+                }
+                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey)) {
+                    e.preventDefault();
+                    applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    hideSuggestions();
+                    return;
+                }
+            }
 
-            if (e.key === 'ArrowDown') {
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
                 e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
-                renderSuggestions();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
-                renderSuggestions();
-            } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey)) {
-                e.preventDefault();
-                applySuggestion(currentSuggestions[selectedSuggestionIndex]!);
-            } else if (e.key === 'Escape') {
-                hideSuggestions();
+                applyAutoIndent();
             }
         });
     };
