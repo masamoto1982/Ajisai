@@ -275,6 +275,21 @@
     .shortcuts-hint__mobile {
         display: table;
     }
+
+    /* Keep the narrower mobile screen from pushing the table against the editor
+       edges: smaller text, tighter columns, and wrap-friendly descriptions. */
+    #shortcuts-hint {
+        padding: 1rem;
+        font-size: 0.72rem;
+    }
+
+    #shortcuts-hint th {
+        padding-right: 0.75rem;
+    }
+
+    #shortcuts-hint td {
+        white-space: normal;
+    }
 }
 
 #shortcuts-hint caption {

@@ -365,6 +365,13 @@ export const createGUI = (): GUI => {
 
         applyPlaygroundCodeFromUrl();
 
+        // Focus the empty editor on load so the caret is visible and invites
+        // typing. Skipped on mobile, where programmatic focus would pop the
+        // virtual keyboard (and the symbol-assist panel) over the editor.
+        if (!mobile.isMobile() && editor.extractValue() === '') {
+            editor.focus();
+        }
+
         console.log('[GUI] GUI initialization completed');
     };
 
