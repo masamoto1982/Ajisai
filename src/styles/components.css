@@ -230,6 +230,72 @@
 }
 
 
+/* Rich placeholder: a keyboard-shortcut cheat sheet shown over the empty
+   editor. A textarea placeholder cannot contain markup, so this table overlay
+   stands in for one. pointer-events are disabled so clicks fall through to the
+   textarea, and it is revealed only while the field shows its placeholder. */
+#shortcuts-hint {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.75rem;
+    display: none;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+    color: var(--input-placeholder);
+    font-family: var(--font-stack-mono);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+#code-input:placeholder-shown ~ #shortcuts-hint {
+    display: block;
+}
+
+#shortcuts-hint table {
+    border-collapse: collapse;
+}
+
+/* Desktop shows the keyboard-shortcut table; mobile shows the gesture table.
+   Toggled purely by the shared 768px breakpoint, mirroring the area selectors. */
+.shortcuts-hint__mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .shortcuts-hint__desktop {
+        display: none;
+    }
+
+    .shortcuts-hint__mobile {
+        display: table;
+    }
+}
+
+#shortcuts-hint caption {
+    text-align: left;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+#shortcuts-hint th,
+#shortcuts-hint td {
+    padding: 0.1rem 0;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+    font-weight: normal;
+}
+
+#shortcuts-hint th {
+    padding-right: 1.25rem;
+    opacity: 0.95;
+}
+
+
 .editor-suggestions {
     position: absolute;
 
