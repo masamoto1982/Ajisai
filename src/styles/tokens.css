@@ -19,8 +19,15 @@
     --color-light: #f8f9fa;
     --color-medium: #eaecf0;
 
-    --input-text: oklch(38% 0.06 305);
-    --input-placeholder: oklch(68% 0.022 305);
+    /* Symbol colour: Sun Microsystems purple (Pantone 2685 C). Used as the
+       background of the code editor and the dictionary search inputs. */
+    --color-symbol: #330072;
+    --color-symbol-focus: #43208a;
+
+    /* Text/placeholder for inputs painted with --color-symbol: kept light so
+       they stay readable on the deep purple background. */
+    --input-text: oklch(96% 0.015 305);
+    --input-placeholder: oklch(82% 0.045 305);
 
     --color-core: #E65100;
     --color-dependency: #E69500;
