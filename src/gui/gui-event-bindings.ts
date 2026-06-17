@@ -127,6 +127,13 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.clearBtn.addEventListener('click', () => editor.clear());
     elements.formatBtn.addEventListener('click', () => editor.format());
 
+    // Reformat the editor before running it, so the source that defines words
+    // (and therefore the stored definition) is tidied at execution time.
+    const runEditorCode = (): void => {
+        editor.format();
+        executionController.executeCode(editor.extractValue());
+    };
+
     elements.outputArea.addEventListener('dblclick', (e: MouseEvent) => {
         if ((e.target as HTMLElement).closest('button, a')) return;
         if (!mobile.isMobile() && layoutState.currentLeftMode === 'output') {
@@ -173,7 +180,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.codeInput.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
-            executionController.executeCode(editor.extractValue());
+            runEditorCode();
         }
         if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
             e.preventDefault();
@@ -206,7 +213,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
                 // Run; the post-execution auto-navigation (applyExecutionAreaState)
                 // chooses the destination surface from what actually changed, so
                 // we deliberately do not force a switch to Stack here.
-                executionController.executeCode(editor.extractValue());
+                runEditorCode();
                 tapCount = 0;
                 lastTapAt = 0;
                 return;
@@ -232,7 +239,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
             }
 
             if (clickCount >= 3) {
-                executionController.executeCode(editor.extractValue());
+                runEditorCode();
                 clickCount = 0;
                 lastClickAt = 0;
                 return;

@@ -423,13 +423,17 @@ export const createEditor = (
             const cursor = formatted.length;
             updateSelectionRange(element, cursor, cursor);
             syncLastKnownSelection();
-            hideSuggestions();
             emitContentChange();
         }
 
         if (wasFocused || !checkIsMobile()) {
             focusElement(element);
         }
+
+        // Focusing the textarea re-runs the focus handler, which would reopen the
+        // suggestion panel. Formatting is an explicit, whole-buffer action, so
+        // close any suggestions afterwards rather than competing with input assist.
+        hideSuggestions();
     };
 
     const focus = (): void => {
