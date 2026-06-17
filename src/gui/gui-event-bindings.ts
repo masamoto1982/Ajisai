@@ -125,6 +125,7 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
     elements.mobileDictionarySearchClearBtn.addEventListener('click', () => applySearchFilter(''));
 
     elements.clearBtn.addEventListener('click', () => editor.clear());
+    elements.formatBtn.addEventListener('click', () => editor.format());
 
     elements.outputArea.addEventListener('dblclick', (e: MouseEvent) => {
         if ((e.target as HTMLElement).closest('button, a')) return;
@@ -177,6 +178,11 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
         if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
             e.preventDefault();
             executionController.executeStep();
+        }
+        // Shift+Alt+F reformats the editor contents (matches the format button).
+        if (e.code === 'KeyF' && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            editor.format();
         }
     });
 

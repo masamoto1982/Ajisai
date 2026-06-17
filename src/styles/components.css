@@ -217,7 +217,15 @@
     color: var(--input-text);
 }
 
-#code-input:placeholder-shown ~ #clear-btn {
+#format-btn {
+    top: 0.5rem;
+    right: 2.25rem;
+    z-index: 2;
+    color: var(--input-text);
+}
+
+#code-input:placeholder-shown ~ #clear-btn,
+#code-input:placeholder-shown ~ #format-btn {
     display: none;
 }
 
