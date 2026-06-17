@@ -218,8 +218,8 @@
 }
 
 #format-btn {
-    top: 0.5rem;
-    right: 2.25rem;
+    bottom: 0.5rem;
+    right: 0.5rem;
     z-index: 2;
     color: var(--input-text);
 }
