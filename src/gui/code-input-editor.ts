@@ -131,23 +131,39 @@ const extractToken = (
 
 const INDENT_UNIT = '  ';
 const OPENING_BRACKETS: ReadonlySet<string> = new Set(['[', '{', '(']);
+const CLOSING_BRACKETS: ReadonlySet<string> = new Set([']', '}', ')']);
 
 const extractLeadingWhitespace = (line: string): string =>
     line.match(/^[ \t]*/)?.[0] ?? '';
 
-const lastSignificantChar = (line: string): string =>
-    line.replace(/\s+$/, '').slice(-1);
+// Drop single-quoted string literals so brackets written inside them (e.g.
+// '[ not code ]') do not influence the indentation depth.
+const stripStringLiterals = (line: string): string =>
+    line.replace(/'[^']*'/g, '');
+
+// Net number of opening brackets on the line that are not closed again on the
+// same line. Never drops below zero: a closing bracket without a matching open
+// on this line refers to an earlier line and must not pull the depth negative.
+const countUnclosedBrackets = (line: string): number => {
+    let depth = 0;
+    for (const ch of stripStringLiterals(line)) {
+        if (OPENING_BRACKETS.has(ch)) {
+            depth += 1;
+        } else if (CLOSING_BRACKETS.has(ch) && depth > 0) {
+            depth -= 1;
+        }
+    }
+    return depth;
+};
 
 // Auto-indent insertion for a newline: preserve the current line's leading
-// whitespace, and add one extra indent level when that line ends with an
-// opening bracket. `textBeforeCursor` is everything to the left of the caret.
+// whitespace, and add one indent level per still-open bracket on that line.
+// `textBeforeCursor` is everything to the left of the caret.
 export const computeAutoIndentInsertion = (textBeforeCursor: string): string => {
     const lineStart = textBeforeCursor.lastIndexOf('\n') + 1;
     const currentLine = textBeforeCursor.slice(lineStart);
     const baseIndent = extractLeadingWhitespace(currentLine);
-    const extraIndent = OPENING_BRACKETS.has(lastSignificantChar(currentLine))
-        ? INDENT_UNIT
-        : '';
+    const extraIndent = INDENT_UNIT.repeat(countUnclosedBrackets(currentLine));
     return `\n${baseIndent}${extraIndent}`;
 };
 

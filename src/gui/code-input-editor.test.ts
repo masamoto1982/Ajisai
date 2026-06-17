@@ -27,19 +27,19 @@ describe('computeAutoIndentInsertion', () => {
         expect(computeAutoIndentInsertion('first\n    second')).toBe('\n    ');
     });
 
-    test('adds one indent level after a trailing opening square bracket', () => {
+    test('adds one indent level for an unclosed square bracket', () => {
         expect(computeAutoIndentInsertion('[')).toBe('\n  ');
     });
 
-    test('adds one indent level after a trailing opening brace', () => {
+    test('adds one indent level for an unclosed brace', () => {
         expect(computeAutoIndentInsertion('{')).toBe('\n  ');
     });
 
-    test('adds one indent level after a trailing opening paren', () => {
+    test('adds one indent level for an unclosed paren', () => {
         expect(computeAutoIndentInsertion('(')).toBe('\n  ');
     });
 
-    test('ignores trailing whitespace when detecting an opening bracket', () => {
+    test('keeps depth for an unclosed bracket with content and trailing space', () => {
         expect(computeAutoIndentInsertion('  [   ')).toBe('\n    ');
     });
 
@@ -49,5 +49,32 @@ describe('computeAutoIndentInsertion', () => {
 
     test('combines existing indentation with the extra bracket level', () => {
         expect(computeAutoIndentInsertion('    {')).toBe('\n      ');
+    });
+
+    test('deepens by the net unclosed bracket count mid-line', () => {
+        // { still open, both [ ] pairs balanced -> one extra level.
+        expect(computeAutoIndentInsertion('{ [ 1 ] [ 2 ] +')).toBe('\n  ');
+    });
+
+    test('adds one level per still-open bracket', () => {
+        // { and [ both open -> two extra levels.
+        expect(computeAutoIndentInsertion('{ [ 1')).toBe('\n    ');
+    });
+
+    test('handles nested tensor opening brackets', () => {
+        expect(computeAutoIndentInsertion('[[ 1 2')).toBe('\n    ');
+    });
+
+    test('returns to zero extra indent when all brackets close', () => {
+        expect(computeAutoIndentInsertion('{ [ ] }')).toBe('\n');
+    });
+
+    test('ignores brackets inside single-quoted string literals', () => {
+        expect(computeAutoIndentInsertion("'[ not code'")).toBe('\n');
+    });
+
+    test('does not go negative on a leading closing bracket', () => {
+        // The ] closes an earlier line; the trailing [ leaves one open.
+        expect(computeAutoIndentInsertion('  ] [')).toBe('\n    ');
     });
 });
