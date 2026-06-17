@@ -232,15 +232,18 @@
 
 /* Rich placeholder: a keyboard-shortcut cheat sheet shown over the empty
    editor. A textarea placeholder cannot contain markup, so this table overlay
-   stands in for one. pointer-events are disabled so clicks fall through to the
-   textarea, and it is revealed only while the field shows its placeholder. */
+   stands in for one. It covers the whole editor and centres the table on both
+   axes so it never sits under the caret. pointer-events are disabled so clicks
+   fall through to the textarea, and it is revealed only while the field shows
+   its placeholder. */
 #shortcuts-hint {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    inset: 0;
+    box-sizing: border-box;
     padding: 0.75rem;
     display: none;
+    align-items: center;
+    justify-content: center;
     pointer-events: none;
     z-index: 1;
     overflow: hidden;
@@ -251,7 +254,7 @@
 }
 
 #code-input:placeholder-shown ~ #shortcuts-hint {
-    display: block;
+    display: flex;
 }
 
 #shortcuts-hint table {
