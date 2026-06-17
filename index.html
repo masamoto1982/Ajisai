@@ -86,13 +86,36 @@
                 </section>
                 <section id="input-panel" class="input-area" aria-label="Input" tabindex="0">
                     <h2 class="visually-hidden">Input</h2>
-                    <textarea id="code-input" aria-label="Ajisai code input" placeholder="Enter code here"></textarea>
+                    <textarea id="code-input" aria-label="Ajisai code input" placeholder=" "></textarea>
                     <button id="format-btn" type="button" class="inline-clear-btn" aria-label="Format code" title="Format (Shift+Alt+F)">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                             <path d="M4 6h16M4 12h10M4 18h13"/>
                         </svg>
                     </button>
                     <button id="clear-btn" type="button" class="inline-clear-btn" aria-label="Clear input">&times;</button>
+                    <div id="shortcuts-hint" aria-hidden="true">
+                        <table class="shortcuts-hint__table shortcuts-hint__desktop">
+                            <caption>Keyboard shortcuts</caption>
+                            <tbody>
+                                <tr><th scope="row">Shift + Enter</th><td>Run code</td></tr>
+                                <tr><th scope="row">Ctrl + Enter</th><td>Run one step</td></tr>
+                                <tr><th scope="row">Ctrl + Alt + Enter</th><td>Reset system</td></tr>
+                                <tr><th scope="row">Shift + Alt + F</th><td>Format code</td></tr>
+                                <tr><th scope="row">Ctrl + Space</th><td>Show word suggestions</td></tr>
+                                <tr><th scope="row">Esc</th><td>Abort execution</td></tr>
+                            </tbody>
+                        </table>
+                        <table class="shortcuts-hint__table shortcuts-hint__mobile">
+                            <caption>Gestures</caption>
+                            <tbody>
+                                <tr><th scope="row">Triple-tap editor</th><td>Run code</td></tr>
+                                <tr><th scope="row">Double-tap Stack</th><td>Stack → Output</td></tr>
+                                <tr><th scope="row">Double-tap Output</th><td>Output → Editor</td></tr>
+                                <tr><th scope="row">Tap words below</th><td>Insert into editor</td></tr>
+                                <tr><th scope="row">Tap suggestions</th><td>Autocomplete while typing</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
             </div>
 

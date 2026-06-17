@@ -9,25 +9,12 @@ const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
 const checkStackHighlightAll = (content: string): boolean => /(\s|^)\.\.(\s|$)/.test(content);
 const checkStackHighlightTop = (content: string): boolean => /(\s|^)\.(\s|$)/.test(content);
 
-const DESKTOP_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'Run → Shift+Enter',
-    'Step → Ctrl+Enter',
-    'Abort → Escape',
-    'Reset → Ctrl+Alt+Enter',
-    'Autocomplete → Ctrl+Space / Tab / ↑↓'
-].join('\n');
-
-const MOBILE_EDITOR_PLACEHOLDER = [
-    'Enter code here',
-    '',
-    'Run → Triple-tap the editor',
-    'Stack → Output → Double-tap Stack area',
-    'Output → Editor → Double-tap Output area',
-    'Input assist → Tap words below',
-    'Autocomplete → Tap suggestions while typing'
-].join('\n');
+// The editor's shortcut/gesture hints now live in an HTML table overlay
+// (#shortcuts-hint in index.html), which a textarea placeholder cannot hold.
+// The textarea keeps only a blank placeholder so the :placeholder-shown CSS
+// state — which reveals that overlay and hides the inline clear/format buttons
+// while the field is empty — keeps working.
+const EDITOR_PLACEHOLDER = ' ';
 
 export interface LayoutState {
     /** Last mode passed to `switchArea`. Shared between desktop and mobile; used to re-apply layout on resize and to drive mobile-only behaviors. */
@@ -204,9 +191,7 @@ export const updateHighlights = (elements: GUIElements, content: string): void =
     elements.stackDisplay.classList.remove('blink-top');
 };
 
-export const updateEditorPlaceholder = (elements: GUIElements, mobile: MobileHandler): void => {
+export const updateEditorPlaceholder = (elements: GUIElements, _mobile: MobileHandler): void => {
     if (!elements?.codeInput) return;
-    elements.codeInput.placeholder = mobile.isMobile()
-        ? MOBILE_EDITOR_PLACEHOLDER
-        : DESKTOP_EDITOR_PLACEHOLDER;
+    elements.codeInput.placeholder = EDITOR_PLACEHOLDER;
 };
