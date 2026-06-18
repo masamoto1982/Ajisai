@@ -34,7 +34,7 @@
     line-height: 1.2;
     padding: calc(0.25rem + var(--control-text-y-adjust)) 0.5rem calc(0.25rem - var(--control-text-y-adjust));
     border: var(--border-main);
-    border-radius: var(--radius-button);
+    border-radius: var(--radius-main);
     background: #fff;
     color: var(--color-text);
     width: 100%;
