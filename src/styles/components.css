@@ -143,6 +143,11 @@
     position: relative;
 }
 
+.input-area      { background: var(--area-color-input); }
+.output-area     { background: var(--area-color-output); }
+.stack-area      { background: var(--area-color-stack); }
+.dictionary-area { background: var(--area-color-dictionary); }
+
 
 @media (min-width: 769px) {
     body[data-active-area] .main-layout section {
@@ -172,7 +177,7 @@
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background-color: var(--color-symbol);
+    background-color: var(--area-color-input);
     color: var(--input-text);
     caret-color: var(--input-text);
     transition: background-color var(--transition-fast);
@@ -350,7 +355,7 @@
     border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
-    background-color: var(--color-symbol);
+    background-color: var(--area-color-dictionary);
     color: var(--input-text);
     caret-color: var(--input-text);
     min-width: 120px;
@@ -731,8 +736,14 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.75rem 0.75rem 0;
-        background: #fff;
+        background: var(--area-color-input);
+        transition: background var(--transition-fast);
     }
+
+    body[data-active-area="input"]      .area-selector-mobile { background: var(--area-color-input); }
+    body[data-active-area="output"]     .area-selector-mobile { background: var(--area-color-output); }
+    body[data-active-area="stack"]      .area-selector-mobile { background: var(--area-color-stack); }
+    body[data-active-area="dictionary"] .area-selector-mobile { background: var(--area-color-dictionary); }
 
     .area-selector-mobile select {
         flex: 1.618 1 0%;
