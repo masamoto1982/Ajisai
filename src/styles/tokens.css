@@ -54,47 +54,48 @@
     --breakpoint-tablet: 1024px;
 
     /* --- Brand / accent --------------------------------------------------- */
-    --color-primary: #6b5b95;
-    --color-secondary: #aba9b1;
+    /* Muted hydrangea purple: the single brand accent (links, focus rings). */
+    --color-primary:   oklch(48.7% 0.109 294);
+    --color-secondary: oklch(71%   0.013 307);
 
     /* --- Ink / text ------------------------------------------------------- */
-    --color-text: #202122;
-    --color-text-light: #54595d;
+    --color-text:       oklch(16%  0.003 247);   /* near-black warm ink    */
+    --color-text-light: oklch(38%  0.007 252);   /* secondary / captions   */
 
     /* --- Surfaces --------------------------------------------------------- */
-    --color-white: #ffffff;
-    --color-light: #f8f9fa;
-    --color-medium: #eaecf0;
+    --color-white:  oklch(100% 0     0);
+    --color-light:  oklch(97.5% 0.003 254);   /* hover fills, nav rail  */
+    --color-medium: oklch(94%   0.006 255);   /* inline-code bg, scrollbar */
 
     /* --- Border ----------------------------------------------------------- */
-    --color-border: #a2a9b1;
+    --color-border: oklch(70% 0.013 254);
     --border-width: 1px;
     --border-main: solid 1px var(--color-border);
 
-    /* Code-entry surface: leaf-water animated gradient (pale green ↔ pale aqua).
-       The static fallback sits at the midpoint hue for no-@property browsers. */
-    --color-symbol: oklch(91% 0.06 175);
-    --color-symbol-focus: oklch(93% 0.055 185);
+    /* Code-entry surface: a recessed "well" — faint cool gray, slightly
+       darker than the page white so the input reads as a depression. */
+    --color-symbol:       oklch(94% 0.004 255);
+    --color-symbol-focus: oklch(94% 0.004 255);
 
-    /* Dark ink for the light leaf-water surfaces. */
-    --input-text: var(--color-text);
+    /* Ink for inputs on the light symbol surface. */
+    --input-text:        var(--color-text);
     --input-placeholder: var(--color-text-light);
 
     /* --- Word-category semantics ----------------------------------------- */
-    --color-core: #e65100;
-    --color-dependency: #e69500;
-    --color-non-dependency: #009b68;
-    --color-stack: #990099;
+    --color-core:           oklch(54.5% 0.187 49);    /* orange  */
+    --color-dependency:     oklch(67.5% 0.162 73);    /* amber   */
+    --color-non-dependency: oklch(60.5% 0.152 158);   /* green   */
+    --color-stack:          oklch(43.5% 0.235 328);   /* magenta */
 
-    /* --- Hydrangea hue anchors (移ろい swatch references) ----------------- */
+    /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);
     --hue-violet:      oklch(90% 0.085 300);
     --hue-red-purple:  oklch(90% 0.085 325);
-    --hue-aqua:        oklch(90% 0.07 205);
-    --hue-pale-green:  oklch(91% 0.06 155);
+    --hue-aqua:        oklch(90% 0.07  205);
+    --hue-pale-green:  oklch(91% 0.06  155);
 
     /* --- Effects ---------------------------------------------------------- */
-    --shadow-popover: 0 2px 6px rgba(0, 0, 0, 0.15);
+    --shadow-popover: 0 2px 6px oklch(0% 0 0 / 0.15);
     --transition-fast: 0.15s ease;
 
     /* --- Semantic aliases ------------------------------------------------- */
@@ -103,12 +104,12 @@
     --text-link: var(--color-primary);
     --text-on-symbol: var(--input-text);
 
-    --surface-page: var(--color-white);
-    --surface-card: var(--color-white);
+    --surface-page:   var(--color-white);
+    --surface-card:   var(--color-white);
     --surface-subtle: var(--color-light);
-    --surface-fill: var(--color-medium);
-    --surface-code: var(--color-symbol);
+    --surface-fill:   var(--color-medium);
+    --surface-code:   var(--color-symbol);
 
     --border-color: var(--color-border);
-    --focus-ring: var(--color-primary);
+    --focus-ring:   var(--color-primary);
 }

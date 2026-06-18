@@ -172,16 +172,10 @@
     resize: none;
     flex: 1;
     line-height: 1.5;
-    background: linear-gradient(
-        to right in oklch,
-        oklch(var(--lf-l) 0.065 var(--lf-h-a)) 0%,
-        oklch(calc(var(--lf-l) + 1%) 0.065 var(--lf-h-b)) 100%
-    );
-    animation:
-        lf-leaf-water 240s ease-in-out infinite,
-        lf-light 170s ease-in-out infinite;
+    background-color: var(--color-symbol);
     color: var(--input-text);
     caret-color: var(--input-text);
+    transition: background-color var(--transition-fast);
 }
 
 #code-input:focus {
@@ -356,18 +350,12 @@
     border-radius: 0;
     font-size: 0.85rem;
     font-family: var(--font-stack-mono);
-    background: linear-gradient(
-        to right in oklch,
-        oklch(var(--lf-l) 0.065 var(--lf-h-a)) 0%,
-        oklch(calc(var(--lf-l) + 1%) 0.065 var(--lf-h-b)) 100%
-    );
-    animation:
-        lf-leaf-water 240s ease-in-out infinite,
-        lf-light 170s ease-in-out infinite;
+    background-color: var(--color-symbol);
     color: var(--input-text);
     caret-color: var(--input-text);
     min-width: 120px;
     max-width: 200px;
+    transition: background-color var(--transition-fast);
 }
 
 .vocabulary-search-input:focus {
