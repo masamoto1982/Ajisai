@@ -75,8 +75,8 @@
 
     /* Code-entry surface: a recessed "well" — faint cool gray, slightly
        darker than the page white so the input reads as a depression. */
-    --color-symbol:       oklch(94% 0.004 255);
-    --color-symbol-focus: oklch(94% 0.004 255);
+    --color-symbol:       oklch(97% 0.003 251);
+    --color-symbol-focus: oklch(97% 0.003 251);
 
     /* Ink for inputs on the light symbol surface. */
     --input-text:        var(--color-text);
