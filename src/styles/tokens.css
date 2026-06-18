@@ -1,36 +1,115 @@
 :root {
+    /* --- Families --------------------------------------------------------- */
     --font-stack-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     --font-stack-mono: "SF Mono", Consolas, "Liberation Mono", Monaco, monospace;
+    --font-sans: var(--font-stack-primary);
+    --font-mono: var(--font-stack-mono);
 
+    /* --- Type scale (rem) ------------------------------------------------- */
+    --text-2xs: 0.75rem;
+    --text-xs: 0.8rem;
+    --text-sm: 0.875rem;
+    --text-base: 0.95rem;
+    --text-md: 1.05rem;
+    --text-lg: 1.4rem;
+    --text-xl: 1.5rem;
+
+    /* --- Weights ---------------------------------------------------------- */
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* --- Line heights ----------------------------------------------------- */
+    --leading-tight: 1.2;
+    --leading-snug: 1.5;
+    --leading-body: 1.6;
+    --leading-prose: 1.7;
+
+    /* --- Tracking --------------------------------------------------------- */
+    --tracking-caps: 0.05em;
+
+    /* --- Spacing scale (rem) --------------------------------------------- */
+    --space-3xs: 0.125rem;
+    --space-2xs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+
+    /* --- Radii ------------------------------------------------------------ */
     --radius-main: 2px;
     --radius-button: 6px;
     --radius-word-button: 4px;
+    --radius-code: 3px;
+
+    /* --- Layout ----------------------------------------------------------- */
     --col-left-flex: 1;
     --col-right-flex: 1;
+    --ref-nav-width: 30%;
+    --golden: 1.618;
+    --breakpoint-mobile: 768px;
+    --breakpoint-tablet: 1024px;
 
+    /* --- Brand / accent --------------------------------------------------- */
     --color-primary: #6b5b95;
     --color-secondary: #aba9b1;
 
+    /* --- Ink / text ------------------------------------------------------- */
     --color-text: #202122;
     --color-text-light: #54595d;
 
-    --border-main: solid 1px #a2a9b1;
-
+    /* --- Surfaces --------------------------------------------------------- */
+    --color-white: #ffffff;
     --color-light: #f8f9fa;
     --color-medium: #eaecf0;
 
-    /* Symbol colour: Sun Microsystems purple (Pantone 2685 C). Used as the
-       background of the code editor and the dictionary search inputs. */
-    --color-symbol: #330072;
-    --color-symbol-focus: #43208a;
+    /* --- Border ----------------------------------------------------------- */
+    --color-border: #a2a9b1;
+    --border-width: 1px;
+    --border-main: solid 1px var(--color-border);
 
-    /* Text/placeholder for inputs painted with --color-symbol: kept light so
-       they stay readable on the deep purple background. */
+    /* Muted "symbol" plum-violet — code-entry surface background.
+       A calm, low-chroma deep tone painted behind the editor textarea
+       and dictionary search inputs, harmonising with the white UI. */
+    --color-symbol: #443c5e;
+    --color-symbol-focus: #534969;
+
+    /* Light text for inputs painted with --color-symbol. */
     --input-text: oklch(96% 0.015 305);
     --input-placeholder: oklch(82% 0.045 305);
 
-    --color-core: #E65100;
-    --color-dependency: #E69500;
-    --color-non-dependency: #009B68;
+    /* --- Word-category semantics ----------------------------------------- */
+    --color-core: #e65100;
+    --color-dependency: #e69500;
+    --color-non-dependency: #009b68;
     --color-stack: #990099;
+
+    /* --- Hydrangea hue anchors (移ろい swatch references) ----------------- */
+    --hue-blue-purple: oklch(90% 0.085 265);
+    --hue-violet:      oklch(90% 0.085 300);
+    --hue-red-purple:  oklch(90% 0.085 325);
+    --hue-aqua:        oklch(90% 0.07 205);
+    --hue-pale-green:  oklch(91% 0.06 155);
+
+    /* --- Effects ---------------------------------------------------------- */
+    --shadow-popover: 0 2px 6px rgba(0, 0, 0, 0.15);
+    --transition-fast: 0.15s ease;
+
+    /* --- Semantic aliases ------------------------------------------------- */
+    --text-body: var(--color-text);
+    --text-muted: var(--color-text-light);
+    --text-link: var(--color-primary);
+    --text-on-symbol: var(--input-text);
+
+    --surface-page: var(--color-white);
+    --surface-card: var(--color-white);
+    --surface-subtle: var(--color-light);
+    --surface-fill: var(--color-medium);
+    --surface-code: var(--color-symbol);
+
+    --border-color: var(--color-border);
+    --focus-ring: var(--color-primary);
 }
