@@ -70,26 +70,23 @@
         a:hover { color: var(--color-secondary); }
 
         /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
-           紫陽花らしい青紫・赤紫・淡緑・淡水色の範囲に収め、0% と 100% を
+           花の青紫・赤紫の範囲（hue 265–325）のみに収め、0% と 100% を
            同一にしてループ時の急な色変化を避ける。 */
         @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
-        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 215; }
+        @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 300; }
         @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
         @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
-        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.07; }
+        @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.085; }
 
-        @keyframes mv-hydrangea-hues {
-            0%, 100% { --mv-h-a: 265; --mv-h-b: 215; }
-            20% { --mv-h-a: 300; --mv-h-b: 255; }
-            35% { --mv-h-a: 325; --mv-h-b: 285; }
-            50% { --mv-h-a: 285; --mv-h-b: 245; }
-            70% { --mv-h-a: 205; --mv-h-b: 155; }
-            85% { --mv-h-a: 155; --mv-h-b: 205; }
+        /* 移ろい 花 — blue-purple ↔ red-purple (hue 265–325 only) */
+        @keyframes mv-flower-hues {
+            0%, 100% { --mv-h-a: 265; --mv-h-b: 300; }
+            33%      { --mv-h-a: 295; --mv-h-b: 325; }
+            66%      { --mv-h-a: 320; --mv-h-b: 280; }
         }
         @keyframes mv-chroma {
-            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.07; }
-            40% { --mv-c-a: 0.095; --mv-c-b: 0.08; }
-            60% { --mv-c-a: 0.06; --mv-c-b: 0.065; }
+            0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.085; }
+            50%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
         }
         @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
 
@@ -101,7 +98,7 @@
                 oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
             );
             animation:
-                mv-hydrangea-hues 260s ease-in-out infinite,
+                mv-flower-hues 260s ease-in-out infinite,
                 mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
         }

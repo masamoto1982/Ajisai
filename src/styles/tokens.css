@@ -71,15 +71,14 @@
     --border-width: 1px;
     --border-main: solid 1px var(--color-border);
 
-    /* Muted "symbol" plum-violet — code-entry surface background.
-       A calm, low-chroma deep tone painted behind the editor textarea
-       and dictionary search inputs, harmonising with the white UI. */
-    --color-symbol: #443c5e;
-    --color-symbol-focus: #534969;
+    /* Code-entry surface: leaf-water animated gradient (pale green ↔ pale aqua).
+       The static fallback sits at the midpoint hue for no-@property browsers. */
+    --color-symbol: oklch(91% 0.06 175);
+    --color-symbol-focus: oklch(93% 0.055 185);
 
-    /* Light text for inputs painted with --color-symbol. */
-    --input-text: oklch(96% 0.015 305);
-    --input-placeholder: oklch(82% 0.045 305);
+    /* Dark ink for the light leaf-water surfaces. */
+    --input-text: var(--color-text);
+    --input-placeholder: var(--color-text-light);
 
     /* --- Word-category semantics ----------------------------------------- */
     --color-core: #e65100;

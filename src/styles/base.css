@@ -91,12 +91,10 @@ select:focus-visible {
 }
 
 
-/* "移ろい": header and footer share a slowly shifting OKLCH gradient
- * constrained to hydrangea-like hues: blue-purple, red-purple, pale green,
- * and pale aqua. The two gradient endpoints are animated as a matched pair,
- * with nearby hues at every keyframe so the gradient interpolation never takes
- * a warm orange/yellow shortcut. The 100% keyframe exactly repeats 0%, keeping
- * the infinite loop from producing a visible colour jump. */
+/* ── 移ろい ① 花 — header / footer ─────────────────────────────────────────
+ * Blue-purple ↔ red-purple only: the colour of hydrangea flowers.
+ * Both endpoints stay in the 265–325 hue band so the blend never drifts
+ * into green or orange. The 100% keyframe matches 0% for a seamless loop. */
 @property --mv-h-a {
     syntax: "<number>";
     inherits: false;
@@ -106,7 +104,7 @@ select:focus-visible {
 @property --mv-h-b {
     syntax: "<number>";
     inherits: false;
-    initial-value: 215;
+    initial-value: 300;
 }
 
 @property --mv-l {
@@ -124,39 +122,24 @@ select:focus-visible {
 @property --mv-c-b {
     syntax: "<number>";
     inherits: false;
-    initial-value: 0.07;
+    initial-value: 0.085;
 }
 
-@keyframes mv-hydrangea-hues {
+@keyframes mv-flower-hues {
     0%,
     100% {
         --mv-h-a: 265;
-        --mv-h-b: 215;
+        --mv-h-b: 300;
     }
 
-    20% {
-        --mv-h-a: 300;
-        --mv-h-b: 255;
+    33% {
+        --mv-h-a: 295;
+        --mv-h-b: 325;
     }
 
-    35% {
-        --mv-h-a: 325;
-        --mv-h-b: 285;
-    }
-
-    50% {
-        --mv-h-a: 285;
-        --mv-h-b: 245;
-    }
-
-    70% {
-        --mv-h-a: 205;
-        --mv-h-b: 155;
-    }
-
-    85% {
-        --mv-h-a: 155;
-        --mv-h-b: 205;
+    66% {
+        --mv-h-a: 320;
+        --mv-h-b: 280;
     }
 }
 
@@ -164,17 +147,12 @@ select:focus-visible {
     0%,
     100% {
         --mv-c-a: 0.085;
-        --mv-c-b: 0.07;
+        --mv-c-b: 0.085;
     }
 
-    40% {
+    50% {
         --mv-c-a: 0.095;
-        --mv-c-b: 0.08;
-    }
-
-    60% {
-        --mv-c-a: 0.06;
-        --mv-c-b: 0.065;
+        --mv-c-b: 0.095;
     }
 }
 
@@ -193,16 +171,70 @@ footer,
         oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
     );
     animation:
-        mv-hydrangea-hues 260s ease-in-out infinite,
+        mv-flower-hues 260s ease-in-out infinite,
         mv-chroma 210s ease-in-out infinite,
         mv-light 170s ease-in-out infinite;
 }
+
+
+/* ── 移ろい ② 葉と水 — code editor / search input ──────────────────────────
+ * Pale green ↔ pale aqua: the colour of hydrangea leaves and water.
+ * Hues stay in the 145–215 band. High lightness keeps the surface readable
+ * with dark ink (--color-text). */
+@property --lf-h-a {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 155;
+}
+
+@property --lf-h-b {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 205;
+}
+
+@property --lf-l {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: 90%;
+}
+
+@keyframes lf-leaf-water {
+    0%,
+    100% {
+        --lf-h-a: 155;
+        --lf-h-b: 205;
+    }
+
+    40% {
+        --lf-h-a: 145;
+        --lf-h-b: 195;
+    }
+
+    70% {
+        --lf-h-a: 165;
+        --lf-h-b: 215;
+    }
+}
+
+@keyframes lf-light {
+    0%,
+    100% { --lf-l: 89%; }
+    50%  { --lf-l: 93%; }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
     header,
     footer,
     .utsuroi {
         animation: none;
+    }
+
+    #code-input,
+    .vocabulary-search-input {
+        animation: none;
+        background: oklch(91% 0.06 175);
     }
 }
 
