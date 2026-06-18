@@ -46,14 +46,6 @@
     --radius-code: 3px;
     --radius-panel: 8px;
 
-    /* --- Area identity tints (Input·Output·Stack·Dictionary) -------------- */
-    /* Very pale versions of the four 移ろい hues; used as section backgrounds
-       and input-well fills so each area has a distinct colour identity.       */
-    --area-color-input:      oklch(96.5% 0.025 265);   /* 青紫 blue-purple     */
-    --area-color-output:     oklch(96.5% 0.018 205);   /* 淡水色 pale aqua     */
-    --area-color-stack:      oklch(96.5% 0.025 325);   /* 赤紫 red-purple      */
-    --area-color-dictionary: oklch(96.5% 0.018 155);   /* 淡緑 pale green      */
-
     /* --- Layout ----------------------------------------------------------- */
     --col-left-flex: 1;
     --col-right-flex: 1;
