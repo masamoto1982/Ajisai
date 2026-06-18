@@ -29,16 +29,17 @@
 
             --radius-button: 6px;
 
-            --color-primary: #6b5b95;
-            --color-secondary: #aba9b1;
+            --color-primary:   oklch(48.7% 0.109 294);
+            --color-secondary: oklch(71%   0.013 307);
 
-            --color-text: #202122;
-            --color-text-light: #54595d;
+            --color-text:       oklch(16%  0.003 247);
+            --color-text-light: oklch(38%  0.007 252);
 
-            --border-main: solid 1px #a2a9b1;
+            --color-border: oklch(70% 0.013 254);
+            --border-main: solid 1px var(--color-border);
 
-            --color-light: #f8f9fa;
-            --color-medium: #eaecf0;
+            --color-light:  oklch(97.5% 0.003 254);
+            --color-medium: oklch(94%   0.006 255);
         }
 
         * {
@@ -54,7 +55,7 @@
 
         body {
             font-family: var(--font-stack-primary);
-            background: #fff;
+            background: oklch(100% 0 0);
             color: var(--color-text);
             line-height: 1.7;
             min-height: 100vh;
@@ -69,24 +70,24 @@
 
         a:hover { color: var(--color-secondary); }
 
-        /* "移ろい": header と footer が共有する、ゆっくり色相が巡るグラデーション。
-           花の青紫・赤紫の範囲（hue 265–325）のみに収め、0% と 100% を
-           同一にしてループ時の急な色変化を避ける。 */
+        /* 移ろい: 青紫・赤紫・淡水色・淡緑の四色が巡るグラデーション。
+           0% と 100% を同一にしてループ時の急な色変化を避ける。 */
         @property --mv-h-a { syntax: "<number>"; inherits: false; initial-value: 265; }
         @property --mv-h-b { syntax: "<number>"; inherits: false; initial-value: 300; }
         @property --mv-l { syntax: "<percentage>"; inherits: false; initial-value: 90%; }
         @property --mv-c-a { syntax: "<number>"; inherits: false; initial-value: 0.085; }
         @property --mv-c-b { syntax: "<number>"; inherits: false; initial-value: 0.085; }
 
-        /* 移ろい 花 — blue-purple ↔ red-purple (hue 265–325 only) */
-        @keyframes mv-flower-hues {
-            0%, 100% { --mv-h-a: 265; --mv-h-b: 300; }
-            33%      { --mv-h-a: 295; --mv-h-b: 325; }
-            66%      { --mv-h-a: 320; --mv-h-b: 280; }
+        @keyframes mv-hydrangea-hues {
+            0%,  100% { --mv-h-a: 265; --mv-h-b: 300; }
+            25%       { --mv-h-a: 305; --mv-h-b: 325; }
+            50%       { --mv-h-a: 195; --mv-h-b: 225; }
+            75%       { --mv-h-a: 150; --mv-h-b: 178; }
         }
         @keyframes mv-chroma {
             0%, 100% { --mv-c-a: 0.085; --mv-c-b: 0.085; }
-            50%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
+            40%      { --mv-c-a: 0.095; --mv-c-b: 0.095; }
+            65%      { --mv-c-a: 0.065; --mv-c-b: 0.065; }
         }
         @keyframes mv-light { 0%, 100% { --mv-l: 90%; } 50% { --mv-l: 93%; } }
 
@@ -98,7 +99,7 @@
                 oklch(calc(var(--mv-l) + 1%) var(--mv-c-b) var(--mv-h-b)) 100%
             );
             animation:
-                mv-flower-hues 260s ease-in-out infinite,
+                mv-hydrangea-hues 260s ease-in-out infinite,
                 mv-chroma 210s ease-in-out infinite,
                 mv-light 170s ease-in-out infinite;
         }
