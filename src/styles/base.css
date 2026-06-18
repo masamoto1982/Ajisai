@@ -249,8 +249,14 @@ header h1 a {
 }
 
 .version {
-    font-size: 0.875rem;
+    display: inline-block;
+    font-size: 0.75rem;
     color: var(--color-text-light);
+    background: oklch(96% 0.022 297);
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-button);
+    padding: 0.125rem 0.5rem;
+    line-height: 1.5;
 }
 
 
