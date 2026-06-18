@@ -44,6 +44,7 @@
     --radius-button: 6px;
     --radius-word-button: 4px;
     --radius-code: 3px;
+    --radius-panel: 8px;
 
     /* --- Layout ----------------------------------------------------------- */
     --col-left-flex: 1;
@@ -55,20 +56,20 @@
 
     /* --- Brand / accent --------------------------------------------------- */
     /* Muted hydrangea purple: the single brand accent (links, focus rings). */
-    --color-primary:   oklch(48.7% 0.109 294);
-    --color-secondary: oklch(71%   0.013 307);
+    --color-primary:   oklch(51.1% 0.091 295.7);
+    --color-secondary: oklch(73.9% 0.012 297.5);
 
     /* --- Ink / text ------------------------------------------------------- */
-    --color-text:       oklch(16%  0.003 247);   /* near-black warm ink    */
-    --color-text-light: oklch(38%  0.007 252);   /* secondary / captions   */
+    --color-text:       oklch(24.7% 0.002 247.9);   /* near-black warm ink    */
+    --color-text-light: oklch(46.1% 0.009 241.8);   /* secondary / captions   */
 
     /* --- Surfaces --------------------------------------------------------- */
     --color-white:  oklch(100% 0     0);
-    --color-light:  oklch(97.5% 0.003 254);   /* hover fills, nav rail  */
-    --color-medium: oklch(94%   0.006 255);   /* inline-code bg, scrollbar */
+    --color-light:  oklch(98.2% 0.002 247.8);   /* hover fills, nav rail  */
+    --color-medium: oklch(94.3% 0.006 264.5);   /* inline-code bg, scrollbar */
 
     /* --- Border ----------------------------------------------------------- */
-    --color-border: oklch(70% 0.013 254);
+    --color-border: oklch(73.2% 0.014 251.6);
     --border-width: 1px;
     --border-main: solid 1px var(--color-border);
 
@@ -82,10 +83,11 @@
     --input-placeholder: var(--color-text-light);
 
     /* --- Word-category semantics ----------------------------------------- */
-    --color-core:           oklch(54.5% 0.187 49);    /* orange  */
-    --color-dependency:     oklch(67.5% 0.162 73);    /* amber   */
-    --color-non-dependency: oklch(60.5% 0.152 158);   /* green   */
-    --color-stack:          oklch(43.5% 0.235 328);   /* magenta */
+    /* Precise OKLCH equivalents of the original CVD-safe hex palette.       */
+    --color-core:           oklch(63.1% 0.197 40.3);    /* #e65100 orange  */
+    --color-dependency:     oklch(73.4% 0.158 71.0);    /* #e69500 amber   */
+    --color-non-dependency: oklch(60.9% 0.135 161.2);   /* #009b68 green   */
+    --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
 
     /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);
