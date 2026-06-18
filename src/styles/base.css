@@ -185,7 +185,8 @@ select:focus-visible {
 }
 
 header,
-footer {
+footer,
+.utsuroi {
     background: linear-gradient(
         to right in oklch,
         oklch(var(--mv-l) var(--mv-c-a) var(--mv-h-a)) 0%,
@@ -199,7 +200,8 @@ footer {
 
 @media (prefers-reduced-motion: reduce) {
     header,
-    footer {
+    footer,
+    .utsuroi {
         animation: none;
     }
 }
