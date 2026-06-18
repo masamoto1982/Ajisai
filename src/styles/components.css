@@ -824,3 +824,244 @@
         padding: 0.75rem 0.75rem 0.75rem 0.375rem;
     }
 }
+
+/* Accessibility refinements layered on top of compact Ajisai components. */
+.area-selector select,
+.dictionary-sheet-select,
+.sheet-selector-native-trigger,
+.vocabulary-search-input,
+#code-input {
+    min-height: var(--control-min-size);
+}
+
+.area-selector select:focus-visible,
+.dictionary-sheet-select:focus-visible,
+.sheet-selector-trigger:focus-visible,
+.vocabulary-search-input:focus-visible,
+#code-input:focus-visible,
+.inline-clear-btn:focus-visible,
+.editor-suggestion-item:focus-visible,
+.context-menu button:focus-visible,
+.sheet-selector-option:focus-visible,
+.word-button:focus-visible,
+.stack-latex-toggle:focus-within {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-shadow);
+}
+
+#code-input:focus-visible,
+.vocabulary-search-input:focus-visible {
+    outline-offset: 2px;
+}
+
+.area-selector select:focus,
+.dictionary-sheet-select:focus,
+.dictionary-sheet-select:focus-within,
+.sheet-selector:focus-within .sheet-selector-native-trigger {
+    background: var(--color-light);
+}
+
+.sheet-selector:focus-within .sheet-selector-native-trigger {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-shadow);
+}
+
+.inline-clear-btn {
+    min-width: var(--control-min-size);
+    min-height: var(--control-min-size);
+    color: var(--color-text);
+    opacity: 1;
+    border: 1px solid transparent;
+    border-radius: var(--radius-button);
+}
+
+.inline-clear-btn:hover,
+.inline-clear-btn:focus-visible {
+    background: var(--surface-subtle);
+    border-color: var(--border-color);
+}
+
+.btn {
+    min-height: var(--control-min-size);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn:focus-visible {
+    border-color: var(--color-border-strong);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"],
+.context-menu button:disabled {
+    color: var(--disabled-text);
+    background: var(--disabled-surface);
+    border-color: var(--disabled-border);
+    cursor: not-allowed;
+}
+
+.editor-suggestions,
+.context-menu,
+.sheet-selector-panel {
+    border: var(--border-main);
+    box-shadow: var(--shadow-popover);
+}
+
+.editor-suggestion-item:hover,
+.editor-suggestion-item:focus-visible,
+.context-menu button:hover:not(:disabled),
+.context-menu button:focus-visible:not(:disabled),
+.sheet-selector-option:hover,
+.sheet-selector-option:focus-visible {
+    background: var(--surface-subtle);
+    color: var(--color-text);
+}
+
+.word-button {
+    min-height: var(--control-min-size);
+    min-width: var(--control-min-size);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.word-button:hover,
+.word-button:focus-visible {
+    background: var(--surface-subtle);
+}
+
+.word-button.core::before,
+.word-button.module::before {
+    content: "●";
+    margin-inline-end: 0.25em;
+    font-size: 0.72em;
+}
+
+.word-button.dependency::before {
+    content: "↳";
+    margin-inline-end: 0.25em;
+    font-weight: var(--weight-bold);
+}
+
+.word-button.non-dependency::before {
+    content: "◇";
+    margin-inline-end: 0.25em;
+    font-size: 0.78em;
+}
+
+.word-button.is-inactive,
+.sheet-selector-option.is-inactive {
+    opacity: 1;
+    color: var(--disabled-text);
+    border-color: var(--disabled-border);
+    background-color: var(--disabled-surface);
+    background-image: var(--inactive-pattern);
+    text-decoration: line-through;
+    text-decoration-thickness: 0.08em;
+    text-decoration-color: var(--disabled-border);
+}
+
+.sheet-selector-option.is-inactive::before {
+    content: "inactive ";
+    font-family: var(--font-stack-primary);
+    font-size: 0.72em;
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+}
+
+.sheet-selector-option.is-selected {
+    border-left: 0.25rem solid var(--color-primary);
+    padding-left: 0.5rem;
+}
+
+.stack-latex-toggle {
+    min-height: var(--control-min-size);
+    color: var(--text-muted);
+}
+
+.stack-latex-toggle input {
+    min-width: 1.25rem;
+    min-height: 1.25rem;
+}
+
+.display-area,
+.state-display,
+.words-display,
+#output-display,
+#stack-display {
+    line-height: var(--leading-body);
+}
+
+#stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
+#stack-display.blink-all .stack-item .stack-node[data-depth="1"],
+#stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
+#stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
+    background-color: var(--surface-fill);
+    outline: 1px solid var(--color-border-strong);
+}
+
+@media (pointer: coarse) {
+    .inline-clear-btn,
+    .word-button,
+    .sheet-selector-option,
+    .editor-suggestion-item,
+    .context-menu button {
+        min-height: var(--control-min-touch-size);
+    }
+}
+
+@media (prefers-contrast: more) {
+    .word-button,
+    .btn,
+    .area-selector select,
+    .dictionary-sheet-select,
+    .sheet-selector-native-trigger,
+    .vocabulary-search-input,
+    #code-input,
+    .editor-suggestions,
+    .context-menu,
+    .sheet-selector-panel {
+        border-color: var(--color-border-strong);
+    }
+
+    .word-button.is-inactive,
+    .sheet-selector-option.is-inactive {
+        color: var(--color-text);
+        border-style: dashed;
+    }
+}
+
+@media (forced-colors: active) {
+    .word-button,
+    .word-button.core,
+    .word-button.module,
+    .word-button.dependency,
+    .word-button.non-dependency,
+    .stack-item,
+    .stack-node-vector {
+        color: ButtonText;
+        border-color: ButtonText;
+    }
+
+    .word-button.is-inactive,
+    .sheet-selector-option.is-inactive {
+        color: GrayText;
+        border-color: GrayText;
+        background: Canvas;
+    }
+
+    .sheet-selector:focus-within .sheet-selector-native-trigger,
+    .area-selector select:focus-visible,
+    .dictionary-sheet-select:focus-visible,
+    .sheet-selector-trigger:focus-visible,
+    .vocabulary-search-input:focus-visible,
+    #code-input:focus-visible,
+    .inline-clear-btn:focus-visible,
+    .editor-suggestion-item:focus-visible,
+    .context-menu button:focus-visible,
+    .sheet-selector-option:focus-visible,
+    .word-button:focus-visible,
+    .stack-latex-toggle:focus-within {
+        outline: 3px solid Highlight;
+        box-shadow: none;
+    }
+}

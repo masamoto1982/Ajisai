@@ -55,12 +55,14 @@
 
     /* --- Brand / accent --------------------------------------------------- */
     /* Muted hydrangea purple: the single brand accent (links, focus rings). */
-    --color-primary:   oklch(48.7% 0.109 294);
-    --color-secondary: oklch(71%   0.013 307);
+    --color-primary:   oklch(42% 0.12 294);
+    --color-primary-hover: oklch(34% 0.13 294);
+    --color-secondary: oklch(43% 0.035 307);
 
     /* --- Ink / text ------------------------------------------------------- */
     --color-text:       oklch(16%  0.003 247);   /* near-black warm ink    */
-    --color-text-light: oklch(38%  0.007 252);   /* secondary / captions   */
+    --color-text-light: oklch(34%  0.012 252);   /* secondary / captions   */
+    --color-text-disabled: oklch(45% 0.006 252);
 
     /* --- Surfaces --------------------------------------------------------- */
     --color-white:  oklch(100% 0     0);
@@ -68,7 +70,8 @@
     --color-medium: oklch(94%   0.006 255);   /* inline-code bg, scrollbar */
 
     /* --- Border ----------------------------------------------------------- */
-    --color-border: oklch(70% 0.013 254);
+    --color-border: oklch(62% 0.016 254);
+    --color-border-strong: oklch(44% 0.018 254);
     --border-width: 1px;
     --border-main: solid 1px var(--color-border);
 
@@ -82,10 +85,13 @@
     --input-placeholder: var(--color-text-light);
 
     /* --- Word-category semantics ----------------------------------------- */
-    --color-core:           oklch(54.5% 0.187 49);    /* orange  */
-    --color-dependency:     oklch(67.5% 0.162 73);    /* amber   */
-    --color-non-dependency: oklch(60.5% 0.152 158);   /* green   */
-    --color-stack:          oklch(43.5% 0.235 328);   /* magenta */
+    --color-core:           oklch(42% 0.15 49);    /* orange-brown, readable on white */
+    --color-dependency:     oklch(40% 0.11 73);    /* amber-brown, readable on white */
+    --color-non-dependency: oklch(38% 0.12 158);   /* green-teal, readable on white */
+    --color-stack:          oklch(40% 0.18 328);   /* magenta, readable on white */
+    --color-status-warning: oklch(40% 0.11 73);
+    --color-status-error:   oklch(38% 0.16 28);
+    --color-status-success: oklch(36% 0.12 158);
 
     /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);
@@ -97,6 +103,22 @@
     /* --- Effects ---------------------------------------------------------- */
     --shadow-popover: 0 2px 6px oklch(0% 0 0 / 0.15);
     --transition-fast: 0.15s ease;
+
+    /* --- Accessible controls / states ------------------------------------ */
+    --focus-ring-color: var(--color-primary);
+    --focus-ring-inner: var(--surface-page);
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 3px;
+    --focus-ring-shadow: 0 0 0 2px var(--focus-ring-inner);
+    --control-min-size: 2rem;
+    --control-min-touch-size: 2.75rem;
+    --disabled-text: var(--color-text-disabled);
+    --disabled-border: oklch(58% 0.006 252);
+    --disabled-surface: oklch(96% 0.003 254);
+    --inactive-pattern: repeating-linear-gradient(
+        45deg, transparent, transparent 5px,
+        oklch(0% 0 0 / 0.055) 5px, oklch(0% 0 0 / 0.055) 10px
+    );
 
     /* --- Semantic aliases ------------------------------------------------- */
     --text-body: var(--color-text);
@@ -111,5 +133,17 @@
     --surface-code:   var(--color-symbol);
 
     --border-color: var(--color-border);
-    --focus-ring:   var(--color-primary);
+    --focus-ring:   var(--focus-ring-color);
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --color-primary: oklch(30% 0.14 294);
+        --color-text-light: oklch(24% 0.012 252);
+        --color-border: oklch(34% 0.018 254);
+        --color-border-strong: oklch(20% 0.018 254);
+        --focus-ring-width: 4px;
+        --disabled-text: oklch(32% 0.006 252);
+        --disabled-border: oklch(36% 0.006 252);
+    }
 }

@@ -379,3 +379,200 @@ footer a:hover {
         z-index: 100;
     }
 }
+
+/* Accessibility foundation: visible keyboard focus, readable links, OS contrast/motion settings. */
+a {
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.18em;
+    transition: color var(--transition-fast), text-decoration-thickness var(--transition-fast), text-underline-offset var(--transition-fast);
+}
+
+a:hover,
+a:focus-visible {
+    color: var(--color-primary-hover);
+    text-decoration-thickness: 0.14em;
+    text-underline-offset: 0.26em;
+}
+
+a:visited {
+    text-decoration-style: dotted;
+}
+
+:focus {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+}
+
+:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--focus-ring-shadow);
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea,
+summary,
+.btn {
+    min-height: var(--control-min-size);
+}
+
+button,
+[role="button"],
+summary,
+.btn {
+    min-width: var(--control-min-size);
+}
+
+button:disabled,
+[aria-disabled="true"],
+input:disabled,
+select:disabled,
+textarea:disabled {
+    color: var(--disabled-text);
+    border-color: var(--disabled-border);
+    background-color: var(--disabled-surface);
+    cursor: not-allowed;
+}
+
+main,
+section,
+.display-area,
+.state-display,
+.words-display {
+    line-height: var(--leading-body);
+}
+
+code,
+pre,
+kbd,
+samp {
+    color: var(--text-on-symbol);
+    background-color: var(--surface-code);
+}
+
+@media (pointer: coarse) {
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea,
+    summary,
+    .btn,
+    .word-button,
+    .inline-clear-btn,
+    .sheet-selector-option {
+        min-height: var(--control-min-touch-size);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html:focus-within {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (prefers-contrast: more) {
+    body {
+        background: var(--surface-page);
+        color: var(--text-body);
+    }
+
+    header,
+    footer,
+    .display-area,
+    .state-display,
+    .words-display,
+    .btn {
+        border-color: var(--color-border-strong);
+    }
+
+    a {
+        text-decoration-thickness: 0.12em;
+    }
+}
+
+@media (forced-colors: active) {
+    :root {
+        --color-text: CanvasText;
+        --color-text-light: CanvasText;
+        --color-primary: LinkText;
+        --color-primary-hover: Highlight;
+        --color-border: CanvasText;
+        --focus-ring-color: Highlight;
+        --focus-ring-inner: Canvas;
+        --surface-page: Canvas;
+        --surface-card: Canvas;
+        --surface-subtle: Canvas;
+        --surface-fill: Canvas;
+        --surface-code: Canvas;
+    }
+
+    body,
+    header,
+    footer,
+    .display-area,
+    .state-display,
+    .words-display,
+    .context-menu,
+    .sheet-selector-panel {
+        background: Canvas;
+        color: CanvasText;
+    }
+
+    :focus-visible,
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible,
+    summary:focus-visible,
+    [role="button"]:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 3px solid Highlight;
+        box-shadow: none;
+    }
+
+    button,
+    .btn,
+    input,
+    select,
+    textarea {
+        border: 1px solid ButtonText;
+        color: ButtonText;
+    }
+
+    button:disabled,
+    [aria-disabled="true"],
+    input:disabled,
+    select:disabled,
+    textarea:disabled {
+        color: GrayText;
+        border-color: GrayText;
+    }
+}
