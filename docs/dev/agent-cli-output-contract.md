@@ -54,8 +54,8 @@ does not prove it will.
 | `schemaVersion` | number | Version of this envelope. Currently `1`. |
 | `status` | string | `"ok"` (exit 0) or `"error"` (exit 1). |
 | `stack` | array | Final data stack, bottom to top, as value protocol nodes (§3). Empty for `check`. |
-| `stackDisplay` | array of string | The same stack as display strings (the text the GUI / `PRINT` render), bottom to top. Convenience view of `stack`; the structured nodes stay authoritative. |
-| `output` | array of string | Ordered `PRINT` payloads produced during the run. Empty for `check`. |
+| `stackDisplay` | array of string | The same stack as Stack-projection display strings (the text the GUI's Stack area renders), bottom to top. Strings keep their `'...'` quotes here. Convenience view of `stack`; the structured nodes stay authoritative. |
+| `output` | array of string | Ordered `PRINT` payloads produced during the run, as rendered at the output boundary (a `Text`-role value is emitted without its display quotes, so `'TEST'` appears as `TEST`). Empty for `check`. |
 | `message` | string \| null | The raw error display string, when `status` is `"error"`. |
 | `diagnosis` | object \| null | Structured diagnosis of the failure (§4). Null when `status` is `"ok"`. |
 | `errorFlowTrace` | array | Ordered observation log of word errors **and NIL productions** (§6). May be non-empty even when `status` is `"ok"`: a division by zero, for example, bubbles to NIL (SPEC Bubble Rule) and the run succeeds, but the projection is traced here with a full diagnosis. |
