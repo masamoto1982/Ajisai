@@ -1862,6 +1862,7 @@ COND</code></td>
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
                     <p><code>PRINT</code> writes the top stack value to the output area. Like any word it consumes its operand by default; with <code>KEEP</code> (<code>,,</code>) the value also stays on the stack. The Playground always shows the final stack, so <code>PRINT</code> is for the output channel, not for seeing results.</p>
+                    <p>A string is shown on the stack wrapped in single quotes (<code>'TEST'</code>) so you can tell it apart from a numeric vector. Those quotes belong to the Stack display, not to the value: <code>PRINT</code> writes the raw text, so <code>'TEST'</code> prints as <code>TEST</code>. Quote characters that are part of the text are kept (a string whose content is <code>T'ES'T</code> prints as <code>T'ES'T</code>). Numbers and booleans print exactly as they appear on the stack.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1892,6 +1893,25 @@ COND</code></td>
                                     <td><code>42 PRINT</code></td>
                                     <td>—</td>
                                     <td class="notes">Default mode consumes the operand: the stack ends empty and the value appears only in the output area.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected output</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'TEST' PRINT</code></td>
+                                    <td><code>TEST</code></td>
+                                    <td class="notes">The stack shows the string as <code>'TEST'</code>; the output drops the display quotes and writes the raw text.</td>
                                 </tr>
                             </tbody>
                         </table>

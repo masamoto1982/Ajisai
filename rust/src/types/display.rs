@@ -348,52 +348,59 @@ fn format_exact_real(er: &ExactReal) -> String {
     }
 }
 
+/// Render a value for an **output** boundary (`PRINT`, SPEC §7.9).
+///
+/// The stack projection shows a Text-role value wrapped in `'...'` so the
+/// reader can see that it is a string and not a bare numeric vector. Those
+/// quotes are a display affordance of the Stack surface only: at an output
+/// boundary the surrounding quotes are dropped and the raw character content
+/// is emitted (`'TEST'` on the stack is printed as `TEST`). Quote characters
+/// that are part of the content survive unchanged (`'T'ES'T'` prints as
+/// `T'ES'T`). Non-text values render exactly as they do on the stack.
+pub fn format_for_output(value: &Value) -> String {
+    if value.is_unknown() {
+        return "UNKNOWN".to_string();
+    }
+    if value.hint == Interpretation::Text {
+        return format_text_content(&value.data);
+    }
+    format_with_hint(value, value.hint)
+}
+
 fn format_as_string(data: &ValueData) -> String {
     match data {
-        ValueData::Nil => "''".to_string(),
-        ValueData::Boolean(b) => format!("'{}'", if *b { "TRUE" } else { "FALSE" }),
-        ValueData::ExactScalar(er) => format!("'{}'", format_exact_real(er)),
+        // These variants are not character data; they carry no surrounding
+        // quotes in the stack projection either, so reuse their bare form.
+        ValueData::CodeBlock(tokens) => format_code_block(tokens),
+        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
+        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
+        _ => format!("'{}'", format_text_content(data)),
+    }
+}
+
+/// Decode the raw character content of a Text-role value, without the
+/// surrounding display quotes. This is the body shared by `format_as_string`
+/// (which wraps it in `'...'` for the stack projection) and
+/// `format_for_output` (which emits it bare for `PRINT`).
+fn format_text_content(data: &ValueData) -> String {
+    match data {
+        ValueData::Nil => String::new(),
+        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+        ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Scalar(f) => {
             if let Some(n) = f.to_i64() {
                 if n >= 0 && n <= 0x10FFFF {
                     if let Some(c) = char::from_u32(n as u32) {
-                        return format!("'{}'", c);
+                        return c.to_string();
                     }
                 }
             }
-            format!("'{}'", format_fraction(f))
+            format_fraction(f)
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-            if v.is_empty() {
-                return "''".to_string();
-            }
-
-            let chars: String = v
-                .iter()
-                .filter_map(|child| {
-                    if let ValueData::Scalar(f) = &child.data {
-                        f.to_i64().and_then(|n| {
-                            if n >= 0 && n <= 0x10FFFF {
-                                char::from_u32(n as u32)
-                            } else {
-                                None
-                            }
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            format!("'{}'", chars)
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                return "''".to_string();
-            }
-            let chars: String = data
-                .iter()
-                .filter_map(|f| {
+        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v
+            .iter()
+            .filter_map(|child| {
+                if let ValueData::Scalar(f) = &child.data {
                     f.to_i64().and_then(|n| {
                         if n >= 0 && n <= 0x10FFFF {
                             char::from_u32(n as u32)
@@ -401,10 +408,23 @@ fn format_as_string(data: &ValueData) -> String {
                             None
                         }
                     })
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        ValueData::Tensor { data, .. } => data
+            .iter()
+            .filter_map(|f| {
+                f.to_i64().and_then(|n| {
+                    if n >= 0 && n <= 0x10FFFF {
+                        char::from_u32(n as u32)
+                    } else {
+                        None
+                    }
                 })
-                .collect();
-            format!("'{}'", chars)
-        }
+            })
+            .collect(),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),

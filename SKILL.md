@@ -100,7 +100,7 @@ to decide; AND/OR/NOT follow Kleene three-valued logic over UNKNOWN.
 - Define a user word: { body } then name, then DEF
   `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)
-  `[ 4 ] { [ 0 ] >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `'non-negative'`; stack: `[ 4/1 ]`
+  `[ 4 ] { [ 0 ] >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `[ 4/1 ]`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
