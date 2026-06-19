@@ -692,7 +692,7 @@
 
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
-    background-color: #DDDDDD;
+    background-color: var(--color-symbol);
     font-weight: bold;
     padding: 2px 5px;
 }
@@ -700,7 +700,7 @@
 
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: #DDDDDD;
+    background-color: var(--color-symbol);
     padding: 2px 5px;
 }
 
