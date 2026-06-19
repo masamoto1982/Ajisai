@@ -75,4 +75,25 @@ mod tests {
         // The value still renders with its Stack-projection quotes.
         assert_eq!(interp.stack.last().unwrap().to_string(), "'TEST'");
     }
+
+    /// A string nested inside a collection stays a string: printing a vector
+    /// of strings shows them quoted, never as their codepoint fractions. Only
+    /// the outer `'...'` of a top-level string is a display affordance.
+    #[tokio::test]
+    async fn test_print_vector_of_strings_keeps_them_as_strings() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'AB' 'CD' ] PRINT").await.unwrap();
+        assert_eq!(interp.collect_output().trim(), "[ 'AB' 'CD' ]");
+    }
+
+    /// A mixed collection renders each element in its own role: strings
+    /// quoted, numbers as fractions.
+    #[tokio::test]
+    async fn test_print_mixed_vector_renders_each_role() {
+        let mut interp = Interpreter::new();
+        interp.execute("[ 'mix' 42 ] ,, PRINT").await.unwrap();
+        assert_eq!(interp.collect_output().trim(), "[ 'mix' 42/1 ]");
+        // The Stack projection shows the same structure.
+        assert_eq!(interp.stack.last().unwrap().to_string(), "[ 'mix' 42/1 ]");
+    }
 }
