@@ -80,7 +80,7 @@
 
     /* Ink for inputs on the light symbol surface. */
     --input-text:        var(--color-text);
-    --input-placeholder: var(--color-text-light);
+    --input-placeholder: oklch(80% 0.07 55);
 
     /* --- Word-category semantics ----------------------------------------- */
     /* Precise OKLCH equivalents of the original CVD-safe hex palette.       */
