@@ -226,7 +226,7 @@ program (then the short name works), or can be called fully qualified.
 | `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
 | `COUNT` | higher-order | Count the elements that satisfy the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } COUNT` |
 | `SCAN` | higher-order | Return a vector of intermediate fold accumulators. — e.g. `[ 1 2 3 ] [ 0 ] { + } SCAN` |
-| `PRINT` | io | Output a value to the display. — e.g. `42 PRINT` |
+| `PRINT` | io | Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack. — e.g. `42 PRINT` |
 | `PRECOMPUTE` | Control / Staging | Definition-time staging marker (not a macro). — e.g. `{ ... } PRECOMPUTE` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `'WORD' DEL` |
