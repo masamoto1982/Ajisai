@@ -1522,7 +1522,7 @@ COND</code></td>
 
                 <section id="strings" class="ref-page">
                     <h2>Strings</h2>
-                    <p>A string is quoted with <code>'</code> and displays in quotes. Strings convert to and from numbers and characters with the cast words.</p>
+                    <p>A string is quoted with <code>'</code> and shows in quotes on the stack, so you can tell it apart from a numeric vector. Those quotes are a display affordance, not part of the value: <code>PRINT</code> writes the raw text (<code>'TEST'</code> prints as <code>TEST</code> — see <a href="#output">Output</a>), while a string nested in a collection keeps its quotes (<code>[ 'AB' 'CD' ]</code> stays <code>[ 'AB' 'CD' ]</code>). Strings convert to and from numbers and characters with the cast words.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">

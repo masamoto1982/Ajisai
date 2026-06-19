@@ -1088,8 +1088,8 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
         executor_key: Some(BuiltinExecutorKey::Print),
-        summary: "Output a value to the display.",
-        role: "Io primitive: Output a value to the display.",
+        summary: "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        role: "Io primitive: output the top stack value at the output boundary, where a string is emitted as its raw character content (the stack's surrounding quotes are a display affordance only).",
 
         stack_effect: "[ x ] -> [ x ]",
         stability: "experimental",
