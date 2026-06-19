@@ -221,6 +221,11 @@ const renderMathValueNode = (item: Value): HTMLElement | null => {
     if (tex === null) return null;
     const node = document.createElement('span');
     node.className = 'stack-node stack-node-math';
+    // Tag the top-level node so the operation-target highlight selectors
+    // (`.stack-node[data-depth="1"]`) match in LaTeX view exactly as they do
+    // for the canonical rendering — keeping the grey background that shows
+    // whether the target is the Stack top or the whole Stack.
+    node.dataset.depth = '1';
     // Trusted markup: KaTeX output for TeX generated from the structured
     // value by valueToLatex, never from user-supplied text.
     node.innerHTML = katex.renderToString(tex, { throwOnError: false });
