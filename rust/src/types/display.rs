@@ -219,7 +219,18 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
 
             let inner: Vec<String> = v
                 .iter()
-                .map(|child| format_value_recursive(&child.data, depth + 1))
+                .map(|child| {
+                    // A nested element keeps its own role: a Text-role child
+                    // renders as a quoted string (`'AB'`) rather than its bare
+                    // codepoint fractions, so strings stay recognizable as
+                    // strings inside a collection (SPEC §12.2). Numbers,
+                    // booleans, and deeper vectors are unchanged.
+                    if child.hint == Interpretation::Text {
+                        format_as_string(&child.data)
+                    } else {
+                        format_value_recursive(&child.data, depth + 1)
+                    }
+                })
                 .collect();
 
             format!("{} {} {}", open, inner.join(" "), close)
