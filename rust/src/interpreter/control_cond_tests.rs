@@ -227,7 +227,6 @@ mod tests {
 #[cfg(test)]
 mod example_words_tests {
     use crate::interpreter::Interpreter;
-    use crate::types::ValueData;
 
     async fn setup_example_words(interp: &mut Interpreter) {
         interp
@@ -242,9 +241,12 @@ mod example_words_tests {
             .execute("{ '!' ,, PRINT } 'SAY-BANG' DEF")
             .await
             .unwrap();
-        interp.execute("{ { [ 1 ] = } { SAY-HELLO } { [ 2 ] = } { SAY-WORLD } { IDLE } { SAY-BANG } COND } 'GREET' DEF").await.unwrap();
         interp
-            .execute("{ { GREET } MAP } 'GREET-ALL' DEF")
+            .execute("{ SAY-HELLO SAY-WORLD SAY-BANG } 'GREET' DEF")
+            .await
+            .unwrap();
+        interp
+            .execute("{ { [ 15 ] MOD [ 0 ] = } { 'FizzBuzz' PRINT } { [ 3 ] MOD [ 0 ] = } { 'Fizz' PRINT } { [ 5 ] MOD [ 0 ] = } { 'Buzz' PRINT } { TRUE } { ,, PRINT } COND } 'FIZZBUZZ' DEF")
             .await
             .unwrap();
         let _ = interp.collect_output();
@@ -264,71 +266,102 @@ mod example_words_tests {
     }
 
     #[tokio::test]
-    async fn test_greet_branch_1() {
+    async fn test_greet_chains_say_words() {
         let mut interp = Interpreter::new();
         setup_example_words(&mut interp).await;
 
-        let r = interp.execute("[ 1 ] GREET").await;
-        assert!(r.is_ok(), "GREET 1 failed: {:?}", r);
+        // GREET teaches dependency management: it is nothing but the three
+        // SAY words chained together, so calling it prints all three pieces.
+        let r = interp.execute("GREET").await;
+        assert!(r.is_ok(), "GREET failed: {:?}", r);
         let output = interp.collect_output();
         assert!(output.contains("Hello"), "Expected Hello, got: {}", output);
-    }
-
-    #[tokio::test]
-    async fn test_greet_branch_2() {
-        let mut interp = Interpreter::new();
-        setup_example_words(&mut interp).await;
-
-        let r = interp.execute("[ 2 ] GREET").await;
-        assert!(r.is_ok(), "GREET 2 failed: {:?}", r);
-        let output = interp.collect_output();
         assert!(output.contains("World"), "Expected World, got: {}", output);
-    }
-
-    #[tokio::test]
-    async fn test_greet_else_branch() {
-        let mut interp = Interpreter::new();
-        setup_example_words(&mut interp).await;
-
-        let r = interp.execute("[ 99 ] GREET").await;
-        assert!(r.is_ok(), "GREET 99 failed: {:?}", r);
-        let output = interp.collect_output();
         assert!(output.contains("!"), "Expected !, got: {}", output);
     }
 
     #[tokio::test]
-    async fn test_greet_all() {
+    async fn test_greet_depends_on_say_words() {
         let mut interp = Interpreter::new();
         setup_example_words(&mut interp).await;
 
-        let r = interp.execute("[ 1 2 3 ] GREET-ALL").await;
-        assert!(r.is_ok(), "GREET-ALL failed: {:?}", r);
+        // The dependency graph must record that GREET relies on each SAY word.
+        for dep in ["EXAMPLE@SAY-HELLO", "EXAMPLE@SAY-WORLD", "EXAMPLE@SAY-BANG"] {
+            let dependents = interp.dependents.get(dep);
+            assert!(
+                dependents.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+                "{} should be referenced by EXAMPLE@GREET; got {:?}",
+                dep,
+                dependents
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fizzbuzz_multiple_of_three() {
+        let mut interp = Interpreter::new();
+        setup_example_words(&mut interp).await;
+
+        let r = interp.execute("[ 9 ] FIZZBUZZ").await;
+        assert!(r.is_ok(), "FIZZBUZZ 9 failed: {:?}", r);
         let output = interp.collect_output();
         assert!(
-            output.contains("Hello"),
-            "Expected Hello in output, got: {}",
+            output.contains("Fizz") && !output.contains("FizzBuzz"),
+            "Expected Fizz, got: {}",
             output
         );
+    }
+
+    #[tokio::test]
+    async fn test_fizzbuzz_multiple_of_five() {
+        let mut interp = Interpreter::new();
+        setup_example_words(&mut interp).await;
+
+        let r = interp.execute("[ 10 ] FIZZBUZZ").await;
+        assert!(r.is_ok(), "FIZZBUZZ 10 failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains("Buzz"), "Expected Buzz, got: {}", output);
+    }
+
+    #[tokio::test]
+    async fn test_fizzbuzz_multiple_of_fifteen() {
+        let mut interp = Interpreter::new();
+        setup_example_words(&mut interp).await;
+
+        // The 15 guard must win over the 3 and 5 guards thanks to its order.
+        let r = interp.execute("[ 30 ] FIZZBUZZ").await;
+        assert!(r.is_ok(), "FIZZBUZZ 30 failed: {:?}", r);
+        let output = interp.collect_output();
         assert!(
-            output.contains("World"),
-            "Expected World in output, got: {}",
+            output.contains("FizzBuzz"),
+            "Expected FizzBuzz, got: {}",
             output
         );
+    }
+
+    #[tokio::test]
+    async fn test_fizzbuzz_else_prints_number() {
+        let mut interp = Interpreter::new();
+        setup_example_words(&mut interp).await;
+
+        let r = interp.execute("[ 7 ] FIZZBUZZ").await;
+        assert!(r.is_ok(), "FIZZBUZZ 7 failed: {:?}", r);
+        let output = interp.collect_output();
+        assert!(output.contains('7'), "Expected 7, got: {}", output);
         assert!(
-            output.contains("!"),
-            "Expected ! in output, got: {}",
+            !output.contains("Fizz") && !output.contains("Buzz"),
+            "Expected no Fizz/Buzz, got: {}",
             output
         );
 
+        // The value remains on the stack after COND.
         assert_eq!(interp.stack.len(), 1);
         let result = &interp.stack[0];
-        assert_eq!(result.len(), 3);
-
-        let bang = result.get_child(2).unwrap();
-        assert!(
-            matches!(bang.data, ValueData::Vector(_)),
-            "Expected '!' to remain as a vector (string), got: {:?}",
-            bang.data
-        );
+        let scalar = result
+            .as_scalar()
+            .cloned()
+            .or_else(|| result.child(0).and_then(|c| c.as_scalar().cloned()))
+            .expect("FIZZBUZZ should leave the numeric value on the stack");
+        assert_eq!(scalar.to_i64().unwrap(), 7);
     }
 }
