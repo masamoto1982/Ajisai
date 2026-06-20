@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyExecutionAreaState, type ApplyAreaStateDeps, type LayoutState } from './gui-layout-state';
+import {
+    analyzeStackModifiers,
+    applyExecutionAreaState,
+    type ApplyAreaStateDeps,
+    type LayoutState,
+} from './gui-layout-state';
 import type { ViewMode } from './mobile-view-switcher';
 
 const makeElement = () => ({ hidden: false }) as HTMLElement;
@@ -29,6 +34,42 @@ const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps =
         switchDictionarySheet: vi.fn(),
     };
 };
+
+describe('analyzeStackModifiers', () => {
+    it('defaults to TOP and EAT when no modifier token is present', () => {
+        expect(analyzeStackModifiers('1 2 ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers('')).toEqual({ stak: false, keep: false });
+    });
+
+    it('reads the canonical TOP/STAK and EAT/KEEP tokens', () => {
+        expect(analyzeStackModifiers('. ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers('.. ADD')).toEqual({ stak: true, keep: false });
+        expect(analyzeStackModifiers(', ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers(',, ADD')).toEqual({ stak: false, keep: true });
+    });
+
+    it('reads the combined modifier forms of SPEC §6.3', () => {
+        expect(analyzeStackModifiers('.,, ADD')).toEqual({ stak: false, keep: true });
+        expect(analyzeStackModifiers('..,, ADD')).toEqual({ stak: true, keep: true });
+        expect(analyzeStackModifiers('..,  ADD')).toEqual({ stak: true, keep: false });
+    });
+
+    it('reads the ; and ;; sugar (. , and .. ,,)', () => {
+        expect(analyzeStackModifiers('; ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers(';; ADD')).toEqual({ stak: true, keep: true });
+    });
+
+    it('never mistakes a decimal literal for a modifier', () => {
+        expect(analyzeStackModifiers('.5 ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers('5. ADD')).toEqual({ stak: false, keep: false });
+        expect(analyzeStackModifiers('3.14 ADD')).toEqual({ stak: false, keep: false });
+    });
+
+    it('treats either axis as triggered if any token selects the non-default', () => {
+        expect(analyzeStackModifiers('1 .. ADD 2 . SUB')).toEqual({ stak: true, keep: false });
+        expect(analyzeStackModifiers('1 ,, ADD 2 , SUB')).toEqual({ stak: false, keep: true });
+    });
+});
 
 describe('applyExecutionAreaState', () => {
     beforeEach(() => {
