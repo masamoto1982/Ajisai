@@ -89,16 +89,17 @@
     --color-non-dependency: oklch(60.9% 0.135 161.2);   /* #009b68 green   */
     --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
 
-    /* --- Stack operand-underline colors ---------------------------------- */
-    /* The Stack underlines operand nodes (SPEC §6.1 target); the underline's
-       color and style carry the consumption axis (SPEC §6.2): EAT a warm red
-       (operands are removed after the operation), KEEP a teal-green (operands
-       are retained). A dashed (EAT) vs solid (KEEP) underline reinforces the
-       hue so the pair reads apart under color-vision deficiency, in keeping
-       with the CVD-safe palette above. Dark enough to show as a thin line on
-       the page, and distinct from the magenta Stack ink. */
-    --color-consume-eat:  oklch(57% 0.185 25);    /* warm red   */
-    --color-consume-keep: oklch(57% 0.110 165);   /* teal-green */
+    /* --- Stack operand-highlight backgrounds ----------------------------- */
+    /* The Stack fills operand nodes (SPEC §6.1 target) with a background whose
+       color carries the consumption axis (SPEC §6.2): EAT a very pale warm red
+       (operands are removed after the operation), KEEP a very pale teal-green
+       (operands are retained). A background fill — rather than a text-color
+       change — leaves the bracket depth-colors that show Vector nesting intact.
+       The tints are kept faint so the magenta Stack ink stays legible, and are
+       separated in lightness as well as hue so they read apart under
+       color-vision deficiency, in keeping with the CVD-safe palette above. */
+    --color-consume-eat:  oklch(94% 0.035 25);    /* very pale warm red   */
+    --color-consume-keep: oklch(96% 0.030 165);   /* very pale teal-green */
 
     /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);
