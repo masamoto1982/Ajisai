@@ -690,13 +690,15 @@
 }
 
 
-/* Operand-highlight padding gives the lemon background and the consumption
-   border room around the value, so the text — especially a taller KaTeX
-   rendering in LaTeX view — never touches the border. One padding serves both
-   the canonical and LaTeX renderings; no per-view switch is needed. */
+/* Operand highlight. The painted set is the target axis (SPEC §6.1): STAK paints
+   every stack item, the default TOP only the top item. The background *color*
+   carries the consumption axis (SPEC §6.2), so a single channel shows both
+   "which values are operands" and "what becomes of them" — a non-operand can
+   never be consumed, so no separate marker is needed. Padding keeps the value
+   clear of the background edge in both the canonical and LaTeX renderings; one
+   padding serves both, with no per-view switch. */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
-    background-color: var(--color-symbol);
     font-weight: bold;
     padding: 0.25rem 0.5rem;
 }
@@ -704,24 +706,22 @@
 
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: var(--color-symbol);
     padding: 0.25rem 0.5rem;
 }
 
 
-/* Consumption axis (SPEC §6.2), layered on the same operand nodes the lemon
-   target highlight marks. KEEP draws a solid border (operands remain on the
-   stack); the default EAT draws a dashed border (operands are removed after the
-   operation). Both stay 1px so toggling between them never reflows the item. */
-#stack-display.highlight-all.consume-keep .stack-item .stack-node[data-depth="1"],
-#stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
-    border: 1px solid var(--color-stack);
+/* EAT (default): operands are removed after the operation — pale warm red. */
+#stack-display.highlight-all.consume-eat .stack-item .stack-node[data-depth="1"],
+#stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
+    background-color: var(--color-consume-eat);
 }
 
 
-#stack-display.highlight-all.consume-eat .stack-item .stack-node[data-depth="1"],
-#stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
-    border: 1px dashed var(--color-stack);
+/* KEEP: operands are retained — pale teal-green, set apart from EAT in both hue
+   and lightness so the two read apart under color-vision deficiency. */
+#stack-display.highlight-all.consume-keep .stack-item .stack-node[data-depth="1"],
+#stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
+    background-color: var(--color-consume-keep);
 }
 
 

@@ -89,6 +89,16 @@
     --color-non-dependency: oklch(60.9% 0.135 161.2);   /* #009b68 green   */
     --color-stack:          oklch(47.9% 0.220 328.4);   /* #990099 magenta */
 
+    /* --- Stack consumption-highlight backgrounds ------------------------- */
+    /* The Stack paints operand nodes (SPEC §6.1 target) with a background whose
+       color carries the consumption axis (SPEC §6.2): EAT a pale warm red
+       (operands are removed after the operation), KEEP a pale teal-green
+       (operands are retained). The pair is separated in lightness as well as
+       hue so it reads apart under color-vision deficiency, in keeping with the
+       CVD-safe palette above. Magenta Stack ink stays legible on both. */
+    --color-consume-eat:  oklch(88% 0.060 25);    /* pale warm red   */
+    --color-consume-keep: oklch(94% 0.050 165);   /* pale teal-green */
+
     /* --- Hydrangea hue anchors (移ろい reference swatches) ---------------- */
     --hue-blue-purple: oklch(90% 0.085 265);
     --hue-violet:      oklch(90% 0.085 300);

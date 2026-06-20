@@ -32,9 +32,9 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Data/state behavior
 - Stack display and dictionary update after execution.
-- Stack area has visual highlight modes triggered by code content, scanned as whole whitespace-delimited modifier tokens so the combined forms (`.,,`, `..,,`) and the `;`/`;;` sugar are recognized, and decimals like `.5`/`5.` never false-trigger:
-  - Target axis (lemon background): `..` (or `;;`) highlights the whole stack, otherwise the default `.` (TOP) highlights the top item — "which values are the operands".
-  - Consumption axis (border on those same operand nodes): `,,` (or `;;`) draws a solid border (KEEP — operands remain), otherwise the default `,` (EAT) draws a dashed border (operands are removed) — "what becomes of them". The two axes are independent, mirroring SPEC §6.3.
+- Stack area has visual highlight modes triggered by code content, scanned as whole whitespace-delimited modifier tokens so the combined forms (`.,,`, `..,,`) and the `;`/`;;` sugar are recognized, and decimals like `.5`/`5.` never false-trigger. Both modifier axes ride on one background channel on the operand nodes — the painted set is the target, the color is the consumption fate (a non-operand can never be consumed, so no extra marker is needed):
+  - Target axis (which items are painted): `..` (or `;;`) paints every stack item (STAK), otherwise the default `.` (TOP) paints only the top item — "which values are the operands".
+  - Consumption axis (the background color): the default `,` (EAT) is a pale warm red (operands are removed), `,,` (or `;;`) a pale teal-green (KEEP — operands are retained) — "what becomes of them". The two colors are separated in lightness as well as hue (`--color-consume-eat` / `--color-consume-keep` in `tokens.css`) so they read apart under color-vision deficiency. The two axes are independent, mirroring SPEC §6.3.
 - GUI tracks layout state (`currentMode`, `currentLeftMode`, `currentRightMode`).
 - Desktop and mobile layouts sync via selectors and `body[data-active-area]`.
 
