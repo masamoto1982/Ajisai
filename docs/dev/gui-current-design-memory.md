@@ -32,9 +32,9 @@ This note captures the current Ajisai web-playground GUI behavior for reference.
 
 ## Data/state behavior
 - Stack display and dictionary update after execution.
-- Stack area has visual highlight modes triggered by code content:
-  - `..` highlights all stack
-  - `.` highlights top (unless all-highlight already active)
+- Stack area has visual highlight modes triggered by code content, scanned as whole whitespace-delimited modifier tokens so the combined forms (`.,,`, `..,,`) and the `;`/`;;` sugar are recognized, and decimals like `.5`/`5.` never false-trigger:
+  - Target axis (lemon background): `..` (or `;;`) highlights the whole stack, otherwise the default `.` (TOP) highlights the top item — "which values are the operands".
+  - Consumption axis (border on those same operand nodes): `,,` (or `;;`) draws a solid border (KEEP — operands remain), otherwise the default `,` (EAT) draws a dashed border (operands are removed) — "what becomes of them". The two axes are independent, mirroring SPEC §6.3.
 - GUI tracks layout state (`currentMode`, `currentLeftMode`, `currentRightMode`).
 - Desktop and mobile layouts sync via selectors and `body[data-active-area]`.
 

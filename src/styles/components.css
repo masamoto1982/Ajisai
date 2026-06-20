@@ -705,6 +705,22 @@
 }
 
 
+/* Consumption axis (SPEC §6.2), layered on the same operand nodes the lemon
+   target highlight marks. KEEP draws a solid border (operands remain on the
+   stack); the default EAT draws a dashed border (operands are removed after the
+   operation). Both stay 1px so toggling between them never reflows the item. */
+#stack-display.highlight-all.consume-keep .stack-item .stack-node[data-depth="1"],
+#stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
+    border: 1px solid var(--color-stack);
+}
+
+
+#stack-display.highlight-all.consume-eat .stack-item .stack-node[data-depth="1"],
+#stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
+    border: 1px dashed var(--color-stack);
+}
+
+
 @media (max-width: 768px) {
 
 
