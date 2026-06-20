@@ -690,38 +690,41 @@
 }
 
 
-/* Operand highlight. The painted set is the target axis (SPEC §6.1): STAK paints
-   every stack item, the default TOP only the top item. The background *color*
-   carries the consumption axis (SPEC §6.2), so a single channel shows both
-   "which values are operands" and "what becomes of them" — a non-operand can
-   never be consumed, so no separate marker is needed. Padding keeps the value
-   clear of the background edge in both the canonical and LaTeX renderings; one
-   padding serves both, with no per-view switch. */
+/* Operand highlight as an underline, so the value keeps its own color (a
+   background tint washed out the magenta Stack ink). The underlined set is the
+   target axis (SPEC §6.1): STAK underlines every stack item, the default TOP
+   only the top item. The underline's color and style carry the consumption
+   axis (SPEC §6.2) — a non-operand is never consumed, so the underline alone
+   shows both "which values are operands" and "what becomes of them". The small
+   bottom padding lifts the line off the glyphs (and below a KaTeX rendering) in
+   both the canonical and LaTeX views. */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
     font-weight: bold;
-    padding: 0.25rem 0.5rem;
+    padding-bottom: 0.2rem;
 }
 
 
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
-    padding: 0.25rem 0.5rem;
+    padding-bottom: 0.2rem;
 }
 
 
-/* EAT (default): operands are removed after the operation — pale warm red. */
+/* EAT (default): operands are removed after the operation — dashed warm-red
+   underline. */
 #stack-display.highlight-all.consume-eat .stack-item .stack-node[data-depth="1"],
 #stack-display.highlight-top.consume-eat .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: var(--color-consume-eat);
+    border-bottom: 2px dashed var(--color-consume-eat);
 }
 
 
-/* KEEP: operands are retained — pale teal-green, set apart from EAT in both hue
-   and lightness so the two read apart under color-vision deficiency. */
+/* KEEP: operands are retained — solid teal-green underline. The dashed/solid
+   contrast keeps EAT and KEEP apart under color-vision deficiency, not by hue
+   alone. */
 #stack-display.highlight-all.consume-keep .stack-item .stack-node[data-depth="1"],
 #stack-display.highlight-top.consume-keep .stack-item:last-child .stack-node[data-depth="1"] {
-    background-color: var(--color-consume-keep);
+    border-bottom: 2px solid var(--color-consume-keep);
 }
 
 
