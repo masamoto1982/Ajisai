@@ -690,18 +690,22 @@
 }
 
 
+/* Operand-highlight padding gives the lemon background and the consumption
+   border room around the value, so the text — especially a taller KaTeX
+   rendering in LaTeX view — never touches the border. One padding serves both
+   the canonical and LaTeX renderings; no per-view switch is needed. */
 #stack-display.highlight-all .stack-item .stack-node[data-depth="1"],
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
     background-color: var(--color-symbol);
     font-weight: bold;
-    padding: 2px 5px;
+    padding: 0.25rem 0.5rem;
 }
 
 
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     background-color: var(--color-symbol);
-    padding: 2px 5px;
+    padding: 0.25rem 0.5rem;
 }
 
 
