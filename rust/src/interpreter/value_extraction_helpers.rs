@@ -147,18 +147,20 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
 }
 
 pub(crate) fn normalize_index(index: i64, length: usize) -> Option<usize> {
-    let actual_index = if index < 0 {
-        let offset = (length as i64) + index;
-        if offset < 0 {
-            return None;
-        }
-        offset as usize
+    // Resolve the bounds check entirely in i64 before narrowing. An in-memory
+    // vector length always fits i64, and a previous `index as usize` truncated
+    // out-of-range positive indices on 32-bit wasm (e.g. 2^32 + 1 wrapping to a
+    // valid-looking small index). Keeping `actual` in [0, length) guarantees the
+    // final `as usize` is exact on both 32- and 64-bit targets.
+    let len_i64 = length as i64;
+    let actual = if index < 0 {
+        len_i64.checked_add(index)?
     } else {
-        index as usize
+        index
     };
 
-    if actual_index < length {
-        Some(actual_index)
+    if actual >= 0 && actual < len_i64 {
+        Some(actual as usize)
     } else {
         None
     }

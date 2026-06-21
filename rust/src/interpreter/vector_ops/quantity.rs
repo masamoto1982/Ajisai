@@ -10,25 +10,25 @@ use crate::types::Value;
 use num_traits::ToPrimitive;
 
 fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, usize)> {
-    if count < 0 {
-        let take = (-count) as usize;
-        if take > len {
-            return Err(AjisaiError::from(format!(
-                "Take count exceeds {} length",
-                target
-            )));
-        }
-        return Ok((len - take, len));
-    }
-
-    let take = count as usize;
-    if take > len {
+    // Compare the magnitude in u64 before narrowing to usize. `(-count) as
+    // usize` overflowed and panicked on i64::MIN (reachable via
+    // `[ .. ] -9223372036854775808 TAKE`), and a bare `count as usize` would
+    // silently truncate a huge count on 32-bit wasm. Working in u64 keeps both
+    // the over-length rejection and the eventual narrowing exact.
+    let magnitude: u64 = count.unsigned_abs();
+    if magnitude > len as u64 {
         return Err(AjisaiError::from(format!(
             "Take count exceeds {} length",
             target
         )));
     }
-    Ok((0, take))
+    let take = magnitude as usize;
+
+    if count < 0 {
+        Ok((len - take, len))
+    } else {
+        Ok((0, take))
+    }
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {

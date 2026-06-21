@@ -4,15 +4,22 @@ use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
 #[inline]
-pub(crate) fn compute_gcd_i64(mut a: i64, mut b: i64) -> i64 {
-    a = a.abs();
-    b = b.abs();
+pub(crate) fn compute_gcd_i64(a: i64, b: i64) -> i64 {
+    // Reduce in unsigned space: `i64::MIN.abs()` overflows and panics, so the
+    // signed `abs()` form crashed on `i64::MIN` operands (reachable from a
+    // `-9223372036854775808` literal flowing through the fraction normalizer).
+    let mut a = a.unsigned_abs();
+    let mut b = b.unsigned_abs();
     while b != 0 {
         let t = b;
         b = a % b;
         a = t;
     }
-    a
+    // The gcd of two i64 values always fits in i64 except gcd(i64::MIN,
+    // i64::MIN) == 2^63, which wraps to i64::MIN. Every caller only ever
+    // divides its operands by this result, and i64::MIN / i64::MIN == 1, so the
+    // reduction stays exact even in that single wrapping case.
+    a as i64
 }
 
 #[inline]
@@ -120,16 +127,12 @@ impl Fraction {
         }
 
         if let (Some(n), Some(d)) = (numerator.to_i64(), denominator.to_i64()) {
-            let g = compute_gcd_i64(n, d);
-            let mut num = n / g;
-            let mut den = d / g;
-            if den < 0 {
-                num = -num;
-                den = -den;
-            }
-            return Fraction {
-                repr: FractionRepr::Small(num, den),
-            };
+            // Normalize through the i128 path: the previous i64 reduction
+            // panicked on `i64::MIN` operands because sign normalization
+            // (`num = -num`) overflows for `i64::MIN` (e.g. `Fraction::new(
+            // i64::MIN, -1)`). Widening to i128 makes every abs/negation total
+            // while producing an identical Small/Big result for i64 inputs.
+            return Self::create_from_i128(n as i128, d as i128);
         }
 
         let common: BigInt = numerator.gcd(&denominator);
@@ -331,13 +334,21 @@ impl Fraction {
 
             let mantissa: Fraction = Self::from_str(mantissa_str)?;
             let exponent: i32 = exponent_str.parse::<i32>().map_err(|e| e.to_string())?;
+            // Take the magnitude with `unsigned_abs`: negating an i32::MIN
+            // exponent (`1e-2147483648`) overflows and panicked here, a crash
+            // reachable from both a numeric literal and `NUM` on a string.
+            let magnitude: u32 = exponent.unsigned_abs();
 
             let (mn, md): (BigInt, BigInt) = mantissa.to_bigint_pair();
+            // A zero mantissa is zero at any scale; skip the (possibly enormous)
+            // power so `0e<huge>` cannot drive an unbounded `pow` allocation.
+            if mn.is_zero() {
+                return Ok(Fraction::new(BigInt::zero(), BigInt::one()));
+            }
+            let power: BigInt = BigInt::from(10).pow(magnitude);
             if exponent >= 0 {
-                let power: BigInt = BigInt::from(10).pow(exponent as u32);
                 return Ok(Fraction::new(mn * power, md));
             } else {
-                let power: BigInt = BigInt::from(10).pow((-exponent) as u32);
                 return Ok(Fraction::new(mn, md * power));
             }
         }

@@ -37,6 +37,12 @@ mod arithmetic_operation_tests;
 mod dimension_limit_tests;
 
 #[cfg(test)]
+mod materialization_limit_tests;
+
+#[cfg(test)]
+mod extreme_index_tests;
+
+#[cfg(test)]
 mod tensor_operation_tests;
 
 #[cfg(test)]

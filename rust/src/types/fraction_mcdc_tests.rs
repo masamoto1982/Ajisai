@@ -706,3 +706,84 @@ mod modulo_remainder_sign_normalization {
         assert_eq!(result, small(1, 1));
     }
 }
+
+// ---------------------------------------------------------------------------
+// i64::MIN normalization (regression)
+// DUT: rust/src/types/fraction.rs `compute_gcd_i64` and `Fraction::new`
+//
+// `i64::MIN` has no positive i64 counterpart, so `i64::MIN.abs()` and
+// `-i64::MIN` both overflow and panic. The old gcd reduced operands with
+// signed `abs()`, and `Fraction::new` sign-normalized the Small path with
+// `num = -num`; either crashed the interpreter as soon as a
+// `-9223372036854775808` literal entered the fraction normalizer (most
+// visibly when stored inside a vector/tensor). These tests pin the totalized
+// behavior: every i64::MIN form must reduce to an exact value rather than
+// panic.
+// ---------------------------------------------------------------------------
+mod i64_min_normalization {
+    use super::*;
+
+    #[test]
+    fn new_accepts_i64_min_numerator() {
+        // Previously panicked in compute_gcd_i64's signed abs().
+        let f = Fraction::new(BigInt::from(i64::MIN), BigInt::from(1));
+        assert_eq!(f, small(i64::MIN, 1));
+    }
+
+    #[test]
+    fn new_accepts_i64_min_over_negative_one() {
+        // Sign normalization (`num = -num`) used to overflow on i64::MIN; the
+        // exact value 2^63 no longer fits in i64 and must widen to Big.
+        let f = Fraction::new(BigInt::from(i64::MIN), BigInt::from(-1));
+        let expected = Fraction::new(-BigInt::from(i64::MIN), BigInt::from(1));
+        assert_eq!(f, expected);
+    }
+
+    #[test]
+    fn new_reduces_i64_min_over_i64_min_to_one() {
+        let f = Fraction::new(BigInt::from(i64::MIN), BigInt::from(i64::MIN));
+        assert_eq!(f, small(1, 1));
+    }
+
+    #[test]
+    fn multiply_i64_min_operands_widens_to_big() {
+        // i64::MIN * i64::MIN == 2^126, well outside i64; must not panic.
+        let product = small(i64::MIN, 1).mul(&small(i64::MIN, 1));
+        let expected = Fraction::new(
+            BigInt::from(i64::MIN) * BigInt::from(i64::MIN),
+            BigInt::from(1),
+        );
+        assert_eq!(product, expected);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Scientific-notation exponent overflow (regression)
+// DUT: rust/src/types/fraction.rs `Fraction::from_str` exponent branch
+//
+// The negative-exponent branch computed `(-exponent) as u32`. For the literal
+// `1e-2147483648` the exponent parses to i32::MIN, whose negation overflows i32
+// and panicked the interpreter (reachable from a source literal and from `NUM`
+// on a string). `unsigned_abs` takes the magnitude without overflow.
+// ---------------------------------------------------------------------------
+mod scientific_exponent_overflow {
+    use super::*;
+
+    #[test]
+    fn from_str_handles_i32_min_negative_exponent_small() {
+        // 1e-1 still parses fine through the same magnitude path.
+        let f = Fraction::from_str("1e-1").unwrap();
+        assert_eq!(f, small(1, 10));
+    }
+
+    #[test]
+    fn from_str_does_not_panic_on_i32_min_exponent_magnitude() {
+        // We only assert it returns an Ok value rather than panicking; the
+        // resulting denominator is astronomically large but well-formed. Use a
+        // mantissa of 0 so the heavy power is multiplied away and the test stays
+        // fast while still exercising the magnitude computation.
+        let f = Fraction::from_str("0e-2147483648");
+        assert!(f.is_ok(), "i32::MIN exponent must not panic");
+        assert_eq!(f.unwrap(), small(0, 1));
+    }
+}
