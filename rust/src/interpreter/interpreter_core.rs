@@ -21,6 +21,21 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 /// recursion specifically into a recoverable AjisaiError instead of a trap.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
+/// Cap on the number of elements a single generative built-in (`RANGE`,
+/// `FILL`, ...) is allowed to materialize in one call. Such words loop
+/// internally to build a vector/tensor, so they each count as a *single*
+/// execution step and therefore bypass `DEFAULT_MAX_EXECUTION_STEPS`. Without
+/// this guard an input like `[ 0 9999999999999 ] RANGE` or
+/// `[ 1000000 1000000 7 ] FILL` drives an unbounded allocation that aborts the
+/// process with an OOM (an unrecoverable trap inside the WASM playground)
+/// instead of a diagnosable `AjisaiError`. The ceiling sits three orders of
+/// magnitude above any realistic generated size (benchmarks top out in the
+/// hundreds) while keeping worst-case materialization recoverable: each
+/// generated `Value` costs a few hundred bytes, so one million elements bounds
+/// a single call to a few hundred MiB rather than the multi-gigabyte abort that
+/// unbounded counts produce.
+pub const MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTargetMode {
     StackTop,

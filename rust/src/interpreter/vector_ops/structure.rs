@@ -4,7 +4,9 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     extract_bigint_from_value, extract_integer_from_value, normalize_index,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{
+    ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
+};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
@@ -200,7 +202,24 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    let mut range_vec = Vec::new();
+    // Guard against unbounded materialization before allocating. RANGE loops
+    // internally, so it counts as one execution step and bypasses the
+    // step-count backstop; an input like `[ 0 9999999999999 ] RANGE` would
+    // otherwise drive the process into an OOM abort (a WASM trap in the
+    // playground) instead of a recoverable error. Count the elements in i128
+    // so the span arithmetic cannot overflow for extreme i64 bounds.
+    let span = (end as i128 - start as i128).unsigned_abs();
+    let stride = (step as i128).unsigned_abs();
+    let element_count = span / stride + 1;
+    if element_count > MAX_MATERIALIZED_ELEMENTS as u128 {
+        interp.stack.push(args_val);
+        return Err(AjisaiError::from(format!(
+            "RANGE would generate {} elements, exceeding the limit of {}",
+            element_count, MAX_MATERIALIZED_ELEMENTS
+        )));
+    }
+
+    let mut range_vec = Vec::with_capacity(element_count as usize);
     let mut current = start;
 
     if step > 0 {

@@ -2,10 +2,20 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{
+    ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
+};
 use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
+
+/// Multiply dimension sizes without ever overflowing `usize`. Returns `None`
+/// when the running product would wrap, so callers can reject pathological
+/// shapes with a structured error instead of panicking (debug) or silently
+/// computing a wrong size (release).
+fn checked_shape_product(shape: &[usize]) -> Option<usize> {
+    shape.iter().try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
+}
 
 /// Push a SPEC §7.4.1 Undecidable NIL. Used when an exact-real (CF)
 /// arithmetic word cannot resolve its result within the partial-quotient
@@ -145,10 +155,24 @@ pub fn op_reshape(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
+    // A pathological shape such as `[ 99999999 99999999 99999999 ]` overflows
+    // the size product and panics under `iter().product()`. Compute it with
+    // overflow protection: an overflowing product can never equal the (bounded)
+    // input length, so fall through to the existing mismatch error.
     let required_size: usize = if new_shape.is_empty() {
         1
     } else {
-        new_shape.iter().product()
+        match checked_shape_product(&new_shape) {
+            Some(size) => size,
+            None => {
+                interp.stack.push(data_val);
+                interp.stack.push(shape_val);
+                return Err(AjisaiError::from(format!(
+                    "RESHAPE failed: shape {:?} is too large to materialize",
+                    new_shape
+                )));
+            }
+        }
     };
     if input_tensor.data.len() != required_size {
         interp.stack.push(data_val);
@@ -477,7 +501,21 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
         shape.push(dim);
     }
 
-    let total_size: usize = shape.iter().product();
+    // Compute the element count with overflow protection and reject anything
+    // beyond the materialization cap before allocating. `shape.iter().product()`
+    // would otherwise panic on a usize overflow (e.g. three ~1e8 dimensions) or
+    // drive an OOM abort for a merely large product — neither is recoverable in
+    // the WASM playground.
+    let total_size = match checked_shape_product(&shape) {
+        Some(size) if size <= MAX_MATERIALIZED_ELEMENTS => size,
+        _ => {
+            interp.stack.push(args_val);
+            return Err(AjisaiError::from(format!(
+                "FILL shape {:?} would generate too many elements (limit {})",
+                shape, MAX_MATERIALIZED_ELEMENTS
+            )));
+        }
+    };
     let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
 
     let result = build_nested_value(&data, &shape);
