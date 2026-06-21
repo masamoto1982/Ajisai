@@ -179,3 +179,23 @@ describe('valueToLatex: tensors', () => {
         expect(valueToLatex(tensor([2, 2], [frac(1), frac(2), frac(3)]))).toBeNull();
     });
 });
+
+// Adversarial robustness (fuzzing regression): the math view must never throw.
+// A number value whose denominator is zero is malformed / NIL occupancy (it
+// never arises from a canonical number, but can reach the renderer via restored
+// or injected state). `scientificLatex` used to divide by zero on a >=10-digit
+// zero denominator, throwing a RangeError out of the live Stack render.
+describe('valueToLatex zero-denominator robustness', () => {
+    for (const denom of ['0', '-0', '00', '0000000000', '-0000000000']) {
+        for (const numer of ['1', '1234567890', '12345678901', '99999999999999999999']) {
+            test(`returns null (text fallback) for ${numer}/${denom}`, () => {
+                expect(valueToLatex(num(numer, denom))).toBeNull();
+            });
+        }
+    }
+
+    test('fractionToLatex does not throw on a huge zero denominator', () => {
+        expect(() => fractionToLatex(frac('12345678901', '0000000000'))).not.toThrow();
+        expect(() => fractionToLatex(frac('12345678901', '0'))).not.toThrow();
+    });
+});

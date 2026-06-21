@@ -257,3 +257,25 @@ describe('formatFraction canonical numeric rendering', () => {
         expect(formatFraction(fraction)).toBe(expected);
     });
 });
+
+// Adversarial robustness (fuzzing regression).
+describe('value-formatter robustness', () => {
+    test('formatFractionScientific does not hang on a zero-mantissa denominator', () => {
+        // "0000000000" renders to a zero mantissa; the division produced
+        // Infinity and the normalization loop spun forever. Must now return a
+        // finite string promptly.
+        const start = Date.now();
+        const result = formatFractionScientific('1234567890', '0000000000');
+        expect(typeof result).toBe('string');
+        expect(Date.now() - start).toBeLessThan(1000);
+    });
+
+    test('compareValue reports inequality instead of throwing on a null number value', () => {
+        const malformed = { type: 'number', value: null } as unknown as Value;
+        const valid = num(1, 1);
+        expect(() => compareValue(malformed, malformed)).not.toThrow();
+        expect(compareValue(malformed, malformed)).toBe(true);
+        expect(compareValue(malformed, valid)).toBe(false);
+        expect(compareValue(valid, malformed)).toBe(false);
+    });
+});

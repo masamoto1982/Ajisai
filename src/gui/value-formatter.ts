@@ -55,6 +55,16 @@ export function formatFractionScientific(numerStr: string, denomStr: string): st
             let resultMantissa = numMantissa / denMantissa;
             let resultExponent = numExponent - denExponent;
 
+            // A zero (or non-finite) denominator mantissa makes resultMantissa
+            // Infinity/NaN, and the normalization loops below would spin forever
+            // (Infinity / 10 === Infinity). Fall back to the plain ratio form
+            // rather than hang. (Canonical numbers never have a zero
+            // denominator, but this helper is exported and may see malformed
+            // or restored state.)
+            if (!Number.isFinite(resultMantissa)) {
+                return `${numSci}/${denSci}`;
+            }
+
             while (Math.abs(resultMantissa) >= 10) {
                 resultMantissa /= 10;
                 resultExponent += 1;
@@ -87,8 +97,15 @@ export function compareValue(actual: Value, expected: Value): boolean {
 
     switch (actual.type) {
         case 'number': {
-            const actualFrac = actual.value as Fraction;
-            const expectedFrac = expected.value as Fraction;
+            // Guard against a malformed number node carrying a null/non-object
+            // `value`: dereferencing `.numerator` on it would throw a TypeError
+            // instead of reporting inequality.
+            const actualFrac = actual.value as Fraction | null;
+            const expectedFrac = expected.value as Fraction | null;
+            if (!actualFrac || typeof actualFrac !== 'object' ||
+                !expectedFrac || typeof expectedFrac !== 'object') {
+                return actualFrac === expectedFrac;
+            }
             return actualFrac.numerator === expectedFrac.numerator &&
                    actualFrac.denominator === expectedFrac.denominator;
         }

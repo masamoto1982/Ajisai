@@ -28,6 +28,12 @@ const checkFractionShape = (value: unknown): Fraction | null => {
     const numerator = String(candidate.numerator ?? '');
     const denominator = String(candidate.denominator ?? '');
     if (!INTEGER_PATTERN.test(numerator) || !INTEGER_PATTERN.test(denominator)) return null;
+    // A zero denominator is not a faithful rational (it is NIL occupancy /
+    // malformed state, never a canonical number). Reject it here so the math
+    // view falls back to the canonical text rendering instead of dividing by
+    // zero inside `scientificLatex`. Matches INTEGER_PATTERN-allowed forms like
+    // "0", "-0" and "0000000000".
+    if (/^-?0+$/.test(denominator)) return null;
     return { numerator, denominator };
 };
 
@@ -38,6 +44,10 @@ const checkFractionShape = (value: unknown): Fraction | null => {
 const scientificLatex = (numeratorStr: string, denominatorStr: string): string => {
     let numerator = BigInt(numeratorStr);
     let denominator = BigInt(denominatorStr);
+    // Defensive: a zero denominator would divide by zero below. Internal callers
+    // are pre-filtered by `checkFractionShape`, but `fractionToLatex` is exported
+    // and may be called directly, so keep this primitive total.
+    if (denominator === 0n) return '\\mathrm{NIL}';
     if (denominator < 0n) {
         denominator = -denominator;
         numerator = -numerator;
