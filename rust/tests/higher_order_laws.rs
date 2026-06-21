@@ -201,7 +201,7 @@ fn scan_yields_prefix_sums() {
 
 #[test]
 fn cond_u_guard_does_not_fire() {
-    let u_guard = "{ 2 SQRT 2 SQRT SUB 0 EQ }";
+    let u_guard = "{ 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ }";
     let prog = |guard: &str| {
         format!("'MATH' IMPORT [ 1 ] {guard} {{ 'fired' }} {{ IDLE }} {{ 'else' }} COND")
     };

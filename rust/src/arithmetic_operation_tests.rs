@@ -655,9 +655,11 @@ mod ai_first_comparison_tests {
 
     #[tokio::test]
     async fn equal_irrationals_compare_unknown() {
-        // sqrt(2) - sqrt(2) is, structurally, a Gosper node the budget cannot
-        // distinguish from 0; EQ / LT against 0 therefore yield Unknown (U).
-        for code in ["2 SQRT 2 SQRT SUB 0 EQ", "2 SQRT 2 SQRT SUB 0 LT"] {
+        // (√2 + 1) − (√2 + 1) is, structurally, a composed Gosper node the
+        // budget cannot distinguish from 0; EQ / LT against 0 therefore yield
+        // Unknown (U). (Plain √2 − √2 now collapses to an exact 0 in closed
+        // form and would decide, so it no longer exercises the U path.)
+        for code in ["2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT"] {
             let mut interp = Interpreter::new();
             interp
                 .execute(&format!("'math' IMPORT {code}"))
@@ -1146,7 +1148,7 @@ mod compare_within_tests {
     async fn compare_within_equal_irrationals_yield_unknown_with_prefix() {
         // √2 − √2 is a Gosper node the budget cannot distinguish from 0,
         // so comparing it against 0 never decides → logical Unknown (U).
-        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 8 COMPARE-WITHIN").await;
+        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 8 COMPARE-WITHIN").await;
         let v = &interp.get_stack()[0];
         assert!(
             v.is_unknown(),
@@ -1384,8 +1386,10 @@ mod exact_scalar_tests {
 
     #[tokio::test]
     async fn sqrt_squared_via_mul_returns_exact_scalar() {
-        // √2 × √2 produces an exact value via Gosper bihomographic path.
-        // The result is ExactScalar(Gosper); it should be a non-nil scalar.
+        // √2 × √2 = √4 = 2 exactly: the closed-form √a·√b = √(a·b)
+        // simplification collapses the product to the rational 2 instead of
+        // building a bihom that would exhaust into an empty CF (the historical
+        // "silent NIL" bug). The result must be a non-nil scalar equal to 2.
         let mut interp = Interpreter::new();
         interp
             .execute("'math' IMPORT 2 SQRT 2 SQRT *")
@@ -1396,12 +1400,8 @@ mod exact_scalar_tests {
             val.is_scalar() && !val.is_nil(),
             "√2 × √2 must be a non-nil scalar, got: {val}"
         );
-        // The display should be an approximate rational (Gosper node)
         let display = format!("{val}");
-        assert!(
-            !display.is_empty() && display != "NIL",
-            "display must be non-nil"
-        );
+        assert_eq!(display, "2/1", "√2 × √2 must render as the exact integer 2");
     }
 
     #[tokio::test]
@@ -1541,8 +1541,9 @@ mod continued_fraction_role_tests {
 
 /// SPEC §7.4.3 — propagation of the logical `Unknown` (U) through the
 /// comparison-dependent words `MIN`, `MAX`, `SORT`, and `COND`. The
-/// U-producing idiom is `2 SQRT 2 SQRT SUB 0 <cmp>`: √2−√2 is a Gosper node
-/// the budget cannot distinguish from 0, so any comparison against 0 yields U.
+/// U-producing idiom is `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 <cmp>`: (√2+1)−(√2+1)
+/// is a composed Gosper node the budget cannot distinguish from 0, so any
+/// comparison against 0 yields U. (Plain √2−√2 now collapses to an exact 0.)
 #[cfg(test)]
 mod u_propagation_tests {
     use crate::interpreter::Interpreter;
@@ -1573,7 +1574,7 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn min_on_undecidable_yields_unknown_with_prefix() {
-        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 MIN").await;
+        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 MIN").await;
         let v = top(&interp);
         assert!(
             v.is_unknown(),
@@ -1590,7 +1591,7 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn max_on_undecidable_yields_unknown() {
-        let interp = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 MAX").await;
+        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 MAX").await;
         assert!(top(&interp).is_unknown());
     }
 
@@ -1623,7 +1624,7 @@ mod u_propagation_tests {
     async fn sort_with_undecidable_pair_yields_unknown_not_partial() {
         // Build a runtime vector containing √2−√2 and 0 via stack-mode SORT;
         // the undecidable pair makes the whole order unestablished ⇒ U.
-        let interp = run("'algo' IMPORT 'math' IMPORT 2 SQRT 2 SQRT SUB 0 .. SORT").await;
+        let interp = run("'algo' IMPORT 'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 .. SORT").await;
         let v = top(&interp);
         assert!(
             v.is_unknown(),
@@ -1641,7 +1642,7 @@ mod u_propagation_tests {
     //
     // Syntax: `[ value ] { guard | body } { IDLE | body } COND`. The guard is
     // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. The
-    // value `2 SQRT 2 SQRT SUB` (≈ √2−√2) compares Unknown against 0.
+    // value `2 SQRT 1 ADD 2 SQRT 1 ADD SUB` (≈ √2−√2) compares Unknown against 0.
 
     #[tokio::test]
     async fn cond_fires_clause_with_definite_true_guard() {
@@ -1655,7 +1656,7 @@ mod u_propagation_tests {
         // is in fact Unknown against every rational); it must NOT fire. The
         // second guard `TRUE` is value-independent and definitely fires.
         let interp = run(
-            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND",
+            "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND",
         )
         .await;
         assert_eq!(
@@ -1669,7 +1670,7 @@ mod u_propagation_tests {
     async fn cond_u_guard_then_else_clause() {
         // The only non-else guard is U ⇒ does not fire ⇒ IDLE/else runs.
         let interp = run(
-            "'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND",
+            "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND",
         )
         .await;
         assert_eq!(format!("{}", top(&interp)), "'else'");
@@ -1680,7 +1681,7 @@ mod u_propagation_tests {
         // U guard does not fire and there is no else clause ⇒ CondExhausted.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("'math' IMPORT 2 SQRT 2 SQRT SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND")
+            .execute("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND")
             .await;
         assert!(
             result.is_err(),

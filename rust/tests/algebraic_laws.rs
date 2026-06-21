@@ -181,8 +181,10 @@ fn integer_projection_examples() {
 //
 // K3 laws are checked exhaustively over the truth domain {TRUE, FALSE, U}.
 // `U` is produced by an undecidable continued-fraction comparison
-// (SPEC §7.4.1): `2 SQRT 2 SQRT SUB 0 EQ` compares √2 − √2 against 0 and
-// exhausts the budget. Each law renders both sides through the identical path,
+// (SPEC §7.4.1): `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ` compares the composed
+// Gosper value (√2+1) − (√2+1) against 0 and exhausts the budget. (Plain
+// √2 − √2 now collapses to an exact 0 in closed form and would decide.)
+// Each law renders both sides through the identical path,
 // so the equation is independent of how a truth value is displayed (finding B).
 
 /// The three truth-domain generators as Ajisai source fragments.
@@ -190,7 +192,7 @@ fn truths() -> [(&'static str, &'static str); 3] {
     [
         ("T", "TRUE"),
         ("F", "FALSE"),
-        ("U", "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ"),
+        ("U", "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
     ]
 }
 

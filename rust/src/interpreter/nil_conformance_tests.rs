@@ -221,7 +221,7 @@ async fn three_valued_or() {
 /// Ajisai source that leaves the logical Unknown (U) on the stack: the
 /// comparison of two equal irrationals exhausts the partial-quotient
 /// budget (SPEC §7.4.1).
-const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
 
 fn is_unknown(v: &Value) -> bool {
     v.is_unknown()
