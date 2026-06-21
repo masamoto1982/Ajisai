@@ -703,12 +703,14 @@
 #stack-display.blink-all .stack-item .stack-node[data-depth="1"] {
     font-weight: bold;
     padding: 0.35rem;
+    border-radius: 0;
 }
 
 
 #stack-display.highlight-top .stack-item:last-child .stack-node[data-depth="1"],
 #stack-display.blink-top .stack-item:last-child .stack-node[data-depth="1"] {
     padding: 0.35rem;
+    border-radius: 0;
 }
 
 
