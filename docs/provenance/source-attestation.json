@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:a32acd07505c628db0856913c9f807ebf7597f7cc1afd65d9b0ddf063f911ec6",
+  "rootIdentity": "sha256:b14b89207bf06aebd8922ed5e9dd60a45b39c6253396f6c89f978b94526a64a2",
   "fileCount": 259,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -59,8 +59,8 @@
     },
     {
       "path": "rust/src/arithmetic_operation_tests.rs",
-      "sha256": "5ed49a3af696291722bd4e0f4c1bc152fe3e32abc39d3f23a111d309201f73d2",
-      "bytes": 62599
+      "sha256": "4e9e951104e1bd2b643b687ed737c64cd265a2fc223cec19c60e8eaa8c7d0f7a",
+      "bytes": 63020
     },
     {
       "path": "rust/src/bin/ajisai.rs",
@@ -574,8 +574,8 @@
     },
     {
       "path": "rust/src/interpreter/logic_kleene.rs",
-      "sha256": "b5cc85dcca3b366779365445fc9de8634b336ca231401245fdd5b6e90ed990b5",
-      "bytes": 13754
+      "sha256": "83da8f3440a59b55408302998025be0a489401ed431333ddf2bd7c61b8d8b9b3",
+      "bytes": 13848
     },
     {
       "path": "rust/src/interpreter/mass_conservation.rs",
@@ -644,8 +644,8 @@
     },
     {
       "path": "rust/src/interpreter/nil_conformance_tests.rs",
-      "sha256": "b8c7c8ca77db8782a563d11804c127f43c0aea347dbbec2ba4e88323642e484e",
-      "bytes": 19464
+      "sha256": "3baaf13d3d625f68b60005a3006e5a4866d8044c9442d1303997998daf6d6b77",
+      "bytes": 19476
     },
     {
       "path": "rust/src/interpreter/nil_reason_tests.rs",
@@ -654,8 +654,8 @@
     },
     {
       "path": "rust/src/interpreter/nil_unknown_firewall_tests.rs",
-      "sha256": "7e06cb55d2a9e7c8e2db269169edf96f38ffffb4b2c4cbed3e5a1d922a2d2a21",
-      "bytes": 4531
+      "sha256": "c6d0c0d0a8a68c0a8b4b8d4ddea6d17d8a32a7eb1a04dd58aa45ea9119e165ae",
+      "bytes": 4618
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
@@ -869,8 +869,8 @@
     },
     {
       "path": "rust/src/types/continued_fraction.rs",
-      "sha256": "9e1cb59d36035c4a683752d3922da414426fd298f95b5625ae834c446eb0d624",
-      "bytes": 119581
+      "sha256": "be171045ccd971dbe9844b47d9e4a3f80937212c0e8239b495c0a54f1b9efa83",
+      "bytes": 127791
     },
     {
       "path": "rust/src/types/display.rs",
