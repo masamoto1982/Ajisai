@@ -19,7 +19,10 @@ mod materialization_limit_tests {
         let result = interp.execute("[ 0 9999999999999 ] RANGE").await;
         assert!(result.is_err(), "an astronomically large RANGE must error");
         assert!(
-            result.unwrap_err().to_string().contains("exceeding the limit"),
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("exceeding the limit"),
             "RANGE should report a materialization-limit error"
         );
     }
@@ -46,7 +49,10 @@ mod materialization_limit_tests {
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 1000000 1000000 7 ] FILL").await;
         assert!(result.is_err(), "a billion-element FILL must error");
-        assert!(result.unwrap_err().to_string().contains("too many elements"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("too many elements"));
     }
 
     #[tokio::test]
@@ -54,8 +60,13 @@ mod materialization_limit_tests {
         // The product of these dimensions overflows usize; the old
         // `shape.iter().product()` panicked here.
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ 99999999 99999999 99999999 1 ] FILL").await;
-        assert!(result.is_err(), "overflowing FILL shape must error, not panic");
+        let result = interp
+            .execute("[ 99999999 99999999 99999999 1 ] FILL")
+            .await;
+        assert!(
+            result.is_err(),
+            "overflowing FILL shape must error, not panic"
+        );
     }
 
     #[tokio::test]

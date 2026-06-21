@@ -40,7 +40,10 @@ mod extreme_index_tests {
     async fn get_with_i64_min_index_yields_nil_not_panic() {
         let mut interp = Interpreter::new();
         let result = interp.execute(&format!("[ 1 2 3 ] {} GET", I64_MIN)).await;
-        assert!(result.is_ok(), "out-of-range GET should produce NIL, not error");
+        assert!(
+            result.is_ok(),
+            "out-of-range GET should produce NIL, not error"
+        );
     }
 
     #[tokio::test]

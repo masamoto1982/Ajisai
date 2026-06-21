@@ -14,7 +14,9 @@ use crate::types::{Interpretation, Value, ValueData};
 /// shapes with a structured error instead of panicking (debug) or silently
 /// computing a wrong size (release).
 fn checked_shape_product(shape: &[usize]) -> Option<usize> {
-    shape.iter().try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
+    shape
+        .iter()
+        .try_fold(1usize, |acc, &dim| acc.checked_mul(dim))
 }
 
 /// Push a SPEC §7.4.1 Undecidable NIL. Used when an exact-real (CF)
