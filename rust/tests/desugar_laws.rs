@@ -108,8 +108,8 @@ fn arithmetic_alias_preserves_nil_absence_metadata() {
 
 #[test]
 fn comparison_alias_preserves_unknown_diagnosis() {
-    let lhs = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 =";
-    let rhs = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+    let lhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
+    let rhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
     let alias = observed(lhs);
     let canonical = observed(rhs);
     assert_eq!(alias, canonical);
@@ -144,7 +144,7 @@ fn truths() -> [(&'static str, &'static str); 3] {
     [
         ("T", "TRUE"),
         ("F", "FALSE"),
-        ("U", "'MATH' IMPORT 2 SQRT 2 SQRT SUB 0 EQ"),
+        ("U", "'MATH' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
     ]
 }
 

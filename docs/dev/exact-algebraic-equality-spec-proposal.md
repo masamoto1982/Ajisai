@@ -25,13 +25,24 @@ The consequence is that mathematically exact identities are reported as
 undecidable:
 
 ```ajisai
-2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ
+2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD SUB 0 EQ
 ```
 
-`√2 − √2` is exactly `0`, but the bihomographic Gosper transform treats its
-two operands as independent CF streams and cannot prove the difference is
-zero. The comparison budget is exhausted and the result is
+`(√2 + 1) − (√2 + 1)` is exactly `0`, but the bihomographic Gosper transform
+treats its two operands as independent CF streams and cannot prove the
+difference is zero. The comparison budget is exhausted and the result is
 `NIL (undecidable)`.
+
+> **Partial implementation note (incremental, non-canonical).** The
+> *direct* binary cases — `√a · √b`, `√a ÷ √b`, `√a − √a`, `√a + √a` —
+> are now simplified in closed form in `ExactReal` arithmetic
+> (`continued_fraction.rs`): `√a·√b = √(a·b)`, etc., so they collapse to a
+> `Rational`/`AlgebraicSqrt` instead of an opaque `Gosper`. This already
+> removes the historical *silent-NIL* bug where, e.g., `√2 · √2` exhausted
+> the bihom into an **empty** continued fraction and surfaced as `NIL`
+> rather than `2`. It does **not** cover *composed* operands such as
+> `(√2 + 1) − (√2 + 1)` above, whose operands are already `Gosper` nodes;
+> the full multiquadratic representation below is what closes that gap.
 
 A previously circulated memo proposed catching this NIL and silently
 falling back to an epsilon comparison. That proposal was rejected: it

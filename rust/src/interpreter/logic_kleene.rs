@@ -344,8 +344,9 @@ mod tests {
             interp.execute(code).await.expect("executes");
             interp.get_stack().last().expect("nonempty").clone()
         }
-        // (√2 − √2) == 0 is undecidable within budget -> U with agreedPrefix.
-        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ";
+        // ((√2+1) − (√2+1)) == 0 is undecidable within budget -> U with
+        // agreedPrefix. (Plain √2 − √2 now collapses to an exact 0 and decides.)
+        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
         let base = top(PRODUCE_U).await;
         let k = agreed_prefix_of(&base).expect("U carries an agreedPrefix");
 

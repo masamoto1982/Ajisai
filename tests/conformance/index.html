@@ -140,14 +140,14 @@
 
 <section class="ajisai-case" id="core-unknown-spelling" data-category="core">
   <h3>UNKNOWN spells as UNKNOWN (an undecidable comparison)</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</pre>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ</pre>
   <pre class="ajisai-expect-result">UNKNOWN</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-unknown-propagation" data-category="core">
   <h3>UNKNOWN propagates through Kleene AND</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ TRUE AND</pre>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ TRUE AND</pre>
   <pre class="ajisai-expect-result">UNKNOWN</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
