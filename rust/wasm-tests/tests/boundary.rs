@@ -136,3 +136,72 @@ async fn exact_rational_is_not_marked_approximate() {
         "exact rational must not carry an approximate marker"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Inbound boundary: restore_stack with untrusted / malformed values.
+//
+// `restore_stack` feeds each element through `js_value_to_value`. A restored
+// snapshot is untrusted (it can be tampered with in IndexedDB or arrive across
+// the worker boundary), so a malformed value must surface a recoverable error
+// rather than panic the module to an unrecoverable trap. Two such inputs used
+// to abort: a number whose denominator is "0" (panicked in `Fraction::new`),
+// and a deeply nested vector (overflowed the stack via unbounded recursion).
+// ---------------------------------------------------------------------------
+
+fn set_field(obj: &js_sys::Object, key: &str, val: &JsValue) {
+    js_sys::Reflect::set(obj, &JsValue::from_str(key), val).expect("set field");
+}
+
+fn number_node(numerator: &str, denominator: &str) -> JsValue {
+    let frac = js_sys::Object::new();
+    set_field(&frac, "numerator", &JsValue::from_str(numerator));
+    set_field(&frac, "denominator", &JsValue::from_str(denominator));
+    let node = js_sys::Object::new();
+    set_field(&node, "type", &JsValue::from_str("number"));
+    set_field(&node, "value", &frac.into());
+    node.into()
+}
+
+fn single_stack(node: JsValue) -> JsValue {
+    let arr = js_sys::Array::new();
+    arr.push(&node);
+    arr.into()
+}
+
+#[wasm_bindgen_test]
+fn restore_stack_rejects_zero_denominator_without_panicking() {
+    let mut interp = AjisaiInterpreter::new();
+    let result = interp.restore_stack(single_stack(number_node("1", "0")));
+    assert!(
+        result.is_err(),
+        "a zero-denominator value must be a recoverable error, not a Fraction::new panic"
+    );
+}
+
+#[wasm_bindgen_test]
+fn restore_stack_accepts_valid_rational() {
+    let mut interp = AjisaiInterpreter::new();
+    let result = interp.restore_stack(single_stack(number_node("3", "4")));
+    assert!(result.is_ok(), "a valid rational must restore successfully");
+}
+
+#[wasm_bindgen_test]
+fn restore_stack_rejects_deeply_nested_vector_without_overflow() {
+    // Wrap a scalar in `{type:'vector', value:[ ... ]}` far beyond the depth
+    // cap; deserializing this used to recurse until the WASM stack overflowed.
+    let mut node = number_node("1", "1");
+    for _ in 0..1000 {
+        let arr = js_sys::Array::new();
+        arr.push(&node);
+        let vector = js_sys::Object::new();
+        set_field(&vector, "type", &JsValue::from_str("vector"));
+        set_field(&vector, "value", &arr.into());
+        node = vector.into();
+    }
+    let mut interp = AjisaiInterpreter::new();
+    let result = interp.restore_stack(single_stack(node));
+    assert!(
+        result.is_err(),
+        "deeply nested restored value must error, not overflow the stack"
+    );
+}

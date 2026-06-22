@@ -11,9 +11,40 @@ use crate::types::value_protocol::{
 };
 use crate::types::{Interpretation, Value, ValueData};
 use num_bigint::BigInt;
+use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
+
+/// Cap on how deeply a JS value may nest when deserialized at the boundary
+/// (`restore_stack` / `restore_user_words`). `js_value_to_value` recurses one
+/// frame per `vector` level, and the resulting `Value` is then traversed
+/// recursively (display, the derived `Drop`, JSON conversions). A hostile or
+/// corrupted restored snapshot with thousands of nesting levels would overflow
+/// the WASM stack — an unrecoverable trap — instead of yielding a recoverable
+/// error. Matches the interpreter's WASM-vetted recursion envelope.
+const MAX_BOUNDARY_NESTING_DEPTH: usize = 256;
+
+/// Parse a `{ numerator, denominator }` JS object into a `Fraction`, rejecting a
+/// zero denominator before it reaches `Fraction::new` (which *panics* on a zero
+/// denominator — an unrecoverable WASM trap when the value comes from untrusted
+/// restored state).
+fn parse_js_fraction(obj: &js_sys::Object) -> Result<Fraction, String> {
+    let num_str = js_sys::Reflect::get(obj, &"numerator".into())
+        .map_err(|_| "No numerator".to_string())?
+        .as_string()
+        .ok_or("Numerator not string")?;
+    let den_str = js_sys::Reflect::get(obj, &"denominator".into())
+        .map_err(|_| "No denominator".to_string())?
+        .as_string()
+        .ok_or("Denominator not string")?;
+    let numerator = BigInt::from_str(&num_str).map_err(|e| e.to_string())?;
+    let denominator = BigInt::from_str(&den_str).map_err(|e| e.to_string())?;
+    if denominator.is_zero() {
+        return Err("denominator is zero".to_string());
+    }
+    Ok(Fraction::new(numerator, denominator))
+}
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct UserWordData {
@@ -45,6 +76,17 @@ pub(crate) fn build_bracket_structure_from_shape(shape: &[usize]) -> String {
 }
 
 pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
+    js_value_to_value_with_depth(js_val, 0)
+}
+
+fn js_value_to_value_with_depth(js_val: JsValue, depth: usize) -> Result<Value, String> {
+    // Bound recursion before descending: a deeply nested untrusted value would
+    // otherwise overflow the WASM stack (an unrecoverable trap) here and in
+    // every later traversal of the resulting Value.
+    if depth > MAX_BOUNDARY_NESTING_DEPTH {
+        return Err("value nesting too deep".to_string());
+    }
+
     let obj = js_sys::Object::from(js_val);
     let type_str = js_sys::Reflect::get(&obj, &"type".into())
         .map_err(|_| "Failed to get 'type' property".to_string())?
@@ -55,35 +97,11 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
 
     match type_str.as_str() {
         "number" => {
-            let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
-                .map_err(|_| "No numerator".to_string())?
-                .as_string()
-                .ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
-                .map_err(|_| "No denominator".to_string())?
-                .as_string()
-                .ok_or("Denominator not string")?;
-            let fraction = Fraction::new(
-                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-            );
+            let fraction = parse_js_fraction(&js_sys::Object::from(value_js))?;
             Ok(Value::from_fraction(fraction))
         }
         "datetime" => {
-            let num_obj = js_sys::Object::from(value_js);
-            let num_str = js_sys::Reflect::get(&num_obj, &"numerator".into())
-                .map_err(|_| "No numerator".to_string())?
-                .as_string()
-                .ok_or("Numerator not string")?;
-            let den_str = js_sys::Reflect::get(&num_obj, &"denominator".into())
-                .map_err(|_| "No denominator".to_string())?
-                .as_string()
-                .ok_or("Denominator not string")?;
-            let fraction = Fraction::new(
-                BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-            );
+            let fraction = parse_js_fraction(&js_sys::Object::from(value_js))?;
             Ok(Value::from_datetime(fraction))
         }
         "string" => {
@@ -102,7 +120,7 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             let js_array = js_sys::Array::from(&value_js);
             let mut vec = Vec::new();
             for i in 0..js_array.length() {
-                vec.push(js_value_to_value(js_array.get(i))?);
+                vec.push(js_value_to_value_with_depth(js_array.get(i), depth + 1)?);
             }
             Ok(Value::from_vector(vec))
         }
@@ -114,19 +132,7 @@ pub(crate) fn js_value_to_value(js_val: JsValue) -> Result<Value, String> {
             let data_array = js_sys::Array::from(&data_js);
             let mut fractions = Vec::new();
             for i in 0..data_array.length() {
-                let frac_obj = js_sys::Object::from(data_array.get(i));
-                let num_str = js_sys::Reflect::get(&frac_obj, &"numerator".into())
-                    .map_err(|_| "No numerator in tensor data".to_string())?
-                    .as_string()
-                    .ok_or("Numerator not string")?;
-                let den_str = js_sys::Reflect::get(&frac_obj, &"denominator".into())
-                    .map_err(|_| "No denominator in tensor data".to_string())?
-                    .as_string()
-                    .ok_or("Denominator not string")?;
-                let fraction = Fraction::new(
-                    BigInt::from_str(&num_str).map_err(|e| e.to_string())?,
-                    BigInt::from_str(&den_str).map_err(|e| e.to_string())?,
-                );
+                let fraction = parse_js_fraction(&js_sys::Object::from(data_array.get(i)))?;
                 fractions.push(fraction);
             }
 
