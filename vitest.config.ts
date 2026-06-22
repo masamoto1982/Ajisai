@@ -6,6 +6,13 @@ import { defineConfig } from 'vitest/config';
 // (the Rust quality gate already handles branch coverage; AQ-VER-004
 // targets behavioural correctness of pure helpers).
 export default defineConfig({
+    // Mirror the production build's injected globals so importing modules that
+    // transitively reference them (e.g. the platform adapters pulled in by the
+    // persistence layer) does not throw a ReferenceError at module load. This
+    // only defines build-time constants; it adds no DOM or coverage tooling.
+    define: {
+        __AJISAI_BUILD_TIMESTAMP__: JSON.stringify('test'),
+    },
     test: {
         // Co-locate tests with source: src/**/*.test.ts.
         include: ['src/**/*.test.ts'],

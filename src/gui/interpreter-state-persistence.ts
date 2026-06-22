@@ -125,7 +125,7 @@ const createExportData = (interpreter: AjisaiInterpreter, dictionaryName: string
     return { formatVersion: EXPORT_FORMAT_VERSION, dictionary: dictionaryName, words };
 };
 
-interface ParsedImport {
+export interface ParsedImport {
     readonly words: UserWord[];
     // Embedded content identities keyed by upper-cased word name, or null for
     // legacy (v1) array files that predate content addressing.
@@ -141,7 +141,26 @@ const isRemovedUserWordDictionary = (dictionary: string | null | undefined): boo
 const containsRemovedUserWordDictionary = (words: readonly UserWord[]): boolean =>
     words.some(word => isRemovedUserWordDictionary(word.dictionary));
 
-const parseImportDocument = (jsonString: string): Result<ParsedImport, Error> => {
+// Validate a single raw word entry from an (untrusted) import file. Returns a
+// normalized word, or null when the entry is malformed. A word is only usable
+// downstream if it has a string `name`; `definition` and `id` are optional and
+// must be strings when present. This keeps `parseImportDocument` a total
+// function — a hostile or hand-corrupted file with `null`, numeric, or
+// name-less entries previously threw a TypeError out of the v2 `.map` (and
+// would have thrown again at `word.name.toUpperCase()` in `importUserWords`)
+// instead of being parsed or cleanly rejected.
+const normalizeImportWord = (
+    raw: unknown
+): { name: string; definition: string | null; id?: string } | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const word = raw as Record<string, unknown>;
+    if (typeof word.name !== 'string') return null;
+    const definition = typeof word.definition === 'string' ? word.definition : null;
+    const id = typeof word.id === 'string' ? word.id : undefined;
+    return id ? { name: word.name, definition, id } : { name: word.name, definition };
+};
+
+export const parseImportDocument = (jsonString: string): Result<ParsedImport, Error> => {
     let parsed: unknown;
     try {
         parsed = JSON.parse(jsonString);
@@ -149,21 +168,29 @@ const parseImportDocument = (jsonString: string): Result<ParsedImport, Error> =>
         return err(e instanceof Error ? e : new Error(String(e)));
     }
 
+    // Both branches drop malformed entries rather than throwing or forwarding
+    // them to `restore_user_words`; valid words in a partially-corrupt file
+    // still import.
+    const collect = (rawWords: unknown[]): ParsedImport => {
+        const embeddedIds = new Map<string, string>();
+        const words: UserWord[] = [];
+        for (const raw of rawWords) {
+            const word = normalizeImportWord(raw);
+            if (!word) continue;
+            if (word.id) embeddedIds.set(word.name.toUpperCase(), word.id);
+            words.push({ name: word.name, definition: word.definition });
+        }
+        return { words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null };
+    };
+
     // Legacy v1: a bare array of words, with no content identities.
     if (Array.isArray(parsed)) {
-        return ok({ words: parsed as UserWord[], embeddedIds: null });
+        return ok({ words: collect(parsed).words, embeddedIds: null });
     }
 
     // v2: an export document carrying per-word content identities.
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as ExportDocument).words)) {
-        const embeddedIds = new Map<string, string>();
-        const words: UserWord[] = (parsed as ExportDocument).words.map(word => {
-            if (word.id) {
-                embeddedIds.set(word.name.toUpperCase(), word.id);
-            }
-            return { name: word.name, definition: word.definition ?? null };
-        });
-        return ok({ words, embeddedIds: embeddedIds.size > 0 ? embeddedIds : null });
+        return ok(collect((parsed as ExportDocument).words as unknown[]));
     }
 
     return err(new Error('Invalid file format. Expected an array of words or an export document.'));
