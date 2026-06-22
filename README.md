@@ -1,6 +1,6 @@
 ![Rust](docs/assets/badges/rust.svg) ![WebAssembly](docs/assets/badges/webassembly.svg) ![TypeScript](docs/assets/badges/typescript.svg) ![Tauri](docs/assets/badges/tauri.svg) [Build and Deploy status](https://github.com/masamoto1982/Ajisai/actions/workflows/build.yml)
 
-![Ajisai QR Code](public/images/QR_ajisai.png "Ajisai QR Code")
+![Ajisai QR Code](public/images/QR_ajisai_M.png "Ajisai QR Code")
 
 # Ajisai
 
