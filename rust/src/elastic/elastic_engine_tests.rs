@@ -654,6 +654,15 @@ mod tests {
     // ────────────────────────────────────────────────────────────────────────
 
     #[test]
+    fn interpreter_and_values_are_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Interpreter>();
+        assert_send::<crate::types::Value>();
+        assert_send::<crate::types::ValueData>();
+        assert_send::<crate::types::SemanticRegistry>();
+    }
+
+    #[test]
     fn interpreter_default_mode_is_greedy() {
         let interp = Interpreter::new();
         assert_eq!(interp.elastic_mode(), ElasticMode::Greedy);

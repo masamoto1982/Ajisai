@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:29d6d251924d5d91376a33ebb52ae99cd5a0ccacdd2d97aa544099032f3831a2",
+  "rootIdentity": "sha256:98689160a4f15f00728ed4ca27cafb8014b984459539aeb665fe69e211167911",
   "fileCount": 263,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -54,7 +54,7 @@
     },
     {
       "path": "rust/Cargo.toml",
-      "sha256": "735507dc254c56236acaaa8fd3df694e3c3b55f9d8f0f7fa047f95cfcc26c25a",
+      "sha256": "d0c5c9ad00c673a33e58972515e11ff28bfc8ca2c6896273eb2e3f243f353b0a",
       "bytes": 2496
     },
     {
@@ -129,8 +129,8 @@
     },
     {
       "path": "rust/src/elastic/elastic_engine_tests.rs",
-      "sha256": "4fb18925e119cde7920c6da4154f999e000e817f9544bef8429ec94e8f76d829",
-      "bytes": 25378
+      "sha256": "0788103a206550839435924c378e354f58e2c59f4eee3b379ab22df7e3439f27",
+      "bytes": 25668
     },
     {
       "path": "rust/src/elastic/evaluation_unit.rs",
@@ -249,13 +249,13 @@
     },
     {
       "path": "rust/src/interpreter/audio/music_group.rs",
-      "sha256": "a64bdde44140910d62202c0ab972403e162532286bf26347b42e0ed8ea9fcd29",
-      "bytes": 6459
+      "sha256": "e42b4fff4681470535ff7ae17079c1e561ae5dcfd000a1196af0240571cd27bb",
+      "bytes": 6463
     },
     {
       "path": "rust/src/interpreter/audio/music_values.rs",
-      "sha256": "cf799c48a2bed8bbbe6c728ff394fadb11b57c7e52359bf724aa2e9152d4f23e",
-      "bytes": 11829
+      "sha256": "f63e13b0f2977a4fa4dbc65685a0c6feb9d3b7172c3fa157cd8c3822d605cdae",
+      "bytes": 11834
     },
     {
       "path": "rust/src/interpreter/cast/cast_chars_join.rs",
@@ -394,8 +394,8 @@
     },
     {
       "path": "rust/src/interpreter/differential_tests.rs",
-      "sha256": "a9d74c0a77bdc6b705ee44ac721cc1ad9cd969267e501128d855d9c334ec6402",
-      "bytes": 2993
+      "sha256": "a97a611b5ee7b34da7e5f6e65b332c316e6d71618389d5b4c44e9c4c09fde831",
+      "bytes": 4218
     },
     {
       "path": "rust/src/interpreter/energy_proxy.rs",
@@ -539,8 +539,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "0bc3f0e8124406164b554087e2fbdb5f2acfbeef754af0ace18d7fb64277d43c",
-      "bytes": 27219
+      "sha256": "a703f50ee6ccd3865ff82d9247ba9467913aee54e83ea523ce94689e4271f24e",
+      "bytes": 27227
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -569,8 +569,8 @@
     },
     {
       "path": "rust/src/interpreter/json.rs",
-      "sha256": "1ec20192fd7ec98c81e7eda36a5aaea89f6aa06701c61423292a8ebbfd8eec38",
-      "bytes": 15441
+      "sha256": "6ff61103487b41bdedd2d929636389047092d0dd73d8464ed1d2a636291d7094",
+      "bytes": 15452
     },
     {
       "path": "rust/src/interpreter/logic.rs",
@@ -729,8 +729,8 @@
     },
     {
       "path": "rust/src/interpreter/tensor_ops.rs",
-      "sha256": "f098f14eccd5c3153c03bdc79b8fa8d1ffdf440acb0ddc3eef65fdb58852f72a",
-      "bytes": 17766
+      "sha256": "8bb400f756f9a9d71bb100791dfb9728101e27884fc609450e2b35cdb6493429",
+      "bytes": 17771
     },
     {
       "path": "rust/src/interpreter/time_calendar.rs",
@@ -874,8 +874,8 @@
     },
     {
       "path": "rust/src/types/arena.rs",
-      "sha256": "ceb77215a44abe27d267a074c3b3ad9b92e250a60cec71eeb539af0aa33fb2f9",
-      "bytes": 20938
+      "sha256": "351a3c49ea5a9c358e9081a212df865500d5cb0888cae4af974d7d035f8e09d6",
+      "bytes": 20945
     },
     {
       "path": "rust/src/types/continued_fraction.rs",
@@ -909,13 +909,13 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "73d545256c95a31add486a0a150bfc757f7a303a110d7aa789476c6ea19f7c30",
-      "bytes": 22560
+      "sha256": "867fab504d03c3a3385c2ca6af03523c813aaad67ef34ed7311b01bece5c5d03",
+      "bytes": 22554
     },
     {
       "path": "rust/src/types/value_operations.rs",
-      "sha256": "9c5118a7fb514f19a1467018079e9d898f474d19cf217a268cb88e48b39af272",
-      "bytes": 52069
+      "sha256": "6f4f4a1b37dbadfc07fa1ac8d5396d5f06d1088789c3c759892b7fa6f6cfa4a0",
+      "bytes": 52099
     },
     {
       "path": "rust/src/types/value_protocol.rs",
@@ -924,8 +924,8 @@
     },
     {
       "path": "rust/src/types/value_protocol_tests.rs",
-      "sha256": "1ab6dc77d77aa6e67eef915798778a372b179ed4f4c0ab1fcfcf506ad10a1cad",
-      "bytes": 14007
+      "sha256": "0996b4ac4a5ebbc819f9684382a0393b921268ac1aa04e02fe0345edeb4df9a0",
+      "bytes": 14014
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/mod.rs",
@@ -1009,8 +1009,8 @@
     },
     {
       "path": "scripts/rebuild-wasm.sh",
-      "sha256": "1d924da9b47fa470722916580e1945d8dfc0da19635769d834928dbbea8173dd",
-      "bytes": 1520
+      "sha256": "b033cbc413800f0eddc875aa500561d0f46256f8082d6fa33d27559c33b9b8fc",
+      "bytes": 2194
     },
     {
       "path": "src-tauri/Cargo.toml",

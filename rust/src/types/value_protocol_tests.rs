@@ -12,7 +12,7 @@
 use crate::types::fraction::Fraction;
 use crate::types::value_protocol::{value_to_protocol, ProtocolNode, ProtocolValue};
 use crate::types::{DenseTensor, Interpretation, Value, ValueData};
-use std::rc::Rc;
+use std::sync::Arc;
 
 fn frac(n: i64) -> Fraction {
     Fraction::from(n)
@@ -37,8 +37,8 @@ fn tensor(nums: &[i64], shape: &[usize]) -> Value {
         DenseTensor::from_fractions(fracs, shape.to_vec()).expect("rectangular tensor for test");
     Value {
         data: ValueData::Tensor {
-            data: Rc::new(dense),
-            shape: Rc::new(shape.to_vec()),
+            data: Arc::new(dense),
+            shape: Arc::new(shape.to_vec()),
         },
         hint: Interpretation::Unassigned,
         absence: None,
@@ -349,8 +349,8 @@ mod protocol_property_tests {
         let dense = DenseTensor::from_fractions(fracs, vec![len]).expect("1d tensor");
         Value {
             data: ValueData::Tensor {
-                data: Rc::new(dense),
-                shape: Rc::new(vec![len]),
+                data: Arc::new(dense),
+                shape: Arc::new(vec![len]),
             },
             hint: Interpretation::Unassigned,
             absence: None,

@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::interpreter_core::RuntimeMetrics;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[inline]
 fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
@@ -216,7 +216,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
             .map(|f| Value::from_fraction(f.clone()))
             .collect();
         return Value {
-            data: ValueData::Vector(Rc::new(children)),
+            data: ValueData::Vector(Arc::new(children)),
             hint: Interpretation::Unassigned,
             absence: None,
         };
@@ -235,7 +235,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
         .collect();
 
     Value {
-        data: ValueData::Vector(Rc::new(children)),
+        data: ValueData::Vector(Arc::new(children)),
         hint: Interpretation::Unassigned,
         absence: None,
     }

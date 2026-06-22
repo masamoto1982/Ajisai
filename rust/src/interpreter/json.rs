@@ -5,7 +5,7 @@ use crate::types::arena::{
 };
 use crate::types::{Interpretation, Value, ValueData};
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 fn extract_stack_value(
     interp: &mut Interpreter,
@@ -167,7 +167,7 @@ pub fn op_json_keys(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value::nil());
     } else {
         interp.stack.push(Value {
-            data: ValueData::Vector(Rc::new(keys)),
+            data: ValueData::Vector(Arc::new(keys)),
             hint: Interpretation::Unassigned,
             absence: None,
         });
@@ -224,7 +224,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
                         new_pairs.push(Value {
-                            data: ValueData::Vector(Rc::new(vec![
+                            data: ValueData::Vector(Arc::new(vec![
                                 kv[0].clone(),
                                 new_value.clone(),
                             ])),
@@ -241,7 +241,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         if found_idx.is_none() {
             new_index.insert(key_str.clone(), new_pairs.len());
             new_pairs.push(Value {
-                data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
+                data: ValueData::Vector(Arc::new(vec![Value::from_string(&key_str), new_value])),
                 hint: Interpretation::Unassigned,
                 absence: None,
             });
@@ -261,7 +261,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 
         interp.stack.push(Value {
             data: ValueData::Record {
-                pairs: Rc::new(new_pairs),
+                pairs: Arc::new(new_pairs),
                 index: new_index,
             },
             hint: Interpretation::Unassigned,
@@ -270,8 +270,8 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
     } else {
         let mut index = HashMap::new();
         index.insert(key_str.clone(), 0);
-        let pairs = Rc::new(vec![Value {
-            data: ValueData::Vector(Rc::new(vec![Value::from_string(&key_str), new_value])),
+        let pairs = Arc::new(vec![Value {
+            data: ValueData::Vector(Arc::new(vec![Value::from_string(&key_str), new_value])),
             hint: Interpretation::Unassigned,
             absence: None,
         }]);
@@ -337,7 +337,7 @@ fn build_record(pairs: Vec<Value>) -> Value {
     }
     Value {
         data: ValueData::Record {
-            pairs: Rc::new(pairs),
+            pairs: Arc::new(pairs),
             index,
         },
         hint: Interpretation::Unassigned,
@@ -396,7 +396,7 @@ pub fn op_json_values(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value::nil());
     } else {
         interp.stack.push(Value {
-            data: ValueData::Vector(Rc::new(values)),
+            data: ValueData::Vector(Arc::new(values)),
             hint: Interpretation::Unassigned,
             absence: None,
         });
