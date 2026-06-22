@@ -17,7 +17,6 @@ use crate::semantic::AbsenceMetadata;
 use crate::types::continued_fraction::ExactReal;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq)]
@@ -273,7 +272,7 @@ pub struct TensorLaneId {
 
 pub type NilReasonRegistry = HashMap<TensorLaneId, NilReason>;
 
-pub trait ValueExt: std::fmt::Debug + 'static {
+pub trait ValueExt: std::fmt::Debug + Send + 'static {
     fn clone_box(&self) -> Box<dyn ValueExt>;
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -326,13 +325,13 @@ pub enum ValueData {
     /// (e.g. AlgebraicSqrt or a Gosper transform). Constructed only by
     /// `Value::from_exact_real`; use `as_scalar()` for the rational fast path.
     ExactScalar(ExactReal),
-    Vector(Rc<Vec<Value>>),
+    Vector(Arc<Vec<Value>>),
     Tensor {
-        data: Rc<DenseTensor>,
-        shape: Rc<Vec<usize>>,
+        data: Arc<DenseTensor>,
+        shape: Arc<Vec<usize>>,
     },
     Record {
-        pairs: Rc<Vec<Value>>,
+        pairs: Arc<Vec<Value>>,
         index: HashMap<String, usize>,
     },
     Nil,
