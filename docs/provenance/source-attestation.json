@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:e2769bc7d01f18552bfa976f461cbfd71781141eafeacbf97b58e24dd84b251c",
-  "fileCount": 261,
+  "rootIdentity": "sha256:fc5fe2d15b7480f03372207b6446ff8fc405aa3ddabe9e91dc2035e22d7928d7",
+  "fileCount": 263,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -1133,9 +1133,14 @@
       "bytes": 2152
     },
     {
+      "path": "src/gui/interpreter-state-persistence.test.ts",
+      "sha256": "2e66fc5a9181892a7a1c0c9c0037b98f1f9452a32c929908dbf9bf43ce776c08",
+      "bytes": 2344
+    },
+    {
       "path": "src/gui/interpreter-state-persistence.ts",
-      "sha256": "02918e1fb8f7f336cf9be2ad37a543073459c6ac9c5589492dea1a8f270a57c0",
-      "bytes": 19279
+      "sha256": "ab2e50d8b62a83afd7d0c6cb4275a99fe2e0378e824bafe787ea049162ed991a",
+      "bytes": 20757
     },
     {
       "path": "src/gui/interpreter/interpreter-client.ts",
@@ -1318,9 +1323,14 @@
       "bytes": 2803
     },
     {
+      "path": "src/workers/interpreter-snapshot.test.ts",
+      "sha256": "14fa62bc77a8515eac195d5283534c1d0ffbfcae383e3c311daf0c35203bd2c8",
+      "bytes": 2661
+    },
+    {
       "path": "src/workers/interpreter-snapshot.ts",
-      "sha256": "6d1c46cc587f5292c617567986b633b81ceb208b5f27b7c628236b5a1415f24a",
-      "bytes": 2038
+      "sha256": "ed6cd8a2e1b622648e6d66bfb89d7db112d7dc5985e0fce8e03fb9f126df02cb",
+      "bytes": 2617
     },
     {
       "path": "tsconfig.json",
