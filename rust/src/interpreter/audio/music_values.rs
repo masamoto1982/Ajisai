@@ -20,7 +20,7 @@ use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub(crate) const PITCH_KIND: &str = "music.pitch";
 pub(crate) const DURATION_KIND: &str = "music.duration";
@@ -31,7 +31,7 @@ pub(crate) const SCOPE_KIND: &str = "music.scope";
 
 fn plain_vector(children: Vec<Value>) -> Value {
     Value {
-        data: ValueData::Vector(Rc::new(children)),
+        data: ValueData::Vector(Arc::new(children)),
         hint: Interpretation::Unassigned,
         absence: None,
     }
@@ -47,7 +47,7 @@ pub(crate) fn make_record(fields: Vec<(&str, Value)>) -> Value {
     }
     Value {
         data: ValueData::Record {
-            pairs: Rc::new(pairs),
+            pairs: Arc::new(pairs),
             index,
         },
         hint: Interpretation::Unassigned,

@@ -8,7 +8,7 @@ use super::music_values::{make_record, record_field};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::types::{Interpretation, Value, ValueData};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub(crate) const GROUP_KIND: &str = "music.group";
 
@@ -53,7 +53,7 @@ pub(crate) fn make_group(
     children: Vec<Value>,
 ) -> Value {
     let children_value = Value {
-        data: ValueData::Vector(Rc::new(children)),
+        data: ValueData::Vector(Arc::new(children)),
         hint: Interpretation::Unassigned,
         absence: None,
     };

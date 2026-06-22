@@ -2,6 +2,7 @@
 
 use crate::interpreter::Interpreter;
 use crate::types::Stack;
+use proptest::prelude::*;
 
 fn run_with_quantization_mode(code: &str, force_no_quant: bool) -> Stack {
     let mut interp = Interpreter::new();
@@ -88,4 +89,40 @@ fn differential_cond_pure_branches() {
     let code = "[ 5 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND";
     let (quantized, plain) = run_with_both_paths(code);
     assert_eq!(quantized, plain);
+}
+
+fn vector_literal(values: &[i64]) -> String {
+    let body = values
+        .iter()
+        .map(i64::to_string)
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!("[ {} ]", body)
+}
+
+proptest! {
+    #[test]
+    fn differential_elementwise_integer_vectors(
+        lhs in proptest::collection::vec(-32i64..=32, 1..8),
+        rhs in proptest::collection::vec(-32i64..=32, 1..8),
+        op in prop_oneof![Just("+"), Just("-"), Just("*")],
+    ) {
+        let len = lhs.len().min(rhs.len());
+        let code = format!("{} {} {}", vector_literal(&lhs[..len]), vector_literal(&rhs[..len]), op);
+        let (quantized, plain) = run_with_both_paths(&code);
+        prop_assert_eq!(quantized, plain, "program: {}", code);
+    }
+}
+
+proptest! {
+    #[test]
+    fn differential_map_pure_integer_callback(
+        values in proptest::collection::vec(-32i64..=32, 1..8),
+        constant in -16i64..=16,
+        op in prop_oneof![Just("+"), Just("-"), Just("*")],
+    ) {
+        let code = format!("{} {{ [ {} ] {} }} MAP", vector_literal(&values), constant, op);
+        let (quantized, plain) = run_with_both_paths(&code);
+        prop_assert_eq!(quantized, plain, "program: {}", code);
+    }
 }

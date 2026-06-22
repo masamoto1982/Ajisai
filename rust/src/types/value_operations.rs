@@ -7,7 +7,7 @@ use crate::semantic::{
     AbsenceMetadata, AbsenceOrigin, Capability, Recoverability, SemanticKind, ValueOrigin,
     ValueShape,
 };
-use std::rc::Rc;
+use std::sync::Arc;
 
 fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
     match reason {
@@ -275,7 +275,7 @@ impl Value {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
-            data: ValueData::Vector(Rc::new(children)),
+            data: ValueData::Vector(Arc::new(children)),
             hint: Interpretation::Text,
             absence: None,
         }
@@ -288,7 +288,7 @@ impl Value {
     #[inline]
     pub fn from_children(children: Vec<Value>) -> Self {
         Self {
-            data: ValueData::Vector(Rc::new(children)),
+            data: ValueData::Vector(Arc::new(children)),
             hint: Interpretation::Unassigned,
             absence: None,
         }
@@ -297,7 +297,7 @@ impl Value {
     #[inline]
     pub fn from_children_with_hint(children: Vec<Value>, hint: Interpretation) -> Self {
         Self {
-            data: ValueData::Vector(Rc::new(children)),
+            data: ValueData::Vector(Arc::new(children)),
             hint,
             absence: None,
         }
@@ -308,7 +308,7 @@ impl Value {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
-            data: ValueData::Vector(Rc::new(values)),
+            data: ValueData::Vector(Arc::new(values)),
             hint: Interpretation::Unassigned,
             absence: None,
         }
@@ -319,7 +319,7 @@ impl Value {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
         Self {
-            data: ValueData::Vector(Rc::new(values)),
+            data: ValueData::Vector(Arc::new(values)),
             hint,
             absence: None,
         }
@@ -350,7 +350,7 @@ impl Value {
     #[inline]
     pub fn from_interval(interval: Interval) -> Self {
         Self {
-            data: ValueData::Vector(Rc::new(vec![
+            data: ValueData::Vector(Arc::new(vec![
                 Value::from_fraction(interval.lo),
                 Value::from_fraction(interval.hi),
             ])),
@@ -566,7 +566,7 @@ impl Value {
             ValueData::Tensor { data, shape } => {
                 let children = tensor_to_nested_values(data, shape);
                 std::borrow::Cow::Owned(Value {
-                    data: ValueData::Vector(Rc::new(children)),
+                    data: ValueData::Vector(Arc::new(children)),
                     hint: self.hint,
                     absence: self.absence.clone(),
                 })
@@ -580,11 +580,11 @@ impl Value {
         match &self.data {
             ValueData::Boolean(_) => true,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
-            ValueData::Vector(rc) => Rc::strong_count(rc) == 1,
+            ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
-                Rc::strong_count(data) == 1 && Rc::strong_count(shape) == 1
+                Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
             }
-            ValueData::Record { pairs, .. } => Rc::strong_count(pairs) == 1,
+            ValueData::Record { pairs, .. } => Arc::strong_count(pairs) == 1,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => false,
@@ -680,7 +680,7 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Rc::make_mut(v).get_mut(index)
+                Arc::make_mut(v).get_mut(index)
             }
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
@@ -720,7 +720,7 @@ impl Value {
             return;
         };
         let children = tensor_to_nested_values(data, shape);
-        self.data = ValueData::Vector(Rc::new(children));
+        self.data = ValueData::Vector(Arc::new(children));
     }
 
     pub fn push_child(&mut self, child: Value) {
@@ -729,14 +729,14 @@ impl Value {
         }
         match &mut self.data {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Rc::make_mut(v).push(child);
+                Arc::make_mut(v).push(child);
             }
             ValueData::Nil => {
-                self.data = ValueData::Vector(Rc::new(vec![child]));
+                self.data = ValueData::Vector(Arc::new(vec![child]));
             }
             ValueData::Scalar(f) => {
                 let old = Value::from_fraction(f.clone());
-                self.data = ValueData::Vector(Rc::new(vec![old, child]));
+                self.data = ValueData::Vector(Arc::new(vec![old, child]));
             }
             ValueData::ExactScalar(_) => {
                 // Cannot push_child into an ExactScalar — silently ignore
@@ -755,7 +755,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v).pop(),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v).pop(),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
@@ -772,7 +772,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
@@ -792,7 +792,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
@@ -814,7 +814,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Rc::make_mut(v),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
@@ -894,7 +894,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Rc::make_mut(v)),
+            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Arc::make_mut(v)),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
@@ -1058,8 +1058,8 @@ impl Value {
         };
         Self {
             data: ValueData::Tensor {
-                data: Rc::new(tensor),
-                shape: Rc::new(resolved_shape),
+                data: Arc::new(tensor),
+                shape: Arc::new(resolved_shape),
             },
             hint: Interpretation::Unassigned,
             absence: None,
@@ -1078,7 +1078,7 @@ impl Value {
         }
         if hint == Interpretation::Text {
             return Self {
-                data: ValueData::Vector(Rc::new(values)),
+                data: ValueData::Vector(Arc::new(values)),
                 hint,
                 absence: None,
             };
@@ -1087,8 +1087,8 @@ impl Value {
             if let Some(tensor) = DenseTensor::from_fractions(data, shape.clone()) {
                 return Self {
                     data: ValueData::Tensor {
-                        data: Rc::new(tensor),
-                        shape: Rc::new(shape),
+                        data: Arc::new(tensor),
+                        shape: Arc::new(shape),
                     },
                     hint,
                     absence: None,
@@ -1096,7 +1096,7 @@ impl Value {
             }
         }
         Self {
-            data: ValueData::Vector(Rc::new(values)),
+            data: ValueData::Vector(Arc::new(values)),
             hint,
             absence: None,
         }
