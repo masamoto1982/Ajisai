@@ -18,7 +18,7 @@ pub mod purity_table;
 pub mod tracer;
 
 pub use cache_manager::CacheManager;
-pub use evaluation_unit::{EvaluationUnit, UnitState};
+pub use evaluation_unit::{EvaluationUnit, ParallelGate, UnitState, MIN_PARALLEL_WORK_SCORE};
 pub use execution_mode::ElasticMode;
 pub use fallback_bridge::{FallbackBridge, FallbackLogEntry, FallbackReason};
 pub use purity_table::{infer_purity, purity_by_name, EvalCost, Purity, PurityInfo};
