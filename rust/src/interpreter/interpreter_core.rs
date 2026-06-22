@@ -138,11 +138,40 @@ pub struct ResolveCacheEntry {
     pub registration_order: u64,
 }
 
+/// How the runtime reacts when the compiled (optimized) path and the plain
+/// (reference) path disagree during shadow validation.
+///
+/// This is an *internal* safety control, never a user-facing knob. The default
+/// (`Fallback`) already guarantees that a divergent optimization result is
+/// never committed: the reference path wins. Ajisai programs get this
+/// protection transparently just by running. The remaining variants exist for
+/// benchmarking the comparison cost (`Off`) and for tests that need to observe
+/// (`Observe`) or hard-reject (`Strict`) a disagreement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IntegrityMode {
+    /// Skip the enriched comparison (host effects / absence metadata) and keep
+    /// the historical behavior. Used only to measure the comparison's own cost.
+    Off,
+    /// Run the full comparison and count disagreements, but still adopt the
+    /// compiled path. Non-disruptive characterization.
+    Observe,
+    /// Default. On any disagreement, prefer the plain reference path so a
+    /// result the reference path does not agree with is never committed.
+    #[default]
+    Fallback,
+    /// On disagreement, refuse the result and surface an integrity failure
+    /// instead of silently substituting the reference path.
+    Strict,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationPolicy {
     pub enable_shadow_validation: bool,
     pub max_validation_input_len: usize,
     pub warmup_runs: u64,
+    /// Reaction to a compiled-vs-plain disagreement. Defaults to the safe
+    /// `Fallback`; see `IntegrityMode`.
+    pub integrity_mode: IntegrityMode,
 }
 
 impl Default for ValidationPolicy {
@@ -151,6 +180,7 @@ impl Default for ValidationPolicy {
             enable_shadow_validation: true,
             max_validation_input_len: 16,
             warmup_runs: 3,
+            integrity_mode: IntegrityMode::Fallback,
         }
     }
 }
@@ -172,6 +202,11 @@ pub struct RuntimeMetrics {
     pub shadow_validation_started_count: u64,
     pub shadow_validation_success_count: u64,
     pub shadow_validation_fallback_count: u64,
+    /// Number of shadow validations where the compiled and plain paths
+    /// disagreed on stack value, semantic hint, absence metadata, or emitted
+    /// host effects. Counts genuine divergences the enriched comparison caught,
+    /// independent of how the active `IntegrityMode` then resolved them.
+    pub shadow_validation_integrity_mismatch_count: u64,
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
