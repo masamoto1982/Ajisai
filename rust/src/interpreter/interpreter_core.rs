@@ -21,6 +21,21 @@ pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 /// recursion specifically into a recoverable AjisaiError instead of a trap.
 pub const MAX_USER_WORD_DEPTH: usize = 256;
 
+/// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal
+/// builder `collect_vector_with_depth` recurses one frame per level, and so do
+/// every downstream traversal of the resulting value — `Display`, the derived
+/// recursive `Drop` of the nested `Rc<Vec<Value>>`, and the JSON
+/// arena/stringify conversions. None of those had a depth guard, so a few
+/// thousand levels of nesting from plain source overflowed the native stack and
+/// aborted the process (an unrecoverable trap inside the WASM playground)
+/// rather than producing a diagnosable `AjisaiError`. The ceiling matches
+/// `MAX_USER_WORD_DEPTH`: a single self-recursive vector frame is lighter than
+/// a user-word call (which expands to several Rust frames per level), so a
+/// value capped at this depth stays safely within the same WASM stack envelope
+/// that depth is already vetted against, while remaining ~20x the deepest
+/// hand-written nesting in the corpus.
+pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
+
 /// Cap on the number of elements a single generative built-in (`RANGE`,
 /// `FILL`, ...) is allowed to materialize in one call. Such words loop
 /// internally to build a vector/tensor, so they each count as a *single*
