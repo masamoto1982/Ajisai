@@ -708,6 +708,61 @@ fn bench_trie_lookup_miss(c: &mut Criterion) {
     });
 }
 
+fn phase1_vector_literal(len: usize) -> String {
+    let body = (1..=len)
+        .map(|n| n.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!("[ {} ]", body)
+}
+
+fn bench_phase1_seq_vector_add(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let lhs = phase1_vector_literal(128);
+    let rhs = phase1_vector_literal(128);
+    let code = format!("{} {} +", lhs, rhs);
+
+    c.bench_function("implicit_phase1_seq_vector_add_128", |b| {
+        b.iter(|| {
+            let mut interp = Interpreter::new();
+            interp.set_elastic_mode(ElasticMode::Greedy);
+            interp.set_force_no_quant(true);
+            rt.block_on(interp.execute(&code)).unwrap();
+            black_box(interp.get_stack().clone());
+        })
+    });
+}
+
+fn bench_phase1_seq_map_increment(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let code = format!("{} {{ [ 1 ] + }} MAP", phase1_vector_literal(128));
+
+    c.bench_function("implicit_phase1_seq_map_increment_128", |b| {
+        b.iter(|| {
+            let mut interp = Interpreter::new();
+            interp.set_elastic_mode(ElasticMode::Greedy);
+            interp.set_force_no_quant(true);
+            rt.block_on(interp.execute(&code)).unwrap();
+            black_box(interp.get_stack().clone());
+        })
+    });
+}
+
+fn bench_phase1_seq_fold_sum(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let code = format!("{} [ 0 ] {{ + }} FOLD", phase1_vector_literal(128));
+
+    c.bench_function("implicit_phase1_seq_fold_sum_128", |b| {
+        b.iter(|| {
+            let mut interp = Interpreter::new();
+            interp.set_elastic_mode(ElasticMode::Greedy);
+            interp.set_force_no_quant(true);
+            rt.block_on(interp.execute(&code)).unwrap();
+            black_box(interp.get_stack().clone());
+        })
+    });
+}
+
 criterion_group!(
     dictionary_benches,
     bench_hashmap_lookup_hit,
@@ -748,4 +803,16 @@ criterion_group!(
     bench_interpreter_hof_mode_matrix,
 );
 
-criterion_main!(dictionary_benches, fraction_benches, interpreter_benches);
+criterion_group!(
+    implicit_parallelism_phase1_benches,
+    bench_phase1_seq_vector_add,
+    bench_phase1_seq_map_increment,
+    bench_phase1_seq_fold_sum,
+);
+
+criterion_main!(
+    dictionary_benches,
+    fraction_benches,
+    interpreter_benches,
+    implicit_parallelism_phase1_benches,
+);

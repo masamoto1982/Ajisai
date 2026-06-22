@@ -12,6 +12,31 @@ fn next_unit_id() -> u32 {
     UNIT_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
+/// Minimum estimated work before the scheduler may spend memory/threading
+/// overhead on a future data-parallel kernel. This is deliberately
+/// conservative: small pure units stay greedy, preserving Never-Slower until
+/// benchmarks justify lowering it.
+pub const MIN_PARALLEL_WORK_SCORE: f64 = 1024.0;
+
+/// Existing space-budget accounting expressed as the number of output lanes a
+/// speculative/parallel kernel may allocate. `None` means the caller has no
+/// reliable space-watermark signal, so the safe answer is to keep execution
+/// sequential.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParallelGate {
+    pub element_count: usize,
+    pub available_space_budget: Option<usize>,
+}
+
+impl ParallelGate {
+    pub fn new(element_count: usize, available_space_budget: Option<usize>) -> Self {
+        Self {
+            element_count,
+            available_space_budget,
+        }
+    }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,6 +163,26 @@ impl EvaluationUnit {
     /// Requirements: pure, not order-sensitive, not requiring eager evaluation.
     pub fn elastic_eligible(&self) -> bool {
         self.pure && !self.order_sensitive && !self.eager_required
+    }
+
+    /// `true` when this unit may use a future data-parallel kernel. This is a
+    /// stricter gate than `elastic_eligible`: it also requires enough work to
+    /// amortize scheduling overhead and enough space budget to materialize the
+    /// output lanes without crossing the existing waterline.
+    pub fn parallel_kernel_eligible(&self, gate: ParallelGate) -> bool {
+        if !self.elastic_eligible() {
+            return false;
+        }
+        if gate.element_count == 0 {
+            return false;
+        }
+        let Some(space_budget) = gate.available_space_budget else {
+            return false;
+        };
+        if space_budget < gate.element_count {
+            return false;
+        }
+        self.estimated_cost * gate.element_count as f64 >= MIN_PARALLEL_WORK_SCORE
     }
 
     /// Scheduling priority — **lower score = higher priority**.

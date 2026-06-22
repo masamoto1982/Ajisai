@@ -24,7 +24,7 @@ pub const MAX_USER_WORD_DEPTH: usize = 256;
 /// Cap on how deeply vector literals may nest (`[ [ [ ... ] ] ]`). The literal
 /// builder `collect_vector_with_depth` recurses one frame per level, and so do
 /// every downstream traversal of the resulting value — `Display`, the derived
-/// recursive `Drop` of the nested `Rc<Vec<Value>>`, and the JSON
+/// recursive `Drop` of the nested `Arc<Vec<Value>>`, and the JSON
 /// arena/stringify conversions. None of those had a depth guard, so a few
 /// thousand levels of nesting from plain source overflowed the native stack and
 /// aborted the process (an unrecoverable trap inside the WASM playground)
@@ -281,7 +281,7 @@ pub struct Interpreter {
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
-    pub(crate) module_state: HashMap<String, Box<dyn std::any::Any>>,
+    pub(crate) module_state: HashMap<String, Box<dyn std::any::Any + Send>>,
     pub(crate) import_table: ImportTable,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     /// User-word call depth. Incremented on entry to a user-word body in

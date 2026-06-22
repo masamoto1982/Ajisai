@@ -9,10 +9,12 @@
 # We build into a scratch directory and copy just those four files so the
 # committed tree stays clean.
 #
-# --no-opt is intentional: wasm-opt 108 (the version available in the build
-# environment) miscompiles wasm-bindgen 0.2.120 output and produces a
-# corrupted module (see commit 89a0c7b). Skipping it costs ~6% binary size
-# but keeps the runtime functional.
+# wasm-opt remains opt-in for now: wasm-opt 108 (the version available in an
+# earlier build environment) miscompiled wasm-bindgen 0.2.120 output and
+# produced a corrupted module (see commit 89a0c7b). The Cargo profile below is
+# speed-oriented (-O3), but the stable default still passes --no-opt until the
+# optimized path has a pinned Binaryen version plus smoke/benchmark evidence.
+# Set AJISAI_WASM_OPT=1 to exercise the speed-optimized profile.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -30,7 +32,18 @@ cd "${repo_root}/rust"
 # The WASM/JS bindings are gated behind the `wasm` Cargo feature so the native
 # Core build never pulls in wasm-bindgen. wasm-pack passes args after `--`
 # straight to cargo.
-wasm-pack build --target web --out-dir "${scratch_dir}" --no-opt -- --features wasm
+wasm_pack_args=(build --target web --out-dir "${scratch_dir}")
+if [[ "${AJISAI_WASM_OPT:-0}" == "1" ]]; then
+  if command -v wasm-opt >/dev/null 2>&1; then
+    echo "rebuild-wasm: AJISAI_WASM_OPT=1; using wasm-pack release wasm-opt profile ($(wasm-opt --version))."
+  else
+    echo "rebuild-wasm: AJISAI_WASM_OPT=1 but wasm-opt is not on PATH; wasm-pack may fail." >&2
+  fi
+else
+  echo "rebuild-wasm: using stable no-opt wasm build; set AJISAI_WASM_OPT=1 to enable wasm-opt -O3."
+  wasm_pack_args+=(--no-opt)
+fi
+wasm-pack "${wasm_pack_args[@]}" -- --features wasm
 
 mkdir -p "${out_dir}"
 for f in ajisai_core.js ajisai_core.d.ts ajisai_core_bg.wasm ajisai_core_bg.wasm.d.ts; do

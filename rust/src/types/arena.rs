@@ -3,7 +3,7 @@ use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub type NodeId = u32;
 
@@ -193,18 +193,18 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     .map(|child_id| rebuild_recursive(arena, *child_id))
                     .collect();
                 Value {
-                    data: ValueData::Vector(Rc::new(values)),
+                    data: ValueData::Vector(Arc::new(values)),
                     hint: arena.hint(id),
                     absence: None,
                 }
             }
             NodeKind::Tensor { data, shape } => Value {
                 data: ValueData::Tensor {
-                    data: Rc::new(
+                    data: Arc::new(
                         DenseTensor::from_fractions(data.clone(), shape.clone())
                             .expect("arena tensor nodes preserve shape-compatible dense data"),
                     ),
-                    shape: Rc::new(shape.clone()),
+                    shape: Arc::new(shape.clone()),
                 },
                 hint: arena.hint(id),
                 absence: None,
@@ -216,7 +216,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                     .collect();
                 Value {
                     data: ValueData::Record {
-                        pairs: Rc::new(values),
+                        pairs: Arc::new(values),
                         index: index.clone(),
                     },
                     hint: arena.hint(id),

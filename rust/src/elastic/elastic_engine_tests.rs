@@ -176,6 +176,47 @@ mod tests {
     }
 
     #[test]
+    fn parallel_kernel_gate_requires_cost_and_space_budget() {
+        let info = pbn("MAP").unwrap();
+        let u = EvaluationUnit::from_purity("MAP", &info);
+
+        assert!(u.elastic_eligible());
+        assert!(
+            !u.parallel_kernel_eligible(crate::elastic::evaluation_unit::ParallelGate::new(
+                32,
+                Some(32),
+            ))
+        );
+        assert!(
+            !u.parallel_kernel_eligible(crate::elastic::evaluation_unit::ParallelGate::new(
+                1024,
+                Some(1023),
+            ))
+        );
+        assert!(
+            !u.parallel_kernel_eligible(crate::elastic::evaluation_unit::ParallelGate::new(
+                1024, None,
+            ))
+        );
+        assert!(
+            u.parallel_kernel_eligible(crate::elastic::evaluation_unit::ParallelGate::new(
+                1024,
+                Some(1024),
+            ))
+        );
+    }
+
+    #[test]
+    fn parallel_kernel_gate_rejects_order_sensitive_and_impure_units() {
+        let fold = EvaluationUnit::from_purity("FOLD", &pbn("FOLD").unwrap());
+        let print = EvaluationUnit::from_purity("PRINT", &pbn("PRINT").unwrap());
+        let enough_space = crate::elastic::evaluation_unit::ParallelGate::new(4096, Some(4096));
+
+        assert!(!fold.parallel_kernel_eligible(enough_space));
+        assert!(!print.parallel_kernel_eligible(enough_space));
+    }
+
+    #[test]
     fn evaluation_unit_ids_are_unique() {
         let a = EvaluationUnit::new("A");
         let b = EvaluationUnit::new("B");
@@ -652,6 +693,15 @@ mod tests {
     // ────────────────────────────────────────────────────────────────────────
     // Interpreter integration — elastic fields accessible
     // ────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn interpreter_and_values_are_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Interpreter>();
+        assert_send::<crate::types::Value>();
+        assert_send::<crate::types::ValueData>();
+        assert_send::<crate::types::SemanticRegistry>();
+    }
 
     #[test]
     fn interpreter_default_mode_is_greedy() {
