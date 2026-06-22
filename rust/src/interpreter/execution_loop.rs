@@ -135,6 +135,19 @@ impl Interpreter {
             return Err(AjisaiError::from("Expected vector start"));
         }
 
+        // Guard against unbounded nesting before recursing. Without this, a few
+        // thousand levels of `[ [ [ ... ] ] ]` from plain source build a value
+        // so deeply nested that recursively displaying or dropping it overflows
+        // the native stack and aborts the process (a WASM trap). Rejecting here
+        // keeps the value — and every later traversal of it — within a depth the
+        // stack can handle, surfaced as a recoverable error.
+        if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
+            return Err(AjisaiError::from(format!(
+                "Vector nesting too deep (limit {})",
+                crate::interpreter::MAX_VECTOR_NESTING_DEPTH
+            )));
+        }
+
         let mut values = Vec::new();
         let mut i = start_index + 1;
         let mut has_bool: bool = false;

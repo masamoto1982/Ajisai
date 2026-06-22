@@ -201,4 +201,44 @@ mod dimension_limit_tests {
         let result = interp.execute("..").await;
         assert!(result.is_ok(), ".. operation should succeed");
     }
+
+    // Regression: deeply nested vector literals must be rejected before they
+    // build a value whose recursive display/drop overflows the native stack
+    // (an unrecoverable abort / WASM trap). See MAX_VECTOR_NESTING_DEPTH.
+    fn nested_literal(depth: usize) -> String {
+        format!("{}1{}", "[ ".repeat(depth), " ]".repeat(depth))
+    }
+
+    #[tokio::test]
+    async fn test_excessive_vector_nesting_errors_not_aborts() {
+        let mut interp = Interpreter::new();
+        let result = interp.execute(&nested_literal(5000)).await;
+        assert!(
+            result.is_err(),
+            "5000-deep vector nesting must be a recoverable error, not a stack-overflow abort"
+        );
+        assert!(result.unwrap_err().to_string().contains("nesting too deep"));
+    }
+
+    #[tokio::test]
+    async fn test_excessive_nesting_survivable_and_recovers() {
+        // After the deep-nesting error, the interpreter stays usable: it did not
+        // build (and then have to recursively drop) the pathological value.
+        let mut interp = Interpreter::new();
+        assert!(interp.execute(&nested_literal(5000)).await.is_err());
+        assert!(
+            interp.execute("[ 1 2 3 ]").await.is_ok(),
+            "interpreter must remain usable after a deep-nesting rejection"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_moderate_vector_nesting_still_succeeds() {
+        // Well within the cap: ordinary nested data keeps working.
+        let mut interp = Interpreter::new();
+        assert!(
+            interp.execute(&nested_literal(32)).await.is_ok(),
+            "32-deep nesting is far below the cap and must succeed"
+        );
+    }
 }
