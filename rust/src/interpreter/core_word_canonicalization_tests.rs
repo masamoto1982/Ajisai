@@ -111,7 +111,7 @@ fn canonicalize_borrows_without_allocating_on_hot_paths() {
     assert_eq!(add, "ADD");
 
     // Already-uppercase non-alias word → input borrowed unchanged.
-    for word in ["MAP", "DUP", "TIME@NOW", "USER-WORD"] {
+    for word in ["MAP", "LENGTH", "TIME@NOW", "USER-WORD"] {
         let canon = canonicalize_core_word_name(word);
         assert!(
             matches!(canon, Cow::Borrowed(_)),
