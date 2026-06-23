@@ -66,7 +66,7 @@ impl Interpreter {
     /// Never call directly — use `execute_word_core` so tracing applies.
     fn execute_word_core_inner(&mut self, name: &str) -> Result<()> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        let name = canonical_name.as_str();
+        let name = canonical_name.as_ref();
         let (resolved_name, def) = self.resolve_word_entry(name).ok_or_else(|| {
             let ambiguous = self.check_ambiguity(name);
             if !ambiguous.is_empty() {
@@ -172,7 +172,7 @@ impl Interpreter {
             self.force_flag = false;
         }
 
-        self.execute_builtin_direct(canonical.as_str())
+        self.execute_builtin_direct(canonical.as_ref())
     }
 
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
