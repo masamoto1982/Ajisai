@@ -78,13 +78,21 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
     }
 }
 
-fn apply_simd_binary(a: &Value, b: &Value, op: fn(&[i64], &[i64]) -> Vec<i64>) -> Option<Value> {
+fn apply_simd_binary(
+    word: &str,
+    a: &Value,
+    b: &Value,
+    op: fn(i64, i64) -> i64,
+    lane: fn(&[i64], &[i64]) -> Vec<i64>,
+) -> Option<(Value, bool)> {
     let va: Vec<i64> = extract_integer_vector(a)?;
     let vb: Vec<i64> = extract_integer_vector(b)?;
     if va.len() != vb.len() {
         return None;
     }
-    Some(create_value_from_integer_vector(op(&va, &vb)))
+    let (result, parallel) =
+        crate::interpreter::parallel::elementwise_binary(word, &va, &vb, op, lane);
+    Some((create_value_from_integer_vector(result), parallel))
 }
 
 // SIMD intrinsics path: only when wasm32 is built with the `simd128` target
@@ -268,32 +276,69 @@ mod wasm_impl {
     }
 }
 
-pub fn apply_simd_add(a: &Value, b: &Value) -> Option<Value> {
-    apply_simd_binary(a, b, wasm_impl::simd_add)
+// Public SIMD lane kernels: one chunk's worth of work. The native parallel
+// dispatcher (`interpreter::parallel`) uses these as the sequential fallback
+// (below threshold and on wasm), while the per-lane scalar `op` closures it
+// fans across threads are required to agree with them element-wise so the
+// parallel and sequential outputs stay bit-identical (Same Result).
+pub fn lane_add(a: &[i64], b: &[i64]) -> Vec<i64> {
+    wasm_impl::simd_add(a, b)
 }
 
-pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<Value> {
-    apply_simd_binary(a, b, wasm_impl::simd_sub)
+pub fn lane_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
+    wasm_impl::simd_sub(a, b)
 }
 
-pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<Value> {
-    apply_simd_binary(a, b, wasm_impl::simd_mul)
+pub fn lane_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
+    wasm_impl::simd_mul(a, b)
 }
 
-pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+pub fn lane_scalar_add(a: &[i64], scalar: i64) -> Vec<i64> {
+    wasm_impl::simd_scalar_add(a, scalar)
+}
+
+pub fn lane_scalar_mul(a: &[i64], scalar: i64) -> Vec<i64> {
+    wasm_impl::simd_scalar_mul(a, scalar)
+}
+
+/// Returns `(result, parallel_used)`; `parallel_used` is `true` only when the
+/// multi-core kernel actually fired (observational metric only).
+pub fn apply_simd_add(a: &Value, b: &Value) -> Option<(Value, bool)> {
+    apply_simd_binary("+", a, b, |x, y| x + y, lane_add)
+}
+
+pub fn apply_simd_sub(a: &Value, b: &Value) -> Option<(Value, bool)> {
+    apply_simd_binary("-", a, b, |x, y| x - y, lane_sub)
+}
+
+pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<(Value, bool)> {
+    apply_simd_binary("*", a, b, |x, y| x * y, lane_mul)
+}
+
+pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Vec<i64> = extract_integer_vector(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    Some(create_value_from_integer_vector(
-        wasm_impl::simd_scalar_add(&va, scalar),
-    ))
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar(
+        "+",
+        &va,
+        scalar,
+        |x, s| x + s,
+        lane_scalar_add,
+    );
+    Some((create_value_from_integer_vector(result), parallel))
 }
 
-pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<Value> {
+pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Vec<i64> = extract_integer_vector(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    Some(create_value_from_integer_vector(
-        wasm_impl::simd_scalar_mul(&va, scalar),
-    ))
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar(
+        "*",
+        &va,
+        scalar,
+        |x, s| x * s,
+        lane_scalar_mul,
+    );
+    Some((create_value_from_integer_vector(result), parallel))
 }
 
 #[cfg(test)]
@@ -327,7 +372,7 @@ mod tests {
     fn test_simd_add_vectors() {
         let a: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
-        let result: Value = apply_simd_add(&a, &b).unwrap();
+        let (result, _) = apply_simd_add(&a, &b).unwrap();
         let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88]);
     }
@@ -336,7 +381,7 @@ mod tests {
     fn test_simd_sub_vectors() {
         let a: Value = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80]);
         let b: Value = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
-        let result: Value = apply_simd_sub(&a, &b).unwrap();
+        let (result, _) = apply_simd_sub(&a, &b).unwrap();
         let expected: Vec<i64> = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![9, 18, 27, 36, 45, 54, 63, 72]);
     }
@@ -345,7 +390,7 @@ mod tests {
     fn test_simd_mul_vectors() {
         let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let b = create_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
-        let result = apply_simd_mul(&a, &b).unwrap();
+        let (result, _) = apply_simd_mul(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![2, 6, 12, 20, 30, 42, 56, 72]);
     }
@@ -354,7 +399,7 @@ mod tests {
     fn test_simd_scalar_add() {
         let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(100);
-        let result = apply_simd_scalar_add(&v, &s).unwrap();
+        let (result, _) = apply_simd_scalar_add(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![101, 102, 103, 104, 105, 106, 107, 108]);
     }
@@ -363,7 +408,7 @@ mod tests {
     fn test_simd_scalar_mul() {
         let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let s = Value::from_int(3);
-        let result = apply_simd_scalar_mul(&v, &s).unwrap();
+        let (result, _) = apply_simd_scalar_mul(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![3, 6, 9, 12, 15, 18, 21, 24]);
     }
@@ -372,7 +417,7 @@ mod tests {
     fn test_simd_add_odd_length() {
         let a = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
         let b = create_int_vector(&[10, 20, 30, 40, 50, 60, 70, 80, 90]);
-        let result = apply_simd_add(&a, &b).unwrap();
+        let (result, _) = apply_simd_add(&a, &b).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![11, 22, 33, 44, 55, 66, 77, 88, 99]);
     }

@@ -100,6 +100,31 @@ fn vector_literal(values: &[i64]) -> String {
     format!("[ {} ]", body)
 }
 
+#[test]
+fn differential_vector_add_end_to_end() {
+    // Phase 3, hierarchy A: the element-wise integer add wiring (which now
+    // routes through the gated parallel dispatcher) must produce a result
+    // bit-identical to the sequentially-computed reference (Same Result) and
+    // identical across the quantized / force-no-quant paths. The kept size is
+    // modest (well under the materialization limit) so parsing stays cheap; the
+    // parallel==sequential contract itself is pinned by the kernel proptests in
+    // `interpreter::parallel`.
+    use crate::interpreter::simd_ops::extract_integer_vector;
+
+    let n = 2048;
+    let lhs: Vec<i64> = (0..n as i64).collect();
+    let rhs: Vec<i64> = (0..n as i64).map(|x| x * 3 - 5).collect();
+    let expected: Vec<i64> = lhs.iter().zip(rhs.iter()).map(|(a, b)| a + b).collect();
+
+    let code = format!("{} {} +", vector_literal(&lhs), vector_literal(&rhs));
+    let (quantized, plain) = run_with_both_paths(&code);
+    assert_eq!(quantized, plain, "quantized vs plain diverged on vector add");
+
+    let top = plain.last().expect("result on stack");
+    let got = extract_integer_vector(top).expect("integer vector result");
+    assert_eq!(got, expected, "vector add != sequential reference");
+}
+
 proptest! {
     #[test]
     fn differential_elementwise_integer_vectors(

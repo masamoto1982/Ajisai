@@ -83,7 +83,13 @@ fn push_interval_schema_result(
     Ok(true)
 }
 
-fn simd_schema_candidate(schema: ExactArithmeticSchema, a: &Value, b: &Value) -> Option<Value> {
+/// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
+/// the native multi-core kernel actually fired for this operation.
+fn simd_schema_candidate(
+    schema: ExactArithmeticSchema,
+    a: &Value,
+    b: &Value,
+) -> Option<(Value, bool)> {
     match schema {
         ExactArithmeticSchema::Add => simd_ops::apply_simd_add(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_add(a, b))
@@ -102,13 +108,19 @@ fn push_simd_schema_result(
     a: &Value,
     b: &Value,
 ) -> bool {
-    let Some(result) = simd_schema_candidate(schema, a, b) else {
+    let Some((result, parallel_used)) = simd_schema_candidate(schema, a, b) else {
         return false;
     };
     interp.runtime_metrics.vtu_simd_kernel_use_count = interp
         .runtime_metrics
         .vtu_simd_kernel_use_count
         .saturating_add(1);
+    if parallel_used {
+        interp.runtime_metrics.vtu_parallel_kernel_use_count = interp
+            .runtime_metrics
+            .vtu_parallel_kernel_use_count
+            .saturating_add(1);
+    }
     consume_stacktop_binary(interp);
     interp.stack.push(result);
     true

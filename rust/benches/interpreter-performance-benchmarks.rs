@@ -810,9 +810,70 @@ criterion_group!(
     bench_phase1_seq_fold_sum,
 );
 
+// ── Phase 3: native multi-core data-parallel kernel ─────────────────────────
+// Never-Slower integration guard: a below-floor vector add must stay at the
+// sequential cost — the gated dispatcher must not fan out tiny inputs.
+fn bench_phase3_small_vector_add_never_slower(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let lhs = phase1_vector_literal(128);
+    let rhs = phase1_vector_literal(128);
+    let code = format!("{} {} +", lhs, rhs);
+
+    c.bench_function("implicit_phase3_small_vector_add_128", |b| {
+        b.iter(|| {
+            let mut interp = Interpreter::new();
+            interp.set_elastic_mode(ElasticMode::Greedy);
+            interp.set_force_no_quant(true);
+            rt.block_on(interp.execute(&code)).unwrap();
+            black_box(interp.get_stack().clone());
+        })
+    });
+}
+
+// Kernel-isolated scaling evidence. End-to-end interpreter benches are
+// dominated by literal parsing and per-element Value materialization, so they
+// cannot reveal kernel scaling. These run on a pre-built `Vec<i64>` so the only
+// difference is the sequential lane vs the native multi-core pool dispatch
+// (`run_parallel_binary`, which always fans out). Element-wise i64 add is
+// memory-bandwidth-bound, so the achievable speedup is sub-linear and only
+// emerges at large sizes; this pair documents the crossover that calibrates
+// `PARALLEL_DISPATCH_MIN`.
+fn phase3_kernel_seq_lane(a: &[i64], b: &[i64]) -> Vec<i64> {
+    a.iter().zip(b.iter()).map(|(x, y)| x + y).collect()
+}
+
+fn bench_phase3_kernel_add(c: &mut Criterion) {
+    for n in [262_144usize, 524_288, 1_000_000] {
+        let a: Vec<i64> = (0..n as i64).collect();
+        let b: Vec<i64> = (0..n as i64).map(|x| x + 1).collect();
+
+        c.bench_function(&format!("implicit_phase3_kernel_seq_add_{n}"), |bb| {
+            bb.iter(|| black_box(phase3_kernel_seq_lane(black_box(&a), black_box(&b))))
+        });
+
+        c.bench_function(&format!("implicit_phase3_kernel_par_add_{n}"), |bb| {
+            bb.iter(|| {
+                let result = ajisai_core::interpreter::parallel::run_parallel_binary(
+                    black_box(&a),
+                    black_box(&b),
+                    |x, y| x + y,
+                );
+                black_box(result)
+            })
+        });
+    }
+}
+
+criterion_group!(
+    implicit_parallelism_phase3_benches,
+    bench_phase3_small_vector_add_never_slower,
+    bench_phase3_kernel_add,
+);
+
 criterion_main!(
     dictionary_benches,
     fraction_benches,
     interpreter_benches,
     implicit_parallelism_phase1_benches,
+    implicit_parallelism_phase3_benches,
 );
