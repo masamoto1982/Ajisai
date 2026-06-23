@@ -169,11 +169,11 @@ impl<T> SendMutPtr<T> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Pool {
     /// Run `task(chunk_index)` for every chunk on the pool and block until all
     /// have completed. `task` may borrow caller-local data because we join all
     /// jobs before returning.
-    #[cfg(not(target_arch = "wasm32"))]
     fn for_each_chunk<F>(&self, chunks: usize, task: F)
     where
         F: Fn(usize) + Sync,
