@@ -1041,6 +1041,28 @@ impl Value {
     /// Construct a dense `Tensor` value. `data.len()` must equal the product of
     /// `shape` (or `shape` may be empty for a flat 1-D buffer; in that case
     /// `[data.len()]` is used).
+    /// Wrap a flat `Vec<i64>` as a 1-D pure-integer dense `Tensor` (SoA),
+    /// without materializing per-element `Value`s or `Fraction`s. This is the
+    /// output constructor for the integer SIMD lane: it keeps the result in
+    /// the same dense column representation as its inputs instead of degrading
+    /// to an AoS `Vector` (handoff 手1). The `hint` matches `from_tensor` /
+    /// `from_children` (`Unassigned`) so downstream interpretation is unchanged.
+    pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
+        if numerators.is_empty() {
+            return Self::nil_with_reason(NilReason::EmptySequence);
+        }
+        let len = numerators.len();
+        let tensor = DenseTensor::from_integers(numerators);
+        Self {
+            data: ValueData::Tensor {
+                data: Arc::new(tensor),
+                shape: Arc::new(vec![len]),
+            },
+            hint: Interpretation::Unassigned,
+            absence: None,
+        }
+    }
+
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
         if data.is_empty() {
             return Self::nil_with_reason(NilReason::EmptySequence);

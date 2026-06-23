@@ -870,10 +870,41 @@ criterion_group!(
     bench_phase3_kernel_add,
 );
 
+// ── 手1: zero-copy integer lane (普段使い回復) ──────────────────────────────
+// These mid-size integer benches isolate the representation round-trip the
+// handoff targets: with 手1 the integer lane borrows its dense-tensor inputs
+// (no per-element Fraction) and emits a dense `Tensor` (SoA), so a *chained*
+// op (`+` then `*`) lets the second op borrow the first's output directly
+// instead of re-extracting an AoS `Vector`. These run well below
+// `PARALLEL_DISPATCH_MIN`, so they measure the普段使い sequential path only —
+// the regime that previously regressed. Build the input vectors once and reuse
+// the interpreter so parsing/init does not dominate.
+fn bench_step1_integer_chain(c: &mut Criterion) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    for n in [1_000usize, 10_000, 100_000] {
+        // [v] [v] + [v] *  — exercises Tensor→Tensor hand-off between ops.
+        let v = phase1_vector_literal(n);
+        let code = format!("{v} {v} + {v} *");
+
+        c.bench_function(&format!("step1_integer_add_mul_chain_{n}"), |b| {
+            b.iter(|| {
+                let mut interp = Interpreter::new();
+                interp.set_elastic_mode(ElasticMode::Greedy);
+                interp.set_force_no_quant(true);
+                rt.block_on(interp.execute(&code)).unwrap();
+                black_box(interp.get_stack().clone());
+            })
+        });
+    }
+}
+
+criterion_group!(handoff_step1_benches, bench_step1_integer_chain,);
+
 criterion_main!(
     dictionary_benches,
     fraction_benches,
     interpreter_benches,
     implicit_parallelism_phase1_benches,
     implicit_parallelism_phase3_benches,
+    handoff_step1_benches,
 );

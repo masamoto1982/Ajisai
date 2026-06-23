@@ -33,6 +33,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::mem::MaybeUninit;
 #[cfg(not(target_arch = "wasm32"))]
+use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc::{Receiver, Sender};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
@@ -327,6 +329,101 @@ pub fn run_parallel_scalar(a: &[i64], scalar: i64, op: fn(i64, i64) -> i64) -> V
     })
 }
 
+// ── Speculative (overflow-checked) parallel implementations ─────────────────
+//
+// The integer lane runs `i64` arithmetic speculatively: it is bit-identical to
+// the exact rational result *iff* no lane overflows (handoff 奇策本命). These
+// variants compute with `checked_*` ops and OR-aggregate an overflow flag
+// across workers. On overflow the caller discards the result and recomputes on
+// the exact `Fraction`/BigInt path, so the answer can never silently differ
+// from the sequential exact value. The cheap overflow check (not a second full
+// execution) is what keeps this on the Never-Slower side.
+
+/// Multi-core overflow-checked element-wise binary op. Returns `None` if any
+/// lane overflowed `i64`; otherwise the bit-exact result.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_parallel_binary_checked(
+    a: &[i64],
+    b: &[i64],
+    op: fn(i64, i64) -> Option<i64>,
+) -> Option<Vec<i64>> {
+    debug_assert_eq!(a.len(), b.len());
+    let n = a.len();
+    let pool = pool();
+    if pool.workers < 2 || n == 0 {
+        let mut out = Vec::with_capacity(n);
+        for (&x, &y) in a.iter().zip(b.iter()) {
+            out.push(op(x, y)?);
+        }
+        return Some(out);
+    }
+
+    let overflow = Arc::new(AtomicBool::new(false));
+    let result = fill_parallel(n, pool, |start, region| {
+        let a_chunk = &a[start..start + region.len()];
+        let b_chunk = &b[start..start + region.len()];
+        for ((dst, &x), &y) in region.iter_mut().zip(a_chunk.iter()).zip(b_chunk.iter()) {
+            match op(x, y) {
+                Some(v) => {
+                    dst.write(v);
+                }
+                None => {
+                    overflow.store(true, Ordering::Relaxed);
+                    // Keep the lane initialized (set_len safety); the whole
+                    // buffer is discarded once the overflow flag is observed.
+                    dst.write(0);
+                }
+            }
+        }
+    });
+
+    if overflow.load(Ordering::Relaxed) {
+        None
+    } else {
+        Some(result)
+    }
+}
+
+/// Multi-core overflow-checked element-wise op between a lane and a scalar.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_parallel_scalar_checked(
+    a: &[i64],
+    scalar: i64,
+    op: fn(i64, i64) -> Option<i64>,
+) -> Option<Vec<i64>> {
+    let n = a.len();
+    let pool = pool();
+    if pool.workers < 2 || n == 0 {
+        let mut out = Vec::with_capacity(n);
+        for &x in a.iter() {
+            out.push(op(x, scalar)?);
+        }
+        return Some(out);
+    }
+
+    let overflow = Arc::new(AtomicBool::new(false));
+    let result = fill_parallel(n, pool, |start, region| {
+        let a_chunk = &a[start..start + region.len()];
+        for (dst, &x) in region.iter_mut().zip(a_chunk.iter()) {
+            match op(x, scalar) {
+                Some(v) => {
+                    dst.write(v);
+                }
+                None => {
+                    overflow.store(true, Ordering::Relaxed);
+                    dst.write(0);
+                }
+            }
+        }
+    });
+
+    if overflow.load(Ordering::Relaxed) {
+        None
+    } else {
+        Some(result)
+    }
+}
+
 // ── Public, gated entry points ──────────────────────────────────────────────
 
 /// Apply an element-wise binary integer op across two equal-length lanes.
@@ -363,6 +460,41 @@ pub fn elementwise_binary(
     (lane(a, b), false)
 }
 
+/// Overflow-checked counterpart of [`elementwise_binary`]. The result is `None`
+/// when any lane overflowed `i64` (the caller must then recompute on the exact
+/// path); the `bool` reports whether the multi-core kernel fired. Both `op` and
+/// `lane` return `None` on overflow and MUST agree element-wise.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn elementwise_binary_checked(
+    word: &str,
+    a: &[i64],
+    b: &[i64],
+    op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    debug_assert_eq!(a.len(), b.len());
+    let n = a.len();
+    if pool().workers < 2 || n < PARALLEL_DISPATCH_MIN || !gate_allows(word, n) {
+        return (lane(a, b), false);
+    }
+    let result = run_parallel_binary_checked(a, b, op);
+    // Only the actual no-overflow success counts as a parallel firing; on
+    // overflow the value is discarded and the exact path takes over.
+    let fired = result.is_some();
+    (result, fired)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn elementwise_binary_checked(
+    _word: &str,
+    a: &[i64],
+    b: &[i64],
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    (lane(a, b), false)
+}
+
 /// Apply an element-wise op between a lane and a broadcast scalar.
 ///
 /// Same contract as [`elementwise_binary`]; `op(lane_value, scalar)` is applied
@@ -390,6 +522,36 @@ pub fn elementwise_scalar(
     _op: fn(i64, i64) -> i64,
     lane: fn(&[i64], i64) -> Vec<i64>,
 ) -> (Vec<i64>, bool) {
+    (lane(a, scalar), false)
+}
+
+/// Overflow-checked counterpart of [`elementwise_scalar`]. Same contract as
+/// [`elementwise_binary_checked`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn elementwise_scalar_checked(
+    word: &str,
+    a: &[i64],
+    scalar: i64,
+    op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], i64) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    let n = a.len();
+    if pool().workers < 2 || n < PARALLEL_DISPATCH_MIN || !gate_allows(word, n) {
+        return (lane(a, scalar), false);
+    }
+    let result = run_parallel_scalar_checked(a, scalar, op);
+    let fired = result.is_some();
+    (result, fired)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn elementwise_scalar_checked(
+    _word: &str,
+    a: &[i64],
+    scalar: i64,
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], i64) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
     (lane(a, scalar), false)
 }
 
@@ -474,6 +636,56 @@ mod tests {
             let a: Vec<i64> = (0..len as i64).map(|i| i % 777).collect();
             let par = run_parallel_scalar(&a, scalar, |x, s| x * s);
             prop_assert_eq!(par, seq_scalar(&a, scalar, |x, s| x * s));
+        }
+    }
+
+    // ── Speculative (overflow-checked) kernel contracts ─────────────────────
+
+    fn seq_binary_checked(
+        a: &[i64],
+        b: &[i64],
+        op: fn(i64, i64) -> Option<i64>,
+    ) -> Option<Vec<i64>> {
+        a.iter().zip(b.iter()).map(|(&x, &y)| op(x, y)).collect()
+    }
+
+    #[test]
+    fn checked_parallel_matches_sequential_when_no_overflow() {
+        // Same Result: the overflow-checked multi-core kernel is bit-identical
+        // to the sequential checked reference when nothing overflows.
+        let n = 50_003;
+        let a: Vec<i64> = (0..n as i64).collect();
+        let b: Vec<i64> = (0..n as i64).map(|x| x - 7).collect();
+        let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
+        let seq = seq_binary_checked(&a, &b, |x, y| x.checked_add(y));
+        assert_eq!(par, seq, "checked parallel != checked sequential");
+    }
+
+    #[test]
+    fn checked_parallel_detects_overflow_and_declines() {
+        // A single overflowing lane anywhere in the buffer must make the whole
+        // checked kernel decline (None), so the caller falls back to exact.
+        let n = 100_003;
+        let mut a: Vec<i64> = vec![1; n];
+        let b: Vec<i64> = vec![1; n];
+        a[n / 2] = i64::MAX; // one poisoned lane mid-buffer
+        let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
+        assert!(par.is_none(), "any overflowing lane must decline the kernel");
+    }
+
+    proptest! {
+        #[test]
+        fn checked_parallel_equals_checked_sequential(
+            len in 0usize..=20_000,
+            seed in any::<i64>(),
+        ) {
+            // Values bounded so no overflow occurs; the checked parallel result
+            // must equal the checked sequential one element for element.
+            let a: Vec<i64> = (0..len as i64).map(|i| i.wrapping_mul(31).wrapping_add(seed) % 1000).collect();
+            let b: Vec<i64> = (0..len as i64).map(|i| i.wrapping_mul(17).wrapping_sub(seed) % 1000).collect();
+            let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_mul(y));
+            let seq = seq_binary_checked(&a, &b, |x, y| x.checked_mul(y));
+            prop_assert_eq!(par, seq);
         }
     }
 }
