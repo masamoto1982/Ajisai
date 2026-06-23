@@ -77,12 +77,59 @@ impl DenseTensor {
         })
     }
 
+    /// Build a 1-D pure-integer dense tensor directly from `i64` numerators,
+    /// without routing through `Fraction`. Every lane is valid and the
+    /// denominator is implicitly `1`. This is the SoA fast-path constructor
+    /// the integer SIMD lane uses for its output, avoiding the
+    /// `Vec<i64> → Vec<Fraction> → re-densify` round-trip (handoff 手1).
+    pub fn from_integers(numerators: Vec<i64>) -> Self {
+        let len = numerators.len();
+        let denominators = vec![1; len];
+        let valid_mask_len = len.div_ceil(64);
+        let mut valid_mask = vec![u64::MAX; valid_mask_len];
+        if let Some(last) = valid_mask.last_mut() {
+            let live_bits = len % 64;
+            if live_bits != 0 {
+                *last = (1u64 << live_bits) - 1;
+            }
+        }
+        Self {
+            numerators,
+            denominators,
+            valid_mask,
+            shape: vec![len],
+            is_pure_integer: true,
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.numerators.len()
     }
 
     pub fn is_empty(&self) -> bool {
         self.numerators.is_empty()
+    }
+
+    /// `true` when every lane (`0..len`) is valid — i.e. there are no `nil`
+    /// holes. Checks the bitmask word-at-a-time instead of per lane, so the
+    /// integer borrow fast-path can confirm density in O(len/64).
+    pub fn all_lanes_valid(&self) -> bool {
+        let len = self.len();
+        let full_words = len / 64;
+        for word in self.valid_mask.iter().take(full_words) {
+            if *word != u64::MAX {
+                return false;
+            }
+        }
+        let remainder = len % 64;
+        if remainder != 0 {
+            let expected = (1u64 << remainder) - 1;
+            match self.valid_mask.get(full_words) {
+                Some(word) => return *word == expected,
+                None => return false,
+            }
+        }
+        true
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Fraction> + '_ {

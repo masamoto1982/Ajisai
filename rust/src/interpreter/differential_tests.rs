@@ -139,6 +139,70 @@ proptest! {
     }
 }
 
+/// A vector literal of big-integer values written out in full decimal, used as
+/// the exact (BigInt) reference for an overflowing i64 lane op.
+fn big_vector_literal(values: &[i128]) -> String {
+    let body = values
+        .iter()
+        .map(i128::to_string)
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!("[ {} ]", body)
+}
+
+#[test]
+fn differential_integer_add_overflow_stays_exact() {
+    // 奇策本命: the speculative i64 lane must never silently wrap. When a lane
+    // sum exceeds i64::MAX the engine falls back to the exact BigInt path, so
+    // the result is the true mathematical value `i64::MAX + 1`, identical on
+    // the quantized and force-no-quant paths. The vector is long enough
+    // (>= SIMD_THRESHOLD) to engage the integer SIMD lane.
+    let max = i64::MAX;
+    let lhs = vec![max; 8];
+    let rhs = vec![1i64; 8];
+    let code = format!("{} {} +", vector_literal(&lhs), vector_literal(&rhs));
+    let (quantized, plain) = run_with_both_paths(&code);
+    assert_eq!(quantized, plain, "overflow add diverged across paths");
+
+    // The exact result `i64::MAX + 1` cannot be an i64, so the fast-path
+    // extractor must decline it — proving we did NOT wrap to i64::MIN.
+    use crate::interpreter::simd_ops::extract_integer_vector;
+    let top = plain.last().expect("result on stack");
+    assert!(
+        extract_integer_vector(top).is_none(),
+        "result must be a big-integer lane, not a wrapped i64 vector"
+    );
+
+    // Strong value check: the result equals the exact big-integer reference
+    // vector parsed from full-decimal literals (BigInt path), not a wrap.
+    let expected_vals = vec![(max as i128) + 1; 8];
+    let reference = run_with_quantization_mode(&big_vector_literal(&expected_vals), true);
+    assert_eq!(
+        plain.last(),
+        reference.last(),
+        "overflow add result must equal the exact BigInt reference"
+    );
+}
+
+#[test]
+fn differential_integer_mul_overflow_stays_exact() {
+    // Same speculative-lowering contract for multiplication.
+    let big = 1i64 << 62;
+    let lhs = vec![big; 8];
+    let rhs = vec![4i64; 8]; // big * 4 overflows i64
+    let code = format!("{} {} *", vector_literal(&lhs), vector_literal(&rhs));
+    let (quantized, plain) = run_with_both_paths(&code);
+    assert_eq!(quantized, plain, "overflow mul diverged across paths");
+
+    let expected_vals = vec![(big as i128) * 4; 8];
+    let reference = run_with_quantization_mode(&big_vector_literal(&expected_vals), true);
+    assert_eq!(
+        plain.last(),
+        reference.last(),
+        "overflow mul result must equal the exact BigInt reference"
+    );
+}
+
 proptest! {
     #[test]
     fn differential_map_pure_integer_callback(

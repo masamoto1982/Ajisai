@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:9dafddffbd0ee07bdec73f0a1c76e5d75ad7db43edea5d7ab9355c18f0fa15d6",
+  "rootIdentity": "sha256:ad965627b4c14c289889ef1694020e6310c6af14baa284dbf8fc37cadec75f3c",
   "fileCount": 264,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -394,8 +394,8 @@
     },
     {
       "path": "rust/src/interpreter/differential_tests.rs",
-      "sha256": "48ffb9b38aea17cc618d27d82c82dc0b64c21ef31964f8e677c569f3fbcf76c7",
-      "bytes": 5473
+      "sha256": "c5367d72cbfef5a60cdf551430e4b61b1da71214e52027f61aef8f836e561181",
+      "bytes": 8106
     },
     {
       "path": "rust/src/interpreter/energy_proxy.rs",
@@ -664,8 +664,8 @@
     },
     {
       "path": "rust/src/interpreter/parallel.rs",
-      "sha256": "101e30b38c4f19423c4f7166ab0e7bf5af469c06a6896f8ff7eacabd4ea5839a",
-      "bytes": 20119
+      "sha256": "df429f223731381656b002b1b378b774052d622c1e7fdf2acd7066944d5d4fc7",
+      "bytes": 27769
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
@@ -719,8 +719,8 @@
     },
     {
       "path": "rust/src/interpreter/simd_ops.rs",
-      "sha256": "f651cca793a5be14ee8fe52b72feb24ca40618b1861e3c921d29b0f785dc5732",
-      "bytes": 13610
+      "sha256": "cef0c15ee88ffe8fc36c5e206a254a66c73491b45b7229da5c99e4511cb15cf8",
+      "bytes": 20211
     },
     {
       "path": "rust/src/interpreter/sort.rs",
@@ -914,13 +914,13 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "867fab504d03c3a3385c2ca6af03523c813aaad67ef34ed7311b01bece5c5d03",
-      "bytes": 22554
+      "sha256": "98b4ed162c6966951ffc4409bc54a9059c3b4362fa89f34fc6381a1111af3d79",
+      "bytes": 24319
     },
     {
       "path": "rust/src/types/value_operations.rs",
-      "sha256": "6f4f4a1b37dbadfc07fa1ac8d5396d5f06d1088789c3c759892b7fa6f6cfa4a0",
-      "bytes": 52099
+      "sha256": "edfb383601197cb3d8c2fea9fe0168745477e1644372dde37843045a8f87469f",
+      "bytes": 53081
     },
     {
       "path": "rust/src/types/value_protocol.rs",
