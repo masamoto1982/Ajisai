@@ -236,6 +236,12 @@ pub struct RuntimeMetrics {
     pub vtu_projected_broadcast_count: u64,
     /// SIMD fast paths actually taken (target-arch dependent).
     pub vtu_simd_kernel_use_count: u64,
+    /// Native multi-core data-parallel kernels actually dispatched (Phase 3,
+    /// hierarchy A). Bumped only when an element-wise integer op cleared both
+    /// the Phase-2 `parallel_kernel_eligible` gate and the runtime dispatch
+    /// floor and fanned across worker threads. Observational only; never alters
+    /// execution semantics, and stays 0 on wasm (sequential fallback).
+    pub vtu_parallel_kernel_use_count: u64,
     /// Dense Tensor values classified as sparse optimization candidates.
     pub vtu_sparse_candidate_count: u64,
     /// Total dense lanes in sparse candidate Tensor values.

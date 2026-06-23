@@ -30,6 +30,7 @@ pub mod mass_conservation;
 pub mod math_ops;
 pub mod modules;
 pub(crate) mod naming_convention_checker;
+pub mod parallel;
 pub mod quantized_block;
 pub mod random;
 mod resolve_cache;
