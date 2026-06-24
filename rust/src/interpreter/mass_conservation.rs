@@ -71,7 +71,9 @@ pub fn validate_mass_conservation(plan: &CompiledPlan) -> MassReport {
     'outer: for line in &plan.lines {
         for op in &line.ops {
             match op {
-                CompiledOp::PushLiteral(_) | CompiledOp::PushCodeBlock(_) => {
+                CompiledOp::PushLiteral(_)
+                | CompiledOp::PushVectorLiteral(_, _)
+                | CompiledOp::PushCodeBlock(_) => {
                     cur += 1;
                 }
                 CompiledOp::SetTargetModeStackTop => target = Target::Top,
