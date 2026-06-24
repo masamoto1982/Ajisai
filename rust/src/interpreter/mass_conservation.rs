@@ -113,6 +113,7 @@ pub fn validate_mass_conservation(plan: &CompiledPlan) -> MassReport {
                 // arity here; freeze the analysis.
                 CompiledOp::CallUserWord(_)
                 | CompiledOp::CallQualifiedWord { .. }
+                | CompiledOp::CondDispatch(_)
                 | CompiledOp::FallbackToken(_) => {
                     all_known = false;
                     break 'outer;

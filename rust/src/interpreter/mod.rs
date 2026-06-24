@@ -122,6 +122,8 @@ pub use quantized_block::{
 #[cfg(test)]
 mod compiled_plan_tests;
 #[cfg(test)]
+mod cond_dispatch_tests;
+#[cfg(test)]
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod differential_tests;

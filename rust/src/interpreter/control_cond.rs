@@ -1,16 +1,60 @@
+use std::sync::Arc;
+
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Interpretation, Token, Value, ValueData};
 
+/// One precomputed COND clause: a guard and the body it selects. Token streams
+/// are `Arc`-shared so the compiled dispatch (`CompiledOp::CondDispatch`) can
+/// reuse the same split every iteration instead of re-collecting and re-cloning
+/// the clause blocks off the stack and re-scanning each for `|`.
+#[derive(Debug, Clone)]
+pub struct CondClause {
+    pub guard: Arc<[Token]>,
+    pub body: Arc<[Token]>,
+}
+
+/// Dynamic entry point: collect the clause blocks the preceding code pushed,
+/// split them, then dispatch. This is the path the plain interpreter and any
+/// non-lowered `COND` take.
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
     // Tail position of the enclosing word, if any (set by the compiled-plan
     // tail op). Guards must run as non-tail (they may call the same word in a
     // non-tail position), so clear it here and hand it only to the winning
     // clause body, where a tail self-call becomes an internal backward jump.
     let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
+    let blocks = collect_top_code_blocks(interp);
+    let clauses = split_clause_blocks(blocks)?;
+    run_cond_core(interp, &clauses, tail_context)
+}
 
-    let pairs: Vec<(Vec<Token>, Vec<Token>)> = collect_cond_pairs_from_stack(interp)?;
+/// Compiled entry point: the clauses were split once at compile time. Collect
+/// the blocks the kept `PushCodeBlock` ops pushed so stack discipline is
+/// preserved; when their count matches the precomputed set they are exactly
+/// those blocks, so dispatch on the precomputed clauses (no clone, no re-split).
+/// Otherwise (an unexpected extra block reached the stack) fall back to the
+/// dynamic split of the actual blocks — keeping behavior identical to `op_cond`.
+pub(crate) fn op_cond_dispatch(interp: &mut Interpreter, precomputed: &[CondClause]) -> Result<()> {
+    let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
+    let blocks = collect_top_code_blocks(interp);
+    if blocks.len() == precomputed.len() && !blocks.is_empty() {
+        interp.runtime_metrics.cond_dispatch_fast_count += 1;
+        run_cond_core(interp, precomputed, tail_context)
+    } else {
+        let clauses = split_clause_blocks(blocks)?;
+        run_cond_core(interp, &clauses, tail_context)
+    }
+}
+
+/// Pop the target value and dispatch over `clauses`, running the first clause
+/// whose guard fires (or the `IDLE` else-clause). Shared by both entry points
+/// so dynamic and compiled COND are behaviorally identical.
+fn run_cond_core(
+    interp: &mut Interpreter,
+    clauses: &[CondClause],
+    tail_context: bool,
+) -> Result<()> {
     let target_value: Value = match interp.consumption_mode {
         ConsumptionMode::Consume => {
             let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -24,24 +68,24 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
             .ok_or(AjisaiError::StackUnderflow)?,
     };
 
-    let mut else_body: Option<Vec<Token>> = None;
+    let mut else_body: Option<Arc<[Token]>> = None;
     if is_hedged_cond_mode(interp) {
         interp.push_hedged_trace("cond:prefetch-start");
         if let Some(body) =
-            evaluate_guard_hedged_prefetch(interp, &pairs, &target_value, &mut else_body)?
+            evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_body)?
         {
             interp.push_hedged_trace("cond:winner-prefetched-guard");
-            return execute_cond_body(interp, body, &target_value, tail_context);
+            return execute_cond_body(interp, &body, &target_value, tail_context);
         }
     } else {
-        for (guard_tokens, body_tokens) in &pairs {
-            if is_idle_guard(guard_tokens) {
-                else_body = Some(body_tokens.clone());
+        for clause in clauses {
+            if is_idle_guard(&clause.guard) {
+                else_body = Some(clause.body.clone());
                 continue;
             }
 
-            if evaluate_guard_greedy(interp, guard_tokens, &target_value)? {
-                return execute_cond_body(interp, body_tokens, &target_value, tail_context);
+            if evaluate_guard_greedy(interp, &clause.guard, &target_value)? {
+                return execute_cond_body(interp, &clause.body, &target_value, tail_context);
             }
         }
     }
@@ -53,39 +97,40 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
     Err(AjisaiError::CondExhausted)
 }
 
-fn collect_cond_pairs_from_stack(
-    interp: &mut Interpreter,
-) -> Result<Vec<(Vec<Token>, Vec<Token>)>> {
-    let mut collected_blocks: Vec<Vec<Token>> = Vec::new();
-
-    while let Some(last_value) = interp.stack.last() {
-        if let Some(tokens) = last_value.as_code_block() {
-            collected_blocks.push(tokens.clone());
-            interp.stack.pop();
-            let _ = interp.semantic_registry.pop_hint();
-            continue;
+/// Pop the consecutive code blocks on top of the stack, moving their token
+/// vectors out (no clone). Returns them bottom-to-top, matching source order.
+fn collect_top_code_blocks(interp: &mut Interpreter) -> Vec<Vec<Token>> {
+    let mut blocks: Vec<Vec<Token>> = Vec::new();
+    while interp
+        .stack
+        .last()
+        .is_some_and(|v| matches!(v.data, ValueData::CodeBlock(_)))
+    {
+        let value = interp.stack.pop().expect("checked by last()");
+        let _ = interp.semantic_registry.pop_hint();
+        if let ValueData::CodeBlock(tokens) = value.data {
+            blocks.push(tokens);
         }
-        break;
     }
+    blocks.reverse();
+    blocks
+}
 
-    collected_blocks.reverse();
-
-    if collected_blocks.is_empty() {
+/// Split collected clause blocks into guards and bodies, validating clause
+/// style. Pure over the blocks, so the compiler can precompute the result.
+pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondClause>> {
+    if blocks.is_empty() {
         return Err(AjisaiError::from(
             "COND: expected guard/body clauses, got 0 code blocks",
         ));
     }
 
-    let has_sep_flags: Vec<bool> = collected_blocks
+    let has_sep_flags: Vec<bool> = blocks
         .iter()
-        .map(|block| {
-            block
-                .iter()
-                .any(|token| matches!(token, Token::CondClauseSep))
-        })
+        .map(|block| block.iter().any(|t| matches!(t, Token::CondClauseSep)))
         .collect();
-    let all_with_sep: bool = has_sep_flags.iter().all(|has_sep| *has_sep);
-    let none_with_sep: bool = has_sep_flags.iter().all(|has_sep| !*has_sep);
+    let all_with_sep: bool = has_sep_flags.iter().all(|f| *f);
+    let none_with_sep: bool = has_sep_flags.iter().all(|f| !*f);
 
     if !all_with_sep && !none_with_sep {
         return Err(AjisaiError::from(
@@ -93,31 +138,34 @@ fn collect_cond_pairs_from_stack(
         ));
     }
 
-    let mut pairs: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
+    let mut clauses: Vec<CondClause> = Vec::new();
     if all_with_sep {
-        for block in &collected_blocks {
+        for block in &blocks {
             let (guard_tokens, body_tokens) = split_cond_clause_block(block)?;
-            pairs.push((guard_tokens, body_tokens));
+            clauses.push(CondClause {
+                guard: Arc::from(guard_tokens),
+                body: Arc::from(body_tokens),
+            });
         }
-        return Ok(pairs);
+        return Ok(clauses);
     }
 
-    if !collected_blocks.len().is_multiple_of(2) {
+    if !blocks.len().is_multiple_of(2) {
         return Err(AjisaiError::from(format!(
             "COND: expected even number of code blocks (guard/body pairs), got {}",
-            collected_blocks.len()
+            blocks.len()
         )));
     }
 
-    let mut i: usize = 0;
-    while i < collected_blocks.len() {
-        let guard_tokens: Vec<Token> = collected_blocks[i].clone();
-        let body_tokens: Vec<Token> = collected_blocks[i + 1].clone();
-        pairs.push((guard_tokens, body_tokens));
-        i += 2;
+    let mut blocks = blocks.into_iter();
+    while let (Some(guard_tokens), Some(body_tokens)) = (blocks.next(), blocks.next()) {
+        clauses.push(CondClause {
+            guard: Arc::from(guard_tokens),
+            body: Arc::from(body_tokens),
+        });
     }
 
-    Ok(pairs)
+    Ok(clauses)
 }
 
 fn split_cond_clause_block(tokens: &[Token]) -> Result<(Vec<Token>, Vec<Token>)> {
@@ -275,22 +323,22 @@ fn is_hedged_cond_mode(interp: &Interpreter) -> bool {
     )
 }
 
-fn evaluate_guard_hedged_prefetch<'a>(
+fn evaluate_guard_hedged_prefetch(
     interp: &mut Interpreter,
-    pairs: &'a [(Vec<Token>, Vec<Token>)],
+    clauses: &[CondClause],
     target_value: &Value,
-    else_body: &mut Option<Vec<Token>>,
-) -> Result<Option<&'a [Token]>> {
-    let mut prefetched: Vec<Option<Result<bool>>> = vec![None; pairs.len()];
+    else_body: &mut Option<Arc<[Token]>>,
+) -> Result<Option<Arc<[Token]>>> {
+    let mut prefetched: Vec<Option<Result<bool>>> = vec![None; clauses.len()];
     let mut has_impure_guard = false;
 
-    for (idx, (guard_tokens, _)) in pairs.iter().enumerate() {
-        if is_idle_guard(guard_tokens) {
+    for (idx, clause) in clauses.iter().enumerate() {
+        if is_idle_guard(&clause.guard) {
             continue;
         }
-        if is_pure_cond_guard(guard_tokens) {
+        if is_pure_cond_guard(&clause.guard) {
             interp.runtime_metrics.cond_guard_prefetch_count += 1;
-            prefetched[idx] = Some(evaluate_guard_isolated(interp, guard_tokens, target_value));
+            prefetched[idx] = Some(evaluate_guard_isolated(interp, &clause.guard, target_value));
         } else {
             has_impure_guard = true;
         }
@@ -299,19 +347,19 @@ fn evaluate_guard_hedged_prefetch<'a>(
         interp.push_hedged_trace("cond:partial-prefetch-impure-guard-present");
     }
 
-    for (idx, (guard_tokens, body_tokens)) in pairs.iter().enumerate() {
-        if is_idle_guard(guard_tokens) {
-            *else_body = Some(body_tokens.clone());
+    for (idx, clause) in clauses.iter().enumerate() {
+        if is_idle_guard(&clause.guard) {
+            *else_body = Some(clause.body.clone());
             continue;
         }
 
         let is_true = if let Some(result) = prefetched[idx].clone() {
             result?
         } else {
-            evaluate_guard_greedy(interp, guard_tokens, target_value)?
+            evaluate_guard_greedy(interp, &clause.guard, target_value)?
         };
         if is_true {
-            return Ok(Some(body_tokens.as_slice()));
+            return Ok(Some(clause.body.clone()));
         }
     }
     Ok(None)
