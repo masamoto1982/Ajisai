@@ -20,9 +20,7 @@ fn absence_core_eq(a: &Option<AbsenceMetadata>, b: &Option<AbsenceMetadata>) -> 
     match (a, b) {
         (None, None) => true,
         (Some(x), Some(y)) => {
-            x.reason == y.reason
-                && x.origin == y.origin
-                && x.recoverability == y.recoverability
+            x.reason == y.reason && x.origin == y.origin && x.recoverability == y.recoverability
         }
         _ => false,
     }
@@ -95,7 +93,14 @@ impl Interpreter {
         let saved_io_output = std::mem::take(&mut self.io_output_buffer);
         let saved_host_effects = std::mem::take(&mut self.host_effects);
 
+        // Each path runs as one trampolined body pass; a guarded tail self-call
+        // defers by raising `tail_jump_pending`. Capture each path's flag so the
+        // outer trampoline (in `execute_word_core_inner`) re-runs the next
+        // iteration only for the path actually committed, and so a per-step
+        // residual stack from one path is compared against the other's.
+        self.tail_jump_pending = false;
         let fast_result = execute_compiled_plan(self, compiled);
+        let fast_jumped = self.tail_jump_pending;
         let fast_stack = self.stack.clone();
         let fast_hints = self.semantic_registry.stack_hints.clone();
         let fast_output = std::mem::take(&mut self.output_buffer);
@@ -107,7 +112,11 @@ impl Interpreter {
         self.operation_target_mode = saved_target;
         self.consumption_mode = saved_consumption;
 
+        self.tail_jump_pending = false;
         let plain_result = self.execute_guard_structure(&def.lines);
+        let plain_jumped = self.tail_jump_pending;
+        // Default to the fast path's decision; commit_plain arms below override.
+        self.tail_jump_pending = fast_jumped;
         let plain_stack = self.stack.clone();
         let plain_hints = self.semantic_registry.stack_hints.clone();
         let plain_output = std::mem::take(&mut self.output_buffer);
@@ -138,7 +147,13 @@ impl Interpreter {
 
                 if agree {
                     self.runtime_metrics.shadow_validation_success_count += 1;
-                    self.commit_fast(fast_stack, fast_hints, fast_output, fast_io_output, fast_host_effects);
+                    self.commit_fast(
+                        fast_stack,
+                        fast_hints,
+                        fast_output,
+                        fast_io_output,
+                        fast_host_effects,
+                    );
                     return ValidationOutcome {
                         result: Ok(()),
                         used_plain_fallback: false,
@@ -147,7 +162,8 @@ impl Interpreter {
 
                 // The two paths produced different observable results. Record it
                 // and react per the active mode.
-                self.runtime_metrics.shadow_validation_integrity_mismatch_count += 1;
+                self.runtime_metrics
+                    .shadow_validation_integrity_mismatch_count += 1;
 
                 match mode {
                     // Legacy / characterization: keep the optimized result.
@@ -178,6 +194,7 @@ impl Interpreter {
                             plain_io_output,
                             plain_host_effects,
                         );
+                        self.tail_jump_pending = plain_jumped;
                         ValidationOutcome {
                             result: Ok(()),
                             used_plain_fallback: true,
@@ -208,6 +225,7 @@ impl Interpreter {
                     plain_io_output,
                     plain_host_effects,
                 );
+                self.tail_jump_pending = plain_jumped;
                 ValidationOutcome {
                     result: Ok(()),
                     used_plain_fallback: true,
@@ -223,7 +241,8 @@ impl Interpreter {
             // fast result; that is exactly the broken-result-committed case we
             // want to stop.
             (Ok(()), Err(plain_err)) => {
-                self.runtime_metrics.shadow_validation_integrity_mismatch_count += 1;
+                self.runtime_metrics
+                    .shadow_validation_integrity_mismatch_count += 1;
                 match mode {
                     IntegrityMode::Off | IntegrityMode::Observe => {
                         self.commit_fast(
@@ -311,11 +330,11 @@ fn integrity_failure_error(word: &str) -> AjisaiError {
 #[cfg(test)]
 mod integrity_comparison_tests {
     use super::{absence_core_eq, paths_integrity_agree, stacks_integrity_agree};
+    use crate::error::NilReason;
     use crate::interpreter::HostEffect;
     use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
     use crate::types::fraction::Fraction;
     use crate::types::Value;
-    use crate::error::NilReason;
 
     fn scalar(n: i64) -> Value {
         Value::from_fraction(Fraction::from(n))
@@ -371,9 +390,18 @@ mod integrity_comparison_tests {
         // Both stacks print as a single NIL with identical data+hint, so
         // `Value`-level equality alone would call them equal. The absence
         // reason differs, which is exactly the silently-broken-meaning case.
-        let fast = vec![nil_with(NilReason::DivisionByZero, AbsenceOrigin::DivisionByZero)];
-        let plain = vec![nil_with(NilReason::IndexOutOfBounds, AbsenceOrigin::IndexOutOfBounds)];
-        assert_eq!(fast[0], plain[0], "Value equality ignores absence by design");
+        let fast = vec![nil_with(
+            NilReason::DivisionByZero,
+            AbsenceOrigin::DivisionByZero,
+        )];
+        let plain = vec![nil_with(
+            NilReason::IndexOutOfBounds,
+            AbsenceOrigin::IndexOutOfBounds,
+        )];
+        assert_eq!(
+            fast[0], plain[0],
+            "Value equality ignores absence by design"
+        );
         assert!(
             !stacks_integrity_agree(&fast, &plain),
             "integrity comparison must catch the absence-reason divergence"
@@ -382,8 +410,14 @@ mod integrity_comparison_tests {
 
     #[test]
     fn same_nil_reason_agrees() {
-        let fast = vec![nil_with(NilReason::EmptySequence, AbsenceOrigin::EmptySequence)];
-        let plain = vec![nil_with(NilReason::EmptySequence, AbsenceOrigin::EmptySequence)];
+        let fast = vec![nil_with(
+            NilReason::EmptySequence,
+            AbsenceOrigin::EmptySequence,
+        )];
+        let plain = vec![nil_with(
+            NilReason::EmptySequence,
+            AbsenceOrigin::EmptySequence,
+        )];
         assert!(stacks_integrity_agree(&fast, &plain));
     }
 

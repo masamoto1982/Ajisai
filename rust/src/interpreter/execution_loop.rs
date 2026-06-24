@@ -40,6 +40,23 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     }
 }
 
+/// True when the last executable token of a line is the `COND` word. Used by
+/// the tail-call trampoline: only a body line that ends in `COND` carries a
+/// guarded tail self-call eligible for the internal backward jump. Trailing
+/// `LineBreak`s are ignored.
+fn tail_token_is_cond(tokens: &[Token]) -> bool {
+    for token in tokens.iter().rev() {
+        match token {
+            Token::LineBreak => continue,
+            Token::Symbol(s) => {
+                return crate::core_word_aliases::canonicalize_core_word_name(s).as_ref() == "COND";
+            }
+            _ => return false,
+        }
+    }
+    false
+}
+
 fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
     match reason {
         NilReason::DivisionByZero => Some(ErrorCategory::DivisionByZero),
@@ -355,6 +372,35 @@ impl Interpreter {
                         }
                         _ => {
                             let upper = canonical;
+
+                            // Internal tail-call elimination ("internal GOTO").
+                            // A guarded tail self-call — the last executable
+                            // token of a COND clause body that resolves to the
+                            // word currently trampolining — is not executed.
+                            // Its arguments are left on the stack and
+                            // `tail_jump_pending` is raised; the trampoline loop
+                            // in `execute_word_core_inner` re-runs the body as a
+                            // backward jump, so the recursion never grows
+                            // `call_depth` or the native stack.
+                            if self.in_tail_context && self.tail_call_enabled {
+                                let is_last_executable = execute_tokens[i + 1..]
+                                    .iter()
+                                    .all(|t| matches!(t, Token::LineBreak));
+                                if is_last_executable {
+                                    if let Some(target) = self.tail_self_word.clone() {
+                                        if let Some((resolved, def)) =
+                                            self.resolve_word_entry_readonly(upper.as_ref())
+                                        {
+                                            if !def.is_builtin && resolved == target {
+                                                self.tail_jump_pending = true;
+                                                self.in_tail_context = false;
+                                                return Ok(start_index + i + 1);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             let stack_len_before = self.stack.len();
                             match self.execute_word_core(upper.as_ref()) {
                                 Ok(()) => {
@@ -462,8 +508,21 @@ impl Interpreter {
     }
 
     pub(crate) fn execute_guard_structure(&mut self, lines: &[ExecutionLine]) -> Result<()> {
-        for line in lines {
-            self.execute_section_core(&line.body_tokens, 0)?;
+        // Mirror the compiled-plan tail marking on the plain interpreter path so
+        // the two stay behaviorally identical (shadow validation runs both). A
+        // word body is in tail position on its last line, and we only propagate
+        // tail context when that line ends in `COND` — exactly the compiled
+        // path's `CallBuiltin("COND")` tail op. A bare tail self-call (e.g.
+        // `{ REC }`, with no base case) is deliberately *not* trampolined: it
+        // keeps the legacy native-recursion behavior and its depth-limit error.
+        let tail_enabled = self.tail_call_enabled && self.tail_self_word.is_some();
+        let last_line = lines.len().saturating_sub(1);
+        for (idx, line) in lines.iter().enumerate() {
+            self.in_tail_context =
+                tail_enabled && idx == last_line && tail_token_is_cond(&line.body_tokens);
+            let r = self.execute_section_core(&line.body_tokens, 0);
+            self.in_tail_context = false;
+            r?;
         }
         Ok(())
     }

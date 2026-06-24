@@ -107,31 +107,88 @@ impl Interpreter {
         // dictionary first, both while compiling its execution plan and while
         // running its body. Saved and restored so nested calls into other
         // dictionaries see their own dictionary's context.
-        let owning_dict = self.split_qualified_name(&resolved_name).map(|(dict, _)| dict);
+        let owning_dict = self
+            .split_qualified_name(&resolved_name)
+            .map(|(dict, _)| dict);
         let prev_owning = std::mem::replace(&mut self.owning_dictionary_context, owning_dict);
 
         let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
         self.call_stack.push(resolved_name.clone());
-        let result = if let Some(plan_set) = plan_set {
-            if let Some(qb) = plan_set.quantized.as_ref() {
-                if qb.guard_signature.dictionary_epoch == self.dictionary_epoch
-                    && qb.guard_signature.module_epoch == self.module_epoch
-                    && qb.purity == super::quantized_block::QuantizedPurity::Pure
-                    && !self.is_hedged_mode()
-                {
-                    self.runtime_metrics.quantized_block_use_count += 1;
-                    if let Some(compiled) = plan_set.compiled.as_ref() {
-                        execute_compiled_plan(self, compiled)
+
+        // Internal tail-call elimination ("internal GOTO"): mark this frame as
+        // the self-tail-call target, then run its body in a trampoline. A
+        // guarded tail self-call (the tail of a COND clause body) sets
+        // `tail_jump_pending` and unwinds to here instead of recursing, so the
+        // loop re-runs the same body with the next iteration's arguments — a
+        // backward jump that never grows `call_depth` or the native stack.
+        let prev_tail_self = self.tail_self_word.take();
+        let prev_in_tail = self.in_tail_context;
+        self.tail_self_word = Some(resolved_name.clone());
+
+        // A word's body is identical at every recursion level, so shadow
+        // validation only needs to run at its outermost entry. Skipping it on
+        // recursive re-entry keeps the same divergence coverage while removing
+        // the heavy validation frame from the recursion chain — recovering
+        // native-stack headroom (the depth guard's whole purpose) and avoiding a
+        // redundant double execution of the body per level. `call_stack` already
+        // holds this call's name (pushed above), so a count above one means we
+        // are nested inside an earlier activation of the same word.
+        let recursive_reentry = self
+            .call_stack
+            .iter()
+            .filter(|n| n.as_str() == resolved_name)
+            .count()
+            > 1;
+
+        // The dispatch is inlined into the loop rather than extracted into a
+        // helper so the legacy (non-trampolined) recursion path adds no extra
+        // native-stack frame per call — important because that path is still
+        // bounded only by `MAX_USER_WORD_DEPTH`, and a deeper per-frame cost
+        // would lower the effective depth ceiling.
+        let result = loop {
+            self.in_tail_context = false;
+            self.tail_jump_pending = false;
+
+            let body_result = if let Some(plan_set) = plan_set.as_ref() {
+                if let Some(qb) = plan_set.quantized.as_ref() {
+                    if qb.guard_signature.dictionary_epoch == self.dictionary_epoch
+                        && qb.guard_signature.module_epoch == self.module_epoch
+                        && qb.purity == super::quantized_block::QuantizedPurity::Pure
+                        && !self.is_hedged_mode()
+                    {
+                        self.runtime_metrics.quantized_block_use_count += 1;
+                        if let Some(compiled) = plan_set.compiled.as_ref() {
+                            execute_compiled_plan(self, compiled)
+                        } else {
+                            self.execute_guard_structure(&def.lines)
+                        }
+                    } else if let Some(compiled) = plan_set.compiled.as_ref() {
+                        if !recursive_reentry
+                            && self.should_shadow_validate(plan_set, self.stack.len())
+                        {
+                            let outcome = self.run_compiled_with_shadow_validation(
+                                &resolved_name,
+                                &def,
+                                plan_set,
+                            );
+                            if outcome.used_plain_fallback {
+                                self.runtime_metrics.hedged_race_fallback_count += 1;
+                            }
+                            outcome.result
+                        } else {
+                            execute_compiled_plan(self, compiled)
+                        }
                     } else {
                         self.execute_guard_structure(&def.lines)
                     }
                 } else if let Some(compiled) = plan_set.compiled.as_ref() {
-                    if self.should_shadow_validate(&plan_set, self.stack.len()) {
+                    if !recursive_reentry && self.should_shadow_validate(plan_set, self.stack.len())
+                    {
                         let outcome = self.run_compiled_with_shadow_validation(
                             &resolved_name,
                             &def,
-                            &plan_set,
+                            plan_set,
                         );
                         if outcome.used_plain_fallback {
                             self.runtime_metrics.hedged_race_fallback_count += 1;
@@ -143,23 +200,31 @@ impl Interpreter {
                 } else {
                     self.execute_guard_structure(&def.lines)
                 }
-            } else if let Some(compiled) = plan_set.compiled.as_ref() {
-                if self.should_shadow_validate(&plan_set, self.stack.len()) {
-                    let outcome =
-                        self.run_compiled_with_shadow_validation(&resolved_name, &def, &plan_set);
-                    if outcome.used_plain_fallback {
-                        self.runtime_metrics.hedged_race_fallback_count += 1;
-                    }
-                    outcome.result
-                } else {
-                    execute_compiled_plan(self, compiled)
-                }
             } else {
                 self.execute_guard_structure(&def.lines)
+            };
+
+            if body_result.is_ok() && self.tail_jump_pending {
+                self.tail_jump_pending = false;
+                // The backward jump still consumes one execution step, so an
+                // unbounded guarded loop terminates via `ExecutionLimitExceeded`
+                // rather than running forever (SPEC §5.3 water level).
+                self.runtime_metrics.tail_call_jump_count += 1;
+                self.execution_step_count += 1;
+                if self.execution_step_count > self.max_execution_steps {
+                    break Err(AjisaiError::ExecutionLimitExceeded {
+                        limit: self.max_execution_steps,
+                    });
+                }
+                continue;
             }
-        } else {
-            self.execute_guard_structure(&def.lines)
+            break body_result;
         };
+
+        self.tail_jump_pending = false;
+        self.in_tail_context = prev_in_tail;
+        self.tail_self_word = prev_tail_self;
+
         self.call_stack.pop();
         self.owning_dictionary_context = prev_owning;
         self.call_depth -= 1;

@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:d30092881c73ef2356966863542ddeb014093a64d2f8a139fc83a31e28a01b2f",
-  "fileCount": 264,
+  "rootIdentity": "sha256:b0d4eaa327c6c4eda8b9d149d6a75518d2ac16b0a69e182a50534cbb7e7f76f3",
+  "fileCount": 265,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -304,8 +304,8 @@
     },
     {
       "path": "rust/src/interpreter/compiled_plan.rs",
-      "sha256": "764c4c564e489172d07156886d6bd7fdb338cb1ffc43d6730531388e92637c3a",
-      "bytes": 8148
+      "sha256": "e4fa97b42485a853cb144addb8d244ce8be65f621dc7730a93c5837f57d183d4",
+      "bytes": 9719
     },
     {
       "path": "rust/src/interpreter/compiled_plan_tests.rs",
@@ -344,8 +344,8 @@
     },
     {
       "path": "rust/src/interpreter/control_cond.rs",
-      "sha256": "566cc7cc35bb25e33682f0b9c0db28fbc324e13f4010bec0e3ac2d0a70252428",
-      "bytes": 12097
+      "sha256": "9fae5038137ccd77bd8b152c0c76122e8c000e9b27c760a9c93397f0499ebc15",
+      "bytes": 12949
     },
     {
       "path": "rust/src/interpreter/control_cond_tests.rs",
@@ -424,8 +424,8 @@
     },
     {
       "path": "rust/src/interpreter/execute_builtin.rs",
-      "sha256": "054ba5b71c078ba9d239582961633e1653cdc10a7b2782a8d83414173f06c9d8",
-      "bytes": 18353
+      "sha256": "6813270f0bafac456eff42762ac7a9b726bd329086af56760e8256eee05947d6",
+      "bytes": 21598
     },
     {
       "path": "rust/src/interpreter/execute_def.rs",
@@ -444,8 +444,8 @@
     },
     {
       "path": "rust/src/interpreter/execution_loop.rs",
-      "sha256": "00d2345e55cd9fa14e1961b64df402f382ca2df5efe06604fc6d1e7efe191429",
-      "bytes": 21381
+      "sha256": "c77891dde5f125aec2fbe8320c38ee2eb84da60ccbe2e3bbc6dd5422ff144b5b",
+      "bytes": 24763
     },
     {
       "path": "rust/src/interpreter/execution_plan_set.rs",
@@ -539,8 +539,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "c7cb97f744bd7628e75fab76ddf6ef1067f2b99813e06785955c4570f447568f",
-      "bytes": 27658
+      "sha256": "d701c9c30e807cd263c66a1dc1b8e8b05a66ab5ce1fe88dfd32302cf9d406ea2",
+      "bytes": 30381
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -599,8 +599,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "dbd57be2910ea90ed8ff29ca35e35c3800aa1e0611f72398e732746c5b15e862",
-      "bytes": 2749
+      "sha256": "4a2fce16f8c90b4d56a2500bc4088320a5c15173aa4fe1ef3347b2069539ec87",
+      "bytes": 2783
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -714,8 +714,8 @@
     },
     {
       "path": "rust/src/interpreter/shadow_validation.rs",
-      "sha256": "a116edad84ec5ccc067120bb77a2763eb2ff1dd56102d2ca9a9d857df5db9dfd",
-      "bytes": 16350
+      "sha256": "d2f247081855731411f785cff751052c0c94866c45de38e0e286f02136825e83",
+      "bytes": 17493
     },
     {
       "path": "rust/src/interpreter/simd_ops.rs",
@@ -726,6 +726,11 @@
       "path": "rust/src/interpreter/sort.rs",
       "sha256": "1f34c2e145007825fa8430872c1bde62ee07090150aa4ff3e39b53f0aa561dc9",
       "bytes": 7777
+    },
+    {
+      "path": "rust/src/interpreter/tail_call_tests.rs",
+      "sha256": "a65ba9ce5af8ef4c11f643c2f2d21fb2d82d8bfe3693530862615fd9607a5df2",
+      "bytes": 6307
     },
     {
       "path": "rust/src/interpreter/tensor_cmds.rs",
