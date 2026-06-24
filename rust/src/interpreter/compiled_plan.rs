@@ -159,13 +159,28 @@ fn post_call_cleanup(interp: &mut Interpreter, name: &str) {
 }
 
 pub fn execute_compiled_plan(interp: &mut Interpreter, plan: &CompiledPlan) -> Result<()> {
-    for line in &plan.lines {
-        execute_compiled_line(interp, line)?;
+    let last_line = plan.lines.len().saturating_sub(1);
+    for (idx, line) in plan.lines.iter().enumerate() {
+        // The last line of a word body holds its tail position. Only there can
+        // a tail self-call be eliminated into an internal backward jump.
+        let is_tail_line = idx == last_line;
+        execute_compiled_line(interp, line, is_tail_line)?;
     }
     Ok(())
 }
 
-fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Result<()> {
+/// Index of the last op in `ops` that actually executes (skipping no-op
+/// markers like `LineBreak`), or `None` when the line is effectively empty.
+fn last_effective_op(ops: &[CompiledOp]) -> Option<usize> {
+    ops.iter()
+        .rposition(|op| !matches!(op, CompiledOp::LineBreak | CompiledOp::BeginGuardedBlock))
+}
+
+fn execute_compiled_line(
+    interp: &mut Interpreter,
+    line: &CompiledLine,
+    is_tail_line: bool,
+) -> Result<()> {
     if line
         .ops
         .iter()
@@ -175,7 +190,29 @@ fn execute_compiled_line(interp: &mut Interpreter, line: &CompiledLine) -> Resul
         return Ok(());
     }
 
-    for op in &line.ops {
+    // The tail op of the tail line carries the word's tail position. When it is
+    // a `COND`, propagate tail context into the selected clause body so a
+    // guarded tail self-call there is eliminated (the "internal GOTO").
+    let tail_op = if is_tail_line && interp.tail_call_enabled && interp.tail_self_word.is_some() {
+        last_effective_op(&line.ops)
+    } else {
+        None
+    };
+
+    for (op_idx, op) in line.ops.iter().enumerate() {
+        if tail_op == Some(op_idx) {
+            if let CompiledOp::CallBuiltin(name) = op {
+                if name == "COND" {
+                    let prev = interp.in_tail_context;
+                    interp.in_tail_context = true;
+                    let r = interp.execute_builtin(name);
+                    interp.in_tail_context = prev;
+                    r?;
+                    post_call_cleanup(interp, name);
+                    continue;
+                }
+            }
+        }
         match op {
             CompiledOp::PushLiteral(v) => {
                 interp.stack.push(v.clone());

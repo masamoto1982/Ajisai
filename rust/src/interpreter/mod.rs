@@ -131,3 +131,5 @@ mod fast_guarded_tests;
 mod perf_regression_tests;
 #[cfg(test)]
 mod quantized_block_tests;
+#[cfg(test)]
+mod tail_call_tests;

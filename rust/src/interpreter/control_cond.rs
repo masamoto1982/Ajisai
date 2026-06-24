@@ -4,6 +4,12 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::{Interpretation, Token, Value};
 
 pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
+    // Tail position of the enclosing word, if any (set by the compiled-plan
+    // tail op). Guards must run as non-tail (they may call the same word in a
+    // non-tail position), so clear it here and hand it only to the winning
+    // clause body, where a tail self-call becomes an internal backward jump.
+    let tail_context: bool = std::mem::replace(&mut interp.in_tail_context, false);
+
     let pairs: Vec<(Vec<Token>, Vec<Token>)> = collect_cond_pairs_from_stack(interp)?;
     let target_value: Value = match interp.consumption_mode {
         ConsumptionMode::Consume => {
@@ -25,7 +31,7 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
             evaluate_guard_hedged_prefetch(interp, &pairs, &target_value, &mut else_body)?
         {
             interp.push_hedged_trace("cond:winner-prefetched-guard");
-            return execute_cond_body(interp, body, &target_value);
+            return execute_cond_body(interp, body, &target_value, tail_context);
         }
     } else {
         for (guard_tokens, body_tokens) in &pairs {
@@ -35,13 +41,13 @@ pub(crate) fn op_cond(interp: &mut Interpreter) -> Result<()> {
             }
 
             if evaluate_guard_greedy(interp, guard_tokens, &target_value)? {
-                return execute_cond_body(interp, body_tokens, &target_value);
+                return execute_cond_body(interp, body_tokens, &target_value, tail_context);
             }
         }
     }
 
     if let Some(body_tokens) = else_body {
-        return execute_cond_body(interp, &body_tokens, &target_value);
+        return execute_cond_body(interp, &body_tokens, &target_value, tail_context);
     }
 
     Err(AjisaiError::CondExhausted)
@@ -311,7 +317,12 @@ fn evaluate_guard_hedged_prefetch<'a>(
     Ok(None)
 }
 
-fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Value) -> Result<()> {
+fn execute_cond_body(
+    interp: &mut Interpreter,
+    body_tokens: &[Token],
+    value: &Value,
+    tail_context: bool,
+) -> Result<()> {
     let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
     let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
@@ -322,7 +333,13 @@ fn execute_cond_body(interp: &mut Interpreter, body_tokens: &[Token], value: &Va
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
+    // This clause body runs in the word's tail position iff the COND itself
+    // did. A tail self-call at the end of `body_tokens` then defers to the
+    // trampoline instead of recursing; its residual single value (the next
+    // iteration's argument) flows out as this body's result below.
+    interp.in_tail_context = tail_context;
     let execution_result: Result<usize> = interp.execute_section_core(body_tokens, 0);
+    interp.in_tail_context = false;
     let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
     let body_result_value: Option<Value> = interp.stack.pop();
 

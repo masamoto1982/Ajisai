@@ -260,6 +260,12 @@ pub struct RuntimeMetrics {
     /// `Tensor.data: &[Fraction]` directly without per-element Value
     /// materialization. Phase III metric.
     pub vtu_bulk_kernel_use_count: u64,
+
+    /// Guarded tail self-calls eliminated into an internal backward jump
+    /// (the "internal GOTO" trampoline). Each increment is one recursive
+    /// call that ran as a loop iteration instead of growing `call_depth`
+    /// and the native stack. Observational only; never alters value results.
+    pub tail_call_jump_count: u64,
 }
 
 pub struct Interpreter {
@@ -358,6 +364,26 @@ pub struct Interpreter {
     /// restoring or importing many words) set this for the duration of the
     /// batch and recompute once at the end, avoiding O(N^2) identity hashing.
     pub(crate) defer_identity_recompute: bool,
+
+    // ── Internal tail-call elimination ("internal GOTO") ──────────────────
+    // Guarded tail self-recursion (a self-call in the tail position of a
+    // COND clause body) is run as an internal backward jump instead of a
+    // native recursive call. This keeps such loops in O(1) native stack and
+    // lifts them past `MAX_USER_WORD_DEPTH`, without exposing any jump or
+    // label to the surface language. See `docs/dev/internal-goto-tail-call.md`.
+    /// Master toggle. Defaults to true; set `AJISAI_NO_TAIL_CALL=1` to force
+    /// the legacy native-recursion path (used by the A/B benchmark harness).
+    pub(crate) tail_call_enabled: bool,
+    /// Resolved name of the word whose body is currently executing and is
+    /// eligible for self-tail-call elimination. `Some` only inside a
+    /// trampolined user-word frame.
+    pub(crate) tail_self_word: Option<String>,
+    /// True while executing a token section that sits in the tail position of
+    /// the current word (set by the COND tail op for the selected clause body).
+    pub(crate) in_tail_context: bool,
+    /// Raised by the deferral site when a guarded tail self-call is recognized
+    /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
+    pub(crate) tail_jump_pending: bool,
 }
 
 impl Interpreter {
@@ -419,6 +445,10 @@ impl Interpreter {
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
             defer_identity_recompute: false,
+            tail_call_enabled: std::env::var("AJISAI_NO_TAIL_CALL").is_err(),
+            tail_self_word: None,
+            in_tail_context: false,
+            tail_jump_pending: false,
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -581,6 +611,9 @@ impl Interpreter {
         self.module_state.clear();
         self.call_stack.clear();
         self.call_depth = 0;
+        self.tail_self_word = None;
+        self.in_tail_context = false;
+        self.tail_jump_pending = false;
         self.owning_dictionary_context = None;
         self.word_identities.clear();
         self.body_store.clear();
@@ -660,6 +693,21 @@ impl Interpreter {
 
     pub fn set_force_no_quant(&mut self, force_no_quant: bool) {
         self.force_no_quant = force_no_quant;
+    }
+
+    /// Enable or disable internal tail-call elimination (the guarded-tail-`COND`
+    /// backward-jump trampoline). Default is on; this is the in-process
+    /// equivalent of the `AJISAI_NO_TAIL_CALL` environment switch and exists so
+    /// benchmarks can A/B the same interpreter against the legacy recursion path.
+    pub fn set_tail_call_enabled(&mut self, enabled: bool) {
+        self.tail_call_enabled = enabled;
+    }
+
+    /// Override the execution step budget (water level). Raising it lets a
+    /// benchmark drive a tail-recursive loop far past the default
+    /// `DEFAULT_MAX_EXECUTION_STEPS` to observe O(1)-native-stack iteration.
+    pub fn set_max_execution_steps(&mut self, steps: usize) {
+        self.max_execution_steps = steps;
     }
 
     pub fn update_stack(&mut self, stack: Stack) {
