@@ -153,8 +153,8 @@ pub fn lookup_core_word_alias(alias: &str) -> Option<&'static CoreWordAlias> {
 /// `String` allocation was pure overhead for the two dominant cases:
 /// * a symbol alias (`+`, `<=`, `,,`) maps to a `&'static str` canonical name —
 ///   returned as `Cow::Borrowed` with zero allocation;
-/// * an already-uppercase ASCII word (`MAP`, `DUP`, most user words) is its own
-///   canonical form, so the input slice is borrowed unchanged.
+/// * an already-uppercase ASCII word (`MAP`, `LENGTH`, most user words) is its
+///   own canonical form, so the input slice is borrowed unchanged.
 ///
 /// Only a name that genuinely needs case folding (contains an ASCII lowercase
 /// letter, or any non-ASCII char where Unicode upcasing may not be identity)
