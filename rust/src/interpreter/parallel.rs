@@ -311,7 +311,14 @@ where
     let base: SendMutPtr<MaybeUninit<T>> = SendMutPtr(out.spare_capacity_mut().as_mut_ptr());
 
     pool.for_each_chunk(chunks, |i| {
-        let start = i * chunk;
+        // Clamp `start` to `n`: for a small `n` that is not a multiple of the
+        // worker count, `chunk_plan`'s ceil-rounded `chunk` can push the last
+        // chunk's `i * chunk` past `n` (e.g. n=5, workers=4 → chunk=2, i=3 →
+        // start=6). Without the clamp `end - start` underflows `usize` and the
+        // region length becomes enormous, so the worker writes far out of
+        // bounds (UB / SIGSEGV). Clamping yields an empty trailing region; the
+        // earlier chunks already cover every index because `chunk` is ceil-based.
+        let start = (i * chunk).min(n);
         let end = (start + chunk).min(n);
         // SAFETY: chunk ranges are disjoint and within `0..n` (== reserved
         // capacity); this worker is the sole writer of `start..end`, and the
@@ -908,6 +915,25 @@ mod tests {
             let gated = compute_bound_elementwise(n, rational_op).unwrap();
             let seq = seq_fraction_map(n, rational_op).unwrap();
             assert_eq!(gated, seq, "gated compute-bound != sequential at n={n}");
+        }
+    }
+
+    #[test]
+    fn parallel_fraction_handles_chunk_overshoot_sizes() {
+        // Regression: a small `n` that is not a multiple of the worker count
+        // (e.g. n=5 with 4 workers) makes `chunk_plan`'s ceil-rounded chunk push
+        // the last chunk's start past `n`. Before clamping `start`, the region
+        // length underflowed and the worker wrote out of bounds (SIGSEGV). Every
+        // tiny size must now produce exactly the sequential result. Both the i64
+        // and Fraction lanes share `fill_parallel`, so cover both.
+        for n in 0usize..=64 {
+            let frac = parallel_try_elementwise(n, rational_op).unwrap();
+            assert_eq!(frac, seq_fraction_map(n, rational_op).unwrap(), "fraction n={n}");
+
+            let a: Vec<i64> = (0..n as i64).collect();
+            let b: Vec<i64> = (0..n as i64).map(|x| x + 1).collect();
+            let ints = run_parallel_binary(&a, &b, |x, y| x + y);
+            assert_eq!(ints, seq_binary(&a, &b, |x, y| x + y), "i64 n={n}");
         }
     }
 
