@@ -332,7 +332,7 @@ fn sparse_same_shape_tensor_mul(a: &Value, b: &Value) -> Option<Value> {
 
 fn apply_binary_arithmetic<F>(interp: &mut Interpreter, op: F) -> Result<()>
 where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
