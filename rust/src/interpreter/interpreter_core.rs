@@ -394,6 +394,12 @@ pub struct Interpreter {
     /// per-call clause collect/clone/split is replaced by a precomputed jump
     /// table. Disable via `AJISAI_NO_COND_DISPATCH` for an A/B comparison.
     pub(crate) cond_dispatch_enabled: bool,
+
+    /// When true (default), `compile_word_definition` lowers fully-literal
+    /// vectors into a prebuilt `CompiledOp::PushVectorLiteral` instead of
+    /// leaving them on the interpreter via `FallbackToken`. Disable via
+    /// `AJISAI_NO_VECTOR_LITERAL` for an A/B comparison.
+    pub(crate) vector_literal_enabled: bool,
 }
 
 impl Interpreter {
@@ -460,6 +466,7 @@ impl Interpreter {
             in_tail_context: false,
             tail_jump_pending: false,
             cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
+            vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -722,6 +729,13 @@ impl Interpreter {
     /// path. Takes effect for word plans compiled after the change.
     pub fn set_cond_dispatch_enabled(&mut self, enabled: bool) {
         self.cond_dispatch_enabled = enabled;
+    }
+
+    /// Enable or disable compile-time lowering of fully-literal vectors. In-process
+    /// equivalent of `AJISAI_NO_VECTOR_LITERAL`; takes effect for word plans
+    /// compiled after the change.
+    pub fn set_vector_literal_enabled(&mut self, enabled: bool) {
+        self.vector_literal_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a

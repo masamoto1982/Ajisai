@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::builtins::lookup_builtin_spec;
 use crate::error::Result;
-use crate::types::{Token, Value, WordDefinition};
+use crate::types::fraction::Fraction;
+use crate::types::{Interpretation, Token, Value, WordDefinition};
 
 use super::{modules, ConsumptionMode, EpochSnapshot, Interpreter, OperationTargetMode};
 
@@ -21,6 +22,12 @@ pub struct CompiledLine {
 #[derive(Debug, Clone)]
 pub enum CompiledOp {
     PushLiteral(Value),
+    /// A fully-literal vector (`[ 1 2 3 ]`, nested literals, `TRUE`/`FALSE`/`NIL`)
+    /// built once at compile time, with the same promoted `Value` and element
+    /// hint `collect_vector` would produce. Replaces the per-call vector walk
+    /// and keeps lines with literal vectors on the compiled path instead of
+    /// forcing them onto the interpreter via `FallbackToken`.
+    PushVectorLiteral(Value, Interpretation),
     PushCodeBlock(Vec<Token>),
     SetTargetModeStackTop,
     SetTargetModeStack,
@@ -107,6 +114,99 @@ fn collect_code_block(tokens: &[Token], start: usize) -> Option<(Vec<Token>, usi
     None
 }
 
+/// Try to build a fully-literal vector starting at `tokens[start]` (a
+/// `VectorStart`). Mirrors `Interpreter::collect_vector` for the literal subset
+/// — same element values, nesting, promotion, and element hint — but returns
+/// `None` the moment a non-literal element appears (a bare symbol that could be
+/// a user word, a `|` separator, an unclosed/empty vector, excessive nesting),
+/// so those keep the interpreter's `collect_vector` behavior via `FallbackToken`.
+/// On success returns the element values, tokens consumed (including both
+/// brackets), and the element hint to attach on the stack.
+fn try_collect_literal_vector(
+    tokens: &[Token],
+    start: usize,
+    depth: usize,
+) -> Option<(Vec<Value>, usize, Interpretation)> {
+    if !matches!(tokens.get(start), Some(Token::VectorStart)) {
+        return None;
+    }
+    if depth > crate::interpreter::MAX_VECTOR_NESTING_DEPTH {
+        return None;
+    }
+
+    let mut values: Vec<Value> = Vec::new();
+    let mut i = start + 1;
+    let mut has_bool = false;
+    let mut has_number = false;
+    let mut has_other = false;
+
+    while i < tokens.len() {
+        match &tokens[i] {
+            Token::VectorStart => {
+                // A nested empty vector returns `None` from the recursive call
+                // above (the interpreter rejects it), so `nested` is non-empty.
+                let (nested, consumed, nested_hint) =
+                    try_collect_literal_vector(tokens, i, depth + 1)?;
+                values.push(Value::from_vector_promoted_with_hint(nested, nested_hint));
+                has_other = true;
+                i += consumed;
+            }
+            Token::VectorEnd => {
+                if values.is_empty() {
+                    // The interpreter rejects `[ ]`; leave it as a fallback so
+                    // that error is raised rather than silently building a NIL.
+                    return None;
+                }
+                let element_hint = if has_other {
+                    Interpretation::Unassigned
+                } else if has_bool && !has_number {
+                    Interpretation::TruthValue
+                } else if has_number && !has_bool {
+                    Interpretation::RawNumber
+                } else {
+                    Interpretation::Unassigned
+                };
+                return Some((values, i - start + 1, element_hint));
+            }
+            Token::Number(n) => {
+                values.push(Value::from_number(Fraction::from_str(n).ok()?));
+                has_number = true;
+                i += 1;
+            }
+            Token::String(s) => {
+                values.push(Value::from_string(s));
+                has_other = true;
+                i += 1;
+            }
+            Token::Symbol(s) => {
+                match Interpreter::normalize_symbol(s).as_ref() {
+                    "TRUE" => {
+                        values.push(Value::from_bool(true));
+                        has_bool = true;
+                    }
+                    "FALSE" => {
+                        values.push(Value::from_bool(false));
+                        has_bool = true;
+                    }
+                    "NIL" => {
+                        values.push(Value::nil());
+                        has_other = true;
+                    }
+                    // Any other symbol may resolve to a user word that
+                    // `collect_vector` would execute; not a literal.
+                    _ => return None,
+                }
+                i += 1;
+            }
+            Token::LineBreak => {
+                i += 1;
+            }
+            _ => return None,
+        }
+    }
+    None // unclosed
+}
+
 pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
     let mut lines = Vec::with_capacity(word_def.lines.len());
 
@@ -132,7 +232,14 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
                     }
                 }
                 Token::BlockEnd => CompiledOp::FallbackToken(token.clone()),
-                Token::VectorStart | Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
+                Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {
+                    Some((values, consumed, hint)) if interp.vector_literal_enabled => {
+                        i += consumed - 1;
+                        CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values), hint)
+                    }
+                    _ => CompiledOp::FallbackToken(token.clone()),
+                },
+                Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
                 Token::Pipeline | Token::NilCoalesce | Token::CondClauseSep => {
                     CompiledOp::FallbackToken(token.clone())
                 }
@@ -273,6 +380,12 @@ fn execute_compiled_line(
                 interp
                     .semantic_registry
                     .normalize_to_stack_len(interp.stack.len());
+            }
+            CompiledOp::PushVectorLiteral(v, hint) => {
+                // Match `execute_section_core`'s VectorStart handling exactly:
+                // push the prebuilt vector and its element hint.
+                interp.stack.push(v.clone());
+                interp.semantic_registry.push_hint(*hint);
             }
             CompiledOp::PushCodeBlock(tokens) => {
                 interp.stack.push(Value::from_code_block(tokens.clone()));

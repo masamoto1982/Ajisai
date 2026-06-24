@@ -249,7 +249,7 @@ fn analyze_compiled_plan_with_context(
     for line in &plan.lines {
         for op in &line.ops {
             match op {
-                CompiledOp::PushLiteral(_) => {
+                CompiledOp::PushLiteral(_) | CompiledOp::PushVectorLiteral(_, _) => {
                     cur_depth += 1;
                 }
                 CompiledOp::PushCodeBlock(inner_tokens) => {
