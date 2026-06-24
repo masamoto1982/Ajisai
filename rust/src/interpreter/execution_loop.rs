@@ -340,7 +340,7 @@ impl Interpreter {
                 }
                 Token::Symbol(s) => {
                     let canonical = crate::core_word_aliases::canonicalize_core_word_name(s);
-                    match canonical.as_str() {
+                    match canonical.as_ref() {
                         "STAK" => {
                             self.update_operation_target_mode(OperationTargetMode::Stack);
                         }
