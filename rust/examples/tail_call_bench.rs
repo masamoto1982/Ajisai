@@ -64,11 +64,12 @@ fn max_reach(tail_call: bool, cap: u64) -> u64 {
     lo
 }
 
-fn time_loops(tail_call: bool, depth: u64, reps: u32) -> std::time::Duration {
+fn time_loops(tail_call: bool, cond_dispatch: bool, depth: u64, reps: u32) -> std::time::Duration {
     let steps = 100_000_000;
     // Prepare one interpreter; re-run the same loop `reps` times in-process.
     let mut interp = Interpreter::new();
     interp.set_tail_call_enabled(tail_call);
+    interp.set_cond_dispatch_enabled(cond_dispatch);
     interp.set_max_execution_steps(steps);
     block_on(interp.execute(DEF)).unwrap();
     let line = format!("[ {} ] DOWN", depth);
@@ -93,26 +94,51 @@ fn main() {
         on_reach / off_reach.max(1)
     );
 
-    println!("-- Per-iteration cost at depth 250 (both complete) --");
     let depth = 250u64;
     let reps = 2000u32;
-    // Warm up plan caches.
-    let _ = time_loops(false, depth, 50);
-    let _ = time_loops(true, depth, 50);
-    let off = time_loops(false, depth, reps);
-    let on = time_loops(true, depth, reps);
     let iters = (depth as u128) * (reps as u128);
+    let ns = |d: std::time::Duration| d.as_nanos() as f64 / iters as f64;
+
+    println!("-- Tail-call: native recursion vs backward jump (depth 250) --");
+    // Warm up plan caches.
+    let _ = time_loops(false, true, depth, 50);
+    let _ = time_loops(true, true, depth, 50);
+    let tc_off = time_loops(false, true, depth, reps);
+    let tc_on = time_loops(true, true, depth, reps);
     println!("  {reps} loops × depth {depth} = {iters} iterations");
     println!(
-        "  OFF: {:>8.3} ms  ({:.1} ns/iter)",
-        off.as_secs_f64() * 1e3,
-        off.as_nanos() as f64 / iters as f64
+        "  tail-call OFF: {:>8.3} ms  ({:.1} ns/iter)",
+        tc_off.as_secs_f64() * 1e3,
+        ns(tc_off)
     );
     println!(
-        "  ON : {:>8.3} ms  ({:.1} ns/iter)",
-        on.as_secs_f64() * 1e3,
-        on.as_nanos() as f64 / iters as f64
+        "  tail-call ON : {:>8.3} ms  ({:.1} ns/iter)",
+        tc_on.as_secs_f64() * 1e3,
+        ns(tc_on)
     );
-    let speedup = off.as_secs_f64() / on.as_secs_f64();
-    println!("  speedup: {speedup:.2}x");
+    println!(
+        "  speedup: {:.2}x\n",
+        tc_off.as_secs_f64() / tc_on.as_secs_f64()
+    );
+
+    println!(
+        "-- COND dispatch: dynamic collect vs precompiled jump table (depth 250, tail-call ON) --"
+    );
+    let _ = time_loops(true, false, depth, 50);
+    let cd_off = time_loops(true, false, depth, reps);
+    let cd_on = time_loops(true, true, depth, reps);
+    println!(
+        "  dispatch OFF (dynamic): {:>8.3} ms  ({:.1} ns/iter)",
+        cd_off.as_secs_f64() * 1e3,
+        ns(cd_off)
+    );
+    println!(
+        "  dispatch ON  (jump tbl): {:>8.3} ms  ({:.1} ns/iter)",
+        cd_on.as_secs_f64() * 1e3,
+        ns(cd_on)
+    );
+    println!(
+        "  speedup: {:.2}x",
+        cd_off.as_secs_f64() / cd_on.as_secs_f64()
+    );
 }

@@ -27,8 +27,17 @@ pub enum CompiledOp {
     SetConsumptionConsume,
     SetConsumptionKeep,
     CallBuiltin(String),
+    /// A `COND` whose guard/body clauses were split once at compile time. The
+    /// preceding `PushCodeBlock` ops are kept (they still push the clause blocks
+    /// so stack discipline and the dynamic fallback are preserved); this op
+    /// dispatches on the precomputed table instead of re-collecting and
+    /// re-splitting those blocks every call. Internal-GOTO "jump table".
+    CondDispatch(Arc<[super::control_cond::CondClause]>),
     CallUserWord(String),
-    CallQualifiedWord { namespace: String, word: String },
+    CallQualifiedWord {
+        namespace: String,
+        word: String,
+    },
     BeginGuardedBlock,
     LineBreak,
     // FallbackToken keeps runtime-sensitive tokens in the interpreter path:
@@ -143,9 +152,62 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
         });
     }
 
+    if interp.cond_dispatch_enabled {
+        lower_cond_dispatch(&mut lines);
+    }
+
     CompiledPlan {
         lines,
         compiled_at: interp.current_epoch_snapshot(),
+    }
+}
+
+fn is_cond_tail_op(op: &CompiledOp) -> bool {
+    matches!(op, CompiledOp::CondDispatch(_))
+        || matches!(op, CompiledOp::CallBuiltin(n) if n == "COND")
+}
+
+/// Replace each `CallBuiltin("COND")` whose clause blocks are statically known
+/// (a contiguous run of preceding `PushCodeBlock` ops, possibly spanning line
+/// breaks) with a `CondDispatch` carrying the split-once clause table. The
+/// `PushCodeBlock` ops are left in place: they still push the blocks at runtime,
+/// so `op_cond_dispatch` can count them and fall back to the dynamic split if an
+/// unexpected block reached the stack. A clause set that fails to split is left
+/// as the dynamic `COND` so its error still surfaces at runtime.
+fn lower_cond_dispatch(lines: &mut [CompiledLine]) {
+    let positions: Vec<(usize, usize)> = lines
+        .iter()
+        .enumerate()
+        .flat_map(|(li, l)| (0..l.ops.len()).map(move |oi| (li, oi)))
+        .collect();
+
+    type Replacement = ((usize, usize), Arc<[super::control_cond::CondClause]>);
+    let mut replacements: Vec<Replacement> = Vec::new();
+    for (flat_idx, &(li, oi)) in positions.iter().enumerate() {
+        if !matches!(&lines[li].ops[oi], CompiledOp::CallBuiltin(n) if n == "COND") {
+            continue;
+        }
+        let mut blocks: Vec<Vec<Token>> = Vec::new();
+        let mut k = flat_idx;
+        while k > 0 {
+            k -= 1;
+            let (pli, poi) = positions[k];
+            match &lines[pli].ops[poi] {
+                CompiledOp::PushCodeBlock(b) => blocks.push(b.clone()),
+                _ => break,
+            }
+        }
+        if blocks.is_empty() {
+            continue;
+        }
+        blocks.reverse();
+        if let Ok(clauses) = super::control_cond::split_clause_blocks(blocks) {
+            replacements.push(((li, oi), Arc::from(clauses)));
+        }
+    }
+
+    for ((li, oi), clauses) in replacements {
+        lines[li].ops[oi] = CompiledOp::CondDispatch(clauses);
     }
 }
 
@@ -191,8 +253,10 @@ fn execute_compiled_line(
     }
 
     // The tail op of the tail line carries the word's tail position. When it is
-    // a `COND`, propagate tail context into the selected clause body so a
-    // guarded tail self-call there is eliminated (the "internal GOTO").
+    // a `COND` (dynamic or precompiled), propagate tail context into the
+    // selected clause body so a guarded tail self-call there is eliminated (the
+    // "internal GOTO"). The COND op consumes `in_tail_context` on entry, so
+    // setting it here needs no explicit restore.
     let tail_op = if is_tail_line && interp.tail_call_enabled && interp.tail_self_word.is_some() {
         last_effective_op(&line.ops)
     } else {
@@ -200,18 +264,8 @@ fn execute_compiled_line(
     };
 
     for (op_idx, op) in line.ops.iter().enumerate() {
-        if tail_op == Some(op_idx) {
-            if let CompiledOp::CallBuiltin(name) = op {
-                if name == "COND" {
-                    let prev = interp.in_tail_context;
-                    interp.in_tail_context = true;
-                    let r = interp.execute_builtin(name);
-                    interp.in_tail_context = prev;
-                    r?;
-                    post_call_cleanup(interp, name);
-                    continue;
-                }
-            }
+        if tail_op == Some(op_idx) && is_cond_tail_op(op) {
+            interp.in_tail_context = true;
         }
         match op {
             CompiledOp::PushLiteral(v) => {
@@ -239,6 +293,10 @@ fn execute_compiled_line(
             CompiledOp::CallBuiltin(name) => {
                 interp.execute_builtin(name)?;
                 post_call_cleanup(interp, name);
+            }
+            CompiledOp::CondDispatch(clauses) => {
+                super::control_cond::op_cond_dispatch(interp, clauses)?;
+                post_call_cleanup(interp, "COND");
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;

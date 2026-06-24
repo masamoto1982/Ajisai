@@ -323,6 +323,16 @@ fn analyze_compiled_plan_with_context(
                     }
                     all_known = false;
                 }
+
+                // Precompiled COND: data-dependent arity, like the dynamic
+                // `COND` builtin. Clause purity is still captured by the kept
+                // `PushCodeBlock` ops above, so freezing arity here suffices.
+                CompiledOp::CondDispatch(_) => {
+                    if min_depth_at_first_unknown.is_none() {
+                        min_depth_at_first_unknown = Some(min_depth);
+                    }
+                    all_known = false;
+                }
             }
         }
     }

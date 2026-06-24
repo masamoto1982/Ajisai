@@ -199,6 +199,10 @@ pub struct RuntimeMetrics {
     pub hedged_race_cancel_count: u64,
     pub hedged_race_validation_reject_count: u64,
     pub cond_guard_prefetch_count: u64,
+    /// COND invocations that dispatched on a compile-time-precomputed clause
+    /// table (`CompiledOp::CondDispatch`) instead of re-collecting, cloning, and
+    /// re-splitting the clause blocks off the stack. Observational only.
+    pub cond_dispatch_fast_count: u64,
     pub shadow_validation_started_count: u64,
     pub shadow_validation_success_count: u64,
     pub shadow_validation_fallback_count: u64,
@@ -384,6 +388,12 @@ pub struct Interpreter {
     /// Raised by the deferral site when a guarded tail self-call is recognized
     /// and skipped; consumed by the trampoline loop in `execute_word_core_inner`.
     pub(crate) tail_jump_pending: bool,
+
+    /// When true (default), `compile_word_definition` lowers `COND` ops with
+    /// statically-known clause blocks into `CompiledOp::CondDispatch`, so the
+    /// per-call clause collect/clone/split is replaced by a precomputed jump
+    /// table. Disable via `AJISAI_NO_COND_DISPATCH` for an A/B comparison.
+    pub(crate) cond_dispatch_enabled: bool,
 }
 
 impl Interpreter {
@@ -449,6 +459,7 @@ impl Interpreter {
             tail_self_word: None,
             in_tail_context: false,
             tail_jump_pending: false,
+            cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -614,6 +625,8 @@ impl Interpreter {
         self.tail_self_word = None;
         self.in_tail_context = false;
         self.tail_jump_pending = false;
+        // `cond_dispatch_enabled` is a configuration flag, not run state, so it
+        // is intentionally not reset here.
         self.owning_dictionary_context = None;
         self.word_identities.clear();
         self.body_store.clear();
@@ -701,6 +714,14 @@ impl Interpreter {
     /// benchmarks can A/B the same interpreter against the legacy recursion path.
     pub fn set_tail_call_enabled(&mut self, enabled: bool) {
         self.tail_call_enabled = enabled;
+    }
+
+    /// Enable or disable precompiled COND clause dispatch (the internal "jump
+    /// table"). In-process equivalent of `AJISAI_NO_COND_DISPATCH`; lets a
+    /// benchmark A/B the compiled dispatch against the dynamic stack-collection
+    /// path. Takes effect for word plans compiled after the change.
+    pub fn set_cond_dispatch_enabled(&mut self, enabled: bool) {
+        self.cond_dispatch_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a
