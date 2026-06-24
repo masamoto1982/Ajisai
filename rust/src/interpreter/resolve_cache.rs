@@ -2,7 +2,7 @@ use super::{Interpreter, ResolveCacheEntry};
 
 impl Interpreter {
     pub(crate) fn make_resolve_cache_key(name: &str) -> String {
-        crate::core_word_aliases::canonicalize_core_word_name(name)
+        crate::core_word_aliases::canonicalize_core_word_name(name).into_owned()
     }
 
     /// Cache key qualified by the active owning-dictionary context (Section 8.6).

@@ -95,3 +95,33 @@ async fn surface_form_concepts_are_not_runtime_canonicalizations() {
     assert_ne!(canonicalize_core_word_name("'"), "STRING-QUOTE");
     assert_ne!(canonicalize_core_word_name(";"), "TOP-EAT");
 }
+
+/// 手3 (dispatch de-allocation): canonicalization must not allocate on the two
+/// dominant dispatch cases — a symbol alias (borrows the `&'static` canonical
+/// name) and an already-uppercase word (borrows the input slice). Only a name
+/// that genuinely needs case folding takes the owned path.
+#[test]
+fn canonicalize_borrows_without_allocating_on_hot_paths() {
+    use crate::core_word_aliases::canonicalize_core_word_name;
+    use std::borrow::Cow;
+
+    // Symbol alias → borrowed &'static canonical, value still correct.
+    let add = canonicalize_core_word_name("+");
+    assert!(matches!(add, Cow::Borrowed(_)), "alias must borrow");
+    assert_eq!(add, "ADD");
+
+    // Already-uppercase non-alias word → input borrowed unchanged.
+    for word in ["MAP", "LENGTH", "TIME@NOW", "USER-WORD"] {
+        let canon = canonicalize_core_word_name(word);
+        assert!(
+            matches!(canon, Cow::Borrowed(_)),
+            "uppercase word {word} must borrow"
+        );
+        assert_eq!(canon, word);
+    }
+
+    // Mixed/lowercase requires folding → owned, and folds correctly.
+    let folded = canonicalize_core_word_name("map");
+    assert!(matches!(folded, Cow::Owned(_)), "lowercase must fold owned");
+    assert_eq!(folded, "MAP");
+}

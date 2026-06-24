@@ -146,7 +146,7 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
         return Some(info);
     }
 
-    match canonical.as_str() {
+    match canonical.as_ref() {
         "NOW" | "DATETIME" | "TIMESTAMP" | "TIME@NOW" | "TIME@DATETIME" | "TIME@TIMESTAMP" => {
             Some(PurityInfo {
                 purity: Purity::Impure,

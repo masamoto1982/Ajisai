@@ -186,7 +186,7 @@ impl Interpreter {
         name: &str,
     ) -> Option<(String, Arc<WordDefinition>)> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        let name = canonical_name.as_str();
+        let name = canonical_name.as_ref();
         let (layers, word) = Self::split_path(name);
 
         match layers.len() {
@@ -266,7 +266,7 @@ impl Interpreter {
         name: &str,
     ) -> Option<(String, Arc<WordDefinition>)> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        let name = canonical_name.as_str();
+        let name = canonical_name.as_ref();
         if let Some(cached_name) = self.lookup_resolve_cache(name) {
             let (layers, word) = Self::split_path(&cached_name);
             if layers.is_empty() {
