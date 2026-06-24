@@ -460,8 +460,8 @@ fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
         let Token::Symbol(symbol) = token else {
             continue;
         };
-        let canonical =
-            crate::core_word_aliases::canonicalize_core_word_name(&normalize_word(symbol));
+        let normalized = normalize_word(symbol);
+        let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
         let resolved = if let Some((module, short)) = canonical.split_once('@') {
             if modules.contains(module) {
                 crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
@@ -478,12 +478,12 @@ fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
                 true
             }
         } else {
-            interp.core_vocabulary.contains_key(&canonical)
+            interp.core_vocabulary.contains_key(canonical.as_ref())
                 || crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
-                || locally_known.contains(&canonical)
+                || locally_known.contains(canonical.as_ref())
         };
-        if !resolved && seen.insert(canonical.clone()) {
-            unknown.push(canonical);
+        if !resolved && seen.insert(canonical.to_string()) {
+            unknown.push(canonical.into_owned());
         }
     }
     unknown
