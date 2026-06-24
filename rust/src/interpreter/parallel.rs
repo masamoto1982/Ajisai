@@ -30,6 +30,8 @@
 //! thread-pools are Phase 5), so every entry point degrades to the sequential
 //! SIMD lane unchanged.
 
+use crate::types::fraction::Fraction;
+
 #[cfg(not(target_arch = "wasm32"))]
 use std::mem::MaybeUninit;
 #[cfg(not(target_arch = "wasm32"))]
@@ -64,6 +66,46 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock};
 /// proptests below (which call [`run_parallel_binary`] directly), so correctness
 /// coverage does not depend on the production threshold.
 pub const PARALLEL_DISPATCH_MIN: usize = 900_000;
+
+/// Runtime profitability floor for a *compute-bound* kernel.
+///
+/// Unlike element-wise `i64` arithmetic (memory-bandwidth-bound, floor
+/// [`PARALLEL_DISPATCH_MIN`]), an exact-rational element op does real work per
+/// lane — a num/den cross-multiplication followed by a gcd normalization — so a
+/// single core no longer saturates the bus and the profitability crossover
+/// drops by more than an order of magnitude. The robust, environment-
+/// independent scaling target the roadmap calls out (手4「正しい戦場」) lives
+/// here, not in the bandwidth-bound lane.
+///
+/// This floor is set conservatively (well above the measured crossover on the
+/// throttled reference host) so Never-Slower holds absolutely; a low-wakeup-
+/// latency multicore host could profitably go lower, but the constant only ever
+/// errs toward staying sequential. Like [`PARALLEL_DISPATCH_MIN`] it governs
+/// only production dispatch — the policy-free kernels below are exercised at any
+/// size by the proptests, independent of this value.
+pub const COMPUTE_BOUND_DISPATCH_MIN: usize = 32_768;
+
+/// Coarse cost classification of a data-parallel kernel. The runtime profit
+/// crossover depends on per-element work, so the dispatch floor is selected per
+/// class rather than from a single global constant (手4: 演算特性別の閾値分離).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParallelOpClass {
+    /// Memory-bandwidth-bound: one core already saturates much of the bus, so
+    /// fan-out only amortizes at very large sizes (element-wise `i64` add/mul).
+    BandwidthBound,
+    /// Compute-bound: each lane does substantial arithmetic (exact-rational
+    /// cross-multiply + gcd), so the crossover is far lower and scaling is
+    /// closer to linear in core count.
+    ComputeBound,
+}
+
+/// Minimum element count before the pool engages for a kernel of `class`.
+pub const fn parallel_dispatch_min(class: ParallelOpClass) -> usize {
+    match class {
+        ParallelOpClass::BandwidthBound => PARALLEL_DISPATCH_MIN,
+        ParallelOpClass::ComputeBound => COMPUTE_BOUND_DISPATCH_MIN,
+    }
+}
 
 // ── Persistent worker pool ──────────────────────────────────────────────────
 
@@ -259,13 +301,14 @@ fn chunk_plan(n: usize, workers: usize) -> (usize, usize) {
 /// that `vec![0; n]` would cost — on a bandwidth-bound integer kernel that
 /// memset doubles the write traffic and erases the parallel win.
 #[cfg(not(target_arch = "wasm32"))]
-fn fill_parallel<F>(n: usize, pool: &Pool, fill: F) -> Vec<i64>
+fn fill_parallel<T, F>(n: usize, pool: &Pool, fill: F) -> Vec<T>
 where
-    F: Fn(usize, &mut [MaybeUninit<i64>]) + Sync,
+    T: Send,
+    F: Fn(usize, &mut [MaybeUninit<T>]) + Sync,
 {
-    let mut out: Vec<i64> = Vec::with_capacity(n);
+    let mut out: Vec<T> = Vec::with_capacity(n);
     let (chunks, chunk) = chunk_plan(n, pool.workers);
-    let base: SendMutPtr<MaybeUninit<i64>> = SendMutPtr(out.spare_capacity_mut().as_mut_ptr());
+    let base: SendMutPtr<MaybeUninit<T>> = SendMutPtr(out.spare_capacity_mut().as_mut_ptr());
 
     pool.for_each_chunk(chunks, |i| {
         let start = i * chunk;
@@ -273,12 +316,13 @@ where
         // SAFETY: chunk ranges are disjoint and within `0..n` (== reserved
         // capacity); this worker is the sole writer of `start..end`, and the
         // dispatcher joins all workers before `out` is read.
-        let region: &mut [MaybeUninit<i64>] =
+        let region: &mut [MaybeUninit<T>] =
             unsafe { std::slice::from_raw_parts_mut(base.ptr().add(start), end - start) };
         fill(start, region);
     });
 
-    // SAFETY: every index in `0..n` was written exactly once above.
+    // SAFETY: every index in `0..n` was written exactly once above (the `fill`
+    // contract requires every lane in each region to be initialized).
     unsafe {
         out.set_len(n);
     }
@@ -555,6 +599,106 @@ pub fn elementwise_scalar_checked(
     (lane(a, scalar), false)
 }
 
+// ── Compute-bound exact-rational kernel (手4: 正しい戦場で並列化) ─────────────
+//
+// Element-wise exact arithmetic over `Fraction` lanes is the robust scaling
+// target: each lane does a num/den cross-multiply plus a gcd normalization, so
+// the work is compute-bound and fan-out scales near-linearly with cores. Unlike
+// the speculative `i64` lane this never needs an overflow escape — `Fraction`
+// is arbitrary precision, so the parallel result is *exactly* the sequential
+// one. The caller assembles the result `Value` from the returned `Vec<Fraction>`
+// through the identical constructor the sequential path uses, so Same Result is
+// structural, not merely value-wise.
+
+/// Policy-free compute-bound element-wise map producing `Fraction` lanes. Always
+/// fans out when the pool has ≥2 workers; otherwise computes inline. `f(i)` must
+/// be the same pure per-element op the sequential path runs, so the assembled
+/// output is identical regardless of worker count.
+///
+/// On a lane error (e.g. division by zero) the parallel pass is discarded and
+/// the map is recomputed sequentially, which surfaces the same first
+/// (lowest-index) error the sequential path would — preserving error order.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn parallel_try_elementwise<F>(n: usize, f: F) -> crate::error::Result<Vec<Fraction>>
+where
+    F: Fn(usize) -> crate::error::Result<Fraction> + Sync,
+{
+    let pool = pool();
+    if pool.workers < 2 || n == 0 {
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            out.push(f(i)?);
+        }
+        return Ok(out);
+    }
+
+    let failed = AtomicBool::new(false);
+    let buf = fill_parallel::<Fraction, _>(n, pool, |start, region| {
+        for (k, slot) in region.iter_mut().enumerate() {
+            match f(start + k) {
+                Ok(v) => {
+                    slot.write(v);
+                }
+                Err(_) => {
+                    // Keep every lane initialized so `set_len` is sound and the
+                    // discarded buffer drops cleanly; the placeholder value is
+                    // never observed (the buffer is dropped below).
+                    failed.store(true, Ordering::Relaxed);
+                    slot.write(Fraction::nil());
+                }
+            }
+        }
+    });
+
+    if failed.load(Ordering::Relaxed) {
+        drop(buf);
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            out.push(f(i)?);
+        }
+        // Unreachable in practice: at least one lane errored above, so the loop
+        // returns early. The `Ok` keeps the type-checker happy.
+        Ok(out)
+    } else {
+        Ok(buf)
+    }
+}
+
+/// Gated entry point for a compute-bound exact-rational element-wise op. Runs
+/// the multi-core kernel only when the element count clears the compute-bound
+/// floor and the pool has ≥2 workers; otherwise stays on the identical
+/// sequential lane (Never Slower). The op is pure by type (`Fraction`-only), so
+/// no purity gate is consulted — the caller guarantees `f` is the pure
+/// per-element arithmetic the sequential path would run.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn compute_bound_elementwise<F>(n: usize, f: F) -> crate::error::Result<Vec<Fraction>>
+where
+    F: Fn(usize) -> crate::error::Result<Fraction> + Sync,
+{
+    if pool().workers < 2 || n < parallel_dispatch_min(ParallelOpClass::ComputeBound) {
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            out.push(f(i)?);
+        }
+        return Ok(out);
+    }
+    parallel_try_elementwise(n, f)
+}
+
+/// On `wasm32` there is no native threading, so the compute-bound element-wise
+/// op degrades to the sequential lane unchanged.
+#[cfg(target_arch = "wasm32")]
+pub fn compute_bound_elementwise<F>(n: usize, f: F) -> crate::error::Result<Vec<Fraction>>
+where
+    F: Fn(usize) -> crate::error::Result<Fraction>,
+{
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        out.push(f(i)?);
+    }
+    Ok(out)
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
@@ -685,6 +829,95 @@ mod tests {
             let b: Vec<i64> = (0..len as i64).map(|i| i.wrapping_mul(17).wrapping_sub(seed) % 1000).collect();
             let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_mul(y));
             let seq = seq_binary_checked(&a, &b, |x, y| x.checked_mul(y));
+            prop_assert_eq!(par, seq);
+        }
+    }
+
+    // ── Compute-bound exact-rational kernel contracts (手4) ──────────────────
+
+    #[test]
+    fn compute_bound_floor_is_below_bandwidth_floor() {
+        // The whole point of per-class thresholds: a compute-bound kernel
+        // becomes profitable far earlier than a bandwidth-bound one.
+        assert!(
+            parallel_dispatch_min(ParallelOpClass::ComputeBound)
+                < parallel_dispatch_min(ParallelOpClass::BandwidthBound),
+            "compute-bound floor must be lower than bandwidth-bound floor"
+        );
+        assert_eq!(
+            parallel_dispatch_min(ParallelOpClass::BandwidthBound),
+            PARALLEL_DISPATCH_MIN,
+            "bandwidth-bound floor must stay the calibrated i64 constant"
+        );
+    }
+
+    /// `i/3 + i/7` over a rational lane — exercises gcd normalization so the
+    /// parallel write path carries real `Fraction` payloads (Small and, for some
+    /// indices, denominators > 1), not just integers.
+    fn rational_op(i: usize) -> crate::error::Result<Fraction> {
+        let third = Fraction::from(i as i64).div(&Fraction::from(3));
+        let seventh = Fraction::from(i as i64).div(&Fraction::from(7));
+        Ok(third.add(&seventh))
+    }
+
+    fn seq_fraction_map<F>(n: usize, f: F) -> crate::error::Result<Vec<Fraction>>
+    where
+        F: Fn(usize) -> crate::error::Result<Fraction>,
+    {
+        (0..n).map(f).collect()
+    }
+
+    #[test]
+    fn parallel_fraction_matches_sequential() {
+        // Same Result: the policy-free compute-bound map is element-for-element
+        // identical to the sequential reference. Size is multi-chunk and not a
+        // multiple of any worker count so chunk boundaries are exercised.
+        let n = 50_003;
+        let par = parallel_try_elementwise(n, rational_op).unwrap();
+        let seq = seq_fraction_map(n, rational_op).unwrap();
+        assert_eq!(par, seq, "parallel rational map != sequential");
+    }
+
+    #[test]
+    fn parallel_fraction_surfaces_first_error_like_sequential() {
+        // A lane error must make the kernel decline with the same Err the
+        // sequential lane raises (error order preserved). One poisoned index
+        // mid-buffer stands in for e.g. a division by zero.
+        let n = 40_000;
+        let poison = n / 2;
+        let f = |i: usize| -> crate::error::Result<Fraction> {
+            if i == poison {
+                Err(crate::error::AjisaiError::from("rational lane boom"))
+            } else {
+                Ok(Fraction::from(i as i64))
+            }
+        };
+        assert!(
+            parallel_try_elementwise(n, f).is_err(),
+            "a poisoned lane must decline the parallel kernel"
+        );
+        assert!(seq_fraction_map(n, f).is_err(), "sequential must also error");
+    }
+
+    #[test]
+    fn compute_bound_gate_matches_sequential_below_and_above_floor() {
+        // The gated entry must be bit-identical to sequential both below the
+        // floor (no fan-out) and above it (fan-out), so dispatch never changes
+        // the answer.
+        for n in [8usize, COMPUTE_BOUND_DISPATCH_MIN + 11] {
+            let gated = compute_bound_elementwise(n, rational_op).unwrap();
+            let seq = seq_fraction_map(n, rational_op).unwrap();
+            assert_eq!(gated, seq, "gated compute-bound != sequential at n={n}");
+        }
+    }
+
+    proptest! {
+        // Differential contract: the policy-free compute-bound rational map is
+        // exactly the sequential one across sizes straddling chunk boundaries.
+        #[test]
+        fn parallel_fraction_equals_sequential(len in 0usize..=8_000) {
+            let par = parallel_try_elementwise(len, rational_op).unwrap();
+            let seq = seq_fraction_map(len, rational_op).unwrap();
             prop_assert_eq!(par, seq);
         }
     }

@@ -373,7 +373,7 @@ pub(crate) fn apply_binary_broadcast_with_metrics<F>(
     mut metrics: Option<&mut RuntimeMetrics>,
 ) -> Result<Value>
 where
-    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy,
+    F: Fn(&Fraction, &Fraction) -> Result<Fraction> + Copy + Sync,
 {
     if a.is_nil() || b.is_nil() {
         return Err(AjisaiError::from("Cannot broadcast NIL values"));
@@ -410,10 +410,17 @@ where
             m.vtu_same_shape_elementwise_count =
                 m.vtu_same_shape_elementwise_count.saturating_add(1);
         }
-        let mut out_data = Vec::with_capacity(out_size);
-        for i in 0..out_size {
-            out_data.push(op(&tensor_a.data[i], &tensor_b.data[i])?);
-        }
+        // Compute-bound same-shape element-wise op. The per-lane exact-rational
+        // arithmetic (num/den cross-multiply + gcd) is the robust parallel
+        // scaling target (手4); fan-out is gated by the compute-bound floor and
+        // is transparent — the result `Vec<Fraction>` is assembled through the
+        // identical `FlatTensor` constructor the sequential lane uses, so the
+        // output is structurally identical regardless of worker count.
+        let data_a = &tensor_a.data;
+        let data_b = &tensor_b.data;
+        let out_data = crate::interpreter::parallel::compute_bound_elementwise(out_size, |i| {
+            op(&data_a[i], &data_b[i])
+        })?;
         let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
         return Ok(out_tensor.to_value());
     }
