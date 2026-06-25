@@ -1,8 +1,25 @@
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Signed, ToPrimitive, Zero};
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::Arc;
+
+/// Master switch for the i128 `SqrtSmall` fast path. Always on in production;
+/// `set_sqrt_small_fast_path(false)` forces the BigInt `Sqrt` path so
+/// benchmarks can A/B the two. Correctness is identical either way (see
+/// `sqrt_small_matches_bigint_path`), so this only affects performance, never
+/// results.
+static SQRT_SMALL_FAST_PATH: AtomicBool = AtomicBool::new(true);
+
+fn sqrt_small_enabled() -> bool {
+    SQRT_SMALL_FAST_PATH.load(AtomicOrdering::Relaxed)
+}
+
+/// Enable or disable the i128 `SqrtSmall` fast path (benchmark/A-B hook).
+pub fn set_sqrt_small_fast_path(enabled: bool) {
+    SQRT_SMALL_FAST_PATH.store(enabled, AtomicOrdering::Relaxed);
+}
 
 // Safety bound on internal Gosper ingestion. The classical Gosper
 // transforms terminate (or emit) after a bounded number of input
@@ -1012,6 +1029,18 @@ enum CfState {
         p_i: BigInt,
         q_i: BigInt,
     },
+    /// i128 fast path for `Sqrt`. The surd recurrence keeps `P_i`, `Q_i`
+    /// bounded by `2·√D`, so for radicands whose `D` fits in i128 every term
+    /// is computed without allocating a `BigInt`. A step that would overflow
+    /// i128 (only reachable for enormous `D` near the i128 ceiling) promotes
+    /// back to the `Sqrt` BigInt state and retries there, so the result is
+    /// always identical to the BigInt path.
+    SqrtSmall {
+        big_d: i128,
+        sqrt_floor: i128,
+        p_i: i128,
+        q_i: i128,
+    },
     /// Unary Möbius (a·x + b) / (c·x + d) over an inner operand
     /// stream `x`.
     Mobius {
@@ -1062,6 +1091,23 @@ impl CfIter {
                 let q = radicand.denominator();
                 let big_d = &p * &q;
                 let sqrt_floor = big_d.sqrt();
+                // i128 fast path when D, ⌊√D⌋ and the starting Q all fit; the
+                // step still promotes back to BigInt on any overflow.
+                if let (true, Some(d_s), Some(f_s), Some(q_s)) = (
+                    sqrt_small_enabled(),
+                    big_d.to_i128(),
+                    sqrt_floor.to_i128(),
+                    q.to_i128(),
+                ) {
+                    return CfIter {
+                        state: CfState::SqrtSmall {
+                            big_d: d_s,
+                            sqrt_floor: f_s,
+                            p_i: 0,
+                            q_i: q_s,
+                        },
+                    };
+                }
                 CfIter {
                     state: CfState::Sqrt {
                         big_d,
@@ -1148,6 +1194,39 @@ impl CfIter {
                     *p_i = next_p;
                     *q_i = next_q;
                     return CfStep::Quotient(a_i);
+                }
+                CfState::SqrtSmall { .. } => {
+                    let CfState::SqrtSmall {
+                        big_d,
+                        sqrt_floor,
+                        p_i,
+                        q_i,
+                    } = &self.state
+                    else {
+                        unreachable!()
+                    };
+                    let (d, f, p, q) = (*big_d, *sqrt_floor, *p_i, *q_i);
+                    match sqrt_small_step(d, f, p, q) {
+                        Some((a, next_p, next_q)) => {
+                            self.state = CfState::SqrtSmall {
+                                big_d: d,
+                                sqrt_floor: f,
+                                p_i: next_p,
+                                q_i: next_q,
+                            };
+                            return CfStep::Quotient(BigInt::from(a));
+                        }
+                        None => {
+                            // i128 overflow (only near the ceiling): continue
+                            // in BigInt, producing an identical term sequence.
+                            self.state = CfState::Sqrt {
+                                big_d: BigInt::from(d),
+                                sqrt_floor: BigInt::from(f),
+                                p_i: BigInt::from(p),
+                                q_i: BigInt::from(q),
+                            };
+                        }
+                    }
                 }
                 CfState::Mobius { .. } => {
                     if let Some(q) = step_mobius(&mut self.state) {
@@ -1430,6 +1509,41 @@ impl NicfStream {
 /// when a partial quotient is emitted (state already updated); `None`
 /// when the state has transitioned to a non-Möbius form that the
 /// caller's outer loop should re-dispatch.
+/// Floor division on i128 (rounds toward −∞), matching `BigInt::div_floor`.
+/// Returns `None` on the i128::MIN / −1 overflow so callers fall back to BigInt.
+#[inline]
+fn floor_div_i128(a: i128, b: i128) -> Option<i128> {
+    if b == 0 {
+        return None;
+    }
+    let q = a.checked_div(b)?;
+    let r = a % b;
+    if r != 0 && ((r < 0) != (b < 0)) {
+        q.checked_sub(1)
+    } else {
+        Some(q)
+    }
+}
+
+/// One step of the quadratic-surd recurrence in i128, returning
+/// `(a_i, next_p, next_q)`. `None` on any overflow, so the caller promotes to
+/// the BigInt `Sqrt` state and recomputes the same step there. Mirrors the
+/// BigInt arm exactly: `a = ⌊(P+⌊√D⌋)/Q⌋`, `P' = a·Q − P`, `Q' = (D − P'²)/Q`.
+#[inline]
+fn sqrt_small_step(
+    big_d: i128,
+    sqrt_floor: i128,
+    p_i: i128,
+    q_i: i128,
+) -> Option<(i128, i128, i128)> {
+    let sum = p_i.checked_add(sqrt_floor)?;
+    let a = floor_div_i128(sum, q_i)?;
+    let next_p = a.checked_mul(q_i)?.checked_sub(p_i)?;
+    let next_p_sq = next_p.checked_mul(next_p)?;
+    let next_q = big_d.checked_sub(next_p_sq)?.checked_div(q_i)?;
+    Some((a, next_p, next_q))
+}
+
 fn step_mobius(state: &mut CfState) -> Option<BigInt> {
     let CfState::Mobius {
         a,
@@ -1863,6 +1977,62 @@ mod tests {
     fn sqrt_of(num: i64, den: i64) -> ExactReal {
         ExactReal::from_sqrt_rational(Fraction::new(bi(num), bi(den)))
             .expect("non-negative radicand should construct")
+    }
+
+    // ─── i128 `SqrtSmall` fast path: differential vs the BigInt `Sqrt` path ───
+
+    /// Expand √(radicand) forcing the BigInt `Sqrt` state, bypassing the i128
+    /// `SqrtSmall` fast path — the reference the fast path must match term for
+    /// term. Mirrors `CfIter::from_exact_real`'s `AlgebraicSqrt` construction.
+    fn sqrt_terms_bigint(radicand: &Fraction, budget: usize) -> Vec<BigInt> {
+        let p = radicand.numerator();
+        let q = radicand.denominator();
+        let big_d = &p * &q;
+        let sqrt_floor = big_d.sqrt();
+        let mut iter = CfIter {
+            state: CfState::Sqrt {
+                big_d,
+                sqrt_floor,
+                p_i: BigInt::zero(),
+                q_i: q,
+            },
+        };
+        let mut out = Vec::with_capacity(budget);
+        for _ in 0..budget {
+            match iter.next_quotient() {
+                Some(t) => out.push(t),
+                None => break,
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn sqrt_small_matches_bigint_path() {
+        let budget = 300;
+        let mut checked = 0;
+        for num in 1..=80i64 {
+            for den in 1..=16i64 {
+                // Only genuine surds reach the Sqrt state; perfect squares
+                // project to `Rational` and never build a `SqrtSmall`.
+                let Some(ExactReal::AlgebraicSqrt { radicand }) =
+                    ExactReal::from_sqrt_rational(Fraction::new(bi(num), bi(den)))
+                else {
+                    continue;
+                };
+                let small = ExactReal::AlgebraicSqrt {
+                    radicand: radicand.clone(),
+                }
+                .partial_quotients_bounded(budget);
+                let big = sqrt_terms_bigint(&radicand, budget);
+                assert_eq!(
+                    small, big,
+                    "√({num}/{den}) CF terms diverged: SqrtSmall vs BigInt Sqrt"
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked > 200, "expected many surds, checked {checked}");
     }
 
     // ─── SPEC §7.4.1.1 / §15.3: NICF-accelerated comparison conformance ───
@@ -2901,7 +3071,10 @@ mod tests {
         // Equal to true zero (was undecidable while the bihom could not
         // pin the cancellation).
         let zero = sqrt_of(2, 1).sub(&sqrt_of(2, 1));
-        assert_eq!(zero.cmp_with_budget(&rational(0, 1), BUDGET), Some(Ordering::Equal));
+        assert_eq!(
+            zero.cmp_with_budget(&rational(0, 1), BUDGET),
+            Some(Ordering::Equal)
+        );
     }
 
     #[test]
@@ -3325,7 +3498,11 @@ mod tests {
                 rational(n, 1),
                 "√{n}·√{n} must collapse to the integer {n}"
             );
-            assert_eq!(expanded(&product), terms(&[n]), "CF of √{n}·√{n} is ( {n} )");
+            assert_eq!(
+                expanded(&product),
+                terms(&[n]),
+                "CF of √{n}·√{n} is ( {n} )"
+            );
         }
     }
 
