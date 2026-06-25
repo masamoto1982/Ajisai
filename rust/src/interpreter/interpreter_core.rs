@@ -203,6 +203,9 @@ pub struct RuntimeMetrics {
     /// table (`CompiledOp::CondDispatch`) instead of re-collecting, cloning, and
     /// re-splitting the clause blocks off the stack. Observational only.
     pub cond_dispatch_fast_count: u64,
+    /// COND guard/body executions that ran a compiled sub-plan instead of
+    /// re-interpreting the clause's token stream. Observational only.
+    pub cond_clause_compiled_count: u64,
     pub shadow_validation_started_count: u64,
     pub shadow_validation_success_count: u64,
     pub shadow_validation_fallback_count: u64,
@@ -400,6 +403,11 @@ pub struct Interpreter {
     /// leaving them on the interpreter via `FallbackToken`. Disable via
     /// `AJISAI_NO_VECTOR_LITERAL` for an A/B comparison.
     pub(crate) vector_literal_enabled: bool,
+
+    /// When true (default), precompiled COND clauses (`CondDispatch`) carry
+    /// compiled guard/body sub-plans, so the loop body runs compiled instead of
+    /// re-interpreted each iteration. Disable via `AJISAI_NO_COMPILED_CLAUSE`.
+    pub(crate) compiled_clause_enabled: bool,
 }
 
 impl Interpreter {
@@ -467,6 +475,7 @@ impl Interpreter {
             tail_jump_pending: false,
             cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
+            compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -736,6 +745,13 @@ impl Interpreter {
     /// compiled after the change.
     pub fn set_vector_literal_enabled(&mut self, enabled: bool) {
         self.vector_literal_enabled = enabled;
+    }
+
+    /// Enable or disable compiled COND guard/body sub-plans. In-process
+    /// equivalent of `AJISAI_NO_COMPILED_CLAUSE`; takes effect for word plans
+    /// compiled after the change.
+    pub fn set_compiled_clause_enabled(&mut self, enabled: bool) {
+        self.compiled_clause_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a
