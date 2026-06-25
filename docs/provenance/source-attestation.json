@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:2c56599c0d876bfdffecb86472f0945a45342308252ad99bdf0a9c1c6f087aa3",
-  "fileCount": 267,
+  "rootIdentity": "sha256:580f1670ac93bcd86c010c514fd7a76c629025a82a6a3ee106cf324811caf22e",
+  "fileCount": 268,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -303,9 +303,14 @@
       "bytes": 26196
     },
     {
+      "path": "rust/src/interpreter/compiled_clause_tests.rs",
+      "sha256": "69996e435c793c319f2343928fd2e595c8c3c2913ceb21cfe6b38c2e1cb13d3c",
+      "bytes": 4108
+    },
+    {
       "path": "rust/src/interpreter/compiled_plan.rs",
-      "sha256": "7c5e50181c061dd2a60516d6ceb0d09ea8f8a9efd6eee28b537210d67bc2f041",
-      "bytes": 17055
+      "sha256": "9fce5b1724451e01a82a6aeb89db822f8d806f884b4a8c8e2ba376fdc3078e0f",
+      "bytes": 20100
     },
     {
       "path": "rust/src/interpreter/compiled_plan_tests.rs",
@@ -349,8 +354,8 @@
     },
     {
       "path": "rust/src/interpreter/control_cond.rs",
-      "sha256": "0321eadf7103c26de56a265a2d89f334aba1bfc3eda3cd8f9032665046a69728",
-      "bytes": 15282
+      "sha256": "9bc00879f64dfe5bd4ed40ef5968ab0f5312c744324b486b083cdd77ee45ecb7",
+      "bytes": 17481
     },
     {
       "path": "rust/src/interpreter/control_cond_tests.rs",
@@ -544,8 +549,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "e7c47205851d06800ee65b6d2f352d0a8d5e565cbd102ebbdb5c32232cc6487e",
-      "bytes": 32378
+      "sha256": "9a59ae9ab459822c74dded684cedf231986262ad1b716819b8c78716013b43e6",
+      "bytes": 33249
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -604,8 +609,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "071b962a36e903a6459c16fcc3bfc1c4fef289900304086c35cf1613464f3926",
-      "bytes": 2860
+      "sha256": "a936868f3a6ead47c995f6a9b33759a2501acf6aadc85b0ffdf965459d52546b",
+      "bytes": 2900
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",

@@ -5,14 +5,25 @@ use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::{Interpretation, Token, Value, ValueData};
 
+use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
+
 /// One precomputed COND clause: a guard and the body it selects. Token streams
 /// are `Arc`-shared so the compiled dispatch (`CompiledOp::CondDispatch`) can
 /// reuse the same split every iteration instead of re-collecting and re-cloning
 /// the clause blocks off the stack and re-scanning each for `|`.
+///
+/// `guard_plan` / `body_plan` are compiled sub-plans, attached once at lowering
+/// time (when `compiled_clause_enabled`). When present they are run via
+/// `execute_compiled_plan` instead of re-interpreting the guard/body token
+/// stream on every iteration — the step that finally moves the loop body off
+/// the interpreter. They are `None` on the dynamic path and whenever the clause
+/// does not fully compile.
 #[derive(Debug, Clone)]
 pub struct CondClause {
     pub guard: Arc<[Token]>,
     pub body: Arc<[Token]>,
+    pub guard_plan: Option<Arc<CompiledPlan>>,
+    pub body_plan: Option<Arc<CompiledPlan>>,
 }
 
 /// Dynamic entry point: collect the clause blocks the preceding code pushed,
@@ -68,33 +79,54 @@ fn run_cond_core(
             .ok_or(AjisaiError::StackUnderflow)?,
     };
 
-    let mut else_body: Option<Arc<[Token]>> = None;
+    let mut else_clause: Option<&CondClause> = None;
     if is_hedged_cond_mode(interp) {
         interp.push_hedged_trace("cond:prefetch-start");
-        if let Some(body) =
-            evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_body)?
+        if let Some(clause) =
+            evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_clause)?
         {
             interp.push_hedged_trace("cond:winner-prefetched-guard");
-            return execute_cond_body(interp, &body, &target_value, tail_context);
+            return run_clause_body(interp, clause, &target_value, tail_context);
         }
     } else {
         for clause in clauses {
             if is_idle_guard(&clause.guard) {
-                else_body = Some(clause.body.clone());
+                else_clause = Some(clause);
                 continue;
             }
 
-            if evaluate_guard_greedy(interp, &clause.guard, &target_value)? {
-                return execute_cond_body(interp, &clause.body, &target_value, tail_context);
+            if evaluate_guard_greedy(
+                interp,
+                &clause.guard,
+                clause.guard_plan.as_deref(),
+                &target_value,
+            )? {
+                return run_clause_body(interp, clause, &target_value, tail_context);
             }
         }
     }
 
-    if let Some(body_tokens) = else_body {
-        return execute_cond_body(interp, &body_tokens, &target_value, tail_context);
+    if let Some(clause) = else_clause {
+        return run_clause_body(interp, clause, &target_value, tail_context);
     }
 
     Err(AjisaiError::CondExhausted)
+}
+
+/// Run a clause's body, preferring its compiled sub-plan when present.
+fn run_clause_body(
+    interp: &mut Interpreter,
+    clause: &CondClause,
+    value: &Value,
+    tail_context: bool,
+) -> Result<()> {
+    execute_cond_body(
+        interp,
+        &clause.body,
+        clause.body_plan.as_deref(),
+        value,
+        tail_context,
+    )
 }
 
 /// Pop the consecutive code blocks on top of the stack, moving their token
@@ -145,6 +177,8 @@ pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondCla
             clauses.push(CondClause {
                 guard: Arc::from(guard_tokens),
                 body: Arc::from(body_tokens),
+                guard_plan: None,
+                body_plan: None,
             });
         }
         return Ok(clauses);
@@ -162,6 +196,8 @@ pub(crate) fn split_clause_blocks(blocks: Vec<Vec<Token>>) -> Result<Vec<CondCla
         clauses.push(CondClause {
             guard: Arc::from(guard_tokens),
             body: Arc::from(body_tokens),
+            guard_plan: None,
+            body_plan: None,
         });
     }
 
@@ -196,6 +232,7 @@ fn split_cond_clause_block(tokens: &[Token]) -> Result<(Vec<Token>, Vec<Token>)>
 fn evaluate_guard_isolated(
     interp: &mut Interpreter,
     guard_tokens: &[Token],
+    guard_plan: Option<&CompiledPlan>,
     value: &Value,
 ) -> Result<bool> {
     let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
@@ -211,7 +248,14 @@ fn evaluate_guard_isolated(
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
-    let execution_result: Result<usize> = interp.execute_section_core(guard_tokens, 0);
+    // Guards are never tail position; run the compiled sub-plan when available,
+    // otherwise interpret the tokens. Both produce the same result value.
+    let execution_result: Result<()> = if let Some(plan) = guard_plan {
+        interp.runtime_metrics.cond_clause_compiled_count += 1;
+        execute_compiled_plan(interp, plan)
+    } else {
+        interp.execute_section_core(guard_tokens, 0).map(|_| ())
+    };
     let guard_result_value: Option<Value> = interp.stack.pop();
 
     restore_cond_eval_state(
@@ -280,9 +324,10 @@ fn evaluate_guard_isolated(
 fn evaluate_guard_greedy(
     interp: &mut Interpreter,
     guard_tokens: &[Token],
+    guard_plan: Option<&CompiledPlan>,
     value: &Value,
 ) -> Result<bool> {
-    evaluate_guard_isolated(interp, guard_tokens, value)
+    evaluate_guard_isolated(interp, guard_tokens, guard_plan, value)
 }
 
 fn restore_cond_eval_state(
@@ -323,12 +368,12 @@ fn is_hedged_cond_mode(interp: &Interpreter) -> bool {
     )
 }
 
-fn evaluate_guard_hedged_prefetch(
+fn evaluate_guard_hedged_prefetch<'a>(
     interp: &mut Interpreter,
-    clauses: &[CondClause],
+    clauses: &'a [CondClause],
     target_value: &Value,
-    else_body: &mut Option<Arc<[Token]>>,
-) -> Result<Option<Arc<[Token]>>> {
+    else_clause: &mut Option<&'a CondClause>,
+) -> Result<Option<&'a CondClause>> {
     let mut prefetched: Vec<Option<Result<bool>>> = vec![None; clauses.len()];
     let mut has_impure_guard = false;
 
@@ -338,7 +383,12 @@ fn evaluate_guard_hedged_prefetch(
         }
         if is_pure_cond_guard(&clause.guard) {
             interp.runtime_metrics.cond_guard_prefetch_count += 1;
-            prefetched[idx] = Some(evaluate_guard_isolated(interp, &clause.guard, target_value));
+            prefetched[idx] = Some(evaluate_guard_isolated(
+                interp,
+                &clause.guard,
+                clause.guard_plan.as_deref(),
+                target_value,
+            ));
         } else {
             has_impure_guard = true;
         }
@@ -349,17 +399,22 @@ fn evaluate_guard_hedged_prefetch(
 
     for (idx, clause) in clauses.iter().enumerate() {
         if is_idle_guard(&clause.guard) {
-            *else_body = Some(clause.body.clone());
+            *else_clause = Some(clause);
             continue;
         }
 
         let is_true = if let Some(result) = prefetched[idx].clone() {
             result?
         } else {
-            evaluate_guard_greedy(interp, &clause.guard, target_value)?
+            evaluate_guard_greedy(
+                interp,
+                &clause.guard,
+                clause.guard_plan.as_deref(),
+                target_value,
+            )?
         };
         if is_true {
-            return Ok(Some(clause.body.clone()));
+            return Ok(Some(clause));
         }
     }
     Ok(None)
@@ -368,6 +423,7 @@ fn evaluate_guard_hedged_prefetch(
 fn execute_cond_body(
     interp: &mut Interpreter,
     body_tokens: &[Token],
+    body_plan: Option<&CompiledPlan>,
     value: &Value,
     tail_context: bool,
 ) -> Result<()> {
@@ -382,11 +438,19 @@ fn execute_cond_body(
     interp.consumption_mode = ConsumptionMode::Consume;
 
     // This clause body runs in the word's tail position iff the COND itself
-    // did. A tail self-call at the end of `body_tokens` then defers to the
+    // did. A tail self-call at the end of the body then defers to the
     // trampoline instead of recursing; its residual single value (the next
-    // iteration's argument) flows out as this body's result below.
+    // iteration's argument) flows out as this body's result below. The
+    // deferral happens in `execute_section_core` (interpreted) or, when the
+    // body is compiled, in `execute_compiled_line`'s tail-op handling — both
+    // keyed on `in_tail_context` and `tail_self_word`.
     interp.in_tail_context = tail_context;
-    let execution_result: Result<usize> = interp.execute_section_core(body_tokens, 0);
+    let execution_result: Result<()> = if let Some(plan) = body_plan {
+        interp.runtime_metrics.cond_clause_compiled_count += 1;
+        execute_compiled_plan(interp, plan)
+    } else {
+        interp.execute_section_core(body_tokens, 0).map(|_| ())
+    };
     interp.in_tail_context = false;
     let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
     let body_result_value: Option<Value> = interp.stack.pop();

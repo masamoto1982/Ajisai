@@ -207,60 +207,65 @@ fn try_collect_literal_vector(
     None // unclosed
 }
 
-pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
-    let mut lines = Vec::with_capacity(word_def.lines.len());
+/// Compile one token sequence into a single `CompiledLine`. `collect_vector`'s
+/// flat treatment of a section is preserved: internal `LineBreak`s become no-op
+/// `LineBreak` ops rather than line splits.
+fn compile_one_line(tokens: Vec<Token>, interp: &Interpreter) -> CompiledLine {
+    let mut ops = Vec::with_capacity(tokens.len());
+    let mut i = 0_usize;
 
-    for line in word_def.lines.iter() {
-        let tokens = line.body_tokens.to_vec();
-        let mut ops = Vec::with_capacity(tokens.len());
-        let mut i = 0_usize;
-
-        while i < tokens.len() {
-            let token = &tokens[i];
-            let op = match token {
-                Token::Number(n) => match crate::types::fraction::Fraction::from_str(n) {
-                    Ok(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
-                    Err(_) => CompiledOp::FallbackToken(token.clone()),
-                },
-                Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
-                Token::BlockStart => {
-                    if let Some((block, next_i)) = collect_code_block(&tokens, i) {
-                        i = next_i - 1;
-                        CompiledOp::PushCodeBlock(block)
-                    } else {
-                        CompiledOp::FallbackToken(token.clone())
-                    }
-                }
-                Token::BlockEnd => CompiledOp::FallbackToken(token.clone()),
-                Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {
-                    Some((values, consumed, hint)) if interp.vector_literal_enabled => {
-                        i += consumed - 1;
-                        CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values), hint)
-                    }
-                    _ => CompiledOp::FallbackToken(token.clone()),
-                },
-                Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
-                Token::Pipeline | Token::NilCoalesce | Token::CondClauseSep => {
+    while i < tokens.len() {
+        let token = &tokens[i];
+        let op = match token {
+            Token::Number(n) => match crate::types::fraction::Fraction::from_str(n) {
+                Ok(frac) => CompiledOp::PushLiteral(Value::from_number(frac)),
+                Err(_) => CompiledOp::FallbackToken(token.clone()),
+            },
+            Token::String(s) => CompiledOp::PushLiteral(Value::from_string(s)),
+            Token::BlockStart => {
+                if let Some((block, next_i)) = collect_code_block(&tokens, i) {
+                    i = next_i - 1;
+                    CompiledOp::PushCodeBlock(block)
+                } else {
                     CompiledOp::FallbackToken(token.clone())
                 }
-                Token::LineBreak => CompiledOp::LineBreak,
-                Token::Symbol(s) => {
-                    let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
-                    compile_symbol(token, upper.as_ref(), interp)
+            }
+            Token::BlockEnd => CompiledOp::FallbackToken(token.clone()),
+            Token::VectorStart => match try_collect_literal_vector(&tokens, i, 1) {
+                Some((values, consumed, hint)) if interp.vector_literal_enabled => {
+                    i += consumed - 1;
+                    CompiledOp::PushVectorLiteral(Value::from_vector_promoted(values), hint)
                 }
-            };
-            ops.push(op);
-            i += 1;
-        }
+                _ => CompiledOp::FallbackToken(token.clone()),
+            },
+            Token::VectorEnd => CompiledOp::FallbackToken(token.clone()),
+            Token::Pipeline | Token::NilCoalesce | Token::CondClauseSep => {
+                CompiledOp::FallbackToken(token.clone())
+            }
+            Token::LineBreak => CompiledOp::LineBreak,
+            Token::Symbol(s) => {
+                let upper = crate::core_word_aliases::canonicalize_core_word_name(s);
+                compile_symbol(token, upper.as_ref(), interp)
+            }
+        };
+        ops.push(op);
+        i += 1;
+    }
 
-        lines.push(CompiledLine {
-            ops,
-            source_tokens: tokens,
-        });
+    CompiledLine {
+        ops,
+        source_tokens: tokens,
+    }
+}
+
+pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) -> CompiledPlan {
+    let mut lines = Vec::with_capacity(word_def.lines.len());
+    for line in word_def.lines.iter() {
+        lines.push(compile_one_line(line.body_tokens.to_vec(), interp));
     }
 
     if interp.cond_dispatch_enabled {
-        lower_cond_dispatch(&mut lines);
+        lower_cond_dispatch(&mut lines, interp);
     }
 
     CompiledPlan {
@@ -269,9 +274,50 @@ pub fn compile_word_definition(word_def: &WordDefinition, interp: &Interpreter) 
     }
 }
 
+/// Compile a COND guard or body token slice into a sub-plan. A section is run
+/// flat (a single line, matching `execute_section_core`), then lowered so nested
+/// `COND`s and literal vectors inside it are compiled too. Returns `None` when
+/// the section did not compile to anything beyond fallbacks — there the
+/// interpreter path is kept, with no behavior change and no wasted dispatch.
+fn compile_clause_plan(tokens: &[Token], interp: &Interpreter) -> Option<Arc<CompiledPlan>> {
+    let mut lines = vec![compile_one_line(tokens.to_vec(), interp)];
+    if interp.cond_dispatch_enabled {
+        lower_cond_dispatch(&mut lines, interp);
+    }
+    let plan = CompiledPlan {
+        lines,
+        compiled_at: interp.current_epoch_snapshot(),
+    };
+    if plan_is_all_fallback(&plan) {
+        None
+    } else {
+        Some(Arc::new(plan))
+    }
+}
+
 fn is_cond_tail_op(op: &CompiledOp) -> bool {
     matches!(op, CompiledOp::CondDispatch(_))
         || matches!(op, CompiledOp::CallBuiltin(n) if n == "COND")
+}
+
+/// Whether `op` is a call to the word currently being trampolined
+/// (`tail_self_word`). Mirrors the deferral check in `execute_section_core`'s
+/// interpreter path so a compiled clause body trampolines identically.
+fn is_self_tail_call(interp: &Interpreter, op: &CompiledOp) -> bool {
+    let Some(target) = interp.tail_self_word.as_deref() else {
+        return false;
+    };
+    match op {
+        CompiledOp::CallUserWord(name) => name == target,
+        CompiledOp::CallQualifiedWord { namespace, word } => {
+            // `target` is the resolved `namespace@word` form.
+            target.len() == namespace.len() + 1 + word.len()
+                && target.as_bytes().get(namespace.len()) == Some(&b'@')
+                && target.starts_with(namespace.as_str())
+                && target.ends_with(word.as_str())
+        }
+        _ => false,
+    }
 }
 
 /// Replace each `CallBuiltin("COND")` whose clause blocks are statically known
@@ -281,7 +327,10 @@ fn is_cond_tail_op(op: &CompiledOp) -> bool {
 /// so `op_cond_dispatch` can count them and fall back to the dynamic split if an
 /// unexpected block reached the stack. A clause set that fails to split is left
 /// as the dynamic `COND` so its error still surfaces at runtime.
-fn lower_cond_dispatch(lines: &mut [CompiledLine]) {
+///
+/// When `compiled_clause_enabled`, each clause's guard and body are also
+/// compiled into sub-plans so they run compiled rather than re-interpreted.
+fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
     let positions: Vec<(usize, usize)> = lines
         .iter()
         .enumerate()
@@ -308,7 +357,13 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine]) {
             continue;
         }
         blocks.reverse();
-        if let Ok(clauses) = super::control_cond::split_clause_blocks(blocks) {
+        if let Ok(mut clauses) = super::control_cond::split_clause_blocks(blocks) {
+            if interp.compiled_clause_enabled {
+                for clause in &mut clauses {
+                    clause.guard_plan = compile_clause_plan(&clause.guard, interp);
+                    clause.body_plan = compile_clause_plan(&clause.body, interp);
+                }
+            }
             replacements.push(((li, oi), Arc::from(clauses)));
         }
     }
@@ -371,8 +426,20 @@ fn execute_compiled_line(
     };
 
     for (op_idx, op) in line.ops.iter().enumerate() {
-        if tail_op == Some(op_idx) && is_cond_tail_op(op) {
-            interp.in_tail_context = true;
+        if tail_op == Some(op_idx) {
+            if is_cond_tail_op(op) {
+                interp.in_tail_context = true;
+            } else if interp.in_tail_context && is_self_tail_call(interp, op) {
+                // A guarded tail self-call reached as a compiled op (e.g. a COND
+                // clause body run compiled). Defer to the trampoline instead of
+                // recursing: leave the computed arguments on the stack and raise
+                // `tail_jump_pending`. `in_tail_context` is true only inside a
+                // tail COND clause body, so the word's own body plan (run with
+                // it false) keeps native recursion and its depth-limit error.
+                interp.tail_jump_pending = true;
+                interp.in_tail_context = false;
+                continue;
+            }
         }
         match op {
             CompiledOp::PushLiteral(v) => {

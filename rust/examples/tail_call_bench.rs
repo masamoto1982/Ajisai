@@ -65,11 +65,22 @@ fn max_reach(tail_call: bool, cap: u64) -> u64 {
 }
 
 fn time_loops(tail_call: bool, cond_dispatch: bool, depth: u64, reps: u32) -> std::time::Duration {
+    time_loops_full(tail_call, cond_dispatch, true, depth, reps)
+}
+
+fn time_loops_full(
+    tail_call: bool,
+    cond_dispatch: bool,
+    compiled_clause: bool,
+    depth: u64,
+    reps: u32,
+) -> std::time::Duration {
     let steps = 100_000_000;
     // Prepare one interpreter; re-run the same loop `reps` times in-process.
     let mut interp = Interpreter::new();
     interp.set_tail_call_enabled(tail_call);
     interp.set_cond_dispatch_enabled(cond_dispatch);
+    interp.set_compiled_clause_enabled(compiled_clause);
     interp.set_max_execution_steps(steps);
     block_on(interp.execute(DEF)).unwrap();
     let line = format!("[ {} ] DOWN", depth);
@@ -138,7 +149,28 @@ fn main() {
         ns(cd_on)
     );
     println!(
-        "  speedup: {:.2}x",
+        "  speedup: {:.2}x\n",
         cd_off.as_secs_f64() / cd_on.as_secs_f64()
+    );
+
+    println!(
+        "-- Compiled clause body: interpreted vs compiled (depth 250, tail-call + dispatch ON) --"
+    );
+    let _ = time_loops_full(true, true, false, depth, 50);
+    let cc_off = time_loops_full(true, true, false, depth, reps);
+    let cc_on = time_loops_full(true, true, true, depth, reps);
+    println!(
+        "  clause OFF (interpreted): {:>8.3} ms  ({:.1} ns/iter)",
+        cc_off.as_secs_f64() * 1e3,
+        ns(cc_off)
+    );
+    println!(
+        "  clause ON  (compiled):    {:>8.3} ms  ({:.1} ns/iter)",
+        cc_on.as_secs_f64() * 1e3,
+        ns(cc_on)
+    );
+    println!(
+        "  speedup: {:.2}x",
+        cc_off.as_secs_f64() / cc_on.as_secs_f64()
     );
 }
