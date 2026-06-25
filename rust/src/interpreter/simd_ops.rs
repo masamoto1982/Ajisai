@@ -113,10 +113,51 @@ fn checked_scalar_add(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
     Some(out)
 }
 
+fn checked_scalar_sub(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
+    let mut out = Vec::with_capacity(a.len());
+    for &x in a.iter() {
+        out.push(x.checked_sub(scalar)?);
+    }
+    Some(out)
+}
+
+fn checked_scalar_rsub(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
+    let mut out = Vec::with_capacity(a.len());
+    for &x in a.iter() {
+        out.push(scalar.checked_sub(x)?);
+    }
+    Some(out)
+}
+
 fn checked_scalar_mul(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
     let mut out = Vec::with_capacity(a.len());
     for &x in a.iter() {
         out.push(x.checked_mul(scalar)?);
+    }
+    Some(out)
+}
+
+fn checked_scalar_div(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
+    if scalar == 0 {
+        return None;
+    }
+    let mut out = Vec::with_capacity(a.len());
+    for &x in a.iter() {
+        if x % scalar != 0 {
+            return None;
+        }
+        out.push(x.checked_div(scalar)?);
+    }
+    Some(out)
+}
+
+fn checked_scalar_rdiv(a: &[i64], scalar: i64) -> Option<Vec<i64>> {
+    let mut out = Vec::with_capacity(a.len());
+    for &x in a.iter() {
+        if x == 0 || scalar % x != 0 {
+            return None;
+        }
+        out.push(scalar.checked_div(x)?);
     }
     Some(out)
 }
@@ -399,6 +440,32 @@ pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Val
     Some((create_value_from_integer_vector(result?), parallel))
 }
 
+pub fn apply_simd_scalar_sub(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
+    let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+        "-",
+        va.as_ref(),
+        scalar,
+        |x, s| x.checked_sub(s),
+        checked_scalar_sub,
+    );
+    Some((create_value_from_integer_vector(result?), parallel))
+}
+
+pub fn apply_simd_scalar_rsub(scalar_val: &Value, vec_val: &Value) -> Option<(Value, bool)> {
+    let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+        "-",
+        va.as_ref(),
+        scalar,
+        |x, s| s.checked_sub(x),
+        checked_scalar_rsub,
+    );
+    Some((create_value_from_integer_vector(result?), parallel))
+}
+
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
@@ -408,6 +475,35 @@ pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Val
         scalar,
         |x, s| x.checked_mul(s),
         checked_scalar_mul,
+    );
+    Some((create_value_from_integer_vector(result?), parallel))
+}
+
+pub fn apply_simd_scalar_div(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
+    let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
+    if scalar == 0 {
+        return None;
+    }
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+        "/",
+        va.as_ref(),
+        scalar,
+        |x, s| (x % s == 0).then(|| x.checked_div(s)).flatten(),
+        checked_scalar_div,
+    );
+    Some((create_value_from_integer_vector(result?), parallel))
+}
+
+pub fn apply_simd_scalar_rdiv(scalar_val: &Value, vec_val: &Value) -> Option<(Value, bool)> {
+    let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
+    let scalar: i64 = extract_integer_scalar(scalar_val)?;
+    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+        "/",
+        va.as_ref(),
+        scalar,
+        |x, s| (x != 0 && s % x == 0).then(|| s.checked_div(x)).flatten(),
+        checked_scalar_rdiv,
     );
     Some((create_value_from_integer_vector(result?), parallel))
 }
@@ -482,6 +578,44 @@ mod tests {
         let (result, _) = apply_simd_scalar_mul(&v, &s).unwrap();
         let expected = extract_integer_vector(&result).unwrap();
         assert_eq!(expected, vec![3, 6, 9, 12, 15, 18, 21, 24]);
+    }
+
+    #[test]
+    fn test_simd_scalar_sub_both_orders() {
+        let v = create_int_vector(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        let s = Value::from_int(10);
+
+        let (result, _) = apply_simd_scalar_sub(&v, &s).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
+        assert_eq!(expected, vec![-9, -8, -7, -6, -5, -4, -3, -2]);
+
+        let (result, _) = apply_simd_scalar_rsub(&s, &v).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
+        assert_eq!(expected, vec![9, 8, 7, 6, 5, 4, 3, 2]);
+    }
+
+    #[test]
+    fn test_simd_scalar_div_both_orders_when_integral() {
+        let v = create_int_vector(&[2, 4, 10, 20, -2, -4, -10, -20]);
+        let s = Value::from_int(20);
+
+        let (result, _) = apply_simd_scalar_div(&v, &Value::from_int(2)).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
+        assert_eq!(expected, vec![1, 2, 5, 10, -1, -2, -5, -10]);
+
+        let (result, _) = apply_simd_scalar_rdiv(&s, &v).unwrap();
+        let expected = extract_integer_vector(&result).unwrap();
+        assert_eq!(expected, vec![10, 5, 2, 1, -10, -5, -2, -1]);
+    }
+
+    #[test]
+    fn test_simd_scalar_div_declines_fractional_or_zero_results() {
+        let v = create_int_vector(&[2, 3, 4, 5, 6, 7, 8, 9]);
+        assert!(apply_simd_scalar_div(&v, &Value::from_int(2)).is_none());
+        assert!(apply_simd_scalar_div(&v, &Value::from_int(0)).is_none());
+
+        let with_zero = create_int_vector(&[1, 2, 0, 4, 5, 6, 7, 8]);
+        assert!(apply_simd_scalar_rdiv(&Value::from_int(8), &with_zero).is_none());
     }
 
     #[test]

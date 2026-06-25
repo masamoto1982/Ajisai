@@ -94,11 +94,15 @@ fn simd_schema_candidate(
         ExactArithmeticSchema::Add => simd_ops::apply_simd_add(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_add(a, b))
             .or_else(|| simd_ops::apply_simd_scalar_add(b, a)),
-        ExactArithmeticSchema::Sub => simd_ops::apply_simd_sub(a, b),
+        ExactArithmeticSchema::Sub => simd_ops::apply_simd_sub(a, b)
+            .or_else(|| simd_ops::apply_simd_scalar_sub(a, b))
+            .or_else(|| simd_ops::apply_simd_scalar_rsub(a, b)),
         ExactArithmeticSchema::Mul => simd_ops::apply_simd_mul(a, b)
             .or_else(|| simd_ops::apply_simd_scalar_mul(a, b))
             .or_else(|| simd_ops::apply_simd_scalar_mul(b, a)),
-        ExactArithmeticSchema::Div => None,
+        ExactArithmeticSchema::Div => {
+            simd_ops::apply_simd_scalar_div(a, b).or_else(|| simd_ops::apply_simd_scalar_rdiv(a, b))
+        }
     }
 }
 
