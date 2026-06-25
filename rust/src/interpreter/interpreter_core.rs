@@ -414,8 +414,8 @@ pub struct Interpreter {
     pub(crate) compiled_clause_enabled: bool,
 
     /// When true (default), StackTop scalar-scalar arithmetic and comparison can
-    /// bypass the tensor broadcast wrapper for bare scalars and same-wrapper
-    /// singleton tensors in Consume and Keep modes. Disable via
+    /// bypass the tensor broadcast wrapper for bare scalars and same-shape
+    /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 }
