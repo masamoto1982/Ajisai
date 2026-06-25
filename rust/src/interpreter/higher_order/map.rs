@@ -90,6 +90,23 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
+            // Pure-kernel memoization (direction B): the kernel runs against an
+            // isolated, element-only stack (below), so a pure kernel's result
+            // depends only on the element. For a pure quantized kernel we key
+            // `(kernel tokens, canonical element) -> result` and reuse the
+            // result across repeated elements. Gated off in hedged modes so the
+            // quantized/plain race still observes every per-element event, and
+            // computed once per call. See `memo.rs` for the soundness argument.
+            let memo_kernel_key: Option<String> = if interp.hof_memo_enabled
+                && !super::hedged::hedged_mode(interp.elastic_mode())
+                && matches!(&executable, ExecutableCode::QuantizedBlock(qb)
+                    if qb.purity == crate::interpreter::quantized_block::QuantizedPurity::Pure)
+            {
+                super::memo::kernel_token_key(plain_tokens.as_deref())
+            } else {
+                None
+            };
+
             let mut results: Vec<Value> = Vec::with_capacity(n_elements);
             let mut saved_stack: Vec<Value> = Vec::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
@@ -105,22 +122,40 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                     .child(i)
                     .expect("MAP: child index in 0..len must be valid");
                 match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => match execute_hedged_map_kernel(
-                        interp,
-                        "MAP",
-                        qb,
-                        plain_tokens.as_deref(),
-                        elem.clone(),
-                    ) {
-                        Ok(result_val) => {
-                            results.push(result_val);
-                            continue;
+                    ExecutableCode::QuantizedBlock(qb) => {
+                        // Memo lookup: a pure kernel's result for this exact
+                        // element is reusable. Build the per-element key only
+                        // when the kernel qualified above and the element has a
+                        // canonical identity.
+                        let memo_elem_key = memo_kernel_key.as_ref().and_then(|kk| {
+                            super::memo::element_value_key(&elem).map(|ek| (kk, ek))
+                        });
+                        if let Some((kk, ek)) = &memo_elem_key {
+                            if let Some(cached) = interp.hof_memo_fetch(kk, ek) {
+                                results.push(cached);
+                                continue;
+                            }
                         }
-                        Err(e) => {
-                            error = Some(e);
-                            break;
+                        match execute_hedged_map_kernel(
+                            interp,
+                            "MAP",
+                            qb,
+                            plain_tokens.as_deref(),
+                            elem.clone(),
+                        ) {
+                            Ok(result_val) => {
+                                if let Some((kk, ek)) = &memo_elem_key {
+                                    interp.hof_memo_store(kk, ek, &result_val);
+                                }
+                                results.push(result_val);
+                                continue;
+                            }
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
-                    },
+                    }
                     _ => {
                         interp.stack.clear();
                         interp.stack.push(elem);
