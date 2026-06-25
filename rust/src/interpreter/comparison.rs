@@ -265,7 +265,6 @@ fn same_scalar_fast_wrap(a: &ScalarFastWrap<'_>, b: &ScalarFastWrap<'_>) -> bool
 fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
     if !interp.scalar_fastpath_enabled
         || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.consumption_mode != ConsumptionMode::Consume
         || interp.stack.len() < 2
     {
         return false;
@@ -283,8 +282,10 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
     }
 
     let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
-    interp.stack.pop();
-    interp.stack.pop();
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
     push_boolean_result(interp, decided);
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics
@@ -296,7 +297,6 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
 fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
     if !interp.scalar_fastpath_enabled
         || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.consumption_mode != ConsumptionMode::Consume
         || interp.stack.len() < 2
     {
         return false;
@@ -314,8 +314,10 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
     }
 
     let eq = a.fraction == b.fraction;
-    interp.stack.pop();
-    interp.stack.pop();
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
     push_boolean_result(interp, if invert { !eq } else { eq });
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics

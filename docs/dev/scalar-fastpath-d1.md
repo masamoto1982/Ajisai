@@ -11,17 +11,17 @@ The fast path is guarded by `Interpreter::set_scalar_fastpath_enabled(bool)` and
 the `AJISAI_NO_SCALAR_FASTPATH` environment switch. It increments
 `RuntimeMetrics::scalar_fastpath_count` when it completes an operation.
 
-The implementation deliberately starts with the safe subset:
+The implementation deliberately uses this safe subset:
 
 - `OperationTargetMode::StackTop`
-- `ConsumptionMode::Consume`
+- `ConsumptionMode::Consume` and `ConsumptionMode::Keep`
 - both operands are bare `Scalar(Fraction)`, or both are 1-lane dense `Tensor`
   values with the same shape
 - arithmetic `+ - * /`
 - comparison `< <= > >= = !=`
 
 Everything else falls through to the existing NIL, interval, ExactReal, sparse,
-SIMD, broadcast, KEEP, and Stack-mode paths.
+SIMD, broadcast, and Stack-mode paths.
 
 ## Observable-value preservation
 
@@ -35,6 +35,10 @@ The fast path reconstructs the same observable result shape as the normal path:
 Results are still pushed through the same result helpers (`push_result` for
 numeric values and the comparison boolean helper for truth values), so semantic
 hints remain the same as the baseline route.
+
+For `KEEP`, the fast path mirrors the normal mode contract: the two operands stay
+on the stack and the computed result is appended. For `Consume`, the operands are
+removed before the result is pushed.
 
 Division by zero is handled in the fast path by pushing the same reasoned NIL
 bubble as the existing arithmetic schema. NIL operands are handled before the
@@ -50,7 +54,8 @@ rendered output, and per-value hints across:
 - bare scalar comparisons
 - singleton tensor comparisons
 - tensor wrapping preservation
-- unsupported/mixed/KEEP/NIL fallback cases
+- KEEP mode operand preservation
+- unsupported/mixed/NIL fallback cases
 - division-by-zero bubble preservation
 
 This keeps D1 measurable while preserving the existing paths as the reference

@@ -413,10 +413,10 @@ pub struct Interpreter {
     /// re-interpreted each iteration. Disable via `AJISAI_NO_COMPILED_CLAUSE`.
     pub(crate) compiled_clause_enabled: bool,
 
-    /// When true (default), StackTop+Consume scalar-scalar arithmetic and
-    /// comparison can bypass the tensor broadcast wrapper for bare scalars and
-    /// same-wrapper singleton tensors. Disable via `AJISAI_NO_SCALAR_FASTPATH`
-    /// for A/B measurement.
+    /// When true (default), StackTop scalar-scalar arithmetic and comparison can
+    /// bypass the tensor broadcast wrapper for bare scalars and same-wrapper
+    /// singleton tensors in Consume and Keep modes. Disable via
+    /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 }
 

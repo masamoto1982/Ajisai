@@ -222,7 +222,6 @@ fn push_scalar_fastpath_result(
 ) -> Result<bool> {
     if !interp.scalar_fastpath_enabled
         || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.consumption_mode != ConsumptionMode::Consume
         || interp.stack.len() < 2
     {
         return Ok(false);
@@ -244,8 +243,10 @@ fn push_scalar_fastpath_result(
         Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
         Err(error) => return Err(error),
     };
-    interp.stack.pop();
-    interp.stack.pop();
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
     push_result(interp, result);
     interp.runtime_metrics.scalar_fastpath_count = interp
         .runtime_metrics

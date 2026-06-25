@@ -129,7 +129,6 @@ fn unsupported_or_semantically_sensitive_shapes_fall_back() {
         "[ 2 ] 3 +",
         "NIL 3 +",
         "3 NIL >",
-        "3 4 KEEP ADD",
     ] {
         let (on, off) = assert_on_equals_off(src);
         assert_eq!(
@@ -138,6 +137,34 @@ fn unsupported_or_semantically_sensitive_shapes_fall_back() {
             "fast path should fall back for: {src}"
         );
         assert_eq!(off.runtime_metrics().scalar_fastpath_count, 0);
+    }
+}
+
+#[test]
+fn keep_mode_fast_path_preserves_operands_and_pushes_result() {
+    for src in [
+        "3 4 KEEP ADD",
+        "[ 3 ] [ 4 ] KEEP ADD",
+        "3 4 KEEP >",
+        "[ 3 ] [ 4 ] KEEP >",
+        "3 3 KEEP =",
+        "[ 3 ] [ 3 ] KEEP =",
+    ] {
+        let (on, off) = assert_on_equals_off(src);
+        assert!(
+            on.runtime_metrics().scalar_fastpath_count >= 1,
+            "expected KEEP scalar fast path to fire for: {src}"
+        );
+        assert_eq!(
+            off.runtime_metrics().scalar_fastpath_count,
+            0,
+            "disabled scalar fast path should not count for: {src}"
+        );
+        assert_eq!(
+            on.get_stack().len(),
+            3,
+            "KEEP fast path must retain both operands and push one result for: {src}"
+        );
     }
 }
 
