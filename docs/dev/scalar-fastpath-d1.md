@@ -15,8 +15,8 @@ The implementation deliberately uses this safe subset:
 
 - `OperationTargetMode::StackTop`
 - `ConsumptionMode::Consume` and `ConsumptionMode::Keep`
-- both operands are bare `Scalar(Fraction)`, or both are 1-lane dense `Tensor`
-  values with the same shape
+- both operands are bare `Scalar(Fraction)`, or both are singleton numeric
+  wrappers with the same effective shape (`Tensor` or non-Text `Vector`)
 - arithmetic `+ - * /`
 - comparison `< <= > >= = !=`
 
@@ -28,9 +28,9 @@ SIMD, broadcast, and Stack-mode paths.
 The fast path reconstructs the same observable result shape as the normal path:
 
 - bare scalar + bare scalar returns a bare scalar
-- singleton tensor + singleton tensor returns a singleton tensor with the same
-  shape
-- mixed scalar/tensor and nested singleton vector inputs fall back
+- singleton tensor/vector + singleton tensor/vector returns a singleton tensor
+  with the same effective shape the normal broadcast path produces
+- mixed scalar/tensor/vector wrappers fall back
 
 Results are still pushed through the same result helpers (`push_result` for
 numeric values and the comparison boolean helper for truth values), so semantic
@@ -51,11 +51,13 @@ rendered output, and per-value hints across:
 
 - bare scalar arithmetic
 - singleton tensor arithmetic
+- singleton vector arithmetic
 - bare scalar comparisons
 - singleton tensor comparisons
+- singleton vector comparisons
 - tensor wrapping preservation
 - KEEP mode operand preservation
-- unsupported/mixed/NIL fallback cases
+- unsupported/mixed/Text-hinted/NIL fallback cases
 - division-by-zero bubble preservation
 
 This keeps D1 measurable while preserving the existing paths as the reference

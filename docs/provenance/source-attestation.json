@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:2bb78ed18e0860e2468d4a12eb1e91ee343b2f6f8931fcc7cf2f7d7ccad9542b",
+  "rootIdentity": "sha256:138eeb739ba4fe2144be2460399c25676eb32ff25cbf6528ff1911b766ff2aac",
   "fileCount": 269,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -204,8 +204,8 @@
     },
     {
       "path": "rust/src/interpreter/arithmetic.rs",
-      "sha256": "c0f7ba3b931f915fe225a5bf0659e81de3985847a4ba87f50dd7743412e8eb55",
-      "bytes": 17469
+      "sha256": "097984e433b0c3ac6eaf06bd976f428d933a59803e5afc5b48d6593aa14055cb",
+      "bytes": 18038
     },
     {
       "path": "rust/src/interpreter/arithmetic_exact_div_tests.rs",
@@ -299,8 +299,8 @@
     },
     {
       "path": "rust/src/interpreter/comparison.rs",
-      "sha256": "3ea37a6698da840521642758e4921fb389162d11890a061c82767f670cce3e45",
-      "bytes": 29214
+      "sha256": "eb63d91bc0b6e6de07aed97dfdee3af7a0271ce689d250641fdb119d8469b33f",
+      "bytes": 29790
     },
     {
       "path": "rust/src/interpreter/compiled_clause_tests.rs",
@@ -549,8 +549,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "67882e49014a87c3745f8501ba874a38eea57793c78e2ca41950d78b4c1b70c3",
-      "bytes": 34278
+      "sha256": "a28c815baf935a241581850a1f8bfcc802908234920941d4f329c72402957561",
+      "bytes": 34291
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -709,8 +709,8 @@
     },
     {
       "path": "rust/src/interpreter/scalar_fastpath_tests.rs",
-      "sha256": "cf32ba140026b4b2bd724ec63a4584ffe99458cb22a743c23e420239eee9febb",
-      "bytes": 4914
+      "sha256": "2c8e887269ea04336aab5eddf48da56897a19d2fbd806a3772a7efbaee6f4a0c",
+      "bytes": 7285
     },
     {
       "path": "rust/src/interpreter/serial/execute_serial_commands.rs",

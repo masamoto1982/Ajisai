@@ -230,17 +230,17 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     }
 }
 
-enum ScalarFastWrap<'a> {
+enum ScalarFastWrap {
     Scalar,
-    Tensor(&'a [usize]),
+    Tensor(Vec<usize>),
 }
 
-struct ScalarFastOperand<'a> {
+struct ScalarFastOperand {
     fraction: Fraction,
-    wrap: ScalarFastWrap<'a>,
+    wrap: ScalarFastWrap,
 }
 
-fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand<'_>> {
+fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
     match &value.data {
         ValueData::Scalar(f) => Some(ScalarFastOperand {
             fraction: f.clone(),
@@ -248,13 +248,28 @@ fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand<'_>> {
         }),
         ValueData::Tensor { data, shape } if data.len() == 1 => Some(ScalarFastOperand {
             fraction: data.get_small_fraction(0)?,
-            wrap: ScalarFastWrap::Tensor(shape),
+            wrap: ScalarFastWrap::Tensor((**shape).clone()),
         }),
+        ValueData::Vector(children)
+            if value.hint != Interpretation::Text && children.len() == 1 =>
+        {
+            let child = scalar_fast_operand(&children[0])?;
+            let mut shape = Vec::with_capacity(2);
+            shape.push(1);
+            match child.wrap {
+                ScalarFastWrap::Scalar => {}
+                ScalarFastWrap::Tensor(child_shape) => shape.extend(child_shape),
+            }
+            Some(ScalarFastOperand {
+                fraction: child.fraction,
+                wrap: ScalarFastWrap::Tensor(shape),
+            })
+        }
         _ => None,
     }
 }
 
-fn same_scalar_fast_wrap(a: &ScalarFastWrap<'_>, b: &ScalarFastWrap<'_>) -> bool {
+fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
     match (a, b) {
         (ScalarFastWrap::Scalar, ScalarFastWrap::Scalar) => true,
         (ScalarFastWrap::Tensor(a_shape), ScalarFastWrap::Tensor(b_shape)) => a_shape == b_shape,
