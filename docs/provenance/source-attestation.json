@@ -904,8 +904,8 @@
     },
     {
       "path": "rust/src/types/continued_fraction.rs",
-      "sha256": "2d8ed966ef2b411a12eb8c1e751a90f93d25a62ca3c60f033b3c305b8bf2155b",
-      "bytes": 134590
+      "sha256": "0525ccdb6486e88aeef867af496eef71820a7dcdc760648966f3050b1b2f20bb",
+      "bytes": 146392
     },
     {
       "path": "rust/src/types/display.rs",

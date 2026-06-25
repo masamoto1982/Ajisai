@@ -1051,6 +1051,19 @@ enum CfState {
         x: Box<CfIter>,
         x_done: bool,
     },
+    /// i128 fast path for `Mobius`. Unlike the surd, the coefficients grow as
+    /// terms are ingested, so a step that would overflow i128 (or ingests a
+    /// term that does not fit) promotes to the BigInt `Mobius` state — carrying
+    /// any just-consumed operand term into it — and continues there. The
+    /// emitted term sequence is always identical to the BigInt path.
+    MobiusSmall {
+        a: i128,
+        b: i128,
+        c: i128,
+        d: i128,
+        x: Box<CfIter>,
+        x_done: bool,
+    },
     /// Binary bihomographic over inner operand streams `x` and `y`.
     Bihom {
         a: BigInt,
@@ -1118,16 +1131,38 @@ impl CfIter {
                 }
             }
             ExactReal::Gosper(g) => match g.as_ref() {
-                Gosper::Mobius { a, b, c, d, x } => CfIter {
-                    state: CfState::Mobius {
-                        a: a.clone(),
-                        b: b.clone(),
-                        c: c.clone(),
-                        d: d.clone(),
-                        x: Box::new(CfIter::from_exact_real(x)),
-                        x_done: false,
-                    },
-                },
+                Gosper::Mobius { a, b, c, d, x } => {
+                    let inner = Box::new(CfIter::from_exact_real(x));
+                    if let (true, Some(a_s), Some(b_s), Some(c_s), Some(d_s)) = (
+                        sqrt_small_enabled(),
+                        a.to_i128(),
+                        b.to_i128(),
+                        c.to_i128(),
+                        d.to_i128(),
+                    ) {
+                        CfIter {
+                            state: CfState::MobiusSmall {
+                                a: a_s,
+                                b: b_s,
+                                c: c_s,
+                                d: d_s,
+                                x: inner,
+                                x_done: false,
+                            },
+                        }
+                    } else {
+                        CfIter {
+                            state: CfState::Mobius {
+                                a: a.clone(),
+                                b: b.clone(),
+                                c: c.clone(),
+                                d: d.clone(),
+                                x: inner,
+                                x_done: false,
+                            },
+                        }
+                    }
+                }
                 Gosper::Bihomographic {
                     a,
                     b,
@@ -1227,6 +1262,13 @@ impl CfIter {
                             };
                         }
                     }
+                }
+                CfState::MobiusSmall { .. } => {
+                    if let Some(q) = step_mobius_small(&mut self.state) {
+                        return CfStep::Quotient(q);
+                    }
+                    // Either emitted nothing this poll, or promoted to the
+                    // BigInt `Mobius` state on overflow / tail. Re-dispatch.
                 }
                 CfState::Mobius { .. } => {
                     if let Some(q) = step_mobius(&mut self.state) {
@@ -1542,6 +1584,241 @@ fn sqrt_small_step(
     let next_p_sq = next_p.checked_mul(next_p)?;
     let next_q = big_d.checked_sub(next_p_sq)?.checked_div(q_i)?;
     Some((a, next_p, next_q))
+}
+
+#[inline]
+fn gcd_u128(mut a: u128, mut b: u128) -> u128 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+/// Divide the four Möbius coefficients by their common GCD in i128, matching
+/// `normalize_mobius`. Skips the rare case where the GCD does not fit i128.
+#[inline]
+fn normalize_mobius_i128(a: &mut i128, b: &mut i128, c: &mut i128, d: &mut i128) {
+    let g = gcd_u128(
+        gcd_u128(a.unsigned_abs(), b.unsigned_abs()),
+        gcd_u128(c.unsigned_abs(), d.unsigned_abs()),
+    );
+    if g > 1 && g <= i128::MAX as u128 {
+        let g = g as i128;
+        *a /= g;
+        *b /= g;
+        *c /= g;
+        *d /= g;
+    }
+}
+
+enum SmallEmit {
+    Overflow,
+    CantEmit,
+    Emit {
+        q: i128,
+        a: i128,
+        b: i128,
+        c: i128,
+        d: i128,
+    },
+}
+
+/// Möbius emit test in i128, mirroring the BigInt arm exactly: project
+/// (a·x+b)/(c·x+d) over x∈[1,∞) onto a single integer floor. `Overflow` means
+/// the caller must promote to BigInt (no operand term was consumed).
+#[inline]
+fn mobius_small_emit(a: i128, b: i128, c: i128, d: i128) -> SmallEmit {
+    if c == 0 {
+        return SmallEmit::CantEmit;
+    }
+    let Some(cd) = c.checked_add(d) else {
+        return SmallEmit::Overflow;
+    };
+    if cd == 0 {
+        return SmallEmit::CantEmit;
+    }
+    let same_sign = (c > 0 && cd > 0) || (c < 0 && cd < 0);
+    if !same_sign {
+        return SmallEmit::CantEmit;
+    }
+    let (Some(q_inf), Some(ab)) = (floor_div_i128(a, c), a.checked_add(b)) else {
+        return SmallEmit::Overflow;
+    };
+    let Some(q_one) = floor_div_i128(ab, cd) else {
+        return SmallEmit::Overflow;
+    };
+    if q_inf != q_one {
+        return SmallEmit::CantEmit;
+    }
+    let q = q_inf;
+    // (a,b,c,d) ← (c, d, a − q·c, b − q·d)
+    let (Some(qc), Some(qd)) = (q.checked_mul(c), q.checked_mul(d)) else {
+        return SmallEmit::Overflow;
+    };
+    let (Some(nc), Some(nd)) = (a.checked_sub(qc), b.checked_sub(qd)) else {
+        return SmallEmit::Overflow;
+    };
+    SmallEmit::Emit {
+        q,
+        a: c,
+        b: d,
+        c: nc,
+        d: nd,
+    }
+}
+
+/// Ingest operand term `p` into the Möbius coefficients in i128:
+/// (a,b,c,d) ← (a·p+b, a, c·p+d, c), then normalize. `None` on overflow.
+#[inline]
+fn mobius_small_ingest(
+    a: i128,
+    b: i128,
+    c: i128,
+    d: i128,
+    p: i128,
+) -> Option<(i128, i128, i128, i128)> {
+    let na = a.checked_mul(p)?.checked_add(b)?;
+    let nc = c.checked_mul(p)?.checked_add(d)?;
+    let (mut ra, mut rb, mut rc, mut rd) = (na, a, nc, c);
+    normalize_mobius_i128(&mut ra, &mut rb, &mut rc, &mut rd);
+    Some((ra, rb, rc, rd))
+}
+
+/// Promote a `MobiusSmall` state to the BigInt `Mobius` state, carrying an
+/// already-consumed operand term `pending` into the coefficients so no term is
+/// lost across the transition. The resulting stream is identical to having run
+/// in BigInt all along.
+fn promote_mobius_small(state: &mut CfState, pending: Option<BigInt>) {
+    let CfState::MobiusSmall {
+        a,
+        b,
+        c,
+        d,
+        x,
+        x_done,
+    } = state
+    else {
+        return;
+    };
+    let mut ba = BigInt::from(*a);
+    let mut bb = BigInt::from(*b);
+    let mut bc = BigInt::from(*c);
+    let mut bd = BigInt::from(*d);
+    let xd = *x_done;
+    let xs = std::mem::replace(
+        x,
+        Box::new(CfIter {
+            state: CfState::Empty,
+        }),
+    );
+    if let Some(p) = pending {
+        let new_a = &ba * &p + &bb;
+        let new_c = &bc * &p + &bd;
+        let (new_b, new_d) = (ba, bc);
+        ba = new_a;
+        bb = new_b;
+        bc = new_c;
+        bd = new_d;
+        normalize_mobius(&mut ba, &mut bb, &mut bc, &mut bd);
+    }
+    *state = CfState::Mobius {
+        a: ba,
+        b: bb,
+        c: bc,
+        d: bd,
+        x: xs,
+        x_done: xd,
+    };
+}
+
+enum MobiusAct {
+    Continue,
+    Exhaust,
+    Promote(Option<BigInt>),
+}
+
+/// i128 fast path for `step_mobius`. Emits in i128 and ingests small operand
+/// terms in i128; anything else (overflow, an operand term that does not fit
+/// i128, the rational tail when the operand ends, or the safety budget)
+/// promotes to the BigInt `Mobius` state, which produces an identical stream.
+fn step_mobius_small(state: &mut CfState) -> Option<BigInt> {
+    let mut ingest_budget = GOSPER_INGEST_SAFETY;
+    loop {
+        let action = {
+            let CfState::MobiusSmall {
+                a,
+                b,
+                c,
+                d,
+                x,
+                x_done,
+            } = state
+            else {
+                return None;
+            };
+            match mobius_small_emit(*a, *b, *c, *d) {
+                SmallEmit::Emit {
+                    q,
+                    a: na,
+                    b: nb,
+                    c: nc,
+                    d: nd,
+                } => {
+                    *a = na;
+                    *b = nb;
+                    *c = nc;
+                    *d = nd;
+                    return Some(BigInt::from(q));
+                }
+                SmallEmit::Overflow => MobiusAct::Promote(None),
+                SmallEmit::CantEmit => {
+                    if *x_done || ingest_budget == 0 {
+                        // Let the BigInt path build the rational tail / apply
+                        // its own budget rule, so behavior is unchanged.
+                        MobiusAct::Promote(None)
+                    } else {
+                        ingest_budget -= 1;
+                        match x.next_step() {
+                            CfStep::Quotient(p) => {
+                                match p
+                                    .to_i128()
+                                    .and_then(|ps| mobius_small_ingest(*a, *b, *c, *d, ps))
+                                {
+                                    Some((na, nb, nc, nd)) => {
+                                        *a = na;
+                                        *b = nb;
+                                        *c = nc;
+                                        *d = nd;
+                                        MobiusAct::Continue
+                                    }
+                                    // Carry the consumed term into BigInt.
+                                    None => MobiusAct::Promote(Some(p)),
+                                }
+                            }
+                            CfStep::Ended => {
+                                *x_done = true;
+                                MobiusAct::Continue
+                            }
+                            CfStep::Exhausted => MobiusAct::Exhaust,
+                        }
+                    }
+                }
+            }
+        };
+        match action {
+            MobiusAct::Continue => continue,
+            MobiusAct::Exhaust => {
+                *state = CfState::Exhausted;
+                return None;
+            }
+            MobiusAct::Promote(pending) => {
+                promote_mobius_small(state, pending);
+                return None;
+            }
+        }
+    }
 }
 
 fn step_mobius(state: &mut CfState) -> Option<BigInt> {
@@ -2033,6 +2310,79 @@ mod tests {
             }
         }
         assert!(checked > 200, "expected many surds, checked {checked}");
+    }
+
+    // ─── i128 `MobiusSmall` fast path: differential vs the BigInt `Mobius` ───
+
+    /// Expand a `Gosper::Mobius` value forcing the BigInt `Mobius` state (the
+    /// inner operand stream still uses its own fast path, which the surd
+    /// differential already covers, so this isolates the Möbius layer).
+    fn mobius_terms_bigint(er: &ExactReal, budget: usize) -> Vec<BigInt> {
+        let ExactReal::Gosper(g) = er else {
+            panic!("expected a Gosper value");
+        };
+        let Gosper::Mobius { a, b, c, d, x } = g.as_ref() else {
+            panic!("expected a Möbius transform");
+        };
+        let mut iter = CfIter {
+            state: CfState::Mobius {
+                a: a.clone(),
+                b: b.clone(),
+                c: c.clone(),
+                d: d.clone(),
+                x: Box::new(CfIter::from_exact_real(x)),
+                x_done: false,
+            },
+        };
+        let mut out = Vec::with_capacity(budget);
+        for _ in 0..budget {
+            match iter.next_quotient() {
+                Some(t) => out.push(t),
+                None => break,
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn mobius_small_matches_bigint_path() {
+        let budget = 200;
+        let mut checked = 0;
+        for n in 2..=30i64 {
+            if (n as f64).sqrt().fract() == 0.0 {
+                continue; // skip perfect squares (project to Rational)
+            }
+            let root = sqrt_of(n, 1);
+            for rn in -5..=5i64 {
+                for rd in 1..=4i64 {
+                    let r = Fraction::new(bi(rn), bi(rd));
+                    // The unary Möbius-producing operations: rational ⊕ √n.
+                    let cases = [
+                        ExactReal::Rational(r.clone()).add(&root),
+                        ExactReal::Rational(r.clone()).sub(&root),
+                        root.sub(&ExactReal::Rational(r.clone())),
+                        ExactReal::Rational(r.clone()).mul(&root),
+                    ];
+                    for er in &cases {
+                        // Some collapse to Rational (e.g. 0·√n); only diff the
+                        // genuine Möbius transforms.
+                        let is_mobius = matches!(er, ExactReal::Gosper(g)
+                            if matches!(g.as_ref(), Gosper::Mobius { .. }));
+                        if !is_mobius {
+                            continue;
+                        }
+                        let small = er.partial_quotients_bounded(budget);
+                        let big = mobius_terms_bigint(er, budget);
+                        assert_eq!(small, big, "Möbius CF terms diverged: r={rn}/{rd}, √{n}");
+                        checked += 1;
+                    }
+                }
+            }
+        }
+        assert!(
+            checked > 100,
+            "expected many Möbius transforms, checked {checked}"
+        );
     }
 
     // ─── SPEC §7.4.1.1 / §15.3: NICF-accelerated comparison conformance ───
