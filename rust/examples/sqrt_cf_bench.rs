@@ -15,14 +15,37 @@ fn surd(num: i64, den: i64) -> ExactReal {
         .expect("non-negative radicand")
 }
 
-/// Expand many surds to `budget` CF terms, and compare each adjacent pair.
-fn work(reps: u32, budget: usize) -> u64 {
-    let surds: Vec<ExactReal> = (2..=40i64)
+fn live_surds() -> Vec<ExactReal> {
+    (2..=40i64)
         .filter(|n| (*n as f64).sqrt().fract() != 0.0) // skip perfect squares
         .map(|n| surd(n, 1))
-        .collect();
+        .collect()
+}
+
+/// Möbius transforms `r ± √n` / `r·√n` — the `√ ⊕ rational` arithmetic.
+fn mobius_values() -> Vec<ExactReal> {
+    let mut out = Vec::new();
+    for n in [2i64, 3, 5, 6, 7, 10, 13, 17] {
+        let root = surd(n, 1);
+        for (rn, rd) in [(1, 2), (3, 1), (-2, 3), (5, 4)] {
+            let r = ExactReal::Rational(Fraction::new(rn.into(), rd.into()));
+            out.push(r.add(&root));
+            out.push(root.sub(&r));
+            out.push(r.mul(&root));
+        }
+    }
+    out
+}
+
+/// Expand many surds to `budget` CF terms, and compare each adjacent pair.
+fn work(reps: u32, budget: usize) -> u64 {
+    let surds = live_surds();
+    let mobius = mobius_values();
     let mut acc = 0u64;
     for _ in 0..reps {
+        for m in &mobius {
+            acc += m.partial_quotients_bounded(budget).len() as u64;
+        }
         for s in &surds {
             acc += s.partial_quotients_bounded(budget).len() as u64;
         }
@@ -46,12 +69,12 @@ fn time(enabled: bool, reps: u32, budget: usize) -> std::time::Duration {
 }
 
 fn main() {
-    println!("== SqrtSmall (i128) CF fast-path A/B bench ==\n");
-    let reps = 4000u32;
+    println!("== CF i128 fast-path A/B bench (Sqrt + Möbius) ==\n");
+    let reps = 1500u32;
     let budget = 64usize;
     let off = time(false, reps, budget);
     let on = time(true, reps, budget);
-    println!("  {reps} reps × (expand ~36 surds to {budget} terms + compare adjacent pairs)");
+    println!("  {reps} reps × (expand ~36 surds + ~96 Möbius transforms to {budget} terms, + compare pairs)");
     println!(
         "  fast path OFF (BigInt): {:>8.1} ms",
         off.as_secs_f64() * 1e3
