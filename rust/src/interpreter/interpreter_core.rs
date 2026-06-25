@@ -277,6 +277,16 @@ pub struct RuntimeMetrics {
     /// call that ran as a loop iteration instead of growing `call_depth`
     /// and the native stack. Observational only; never alters value results.
     pub tail_call_jump_count: u64,
+
+    // ── Pure HOF kernel memoization (direction B) ─────────────────────────
+    /// Per-element MAP kernel applications served from the pure-result cache
+    /// instead of re-running the kernel. Observational only.
+    pub hof_memo_hit_count: u64,
+    /// Per-element MAP kernel applications that missed the cache and ran the
+    /// kernel. Observational only.
+    pub hof_memo_miss_count: u64,
+    /// Pure per-element MAP kernel results written into the cache.
+    pub hof_memo_store_count: u64,
 }
 
 pub struct Interpreter {
@@ -418,6 +428,13 @@ pub struct Interpreter {
     /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
+
+    /// When true (default), `MAP` memoizes pure quantized kernel applications
+    /// per element, reusing the result across repeated elements. Engages only
+    /// for pure kernels and rational-scalar elements outside hedged modes;
+    /// every other case runs the kernel unchanged. Disable via
+    /// `AJISAI_NO_HOF_MEMO` for an A/B comparison.
+    pub(crate) hof_memo_enabled: bool,
 }
 
 impl Interpreter {
@@ -487,6 +504,7 @@ impl Interpreter {
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
+            hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -770,6 +788,14 @@ impl Interpreter {
     /// plan toggles this affects subsequent primitive executions immediately.
     pub fn set_scalar_fastpath_enabled(&mut self, enabled: bool) {
         self.scalar_fastpath_enabled = enabled;
+    }
+
+    /// Enable or disable pure HOF kernel memoization (`MAP`). In-process
+    /// equivalent of `AJISAI_NO_HOF_MEMO`; lets a benchmark or differential
+    /// test A/B the memoized path against re-running the kernel. Takes effect
+    /// immediately for subsequent `MAP` calls.
+    pub fn set_hof_memo_enabled(&mut self, enabled: bool) {
+        self.hof_memo_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a
