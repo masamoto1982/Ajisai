@@ -388,6 +388,11 @@
       "bytes": 22179
     },
     {
+      "path": "rust/src/interpreter/dependents_index_tests.rs",
+      "sha256": "a93d4a31513c41b604dbbcb9419447a7dba47fd4a68f7c82f7e5689fcddfc846",
+      "bytes": 5552
+    },
+    {
       "path": "rust/src/interpreter/dictionary_operation_tests.rs",
       "sha256": "41cc6b3e2fbd0086519fca5ce8687200aa404aa451a8aab12ba6bd7268dee282",
       "bytes": 28625
@@ -704,8 +709,13 @@
     },
     {
       "path": "rust/src/interpreter/resolve_word.rs",
-      "sha256": "65eeace0c1afb9903122cc5942887bcb34b3a2fd3e8a81a0a007216d8a621be1",
-      "bytes": 16949
+      "sha256": "ffb63c624a387285eecb791721085fb80c757c0cda768453801cb2bc45fd6538",
+      "bytes": 19820
+    },
+    {
+      "path": "rust/src/interpreter/scalar_fastpath_tests.rs",
+      "sha256": "2c8e887269ea04336aab5eddf48da56897a19d2fbd806a3772a7efbaee6f4a0c",
+      "bytes": 7285
     },
     {
       "path": "rust/src/interpreter/scalar_fastpath_tests.rs",

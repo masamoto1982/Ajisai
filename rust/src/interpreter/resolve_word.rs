@@ -1,5 +1,5 @@
 use crate::types::WordDefinition;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use super::{DictionaryDependencyInfo, Interpreter};
@@ -401,12 +401,73 @@ impl Interpreter {
         Ok(())
     }
 
+    /// Words that directly reference `word_name`, as fully-qualified names.
+    ///
+    /// This reads the maintained reverse-dependency index (`self.dependents`) —
+    /// an inverted index from a word to the set of words that depend on it,
+    /// which `DEF`, `DEL`, and `rebuild_dependencies` keep in sync. It replaces
+    /// the previous O(N) rescan of every user dictionary with an O(1) index
+    /// lookup; for a redefinition or deletion that touches a word referenced
+    /// across a large dictionary this turns a full-corpus walk into a single
+    /// map probe.
+    ///
+    /// In debug builds a `debug_assert_eq!` cross-checks the index against the
+    /// authoritative full scan (`collect_dependents_by_scan`) on every call, so
+    /// any drift between the maintained index and ground truth is caught by the
+    /// existing test suite at zero release-build cost.
     pub fn collect_dependents(&self, word_name: &str) -> HashSet<String> {
+        let from_index = self.dependents.get(word_name).cloned().unwrap_or_default();
+        debug_assert_eq!(
+            from_index,
+            self.collect_dependents_by_scan(word_name),
+            "dependents index diverged from full scan for {}",
+            word_name
+        );
+        from_index
+    }
+
+    /// Authoritative full-scan computation of the direct dependents of
+    /// `word_name`. This is the ground truth the maintained `dependents` index
+    /// mirrors; it is retained only as the debug cross-check for
+    /// `collect_dependents` and is dead-code-eliminated from the release hot
+    /// path.
+    fn collect_dependents_by_scan(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
         for (dict_name, dict) in &self.user_dictionaries {
             for (name, def) in &dict.words {
                 if def.dependencies.contains(word_name) {
                     result.insert(format!("{}@{}", dict_name, name));
+                }
+            }
+        }
+        result
+    }
+
+    /// Transitive closure of `collect_dependents`: every word that depends on
+    /// `word_name` directly or through a chain of intermediate words, as
+    /// fully-qualified names. Built by breadth-first traversal of the
+    /// reverse-dependency index. The starting word itself is not included unless
+    /// it participates in a dependency cycle. This is the impact set that a
+    /// redefinition or deletion of `word_name` can affect, and the scope a later
+    /// stage uses to invalidate dependent cached artifacts.
+    pub fn collect_transitive_dependents(&self, word_name: &str) -> HashSet<String> {
+        let mut result = HashSet::new();
+        let mut queue: VecDeque<String> = self
+            .dependents
+            .get(word_name)
+            .into_iter()
+            .flatten()
+            .cloned()
+            .collect();
+        while let Some(current) = queue.pop_front() {
+            if !result.insert(current.clone()) {
+                continue;
+            }
+            if let Some(next) = self.dependents.get(&current) {
+                for dep in next {
+                    if !result.contains(dep) {
+                        queue.push_back(dep.clone());
+                    }
                 }
             }
         }
