@@ -14,6 +14,10 @@
 //!      capped by `MAX_USER_WORD_DEPTH` (256); ON is bounded only by the
 //!      execution step budget, in O(1) native stack.
 //!   2. Per-iteration cost at an equal depth both can complete (250).
+//!
+//! The final section isolates the D1 scalar-scalar arithmetic/comparison fast
+//! path by running the fully optimized loop with `set_scalar_fastpath_enabled`
+//! toggled ON/OFF and printing the runtime fast-path hit counter.
 
 use std::time::Instant;
 
@@ -64,23 +68,30 @@ fn max_reach(tail_call: bool, cap: u64) -> u64 {
     lo
 }
 
-fn time_loops(tail_call: bool, cond_dispatch: bool, depth: u64, reps: u32) -> std::time::Duration {
-    time_loops_full(tail_call, cond_dispatch, true, depth, reps)
+struct LoopTiming {
+    elapsed: std::time::Duration,
+    scalar_fastpath_count: u64,
+}
+
+fn time_loops(tail_call: bool, cond_dispatch: bool, depth: u64, reps: u32) -> LoopTiming {
+    time_loops_full(tail_call, cond_dispatch, true, true, depth, reps)
 }
 
 fn time_loops_full(
     tail_call: bool,
     cond_dispatch: bool,
     compiled_clause: bool,
+    scalar_fastpath: bool,
     depth: u64,
     reps: u32,
-) -> std::time::Duration {
+) -> LoopTiming {
     let steps = 100_000_000;
     // Prepare one interpreter; re-run the same loop `reps` times in-process.
     let mut interp = Interpreter::new();
     interp.set_tail_call_enabled(tail_call);
     interp.set_cond_dispatch_enabled(cond_dispatch);
     interp.set_compiled_clause_enabled(compiled_clause);
+    interp.set_scalar_fastpath_enabled(scalar_fastpath);
     interp.set_max_execution_steps(steps);
     block_on(interp.execute(DEF)).unwrap();
     let line = format!("[ {} ] DOWN", depth);
@@ -89,7 +100,10 @@ fn time_loops_full(
         block_on(interp.execute(&line)).unwrap();
         interp.update_stack(Vec::new()); // discard the loop's result value
     }
-    t0.elapsed()
+    LoopTiming {
+        elapsed: t0.elapsed(),
+        scalar_fastpath_count: interp.runtime_metrics().scalar_fastpath_count,
+    }
 }
 
 fn main() {
@@ -108,7 +122,7 @@ fn main() {
     let depth = 250u64;
     let reps = 2000u32;
     let iters = (depth as u128) * (reps as u128);
-    let ns = |d: std::time::Duration| d.as_nanos() as f64 / iters as f64;
+    let ns = |timing: &LoopTiming| timing.elapsed.as_nanos() as f64 / iters as f64;
 
     println!("-- Tail-call: native recursion vs backward jump (depth 250) --");
     // Warm up plan caches.
@@ -119,17 +133,17 @@ fn main() {
     println!("  {reps} loops × depth {depth} = {iters} iterations");
     println!(
         "  tail-call OFF: {:>8.3} ms  ({:.1} ns/iter)",
-        tc_off.as_secs_f64() * 1e3,
-        ns(tc_off)
+        tc_off.elapsed.as_secs_f64() * 1e3,
+        ns(&tc_off)
     );
     println!(
         "  tail-call ON : {:>8.3} ms  ({:.1} ns/iter)",
-        tc_on.as_secs_f64() * 1e3,
-        ns(tc_on)
+        tc_on.elapsed.as_secs_f64() * 1e3,
+        ns(&tc_on)
     );
     println!(
         "  speedup: {:.2}x\n",
-        tc_off.as_secs_f64() / tc_on.as_secs_f64()
+        tc_off.elapsed.as_secs_f64() / tc_on.elapsed.as_secs_f64()
     );
 
     println!(
@@ -140,37 +154,61 @@ fn main() {
     let cd_on = time_loops(true, true, depth, reps);
     println!(
         "  dispatch OFF (dynamic): {:>8.3} ms  ({:.1} ns/iter)",
-        cd_off.as_secs_f64() * 1e3,
-        ns(cd_off)
+        cd_off.elapsed.as_secs_f64() * 1e3,
+        ns(&cd_off)
     );
     println!(
         "  dispatch ON  (jump tbl): {:>8.3} ms  ({:.1} ns/iter)",
-        cd_on.as_secs_f64() * 1e3,
-        ns(cd_on)
+        cd_on.elapsed.as_secs_f64() * 1e3,
+        ns(&cd_on)
     );
     println!(
         "  speedup: {:.2}x\n",
-        cd_off.as_secs_f64() / cd_on.as_secs_f64()
+        cd_off.elapsed.as_secs_f64() / cd_on.elapsed.as_secs_f64()
     );
 
     println!(
         "-- Compiled clause body: interpreted vs compiled (depth 250, tail-call + dispatch ON) --"
     );
-    let _ = time_loops_full(true, true, false, depth, 50);
-    let cc_off = time_loops_full(true, true, false, depth, reps);
-    let cc_on = time_loops_full(true, true, true, depth, reps);
+    let _ = time_loops_full(true, true, false, true, depth, 50);
+    let cc_off = time_loops_full(true, true, false, true, depth, reps);
+    let cc_on = time_loops_full(true, true, true, true, depth, reps);
     println!(
         "  clause OFF (interpreted): {:>8.3} ms  ({:.1} ns/iter)",
-        cc_off.as_secs_f64() * 1e3,
-        ns(cc_off)
+        cc_off.elapsed.as_secs_f64() * 1e3,
+        ns(&cc_off)
     );
     println!(
         "  clause ON  (compiled):    {:>8.3} ms  ({:.1} ns/iter)",
-        cc_on.as_secs_f64() * 1e3,
-        ns(cc_on)
+        cc_on.elapsed.as_secs_f64() * 1e3,
+        ns(&cc_on)
     );
     println!(
         "  speedup: {:.2}x",
-        cc_off.as_secs_f64() / cc_on.as_secs_f64()
+        cc_off.elapsed.as_secs_f64() / cc_on.elapsed.as_secs_f64()
+    );
+
+    println!(
+        "\n-- D1 scalar fast path: broadcast wrapper vs direct scalar (depth 250, all prior fast paths ON) --"
+    );
+    let _ = time_loops_full(true, true, true, false, depth, 50);
+    let _ = time_loops_full(true, true, true, true, depth, 50);
+    let sf_off = time_loops_full(true, true, true, false, depth, reps);
+    let sf_on = time_loops_full(true, true, true, true, depth, reps);
+    println!(
+        "  scalar OFF (broadcast): {:>8.3} ms  ({:.1} ns/iter, hits {})",
+        sf_off.elapsed.as_secs_f64() * 1e3,
+        ns(&sf_off),
+        sf_off.scalar_fastpath_count
+    );
+    println!(
+        "  scalar ON  (direct):    {:>8.3} ms  ({:.1} ns/iter, hits {})",
+        sf_on.elapsed.as_secs_f64() * 1e3,
+        ns(&sf_on),
+        sf_on.scalar_fastpath_count
+    );
+    println!(
+        "  speedup: {:.2}x",
+        sf_off.elapsed.as_secs_f64() / sf_on.elapsed.as_secs_f64()
     );
 }

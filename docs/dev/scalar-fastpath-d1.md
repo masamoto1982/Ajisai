@@ -62,3 +62,22 @@ rendered output, and per-value hints across:
 
 This keeps D1 measurable while preserving the existing paths as the reference
 for all shapes outside the intentionally narrow fast subset.
+
+## Measurement hook
+
+`rust/examples/tail_call_bench.rs` now includes a final D1-only A/B section. It
+runs the countdown loop with tail-call elimination, COND dispatch, compiled
+clauses, and vector literals enabled, then toggles only
+`set_scalar_fastpath_enabled(false/true)`. The section also prints
+`RuntimeMetrics::scalar_fastpath_count`, so a scalar-fastpath ON run must report
+non-zero hits while the OFF run reports zero.
+
+On this workspace, the first release run after adding the measurement hook was:
+
+| Configuration | Time | Per iteration | Fast-path hits |
+| --- | ---: | ---: | ---: |
+| scalar OFF (broadcast) | 6122.344 ms | 12244.7 ns/iter | 0 |
+| scalar ON (direct) | 5080.184 ms | 10160.4 ns/iter | 2004000 |
+
+That is a 1.21x speedup for the isolated D1 toggle in the existing
+`tail_call_bench` countdown workload.
