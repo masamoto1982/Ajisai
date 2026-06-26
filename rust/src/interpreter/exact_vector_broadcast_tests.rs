@@ -42,8 +42,45 @@ async fn irrational_vector_plus_irrational_vector_is_exact() {
     let children = vector_children(&stack[0]);
     assert_eq!(children.len(), 2, "result must keep both lanes");
     assert!(
-        children.iter().all(|c| !c.is_nil() && is_exact_real_lane(c)),
+        children
+            .iter()
+            .all(|c| !c.is_nil() && is_exact_real_lane(c)),
         "each lane of √n + √n must stay an exact real, got {children:?}"
+    );
+}
+
+/// The homogeneous equal-length-vector case routes through the compute-bound
+/// parallel map (`exact_real_parallel_broadcast_count` bumps), and the result is
+/// identical to the sequential reference. The kernel decides seq-vs-fan-out by
+/// size internally; below the floor it stays sequential but still flows through
+/// this path, so the counter rises regardless of element count.
+#[tokio::test]
+async fn irrational_vector_addition_takes_parallel_map_path() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("'math' IMPORT [ 2 3 ] { SQRT } MAP [ 2 3 ] { SQRT } MAP +")
+        .await
+        .expect("irrational vector add must not error");
+    assert_eq!(
+        interp.runtime_metrics().exact_real_parallel_broadcast_count,
+        1,
+        "equal-length irrational vector add must use the flat exact parallel map"
+    );
+}
+
+/// Scalar-broadcast shapes stay on the sequential recursion: not the
+/// homogeneous flat case, so the parallel-map counter must not bump.
+#[tokio::test]
+async fn irrational_scalar_broadcast_does_not_take_parallel_map_path() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("'math' IMPORT [ 1 2 3 ] 2 SQRT *")
+        .await
+        .expect("scalar broadcast must not error");
+    assert_eq!(
+        interp.runtime_metrics().exact_real_parallel_broadcast_count,
+        0,
+        "scalar-broadcast shape must not engage the flat parallel map"
     );
 }
 
@@ -54,9 +91,15 @@ async fn irrational_scalar_broadcasts_across_rational_vector() {
     let stack = run_ok("'math' IMPORT [ 1 2 3 ] 2 SQRT *").await;
     assert_eq!(stack.len(), 1);
     let children = vector_children(&stack[0]);
-    assert_eq!(children.len(), 3, "√2 must broadcast across all three lanes");
+    assert_eq!(
+        children.len(),
+        3,
+        "√2 must broadcast across all three lanes"
+    );
     assert!(
-        children.iter().all(|c| !c.is_nil() && is_exact_real_lane(c)),
+        children
+            .iter()
+            .all(|c| !c.is_nil() && is_exact_real_lane(c)),
         "each lane of [1 2 3] * √2 must stay an exact real, got {children:?}"
     );
 }
@@ -105,5 +148,8 @@ async fn rational_vector_addition_unchanged() {
     let stack = run_ok("[ 1 2 3 ] [ 10 20 30 ] +").await;
     assert_eq!(stack.len(), 1);
     let expected = run_ok("[ 11 22 33 ]").await;
-    assert_eq!(stack[0], expected[0], "rational vector add must be unchanged");
+    assert_eq!(
+        stack[0], expected[0],
+        "rational vector add must be unchanged"
+    );
 }
