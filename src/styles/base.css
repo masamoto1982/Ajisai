@@ -22,10 +22,10 @@ body {
 a {
     color: var(--color-primary);
     text-decoration: none;
-}
 
-a:hover {
-    color: var(--color-secondary);
+    &:hover {
+        color: var(--color-secondary);
+    }
 }
 
 
@@ -46,17 +46,17 @@ a:hover {
     padding: 8px 16px;
     z-index: 1000;
     text-decoration: none;
-}
 
-.skip-link:focus {
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip: auto;
-    clip-path: none;
-    white-space: normal;
-    outline: 2px solid var(--color-secondary);
-    outline-offset: 2px;
+    &:focus {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
+        outline: 2px solid var(--color-secondary);
+        outline-offset: 2px;
+    }
 }
 
 
@@ -276,10 +276,10 @@ footer {
 footer a {
     color: var(--color-text-light);
     text-decoration: none;
-}
 
-footer a:hover {
-    color: var(--color-text);
+    &:hover {
+        color: var(--color-text);
+    }
 }
 
 
@@ -304,11 +304,11 @@ footer a:hover {
     text-decoration: none;
     color: var(--color-text);
     background: #fff;
-}
 
-.btn:hover {
-    background: var(--color-light);
-    color: var(--color-text);
+    &:hover {
+        background: var(--color-light);
+        color: var(--color-text);
+    }
 }
 
 .header-actions {

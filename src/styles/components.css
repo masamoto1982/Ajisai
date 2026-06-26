@@ -65,20 +65,33 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-}
 
-.area-selector-right .right-mode-selector {
-    flex: 1.618 1 0%;
-}
+    & .right-mode-selector {
+        flex: 1.618 1 0%;
+    }
 
-.area-selector-right #right-panel-dictionary-search {
-    flex: 1 1 0%;
-    min-width: 0;
-}
+    & #right-panel-dictionary-search {
+        flex: 1 1 0%;
+        min-width: 0;
+    }
 
-.area-selector-right .vocabulary-search-input {
-    width: 100%;
-    max-width: none;
+    & .vocabulary-search-input {
+        width: 100%;
+        max-width: none;
+    }
+
+    /* Container query: when the right column is too narrow to seat the mode
+       selector and the word search side by side, stack them. Keyed on the panel
+       container (not the viewport) so a slim desktop column reflows on its own,
+       without inventing another global breakpoint. */
+    @container panel (max-width: 18rem) {
+        flex-wrap: wrap;
+
+        & .right-mode-selector,
+        & #right-panel-dictionary-search {
+            flex-basis: 100%;
+        }
+    }
 }
 
 
@@ -109,6 +122,13 @@
     overflow: hidden;
     background: #fff;
     position: relative;
+
+    /* Establish a query container so panel-internal components can adapt to the
+       panel's own width rather than the viewport. This keeps the desktop /
+       mobile *mode* switching (driven by the viewport media queries below) while
+       letting controls reflow when a column is merely narrow — e.g. a slim
+       desktop column behaves like the mobile layout without a second breakpoint. */
+    container: panel / inline-size;
 }
 
 
@@ -176,15 +196,15 @@
     color: var(--input-text);
     caret-color: var(--input-text);
     transition: background-color var(--transition-fast);
-}
 
-#code-input:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
-}
+    &:focus {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+    }
 
-#code-input::placeholder {
-    color: var(--input-placeholder);
+    &::placeholder {
+        color: var(--input-placeholder);
+    }
 }
 
 
@@ -204,10 +224,10 @@
     justify-content: center;
     opacity: 0.6;
     transition: opacity 0.15s ease;
-}
 
-.inline-clear-btn:hover {
-    opacity: 1;
+    &:hover {
+        opacity: 1;
+    }
 }
 
 
@@ -356,15 +376,15 @@
     min-width: 120px;
     max-width: 200px;
     transition: background-color var(--transition-fast);
-}
 
-.vocabulary-search-input:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
-}
+    &:focus {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+    }
 
-.vocabulary-search-input::placeholder {
-    color: var(--input-placeholder);
+    &::placeholder {
+        color: var(--input-placeholder);
+    }
 }
 
 .vocabulary-search-clear-btn {
@@ -388,26 +408,26 @@
     padding: 0.125rem;
     background: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
 
-.context-menu button {
-    display: block;
-    width: 100%;
-    padding: 0.375rem 0.75rem;
-    background: transparent;
-    color: var(--color-text);
-    border: none;
-    text-align: left;
-    cursor: pointer;
-}
+    & button {
+        display: block;
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        background: transparent;
+        color: var(--color-text);
+        border: none;
+        text-align: left;
+        cursor: pointer;
 
-.context-menu button:hover:not(:disabled) {
-    background: var(--color-light);
-}
+        &:hover:not(:disabled) {
+            background: var(--color-light);
+        }
 
-.context-menu button:disabled {
-    color: var(--color-text-light);
-    cursor: not-allowed;
+        &:disabled {
+            color: var(--color-text-light);
+            cursor: not-allowed;
+        }
+    }
 }
 
 .no-results-message {
@@ -461,8 +481,38 @@
 }
 
 .dictionary-sheet .words-display {
-    flex: 1;
+    /* Fill the sheet so the whole area stays a click target and the column
+       rules span the panel, but never shrink below the content height: when the
+       glossary is taller than the panel the sheet (above) scrolls vertically,
+       rather than the multi-column layout fragmenting off to the right. */
+    flex: 1 0 auto;
     min-height: 7rem;
+    display: block;
+    overflow: visible;
+
+    /* Print-style multi-column glossary. A column-width (not a fixed count)
+       makes the number of columns intrinsic to the available space, so it
+       adapts across the desktop and mobile widths on its own; column-rule draws
+       the hairline divider between adjacent columns. */
+    column-width: 9rem;
+    column-gap: 1.25rem;
+    column-rule: var(--border-main);
+}
+
+/* With no words, drop the columns so the placeholder message spans the full
+   width and no stray rule is drawn. */
+.dictionary-sheet .words-display.is-empty {
+    column-width: auto;
+    column-rule: none;
+}
+
+/* Keep the Export / Import (and module) actions reachable while the glossary
+   scrolls underneath them. */
+.dictionary-sheet .vocabulary-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding-top: 0.25rem;
 }
 
 .empty-words-message {
@@ -513,7 +563,11 @@
     gap: 0.5rem;
     min-height: 0;
     width: 100%;
-    overflow: hidden;
+
+    /* The sheet is the vertical scroller for the glossary; the words-display
+       inside grows with its content (see below) so its multi-column layout
+       flows downward and scrolls here, never sideways. */
+    overflow: hidden auto;
 }
 
 .dictionary-sheet:not(.active) {
@@ -541,41 +595,49 @@
     font-weight: 400;
     cursor: pointer;
     border-radius: var(--radius-word-button);
-}
 
+    /* Keep a chip whole when the glossary breaks into columns. */
+    break-inside: avoid;
 
-.word-button.core {
-    border-color: var(--color-core);
-    color: var(--color-core);
-}
+    &.core {
+        border-color: var(--color-core);
+        color: var(--color-core);
+    }
 
+    &.dependency {
+        border-color: var(--color-dependency);
+        color: var(--color-dependency);
+    }
 
-.word-button.dependency {
-    border-color: var(--color-dependency);
-    color: var(--color-dependency);
-}
+    &.non-dependency {
+        border-color: var(--color-non-dependency);
+        color: var(--color-non-dependency);
+    }
 
+    /* Module words are built-ins too: keep the same visual treatment as Core words. */
+    &.module {
+        border-color: var(--color-core);
+        color: var(--color-core);
+    }
 
-.word-button.non-dependency {
-    border-color: var(--color-non-dependency);
-    color: var(--color-non-dependency);
-}
+    /* Inactive (un-imported) module words and selector entries: faded, signalling
+       they are candidates to be activated with a long-press. */
+    &.is-inactive {
+        opacity: 0.4;
+        background: repeating-linear-gradient(
+            45deg, transparent, transparent 4px,
+            rgba(0, 0, 0, 0.03) 4px, rgba(0, 0, 0, 0.03) 8px
+        );
+    }
 
-
-/* Module words are built-ins too: keep the same visual treatment as Core words. */
-.word-button.module {
-    border-color: var(--color-core);
-    color: var(--color-core);
-}
-
-/* Inactive (un-imported) module words and selector entries: faded, signalling
-   they are candidates to be activated with a long-press. */
-.word-button.is-inactive {
-    opacity: 0.4;
-    background: repeating-linear-gradient(
-        45deg, transparent, transparent 4px,
-        rgba(0, 0, 0, 0.03) 4px, rgba(0, 0, 0, 0.03) 8px
-    );
+    /* Container query: in a narrow panel (the mobile column, or a slim desktop
+       one) grow the chips into comfortable touch targets. Responds to the panel
+       width, so it follows a resized desktop column without a viewport rule. */
+    @container panel (max-width: 26rem) {
+        margin: 3px;
+        padding: calc(0.4rem + var(--control-text-y-adjust)) 0.6rem calc(0.4rem - var(--control-text-y-adjust));
+        font-size: 0.85rem;
+    }
 }
 
 /* Custom dictionary selector: a div replacement for the native <select> that
@@ -631,19 +693,19 @@
     color: var(--color-text);
     border: none;
     cursor: pointer;
-}
 
-.sheet-selector-option:hover {
-    background: var(--color-light);
-}
+    &:hover {
+        background: var(--color-light);
+    }
 
-.sheet-selector-option.is-selected {
-    font-weight: 700;
-    background: var(--color-light);
-}
+    &.is-selected {
+        font-weight: 700;
+        background: var(--color-light);
+    }
 
-.sheet-selector-option.is-inactive {
-    color: #aaa;
+    &.is-inactive {
+        color: #aaa;
+    }
 }
 
 
