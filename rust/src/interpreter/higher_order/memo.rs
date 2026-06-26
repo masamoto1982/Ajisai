@@ -102,35 +102,68 @@ pub(super) fn kernel_token_key(tokens: Option<&[Token]>) -> Option<String> {
 }
 
 impl Interpreter {
-    fn hof_memo_cache_key(&self, kernel_key: &str, elem_key: &str) -> String {
+    /// `mode` namespaces the cache entry by kernel family so a MAP result Value
+    /// and a predicate boolean for the same `(kernel, element)` never collide.
+    fn hof_memo_cache_key(&self, mode: &str, kernel_key: &str, elem_key: &str) -> String {
         crate::elastic::CacheManager::build_key_with_context(
             kernel_key,
             elem_key,
-            "hof-map",
+            mode,
             Some("memo"),
             self.dictionary_epoch,
             self.module_epoch,
         )
     }
 
-    /// Look up a memoized per-element kernel result. Bumps the HOF-memo hit or
-    /// miss counter and returns the cached `Value` on a hit.
-    pub(crate) fn hof_memo_fetch(&mut self, kernel_key: &str, elem_key: &str) -> Option<Value> {
-        let key = self.hof_memo_cache_key(kernel_key, elem_key);
-        let (value, hit) = self.elastic_cache.fetch(&key);
+    fn record_memo_probe(&mut self, hit: bool) {
         if hit {
             self.runtime_metrics.hof_memo_hit_count += 1;
         } else {
             self.runtime_metrics.hof_memo_miss_count += 1;
         }
+    }
+
+    /// Look up a memoized per-element MAP kernel result. Bumps the HOF-memo hit
+    /// or miss counter and returns the cached `Value` on a hit.
+    pub(crate) fn hof_memo_fetch(&mut self, kernel_key: &str, elem_key: &str) -> Option<Value> {
+        let key = self.hof_memo_cache_key("hof-map", kernel_key, elem_key);
+        let (value, hit) = self.elastic_cache.fetch(&key);
+        self.record_memo_probe(hit);
         value
     }
 
-    /// Store a per-element kernel result. The caller guarantees the kernel was
-    /// pure, so the value is unconditionally cacheable.
+    /// Store a per-element MAP kernel result. The caller guarantees the kernel
+    /// was pure, so the value is unconditionally cacheable.
     pub(crate) fn hof_memo_store(&mut self, kernel_key: &str, elem_key: &str, value: &Value) {
-        let key = self.hof_memo_cache_key(kernel_key, elem_key);
+        let key = self.hof_memo_cache_key("hof-map", kernel_key, elem_key);
         self.elastic_cache.store(key, value.clone(), true);
+        self.runtime_metrics.hof_memo_store_count += 1;
+    }
+
+    /// Predicate-family variant (FILTER / ANY / ALL / COUNT): caches the boolean
+    /// kernel result, stored as a Boolean `Value` under a distinct mode so it
+    /// never collides with MAP's result-Value entries.
+    pub(crate) fn hof_memo_fetch_predicate(
+        &mut self,
+        kernel_key: &str,
+        elem_key: &str,
+    ) -> Option<bool> {
+        let key = self.hof_memo_cache_key("hof-pred", kernel_key, elem_key);
+        let (value, hit) = self.elastic_cache.fetch(&key);
+        self.record_memo_probe(hit);
+        value.and_then(|v| v.as_truth())
+    }
+
+    /// Store a pure predicate kernel's boolean result.
+    pub(crate) fn hof_memo_store_predicate(
+        &mut self,
+        kernel_key: &str,
+        elem_key: &str,
+        result: bool,
+    ) {
+        let key = self.hof_memo_cache_key("hof-pred", kernel_key, elem_key);
+        self.elastic_cache
+            .store(key, Value::from_bool(result), true);
         self.runtime_metrics.hof_memo_store_count += 1;
     }
 }

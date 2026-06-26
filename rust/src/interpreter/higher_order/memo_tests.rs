@@ -126,4 +126,84 @@ mod tests {
             );
         });
     }
+
+    // ── Predicate family: FILTER / ANY / ALL / COUNT ──────────────────────
+    // These share one memoization site in `execute_hedged_predicate_kernel`.
+    // `{ [ 1 ] <= NOT }` (elem > 1) is pure and quantized but not a single
+    // fast-unary predicate, so it takes the per-element loop the memo lives in.
+
+    #[test]
+    fn predicate_filter_invariant() {
+        assert_memo_invariant("[ 1 2 2 3 3 3 ] { [ 1 ] <= NOT } FILTER");
+    }
+
+    #[test]
+    fn predicate_count_invariant() {
+        assert_memo_invariant("[ 1 2 2 3 3 3 ] { [ 1 ] <= NOT } COUNT");
+    }
+
+    #[test]
+    fn predicate_any_invariant() {
+        assert_memo_invariant("[ 2 2 2 2 ] { [ 5 ] = } ANY");
+    }
+
+    #[test]
+    fn predicate_all_invariant() {
+        assert_memo_invariant("[ 3 3 3 5 ] { [ 1 ] <= NOT } ALL");
+    }
+
+    #[test]
+    fn predicate_filter_produces_cache_hits() {
+        // FILTER evaluates every element (no short-circuit). Elements 3,3,3,5:
+        // 3 -> miss+store, 3 -> hit, 3 -> hit, 5 -> miss+store.
+        let interp = run_with_memo("[ 3 3 3 5 ] { [ 1 ] <= NOT } FILTER", true);
+        let m = interp.runtime_metrics();
+        assert_eq!(
+            m.hof_memo_hit_count, 2,
+            "two repeats of element 3 should hit"
+        );
+        assert_eq!(m.hof_memo_miss_count, 2, "distinct elements 3 and 5 miss");
+        assert_eq!(m.hof_memo_store_count, 2, "one store per distinct element");
+    }
+
+    #[test]
+    fn predicate_disabled_does_no_cache_work() {
+        let interp = run_with_memo("[ 3 3 3 5 ] { [ 1 ] <= NOT } FILTER", false);
+        let m = interp.runtime_metrics();
+        assert_eq!(m.hof_memo_hit_count, 0);
+        assert_eq!(m.hof_memo_miss_count, 0);
+        assert_eq!(m.hof_memo_store_count, 0);
+    }
+
+    #[test]
+    fn predicate_redefinition_is_not_served_stale() {
+        // FILTER keeps elements where TEN_X exceeds the threshold; after TEN_X is
+        // redefined the epoch-bump flush must prevent a stale predicate result.
+        let mut interp = Interpreter::new();
+        let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+        rt.block_on(async {
+            // TEN_X x = x*10; predicate keeps elements whose *10 is > 25.
+            interp.execute("{ [ 10 ] * } 'TEN_X' DEF").await.unwrap();
+            interp
+                .execute("[ 2 2 ] { TEN_X [ 25 ] <= NOT } FILTER")
+                .await
+                .unwrap();
+            // 2*10=20, not > 25 -> both dropped -> NIL. Inspect only the top of
+            // stack: the first result stays on the stack under the second.
+            let first = format!("{:?}", interp.get_stack().last());
+            assert!(first.contains("Nil"), "expected NIL (20 <= 25): {first}");
+
+            interp.execute("{ [ 100 ] * } 'TEN_X' DEF").await.unwrap();
+            interp
+                .execute("[ 2 2 ] { TEN_X [ 25 ] <= NOT } FILTER")
+                .await
+                .unwrap();
+            // 2*100=200 > 25 -> both kept; a stale predicate would wrongly drop.
+            let second = format!("{:?}", interp.get_stack().last());
+            assert!(
+                !second.contains("Nil"),
+                "redefinition must not be served a stale predicate result: {second}"
+            );
+        });
+    }
 }

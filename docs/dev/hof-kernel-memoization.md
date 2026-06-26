@@ -1,8 +1,9 @@
 # Pure HOF kernel memoization (direction B)
 
-Status: **implemented** (MAP). A value-model-neutral runtime optimization: it
-changes how many times a higher-order kernel runs, never the observable result.
-The canonical language definition is `SPECIFICATION.html`.
+Status: **implemented** for `MAP` and the predicate family (`FILTER`, `ANY`,
+`ALL`, `COUNT`). A value-model-neutral runtime optimization: it changes how many
+times a higher-order kernel runs, never the observable result. The canonical
+language definition is `SPECIFICATION.html`.
 
 ## Idea
 
@@ -30,6 +31,16 @@ the kernel; on a miss it runs the kernel and stores the result. All other arms
 (`WordName`, non-quantizable `CodeBlock`) and the bulk-tensor fast path are
 unchanged. `interpreter/higher_order/memo.rs` holds the key construction and the
 `elastic_cache` fetch/store wrappers.
+
+The **predicate family** (`FILTER`, `ANY`, `ALL`, `COUNT`) is memoized at a
+single shared site: `execute_hedged_predicate_kernel` is now a thin wrapper that
+fetches/stores the boolean result around the original logic
+(`execute_hedged_predicate_kernel_inner`), so all four words benefit without
+editing each. Predicate results are cached as Boolean `Value`s under a distinct
+`hof-pred` key namespace, so they never collide with MAP's result-Value entries
+for the same `(kernel, element)`. The same isolated-element discipline holds: a
+predicate runs against an element-only stack, so its boolean depends only on the
+element.
 
 ## Soundness
 
@@ -67,17 +78,22 @@ differential tests, not as a semantic knob.
 
 ## Verification
 
-`memo_tests.rs`:
+`memo_tests.rs` (MAP and predicate family):
 - **Differential ON vs OFF** stacks are byte-identical across repeated elements,
-  distinct elements, a user-word kernel, division-by-zero bubbles, and
-  non-rational (collection) elements that fall through.
-- **Engagement counters**: `[ 3 3 3 5 ]` with a pure two-op kernel yields exactly
-  two hits / two misses / two stores; all-distinct yields zero hits; disabled
-  yields no cache work.
+  distinct elements, a user-word kernel, division-by-zero bubbles, non-rational
+  (collection) elements that fall through, and `FILTER`/`ANY`/`ALL`/`COUNT`.
+- **Engagement counters**: `[ 3 3 3 5 ]` with a pure two-op MAP kernel and a
+  pure FILTER predicate each yield exactly two hits / two misses / two stores;
+  all-distinct yields zero hits; disabled yields no cache work.
 - **Invalidation**: redefining a kernel's helper word is never served a stale
-  cached result.
+  cached result, for both MAP and FILTER.
 
-`cargo test --lib` / `--tests` all green (1414 lib). A synthetic 600-element MAP
+`perf_regression_tests.rs` disables the memo in its harness so it keeps measuring
+quantized-block/compiled-plan reuse (the subsystem it targets); the memo would
+otherwise serve every repeated element from cache on a reused interpreter and
+zero out `quantized_block_use_count`.
+
+`cargo test --lib` / `--tests` all green (1421 lib). A synthetic 600-element MAP
 with ~6 distinct values and a moderately heavy pure kernel runs **~4.1x** faster
 with the memo on (≈3.43 ms → ≈0.84 ms/run, 594/600 applications served from
 cache). The payoff is workload-dependent: it scales with element repetition and
@@ -86,9 +102,15 @@ distinct or non-rational.
 
 ## Scope and non-goals
 
-- **MAP only** for now. `FILTER`/`ANY`/`ALL`/`COUNT`/fold-family kernels run
-  against the same isolated-element discipline and are natural follow-ups; they
-  are intentionally out of this first step.
+- **MAP and the predicate family (`FILTER`/`ANY`/`ALL`/`COUNT`)** are memoized.
+  The predicate words share one site in `execute_hedged_predicate_kernel`.
+- **Fold family (`FOLD`/`SCAN`/`UNFOLD`) is intentionally excluded.** Its kernel
+  is arity-two — it reads both the accumulator and the element — and the
+  accumulator changes every step, so a `(kernel, acc, element)` key would almost
+  never repeat. Memoizing it would add a per-step key probe for ~zero hits (a net
+  loss), and `SCAN`/`UNFOLD` carry sequential dependencies besides. The arity-one
+  isolation that makes MAP/predicate memoization both sound and high-yield does
+  not hold there.
 - The bulk-tensor fast path (1-D dense tensor + fast-unary kernel) still wins
   where it applies and is untouched — the memo targets the per-element loop that
   bulk-ineligible kernels (e.g. multi-op blocks, user-word-calling kernels) take.

@@ -71,6 +71,14 @@ fn run_loop(
     // and running a fresh interpreter per iteration would make hit rates
     // meaningless.
     let mut interp = Interpreter::new();
+    // This harness measures reuse of the *quantized-block / compiled-plan*
+    // caches across iterations. Pure HOF kernel memoization is a separate,
+    // higher layer: with it on, a reused interpreter serves every repeated
+    // element from the result cache and never re-runs the quantized kernel, so
+    // `quantized_block_use_count` would no longer reflect plan reuse. Disable it
+    // here so this regression test keeps measuring the subsystem it targets;
+    // memoization has its own dedicated coverage in `higher_order::memo_tests`.
+    interp.set_hof_memo_enabled(false);
     let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
 
     // One warm-up run to populate caches; not timed.
