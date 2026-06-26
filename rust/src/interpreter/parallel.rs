@@ -706,6 +706,66 @@ where
     Ok(out)
 }
 
+/// Policy-free compute-bound element-wise map producing arbitrary `Send` lanes.
+///
+/// Generalizes [`parallel_try_elementwise`] beyond `Fraction`: the per-lane op
+/// returns any `T: Send`, so the caller can carry its own error encoding inside
+/// `T` (e.g. `Option<ExactReal>` where `None` is a division-by-zero bubble)
+/// rather than threading a `Result`. Used for irrational continued-fraction
+/// lanes — each lane is an independent, pure, genuinely compute-bound Gosper
+/// evaluation (not memory-bandwidth-bound), exactly the 戦局1 homogeneous case
+/// the roadmap says to fan out across all cores. `Value` itself is not `Send`,
+/// so the caller maps the `Send` lane results back into `Value`s on the calling
+/// thread after this returns.
+///
+/// Always fans out when the pool has ≥2 workers; `f(i)` must be the same pure
+/// per-element op the sequential path runs, so the assembled output is identical
+/// regardless of worker count.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn parallel_map<T, F>(n: usize, f: F) -> Vec<T>
+where
+    T: Send,
+    F: Fn(usize) -> T + Sync,
+{
+    let pool = pool();
+    if pool.workers < 2 || n == 0 {
+        return (0..n).map(f).collect();
+    }
+    fill_parallel::<T, _>(n, pool, |start, region| {
+        for (k, slot) in region.iter_mut().enumerate() {
+            slot.write(f(start + k));
+        }
+    })
+}
+
+/// Gated compute-bound variant of [`parallel_map`]. Fans out only when the
+/// element count clears the compute-bound floor and the pool has ≥2 workers;
+/// otherwise stays on the identical sequential lane (Never Slower). Pure by type
+/// (the lane op produces a value, no side effects), so no purity gate is
+/// consulted — the caller guarantees `f` is the pure per-element op the
+/// sequential path would run.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn compute_bound_map<T, F>(n: usize, f: F) -> Vec<T>
+where
+    T: Send,
+    F: Fn(usize) -> T + Sync,
+{
+    if pool().workers < 2 || n < parallel_dispatch_min(ParallelOpClass::ComputeBound) {
+        return (0..n).map(f).collect();
+    }
+    parallel_map(n, f)
+}
+
+/// On `wasm32` there is no native threading, so the compute-bound map degrades
+/// to the sequential lane unchanged.
+#[cfg(target_arch = "wasm32")]
+pub fn compute_bound_map<T, F>(n: usize, f: F) -> Vec<T>
+where
+    F: Fn(usize) -> T,
+{
+    (0..n).map(f).collect()
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
@@ -945,6 +1005,65 @@ mod tests {
             let par = parallel_try_elementwise(len, rational_op).unwrap();
             let seq = seq_fraction_map(len, rational_op).unwrap();
             prop_assert_eq!(par, seq);
+        }
+    }
+
+    // ── Generic Send-lane map (`parallel_map` / `compute_bound_map`) ─────────
+    //
+    // Backs the irrational continued-fraction broadcast: each lane is an
+    // independent exact-real op whose `Send` result is rebuilt into a `Value`
+    // on the calling thread. Drive it with `ExactReal` lanes (the production
+    // payload), including a √2-bearing irrational so the Gosper path — not just
+    // the rational fast lane — is exercised under fan-out.
+    use crate::types::continued_fraction::ExactReal;
+
+    /// Per-lane op mirroring `ExactArithmeticSchema::Add` over exact reals:
+    /// `√2·i + (i+1)`, encoded as `Option` exactly like the broadcast's
+    /// division-by-zero channel (always `Some` for add).
+    fn exact_lane(i: usize) -> Option<ExactReal> {
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::from(2_i64)).unwrap();
+        let scaled = sqrt2.mul(&ExactReal::from_integer(i as i64));
+        Some(scaled.add(&ExactReal::from_integer(i as i64 + 1)))
+    }
+
+    fn seq_exact_map(n: usize) -> Vec<Option<ExactReal>> {
+        (0..n).map(exact_lane).collect()
+    }
+
+    #[test]
+    fn parallel_map_exact_matches_sequential_across_chunk_sizes() {
+        // Same Result for the generic Send-lane kernel: the always-fan-out
+        // `parallel_map` is element-identical to the sequential map at every
+        // size, including the tiny chunk-overshoot sizes that share
+        // `fill_parallel` with the i64/Fraction lanes.
+        for n in 0usize..=64 {
+            assert_eq!(parallel_map(n, exact_lane), seq_exact_map(n), "exact n={n}");
+        }
+        let n = 50_003; // multi-chunk, not a multiple of any worker count
+        assert_eq!(parallel_map(n, exact_lane), seq_exact_map(n), "exact n={n}");
+    }
+
+    #[test]
+    fn compute_bound_map_exact_matches_sequential_below_and_above_floor() {
+        // The gated entry is identical to sequential both below the floor (no
+        // fan-out) and above it (fan-out), so dispatch never changes the answer.
+        for n in [8usize, COMPUTE_BOUND_DISPATCH_MIN + 7] {
+            let gated = compute_bound_map(n, exact_lane);
+            assert_eq!(
+                gated,
+                seq_exact_map(n),
+                "gated exact map != sequential at n={n}"
+            );
+        }
+    }
+
+    proptest! {
+        // Differential contract for the generic exact-real lane map across
+        // sizes straddling chunk boundaries.
+        #[test]
+        fn parallel_map_exact_equals_sequential(len in 0usize..=4_000) {
+            let par = parallel_map(len, exact_lane);
+            prop_assert_eq!(par, seq_exact_map(len));
         }
     }
 }

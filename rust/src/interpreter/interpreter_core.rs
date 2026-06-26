@@ -210,6 +210,13 @@ pub struct RuntimeMetrics {
     /// value-model fast path, bypassing the tensor broadcast wrapper while
     /// preserving the same observable Value and semantic hint.
     pub scalar_fastpath_count: u64,
+    /// Homogeneous element-wise binary ops over equal-length vectors of
+    /// irrational `ExactScalar` lanes routed through the compute-bound parallel
+    /// map (`parallel::compute_bound_map`). Counts how many such flat exact
+    /// broadcasts were dispatched; whether each actually fanned out across
+    /// worker threads is decided inside the kernel by the compute-bound floor.
+    /// Observational only; never alters value results (parallel == sequential).
+    pub exact_real_parallel_broadcast_count: u64,
     pub shadow_validation_started_count: u64,
     pub shadow_validation_success_count: u64,
     pub shadow_validation_fallback_count: u64,

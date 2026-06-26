@@ -474,6 +474,35 @@ fn exact_broadcast_leaf(value: &Value) -> Option<ExactReal> {
     }
 }
 
+/// Extract aligned exact-real lanes for the *homogeneous flat* broadcast case:
+/// both operands are equal-length vectors whose every child is a numeric leaf
+/// (no nesting, no ragged shapes). Returns `None` for any shape outside that
+/// subset (scalar-broadcast, nesting, length mismatch, empty) so the caller
+/// falls back to the sequential recursion, which still handles those exactly.
+///
+/// This is the only shape eligible for the parallel kernel: it is the
+/// 戦局1「均質」case where every lane is an independent, equally-sized,
+/// compute-bound Gosper evaluation, so disjoint index ranges fan out cleanly.
+fn exact_flat_leaf_lanes(a: &Value, b: &Value) -> Option<(Vec<ExactReal>, Vec<ExactReal>)> {
+    use crate::interpreter::tensor_ops::broadcast_children;
+
+    let (a_children, b_children) = (broadcast_children(a)?, broadcast_children(b)?);
+    if a_children.is_empty() || a_children.len() != b_children.len() {
+        return None;
+    }
+    let mut a_lanes = Vec::with_capacity(a_children.len());
+    let mut b_lanes = Vec::with_capacity(b_children.len());
+    for (x, y) in a_children.iter().zip(b_children.iter()) {
+        // Any nested child must take the recursive path, not the flat kernel.
+        if broadcast_children(x).is_some() || broadcast_children(y).is_some() {
+            return None;
+        }
+        a_lanes.push(exact_broadcast_leaf(x)?);
+        b_lanes.push(exact_broadcast_leaf(y)?);
+    }
+    Some((a_lanes, b_lanes))
+}
+
 /// Structural broadcast for operands containing irrational `ExactScalar`
 /// lanes. Returns `Ok(false)` (leaving the stack untouched) for the cases the
 /// caller still routes elsewhere — Stack target mode and top-level NIL — so the
@@ -493,7 +522,33 @@ fn push_exact_real_broadcast_result(
     if !value_contains_exact_scalar(a) && !value_contains_exact_scalar(b) {
         return Ok(false);
     }
-    let result = apply_exact_real_recursive_broadcast(a, b, schema)?;
+    // Homogeneous flat case (equal-length vectors of numeric leaves): each lane
+    // is an independent compute-bound exact-real op, so fan it out across the
+    // native pool. `Value` is not `Send`, so the kernel computes `Send`
+    // `Option<ExactReal>` lanes (`None` = division-by-zero bubble) and we rebuild
+    // `Value`s here. The result is identical to the sequential recursion for
+    // this shape, lane for lane.
+    let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
+        let n = a_lanes.len();
+        let lanes: Vec<Option<ExactReal>> =
+            crate::interpreter::parallel::compute_bound_map(n, |i| {
+                schema.exact_real(&a_lanes[i], &b_lanes[i])
+            });
+        interp.runtime_metrics.exact_real_parallel_broadcast_count = interp
+            .runtime_metrics
+            .exact_real_parallel_broadcast_count
+            .saturating_add(1);
+        let children: Vec<Value> = lanes
+            .into_iter()
+            .map(|lane| match lane {
+                Some(result) => Value::from_exact_real(result),
+                None => division_by_zero_bubble(),
+            })
+            .collect();
+        Value::from_children(children)
+    } else {
+        apply_exact_real_recursive_broadcast(a, b, schema)?
+    };
     consume_stacktop_binary(interp);
     push_result(interp, result);
     Ok(true)

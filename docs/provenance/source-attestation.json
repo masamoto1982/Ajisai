@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:4ca70dd4dbd6c613a4b4386c91d2cf06d0fe6a690f29cb2a574ae20f8d81673e",
+  "rootIdentity": "sha256:3c755870f54e4094c2154143c1307c4e2b3de23e94c4168cd5e01d7d430fef61",
   "fileCount": 273,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -204,8 +204,8 @@
     },
     {
       "path": "rust/src/interpreter/arithmetic.rs",
-      "sha256": "e8df925d245c85bb76ddcb72d351cc3a7be4644a63a6dd875352bce4cc90b912",
-      "bytes": 23339
+      "sha256": "9e27fae87e2031d94997eb72e173e5e290c1c7f05a0cdbc1ee3f6908b950467a",
+      "bytes": 26032
     },
     {
       "path": "rust/src/interpreter/arithmetic_exact_div_tests.rs",
@@ -439,8 +439,8 @@
     },
     {
       "path": "rust/src/interpreter/exact_vector_broadcast_tests.rs",
-      "sha256": "c6305ee31dc72516f541b7499d893cb755e83b5853dfb1f5d0032307124daa4c",
-      "bytes": 4377
+      "sha256": "aac5d479973d9d570cc21e274259de8b2a632f0f9e6dbf88fc1387a8b774f47f",
+      "bytes": 5915
     },
     {
       "path": "rust/src/interpreter/execute_builtin.rs",
@@ -569,8 +569,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "24df851508f1550859f34d37f1a2a7cc8746cd4baa5af3811f6bd1261c65d6c0",
-      "bytes": 35700
+      "sha256": "33b22b6d70449a59564acf34c68d296aeabd2f5ea9ce9db468c1f568a1a60234",
+      "bytes": 36218
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -694,8 +694,8 @@
     },
     {
       "path": "rust/src/interpreter/parallel.rs",
-      "sha256": "69ca9c699f87486617ab547031e9314453460041ecdf432bab96e5b84832cfb7",
-      "bytes": 39470
+      "sha256": "eb365d87a3d4a18d2e51773cdf94d9a4e18971c0e841f8e204d1dc9146e02d6a",
+      "bytes": 44497
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
