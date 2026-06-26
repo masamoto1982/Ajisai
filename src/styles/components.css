@@ -454,6 +454,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    /* The sheet (not the words-display) is the scroller now, so pin the word
+       info to the top: hover/selection descriptions stay visible no matter how
+       far the glossary below is scrolled. */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
 }
 
 .dictionary-sheet .word-info-display.is-placeholder {
