@@ -1,5 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::interval_ops::value_to_interval;
+use crate::interpreter::scalar_fastpath::{same_scalar_fast_wrap, scalar_fast_operand};
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::value_extraction_helpers::{
     extract_integer_from_value, nil_passthrough_binary, nil_passthrough_value,
@@ -147,7 +148,6 @@ pub(crate) enum OrderOutcome {
 /// malformed-use path). Both-`Rational` operands take the exact `Fraction`
 /// fast path; any non-`Rational` `ExactReal` routes through the budgeted CF
 /// comparison and may yield `Undecided`.
-
 pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOutcome> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
@@ -229,6 +229,70 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             "non-scalar value",
         )),
     }
+}
+
+fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
+    if !interp.scalar_fastpath_enabled
+        || interp.operation_target_mode != OperationTargetMode::StackTop
+        || interp.stack.len() < 2
+    {
+        return false;
+    }
+
+    let stack_len = interp.stack.len();
+    let Some(a) = scalar_fast_operand(&interp.stack[stack_len - 2]) else {
+        return false;
+    };
+    let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
+        return false;
+    };
+    if !same_scalar_fast_wrap(&a.wrap, &b.wrap) {
+        return false;
+    }
+
+    let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
+    push_boolean_result(interp, decided);
+    interp.runtime_metrics.scalar_fastpath_count = interp
+        .runtime_metrics
+        .scalar_fastpath_count
+        .saturating_add(1);
+    true
+}
+
+fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
+    if !interp.scalar_fastpath_enabled
+        || interp.operation_target_mode != OperationTargetMode::StackTop
+        || interp.stack.len() < 2
+    {
+        return false;
+    }
+
+    let stack_len = interp.stack.len();
+    let Some(a) = scalar_fast_operand(&interp.stack[stack_len - 2]) else {
+        return false;
+    };
+    let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
+        return false;
+    };
+    if !same_scalar_fast_wrap(&a.wrap, &b.wrap) {
+        return false;
+    }
+
+    let eq = a.fraction == b.fraction;
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
+    push_boolean_result(interp, if invert { !eq } else { eq });
+    interp.runtime_metrics.scalar_fastpath_count = interp
+        .runtime_metrics
+        .scalar_fastpath_count
+        .saturating_add(1);
+    true
 }
 
 /// Check whether every adjacent pair in `items` satisfies `kind`.
@@ -324,7 +388,7 @@ fn apply_binary_comparison(
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect()
+                interp.stack[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
@@ -393,6 +457,9 @@ fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result
         return Ok(());
     }
     if interp.operation_target_mode == OperationTargetMode::StackTop {
+        if push_ordering_scalar_fastpath(interp, kind) {
+            return Ok(());
+        }
         if let Some(res) = interval_relation_for_kind(interp, kind) {
             return res;
         }
@@ -501,6 +568,10 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
         return Ok(());
     }
 
+    if push_equality_scalar_fastpath(interp, invert) {
+        return Ok(());
+    }
+
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     match interp.operation_target_mode {
@@ -545,7 +616,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect()
+                interp.stack[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };

@@ -1,5 +1,8 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
+use crate::interpreter::scalar_fastpath::{
+    same_scalar_fast_wrap, scalar_fast_operand, ScalarFastWrap,
+};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
@@ -9,7 +12,8 @@ use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::continued_fraction::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, SparseTensor, Value, ValueData};
+use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
+use std::sync::Arc;
 
 #[derive(Clone, Copy)]
 enum ExactArithmeticSchema {
@@ -163,6 +167,65 @@ fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
     ))
 }
 
+fn build_scalar_fast_result(result: Fraction, wrap: &ScalarFastWrap) -> Value {
+    match wrap {
+        ScalarFastWrap::Scalar => Value::from_fraction(result),
+        ScalarFastWrap::Tensor(shape) => {
+            if let Some(data) = DenseTensor::from_fractions(vec![result.clone()], shape.clone()) {
+                Value {
+                    data: ValueData::Tensor {
+                        data: Arc::new(data),
+                        shape: Arc::new(shape.clone()),
+                    },
+                    hint: Interpretation::Unassigned,
+                    absence: None,
+                }
+            } else {
+                Value::from_tensor(vec![result], shape.clone())
+            }
+        }
+    }
+}
+
+fn push_scalar_fastpath_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+) -> Result<bool> {
+    if !interp.scalar_fastpath_enabled
+        || interp.operation_target_mode != OperationTargetMode::StackTop
+        || interp.stack.len() < 2
+    {
+        return Ok(false);
+    }
+
+    let stack_len = interp.stack.len();
+    let Some(a) = scalar_fast_operand(&interp.stack[stack_len - 2]) else {
+        return Ok(false);
+    };
+    let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
+        return Ok(false);
+    };
+    if !same_scalar_fast_wrap(&a.wrap, &b.wrap) {
+        return Ok(false);
+    }
+
+    let result = match schema.fraction(&a.fraction, &b.fraction) {
+        Ok(result) => build_scalar_fast_result(result, &a.wrap),
+        Err(AjisaiError::DivisionByZero) => division_by_zero_bubble(),
+        Err(error) => return Err(error),
+    };
+    if interp.consumption_mode == ConsumptionMode::Consume {
+        interp.stack.pop();
+        interp.stack.pop();
+    }
+    push_result(interp, result);
+    interp.runtime_metrics.scalar_fastpath_count = interp
+        .runtime_metrics
+        .scalar_fastpath_count
+        .saturating_add(1);
+    Ok(true)
+}
+
 fn apply_exact_arithmetic_schema(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -170,6 +233,10 @@ fn apply_exact_arithmetic_schema(
     if interp.operation_target_mode == OperationTargetMode::StackTop
         && nil_passthrough_binary(interp)
     {
+        return Ok(());
+    }
+
+    if push_scalar_fastpath_result(interp, schema)? {
         return Ok(());
     }
 
@@ -378,10 +445,7 @@ where
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..]
-                    .iter()
-                    .cloned()
-                    .collect::<Vec<Value>>()
+                interp.stack[stack_len - count..].to_vec()
             } else {
                 interp
                     .stack

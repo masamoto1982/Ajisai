@@ -206,6 +206,10 @@ pub struct RuntimeMetrics {
     /// COND guard/body executions that ran a compiled sub-plan instead of
     /// re-interpreting the clause's token stream. Observational only.
     pub cond_clause_compiled_count: u64,
+    /// Scalar-scalar arithmetic/comparison operations completed by the D1
+    /// value-model fast path, bypassing the tensor broadcast wrapper while
+    /// preserving the same observable Value and semantic hint.
+    pub scalar_fastpath_count: u64,
     pub shadow_validation_started_count: u64,
     pub shadow_validation_success_count: u64,
     pub shadow_validation_fallback_count: u64,
@@ -408,6 +412,17 @@ pub struct Interpreter {
     /// compiled guard/body sub-plans, so the loop body runs compiled instead of
     /// re-interpreted each iteration. Disable via `AJISAI_NO_COMPILED_CLAUSE`.
     pub(crate) compiled_clause_enabled: bool,
+
+    /// When true (default), StackTop scalar-scalar arithmetic and comparison can
+    /// bypass the tensor broadcast wrapper for bare scalars and same-shape
+    /// singleton tensor/vector wrappers in Consume and Keep modes. Disable via
+    /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
+    pub(crate) scalar_fastpath_enabled: bool,
+
+    /// When true (default), higher-order-function kernels may use their memoized
+    /// fast-path cache. Disable via `AJISAI_NO_HOF_MEMO` for A/B measurement or
+    /// to force the uncached higher-order path.
+    pub(crate) hof_memo_enabled: bool,
 }
 
 impl Interpreter {
@@ -476,6 +491,8 @@ impl Interpreter {
             cond_dispatch_enabled: std::env::var("AJISAI_NO_COND_DISPATCH").is_err(),
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
+            scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
+            hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -752,6 +769,21 @@ impl Interpreter {
     /// compiled after the change.
     pub fn set_compiled_clause_enabled(&mut self, enabled: bool) {
         self.compiled_clause_enabled = enabled;
+    }
+
+    /// Enable or disable the D1 scalar-scalar arithmetic/comparison fast path.
+    /// In-process equivalent of `AJISAI_NO_SCALAR_FASTPATH`; unlike compiled
+    /// plan toggles this affects subsequent primitive executions immediately.
+    pub fn set_scalar_fastpath_enabled(&mut self, enabled: bool) {
+        self.scalar_fastpath_enabled = enabled;
+    }
+
+    /// Enable or disable higher-order-function memoization. In-process
+    /// equivalent of `AJISAI_NO_HOF_MEMO`; this exists so higher-order
+    /// benchmarks and wasm tests can use the same toggle surface as other
+    /// internal fast paths.
+    pub fn set_hof_memo_enabled(&mut self, enabled: bool) {
+        self.hof_memo_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a
