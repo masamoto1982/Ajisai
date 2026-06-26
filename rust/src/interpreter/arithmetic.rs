@@ -301,6 +301,12 @@ fn apply_exact_arithmetic_schema(
         if push_exact_real_schema_result(interp, schema, &a, &b) {
             return Ok(());
         }
+        // Vectors/structures carrying irrational `ExactScalar` lanes cannot use
+        // the rational broadcast (it hard-errors on `FlatTensor::from_value`);
+        // route them through the exact-real recursive broadcast instead.
+        if push_exact_real_broadcast_result(interp, schema, &a, &b)? {
+            return Ok(());
+        }
     }
 
     if matches!(schema, ExactArithmeticSchema::Div)
@@ -374,6 +380,123 @@ fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
         ValueData::ExactScalar(er) => Some(er.clone()),
         _ => None,
     }
+}
+
+/// `true` when `val` is, or structurally contains, an irrational `ExactScalar`
+/// leaf. The all-rational `Fraction`/`FlatTensor` broadcast path cannot carry
+/// irrational continued-fraction lanes (`FlatTensor::from_value` rejects
+/// `ExactScalar`), so its presence selects the exact-real recursive route
+/// below instead. Bare scalar `ExactScalar` operands are already handled by
+/// `push_exact_real_schema_result` upstream; this predicate exists to catch the
+/// *vector/structural* cases that would otherwise hard-error in broadcast.
+fn value_contains_exact_scalar(val: &Value) -> bool {
+    match &val.data {
+        ValueData::ExactScalar(_) => true,
+        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+            items.iter().any(value_contains_exact_scalar)
+        }
+        // Dense tensors only hold rational `Fraction` lanes; they can never
+        // contain an `ExactScalar`.
+        _ => false,
+    }
+}
+
+/// Element-wise binary broadcast over operands that may contain irrational
+/// `ExactScalar` leaves, computed lane-by-lane through exact-real arithmetic.
+///
+/// This mirrors the rational `apply_recursive_broadcast` in `tensor_ops`
+/// (same shape rules: scalar broadcasts across a vector; equal-length vectors
+/// combine pairwise; unequal lengths raise `VectorLengthMismatch`) but keeps
+/// each lane exact. `Value::from_exact_real` renormalizes any lane that lands
+/// back on a rational to a plain `Scalar`, so an all-rational result is
+/// byte-identical to the rational path. Per-lane division by zero becomes a
+/// reasoned `NIL` bubble — the same Bubble Rule the scalar `√x 0 /` path uses
+/// (SPEC §11.2) — rather than aborting the whole vector.
+fn apply_exact_real_recursive_broadcast(
+    a: &Value,
+    b: &Value,
+    schema: ExactArithmeticSchema,
+) -> Result<Value> {
+    use crate::interpreter::tensor_ops::broadcast_children;
+
+    match (broadcast_children(a), broadcast_children(b)) {
+        (None, None) => {
+            let (Some(ea), Some(eb)) = (exact_broadcast_leaf(a), exact_broadcast_leaf(b)) else {
+                return Err(AjisaiError::create_structure_error(
+                    "number or vector",
+                    "non-numeric value",
+                ));
+            };
+            Ok(match schema.exact_real(&ea, &eb) {
+                Some(result) => Value::from_exact_real(result),
+                None => division_by_zero_bubble(),
+            })
+        }
+        (Some(children), None) => {
+            let out = children
+                .iter()
+                .map(|child| apply_exact_real_recursive_broadcast(child, b, schema))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+        (None, Some(children)) => {
+            let out = children
+                .iter()
+                .map(|child| apply_exact_real_recursive_broadcast(a, child, schema))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+        (Some(a_children), Some(b_children)) => {
+            if a_children.len() != b_children.len() {
+                return Err(AjisaiError::VectorLengthMismatch {
+                    len1: a_children.len(),
+                    len2: b_children.len(),
+                });
+            }
+            let out = a_children
+                .iter()
+                .zip(b_children.iter())
+                .map(|(x, y)| apply_exact_real_recursive_broadcast(x, y, schema))
+                .collect::<Result<Vec<Value>>>()?;
+            Ok(Value::from_children(out))
+        }
+    }
+}
+
+/// Exact-real value of a broadcast leaf (`Scalar`, `ExactScalar`, or `NIL`).
+/// `None` for non-numeric leaves, matching `tensor_ops::broadcast_leaf`.
+fn exact_broadcast_leaf(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        ValueData::Nil => Some(ExactReal::from_fraction(Fraction::nil())),
+        _ => None,
+    }
+}
+
+/// Structural broadcast for operands containing irrational `ExactScalar`
+/// lanes. Returns `Ok(false)` (leaving the stack untouched) for the cases the
+/// caller still routes elsewhere — Stack target mode and top-level NIL — so the
+/// existing NIL-passthrough and reduction paths keep their behavior.
+fn push_exact_real_broadcast_result(
+    interp: &mut Interpreter,
+    schema: ExactArithmeticSchema,
+    a: &Value,
+    b: &Value,
+) -> Result<bool> {
+    if interp.operation_target_mode != OperationTargetMode::StackTop {
+        return Ok(false);
+    }
+    if a.is_nil() || b.is_nil() {
+        return Ok(false);
+    }
+    if !value_contains_exact_scalar(a) && !value_contains_exact_scalar(b) {
+        return Ok(false);
+    }
+    let result = apply_exact_real_recursive_broadcast(a, b, schema)?;
+    consume_stacktop_binary(interp);
+    push_result(interp, result);
+    Ok(true)
 }
 
 fn is_scalar_value(val: &Value) -> bool {
