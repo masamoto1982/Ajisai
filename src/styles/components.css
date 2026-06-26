@@ -95,6 +95,22 @@
 }
 
 
+/* Dictionary word-search visibility, driven declaratively from the native
+   <select> state with :has() instead of an imperative .hidden toggle in TS.
+   The parent selector (.area-selector-right / .area-selector-mobile) is already
+   shown or hidden per desktop/mobile mode by the media queries, so this only
+   has to gate the search box on the chosen mode being "Dictionary". */
+#right-panel-dictionary-search,
+#mobile-panel-dictionary-search {
+    display: none;
+}
+
+.area-selector-right:has(#right-panel-select option[value="dictionary"]:checked) #right-panel-dictionary-search,
+.area-selector-mobile:has(#mobile-panel-select option[value="dictionary"]:checked) #mobile-panel-dictionary-search {
+    display: flex;
+}
+
+
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -402,8 +418,13 @@
 
 
 .context-menu {
+    /* Shown as a native popover (top layer): neutralize the UA popover defaults
+       (centering inset/margin and the default border) and position via the
+       cursor coordinates set in JS. */
     position: fixed;
-    z-index: 1000;
+    inset: auto;
+    margin: 0;
+    border: 0;
     min-width: 12rem;
     padding: 0.125rem;
     background: #fff;
@@ -454,14 +475,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    /* The sheet (not the words-display) is the scroller now, so pin the word
-       info to the top: hover/selection descriptions stay visible no matter how
-       far the glossary below is scrolled. */
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #fff;
 }
 
 .dictionary-sheet .word-info-display.is-placeholder {
@@ -489,38 +502,8 @@
 }
 
 .dictionary-sheet .words-display {
-    /* Fill the sheet so the whole area stays a click target and the column
-       rules span the panel, but never shrink below the content height: when the
-       glossary is taller than the panel the sheet (above) scrolls vertically,
-       rather than the multi-column layout fragmenting off to the right. */
-    flex: 1 0 auto;
+    flex: 1;
     min-height: 7rem;
-    display: block;
-    overflow: visible;
-
-    /* Print-style multi-column glossary. A column-width (not a fixed count)
-       makes the number of columns intrinsic to the available space, so it
-       adapts across the desktop and mobile widths on its own; column-rule draws
-       the hairline divider between adjacent columns. */
-    column-width: 9rem;
-    column-gap: 1.25rem;
-    column-rule: var(--border-main);
-}
-
-/* With no words, drop the columns so the placeholder message spans the full
-   width and no stray rule is drawn. */
-.dictionary-sheet .words-display.is-empty {
-    column-width: auto;
-    column-rule: none;
-}
-
-/* Keep the Export / Import (and module) actions reachable while the glossary
-   scrolls underneath them. */
-.dictionary-sheet .vocabulary-actions {
-    position: sticky;
-    bottom: 0;
-    background: #fff;
-    padding-top: 0.25rem;
 }
 
 .empty-words-message {
@@ -571,11 +554,7 @@
     gap: 0.5rem;
     min-height: 0;
     width: 100%;
-
-    /* The sheet is the vertical scroller for the glossary; the words-display
-       inside grows with its content (see below) so its multi-column layout
-       flows downward and scrolls here, never sideways. */
-    overflow: hidden auto;
+    overflow: hidden;
 }
 
 .dictionary-sheet:not(.active) {
@@ -604,8 +583,14 @@
     cursor: pointer;
     border-radius: var(--radius-word-button);
 
-    /* Keep a chip whole when the glossary breaks into columns. */
-    break-inside: avoid;
+    /* Skip rendering chips that are scrolled out of the words list — the only
+       list here that can grow without bound (large user/module vocabularies).
+       contain-intrinsic-size uses the `auto` keyword so each chip's real size is
+       remembered after it is first laid out, keeping wrap and scroll positions
+       stable; the fallbacks are only the estimate for a chip not yet rendered. */
+    content-visibility: auto;
+    contain-intrinsic-width: auto 4rem;
+    contain-intrinsic-height: auto 1.75rem;
 
     &.core {
         border-color: var(--color-core);
@@ -677,11 +662,13 @@
 }
 
 .sheet-selector-panel {
-    position: absolute;
-    z-index: 1000;
-    left: 0;
-    right: 0;
-    top: calc(100% + 2px);
+    /* Native popover (top layer): the left/top/width are set in JS from the
+       trigger's rect just before it opens; here we only neutralize the UA
+       popover centering and padding. */
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: 0;
     max-height: 60vh;
     overflow-y: auto;
     background: #fff;

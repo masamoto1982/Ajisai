@@ -77,10 +77,16 @@ const createDeleteContextMenuElement = (
     onDelete: () => void
 ): HTMLDivElement => {
     const menu = document.createElement('div');
-    menu.hidden = true;
+    // Native popover: top-layer placement and light-dismiss (outside click /
+    // Escape) are handled by the browser, so no document-level listeners or
+    // z-index management are needed. `inset: auto; margin: 0` lets the explicit
+    // left/top below position it at the cursor (overriding the popover UA
+    // centering).
+    menu.popover = 'auto';
     Object.assign(menu.style, {
         position: 'fixed',
-        zIndex: '1000',
+        inset: 'auto',
+        margin: '0',
         minWidth: '7rem',
         padding: '0.125rem',
         backgroundColor: '#ffffff',
@@ -135,26 +141,25 @@ export const createVocabularyManager = (
     let activeContextWordName: string | null = null;
 
     const hideDeleteContextMenu = (): void => {
-        deleteContextMenu.hidden = true;
+        if (deleteContextMenu.matches(':popover-open')) deleteContextMenu.hidePopover();
         activeContextWordName = null;
     };
 
     const renderDeleteContextMenu = (event: MouseEvent, wordName: string): void => {
         activeContextWordName = wordName;
-        deleteContextMenu.hidden = false;
         deleteContextMenu.style.left = `${event.clientX}px`;
         deleteContextMenu.style.top = `${event.clientY}px`;
+        if (deleteContextMenu.matches(':popover-open')) deleteContextMenu.hidePopover();
+        deleteContextMenu.showPopover();
     };
 
-    document.addEventListener('click', () => {
-        hideDeleteContextMenu();
-    });
-    document.addEventListener('contextmenu', (event) => {
-        if (!(event.target instanceof HTMLElement) || !event.target.closest('.word-button')) {
-            hideDeleteContextMenu();
+    // Reset the tracked word when the popover is light-dismissed (outside click /
+    // Escape) so a later Delete can't act on a stale selection.
+    deleteContextMenu.addEventListener('toggle', (event) => {
+        if ((event as ToggleEvent).newState === 'closed') {
+            activeContextWordName = null;
         }
     });
-    window.addEventListener('blur', hideDeleteContextMenu);
 
     [elements.builtInWordsDisplay, elements.userWordsDisplay].forEach(container => {
         registerBackgroundClickListeners(container, onBackgroundClick, onBackgroundDoubleClick);

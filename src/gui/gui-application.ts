@@ -131,17 +131,6 @@ export const createGUI = (): GUI => {
         switchDictionarySheet(elements.dictionaryArea, sheetId);
     };
 
-    // The parent selectors (.area-selector-right / .area-selector-mobile) are already
-    // hidden at the off-breakpoint by CSS. This JS control is for the in-breakpoint case:
-    // within a single breakpoint the selector stays visible across all right/mobile modes,
-    // so the search input must be hidden whenever the active mode is not 'dictionary'.
-    const syncDictionarySearchVisibility = (): void => {
-        const isDesktopDictionary = !mobile.isMobile() && layoutState.currentRightMode === 'dictionary';
-        const isMobileDictionary = mobile.isMobile() && layoutState.currentMode === 'dictionary';
-        elements.rightPanelDictionarySearch.hidden = !isDesktopDictionary;
-        elements.mobilePanelDictionarySearch.hidden = !isMobileDictionary;
-    };
-
     const buildApplyAreaStateDeps = (): ApplyAreaStateDeps => ({
         elements,
         state: layoutState,
@@ -273,8 +262,7 @@ export const createGUI = (): GUI => {
             state: layoutState,
             elements,
             mobile,
-            buildApplyAreaStateDeps,
-            syncDictionarySearchVisibility
+            buildApplyAreaStateDeps
         });
 
         persistence = createPersistence({
@@ -325,7 +313,6 @@ export const createGUI = (): GUI => {
             updateView: (mode) => layoutController.setArea(mode),
             updateAfterExecution: (changes) => {
                 applyExecutionAreaState(buildApplyAreaStateDeps(), changes);
-                syncDictionarySearchVisibility();
             }
         });
 

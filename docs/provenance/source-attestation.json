@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:c34287d9f20c4c2cb40974a19376a69f5f4cfb31ee9989d01a818d78e1498d32",
+  "rootIdentity": "sha256:4c43f72efbaa0f6ba6212eb3ba298646fbf1a1fb3d518efaf1ece4e6e4a4e404",
   "fileCount": 273,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1119,8 +1119,8 @@
     },
     {
       "path": "src/gui/dictionary-sheet-selector.ts",
-      "sha256": "764b3476095f5ff5222b148f395749d554ae102048eb2e7718babb50c03e28fb",
-      "bytes": 8539
+      "sha256": "a7a01285c9c9dbc22e70ee563ddd83e4da7364fb05d17758664cb9945773b1a8",
+      "bytes": 9306
     },
     {
       "path": "src/gui/example-words.ts",
@@ -1149,8 +1149,8 @@
     },
     {
       "path": "src/gui/gui-application.ts",
-      "sha256": "8da2062060cfdf714486f5c2707e65f668e2ed506adfd58d0a70240538094395",
-      "bytes": 15502
+      "sha256": "31fcc169f2dd8321578dc8bec2f7851942d3eceb597d350480edd3edd54d4794",
+      "bytes": 14632
     },
     {
       "path": "src/gui/gui-dictionary-sheet.ts",
@@ -1159,8 +1159,8 @@
     },
     {
       "path": "src/gui/gui-dom-cache.ts",
-      "sha256": "10a6d941ac2dc36a124875d843673ec6c21128d67b6927b6d55918aa0e414d81",
-      "bytes": 6455
+      "sha256": "5633a0f99de483e351e90b03907929890c289bc09700147fc1ad968fc983826e",
+      "bytes": 6148
     },
     {
       "path": "src/gui/gui-event-bindings.ts",
@@ -1199,8 +1199,8 @@
     },
     {
       "path": "src/gui/layout/layout-controller.ts",
-      "sha256": "7dce803444ecfe4814eafbaf34671ec61db7cda5ff80402cb98d1afc77d167af",
-      "bytes": 1659
+      "sha256": "2063c4633799c0a42b4041477059a73df86a7b62592a7bb76f76df4508921237",
+      "bytes": 1508
     },
     {
       "path": "src/gui/layout/layout-model.ts",
@@ -1219,8 +1219,8 @@
     },
     {
       "path": "src/gui/module-selector-sheets.ts",
-      "sha256": "ecdcc6c5871ca03cda42627a56f550babb654c5907c2b75f2cbc730f288e30f7",
-      "bytes": 14327
+      "sha256": "8f1c18aacb8d6bb8208d1ecac1a05b87ce20d33928a861a041e17e0dc4cda84e",
+      "bytes": 14391
     },
     {
       "path": "src/gui/output-display-renderer.ts",
@@ -1254,8 +1254,8 @@
     },
     {
       "path": "src/gui/vocabulary-state-controller.ts",
-      "sha256": "b16c37ed19e3f7bea0803cd4089fce5978ce13b39194e2edb35b64be9de76e04",
-      "bytes": 13794
+      "sha256": "d266c6cb9c6e99e268767b415f4257c3bd489021df0de931e5888f4ddca1fb16",
+      "bytes": 14257
     },
     {
       "path": "src/platform/index.ts",
@@ -1324,8 +1324,8 @@
     },
     {
       "path": "src/styles/components.css",
-      "sha256": "1790c948d3137223084e6097fac1beba3bd718108bcad4bd7be93d3eba5843fd",
-      "bytes": 20708
+      "sha256": "8ce0cfbf2d297f3e7fa7c519c440cae4092ea4af334e0c07a359efe5a6d7ad79",
+      "bytes": 20566
     },
     {
       "path": "src/styles/debug.css",
