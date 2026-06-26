@@ -66,9 +66,9 @@
         a {
             color: var(--color-primary);
             text-decoration: none;
-        }
 
-        a:hover { color: var(--color-secondary); }
+            &:hover { color: var(--color-secondary); }
+        }
 
         /* 移ろい: 青紫・赤紫・淡水色・淡緑の四色が巡るグラデーション。
            0% と 100% を同一にしてループ時の急な色変化を避ける。 */
@@ -184,11 +184,11 @@
             cursor: pointer;
             color: var(--color-text);
             background: #fff;
-        }
 
-        .btn:hover {
-            background: var(--color-light);
-            color: var(--color-text);
+            &:hover {
+                background: var(--color-light);
+                color: var(--color-text);
+            }
         }
 
         /* コンテンツ: 横軸 3:7。左 30% が navigation、右 70% が article。
@@ -209,58 +209,72 @@
             padding: 1.5rem 2rem;
             border-top: var(--border-main);
             background: var(--color-light);
+
+            & h2 {
+                font-size: 0.95rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--color-text-light);
+                margin-bottom: 0.75rem;
+            }
+
+            /* navigation is a plain list of links. Leave link colors (unvisited /
+               visited), underline, and hover to the user-agent default — minimal,
+               unadorned styling. */
+            & a,
+            & a:hover {
+                color: revert;
+                text-decoration: revert;
+            }
         }
 
-        .ref-nav h2 {
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--color-text-light);
-            margin-bottom: 0.75rem;
-        }
-
-        /* navigation is a plain list of links. Leave link colors (unvisited /
-           visited), underline, and hover to the user-agent default — minimal,
-           unadorned styling. */
-        .ref-nav a,
-        .ref-nav a:hover {
-            color: revert;
-            text-decoration: revert;
-        }
-
-        /* Each .ref-page is one page; JS hides every page except the current one. */
-        .ref-page[hidden] {
+        /* Each .ref-page is one page. Visibility is declarative: the URL fragment
+           selects the visible page through :target, so no JS show/hide is needed
+           (and there is no first-paint flash of every page at once). When nothing
+           is targeted — a bare URL — :has() falls back to showing the first page. */
+        .ref-page {
             display: none;
         }
 
-        .ref-article h2 {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            padding-bottom: 0.3rem;
-            border-bottom: var(--border-main);
+        .ref-page:target {
+            display: block;
         }
 
-        .ref-article h3 {
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin: 1.25rem 0 0.4rem;
+        .ref-main:not(:has(.ref-page:target)) #intro {
+            display: block;
         }
 
-        .ref-article p { margin: 0.5rem 0; }
+        .ref-article {
+            & h2 {
+                font-size: 1.4rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.3rem;
+                border-bottom: var(--border-main);
+            }
 
-        .ref-article ol.ref-list {
-            margin: 0.5rem 0;
-            padding-left: 1.5rem;
-        }
-        .ref-article ol.ref-list li { margin: 0.25rem 0; }
+            & h3 {
+                font-size: 1.05rem;
+                font-weight: 600;
+                margin: 1.25rem 0 0.4rem;
+            }
 
-        .ref-article code {
-            font-family: var(--font-stack-mono);
-            font-size: 0.9em;
-            background: var(--color-medium);
-            padding: 0.1rem 0.3rem;
-            border-radius: 3px;
+            & p { margin: 0.5rem 0; }
+
+            & ol.ref-list {
+                margin: 0.5rem 0;
+                padding-left: 1.5rem;
+
+                & li { margin: 0.25rem 0; }
+            }
+
+            & code {
+                font-family: var(--font-stack-mono);
+                font-size: 0.9em;
+                background: var(--color-medium);
+                padding: 0.1rem 0.3rem;
+                border-radius: 3px;
+            }
         }
 
         /* The "Open in Playground" button sits on its own line at the bottom
@@ -270,12 +284,12 @@
            button at the bottom right. */
         .sample {
             margin: 1.25rem 0;
-        }
 
-        .sample-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 0.5rem;
+            & .sample-actions {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 0.5rem;
+            }
         }
 
         /* The table is wrapped in a horizontally scrollable container so long
@@ -288,35 +302,35 @@
         .ref-table {
             width: 100%;
             border-collapse: collapse;
-        }
 
-        .ref-table th,
-        .ref-table td {
-            border: var(--border-main);
-            padding: 0.5rem 0.75rem;
-            text-align: left;
-            vertical-align: top;
-        }
+            & th,
+            & td {
+                border: var(--border-main);
+                padding: 0.5rem 0.75rem;
+                text-align: left;
+                vertical-align: top;
+            }
 
-        .ref-table th {
-            background: var(--color-light);
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: var(--color-text-light);
-        }
+            & th {
+                background: var(--color-light);
+                font-weight: 600;
+                font-size: 0.8rem;
+                color: var(--color-text-light);
+            }
 
-        .ref-table td code {
-            background: none;
-            padding: 0;
-            font-family: var(--font-stack-mono);
-            font-size: 0.85rem;
-            color: var(--color-text);
-            white-space: pre;
-        }
+            & td code {
+                background: none;
+                padding: 0;
+                font-family: var(--font-stack-mono);
+                font-size: 0.85rem;
+                color: var(--color-text);
+                white-space: pre;
+            }
 
-        .ref-table td.notes {
-            font-size: 0.85rem;
-            color: var(--color-text-light);
+            & td.notes {
+                font-size: 0.85rem;
+                color: var(--color-text-light);
+            }
         }
 
         /* Word/sugar summary tables (not samples): same look, slightly tighter. */
@@ -341,8 +355,11 @@
             text-align: center;
         }
 
-        .ref-footer a { color: var(--color-text-light); }
-        .ref-footer a:hover { color: var(--color-text); }
+        .ref-footer a {
+            color: var(--color-text-light);
+
+            &:hover { color: var(--color-text); }
+        }
 
         /* デスクトップ: 横軸 3:7。nav を左（30%）、article を右（70%）に。
            align-items: stretch（既定）により両カラムが同じ高さに伸び、nav の
@@ -2000,19 +2017,17 @@ COND</code></td>
                 window.location.hash = '#' + pages[next].id;
             }
 
-            function showPage(id) {
+            // Page visibility itself is handled in CSS via :target / :has(); JS only
+            // mirrors the current page into aria-current (accessibility; CSS cannot
+            // set it), falling back to the first page when nothing is targeted.
+            function markCurrentPage() {
+                var id = window.location.hash.replace(/^#/, '');
                 var target = null;
                 pages.forEach(function (page) {
                     if (page.id === id) target = page;
                 });
-                // 該当頁がなければ先頭頁にフォールバック。
                 if (!target) target = pages[0];
 
-                pages.forEach(function (page) {
-                    page.hidden = page !== target;
-                });
-                // aria-current marks the link for the current page (accessibility
-                // only; no visual decoration is applied).
                 navLinks.forEach(function (link) {
                     if (pageIdFromLink(link) === target.id) {
                         link.setAttribute('aria-current', 'page');
@@ -2020,11 +2035,10 @@ COND</code></td>
                         link.removeAttribute('aria-current');
                     }
                 });
-                return target;
             }
 
             function syncFromHash(userInitiated) {
-                showPage(window.location.hash.replace(/^#/, ''));
+                markCurrentPage();
                 // モバイルでは頁を切り替えたら先頭へ戻し、新しい頁を頭から読めるように。
                 if (userInitiated && mobileQuery.matches && contentArea) {
                     contentArea.scrollTo({ top: 0, behavior: 'smooth' });
