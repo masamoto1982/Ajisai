@@ -280,7 +280,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
 /// One level of children for a value, or `None` for a leaf (scalar/NIL) or a
 /// non-broadcastable value. Dense tensors are decomposed into their outermost
 /// rows so that recursive broadcasting treats them like nested vectors.
-fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
+pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
     match &value.data {
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             Some(items.as_ref().clone())

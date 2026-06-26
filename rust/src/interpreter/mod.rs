@@ -62,6 +62,8 @@ mod arithmetic_exact_div_tests;
 #[cfg(test)]
 mod child_runtime_tests;
 #[cfg(test)]
+mod exact_vector_broadcast_tests;
+#[cfg(test)]
 mod control_cond_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
