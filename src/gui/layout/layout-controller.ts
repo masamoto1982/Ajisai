@@ -14,7 +14,6 @@ export type LayoutControllerDeps = {
     readonly elements: GUIElements;
     readonly mobile: MobileHandler;
     readonly buildApplyAreaStateDeps: () => ApplyAreaStateDeps;
-    readonly syncDictionarySearchVisibility: () => void;
 };
 
 // `setArea` realizes a Presentation Profile transition (SPEC Portability
@@ -25,12 +24,10 @@ export const createLayoutController = (deps: LayoutControllerDeps): LayoutContro
     const setArea = (mode: ViewMode): void => {
         deps.state.currentMode = mode;
         applyAreaState(deps.buildApplyAreaStateDeps(), mode);
-        deps.syncDictionarySearchVisibility();
     };
 
     const handleResize = (): void => {
         applyAreaState(deps.buildApplyAreaStateDeps(), deps.state.currentMode);
-        deps.syncDictionarySearchVisibility();
         updateEditorPlaceholder(deps.elements, deps.mobile);
     };
 

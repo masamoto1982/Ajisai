@@ -60,16 +60,40 @@ export const createDictionarySheetSelector = (
     nativeTrigger.setAttribute('aria-hidden', 'true');
     nativeTrigger.tabIndex = -1;
 
+    const SHEET_SELECTOR_PANEL_ID = 'sheet-selector-panel';
+
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.className = 'sheet-selector-trigger';
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-expanded', 'false');
+    // Let the browser toggle the popover natively (handles the
+    // open-trigger/light-dismiss interplay that a manual click handler gets wrong).
+    trigger.setAttribute('popovertarget', SHEET_SELECTOR_PANEL_ID);
 
     const panel = document.createElement('div');
     panel.className = 'sheet-selector-panel';
+    panel.id = SHEET_SELECTOR_PANEL_ID;
     panel.setAttribute('role', 'listbox');
-    panel.hidden = true;
+    // Native popover: top-layer placement plus light-dismiss on outside click /
+    // Escape, replacing the former document-click and window-blur listeners.
+    panel.popover = 'auto';
+
+    // The popover lives in the top layer, so anchor it to the closed control with
+    // fixed coordinates taken just before it opens (no flash), and mirror its width.
+    const positionPanel = (): void => {
+        const rect = rootEl.getBoundingClientRect();
+        panel.style.left = `${rect.left}px`;
+        panel.style.top = `${rect.bottom + 2}px`;
+        panel.style.width = `${rect.width}px`;
+    };
+    panel.addEventListener('beforetoggle', (e) => {
+        if ((e as Event & { newState: string }).newState === 'open') positionPanel();
+    });
+    panel.addEventListener('toggle', (e) => {
+        const isOpen = (e as Event & { newState: string }).newState === 'open';
+        trigger.setAttribute('aria-expanded', String(isOpen));
+    });
 
     rootEl.appendChild(nativeTrigger);
     rootEl.appendChild(trigger);
@@ -98,13 +122,7 @@ export const createDictionarySheetSelector = (
     };
 
     const closePanel = (): void => {
-        panel.hidden = true;
-        trigger.setAttribute('aria-expanded', 'false');
-    };
-
-    const openPanel = (): void => {
-        panel.hidden = false;
-        trigger.setAttribute('aria-expanded', 'true');
+        if (panel.matches(':popover-open')) panel.hidePopover();
     };
 
     const selectSheet = (sheetId: string): void => {
@@ -190,17 +208,6 @@ export const createDictionarySheetSelector = (
         }
         panel.appendChild(fragment);
     };
-
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (panel.hidden) openPanel();
-        else closePanel();
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!rootEl.contains(e.target as Node)) closePanel();
-    });
-    window.addEventListener('blur', closePanel);
 
     Object.defineProperty(rootEl, 'value', {
         configurable: true,

@@ -27,9 +27,7 @@ export interface GUIElements {
     readonly statePanel: HTMLElement;
     readonly leftPanelSelect: HTMLSelectElement;
     readonly rightPanelSelect: HTMLSelectElement;
-    readonly rightPanelDictionarySearch: HTMLElement;
     readonly mobilePanelSelect: HTMLSelectElement;
-    readonly mobilePanelDictionarySearch: HTMLElement;
     readonly mobileDictionarySearch: HTMLInputElement;
     readonly mobileDictionarySearchClearBtn: HTMLButtonElement;
     readonly copyOutputBtn: HTMLButtonElement;
@@ -103,9 +101,7 @@ export const cacheElements = (): GUIElements => ({
     statePanel: requireElementById('state-panel', HTMLElement),
     leftPanelSelect: requireElementById('left-panel-select', HTMLSelectElement),
     rightPanelSelect: requireElementById('right-panel-select', HTMLSelectElement),
-    rightPanelDictionarySearch: requireElementById('right-panel-dictionary-search', HTMLElement),
     mobilePanelSelect: requireElementById('mobile-panel-select', HTMLSelectElement),
-    mobilePanelDictionarySearch: requireElementById('mobile-panel-dictionary-search', HTMLElement),
     mobileDictionarySearch: requireElementById('mobile-dictionary-search', HTMLInputElement),
     mobileDictionarySearchClearBtn: requireElementById('mobile-dictionary-search-clear-btn', HTMLButtonElement),
     copyOutputBtn: requireElementById('copy-output-btn', HTMLButtonElement),

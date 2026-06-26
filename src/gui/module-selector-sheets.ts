@@ -43,7 +43,9 @@ type ContextMenuAction = {
 
 const createContextMenuElement = (): HTMLDivElement => {
     const menu = document.createElement('div');
-    menu.hidden = true;
+    // Native popover: the browser puts it in the top layer and light-dismisses it
+    // on outside click / Escape, so no document-level listeners are needed here.
+    menu.popover = 'auto';
     menu.className = 'context-menu module-context-menu';
     document.body.appendChild(menu);
     return menu;
@@ -62,14 +64,15 @@ const renderContextMenu = (
         button.disabled = Boolean(action.disabled);
         button.addEventListener('click', (clickEvent) => {
             clickEvent.stopPropagation();
-            menu.hidden = true;
+            if (menu.matches(':popover-open')) menu.hidePopover();
             if (!action.disabled) action.onClick();
         });
         menu.appendChild(button);
     }
-    menu.hidden = false;
     menu.style.left = `${event.clientX}px`;
     menu.style.top = `${event.clientY}px`;
+    if (menu.matches(':popover-open')) menu.hidePopover();
+    menu.showPopover();
 };
 
 const quoteAjisaiString = (value: string): string => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -105,13 +108,6 @@ export const createModuleTabManager = (
     const sheets: ModuleSheet[] = [];
     let searchFilter = '';
     const contextMenu = createContextMenuElement();
-
-    const hideContextMenu = (): void => {
-        contextMenu.hidden = true;
-    };
-
-    document.addEventListener('click', hideContextMenu);
-    window.addEventListener('blur', hideContextMenu);
 
     // Activation toggles are intentionally implemented as real IMPORT /
     // UNIMPORT / IMPORT-ONLY / UNIMPORT-ONLY executions so the GUI gesture is
