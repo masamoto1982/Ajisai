@@ -1,6 +1,16 @@
 # Handoff: D1 — scalar–scalar arithmetic fast path (bypass the tensor wrapper)
 
-Status: **not implemented**. This is a handoff spec for whoever picks up D1.
+Status: **implemented and landed**. The completed work is documented in
+`scalar-fastpath-d1.md`; this file is retained as the original handoff spec and
+as the record of the invariants the implementation had to preserve. The fast
+path is guarded by `Interpreter::set_scalar_fastpath_enabled(bool)` /
+`AJISAI_NO_SCALAR_FASTPATH`, covers `+ - * /` and `< <= > >= = !=` for bare
+scalars and same-shape singleton tensor/vector operands in `StackTop` mode
+(`Consume` and `Keep`), and is pinned by the ON/OFF differential suite in
+`rust/src/interpreter/scalar_fastpath_tests.rs`. Measured win on the
+`tail_call_bench` countdown: **~1.19x** (8426.7 → 7081.7 ns/iter; 2,004,000
+fast-path hits ON, 0 OFF).
+
 It is a *value-model* optimization adjacent to the arithmetic kernel, not a
 change to the exact-arithmetic algorithms. The canonical language definition is
 `SPECIFICATION.html`; D1 must not change any observable result.
