@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:81e2d7400d536f0f9385667997b673a21ed9106631f3f98d79c5c34180943920",
-  "fileCount": 272,
+  "rootIdentity": "sha256:4ca70dd4dbd6c613a4b4386c91d2cf06d0fe6a690f29cb2a574ae20f8d81673e",
+  "fileCount": 273,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -204,8 +204,8 @@
     },
     {
       "path": "rust/src/interpreter/arithmetic.rs",
-      "sha256": "097984e433b0c3ac6eaf06bd976f428d933a59803e5afc5b48d6593aa14055cb",
-      "bytes": 18038
+      "sha256": "e8df925d245c85bb76ddcb72d351cc3a7be4644a63a6dd875352bce4cc90b912",
+      "bytes": 23339
     },
     {
       "path": "rust/src/interpreter/arithmetic_exact_div_tests.rs",
@@ -438,6 +438,11 @@
       "bytes": 5571
     },
     {
+      "path": "rust/src/interpreter/exact_vector_broadcast_tests.rs",
+      "sha256": "c6305ee31dc72516f541b7499d893cb755e83b5853dfb1f5d0032307124daa4c",
+      "bytes": 4377
+    },
+    {
       "path": "rust/src/interpreter/execute_builtin.rs",
       "sha256": "6813270f0bafac456eff42762ac7a9b726bd329086af56760e8256eee05947d6",
       "bytes": 21598
@@ -624,8 +629,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "8fa5c72c423828dada9ce463555212e484840ade20d00d7c76e48afdc7025aaf",
-      "bytes": 2981
+      "sha256": "560f28f9ae25619c97a07c5d70baf6d16f3051c1b9b4ad4e9474993526cce0ff",
+      "bytes": 3028
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -769,8 +774,8 @@
     },
     {
       "path": "rust/src/interpreter/tensor_ops.rs",
-      "sha256": "1aa2bbb89da26a7b2e80e874acb9959bda28f86f6a61144252a46810622982f9",
-      "bytes": 18303
+      "sha256": "def637bfa6cb999c77c00053296ff6c67e1bc97a908d1ff1d59a891735b0401e",
+      "bytes": 18314
     },
     {
       "path": "rust/src/interpreter/time_calendar.rs",
