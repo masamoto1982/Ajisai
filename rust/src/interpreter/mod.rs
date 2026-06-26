@@ -69,6 +69,8 @@ mod control_exec_eval_tests;
 #[cfg(test)]
 mod datetime_tests;
 #[cfg(test)]
+mod dependents_index_tests;
+#[cfg(test)]
 mod dictionary_operation_tests;
 #[cfg(test)]
 mod dictionary_resolution_tests;

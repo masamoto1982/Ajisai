@@ -6,6 +6,9 @@ mod fast_kernels;
 mod filter;
 mod hedged;
 mod map;
+mod memo;
+#[cfg(test)]
+mod memo_tests;
 mod runners;
 
 pub(crate) use common::{execute_executable_code, extract_executable_code, ExecutableCode};

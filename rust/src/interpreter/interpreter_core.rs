@@ -277,6 +277,16 @@ pub struct RuntimeMetrics {
     /// call that ran as a loop iteration instead of growing `call_depth`
     /// and the native stack. Observational only; never alters value results.
     pub tail_call_jump_count: u64,
+
+    // ── Pure HOF kernel memoization (direction B) ─────────────────────────
+    /// Per-element MAP kernel applications served from the pure-result cache
+    /// instead of re-running the kernel. Observational only.
+    pub hof_memo_hit_count: u64,
+    /// Per-element MAP kernel applications that missed the cache and ran the
+    /// kernel. Observational only.
+    pub hof_memo_miss_count: u64,
+    /// Pure per-element MAP kernel results written into the cache.
+    pub hof_memo_store_count: u64,
 }
 
 pub struct Interpreter {

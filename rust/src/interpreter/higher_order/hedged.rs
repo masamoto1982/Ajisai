@@ -151,7 +151,54 @@ pub(crate) fn execute_hedged_map_kernel(
     }
 }
 
+/// Build the `(kernel key, element key)` for predicate-family memoization, or
+/// `None` when memoization must not engage: only a pure quantized kernel, in
+/// the plain greedy path (never hedged/fast-guarded, where the race/guard
+/// events must stay observable), over a canonically-keyable element qualifies.
+fn predicate_memo_keys(
+    interp: &Interpreter,
+    qb: &QuantizedBlock,
+    plain_tokens: Option<&[Token]>,
+    elem: &Value,
+) -> Option<(String, String)> {
+    if !interp.hof_memo_enabled
+        || qb.purity != crate::interpreter::quantized_block::QuantizedPurity::Pure
+        || hedged_mode(interp.elastic_mode())
+        || fast_guarded_mode(interp.elastic_mode())
+    {
+        return None;
+    }
+    let kernel_key = super::memo::kernel_token_key(plain_tokens)?;
+    let elem_key = super::memo::element_value_key(elem)?;
+    Some((kernel_key, elem_key))
+}
+
+/// Pure-kernel memoization shared by FILTER / ANY / ALL / COUNT: the predicate
+/// runs against an isolated, element-only stack, so a pure kernel's boolean
+/// result depends only on the element and is reusable across repeated elements.
+/// Centralized here so all four predicate words benefit from one site. See
+/// `memo.rs` for the soundness argument.
 pub(crate) fn execute_hedged_predicate_kernel(
+    interp: &mut Interpreter,
+    op_name: &str,
+    qb: &QuantizedBlock,
+    plain_tokens: Option<&[Token]>,
+    elem: Value,
+) -> Result<bool> {
+    let memo_keys = predicate_memo_keys(interp, qb, plain_tokens, &elem);
+    if let Some((kk, ek)) = &memo_keys {
+        if let Some(cached) = interp.hof_memo_fetch_predicate(kk, ek) {
+            return Ok(cached);
+        }
+    }
+    let result = execute_hedged_predicate_kernel_inner(interp, op_name, qb, plain_tokens, elem)?;
+    if let Some((kk, ek)) = &memo_keys {
+        interp.hof_memo_store_predicate(kk, ek, result);
+    }
+    Ok(result)
+}
+
+fn execute_hedged_predicate_kernel_inner(
     interp: &mut Interpreter,
     op_name: &str,
     qb: &QuantizedBlock,

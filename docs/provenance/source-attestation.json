@@ -388,6 +388,11 @@
       "bytes": 22179
     },
     {
+      "path": "rust/src/interpreter/dependents_index_tests.rs",
+      "sha256": "a93d4a31513c41b604dbbcb9419447a7dba47fd4a68f7c82f7e5689fcddfc846",
+      "bytes": 5552
+    },
+    {
       "path": "rust/src/interpreter/dictionary_operation_tests.rs",
       "sha256": "41cc6b3e2fbd0086519fca5ce8687200aa404aa451a8aab12ba6bd7268dee282",
       "bytes": 28625
@@ -509,18 +514,28 @@
     },
     {
       "path": "rust/src/interpreter/higher_order/hedged.rs",
-      "sha256": "f8177f982e85faec14fe5f4eff8f1927e7a084d70524a2ba3fb25f6b0356c80c",
-      "bytes": 10969
+      "sha256": "ad96e5899c1a1dbd2ce7ac1590702a87e78cd759c2a8cb12c5839dd24cbf4c23",
+      "bytes": 12848
     },
     {
       "path": "rust/src/interpreter/higher_order/map.rs",
-      "sha256": "e393603cacd524a76482668eb830fc757c563d551d0275be39fffd9b615ad4c7",
-      "bytes": 10509
+      "sha256": "f745a8a1867340b409a5422a0687b69e4b7cc4b4fd988bd61e95b6e9a1849fd5",
+      "bytes": 12604
+    },
+    {
+      "path": "rust/src/interpreter/higher_order/memo.rs",
+      "sha256": "cab50f757bf74b4e3ce3aac300f869fc0ddf06dd529ba67e0c1291b80f45de79",
+      "bytes": 7092
+    },
+    {
+      "path": "rust/src/interpreter/higher_order/memo_tests.rs",
+      "sha256": "28c0e33a887a5a6deb4e37f2dbae05ae9f1631afa54638d4624540843ef6a6b2",
+      "bytes": 8484
     },
     {
       "path": "rust/src/interpreter/higher_order/mod.rs",
-      "sha256": "6ebfd0ebdf0482e6dcec1fee7ac197d67fb8c5e210e7c9df9ac07706dfc8f845",
-      "bytes": 1587
+      "sha256": "ed5f49056b8fd9b3a10a09f5095c085ca7116ca5051609a45eb5aac135913799",
+      "bytes": 1626
     },
     {
       "path": "rust/src/interpreter/higher_order/runners.rs",
@@ -679,8 +694,8 @@
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
-      "sha256": "8427192cda7d7f4ffa0cae84aac62b07ff35b89127d6d224fda1cb5e9adedbf8",
-      "bytes": 7511
+      "sha256": "d6e41abad040f47b93db13953dbfbe20b6089f56e888c4191be86b00b8697061",
+      "bytes": 8100
     },
     {
       "path": "rust/src/interpreter/quantized_block.rs",
@@ -704,8 +719,13 @@
     },
     {
       "path": "rust/src/interpreter/resolve_word.rs",
-      "sha256": "65eeace0c1afb9903122cc5942887bcb34b3a2fd3e8a81a0a007216d8a621be1",
-      "bytes": 16949
+      "sha256": "ffb63c624a387285eecb791721085fb80c757c0cda768453801cb2bc45fd6538",
+      "bytes": 19820
+    },
+    {
+      "path": "rust/src/interpreter/scalar_fastpath_tests.rs",
+      "sha256": "2c8e887269ea04336aab5eddf48da56897a19d2fbd806a3772a7efbaee6f4a0c",
+      "bytes": 7285
     },
     {
       "path": "rust/src/interpreter/scalar_fastpath.rs",
