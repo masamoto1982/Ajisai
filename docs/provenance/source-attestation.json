@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:4c9f4bb4a337ac2e12501d84923fb17035a30237b2af1f4791d7281c072cc35a",
-  "fileCount": 282,
+  "rootIdentity": "sha256:7dac84f356dd712e55c0521b4480068e598ecb27ecd3b460ad32c5757c27924f",
+  "fileCount": 284,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -83,6 +83,16 @@
       "bytes": 2639
     },
     {
+      "path": "rust/src/cli/clarify.rs",
+      "sha256": "5d752abd1275bd08aa173b56690d2fcbd2f07cb19505a120ed65b35a73b671a8",
+      "bytes": 5492
+    },
+    {
+      "path": "rust/src/cli/clarify_tests.rs",
+      "sha256": "795d06c4a0d3a1806c85d2c17588ad89f4072e34fab574357b650a89aeb653d4",
+      "bytes": 3078
+    },
+    {
       "path": "rust/src/cli/explain.rs",
       "sha256": "d6ab74ca44b3a48e3d2f5ccf5c2c285759287c759bd593b91400d688f8f653a4",
       "bytes": 11258
@@ -99,13 +109,13 @@
     },
     {
       "path": "rust/src/cli/mod.rs",
-      "sha256": "e3351c3696c06ef652c068998f2edc4b1059edb356fb871822e303d7caf2f3a6",
-      "bytes": 24661
+      "sha256": "287a170556ce601743fbd64bd28aceee2ed52c659e55442ad097e0e7a37fa31b",
+      "bytes": 25532
     },
     {
       "path": "rust/src/cli/modifier.rs",
-      "sha256": "3043805ac54c52e374fd9cba41a5816ef2db978d4adb498988f5c3619999664d",
-      "bytes": 6005
+      "sha256": "73ba1ee7212a0f3d3b56159c4d50a1ff6833be2c96f560011822a8ec8b646cd2",
+      "bytes": 6285
     },
     {
       "path": "rust/src/cli/modifier_tests.rs",
@@ -124,8 +134,8 @@
     },
     {
       "path": "rust/src/cli/report.rs",
-      "sha256": "43a8fb2f0595e635b56986c27be599cfebc05d310e3f04f26dfe1d3f894b609f",
-      "bytes": 12756
+      "sha256": "3229c06ad541f5e2b887a9167e2e1c7e673c24c5156ed306a38684f6766a8f74",
+      "bytes": 13721
     },
     {
       "path": "rust/src/cli/report_tests.rs",

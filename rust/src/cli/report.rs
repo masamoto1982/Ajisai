@@ -8,6 +8,7 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
+use super::clarify::{self, Clarification};
 use super::explain::{Explanation, Lang};
 use super::plan_check::PlanCheck;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
@@ -94,7 +95,31 @@ fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
         "hasFallback": check.has_fallback,
         "rejectsNil": check.rejects_nil,
         "findings": findings,
+        "clarifications": clarifications_json(&clarify::from_plan_check(check, lang)),
     })
+}
+
+/// JSON rendering of approach-4 clarifying questions (`super::clarify`). Each
+/// choice carries the Ajisai sugar it resolves to (`apply`), or `null` for a
+/// "leave as is" choice.
+pub(crate) fn clarifications_json(clarifications: &[Clarification]) -> Json {
+    Json::Array(
+        clarifications
+            .iter()
+            .map(|clarification| {
+                let choices: Vec<Json> = clarification
+                    .choices
+                    .iter()
+                    .map(|choice| json!({ "label": choice.label, "apply": choice.apply }))
+                    .collect();
+                json!({
+                    "kind": clarification.kind.as_str(),
+                    "question": clarification.question,
+                    "choices": choices,
+                })
+            })
+            .collect(),
+    )
 }
 
 /// JSON rendering of the plain-language projection (`super::explain`). The
