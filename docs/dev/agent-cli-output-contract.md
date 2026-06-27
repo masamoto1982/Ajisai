@@ -8,10 +8,15 @@ output, which AI agents and verification scripts consume.
 ## 1. Commands and exit codes
 
 ```
-ajisai run <file.ajisai> [--json]
-ajisai check <file.ajisai> [--json]    # tokenize + parse + resolve only; never executes
+ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>]
+ajisai check <file.ajisai> [--json] [--explain] [--lang <ja|en>]  # tokenize + parse + resolve only; never executes
 ajisai version [--json]
 ```
+
+`--explain` adds a deterministic plain-language projection of the diagnosis
+(`explanation`, §10). `--lang` selects its language (default `ja`). Both are
+additive and never change exit codes, the structured fields, or — when
+`--explain` is absent — the output at all.
 
 | Exit code | Meaning |
 |---|---|
@@ -45,7 +50,8 @@ does not prove it will.
   "diagnosis": { ... } | null,
   "errorFlowTrace": [ ... ],
   "aiDiagnostic": { ... } | null,
-  "runtimeMetrics": { "vtu": { ... } }
+  "runtimeMetrics": { "vtu": { ... } },
+  "explanation": { ... } | null
 }
 ```
 
@@ -61,6 +67,7 @@ does not prove it will.
 | `errorFlowTrace` | array | Ordered observation log of word errors **and NIL productions** (§6). May be non-empty even when `status` is `"ok"`: a division by zero, for example, bubbles to NIL (SPEC Bubble Rule) and the run succeeds, but the projection is traced here with a full diagnosis. |
 | `aiDiagnostic` | object \| null | Machine-oriented classification of the failure (§5). Null when `status` is `"ok"`. |
 | `runtimeMetrics` | object | VTU observation counters (§7). All zeros for `check`. |
+| `explanation` | object \| null | Plain-language projection of the diagnosis (§10). Present only with `--explain`; `null` otherwise. |
 
 `version --json` emits only `{ "schemaVersion", "status", "version" }`.
 
@@ -288,3 +295,39 @@ regression (`energy_proxy_regression_tests.rs`).
    `nextChecks` in order. `aiDiagnostic.recoverability` says *what kind of
    change* fixes it (input vs program vs host).
 3. `message` is for humans; never parse it when a structured field exists.
+
+## 10. `explanation` (`--explain`)
+
+A deterministic plain-language **projection** of the diagnosis — the L0
+surface of the natural-language design note
+(`docs/dev/natural-language-surface-design.md` §3). It is computed only when
+`--explain` is passed; the field is `null` otherwise, so the default output is
+byte-stable.
+
+```json
+{
+  "lang": "ja | en",
+  "headline": "what happened, one plain-language sentence",
+  "nextStep": "what kind of change resolves it, one sentence",
+  "details": [ "label: detail", "..." ]
+}
+```
+
+- It is a **projection, not generation**: every sentence is keyed on an
+  existing enum (`diagnosis.why`) or protocol string
+  (`aiDiagnostic.recoverability`, the NIL `absence.reason`). It introduces no
+  new diagnostic concept and cannot say anything the structured fields do not
+  already encode — there is no model in the loop.
+- `headline` distinguishes the three water-model outcomes the language keeps
+  separate, as different *tones*: Stagnation (logical `UNKNOWN`, selected when
+  `agreedPrefix` is non-null), Bubble (`NIL`, an absence with a reason), and a
+  Channel error (malformed use). The mechanism terms themselves are never
+  surfaced.
+- `nextStep` is the `recoverability` value rendered as an action sentence.
+- `details` is `diagnosis.nextChecks` flattened to `label: detail`, verbatim
+  (authored in the core, currently Japanese, regardless of `lang`).
+- `run` also projects a NIL that bubbled on an **otherwise successful run**
+  (exit 0): the last `nilProduced` event becomes an `explanation` with the
+  Bubble tone and `handleUnknownOrNil` next step.
+- `lang` is a table swap over the enum-keyed sentences; adding a language does
+  not touch the projection structure.
