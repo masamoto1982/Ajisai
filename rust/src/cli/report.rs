@@ -8,7 +8,8 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
-use super::explain::Explanation;
+use super::explain::{Explanation, Lang};
+use super::plan_check::PlanCheck;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
@@ -41,6 +42,11 @@ pub(crate) struct Report {
     /// Plain-language projection of the diagnosis (`--explain`). `None` unless
     /// the user opted in; additive field, see the CLI output contract.
     pub explanation: Option<Explanation>,
+    /// Light contract / flow-mass check (`check --contract`). `None` unless the
+    /// user opted in; additive field, see the CLI output contract.
+    pub plan_check: Option<PlanCheck>,
+    /// Language for rendering `plan_check` findings.
+    pub lang: Lang,
 }
 
 impl Report {
@@ -61,8 +67,34 @@ impl Report {
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "explanation": self.explanation.as_ref().map(explanation_json),
+            "planCheck": self.plan_check.as_ref().map(|check| plan_check_json(check, self.lang)),
         })
     }
+}
+
+/// JSON rendering of the light contract check (`super::plan_check`). Structured
+/// mass numbers and NIL-flow word lists, plus the plain-language `findings`.
+fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
+    let findings: Vec<Json> = check
+        .findings(lang)
+        .into_iter()
+        .map(|finding| {
+            json!({
+                "severity": finding.severity.as_str(),
+                "message": finding.message,
+            })
+        })
+        .collect();
+    json!({
+        "overConsumes": check.over_consumes,
+        "minDepth": check.min_depth,
+        "netMass": check.net_mass,
+        "massKnown": check.mass_known,
+        "mayBubble": check.may_bubble,
+        "hasFallback": check.has_fallback,
+        "rejectsNil": check.rejects_nil,
+        "findings": findings,
+    })
 }
 
 /// JSON rendering of the plain-language projection (`super::explain`). The

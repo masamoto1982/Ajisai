@@ -29,6 +29,8 @@ fn ok_report_envelope_has_contract_fields() {
         error_flow_trace: Vec::new(),
         runtime_metrics: interp.runtime_metrics(),
         explanation: None,
+        plan_check: None,
+        lang: super::Lang::Ja,
     };
     let doc = report.to_json();
     assert_eq!(doc["schemaVersion"], report::SCHEMA_VERSION);
@@ -68,6 +70,7 @@ fn error_report_carries_diagnosis_with_next_checks() {
         &super::Opts {
             json: true,
             explain: false,
+            contract: false,
             lang: super::Lang::Ja,
         },
     );
@@ -179,6 +182,8 @@ fn check_report_uses_default_metrics() {
         error_flow_trace: Vec::new(),
         runtime_metrics: RuntimeMetrics::default(),
         explanation: None,
+        plan_check: None,
+        lang: super::Lang::Ja,
     };
     let doc = report.to_json();
     assert_eq!(doc["runtimeMetrics"]["vtu"]["tensorFlattenCount"], 0);

@@ -22,6 +22,12 @@ mod explain;
 #[cfg(test)]
 mod explain_tests;
 mod host;
+mod modifier;
+#[cfg(test)]
+mod modifier_tests;
+mod plan_check;
+#[cfg(test)]
+mod plan_check_tests;
 mod report;
 #[cfg(test)]
 mod report_tests;
@@ -43,13 +49,18 @@ const USAGE: &str = "Usage: ajisai <command> [options]
 Commands:
   run <file.ajisai> [--json]      Execute a program file
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
+  modifier <phrase...>            Infer the modifier (TOP/STAK, EAT/KEEP, ^) for
+                                  an operation-intent phrase (no execution)
   version [--json]                Print version information
 
 Options:
   --json                          Emit one JSON document (pipe-safe)
   --explain                       Add a plain-language explanation of any
                                   diagnosis (headline, next step, details)
-  --lang <ja|en>                  Language for --explain output (default: ja)
+  --contract                      With `check`: add a light, execution-free
+                                  flow-mass and NIL-flow contract check
+  --lang <ja|en>                  Language for --explain / --contract / modifier
+                                  output (default: ja)
 
 Exit codes:
   0  success
@@ -64,6 +75,7 @@ pub fn run(args: &[String]) -> i32 {
     };
     let mut json = false;
     let mut want_explain = false;
+    let mut contract = false;
     let mut lang = Lang::Ja;
     let mut positional: Vec<&str> = Vec::new();
     let mut iter = rest.iter();
@@ -71,6 +83,7 @@ pub fn run(args: &[String]) -> i32 {
         match arg.as_str() {
             "--json" => json = true,
             "--explain" => want_explain = true,
+            "--contract" => contract = true,
             "--lang" => match iter.next().map(String::as_str).and_then(Lang::parse) {
                 Some(parsed) => lang = parsed,
                 None => {
@@ -88,11 +101,13 @@ pub fn run(args: &[String]) -> i32 {
     let opts = Opts {
         json,
         explain: want_explain,
+        contract,
         lang,
     };
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
+        ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
         ("version", []) => cmd_version(json),
         _ => {
             eprintln!("{}", USAGE);
@@ -101,10 +116,11 @@ pub fn run(args: &[String]) -> i32 {
     }
 }
 
-/// Parsed CLI options shared by `run` and `check`.
+/// Parsed CLI options shared across commands.
 struct Opts {
     json: bool,
     explain: bool,
+    contract: bool,
     lang: Lang,
 }
 
@@ -119,6 +135,45 @@ fn cmd_version(json: bool) -> i32 {
         println!("{}", pretty(&doc));
     } else {
         println!("ajisai {}", version);
+    }
+    0
+}
+
+/// `ajisai modifier <phrase...>`: infer the modifier (approach 3) for an
+/// operation-intent phrase. Never executes; always exit 0 (an ambiguous phrase
+/// is reported via the `ambiguous` flag, not as a failure).
+fn cmd_modifier(phrase: &str, opts: &Opts) -> i32 {
+    let inference = modifier::infer(phrase, opts.lang);
+    if opts.json {
+        let doc = serde_json::json!({
+            "schemaVersion": report::SCHEMA_VERSION,
+            "status": "ok",
+            "modifier": {
+                "target": inference.target.as_str(),
+                "consume": inference.consume.as_str(),
+                "fallback": inference.fallback,
+                "targetExplicit": inference.target_explicit,
+                "consumeExplicit": inference.consume_explicit,
+                "ambiguous": inference.ambiguous,
+                "sugar": inference.sugar,
+                "rationale": inference.rationale,
+            },
+        });
+        println!("{}", pretty(&doc));
+    } else {
+        let fallback = if inference.fallback { " ^" } else { "" };
+        println!(
+            "modifier: {} {}{}",
+            inference.target.as_str(),
+            inference.consume.as_str(),
+            fallback
+        );
+        if inference.sugar.is_empty() {
+            println!("sugar: (defaults: TOP EAT — no modifier needed)");
+        } else {
+            println!("sugar: {}", inference.sugar);
+        }
+        println!("{}", inference.rationale);
     }
     0
 }
@@ -179,6 +234,8 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
                 error_flow_trace: trace,
                 runtime_metrics: interp.runtime_metrics(),
                 explanation,
+                plan_check: None,
+                lang: opts.lang,
             };
             emit(&report, opts);
             0
@@ -231,6 +288,8 @@ fn error_report(
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
         explanation,
+        plan_check: None,
+        lang: opts.lang,
     }
 }
 
@@ -444,9 +503,22 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
         return 1;
     }
 
+    // Light, execution-free contract / flow-mass check (approach 2, light).
+    // A malformed plan (over-consumption) is reported as exit 1; advisories and
+    // notes do not change the exit code.
+    let plan_check = if opts.contract {
+        plan_check::check_plan(&interp, &source).ok()
+    } else {
+        None
+    };
+    let contract_failed = plan_check
+        .as_ref()
+        .map(|check| check.over_consumes)
+        .unwrap_or(false);
+
     if opts.json {
         let report = Report {
-            status: "ok",
+            status: if contract_failed { "error" } else { "ok" },
             stack: serde_json::Value::Array(Vec::new()),
             stack_display: Vec::new(),
             output: Vec::new(),
@@ -456,12 +528,24 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             error_flow_trace: Vec::new(),
             runtime_metrics: RuntimeMetrics::default(),
             explanation: None,
+            plan_check,
+            lang: opts.lang,
         };
         println!("{}", pretty(&report.to_json()));
     } else {
-        println!("ok: {} ({} tokens)", path, tokens.len());
+        let status = if contract_failed { "fail" } else { "ok" };
+        println!("{}: {} ({} tokens)", status, path, tokens.len());
+        if let Some(check) = &plan_check {
+            for finding in check.findings(opts.lang) {
+                eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
+            }
+        }
     }
-    0
+    if contract_failed {
+        1
+    } else {
+        0
+    }
 }
 
 /// Static bracket balance for vector literals and code blocks. Purely

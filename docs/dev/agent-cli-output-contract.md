@@ -9,14 +9,18 @@ output, which AI agents and verification scripts consume.
 
 ```
 ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>]
-ajisai check <file.ajisai> [--json] [--explain] [--lang <ja|en>]  # tokenize + parse + resolve only; never executes
+ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
+ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
 ajisai version [--json]
 ```
 
 `--explain` adds a deterministic plain-language projection of the diagnosis
-(`explanation`, §10). `--lang` selects its language (default `ja`). Both are
-additive and never change exit codes, the structured fields, or — when
-`--explain` is absent — the output at all.
+(`explanation`, §10). `--contract` adds a light, execution-free flow-mass and
+NIL-flow check to `check` (`planCheck`, §11). `--lang` selects the language for
+all plain-language output (default `ja`). All are additive and never change the
+structured fields; with neither `--explain` nor `--contract`, output is
+unchanged. `--contract` raises exit 1 when it finds a malformed (over-consuming)
+plan; advisories and notes do not change the exit code.
 
 | Exit code | Meaning |
 |---|---|
@@ -51,7 +55,8 @@ does not prove it will.
   "errorFlowTrace": [ ... ],
   "aiDiagnostic": { ... } | null,
   "runtimeMetrics": { "vtu": { ... } },
-  "explanation": { ... } | null
+  "explanation": { ... } | null,
+  "planCheck": { ... } | null
 }
 ```
 
@@ -68,8 +73,10 @@ does not prove it will.
 | `aiDiagnostic` | object \| null | Machine-oriented classification of the failure (§5). Null when `status` is `"ok"`. |
 | `runtimeMetrics` | object | VTU observation counters (§7). All zeros for `check`. |
 | `explanation` | object \| null | Plain-language projection of the diagnosis (§10). Present only with `--explain`; `null` otherwise. |
+| `planCheck` | object \| null | Light contract / flow-mass check (§11). Present only with `check --contract`; `null` otherwise. |
 
 `version --json` emits only `{ "schemaVersion", "status", "version" }`.
+`modifier --json` emits `{ "schemaVersion", "status", "modifier": { ... } }` (§12).
 
 ### Compatibility policy
 
@@ -331,3 +338,76 @@ byte-stable.
   Bubble tone and `handleUnknownOrNil` next step.
 - `lang` is a table swap over the enum-keyed sentences; adding a language does
   not touch the projection structure.
+
+## 11. `planCheck` (`check --contract`)
+
+A light, **execution-free** contract / flow-mass check — the "approach 2, light
+version" of the natural-language design note
+(`docs/dev/natural-language-surface-design.md` §4). It reuses the existing
+static mass-conservation validator (SPEC §13.1) and the §7.14 `nil_policy`
+contract; it does not search for or rewrite a plan. Present only with
+`check --contract`; `null` otherwise.
+
+```json
+{
+  "overConsumes": false,
+  "minDepth": 0,
+  "netMass": 1,
+  "massKnown": true,
+  "mayBubble": [ "DIV", "..." ],
+  "hasFallback": false,
+  "rejectsNil": [ "..." ],
+  "findings": [ { "severity": "error | advisory | note", "message": "..." } ]
+}
+```
+
+- `overConsumes` / `minDepth` / `netMass` / `massKnown` come from the §13.1
+  validator over the statically known prefix. `overConsumes` (`minDepth < 0`)
+  means the flow reads more operands than it provides — a malformed plan, and
+  the only finding that raises exit 1. `massKnown` is `false` once a
+  `Dynamic`-arity word (a user word, `STAK` fold, runtime-shaped vector op)
+  froze the static analysis; the numbers then describe only the prefix.
+- `mayBubble` lists words whose `nil_policy = CreatesNil` (they can project a
+  domain miss to NIL, e.g. `DIV` `GET` `NUM`). A `Projecting` comparison
+  (`LT`/`SORT`/…) projects to logical U, not NIL, and is deliberately not
+  listed.
+- `hasFallback` is `true` when a `^` (VENT) or `=>` (OR-NIL) NIL fallback
+  appears. An unguarded NIL source (`mayBubble` non-empty, `hasFallback` false)
+  is an advisory, the `handleUnknownOrNil` prompt rendered ahead of execution.
+- `findings` are the plain-language `planCheck` surface (L0), most severe
+  first; `severity` is `error` (malformed plan), `advisory`, or `note`. Empty
+  means the plan is clean over the known prefix.
+
+## 12. `modifier` (the `modifier` command)
+
+`ajisai modifier <phrase...>` infers the modifier — `TOP`/`STAK` × `EAT`/`KEEP`
+plus the `^` (VENT) fallback — for an operation-intent phrase (approach 3,
+design note §5). It executes nothing and always exits 0.
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "modifier": {
+    "target": "TOP | STAK",
+    "consume": "EAT | KEEP",
+    "fallback": false,
+    "targetExplicit": false,
+    "consumeExplicit": false,
+    "ambiguous": false,
+    "sugar": ".. ,, ^",
+    "rationale": "plain-language explanation of the inference"
+  }
+}
+```
+
+- It is a **classification over a finite lattice**, not generation. Cue matching
+  is case-insensitive substring containment over a controlled vocabulary
+  (Japanese and English).
+- An axis with no cue takes its default (`TOP` / `EAT`); `targetExplicit` /
+  `consumeExplicit` say whether a cue was actually found.
+- `ambiguous` is `true` when one axis received conflicting cues (e.g. both
+  "keep" and "consume"). The design note routes this to approach 4 as a
+  plain-language clarifying question rather than a guess.
+- `sugar` is the Ajisai modifier sugar for the non-default choices (empty when
+  both axes are at their default).

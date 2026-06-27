@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:070b9bf3791ee326207a6886b41228d6ceb1ea86c1658861bba22f2572bd2bb1",
-  "fileCount": 278,
+  "rootIdentity": "sha256:4c9f4bb4a337ac2e12501d84923fb17035a30237b2af1f4791d7281c072cc35a",
+  "fileCount": 282,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -99,18 +99,38 @@
     },
     {
       "path": "rust/src/cli/mod.rs",
-      "sha256": "e5b4dc576780e8ff11bdd31a9f7d4874bf4d14007df3f9a193f7e959403af1bb",
-      "bytes": 21527
+      "sha256": "e3351c3696c06ef652c068998f2edc4b1059edb356fb871822e303d7caf2f3a6",
+      "bytes": 24661
+    },
+    {
+      "path": "rust/src/cli/modifier.rs",
+      "sha256": "3043805ac54c52e374fd9cba41a5816ef2db978d4adb498988f5c3619999664d",
+      "bytes": 6005
+    },
+    {
+      "path": "rust/src/cli/modifier_tests.rs",
+      "sha256": "aba3e55a29e85efccff455d0e62980d53817f4d0cca3c4921dc010fbd8c8d098",
+      "bytes": 1897
+    },
+    {
+      "path": "rust/src/cli/plan_check.rs",
+      "sha256": "351d64b192d078c143b3fa72696f2f5c3891c2aa88b24ec382c4b239404d2d67",
+      "bytes": 8586
+    },
+    {
+      "path": "rust/src/cli/plan_check_tests.rs",
+      "sha256": "57e24ca4eec169110f0e1cb05ef7b294cc876dfba090d1f50671b07ad0f0b93e",
+      "bytes": 2476
     },
     {
       "path": "rust/src/cli/report.rs",
-      "sha256": "693d582f5bb3020ddb1bd731b186ec800c80019551c0163ba42340733dda85f5",
-      "bytes": 11533
+      "sha256": "43a8fb2f0595e635b56986c27be599cfebc05d310e3f04f26dfe1d3f894b609f",
+      "bytes": 12756
     },
     {
       "path": "rust/src/cli/report_tests.rs",
-      "sha256": "1b291e3c9984535ac9bef41405fa0d38669d92e3e16dfbb5e5d9f9a46a74dd41",
-      "bytes": 7097
+      "sha256": "5c592c4d88bce0367edf919523836bce7eadb830268d9d1c57c389df74266fc1",
+      "bytes": 7240
     },
     {
       "path": "rust/src/conformance_tests.rs",
