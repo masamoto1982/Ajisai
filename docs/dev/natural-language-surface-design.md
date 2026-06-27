@@ -260,6 +260,12 @@ Ajisai の構造的な答えがこの 3 分岐である。`nil_policy` が「ど
 1. **案1（決定的射影レイヤ）** — 最初の一歩。CLI `--json` の `DebugDiagnosis` /
    `AiDiagnosticPayload` → 自然言語のマッピング表を実装。L0 平文 + L2 詳細の二段。
    前向き翻訳がまだ無くても、実行結果の説明として単独で価値がある。
+   **実装済み（第一段）**: `rust/src/cli/explain.rs`。`ajisai run|check --explain
+   [--lang ja|en]` で、診断を平文へ決定的に射影する（Stagnation/Bubble/Channel
+   error をトーンで区別、`recoverability` を次の一手の文へ、`nextChecks` を L2 詳細へ）。
+   `--json` には追加フィールド `explanation` として出力（契約は
+   `docs/dev/agent-cli-output-contract.md` §10）。成功実行中に生じた NIL バブルも
+   射影する。LLM を介さない純射影で、幻覚は構造的に排除される。
 2. **案3（修飾子推定）+ 案2軽量版（契約・質量検査）** — NL 操作意図 → 修飾子格子の
    分類器と、フロー質量保存 / §7.14 照合による事前検査。両者は計画生成で一体。
 3. **案4（逆質問）** — 案2軽量版の検査結果（複数候補成立 / 成立なし）と実行時 UNKNOWN を

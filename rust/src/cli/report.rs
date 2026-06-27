@@ -8,6 +8,7 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
+use super::explain::Explanation;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
@@ -37,6 +38,9 @@ pub(crate) struct Report {
     pub ai_diagnostic: Option<AiDiagnosticPayload>,
     pub error_flow_trace: Vec<ErrorFlowEvent>,
     pub runtime_metrics: RuntimeMetrics,
+    /// Plain-language projection of the diagnosis (`--explain`). `None` unless
+    /// the user opted in; additive field, see the CLI output contract.
+    pub explanation: Option<Explanation>,
 }
 
 impl Report {
@@ -56,8 +60,20 @@ impl Report {
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
+            "explanation": self.explanation.as_ref().map(explanation_json),
         })
     }
+}
+
+/// JSON rendering of the plain-language projection (`super::explain`). The
+/// L0 tier is `headline` + `nextStep`; `details` is the L2 repair checklist.
+fn explanation_json(explanation: &Explanation) -> Json {
+    json!({
+        "lang": explanation.lang.as_str(),
+        "headline": explanation.headline,
+        "nextStep": explanation.next_step,
+        "details": explanation.details,
+    })
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {

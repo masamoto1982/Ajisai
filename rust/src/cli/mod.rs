@@ -18,10 +18,15 @@
 //! interpreter and serializes the existing diagnostic structures. It defines
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
+mod explain;
+#[cfg(test)]
+mod explain_tests;
 mod host;
 mod report;
 #[cfg(test)]
 mod report_tests;
+
+use explain::{Explanation, Lang};
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{
@@ -40,6 +45,12 @@ Commands:
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
   version [--json]                Print version information
 
+Options:
+  --json                          Emit one JSON document (pipe-safe)
+  --explain                       Add a plain-language explanation of any
+                                  diagnosis (headline, next step, details)
+  --lang <ja|en>                  Language for --explain output (default: ja)
+
 Exit codes:
   0  success
   1  language error (structured diagnosis emitted)
@@ -52,10 +63,21 @@ pub fn run(args: &[String]) -> i32 {
         return 2;
     };
     let mut json = false;
+    let mut want_explain = false;
+    let mut lang = Lang::Ja;
     let mut positional: Vec<&str> = Vec::new();
-    for arg in rest {
+    let mut iter = rest.iter();
+    while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--json" => json = true,
+            "--explain" => want_explain = true,
+            "--lang" => match iter.next().map(String::as_str).and_then(Lang::parse) {
+                Some(parsed) => lang = parsed,
+                None => {
+                    eprintln!("--lang expects one of: ja, en\n\n{}", USAGE);
+                    return 2;
+                }
+            },
             flag if flag.starts_with('-') => {
                 eprintln!("Unknown option: {}\n\n{}", flag, USAGE);
                 return 2;
@@ -63,15 +85,27 @@ pub fn run(args: &[String]) -> i32 {
             path => positional.push(path),
         }
     }
+    let opts = Opts {
+        json,
+        explain: want_explain,
+        lang,
+    };
     match (command.as_str(), positional.as_slice()) {
-        ("run", [path]) => cmd_run(path, json),
-        ("check", [path]) => cmd_check(path, json),
+        ("run", [path]) => cmd_run(path, &opts),
+        ("check", [path]) => cmd_check(path, &opts),
         ("version", []) => cmd_version(json),
         _ => {
             eprintln!("{}", USAGE);
             2
         }
     }
+}
+
+/// Parsed CLI options shared by `run` and `check`.
+struct Opts {
+    json: bool,
+    explain: bool,
+    lang: Lang,
 }
 
 fn cmd_version(json: bool) -> i32 {
@@ -89,7 +123,7 @@ fn cmd_version(json: bool) -> i32 {
     0
 }
 
-fn cmd_run(path: &str, json: bool) -> i32 {
+fn cmd_run(path: &str, opts: &Opts) -> i32 {
     let source = match std::fs::read_to_string(path) {
         Ok(source) => source,
         Err(e) => {
@@ -112,8 +146,16 @@ fn cmd_run(path: &str, json: bool) -> i32 {
         );
         let interp = Interpreter::new();
         emit(
-            &error_report(&interp, &diagnosis, None, message, Vec::new(), Vec::new()),
-            json,
+            &error_report(
+                &interp,
+                &diagnosis,
+                None,
+                message,
+                Vec::new(),
+                Vec::new(),
+                opts,
+            ),
+            opts,
         );
         return 1;
     }
@@ -125,6 +167,7 @@ fn cmd_run(path: &str, json: bool) -> i32 {
 
     match result {
         Ok(()) => {
+            let explanation = nil_explanation(&trace, opts);
             let report = Report {
                 status: "ok",
                 stack: report::stack_json(&interp),
@@ -135,8 +178,9 @@ fn cmd_run(path: &str, json: bool) -> i32 {
                 ai_diagnostic: None,
                 error_flow_trace: trace,
                 runtime_metrics: interp.runtime_metrics(),
+                explanation,
             };
-            emit(&report, json);
+            emit(&report, opts);
             0
         }
         Err(err) => {
@@ -147,8 +191,16 @@ fn cmd_run(path: &str, json: bool) -> i32 {
                 .unwrap_or_else(|| DebugDiagnosis::from_error(&err, None, stack_len, stack_len));
             let category = ErrorCategory::from_error(&err);
             emit(
-                &error_report(&interp, &diagnosis, Some(&category), message, output, trace),
-                json,
+                &error_report(
+                    &interp,
+                    &diagnosis,
+                    Some(&category),
+                    message,
+                    output,
+                    trace,
+                    opts,
+                ),
+                opts,
             );
             1
         }
@@ -162,7 +214,12 @@ fn error_report(
     message: String,
     output: Vec<String>,
     trace: Vec<crate::interpreter::error_flow_trace::ErrorFlowEvent>,
+    opts: &Opts,
 ) -> Report {
+    let ai = diagnosis.ai_payload(category, None, None, None);
+    let explanation = opts
+        .explain
+        .then(|| explain::explain(diagnosis, Some(&ai.recoverability), None, opts.lang));
     Report {
         status: "error",
         stack: report::stack_json(interp),
@@ -170,10 +227,40 @@ fn error_report(
         output,
         message: Some(message),
         diagnosis: Some(diagnosis.clone()),
-        ai_diagnostic: Some(diagnosis.ai_payload(category, None, None, None)),
+        ai_diagnostic: Some(ai),
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
+        explanation,
     }
+}
+
+/// On a *successful* run a value may still have bubbled to NIL (SPEC Bubble
+/// Rule). When `--explain` is set, project the last such NIL event so the
+/// user sees the absence in plain language. The actionable advice for a value
+/// that bubbled and flows downstream is to decide a fallback (`VENT`) or add a
+/// branch, so this projects `handleUnknownOrNil` regardless of the underlying
+/// domain cause.
+fn nil_explanation(
+    trace: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
+    opts: &Opts,
+) -> Option<Explanation> {
+    if !opts.explain {
+        return None;
+    }
+    trace.iter().rev().find_map(|event| {
+        let diagnosis = event.diagnosis.as_ref()?;
+        let nil_reason = event
+            .absence
+            .as_ref()
+            .and_then(|absence| absence.reason.as_ref())
+            .map(|reason| reason.as_protocol_str());
+        Some(explain::explain(
+            diagnosis,
+            Some("handleUnknownOrNil"),
+            nil_reason,
+            opts.lang,
+        ))
+    })
 }
 
 fn print_payloads(interp: &Interpreter) -> Vec<String> {
@@ -262,7 +349,7 @@ fn missing_capability_diagnosis(interp: &Interpreter, message: &str) -> Option<D
     })
 }
 
-fn cmd_check(path: &str, json: bool) -> i32 {
+fn cmd_check(path: &str, opts: &Opts) -> i32 {
     let source = match std::fs::read_to_string(path) {
         Ok(source) => source,
         Err(e) => {
@@ -285,8 +372,16 @@ fn cmd_check(path: &str, json: bool) -> i32 {
                 Some(message.clone()),
             );
             emit(
-                &error_report(&interp, &diagnosis, None, message, Vec::new(), Vec::new()),
-                json,
+                &error_report(
+                    &interp,
+                    &diagnosis,
+                    None,
+                    message,
+                    Vec::new(),
+                    Vec::new(),
+                    opts,
+                ),
+                opts,
             );
             return 1;
         }
@@ -311,8 +406,9 @@ fn cmd_check(path: &str, json: bool) -> i32 {
                 message,
                 Vec::new(),
                 Vec::new(),
+                opts,
             ),
-            json,
+            opts,
         );
         return 1;
     }
@@ -341,13 +437,14 @@ fn cmd_check(path: &str, json: bool) -> i32 {
                 message,
                 Vec::new(),
                 Vec::new(),
+                opts,
             ),
-            json,
+            opts,
         );
         return 1;
     }
 
-    if json {
+    if opts.json {
         let report = Report {
             status: "ok",
             stack: serde_json::Value::Array(Vec::new()),
@@ -358,6 +455,7 @@ fn cmd_check(path: &str, json: bool) -> i32 {
             ai_diagnostic: None,
             error_flow_trace: Vec::new(),
             runtime_metrics: RuntimeMetrics::default(),
+            explanation: None,
         };
         println!("{}", pretty(&report.to_json()));
     } else {
@@ -489,8 +587,8 @@ fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
     unknown
 }
 
-fn emit(report: &Report, json: bool) {
-    if json {
+fn emit(report: &Report, opts: &Opts) {
+    if opts.json {
         println!("{}", pretty(&report.to_json()));
         return;
     }
@@ -503,12 +601,25 @@ fn emit(report: &Report, json: bool) {
         } else {
             println!("stack: {}", report.stack_display.join(" "));
         }
+        // A value bubbled to NIL on an otherwise successful run; surface it as
+        // an advisory note when --explain is set (L0 plain language).
+        if let Some(explanation) = &report.explanation {
+            eprintln!("note: {} {}", explanation.headline, explanation.next_step);
+        }
         return;
     }
     if let Some(message) = &report.message {
         eprintln!("error: {}", message);
     }
-    if let Some(diagnosis) = &report.diagnosis {
+    // L0: when --explain is set, lead with the plain-language projection and
+    // the L2 detail list. Otherwise fall back to the raw machine summary.
+    if let Some(explanation) = &report.explanation {
+        eprintln!("{}", explanation.headline);
+        eprintln!("{}", explanation.next_step);
+        for detail in &explanation.details {
+            eprintln!("  - {}", detail);
+        }
+    } else if let Some(diagnosis) = &report.diagnosis {
         eprintln!("diagnosis: {}", diagnosis.summary);
         for check in &diagnosis.next_checks {
             eprintln!("  - {}: {}", check.label, check.detail);

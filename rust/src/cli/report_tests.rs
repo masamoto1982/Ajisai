@@ -28,6 +28,7 @@ fn ok_report_envelope_has_contract_fields() {
         ai_diagnostic: None,
         error_flow_trace: Vec::new(),
         runtime_metrics: interp.runtime_metrics(),
+        explanation: None,
     };
     let doc = report.to_json();
     assert_eq!(doc["schemaVersion"], report::SCHEMA_VERSION);
@@ -64,9 +65,18 @@ fn error_report_carries_diagnosis_with_next_checks() {
         err.to_string(),
         Vec::new(),
         trace,
+        &super::Opts {
+            json: true,
+            explain: false,
+            lang: super::Lang::Ja,
+        },
     );
     let doc = report.to_json();
     assert_eq!(doc["status"], "error");
+    assert!(
+        doc["explanation"].is_null(),
+        "explanation must be null without --explain"
+    );
     assert_eq!(doc["diagnosis"]["why"], "typoOrUnknownName");
     assert_eq!(doc["diagnosis"]["when"], "resolveWord");
     assert!(
@@ -168,6 +178,7 @@ fn check_report_uses_default_metrics() {
         ai_diagnostic: None,
         error_flow_trace: Vec::new(),
         runtime_metrics: RuntimeMetrics::default(),
+        explanation: None,
     };
     let doc = report.to_json();
     assert_eq!(doc["runtimeMetrics"]["vtu"]["tensorFlattenCount"], 0);
