@@ -1,0 +1,212 @@
+//! Light contract / flow-mass pre-check of an Ajisai plan — the "approach 2,
+//! light version" of the natural-language surface design note
+//! (`docs/dev/natural-language-surface-design.md` §4): use the *existing*
+//! checking machinery to reject or flag a malformed plan **before execution**,
+//! without becoming a contract-driven search. It reuses
+//! [`mass_conservation::analyze_source`](crate::interpreter::mass_conservation)
+//! (SPEC §13.1) for flow-mass accounting and the §7.14 `nil_policy` contract
+//! for NIL-flow accounting. It executes nothing and defines no semantics
+//! (canonical source: `SPECIFICATION.html`).
+//!
+//! The findings are the signals approach 4 (clarification / UNKNOWN) will later
+//! consume: an over-consuming flow is a malformed plan (a Channel-error-shaped
+//! verdict), and a NIL source with no fallback is the `handleUnknownOrNil`
+//! prompt rendered ahead of time.
+
+use std::collections::HashSet;
+
+use super::explain::Lang;
+use crate::coreword_registry::{get_coreword_metadata, NilPolicy};
+use crate::interpreter::mass_conservation::analyze_source;
+use crate::interpreter::Interpreter;
+use crate::types::Token;
+
+/// Result of the light, execution-free plan check.
+pub(crate) struct PlanCheck {
+    /// The flow reads more operands than it provides over the statically known
+    /// prefix (mass `min_depth < 0`, SPEC §13.1): a malformed plan.
+    pub over_consumes: bool,
+    /// Lowest abstract stack depth from an empty start (negative ⇒ over-consume).
+    pub min_depth: i64,
+    /// Net stack-depth change over the known prefix.
+    pub net_mass: i64,
+    /// `false` once a `Dynamic`-arity word froze the static analysis (the check
+    /// is then only valid for the prefix before that word).
+    pub mass_known: bool,
+    /// Words whose `nil_policy = CreatesNil` (SPEC §7.14): they project a
+    /// well-formed domain miss onto NIL (e.g. `DIV` `GET` `NUM`). First
+    /// appearance order, deduplicated.
+    pub may_bubble: Vec<String>,
+    /// A `VENT` (`^`) appears in the flow, i.e. an explicit NIL fallback.
+    pub has_fallback: bool,
+    /// Words whose `nil_policy = RejectsNil` (they raise on a NIL operand).
+    pub rejects_nil: Vec<String>,
+}
+
+/// Tokenize, compile and statically check `src` for flow-mass conservation and
+/// NIL-flow hygiene. Never executes. `Err` only for a lexical failure.
+pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, String> {
+    let mass = analyze_source(interp, src)?;
+    let tokens = crate::tokenizer::tokenize(src)?;
+
+    let mut may_bubble: Vec<String> = Vec::new();
+    let mut rejects_nil: Vec<String> = Vec::new();
+    let mut has_fallback = false;
+    let mut seen_bubble: HashSet<String> = HashSet::new();
+    let mut seen_reject: HashSet<String> = HashSet::new();
+
+    for token in &tokens {
+        // `^` (VENT) and `=>` (OR-NIL) tokenize as `NilCoalesce`: both are
+        // explicit NIL fallbacks (SPEC §6.5 sugar), so either satisfies the
+        // unguarded-NIL advisory.
+        if matches!(token, Token::NilCoalesce) {
+            has_fallback = true;
+            continue;
+        }
+        let Token::Symbol(symbol) = token else {
+            continue;
+        };
+        let normalized = super::normalize_word(symbol);
+        let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
+        // A spelled-out `VENT` (rather than the `^` sugar) is also a fallback.
+        if canonical.as_ref() == "VENT" {
+            has_fallback = true;
+            continue;
+        }
+        let Some(meta) = get_coreword_metadata(&canonical) else {
+            continue;
+        };
+        // `CreatesNil` is the precise "can bubble to NIL" signal. A `Projecting`
+        // comparison (LT/SORT/…) projects to logical U, not NIL, so it is
+        // deliberately not flagged here.
+        match meta.nil_policy {
+            NilPolicy::CreatesNil => {
+                if seen_bubble.insert(canonical.to_string()) {
+                    may_bubble.push(canonical.into_owned());
+                }
+            }
+            NilPolicy::RejectsNil => {
+                if seen_reject.insert(canonical.to_string()) {
+                    rejects_nil.push(canonical.into_owned());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(PlanCheck {
+        over_consumes: mass.over_consumes_from_empty(),
+        min_depth: mass.min_depth,
+        net_mass: mass.net_mass,
+        mass_known: mass.all_known,
+        may_bubble,
+        has_fallback,
+        rejects_nil,
+    })
+}
+
+/// Severity of a finding, so a consumer (and approach 4) can tell a malformed
+/// plan apart from advice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Severity {
+    /// A malformed plan: it cannot run as written.
+    Error,
+    /// Well-formed but worth surfacing (e.g. an unguarded NIL source).
+    Advisory,
+    /// Informational only (e.g. the static check stopped early).
+    Note,
+}
+
+impl Severity {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Severity::Error => "error",
+            Severity::Advisory => "advisory",
+            Severity::Note => "note",
+        }
+    }
+}
+
+/// One plain-language finding (the L0 surface, design note §2). Mechanism terms
+/// (`nil_policy`, mass, `VENT`) are not exposed; the `^` sugar is named because
+/// it is the literal fix the user types.
+pub(crate) struct Finding {
+    pub severity: Severity,
+    pub message: String,
+}
+
+impl PlanCheck {
+    /// Render the findings in `lang`, most severe first. An empty result means
+    /// the plan is clean over the statically known prefix.
+    pub(crate) fn findings(&self, lang: Lang) -> Vec<Finding> {
+        let mut findings = Vec::new();
+
+        if self.over_consumes {
+            findings.push(Finding {
+                severity: Severity::Error,
+                message: match lang {
+                    Lang::Ja => format!(
+                        "この手順は与えられるより多くの値を読み取ります（最小深さ {}）。語の並びを見直してください。",
+                        self.min_depth
+                    ),
+                    Lang::En => format!(
+                        "This plan reads more values than it provides (min depth {}). Check the words and their order.",
+                        self.min_depth
+                    ),
+                },
+            });
+        }
+
+        if !self.may_bubble.is_empty() && !self.has_fallback {
+            let words = self.may_bubble.join(", ");
+            findings.push(Finding {
+                severity: Severity::Advisory,
+                message: match lang {
+                    Lang::Ja => format!(
+                        "次の語は値を生めないこと（NIL）があります: {}。`^` で既定値を決めるか、分岐を足してください。",
+                        words
+                    ),
+                    Lang::En => format!(
+                        "These words can fail to produce a value (NIL): {}. Supply a fallback with `^`, or add a branch.",
+                        words
+                    ),
+                },
+            });
+
+            if !self.rejects_nil.is_empty() {
+                let sinks = self.rejects_nil.join(", ");
+                findings.push(Finding {
+                    severity: Severity::Advisory,
+                    message: match lang {
+                        Lang::Ja => format!(
+                            "そのうえ次の語は NIL を受け取れません: {}。NIL が届く前に解消してください。",
+                            sinks
+                        ),
+                        Lang::En => format!(
+                            "And these words reject a NIL operand: {}. Resolve the NIL before it reaches them.",
+                            sinks
+                        ),
+                    },
+                });
+            }
+        }
+
+        if !self.mass_known {
+            findings.push(Finding {
+                severity: Severity::Note,
+                message: match lang {
+                    Lang::Ja => {
+                        "動的なアリティの語を含むため、静的な流量チェックは途中で停止しました。"
+                            .to_string()
+                    }
+                    Lang::En => {
+                        "Contains a dynamic-arity word, so the static flow check stopped early."
+                            .to_string()
+                    }
+                },
+            });
+        }
+
+        findings
+    }
+}
