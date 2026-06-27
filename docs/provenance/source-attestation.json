@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:4c43f72efbaa0f6ba6212eb3ba298646fbf1a1fb3d518efaf1ece4e6e4a4e404",
-  "fileCount": 273,
+  "rootIdentity": "sha256:6fe1639f412fedab905158c6593752dbcf51dd51c8ac85ffda9ff836343a3875",
+  "fileCount": 276,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -1258,6 +1258,16 @@
       "bytes": 14257
     },
     {
+      "path": "src/platform/cross-origin-isolation.test.ts",
+      "sha256": "0cfa4e21a57d83500b1c130ef78c295ad68e2195af5dbf95c97a7e8da34c2940",
+      "bytes": 4340
+    },
+    {
+      "path": "src/platform/cross-origin-isolation.ts",
+      "sha256": "fadb4d3986d5fbbcac15b46e0e3a455738e6be2c3f9860caca2d9df289d0b51c",
+      "bytes": 3991
+    },
+    {
       "path": "src/platform/index.ts",
       "sha256": "aaa3820f049a8b40a63f981b2b65d8910f72444836d2444db49eb2c2399db527",
       "bytes": 565
@@ -1266,6 +1276,11 @@
       "path": "src/platform/platform-adapter.ts",
       "sha256": "d5956a4d9cb656f5d540edc7e45102103f0dfd8743837286fe0558d13be8e582",
       "bytes": 3927
+    },
+    {
+      "path": "src/platform/register-cross-origin-isolation.ts",
+      "sha256": "c9341d50a81e6aa039f3b18918264211b6e5d91680069dc5913859d7a6df7444",
+      "bytes": 3681
     },
     {
       "path": "src/platform/runtime-kind.test.ts",
@@ -1364,8 +1379,8 @@
     },
     {
       "path": "src/workers/execution-worker-manager.ts",
-      "sha256": "9455cea34440abcbe7d4e43c147a0c6e1dcf7d1d46975c4f331d1cae04aa828e",
-      "bytes": 13581
+      "sha256": "e0f01b913f61755e0f40697b939e9f1fd4fc1cae7670b94004bfa1d546a2dee6",
+      "bytes": 14317
     },
     {
       "path": "src/workers/interpreter-execution-worker.ts",
@@ -1389,8 +1404,8 @@
     },
     {
       "path": "vite.config.ts",
-      "sha256": "3ff0da91a4ed42f69386b9ffd7f5be2bc49eebab3fc0d12d5bba0f57da575d3d",
-      "bytes": 1600
+      "sha256": "4cabe105ea6931f380ec8450cfa0ad5671f78a11d2a769d26a83cc81b042f94a",
+      "bytes": 2561
     }
   ]
 }

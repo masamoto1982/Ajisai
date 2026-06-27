@@ -20,10 +20,33 @@ export default defineConfig({
     __AJISAI_TARGET__: JSON.stringify(target),
     __AJISAI_BUILD_TIMESTAMP__: JSON.stringify(buildTimestampLabel())
   },
+  // Cross-origin isolation for SharedArrayBuffer-backed wasm threading
+  // (implicit-parallelism roadmap Phase 5). These response headers make
+  // `crossOriginIsolated` true under `npm run dev` / `vite preview`, so a
+  // threaded wasm build can be exercised locally. They apply to the dev and
+  // preview servers only; `vite build` emits static files and does not bake
+  // headers in, so the GitHub Pages deployment is unaffected until the
+  // `coi-serviceworker` fallback is registered (see
+  // docs/dev/browser-parallelism-phase5-rollout.md). Tauri runs in a native
+  // WebView that does not need them.
   server: {
     port: 3000,
     open: !isTauri,
-    strictPort: true
+    strictPort: true,
+    headers: isTauri
+      ? {}
+      : {
+          'Cross-Origin-Opener-Policy': 'same-origin',
+          'Cross-Origin-Embedder-Policy': 'require-corp'
+        }
+  },
+  preview: {
+    headers: isTauri
+      ? {}
+      : {
+          'Cross-Origin-Opener-Policy': 'same-origin',
+          'Cross-Origin-Embedder-Policy': 'require-corp'
+        }
   },
   build: {
     outDir: 'dist',
