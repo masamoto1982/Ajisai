@@ -39,6 +39,10 @@ pub(crate) struct ModifierInference {
     /// An axis received conflicting cues (e.g. both "keep" and "consume"); the
     /// design note routes this to approach 4 as a clarifying question.
     pub ambiguous: bool,
+    /// The target axis received both `TOP` and `STAK` cues.
+    pub target_ambiguous: bool,
+    /// The consumption axis received both `EAT` and `KEEP` cues.
+    pub consume_ambiguous: bool,
     /// The Ajisai modifier sugar for the non-default choices, e.g. `,, ` for
     /// `KEEP` or `..` for `STAK`; empty when both axes are at their default.
     pub sugar: String,
@@ -115,6 +119,8 @@ pub(crate) fn infer(phrase: &str, lang: Lang) -> ModifierInference {
         target_explicit,
         consume_explicit,
         ambiguous,
+        target_ambiguous: target_conflict,
+        consume_ambiguous: consume_conflict,
         sugar,
         rationale,
     }

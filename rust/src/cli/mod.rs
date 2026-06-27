@@ -18,6 +18,9 @@
 //! interpreter and serializes the existing diagnostic structures. It defines
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
+mod clarify;
+#[cfg(test)]
+mod clarify_tests;
 mod explain;
 #[cfg(test)]
 mod explain_tests;
@@ -144,6 +147,7 @@ fn cmd_version(json: bool) -> i32 {
 /// is reported via the `ambiguous` flag, not as a failure).
 fn cmd_modifier(phrase: &str, opts: &Opts) -> i32 {
     let inference = modifier::infer(phrase, opts.lang);
+    let clarifications = clarify::from_modifier(&inference, opts.lang);
     if opts.json {
         let doc = serde_json::json!({
             "schemaVersion": report::SCHEMA_VERSION,
@@ -157,6 +161,7 @@ fn cmd_modifier(phrase: &str, opts: &Opts) -> i32 {
                 "ambiguous": inference.ambiguous,
                 "sugar": inference.sugar,
                 "rationale": inference.rationale,
+                "clarifications": report::clarifications_json(&clarifications),
             },
         });
         println!("{}", pretty(&doc));
@@ -174,8 +179,23 @@ fn cmd_modifier(phrase: &str, opts: &Opts) -> i32 {
             println!("sugar: {}", inference.sugar);
         }
         println!("{}", inference.rationale);
+        print_clarifications(&clarifications);
     }
     0
+}
+
+/// Render clarifying questions (approach 4) as plain text, each with its
+/// choices and the Ajisai sugar a choice resolves to.
+fn print_clarifications(clarifications: &[clarify::Clarification]) {
+    for clarification in clarifications {
+        eprintln!("? {}", clarification.question);
+        for choice in &clarification.choices {
+            match &choice.apply {
+                Some(sugar) => eprintln!("    - {} → {}", choice.label, sugar),
+                None => eprintln!("    - {}", choice.label),
+            }
+        }
+    }
 }
 
 fn cmd_run(path: &str, opts: &Opts) -> i32 {
@@ -539,6 +559,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             for finding in check.findings(opts.lang) {
                 eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
             }
+            print_clarifications(&clarify::from_plan_check(check, opts.lang));
         }
     }
     if contract_failed {

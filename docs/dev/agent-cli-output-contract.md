@@ -411,3 +411,34 @@ design note §5). It executes nothing and always exits 0.
   plain-language clarifying question rather than a guess.
 - `sugar` is the Ajisai modifier sugar for the non-default choices (empty when
   both axes are at their default).
+- `modifier.clarifications` and `planCheck.clarifications` carry the approach-4
+  questions (§13).
+
+## 13. `clarifications` (approach 4)
+
+Plain-language clarifying questions for an *undecided* signal — the dialogue
+layer of the natural-language design note
+(`docs/dev/natural-language-surface-design.md` §6). Rather than guess, the
+surface asks; each choice carries the Ajisai sugar it resolves to, so an answer
+maps straight back to code. The array appears inside `modifier.clarifications`
+(approach 3 ambiguity) and `planCheck.clarifications` (approach 2 unguarded NIL);
+it is empty when nothing is undecided.
+
+```json
+{
+  "kind": "targetAxis | consumeAxis | unguardedNil",
+  "question": "a plain-language question",
+  "choices": [ { "label": "...", "apply": "<Ajisai sugar> | null" } ]
+}
+```
+
+- A question is raised only for an axis that is genuinely undecided
+  (conflicting cues), never for a merely-defaulted one; the unguarded-NIL
+  question is suppressed when a `^`/`=>` fallback is already present
+  (minimization, design note §6).
+- `apply` is the modifier sugar a choice resolves to (`.` `..` `,` `,,` `^`),
+  or `null` for a "leave it as is" choice (no code change).
+- **Deferred**: the comparison-UNKNOWN clarification (`agreedPrefix`, SPEC
+  §7.4.1). The runtime U value carries `agreedPrefix`, but it is not yet
+  surfaced to the CLI report, so there is no signal to drive that question here
+  without a separate value-protocol change.

@@ -277,6 +277,17 @@ Ajisai の構造的な答えがこの 3 分岐である。`nil_policy` が「ど
    §11・§12。いずれも純分類・純検査で、意味論は変更しない。
 3. **案4（逆質問）** — 案2軽量版の検査結果（複数候補成立 / 成立なし）と実行時 UNKNOWN を
    L1 の平易な逆質問へ射影。Strong Kleene による質問最小化を含む。
+   **実装済み（第一段）**: `rust/src/cli/clarify.rs`。CLI が既に観測できる 2 つの
+   未決定信号 —— 案3 の修飾子の軸別曖昧さ（`target_ambiguous`/`consume_ambiguous`）と
+   案2軽量版の無防備な NIL 源 —— を、選択肢つきの平易な逆質問へ射影する。各選択肢は
+   対応する Ajisai 修飾子 sugar（`.` `..` `,` `,,` `^`）を持ち、回答がそのままコード編集に
+   なる。最小化として、曖昧な軸だけを問い（既定化した軸は黙って既定）、fallback が既に
+   あれば NIL の問いを抑制する。`ajisai modifier <句>` と `ajisai check --contract` に
+   `clarifications` として出力（契約 `docs/dev/agent-cli-output-contract.md` §13）。
+   **保留**: 比較 UNKNOWN（`agreedPrefix`）の逆質問。実行時 U 値は `agreedPrefix` を
+   保持するが、まだ CLI レポートへ surface されていないため、別途 value-protocol の
+   拡張が必要（次段）。Strong Kleene による論理語（`TRUE OR U` 等）レベルの質問最小化も、
+   計画構造解析を要するため次段とする。
 4. **案1 を前向き翻訳へ拡張** — 「なぜこの語・この様態を選んだか」を契約に基づいて
    L2 で説明（ループ両端の説明可能性の完成）。
 
