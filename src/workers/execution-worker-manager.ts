@@ -3,6 +3,11 @@
 import type { ExecuteResult } from '../wasm-interpreter-types';
 import type { InterpreterSnapshot } from './interpreter-snapshot';
 import { extractCompiledWasmModule } from '../wasm-module-loader';
+import {
+    detectParallelCapability,
+    describeParallelCapability,
+    type ParallelCapability,
+} from '../platform/cross-origin-isolation';
 
 interface WorkerTask {
     id: string;
@@ -47,9 +52,16 @@ export class WorkerManager {
     private maxWorkers = window.innerWidth <= MOBILE_BREAKPOINT
         ? Math.min(navigator.hardwareConcurrency || 2, MAX_MOBILE_WORKERS)
         : navigator.hardwareConcurrency || 4;
+    // Whether SharedArrayBuffer-backed wasm threading can run in this page
+    // (implicit-parallelism roadmap Phase 5). Observational for now: the pool
+    // still uses snapshot-copying Web Workers regardless. Once a threaded wasm
+    // build ships, `recommendedThreads` drives the wasm-bindgen-rayon pool size
+    // and `threadsAvailable` gates the SharedArrayBuffer snapshot transport.
+    private parallelCapability: ParallelCapability = detectParallelCapability();
 
     async init(): Promise<void> {
         console.log('[WorkerManager] Initializing worker pool...');
+        console.log(`[WorkerManager] parallel capability: ${describeParallelCapability(this.parallelCapability)}`);
         this.workers = [];
 
 
