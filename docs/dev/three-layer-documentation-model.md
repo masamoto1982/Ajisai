@@ -90,7 +90,7 @@ LOOKUP answers, for one specific word the user already chose:
 - What related words should I know?
 
 LOOKUP does not teach the language and does not include design history.
-For Bubble Rule words, LOOKUP may include concise ASCII English failure text such as "Produces a Bubble/NIL when the index is out of range; raises StructureError when the target is not indexable." It must not use Japanese prose such as "泡".
+For Bubble Rule words, LOOKUP may include concise UTF-8 English failure text such as "Produces a Bubble/NIL when the index is out of range; raises StructureError when the target is not indexable." It must not use Japanese prose such as "泡".
 
 ### 3.2 Built-in vs user word — preserve current behavior
 
@@ -105,7 +105,7 @@ Only the **content** that `lookup_builtin_detail` produces changes. The function
 
 LOOKUP output is loaded into the code editor textarea, so it must be plain text usable beside Ajisai source:
 
-- ASCII-only English.
+- UTF-8 English plain text.
 - Plain text (no Markdown rendering — the editor displays it verbatim).
 - Lines ≤ 80 columns recommended.
 - No control characters, no trailing whitespace.
@@ -331,7 +331,7 @@ User-word LOOKUP path is untouched; user-word hover continues to read `wordInfo.
 
 The existing rule that LOOKUP output is **Markdown with Japanese permitted** is superseded for built-in words. After this model is adopted, that document should be amended:
 
-- LOOKUP built-in output → ASCII English plain text (this document, §3.3).
+- LOOKUP built-in output → UTF-8 English plain text (this document, §3.3).
 - Reference site → Markdown, translations allowed.
 - User-word LOOKUP → unchanged (still inserts the original source).
 
