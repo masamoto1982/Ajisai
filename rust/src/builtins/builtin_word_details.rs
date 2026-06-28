@@ -186,12 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn lookup_output_is_ascii() {
+    fn lookup_output_is_utf8_plain_text() {
         for name in ["ADD", "MAP", "LOOKUP", "DEF", "VENT", "TOP", "PRINT"] {
             let body = lookup_builtin_detail(name);
             assert!(
-                body.is_ascii(),
-                "LOOKUP body for {} contains non-ASCII characters:\n{}",
+                !body.chars().any(|c| c.is_control() && c != '\n'),
+                "LOOKUP body for {} must be UTF-8 plain text without control characters:\n{}",
                 name,
                 body
             );

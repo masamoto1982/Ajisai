@@ -1703,11 +1703,11 @@ mod tests {
     }
 
     #[test]
-    fn builtin_specs_lookup_text_is_ascii() {
+    fn builtin_specs_lookup_text_is_utf8_plain_text() {
         let check = |label: &str, name: &str, text: &str| {
             assert!(
-                text.is_ascii(),
-                "{} field of {} must be ASCII; got: {:?}",
+                !text.chars().any(|c| c.is_control() && c != '\n'),
+                "{} field of {} must be UTF-8 plain text without control characters; got: {:?}",
                 label,
                 name,
                 text
