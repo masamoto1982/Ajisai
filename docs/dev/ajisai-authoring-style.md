@@ -16,7 +16,7 @@ The essence of Ajisai is not source code in any one language. It is the **writte
 
 Two consistency problems dominate, and the rest of this document addresses them:
 
-1. **Ajisai symbols look like punctuation.** Almost every ASCII mark in Ajisai is a word.
+1. **Ajisai symbols look like punctuation.** Ajisai source is UTF-8 text, and every symbol token that Ajisai defines is a word.
 2. **Mathematics and Ajisai code share glyphs.** `/`, `+`, `(`, `)`, `>=` mean one thing in a formula and another as Ajisai sugar.
 
 ## 2. The symbol-as-word hazard

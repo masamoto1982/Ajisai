@@ -70,12 +70,12 @@ fn present_fallback_suppresses_the_nil_question() {
 }
 
 #[test]
-fn english_clarifications_are_ascii() {
+fn english_clarifications_are_utf8_plain_text() {
     let inference = infer("keep it but also consume it", Lang::En);
     for clarification in from_modifier(&inference, Lang::En) {
-        assert!(clarification.question.is_ascii());
+        assert!(!clarification.question.chars().any(char::is_control));
         for choice in &clarification.choices {
-            assert!(choice.label.is_ascii());
+            assert!(!choice.label.chars().any(char::is_control));
         }
     }
 }

@@ -1405,7 +1405,7 @@ mod tests {
     }
 
     #[test]
-    fn every_module_word_doc_is_ascii() {
+    fn every_module_word_doc_is_utf8_plain_text() {
         for module in MODULE_SPECS {
             for word in module.words {
                 let doc = super::super::module_word_docs::lookup_module_word_doc(
@@ -1414,9 +1414,21 @@ mod tests {
                 )
                 .expect("doc lookup");
                 let q = format!("{}@{}", module.name, word.short_name);
-                assert!(doc.summary.is_ascii(), "{} summary not ASCII", q);
-                assert!(doc.role.is_ascii(), "{} role not ASCII", q);
-                assert!(doc.stack_effect.is_ascii(), "{} stack_effect not ASCII", q);
+                assert!(
+                    !doc.summary.chars().any(|c| c.is_control() && c != '\n'),
+                    "{} summary must be UTF-8 plain text without control characters",
+                    q
+                );
+                assert!(
+                    !doc.role.chars().any(|c| c.is_control() && c != '\n'),
+                    "{} role must be UTF-8 plain text without control characters",
+                    q
+                );
+                assert!(
+                    !doc.stack_effect.chars().any(|c| c.is_control() && c != '\n'),
+                    "{} stack_effect must be UTF-8 plain text without control characters",
+                    q
+                );
             }
         }
     }
