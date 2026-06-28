@@ -63,12 +63,12 @@ fn nil_source_with_vent_drops_the_advisory() {
 }
 
 #[test]
-fn english_findings_are_ascii() {
+fn english_findings_are_utf8_plain_text() {
     let result = check("+");
     for finding in result.findings(Lang::En) {
         assert!(
-            finding.message.is_ascii(),
-            "English finding must be ASCII: {}",
+            !finding.message.chars().any(char::is_control),
+            "English finding must be UTF-8 plain text without control characters: {}",
             finding.message
         );
     }

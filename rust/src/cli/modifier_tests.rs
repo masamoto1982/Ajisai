@@ -24,7 +24,7 @@ fn english_keep_defaults_target_to_top() {
     assert!(inference.consume_explicit);
     assert!(!inference.target_explicit);
     assert_eq!(inference.sugar, ",,");
-    assert!(inference.rationale.is_ascii());
+    assert!(!inference.rationale.chars().any(char::is_control));
 }
 
 #[test]

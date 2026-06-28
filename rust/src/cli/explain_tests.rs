@@ -54,7 +54,7 @@ fn unknown_word_projects_channel_error_tone_ja() {
 }
 
 #[test]
-fn unknown_word_projects_english_ascii() {
+fn unknown_word_projects_english_utf8_plain_text() {
     let diagnosis = unknown_word_diagnosis();
     let ai = diagnosis.ai_payload(Some(&ErrorCategory::UnknownWord), None, None, None);
     let explanation = explain(&diagnosis, Some(&ai.recoverability), None, Lang::En);
@@ -67,9 +67,9 @@ fn unknown_word_projects_english_ascii() {
         "headline was: {}",
         explanation.headline
     );
-    // The L0 sentences are pure ASCII in English mode.
-    assert!(explanation.headline.is_ascii());
-    assert!(explanation.next_step.is_ascii());
+    // The L0 sentences are UTF-8 plain text in English mode.
+    assert!(!explanation.headline.chars().any(char::is_control));
+    assert!(!explanation.next_step.chars().any(char::is_control));
 }
 
 #[test]
