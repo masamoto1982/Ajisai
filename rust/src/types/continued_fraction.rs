@@ -4301,4 +4301,56 @@ mod tests {
         );
         assert!(decided_pairs > 2000, "corpus too small: {decided_pairs}");
     }
+
+    /// Measurement (sign ②, Lagrange period cache — feasibility). The full-period
+    /// cache can only serve terms it has precomputed, so its precompute cost and
+    /// memory are O(period length). This measures how the period of √D grows
+    /// with D across magnitudes, against the cap that bounds the walk
+    /// (`PERIOD_SCAN_CAP` inside `sqrt_cf_period`). The architectural point: the
+    /// regime where a cache would help most — large D, where each recurrence
+    /// step is heavy BigInt arithmetic — is exactly where the period is longest
+    /// (often capped/uncacheable), while the short-period regime (small D) is
+    /// already served by the cheap i128 `SqrtSmall` fast path. Reported, not
+    /// asserted, beyond a sanity bound.
+    #[test]
+    fn sqrt_period_length_growth_measurement() {
+        fn non_square(n: i64) -> bool {
+            let s = (n as f64).sqrt() as i64;
+            (s - 1..=s + 1).all(|k| k * k != n)
+        }
+        // First non-squares at each magnitude. Bands stop at ~1e6: beyond that
+        // the period itself grows large AND `sqrt_cf_period`'s duplicate-state
+        // search is O(period^2), so even *computing* the period to cache it
+        // becomes prohibitive — which is itself the feasibility finding for ②.
+        let bands: [(&str, i64); 4] = [
+            ("~1e1", 10),
+            ("~1e3", 1_000),
+            ("~1e5", 100_000),
+            ("~1e6", 1_000_000),
+        ];
+        for (label, base) in bands {
+            let mut lens = Vec::new();
+            let mut capped = 0usize;
+            let mut n = base;
+            while lens.len() < 8 {
+                if non_square(n) {
+                    match sqrt_of(n, 1).sqrt_cf_period() {
+                        Some((_, period)) => lens.push(period.len()),
+                        None => capped += 1, // exceeded PERIOD_SCAN_CAP: uncacheable
+                    }
+                }
+                n += 1;
+            }
+            let avg = lens.iter().sum::<usize>() as f64 / lens.len().max(1) as f64;
+            let max = lens.iter().copied().max().unwrap_or(0);
+            eprintln!(
+                "[period growth {label}] sampled={} avg_period={avg:.1} max_period={max} capped(uncacheable)={capped}",
+                lens.len()
+            );
+        }
+        // Sanity: a small surd has a short period (cacheable); used to anchor the
+        // contrast with the large-D bands above.
+        let (_, p2) = sqrt_of(2, 1).sqrt_cf_period().expect("√2 has a period");
+        assert_eq!(p2, terms(&[2]), "√2 period is [2]");
+    }
 }
