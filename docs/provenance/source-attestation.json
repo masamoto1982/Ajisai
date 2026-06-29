@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:d6027214c89a11e1a5dedf177d724a8affb8b47e3e29e5e4ce03483305f639c8",
+  "rootIdentity": "sha256:895dcfd6f583fc2949b3eaa4b4141723cab1bbbf3882c65f9c32c61948debc20",
   "fileCount": 284,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -39,8 +39,8 @@
     },
     {
       "path": "SPECIFICATION.html",
-      "sha256": "90c3681dd8659501f584829135629a9269fdbe4d4d4dc7988cb286e3e19e3fd9",
-      "bytes": 161183
+      "sha256": "f88d365e1e1b1aca55fe68fc02f585f99657257859b58951bb7c8c997e542ab6",
+      "bytes": 162902
     },
     {
       "path": "eslint.config.js",
@@ -244,8 +244,8 @@
     },
     {
       "path": "rust/src/interpreter/arithmetic.rs",
-      "sha256": "9e27fae87e2031d94997eb72e173e5e290c1c7f05a0cdbc1ee3f6908b950467a",
-      "bytes": 26032
+      "sha256": "09fe4bfd48919224ef9a43b5599c6f8e873c947e2a1a183bfd04cc2b2f082bab",
+      "bytes": 26019
     },
     {
       "path": "rust/src/interpreter/arithmetic_exact_div_tests.rs",
@@ -339,8 +339,8 @@
     },
     {
       "path": "rust/src/interpreter/comparison.rs",
-      "sha256": "eb63d91bc0b6e6de07aed97dfdee3af7a0271ce689d250641fdb119d8469b33f",
-      "bytes": 29790
+      "sha256": "7af8f424f849fdb3a170cffd8933cb5c7482a95e88991eaf45e31f2ab0992bb7",
+      "bytes": 29798
     },
     {
       "path": "rust/src/interpreter/compiled_clause_tests.rs",
@@ -589,8 +589,8 @@
     },
     {
       "path": "rust/src/interpreter/higher_order_fold.rs",
-      "sha256": "4ff1b219bfa2b8970eeadc1e277ed6f0f15e49dd59da80b26b399aba8629c541",
-      "bytes": 27539
+      "sha256": "7a79273e9807874af1c75726ad2957ba09d31772d9f98722fccac9b32606b785",
+      "bytes": 27515
     },
     {
       "path": "rust/src/interpreter/higher_order_fold_tests.rs",
@@ -644,8 +644,8 @@
     },
     {
       "path": "rust/src/interpreter/logic.rs",
-      "sha256": "76306af522f02a1e1ac423ef7c5f902f5ead80ae11b11ad7ac7a8b622e4d4284",
-      "bytes": 10590
+      "sha256": "bd8052db2326054e29bd07ac4b934228cc4b84f348efc5f16d50d634f2700e7f",
+      "bytes": 10566
     },
     {
       "path": "rust/src/interpreter/logic_kleene.rs",
@@ -829,8 +829,8 @@
     },
     {
       "path": "rust/src/interpreter/value_extraction_helpers.rs",
-      "sha256": "14819a188a662ebf8c7b8f5664b9525cef7bdf0df6e5b8956e36adcdafeaf0c2",
-      "bytes": 9050
+      "sha256": "8142911ac61ff4974140023554ec6876b8c94097d2734b49fff9c04f5156ca42",
+      "bytes": 10068
     },
     {
       "path": "rust/src/interpreter/vector_exec.rs",

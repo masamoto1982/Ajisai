@@ -47,9 +47,11 @@ Every numeric value in Ajisai is an **exact real represented internally as a con
 
 Ajisai therefore avoids the usual hidden detour through approximate floating-point values. Arithmetic operates on the continued-fraction representation directly, and canonical AI-readable display uses a nested continued-fraction form rather than remembering the original source literal.
 
+Ajisai's numerical-error stance is broader than “no rounding error.” The language design also treats loss of significance, cancellation, truncation error, and overflow as failures to be made impossible, exact, or diagnosable instead of silently accepted. Exact continued-fraction values, arbitrary-precision integer coefficients, lazy observation budgets, and visible `UNKNOWN` / `NIL` outcomes are the mechanisms that keep these error classes from becoming hidden value corruption.
+
 For comparison, Ajisai uses a faster internal observation method: **nearest-integer continued fractions**. This does not change value identity, display, or serialization; it only changes how comparison consumes observation budget.
 
-Spec links: [§3.2 Numeric literal formats](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#32-numeric-literal-formats), [§4.2 Scalar: exact-real continued-fraction arithmetic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#42-scalar-exact-real-continued-fraction-arithmetic), [§4.2.5 Nearest-integer continued fractions](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#425-nearest-integer-continued-fractions-comparison-expansion), [§12.2 Interpretation roles](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#122-interpretation-roles)
+Spec links: [§3.2 Numeric literal formats](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#32-numeric-literal-formats), [§4.2 Scalar: exact-real continued-fraction arithmetic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#42-scalar-exact-real-continued-fraction-arithmetic), [§4.2.5 Nearest-integer continued fractions](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#425-nearest-integer-continued-fractions-comparison-expansion), [§4.2.6 Numeric error policy](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#426-numeric-error-policy), [§12.2 Interpretation roles](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#122-interpretation-roles)
 
 ### 2) Bubble and Stagnation: failure and undecidability stay visible
 

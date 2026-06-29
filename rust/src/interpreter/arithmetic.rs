@@ -3,7 +3,7 @@ use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, extract_operands, nil_passthrough_binary, push_result,
+    extract_count_from_value, extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
@@ -653,7 +653,7 @@ where
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_integer_from_value(&count_val)? as usize;
+            let count = extract_count_from_value(&count_val)?;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);

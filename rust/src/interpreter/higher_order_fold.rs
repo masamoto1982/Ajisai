@@ -2,7 +2,7 @@ use super::higher_order::{
     execute_executable_code, execute_hedged_fold_kernel, extract_executable_code, ExecutableCode,
 };
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
+use crate::interpreter::value_extraction_helpers::{extract_count_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::Value;
 
@@ -179,7 +179,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         OperationTargetMode::Stack => {
             let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count: usize = extract_integer_from_value(&count_val)? as usize;
+            let count: usize = extract_count_from_value(&count_val)?;
 
             if interp.stack.len() < count {
                 interp.stack.push(count_val);
@@ -594,7 +594,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
         OperationTargetMode::Stack => {
             let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
             let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count: usize = extract_integer_from_value(&count_val)? as usize;
+            let count: usize = extract_count_from_value(&count_val)?;
 
             if interp.stack.len() < count {
                 interp.stack.push(count_val);
