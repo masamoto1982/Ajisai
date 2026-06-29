@@ -4069,4 +4069,236 @@ mod tests {
             "RCF-earlier rate regressed above its bound: {rcf_earlier}/{measured} = {rcf_earlier_frac:.3}"
         );
     }
+
+    /// Convergents h_i/k_i of a value's *regular* CF, up to `cap` terms (fewer
+    /// if the CF terminates). Standard recurrence with the 1/0, 0/1 seed.
+    fn convergents(x: &ExactReal, cap: usize) -> Vec<Fraction> {
+        let mut iter = CfIter::from_exact_real(x);
+        let (mut h2, mut h1) = (BigInt::zero(), BigInt::one());
+        let (mut k2, mut k1) = (BigInt::one(), BigInt::zero());
+        let mut out = Vec::new();
+        for _ in 0..cap {
+            match iter.next_step() {
+                CfStep::Quotient(a) => {
+                    let h = &a * &h1 + &h2;
+                    let k = &a * &k1 + &k2;
+                    out.push(Fraction::new(h.clone(), k.clone()));
+                    h2 = std::mem::replace(&mut h1, h);
+                    k2 = std::mem::replace(&mut k1, k);
+                }
+                CfStep::Ended | CfStep::Exhausted => break,
+            }
+        }
+        out
+    }
+
+    /// A rational interval that provably encloses `x`, obtained after pulling
+    /// `r` (>= 1) regular CF terms: consecutive convergents bracket the value,
+    /// so `[min(c_{r-1}, c_r), max(c_{r-1}, c_r)]` contains it; if the CF
+    /// terminates by term `r` the enclosure is the exact value (zero width).
+    /// This is the cheap enclosure an interval filter would carry — here
+    /// reconstructed from convergents purely to *measure* the filter's reach.
+    fn enclosure(convs: &[Fraction], r: usize) -> Option<(Fraction, Fraction)> {
+        if convs.is_empty() {
+            return None;
+        }
+        if r >= convs.len() {
+            let exact = convs[convs.len() - 1].clone();
+            return Some((exact.clone(), exact));
+        }
+        let a = convs[r - 1].clone();
+        let b = convs[r].clone();
+        if a.le(&b) {
+            Some((a, b))
+        } else {
+            Some((b, a))
+        }
+    }
+
+    /// Disjoint (and therefore order-deciding) enclosing intervals: one lies
+    /// strictly below the other.
+    fn intervals_disjoint(x: &(Fraction, Fraction), y: &(Fraction, Fraction)) -> bool {
+        x.1.lt(&y.0) || y.1.lt(&x.0)
+    }
+
+    /// Measurement (sign ①, interval filter): for a corpus of decided pairs,
+    /// how early would a convergent/interval pre-filter separate them, versus
+    /// the budget at which the NICF comparison decides? An interval filter only
+    /// ever short-circuits when it *proves* separation, so it can never decide
+    /// a pair the reference calls equal — that direction is asserted. The reach
+    /// (how often it separates at refinement r = 0..k) is reported, not
+    /// asserted, since this run exists to size the optimization before building
+    /// it. Run with `-- --nocapture` to read the histogram.
+    #[test]
+    fn interval_filter_reach_measurement() {
+        const CAP: usize = 64;
+        let mut seed: u64 = 0xA5A5_5A5A_C3C3_3C3C;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+
+        // Histogram: filter_level[r] = pairs first separated after exactly r
+        // pulled terms (index 0 means "separated by the leading term alone").
+        let mut filter_level = vec![0usize; CAP + 2];
+        let mut never_separated = 0usize;
+        let mut filter_earlier = 0usize;
+        let mut same = 0usize;
+        let mut filter_later = 0usize;
+        let mut decided_pairs = 0usize;
+
+        for _ in 0..4000 {
+            let (x, y) = match next() % 3 {
+                0 => {
+                    let n = (next() % 20_001) as i64 - 10_000;
+                    let d = (next() % 4_000) as i64 + 1;
+                    let a = rational(n, d);
+                    let b = a.add(&rational(1, (next() % 1_000_000) as i64 + 2));
+                    (a, b)
+                }
+                1 => {
+                    let r = [2i64, 3, 5, 6, 7, 8, 10, 11, 13][(next() % 9) as usize];
+                    let s = sqrt_of(r, 1);
+                    let approx = s
+                        .best_rational_approximation(&BigInt::from((next() % 5_000) as i64 + 2))
+                        .expect("sqrt has a best rational approximation");
+                    (s, ExactReal::Rational(approx))
+                }
+                _ => {
+                    let r = [2i64, 3, 5, 6, 7, 11, 13][(next() % 7) as usize];
+                    let g = sqrt_of(r, 1)
+                        .add(&rational((next() % 7) as i64 - 3, (next() % 5) as i64 + 1));
+                    let g2 = g.add(&rational(1, (next() % 100_000) as i64 + 2));
+                    (g, g2)
+                }
+            };
+
+            let Some(truth) = decided(rcf_reference_cmp(&x, &y, 4096)) else {
+                continue; // equal / undecidable: no separation to find
+            };
+            decided_pairs += 1;
+
+            let cx = convergents(&x, CAP + 2);
+            let cy = convergents(&y, CAP + 2);
+
+            // Smallest refinement r at which the enclosures are disjoint.
+            let mut filter_r: Option<usize> = None;
+            for r in 1..=CAP {
+                if let (Some(ix), Some(iy)) = (enclosure(&cx, r), enclosure(&cy, r)) {
+                    if intervals_disjoint(&ix, &iy) {
+                        // Correctness of the filter direction: a separation must
+                        // agree with the true order.
+                        let filter_order = if ix.1.le(&iy.0) {
+                            std::cmp::Ordering::Less
+                        } else {
+                            std::cmp::Ordering::Greater
+                        };
+                        assert_eq!(
+                            filter_order, truth,
+                            "interval filter separated a pair in the wrong direction"
+                        );
+                        filter_r = Some(r);
+                        break;
+                    }
+                }
+            }
+
+            match filter_r {
+                Some(r) => filter_level[r.min(CAP + 1)] += 1,
+                None => {
+                    never_separated += 1;
+                    continue;
+                }
+            }
+
+            // Compare the filter's deciding refinement to the NICF budget.
+            let nicf_b = min_decision_budget(CAP, |b| decided(x.cmp_with_budget_tracked(&y, b)));
+            if let (Some(fr), Some(nb)) = (filter_r, nicf_b) {
+                match fr.cmp(&nb) {
+                    std::cmp::Ordering::Less => filter_earlier += 1,
+                    std::cmp::Ordering::Equal => same += 1,
+                    std::cmp::Ordering::Greater => filter_later += 1,
+                }
+            }
+        }
+
+        let sep_at_1 = filter_level[1];
+        let sep_le_3: usize = filter_level[1..=3.min(CAP)].iter().sum();
+        eprintln!(
+            "[interval-filter reach] decided={decided_pairs} separated@1term={sep_at_1} \
+             separated@<=3terms={sep_le_3} never_separated_within_{CAP}={never_separated}"
+        );
+        eprintln!(
+            "[interval-filter vs NICF budget] filter_earlier={filter_earlier} same={same} filter_later={filter_later}"
+        );
+        // Soundness guard only (the filter never mis-separates); reach numbers
+        // are observational. A handful of nearby pairs may not separate within
+        // CAP terms — that is the expected fall-through-to-streaming tail.
+        assert!(decided_pairs > 2000, "corpus too small: {decided_pairs}");
+    }
+
+    /// Measurement (sign ①, the other side): on *independent* random pairs —
+    /// values not engineered to be close — how often does the interval filter
+    /// separate them at the very first refinement (r = 1)? This is the common
+    /// case the filter exists to win: a single O(1) interval test decides the
+    /// order without entering the streaming comparison at all. Read alongside
+    /// `interval_filter_reach_measurement` (the adversarial nearby corpus) for
+    /// the two-sided picture. Reported, not asserted.
+    #[test]
+    fn interval_filter_reach_independent_pairs() {
+        const CAP: usize = 64;
+        let mut seed: u64 = 0x1234_5678_9ABC_DEF0;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        let pick = |sel: u64, a: u64| -> ExactReal {
+            match sel % 3 {
+                0 => rational((a % 20_001) as i64 - 10_000, ((a >> 20) % 4_000) as i64 + 1),
+                1 => sqrt_of(((a % 200) + 2) as i64, 1),
+                _ => sqrt_of(((a % 50) + 2) as i64, 1).add(&rational(
+                    (a >> 8) as i64 % 13 - 6,
+                    (a >> 16) as i64 % 7 + 1,
+                )),
+            }
+        };
+
+        let mut decided_pairs = 0usize;
+        let mut sep_at_1 = 0usize;
+        let mut sep_at_2 = 0usize;
+        let mut sep_later = 0usize;
+        for _ in 0..4000 {
+            let x = pick(next(), next());
+            let y = pick(next(), next());
+            let Some(_truth) = decided(rcf_reference_cmp(&x, &y, 4096)) else {
+                continue;
+            };
+            decided_pairs += 1;
+            let cx = convergents(&x, CAP + 2);
+            let cy = convergents(&y, CAP + 2);
+            let mut r_sep = None;
+            for r in 1..=CAP {
+                if let (Some(ix), Some(iy)) = (enclosure(&cx, r), enclosure(&cy, r)) {
+                    if intervals_disjoint(&ix, &iy) {
+                        r_sep = Some(r);
+                        break;
+                    }
+                }
+            }
+            match r_sep {
+                Some(1) => sep_at_1 += 1,
+                Some(2) => sep_at_2 += 1,
+                _ => sep_later += 1,
+            }
+        }
+        eprintln!(
+            "[interval-filter independent] decided={decided_pairs} sep@1={sep_at_1} ({:.1}%) sep@2={sep_at_2} sep@>=3={sep_later}",
+            100.0 * sep_at_1 as f64 / decided_pairs as f64,
+        );
+        assert!(decided_pairs > 2000, "corpus too small: {decided_pairs}");
+    }
 }
