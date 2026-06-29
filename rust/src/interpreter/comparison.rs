@@ -125,7 +125,7 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
     let b = extract_exact_real_for_comparison(b_val)?;
     Ok(match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ScalarCmp::Decided(kind.apply_to_fraction(af, bf)),
-        _ => match a.cmp_with_budget_tracked(&b, DEFAULT_COMPARISON_BUDGET) {
+        _ => match cmp_default_budget(&a, &b) {
             CmpOutcome::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
             CmpOutcome::Undecided { agreed_prefix } => ScalarCmp::Unknown(agreed_prefix),
         },
@@ -153,11 +153,25 @@ pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOut
     let b = extract_exact_real_for_comparison(b_val)?;
     Ok(match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => OrderOutcome::Decided(af.cmp(bf)),
-        _ => match a.cmp_with_budget_tracked(&b, DEFAULT_COMPARISON_BUDGET) {
+        _ => match cmp_default_budget(&a, &b) {
             CmpOutcome::Decided(o) => OrderOutcome::Decided(o),
             CmpOutcome::Undecided { agreed_prefix } => OrderOutcome::Undecided(agreed_prefix),
         },
     })
+}
+
+/// Default-budget order of two scalar `ExactReal`s. A cheap interval
+/// pre-filter decides well-separated values in O(1) without streaming
+/// (SPEC §7.4.1 — a proven separation is the true order); when the
+/// enclosures overlap it falls back to the budgeted NICF comparison under
+/// `DEFAULT_COMPARISON_BUDGET`. Used only by the default-budget relations and
+/// comparison-dependent words — never by `COMPARE-WITHIN`, whose `U` is
+/// measured in NICF terms and must not be pre-empted by the filter.
+fn cmp_default_budget(a: &ExactReal, b: &ExactReal) -> CmpOutcome {
+    if let Some(order) = a.cmp_via_interval_filter(b) {
+        return CmpOutcome::Decided(order);
+    }
+    a.cmp_with_budget_tracked(b, DEFAULT_COMPARISON_BUDGET)
 }
 
 /// Push the logical `Unknown` (U) carrying an agreed-prefix diagnosis, for
@@ -601,7 +615,7 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     };
     match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ScalarCmp::Decided(af == bf),
-        _ => match a.cmp_with_budget_tracked(&b, DEFAULT_COMPARISON_BUDGET) {
+        _ => match cmp_default_budget(&a, &b) {
             CmpOutcome::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
             CmpOutcome::Undecided { agreed_prefix } => ScalarCmp::Unknown(agreed_prefix),
         },

@@ -859,6 +859,93 @@ impl ExactReal {
         }
         None
     }
+
+    /// A rational interval `[lo, hi]` that provably encloses the value, formed
+    /// from the deepest pair of consecutive regular-CF convergents reachable
+    /// within `max_terms` partial quotients. Consecutive convergents bracket
+    /// the value, and deeper brackets are nested and tighter, so the deepest
+    /// reachable bracket is the tightest enclosure for that effort. A CF that
+    /// terminates within `max_terms` yields the exact value as a zero-width
+    /// interval; a single available quotient `a0` yields the unit enclosure
+    /// `[a0, a0 + 1]`. Returns `None` for nil, `max_terms == 0`, or a stream
+    /// that cannot produce even one quotient.
+    pub(crate) fn enclosing_interval(&self, max_terms: usize) -> Option<(Fraction, Fraction)> {
+        if self.is_nil() || max_terms == 0 {
+            return None;
+        }
+        let mut iter = CfIter::from_exact_real(self);
+        // Convergent recurrence with the standard 1/0, 0/1 seed (as in
+        // `best_rational_approximation`).
+        let mut h2 = BigInt::zero();
+        let mut h1 = BigInt::one();
+        let mut k2 = BigInt::one();
+        let mut k1 = BigInt::zero();
+        let mut prev: Option<Fraction> = None;
+        let mut last: Option<Fraction> = None;
+        let mut terminated = false;
+        for _ in 0..max_terms {
+            match iter.next_step() {
+                CfStep::Quotient(a) => {
+                    let h = &a * &h1 + &h2;
+                    let k = &a * &k1 + &k2;
+                    let conv = Fraction::new(h.clone(), k.clone());
+                    h2 = std::mem::replace(&mut h1, h);
+                    k2 = std::mem::replace(&mut k1, k);
+                    prev = last.take();
+                    last = Some(conv);
+                }
+                CfStep::Ended => {
+                    terminated = true;
+                    break;
+                }
+                CfStep::Exhausted => break,
+            }
+        }
+        let last = last?;
+        if terminated {
+            // The value equals its final convergent exactly.
+            return Some((last.clone(), last));
+        }
+        match prev {
+            Some(prev) => {
+                if prev.le(&last) {
+                    Some((prev, last))
+                } else {
+                    Some((last, prev))
+                }
+            }
+            // Only the leading quotient a0 was available; the value lies in
+            // [a0, a0 + 1] (it would have terminated if it equalled a0).
+            None => Some((last.clone(), last.add(&Fraction::from(1)))),
+        }
+    }
+
+    /// Decide the order of two values by a cheap interval pre-filter: if their
+    /// enclosing intervals (from a few leading convergents) are disjoint, the
+    /// order is the intervals' order — exactly, and without streaming the
+    /// comparison. Returns `None` when the enclosures overlap, in which case
+    /// the caller falls back to the budgeted CF comparison.
+    ///
+    /// Sound only for the *default-budget* comparison path: a proven interval
+    /// separation is the true order (so a decided result is identical to the
+    /// streamed one), but it can resolve a pair earlier than a small explicit
+    /// budget would, so `COMPARE-WITHIN` (SPEC §7.4.2), whose `U` is measured
+    /// in NICF terms, must not use it.
+    pub(crate) fn cmp_via_interval_filter(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        // A handful of convergents already separates the overwhelming majority
+        // of non-equal pairs (see `interval_filter_reach_*`); overlapping
+        // (near/equal) pairs fall through to the streamed comparison.
+        const FILTER_TERMS: usize = 5;
+        let (xlo, xhi) = self.enclosing_interval(FILTER_TERMS)?;
+        let (ylo, yhi) = other.enclosing_interval(FILTER_TERMS)?;
+        if xhi.lt(&ylo) {
+            Some(std::cmp::Ordering::Less)
+        } else if yhi.lt(&xlo) {
+            Some(std::cmp::Ordering::Greater)
+        } else {
+            None
+        }
+    }
 }
 
 // =========================================================================
@@ -4352,5 +4439,115 @@ mod tests {
         // contrast with the large-D bands above.
         let (_, p2) = sqrt_of(2, 1).sqrt_cf_period().expect("√2 has a period");
         assert_eq!(p2, terms(&[2]), "√2 period is [2]");
+    }
+
+    /// ① implementation correctness + efficacy. For a large deterministic
+    /// corpus mixing nearby and independent pairs (rational / √ / Gosper):
+    ///
+    ///   (1) **default-path equivalence (hard assert)** — whenever
+    ///       `cmp_via_interval_filter` returns a decision, it is identical to
+    ///       the budgeted comparison's decision at `DEFAULT_COMPARISON_BUDGET`.
+    ///       This is the property that wiring the filter into the default-budget
+    ///       path (comparison.rs `cmp_default_budget`) changes nothing
+    ///       observable: it never decides a different order, and never decides a
+    ///       pair the budgeted path would call `Undecided`.
+    ///
+    ///   (2) **efficacy (regression metric)** — the filter short-circuits an
+    ///       overwhelming majority of *independent* (well-separated) pairs in
+    ///       O(1), the win it exists for. Guarded with a lower bound.
+    #[test]
+    fn interval_filter_matches_budgeted_decision_and_hits() {
+        let mut seed: u64 = 0x0DDC0FFEE0DDF00D;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        let pick = |sel: u64, a: u64| -> ExactReal {
+            match sel % 3 {
+                0 => rational((a % 20_001) as i64 - 10_000, ((a >> 20) % 4_000) as i64 + 1),
+                1 => sqrt_of(((a % 200) + 2) as i64, 1),
+                _ => sqrt_of(((a % 50) + 2) as i64, 1).add(&rational(
+                    (a >> 8) as i64 % 13 - 6,
+                    (a >> 16) as i64 % 7 + 1,
+                )),
+            }
+        };
+
+        let mut independent_pairs = 0usize;
+        let mut independent_hits = 0usize;
+        for round in 0..6000u64 {
+            // Two-thirds independent pairs, one-third engineered-nearby pairs.
+            let (x, y, independent) = if round % 3 == 0 {
+                let base = pick(next(), next());
+                let near = base.add(&rational(1, (next() % 1_000_000) as i64 + 2));
+                (base, near, false)
+            } else {
+                (pick(next(), next()), pick(next(), next()), true)
+            };
+
+            let filtered = x.cmp_via_interval_filter(&y);
+            let budgeted = x.cmp_with_budget_tracked(&y, DEFAULT_COMPARISON_BUDGET);
+
+            // (1) A filter decision must equal the budgeted decision exactly.
+            if let Some(order) = filtered {
+                assert_eq!(
+                    CmpOutcome::Decided(order),
+                    budgeted,
+                    "interval filter disagreed with the budgeted comparison"
+                );
+            }
+
+            // Antisymmetry of the filter itself.
+            if let (Some(o), Some(r)) = (filtered, y.cmp_via_interval_filter(&x)) {
+                assert_eq!(o, r.reverse(), "interval filter not antisymmetric");
+            }
+
+            if independent {
+                independent_pairs += 1;
+                if filtered.is_some() {
+                    independent_hits += 1;
+                }
+            }
+        }
+
+        let hit_rate = independent_hits as f64 / independent_pairs as f64;
+        eprintln!(
+            "[interval-filter efficacy] independent hit_rate={:.1}% ({independent_hits}/{independent_pairs})",
+            100.0 * hit_rate
+        );
+        assert!(
+            independent_pairs > 2000,
+            "corpus too small: {independent_pairs}"
+        );
+        // The filter is the O(1) common-case win; if it stops short-circuiting
+        // the bulk of separated pairs, the acceleration has regressed.
+        assert!(
+            hit_rate > 0.70,
+            "interval-filter hit rate regressed: {hit_rate:.3}"
+        );
+    }
+
+    #[test]
+    fn enclosing_interval_contains_value_and_is_exact_for_rationals() {
+        // Rational: exact zero-width enclosure.
+        let r = rational(355, 113);
+        let (lo, hi) = r.enclosing_interval(5).expect("rational enclosure");
+        assert_eq!(lo, hi, "rational enclosure is a point");
+        assert_eq!(lo, Fraction::new(bi(355), bi(113)));
+
+        // √2 ≈ 1.41421: enclosure must bracket it and have positive width.
+        let s = sqrt_of(2, 1);
+        let (lo, hi) = s.enclosing_interval(5).expect("sqrt enclosure");
+        assert!(lo.lt(&hi), "irrational enclosure has positive width");
+        // 7/5 = 1.4 < √2 < 3/2 = 1.5: the enclosure lies within a known bracket.
+        assert!(lo.ge(&Fraction::new(bi(7), bi(5))), "lo not below 1.4");
+        assert!(hi.le(&Fraction::new(bi(3), bi(2))), "hi not above 1.5");
+
+        // Single-term enclosure of √2 is the unit interval [1, 2].
+        let (lo1, hi1) = s.enclosing_interval(1).expect("one-term enclosure");
+        assert_eq!(lo1, Fraction::from(1));
+        assert_eq!(hi1, Fraction::from(2));
     }
 }
