@@ -617,6 +617,19 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>What NICF <em>does</em> make observable, indirectly, is the <strong>unit of the comparison budget</strong> (Sections 7.4.1.1, 7.4.2): a budget term, and hence an <code>agreedPrefix</code> count, is a <em>semiregular (NICF) term</em>. NICF introduces no new numeric type, no new Coreword, and no new protocol field.</p>
 
+<h4 id="426-numeric-error-policy">4.2.6 Numeric error policy</h4>
+
+<p>Ajisai's exactness requirement is not limited to avoiding floating-point rounding error. A conforming implementation must not silently turn numeric work into hidden value corruption through information loss, loss of significance, cancellation, truncation error, or overflow.</p>
+
+<ul>
+<li><strong>Rounding and truncation.</strong> Core numeric operations preserve exact values. Any finite display or observation budget is an observation limit only; it is not a new approximate value and must not be parsed back as canonical data.</li>
+<li><strong>Information loss and cancellation.</strong> Algebraically equivalent values remain represented by exact scalar structures rather than by rounded samples, so subtracting near-equal values or combining large and small terms must not discard significant information as an unreported side effect.</li>
+<li><strong>Overflow.</strong> Internal integer state that participates in scalar identity or arithmetic, including Gosper/Möbius coefficients, uses arbitrary precision or an equally exact strategy. If an implementation-specific resource limit is reached, the result is a diagnosed execution/resource failure, not wraparound.</li>
+<li><strong>Undecidable observation.</strong> When a comparison or other observation cannot decide within its budget, the result is the logical <code>UNKNOWN</code> (Section 7.4.1), not a rounded Boolean guess.</li>
+</ul>
+
+<p>The design aim is therefore stronger than “rounding-error-free”: Ajisai aims for numeric flow in which every traditional error class is either absent by construction, represented exactly, or exposed through a visible diagnostic outcome.</p>
+
 <h3 id="43-vector">4.3 Vector</h3>
 
 <p>An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: <code>-1</code> is the last element.</p>

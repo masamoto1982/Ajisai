@@ -4,7 +4,7 @@ use crate::interpreter::logic_kleene::{self, Ternary};
 use crate::interpreter::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics,
 };
-use crate::interpreter::value_extraction_helpers::extract_integer_from_value;
+use crate::interpreter::value_extraction_helpers::extract_count_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
@@ -193,7 +193,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_integer_from_value(&count_val)? as usize;
+            let count = extract_count_from_value(&count_val)?;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
@@ -267,7 +267,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_integer_from_value(&count_val)? as usize;
+            let count = extract_count_from_value(&count_val)?;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);

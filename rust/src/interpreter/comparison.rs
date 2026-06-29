@@ -2,7 +2,8 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
 use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, nil_passthrough_binary, nil_passthrough_value,
+    extract_count_from_value, extract_integer_from_value, nil_passthrough_binary,
+    nil_passthrough_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::continued_fraction::{CmpOutcome, ExactReal, DEFAULT_COMPARISON_BUDGET};
@@ -420,7 +421,7 @@ fn apply_binary_comparison(
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_integer_from_value(&count_val)? as usize;
+            let count = extract_count_from_value(&count_val)?;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);
@@ -648,7 +649,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
         OperationTargetMode::Stack => {
             let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_integer_from_value(&count_val)? as usize;
+            let count = extract_count_from_value(&count_val)?;
 
             if count == 0 || count == 1 {
                 interp.stack.push(count_val);

@@ -120,6 +120,13 @@ pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
         .ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
 }
 
+pub(crate) fn extract_count_from_value(value: &Value) -> Result<usize> {
+    let n = extract_integer_bigint(value)?;
+    n.to_usize().ok_or_else(|| {
+        AjisaiError::from("Count value must be a non-negative integer that fits usize")
+    })
+}
+
 pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
     extract_integer_bigint(value)
 }
@@ -279,5 +286,26 @@ mod tests {
         let wrapped = create_number_value(Fraction::new(BigInt::from(42), BigInt::one()));
         let result = extract_integer_from_value(&wrapped).unwrap();
         assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn extract_count_rejects_negative_without_wrapping() {
+        let wrapped = create_number_value(Fraction::new(BigInt::from(-1), BigInt::one()));
+        let err = extract_count_from_value(&wrapped).unwrap_err();
+        assert!(
+            err.to_string().contains("non-negative integer"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn extract_count_rejects_too_large_without_truncating() {
+        let huge = BigInt::from(usize::MAX) + BigInt::one();
+        let wrapped = create_number_value(Fraction::new(huge, BigInt::one()));
+        let err = extract_count_from_value(&wrapped).unwrap_err();
+        assert!(
+            err.to_string().contains("fits usize"),
+            "unexpected error: {err}"
+        );
     }
 }
