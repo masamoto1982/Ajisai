@@ -131,10 +131,32 @@ RCF は項1（`10` vs `9`）で分岐＝決定するのに、NICF は先頭2項 
   観測不能で依拠してはならない」と明言する。よって COMPARE-WITHIN の契約は破れない。
 - **精密化の余地。** 「同一予算で決定頻度を減らさない／境界を有利側にだけ動かす」は、項数を
   直接突き合わせる読み方では**普遍的には偽**。平均的性質か、あるいは「観測可能な NICF 予算の下で」
-  という限定命題として述べるのが正確。テストも 4 ペアの存在確認に留まるため、普遍性の主張を
-  支えてはいない。`scratchpad/cf_probe.py` の反例探索は、これを補強するランダムテスト
-  （NICF が決定したら順序が RCF と一致することを property として確認しつつ、
-  「NICF 早分岐率」を回帰指標として観測）に発展させられる。
+  という限定命題として述べるのが正確。既存テスト `nicf_decides_at_least_as_often_as_rcf` も
+  4 ペアの存在確認に留まり、普遍性の主張を支えてはいない。
+
+### 3.5 実装本体での再現とプロパティテスト化
+
+上記の発見は独立再実装（Python）だけでなく **Ajisai 本体の比較路でも再現する**。
+`continued_fraction.rs` のテスト `nicf_order_invariant_and_early_decision_rate` を追加し、
+決定論的コーパス（rational/rational・√ vs rational・√+rational の Gosper、計 4000 ペア）で
+次を検証する：
+
+- **不変条件（ハード assert）**：NICF が決定したら、その順序は真の順序（RCF 参照を大予算で評価。
+  有理数ペアは厳密 `Fraction` 比較でも二重確認）と必ず一致する。← 「予算単位 NICF は決定済みの
+  結果を変えない」という核心性質。
+- **回帰指標**：各ペアの「決定に至る最小予算」を NICF と RCF で比較し、
+  早く決定する側を集計する。実測（決定論的シード）は
+
+  | | 件数 | 割合 |
+  | --- | --- | --- |
+  | NICF が小さい予算で決定 | 1921 | 48.0% |
+  | 同点 | 1947 | 48.7% |
+  | **RCF が小さい予算で決定（反例）** | **132** | **3.3%** |
+
+  この **3.3%** は Python 実験（約 2.8%）と整合し、`…, a, 1` 折りたたみ起因の反例が
+  本体実装にも存在することを確定させる。テストは `rcf_earlier < 15%` と
+  `nicf_earlier > rcf_earlier` を回帰ガードとして固定し、高速化が劣化（RCF 勝率上昇 /
+  NICF 勝率低下）すれば落ちる。
 
 ---
 
@@ -159,7 +181,9 @@ RCF は項1（`10` vs `9`）で分岐＝決定するのに、NICF は先頭2項 
 
 ```sh
 python3 docs/dev/_attachments/cf_probe.py   # 反例探索と統計（標準ライブラリのみ）
-cd rust && cargo test --lib continued_fraction   # 実装側の性質テスト
+cd rust && cargo test --lib continued_fraction   # 実装側の性質テスト一式
+cd rust && cargo test --lib nicf_order_invariant_and_early_decision_rate -- --nocapture
+                                              # ↑ 不変条件＋早分岐率の回帰指標（§3.5）
 ```
 
 > 上記スクリプトは観察用の独立再実装であり、Ajisai 本体の数値路ではない。

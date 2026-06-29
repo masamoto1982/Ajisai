@@ -3932,4 +3932,141 @@ mod tests {
         let sum = sqrt_of(2, 9).add(&sqrt_of(2, 9));
         assert!(!expanded(&sum).is_empty(), "2·√(2/9) must expand");
     }
+
+    /// First budget in `1..=cap` at which `decide(b)` resolves to an order,
+    /// or `None` if it never decides within `cap`. `decide` is monotone in
+    /// `b` (a larger budget never un-decides), so this is the threshold at
+    /// which the pair crosses from `U` to decided under that comparator.
+    fn min_decision_budget(
+        cap: usize,
+        mut decide: impl FnMut(usize) -> Option<std::cmp::Ordering>,
+    ) -> Option<usize> {
+        (1..=cap).find(|&b| decide(b).is_some())
+    }
+
+    /// §4.2.5 / §7.4.1.1, property form. Over a large deterministic corpus of
+    /// budget-stressing nearby pairs (rational/rational, √ vs rational, and
+    /// √+rational Gosper operands):
+    ///
+    ///   (1) **invariant** — whenever the NICF comparison decides, its order
+    ///       equals the true order. Truth is the RCF reference at a generous
+    ///       budget, additionally cross-checked against exact `Fraction` order
+    ///       on rational/rational pairs so the reference itself is anchored.
+    ///       This is the property that the budget unit (NICF) never changes a
+    ///       decided result — it only moves the U→decided boundary.
+    ///
+    ///   (2) **regression metric** — the rate at which NICF reaches a decision
+    ///       at a *smaller or equal* budget than RCF must stay the overwhelming
+    ///       majority. NICF winning far more often than it loses is the
+    ///       acceleration's reason to exist; the minority where RCF decides
+    ///       *earlier* is real (the `…, a, 1` 1-folding that NICF canonicalizes
+    ///       can defer a divergence RCF already exposed) but must stay bounded.
+    ///       A change that regressed the accelerator would push the RCF-earlier
+    ///       rate up or the NICF-earlier rate down and trip this test.
+    #[test]
+    fn nicf_order_invariant_and_early_decision_rate() {
+        use std::cmp::Ordering;
+        const TRUTH_BUDGET: usize = 4096; // generous: distinct values decide here
+        const CAP: usize = 128; // decision-budget scan ceiling
+        let mut seed: u64 = 0x9E3779B97F4A7C15;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+
+        let mut decided_pairs = 0usize;
+        let mut nicf_earlier = 0usize;
+        let mut tie = 0usize;
+        let mut rcf_earlier = 0usize;
+
+        for _ in 0..4000 {
+            // A budget-stressing *nearby* pair (the case that makes the U→decided
+            // boundary observable). Three operand shapes exercise the Rational,
+            // AlgebraicSqrt, and Gosper NICF emitters.
+            let (x, y) = match next() % 3 {
+                0 => {
+                    let n = (next() % 20_001) as i64 - 10_000;
+                    let d = (next() % 4_000) as i64 + 1;
+                    let a = rational(n, d);
+                    let b = a.add(&rational(1, (next() % 1_000_000) as i64 + 2));
+                    (a, b)
+                }
+                1 => {
+                    let r = [2i64, 3, 5, 6, 7, 8, 10, 11, 13][(next() % 9) as usize];
+                    let s = sqrt_of(r, 1);
+                    let approx = s
+                        .best_rational_approximation(&BigInt::from((next() % 5_000) as i64 + 2))
+                        .expect("sqrt has a best rational approximation");
+                    (s, ExactReal::Rational(approx))
+                }
+                _ => {
+                    let r = [2i64, 3, 5, 6, 7, 11, 13][(next() % 7) as usize];
+                    let g = sqrt_of(r, 1)
+                        .add(&rational((next() % 7) as i64 - 3, (next() % 5) as i64 + 1));
+                    let g2 = g.add(&rational(1, (next() % 100_000) as i64 + 2));
+                    (g, g2)
+                }
+            };
+
+            // Truth from the RCF reference at a generous budget; skip equal /
+            // undecidable pairs (no order to check against).
+            let Some(truth) = decided(rcf_reference_cmp(&x, &y, TRUTH_BUDGET)) else {
+                continue;
+            };
+            decided_pairs += 1;
+
+            // (1) A decided NICF order must equal the truth.
+            if let Some(order) = decided(x.cmp_with_budget_tracked(&y, CAP)) {
+                assert_eq!(
+                    order, truth,
+                    "NICF decided an order disagreeing with the RCF reference"
+                );
+            }
+            // Anchor the reference itself on rational/rational pairs.
+            if let (Some(fx), Some(fy)) = (x.as_rational(), y.as_rational()) {
+                assert_eq!(
+                    fx.cmp(fy),
+                    truth,
+                    "RCF reference disagreed with exact rational order"
+                );
+            }
+
+            // (2) Compare the minimal decision budgets under each expansion.
+            let bn = min_decision_budget(CAP, |b| decided(x.cmp_with_budget_tracked(&y, b)));
+            let br = min_decision_budget(CAP, |b| decided(rcf_reference_cmp(&x, &y, b)));
+            if let (Some(bn), Some(br)) = (bn, br) {
+                match bn.cmp(&br) {
+                    Ordering::Less => nicf_earlier += 1,
+                    Ordering::Equal => tie += 1,
+                    Ordering::Greater => rcf_earlier += 1,
+                }
+            }
+        }
+
+        let measured = nicf_earlier + tie + rcf_earlier;
+        assert!(
+            decided_pairs > 2000 && measured > 2000,
+            "corpus too small: decided={decided_pairs} measured={measured}"
+        );
+        let rcf_earlier_frac = rcf_earlier as f64 / measured as f64;
+        let nicf_earlier_frac = nicf_earlier as f64 / measured as f64;
+        eprintln!(
+            "[nicf-vs-rcf decision budget] nicf_earlier={nicf_earlier} ({:.1}%) tie={tie} rcf_earlier={rcf_earlier} ({:.1}%) of {measured}",
+            100.0 * nicf_earlier_frac,
+            100.0 * rcf_earlier_frac,
+        );
+        // Regression guards: NICF wins far more often than it loses, and the
+        // known RCF-earlier minority stays bounded.
+        assert!(
+            nicf_earlier > rcf_earlier,
+            "NICF no longer reaches a decision earlier more often than RCF: \
+             nicf_earlier={nicf_earlier} rcf_earlier={rcf_earlier}"
+        );
+        assert!(
+            rcf_earlier_frac < 0.15,
+            "RCF-earlier rate regressed above its bound: {rcf_earlier}/{measured} = {rcf_earlier_frac:.3}"
+        );
+    }
 }
