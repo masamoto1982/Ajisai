@@ -225,7 +225,7 @@ No protocol strings, no display forms, no Coreword names change.
 - `Undecidable` / `comparisonBudget` plumbing stays in the codebase
   (`error.rs`, `absence.rs`, `value-operations.rs`) for the future
   transcendental domain.
-- `=>` (`OR-NIL`) remains the explicit, user-chosen fallback for any
+- `^` (`VENT`) remains the explicit, user-chosen fallback for any
   genuine future `Undecidable`.
 - The continued-fraction value model and `ContinuedFraction` display
   hint are unchanged; `Algebraic` is an internal representation only.
@@ -293,9 +293,9 @@ normal form, one structural equality test. The larger diff is accepted
 in exchange for structural uniformity.
 
 **Decision 3 — transcendental equality stays `Undecidable` + explicit
-`=>`; no silent approximate fallback, ever.**
+`^`; no silent approximate fallback, ever.**
 Confirmed. A silent epsilon fallback is non-deterministic and
 non-traceable; an AI agent must be able to mechanically predict and
 explain every outcome. `Undecidable` is an explicit, diagnosable signal
-and `=>` is an explicit, user-chosen recovery point. This is the same
+and `^` (`VENT`) is an explicit, user-chosen recovery point. This is the same
 principle on which the original epsilon-fallback memo was rejected.

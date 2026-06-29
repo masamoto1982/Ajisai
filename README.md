@@ -14,11 +14,11 @@ The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.�
 
 The specification and the Reference are authored in HTML (see [`docs/dev/ajisai-authoring-style.md`](docs/dev/ajisai-authoring-style.md)) and are served rendered on the project site:
 
-| Document | Rendered at | Role |
-| --- | --- | --- |
-| **Specification** | https://masamoto1982.github.io/Ajisai/SPECIFICATION.html | Canonical language definition — the single design authority |
-| **Reference** | https://masamoto1982.github.io/Ajisai/docs/index.html | Verified examples, each openable in the Playground |
-| **Playground** | https://masamoto1982.github.io/Ajisai/ | Run Ajisai in the browser |
+| Document | Audience | Rendered at | Role |
+| --- | --- | --- | --- |
+| **Specification** | Builders and porters | https://masamoto1982.github.io/Ajisai/SPECIFICATION.html | Canonical language definition — the single design authority |
+| **Reference** | Ajisai users | https://masamoto1982.github.io/Ajisai/docs/index.html | Verified examples, each openable in the Playground |
+| **Playground** | Run it now | https://masamoto1982.github.io/Ajisai/ | Run Ajisai in the browser |
 
 The HTML source of the specification lives at [`SPECIFICATION.html`](SPECIFICATION.html) in this repository; the rendered URL above is the reading surface. The desktop build channel is the Tauri wrapper in [`src-tauri/`](src-tauri/).
 

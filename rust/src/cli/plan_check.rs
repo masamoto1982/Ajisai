@@ -56,9 +56,9 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
     let mut seen_reject: HashSet<String> = HashSet::new();
 
     for token in &tokens {
-        // `^` (VENT) and `=>` (OR-NIL) tokenize as `NilCoalesce`: both are
-        // explicit NIL fallbacks (SPEC §6.5 sugar), so either satisfies the
-        // unguarded-NIL advisory.
+        // `^` (VENT) is the only current sugar that tokenizes as `NilCoalesce`.
+        // `OR-NIL` / `=>` are historical names/forms and the current tokenizer
+        // does not produce them; a spelled-out `VENT` is handled below.
         if matches!(token, Token::NilCoalesce) {
             has_fallback = true;
             continue;
