@@ -23,7 +23,7 @@ Measured from the current tree:
 | --- | --- | --- |
 | Core words | ~87 across 15 categories | `rust/src/builtins/builtin_word_definitions.rs` |
 | Module words | ~90 across 8 modules (ALGO, CRYPTO, IO, JSON, MATH, MUSIC, SERIAL, TIME) | `rust/src/interpreter/modules/` |
-| Symbol sugar / aliases | `+ - * / % < <= > >= = == <> ! & ? . .. , ,, ' ^ …` | `rust/src/core_word_aliases.rs`, `rust/src/surface_forms.rs` |
+| Symbol sugar / aliases | `+ - * / % < <= > >= = <> ! & ? . .. , ,, ' ~ ^ …` | `rust/src/core_word_aliases.rs`, `rust/src/surface_forms.rs` |
 | Conformance cases | 53 | `tests/conformance/index.html` |
 | Law-test files | 14 | `rust/tests/*_laws.rs` |
 | Algebraic classification today | 19 entries / 22 primitives | `docs/formalization-coverage.json` |
@@ -132,8 +132,8 @@ order (cheapest/most-settled first, building on the proven slice):
 7. **dictionary** (DEF DEL LOOKUP) + **module** (IMPORT* UNIMPORT*) — Primitive
    dictionary lookup / state-transformer composition; FORC as a consumption
    policy.
-8. **modifier** (KEEP STAK EAT TOP VENT PIPE) — Derived modifier combinators;
-   PIPE is Sugar (no-op marker); VENT (`^`) is the bubble handler.
+8. **modifier** (KEEP STAK EAT TOP FLOW VENT) — Derived modifier combinators;
+   FLOW (`~`) is Sugar (no-op marker); VENT (`^`) is the bubble handler.
 9. **higher-order** (MAP FILTER FOLD SCAN UNFOLD ALL ANY COUNT) — Derived
    recursion schemes over `state-transformer.composition` + `structure-lift`.
 10. **control** (COND EVAL EXEC FORC IDLE PRECOMPUTE; SPAWN AWAIT KILL MONITOR

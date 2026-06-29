@@ -235,6 +235,13 @@ mod single_char_aliases {
     }
 
     #[test]
+    fn aq_ver_002_d_double_equals_is_two_eq_symbols_not_pipeline() {
+        // `==` is retired as pipeline sugar: only `~` emits Token::Pipeline.
+        let tokens = tokenize("a == b").unwrap();
+        assert_eq!(tokens, vec![sym("a"), sym("="), sym("="), sym("b")]);
+    }
+
+    #[test]
     fn aq_ver_002_d_equals_at_eof_is_bare_symbol() {
         let tokens = tokenize("=").unwrap();
         assert_eq!(tokens, vec![sym("=")]);

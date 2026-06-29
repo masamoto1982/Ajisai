@@ -30,7 +30,7 @@ The tokenizer maps symbol forms to canonical English names; the master map is th
 | `,` | `EAT` | Consumption modifier | Operands are consumed after the operation (default) |
 | `,,` | `KEEP` | Consumption modifier | Operands are retained; the result is also pushed |
 
-So `.` is the sugar for the word that selects the **operation-target mode**, and `,` is the sugar for the word that selects **operand consumption**. Both look exactly like English punctuation. Other word-aliases (`+` `-` `*` `/` `%` `=` `<` `>` `&` `==` `=>` `?` `!`) carry the same risk to a smaller degree. A casual comma-separated list written near Ajisai code invites the misreading "is that `,` part of the program?".
+So `.` is the sugar for the word that selects the **operation-target mode**, and `,` is the sugar for the word that selects **operand consumption**. Both look exactly like English punctuation. Other word-aliases (`+` `-` `*` `/` `%` `=` `<` `>` `&` `~` `^` `?` `!`) carry the same risk to a smaller degree. A casual comma-separated list written near Ajisai code invites the misreading "is that `,` part of the program?".
 
 ## 3. Primary technique: the gray code background, reserved for Ajisai
 
@@ -101,7 +101,7 @@ Keep paragraphs for the definition of a single concept, the rationale behind a r
 
 1. **Mark every Ajisai-meaningful token as code** so it carries the gray background (Section 3). Non-negotiable baseline.
 2. **Keep mathematics in its own channel** (Section 4); never give it the gray Ajisai background. On the HTML surfaces, typeset it as LaTeX via KaTeX with `\(…\)` / `\[…\]` (Section 4.1); on Markdown surfaces, GitHub's `$…$` math is available (Section 4.2).
-3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word or sugar (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `==` `=>` `?` `!` `|`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
+3. **Never use a bare Ajisai token as prose punctuation.** A symbol that is a word or sugar (`.` `..` `,` `,,` `+` `-` `*` `/` `%` `=` `<` `>` `<=` `>=` `<>` `&` `~` `^` `?` `!` `|`) appears only as marked-up code, never as the separator, bullet, or delimiter of running text.
 4. **Promote an inline list of three or more code tokens to a table.**
 5. **One concept axis per column.**
 6. **Do not encode results with inline comment arrows.** `# → [ 1 ]` blurs code and result; use separate columns or blocks.

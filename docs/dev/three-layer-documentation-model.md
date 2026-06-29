@@ -239,7 +239,7 @@ Unlike LOOKUP and Reference (which always show both forms when sugar exists), ho
 | `SAFE` | `~ GET` |
 | `FORC` | `! 'WORD' DEL` |
 | `LOOKUP` | `'ADD' ?` |
-| `PIPE` | `xs == { ... } MAP` |
+| `FLOW` | `xs ~ { ... } MAP` |
 | `VENT` | `NIL ^ [ 0 ]` |
 | `DEF` | `{ 2 * } 'DOUBLE' DEF` |
 | `IMPORT` | `'IO' IMPORT` |
