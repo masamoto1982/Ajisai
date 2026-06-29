@@ -4550,4 +4550,197 @@ mod tests {
         assert_eq!(lo1, Fraction::from(1));
         assert_eq!(hi1, Fraction::from(2));
     }
+
+    /// Squarefree part of |n| by trial division (n small in the corpus): the
+    /// product of primes dividing n to an odd power. Two surds √a, √b lie in
+    /// the same real quadratic field iff their radicands have equal squarefree
+    /// parts (a/b is then a perfect rational square). 0 and 1 map to themselves.
+    fn squarefree_part(n: &BigInt) -> BigInt {
+        let mut m = n.abs();
+        if m <= BigInt::one() {
+            return m;
+        }
+        let mut result = BigInt::one();
+        let mut d = BigInt::from(2);
+        while &d * &d <= m {
+            let mut power = 0u32;
+            while (&m % &d).is_zero() {
+                m /= &d;
+                power += 1;
+            }
+            if power % 2 == 1 {
+                result *= &d;
+            }
+            d += 1;
+        }
+        result * m // remaining prime factor (appears once)
+    }
+
+    /// Collect the distinct real-quadratic-field keys referenced by a value's
+    /// expression tree: the squarefree parts of every `AlgebraicSqrt` radicand
+    /// reachable through the `Gosper` operands. The empty set means the value
+    /// is rational; one key means it lives in a single field ℚ(√key); two or
+    /// more means it spans a higher-degree field (outside the single-quadratic
+    /// ③ layer).
+    ///
+    /// `Gosper` operands are `Arc`-shared, so a value formed by repeatedly
+    /// combining a sub-expression with itself has only O(depth) *distinct*
+    /// nodes even though a naive traversal would expand exponentially. We
+    /// dedup on `Arc` pointer identity to visit each shared node once, keeping
+    /// the walk linear in the number of allocations.
+    fn field_keys(er: &ExactReal) -> std::collections::BTreeSet<BigInt> {
+        fn walk(
+            er: &ExactReal,
+            out: &mut std::collections::BTreeSet<BigInt>,
+            seen: &mut std::collections::HashSet<usize>,
+        ) {
+            match er {
+                ExactReal::Rational(_) => {}
+                ExactReal::AlgebraicSqrt { radicand } => {
+                    let key = squarefree_part(&(radicand.numerator() * radicand.denominator()));
+                    if key > BigInt::one() {
+                        out.insert(key);
+                    }
+                }
+                ExactReal::Gosper(g) => {
+                    if !seen.insert(Arc::as_ptr(g) as usize) {
+                        return; // shared node already visited
+                    }
+                    match &**g {
+                        Gosper::Mobius { x, .. } => walk(x, out, seen),
+                        Gosper::Bihomographic { x, y, .. } => {
+                            walk(x, out, seen);
+                            walk(y, out, seen);
+                        }
+                    }
+                }
+            }
+        }
+        let mut out = std::collections::BTreeSet::new();
+        let mut seen = std::collections::HashSet::new();
+        walk(er, &mut out, &mut seen);
+        out
+    }
+
+    /// Build a pool of arithmetic results by repeatedly combining rationals and
+    /// the given `surds` (as √r) with +−×÷, then classify the `Gosper`
+    /// (non-trivial arithmetic) results by how many distinct quadratic-field
+    /// keys their trees reference. Returns (gosper_count, rational, single,
+    /// multi, same_single_pairs, pair_total). Deterministic given `seed0`.
+    fn measure_field_reach(
+        seed0: u64,
+        surds: &[i64],
+    ) -> (usize, usize, usize, usize, usize, usize) {
+        let mut seed = seed0;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        let atom = |s: u64| -> ExactReal {
+            if s % 2 == 0 {
+                rational((s >> 1) as i64 % 21 - 10, (s >> 6) as i64 % 7 + 1)
+            } else {
+                sqrt_of(surds[(s >> 1) as usize % surds.len()], 1)
+            }
+        };
+        let mut pool: Vec<ExactReal> = (0..24).map(|_| atom(next())).collect();
+        for _ in 0..1200 {
+            let x = pool[(next() as usize) % pool.len()].clone();
+            let y = pool[(next() as usize) % pool.len()].clone();
+            let r = match next() % 4 {
+                0 => x.add(&y),
+                1 => x.sub(&y),
+                2 => x.mul(&y),
+                _ => x.div(&y).unwrap_or_else(|| x.add(&y)),
+            };
+            if !r.is_nil() {
+                pool.push(r);
+            }
+            // Bound depth/coefficient growth so the corpus stays fast: keep the
+            // most recently formed (deepest) results.
+            if pool.len() > 300 {
+                pool.drain(0..150);
+            }
+        }
+        let gosper: Vec<&ExactReal> = pool
+            .iter()
+            .filter(|e| matches!(e, ExactReal::Gosper(_)))
+            .collect();
+        let (mut rational_v, mut single, mut multi) = (0usize, 0usize, 0usize);
+        for e in &gosper {
+            match field_keys(e).len() {
+                0 => rational_v += 1,
+                1 => single += 1,
+                _ => multi += 1,
+            }
+        }
+        let (mut same_single, mut pair_total) = (0usize, 0usize);
+        for i in (0..gosper.len()).step_by(3) {
+            for j in ((i + 1)..gosper.len()).step_by(7) {
+                let ki = field_keys(gosper[i]);
+                let kj = field_keys(gosper[j]);
+                pair_total += 1;
+                if ki.len() == 1 && ki == kj {
+                    same_single += 1;
+                }
+            }
+        }
+        (
+            gosper.len(),
+            rational_v,
+            single,
+            multi,
+            same_single,
+            pair_total,
+        )
+    }
+
+    /// Measurement (sign ③, ℚ(√d) algebraic layer — reach). The single-quadratic
+    /// ③ layer gives O(1) exact arithmetic/comparison only for values that live
+    /// in *one* real quadratic field `(a + b√d)/c`. Real quadratic fields are
+    /// closed under +−×÷, so the decisive question is workload locality: a
+    /// computation that stays within one field keeps every result single-field
+    /// (③ fully applies), while a single cross-field operation escapes to a
+    /// higher-degree field (③ does not apply). This contrasts the two regimes:
+    ///
+    ///   - single-field corpus (rationals + only ℚ(√2) surds: 2, 8, 18, 32, 50)
+    ///   - mixed corpus (rationals + surds from many distinct fields)
+    ///
+    /// to show ③'s reach is all-or-nothing per computation, gated by input
+    /// discipline rather than by the arithmetic itself. Reported; the closure
+    /// property (single-field in ⇒ single-field out) is asserted.
+    #[test]
+    fn quadratic_field_reach_measurement() {
+        // All these radicands have squarefree part 2 ⇒ the same field ℚ(√2).
+        let (g1, r1, s1, m1, ps1, pt1) =
+            measure_field_reach(0x1111_2222_3333_4444, &[2, 8, 18, 32, 50]);
+        eprintln!(
+            "[③ single-field corpus] gosper={g1} rational={r1} single={s1} ({:.1}%) multi={m1} \
+             | same-single pairs={ps1}/{pt1} ({:.1}%)",
+            100.0 * s1 as f64 / g1.max(1) as f64,
+            100.0 * ps1 as f64 / pt1.max(1) as f64,
+        );
+        // Many distinct fields mixed together.
+        let (g2, r2, s2, m2, ps2, pt2) =
+            measure_field_reach(0xF00D_F00D_CAFE_BABE, &[2, 3, 5, 6, 7, 10, 11, 13]);
+        eprintln!(
+            "[③ mixed corpus] gosper={g2} rational={r2} single={s2} ({:.1}%) multi={m2} ({:.1}%) \
+             | same-single pairs={ps2}/{pt2} ({:.1}%)",
+            100.0 * s2 as f64 / g2.max(1) as f64,
+            100.0 * m2 as f64 / g2.max(1) as f64,
+            100.0 * ps2 as f64 / pt2.max(1) as f64,
+        );
+
+        // Closure: within a single field, arithmetic never escapes it — every
+        // non-rational arithmetic result stays single-field.
+        assert_eq!(m1, 0, "single-field arithmetic escaped its field");
+        assert!(g1 > 50 && s1 > 0, "single-field corpus too small");
+
+        // Squarefree-part field-equivalence anchors.
+        assert_eq!(squarefree_part(&BigInt::from(8)), BigInt::from(2));
+        assert_eq!(squarefree_part(&BigInt::from(50)), BigInt::from(2));
+        assert_eq!(squarefree_part(&BigInt::from(30)), BigInt::from(30));
+    }
 }
