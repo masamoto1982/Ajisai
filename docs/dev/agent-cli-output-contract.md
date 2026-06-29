@@ -371,7 +371,7 @@ contract; it does not search for or rewrite a plan. Present only with
   domain miss to NIL, e.g. `DIV` `GET` `NUM`). A `Projecting` comparison
   (`LT`/`SORT`/…) projects to logical U, not NIL, and is deliberately not
   listed.
-- `hasFallback` is `true` when a `^` (VENT) or `=>` (OR-NIL) NIL fallback
+- `hasFallback` is `true` when a `^` (VENT) NIL fallback
   appears. An unguarded NIL source (`mayBubble` non-empty, `hasFallback` false)
   is an advisory, the `handleUnknownOrNil` prompt rendered ahead of execution.
 - `findings` are the plain-language `planCheck` surface (L0), most severe
@@ -434,7 +434,7 @@ it is empty when nothing is undecided.
 
 - A question is raised only for an axis that is genuinely undecided
   (conflicting cues), never for a merely-defaulted one; the unguarded-NIL
-  question is suppressed when a `^`/`=>` fallback is already present
+  question is suppressed when a `^` (VENT) fallback is already present
   (minimization, design note §6).
 - `apply` is the modifier sugar a choice resolves to (`.` `..` `,` `,,` `^`),
   or `null` for a "leave it as is" choice (no code change).

@@ -1,5 +1,7 @@
 # Ajisai Three-Layer Documentation Model
 
+Note: this model describes the word-help surface hierarchy (Reference / LOOKUP / hover) and is orthogonal to the document-role axis (Specification / Reference / README).
+
 Status: proposal (revision of the草案 dated 2026-05).
 Authority: non-canonical. `SPECIFICATION.html` remains the canonical source for language semantics; its Specification Authority section (§2.4–§2.5) defines Reference, LOOKUP, and hover as derived documentation under the specification's authority. This document defines the **structure and policy of user-facing guidance**, not language behavior.
 
@@ -237,8 +239,8 @@ Unlike LOOKUP and Reference (which always show both forms when sugar exists), ho
 | `SAFE` | `~ GET` |
 | `FORC` | `! 'WORD' DEL` |
 | `LOOKUP` | `'ADD' ?` |
-| `PIPE` | `xs == { ... } MAP` |
-| `OR-NIL` | `NIL => [ 0 ]` |
+| `FLOW` | `xs ~ { ... } MAP` |
+| `VENT` | `NIL ^ [ 0 ]` |
 | `DEF` | `{ 2 * } 'DOUBLE' DEF` |
 | `IMPORT` | `'IO' IMPORT` |
 
