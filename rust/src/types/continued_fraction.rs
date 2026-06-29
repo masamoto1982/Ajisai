@@ -962,16 +962,97 @@ fn mobius_apply(a: BigInt, b: BigInt, c: BigInt, d: BigInt, x: ExactReal) -> Exa
         }
         return ExactReal::Rational(Fraction::new(b, d));
     }
-    if let ExactReal::Rational(f) = &x {
-        // Evaluate the Möbius directly on the rational operand.
-        let (xn, xd) = f.to_bigint_pair();
-        let num = &a * &xn + &b * &xd;
-        let den = &c * &xn + &d * &xd;
-        if den.is_zero() {
-            return ExactReal::Rational(Fraction::nil());
+    match &x {
+        ExactReal::Rational(f) => {
+            // Evaluate the Möbius directly on the rational operand.
+            let (xn, xd) = f.to_bigint_pair();
+            let num = &a * &xn + &b * &xd;
+            let den = &c * &xn + &d * &xd;
+            if den.is_zero() {
+                return ExactReal::Rational(Fraction::nil());
+            }
+            ExactReal::Rational(Fraction::new(num, den))
         }
-        return ExactReal::Rational(Fraction::new(num, den));
+        ExactReal::Gosper(g) => match &**g {
+            // Möbius ∘ Möbius is a Möbius: compose the 2×2 matrices instead of
+            // nesting a new layer over the inner transform. A chain of rational
+            // scalar operations on one lazy value therefore stays a single
+            // Möbius (depth 1) rather than a tower one layer deep per op.
+            // M(M'(t)) = (M·M')(t) with [[a,b],[c,d]]·[[a2,b2],[c2,d2]].
+            Gosper::Mobius {
+                a: a2,
+                b: b2,
+                c: c2,
+                d: d2,
+                x: inner,
+            } => {
+                let na = &a * a2 + &b * c2;
+                let nb = &a * b2 + &b * d2;
+                let nc = &c * a2 + &d * c2;
+                let nd = &c * b2 + &d * d2;
+                let inner = inner.clone();
+                // Recurse: flattens a pre-existing chain and re-checks the
+                // rational/zero short-circuits on the composed transform.
+                mobius_apply(na, nb, nc, nd, inner)
+            }
+            // Möbius ∘ bihomographic is a bihomographic: fold the outer Möbius
+            // into the inner transform's eight coefficients (post-composition
+            // M·B over the shared numerator/denominator), keeping the result a
+            // single bihom over the same two operands instead of wrapping it.
+            Gosper::Bihomographic {
+                a: a2,
+                b: b2,
+                c: c2,
+                d: d2,
+                e: e2,
+                f: f2,
+                g: g2,
+                h: h2,
+                x: bx,
+                y: by,
+            } => {
+                let mut na = &a * a2 + &b * e2;
+                let mut nb = &a * b2 + &b * f2;
+                let mut nc = &a * c2 + &b * g2;
+                let mut nd = &a * d2 + &b * h2;
+                let mut ne = &c * a2 + &d * e2;
+                let mut nf = &c * b2 + &d * f2;
+                let mut ng = &c * c2 + &d * g2;
+                let mut nh = &c * d2 + &d * h2;
+                normalize_bihom(
+                    &mut na, &mut nb, &mut nc, &mut nd, &mut ne, &mut nf, &mut ng, &mut nh,
+                );
+                let (bx, by) = (bx.clone(), by.clone());
+                ExactReal::Gosper(Arc::new(Gosper::Bihomographic {
+                    a: na,
+                    b: nb,
+                    c: nc,
+                    d: nd,
+                    e: ne,
+                    f: nf,
+                    g: ng,
+                    h: nh,
+                    x: bx,
+                    y: by,
+                }))
+            }
+        },
+        ExactReal::AlgebraicSqrt { .. } => wrap_mobius(a, b, c, d, x),
     }
+}
+
+/// Wrap a Möbius over an operand that is neither rational nor itself a Gosper
+/// transform (so no composition applies), GCD-normalizing the coefficients —
+/// scaling all four by a constant leaves `(a·x + b)/(c·x + d)` unchanged, so
+/// this keeps the stored coefficients minimal.
+fn wrap_mobius(
+    mut a: BigInt,
+    mut b: BigInt,
+    mut c: BigInt,
+    mut d: BigInt,
+    x: ExactReal,
+) -> ExactReal {
+    normalize_mobius(&mut a, &mut b, &mut c, &mut d);
     ExactReal::Gosper(Arc::new(Gosper::Mobius { a, b, c, d, x }))
 }
 
@@ -4742,5 +4823,88 @@ mod tests {
         assert_eq!(squarefree_part(&BigInt::from(8)), BigInt::from(2));
         assert_eq!(squarefree_part(&BigInt::from(50)), BigInt::from(2));
         assert_eq!(squarefree_part(&BigInt::from(30)), BigInt::from(30));
+    }
+
+    /// Depth of a value's lazy expression tree: 0 for a leaf, else 1 + the
+    /// deepest `Gosper` operand.
+    fn gosper_depth(er: &ExactReal) -> usize {
+        match er {
+            ExactReal::Rational(_) | ExactReal::AlgebraicSqrt { .. } => 0,
+            ExactReal::Gosper(g) => match &**g {
+                Gosper::Mobius { x, .. } => 1 + gosper_depth(x),
+                Gosper::Bihomographic { x, y, .. } => 1 + gosper_depth(x).max(gosper_depth(y)),
+            },
+        }
+    }
+
+    /// Möbius composition (other-path speedup). A chain of rational scalar
+    /// operations on a single lazy value composes into one Möbius instead of
+    /// nesting, so:
+    ///
+    ///   (1) **depth stays bounded (regression metric)** — the lazy tree of an
+    ///       arbitrarily long rational-op chain stays depth 1 (a single Möbius
+    ///       over the surd), not depth = chain length. Per-term streaming cost
+    ///       is then O(1) in the chain length instead of O(length).
+    ///   (2) **value is exact (hard assert)** — composition is the exact
+    ///       Möbius matrix product, so a net-identity chain returns to the
+    ///       original value, and independently-built equal values compare equal.
+    #[test]
+    fn mobius_composition_keeps_depth_bounded_and_value_exact() {
+        // (1) Depth stays 1 no matter how long the rational-op chain is.
+        for &len in &[1usize, 4, 16, 64, 256] {
+            let mut v = sqrt_of(2, 1);
+            for i in 0..len {
+                v = match i % 3 {
+                    0 => v.add(&rational((i as i64 % 5) - 2, (i as i64 % 3) + 1)),
+                    1 => v.mul(&rational((i as i64 % 4) + 1, (i as i64 % 2) + 1)),
+                    _ => v.sub(&rational((i as i64 % 7) - 3, (i as i64 % 4) + 1)),
+                };
+            }
+            assert!(
+                gosper_depth(&v) <= 1,
+                "rational-op chain of {len} did not stay depth 1 (depth {})",
+                gosper_depth(&v)
+            );
+        }
+
+        // Value identity is checked through the canonical CF expansion, not
+        // `eq_with_budget`: two *equal* irrationals never diverge, so their
+        // budgeted comparison is U (None) — the inherent semi-decidability,
+        // not a composition error. Equal values share every partial quotient.
+
+        // (2a) Net-identity chain: ((√2 · 3 + 1) − 1) / 3 = √2 exactly.
+        let s = sqrt_of(2, 1);
+        let round_trip = s
+            .mul(&rational(3, 1))
+            .add(&rational(1, 1))
+            .sub(&rational(1, 1))
+            .div(&rational(3, 1))
+            .expect("non-zero divisor");
+        assert_eq!(
+            round_trip.partial_quotients_bounded(12),
+            s.partial_quotients_bounded(12),
+            "net-identity rational-op chain did not expand like √2"
+        );
+
+        // (2b) Two construction orders of √2 + 1/2 expand identically.
+        let lhs = sqrt_of(2, 1)
+            .mul(&rational(2, 1))
+            .add(&rational(1, 1))
+            .div(&rational(2, 1))
+            .unwrap(); // (2√2 + 1)/2
+        let rhs = sqrt_of(2, 1).add(&rational(1, 2)); // √2 + 1/2
+        assert_eq!(
+            lhs.partial_quotients_bounded(12),
+            rhs.partial_quotients_bounded(12),
+            "equal values built by different op chains expanded differently"
+        );
+
+        // (2c) The composed chain still expands to the right CF: √2 + 1 = [2;2,2,…].
+        let plus_one = sqrt_of(2, 1).add(&rational(1, 1));
+        assert_eq!(
+            plus_one.partial_quotients_bounded(5),
+            terms(&[2, 2, 2, 2, 2]),
+            "√2 + 1 should expand to [2;2,2,2,2]"
+        );
     }
 }
