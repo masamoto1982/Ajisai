@@ -458,6 +458,7 @@
                     <h2>Introduction</h2>
                     <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is an <strong>exact real</strong> — internally a continued fraction — so arithmetic never rounds.</p>
                     <p>This reference introduces each feature with short, verified examples. Every example has an <strong>"Open in Playground"</strong> button; pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
+                    <p><strong>The Reference is for using Ajisai.</strong> If you are implementing or porting the language, the single design authority is the <a href="../SPECIFICATION.html">Specification</a>; this page is derived from it for learners and day-to-day users.</p>
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
                     <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code> and <code>UNKNOWN</code>; the absence of a value displays as <code>NIL</code>.</p>
@@ -1938,6 +1939,26 @@ COND</code></td>
                         </div>
                     </div>
                 </section>
+
+                <section id="identity-model" class="ref-page">
+                    <h2>Identity Model</h2>
+                    <p>Ajisai lets you write ordinary comparison words such as <code>EQ</code>, <code>LT</code>, and <code>GTE</code> while the language keeps several “same?” questions separate behind the scenes.</p>
+                    <div class="ref-table-wrap">
+                    <table class="ref-table">
+                        <thead>
+                            <tr><th>Layer</th><th>User meaning</th><th>Why it matters</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Value equivalence</td><td>Are these the same mathematical value?</td><td>This is what comparison words use.</td></tr>
+                            <tr><td>Structural identity</td><td>Are they stored the same way internally?</td><td>Not user-observable; implementations may optimize representation.</td></tr>
+                            <tr><td>Budgeted observation</td><td>Can this equality or ordering question be decided now?</td><td>If a future lazy value cannot be decided within budget, Ajisai says <code>UNKNOWN</code> instead of guessing.</td></tr>
+                            <tr><td>Display equivalence</td><td>Do two rendered strings look the same?</td><td>Display helps humans, but it is not the proof of equality.</td></tr>
+                            <tr><td>Conformance equivalence</td><td>Do implementations produce the same observable results?</td><td>This is how ports show they are the same Ajisai language.</td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    <p>For current algebraic Ajisai values, comparison is exact and total. Users do not choose an equality mode: they use the existing words, and Ajisai keeps representation details and display roles out of the value model.</p>
+                </section>
             </article>
 
             <nav class="ref-nav" aria-label="Index">
@@ -1946,6 +1967,7 @@ COND</code></td>
                     <li><a href="#intro">Introduction</a></li>
                     <li><a href="#vectors">Values and Vectors</a></li>
                     <li><a href="#numbers">Exact Numbers</a></li>
+                    <li><a href="#identity-model">Identity Model</a></li>
                     <li><a href="#stack">Stack and Modifiers</a></li>
                     <li><a href="#arithmetic">Arithmetic</a></li>
                     <li><a href="#comparison">Comparison and Truth Values</a></li>

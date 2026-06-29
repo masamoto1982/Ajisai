@@ -195,6 +195,8 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.</p>
 
+<p>This document is written for those implementing or porting Ajisai; users who want to <em>use</em> the language should start from the <a href="docs/index.html">Reference</a> and <a href="https://masamoto1982.github.io/Ajisai/">Playground</a>.</p>
+
 <p>Ajisai is a typed, vector-oriented dataflow language. Its safety story is the conjunction of:</p>
 
 <ul>
@@ -306,6 +308,32 @@ Version: <strong>2026-06-11</strong></p>
 <p>Machine-readable semantic metadata is part of this firewall. <code>docs/word-manifest.json</code> gives every surface word a generated <code>canonical</code> spelling and <code>semantic_role</code>; <code>docs/formalization-coverage.json</code> gives canonical entries their algebraic family, derivation edges, primitive registry, effect boundary, and exploratory debt metadata. Tooling must update the generator and coverage source rather than hand-authoring contradictory manifest semantics.</p>
 
 <p>The <code>truthValue</code> axis is present only on values carrying the <code>TruthValue</code> interpretation role (Section 12.2); such values also carry the <code>truthValued</code> capability. Its three protocol strings — <code>true</code> <code>false</code> <code>unknown</code> — are the <strong>only</strong> observable surface for the three-valued logic of Section 7.5. The third value <code>unknown</code> (U) is a logical truth value, not an operational absence: how it is represented internally (for example, whether it shares storage with a NIL node) is not observable, and consumers must not infer it from <code>semanticKind = absence</code>, from any <code>absence.reason</code>, or from display text. A consumer that needs to distinguish true, false, and unknown reads the <code>truthValue</code> axis and nothing else.</p>
+
+
+<h4 id="231-identity-model">2.3.1 Identity Model</h4>
+
+<p>The Ajisai Identity Model names the layers already used by this specification. It adds no Coreword, no surface syntax, and no default behavior; it is an index that explains which existing rule answers each kind of “same?” question.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Layer</th><th>Name</th><th>Definition</th><th>Canonical basis</th></tr>
+</thead>
+<tbody>
+<tr><td>L1</td><td><strong>Value equivalence</strong></td><td>Whether two values are the same mathematical value. This is what <code>EQ</code> and the other comparison words observe.</td><td>Section 4.2.4; exact algebraic equality is a decidable implementation obligation for the admitted algebraic domain.</td></tr>
+<tr><td>L2</td><td><strong>Structural identity</strong></td><td>Whether the internal representation is the same, such as Rational, Algebraic, Gosper, lazy CF state, or expression-DAG shape.</td><td>Section 2.3, Section 4.2.2, and Section 4.2.4: representation tags are not observable value identity.</td></tr>
+<tr><td>L3</td><td><strong>Budgeted observational equivalence</strong></td><td>Whether an equality or ordering observation is decided within its comparison budget; if not, the observation yields <code>UNKNOWN</code>.</td><td>Section 4.2.5 and Section 7.4.1.</td></tr>
+<tr><td>L4</td><td><strong>Display equivalence</strong></td><td>Whether <code>render(data, role)</code> returns the same human-readable string. This is role-dependent.</td><td>Section 12.1 and Section 12.2.</td></tr>
+<tr><td>L5</td><td><strong>Conformance equivalence</strong></td><td>Whether implementations agree on the conformance suite's observable stack and host-effect samples: the implementation-level meaning of “the same Ajisai”.</td><td>Conformance and Identity; Section 12.3 observable-machine projections; <code>PORTABILITY.md</code>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The layers have fixed implications. L2 implies L1: identical representation of the same Ajisai value is necessarily the same value. L1 does not imply L2: a rational, algebraic, or Gosper-backed value may denote the same mathematical value through different internal structure, and Corewords and external consumers must not branch on that structure. In the current algebraic domain, L1 comparisons are total and exact; budget exhaustion and <code>UNKNOWN</code> are the honest L3 outcome for future or lazy domains whose order is not settled inside the observation budget. L4 does not imply L1 and must never be used as machine evidence of equality, because display is a pure function of both data and interpretation role. L5 sits above L1–L4: an implementation conforms when its observable projections agree with the suite, while unobserved representation choices remain implementation freedom.</p>
+
+<h5 id="2311-user-facing-transparency">2.3.1.1 User-facing transparency</h5>
+
+<p>Users write the existing comparison words — <code>EQ</code>, <code>NEQ</code>, <code>LT</code>, <code>LTE</code>, <code>GT</code>, and <code>GTE</code> — and their existing sugar. The Identity Model explains those words; it is not a new operation. For every value constructible by the current algebraic Coreword set, comparison is exact and total, so a user can rely on examples such as <code>√2 √2 SUB 0 EQ</code> evaluating to <code>TRUE</code> without knowing the representation or any comparison budget. <code>UNKNOWN</code> and explicit fallback through <code>^</code> (<code>VENT</code>) are the visible, user-chosen escape path for future undecidable observations, not silent approximation. L2 structural identity and L4 display role are implementation and presentation concerns; they do not appear as separate user-facing equality modes.</p>
 
 <h3 id="24-documentation-layers">2.4 Documentation layers and their responsibilities</h3>
 
