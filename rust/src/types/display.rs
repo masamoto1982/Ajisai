@@ -17,6 +17,19 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     if value.is_unknown() {
         return "UNKNOWN".to_string();
     }
+    // An operational NIL (a bubble carrying absence metadata) always renders
+    // as `NIL`, regardless of the effective hint. A positional hint can carry
+    // a word's declared output role (e.g. CHR is declared to yield TEXT),
+    // which must not mask an absence into a bogus `''`/`FALSE`/datetime
+    // rendering — the canonical `Display` (which uses the value's own `Nil`
+    // hint) already shows `NIL` here, so this keeps hint-driven callers
+    // consistent with it. The empty string `''` is itself a NIL with reason
+    // `EmptySequence` (see `Value::from_string`), so it likewise renders as
+    // `NIL`, matching its canonical form. Mirrors the Unknown rule above
+    // (SPEC §4.5; §12.2).
+    if matches!(value.data, ValueData::Nil) && value.absence_metadata().is_some() {
+        return "NIL".to_string();
+    }
     match hint {
         Interpretation::Nil => {
             if matches!(value.data, ValueData::Nil) {
