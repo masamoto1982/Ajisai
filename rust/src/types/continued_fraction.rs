@@ -4907,4 +4907,182 @@ mod tests {
             "√2 + 1 should expand to [2;2,2,2,2]"
         );
     }
+
+    /// Total bits across every Möbius/bihomographic coefficient in a value's
+    /// tree (Arc-deduped so shared sub-expressions are counted once), plus the
+    /// single largest coefficient — proxies for the BigInt multiply operand
+    /// sizes that the streaming emitter works on.
+    fn gosper_coeff_stats(er: &ExactReal) -> (u64, u64) {
+        fn walk(
+            er: &ExactReal,
+            total: &mut u64,
+            max: &mut u64,
+            seen: &mut std::collections::HashSet<usize>,
+        ) {
+            match er {
+                ExactReal::Rational(_) | ExactReal::AlgebraicSqrt { .. } => {}
+                ExactReal::Gosper(g) => {
+                    if !seen.insert(Arc::as_ptr(g) as usize) {
+                        return;
+                    }
+                    let coeffs: Vec<&BigInt> = match &**g {
+                        Gosper::Mobius { a, b, c, d, .. } => vec![a, b, c, d],
+                        Gosper::Bihomographic {
+                            a,
+                            b,
+                            c,
+                            d,
+                            e,
+                            f,
+                            g: gco,
+                            h,
+                            ..
+                        } => vec![a, b, c, d, e, f, gco, h],
+                    };
+                    for co in coeffs {
+                        let bits = co.bits();
+                        *total += bits;
+                        *max = (*max).max(bits);
+                    }
+                    match &**g {
+                        Gosper::Mobius { x, .. } => walk(x, total, max, seen),
+                        Gosper::Bihomographic { x, y, .. } => {
+                            walk(x, total, max, seen);
+                            walk(y, total, max, seen);
+                        }
+                    }
+                }
+            }
+        }
+        let (mut total, mut max) = (0u64, 0u64);
+        walk(
+            er,
+            &mut total,
+            &mut max,
+            &mut std::collections::HashSet::new(),
+        );
+        (total, max)
+    }
+
+    /// Bits of the deepest convergent denominator reachable in `k` regular-CF
+    /// terms of `value` — the size of the integers a high-precision rational
+    /// approximation works with.
+    fn convergent_bits_at(value: &ExactReal, k: usize) -> u64 {
+        let mut iter = CfIter::from_exact_real(value);
+        let (mut k2, mut k1) = (BigInt::one(), BigInt::zero());
+        let mut bits = 0u64;
+        for _ in 0..k {
+            match iter.next_step() {
+                CfStep::Quotient(a) => {
+                    let kk = &a * &k1 + &k2;
+                    bits = kk.bits();
+                    k2 = std::mem::replace(&mut k1, kk);
+                }
+                _ => break,
+            }
+        }
+        bits
+    }
+
+    /// Measurement (NTT feasibility — REACH). How large do the BigInt operands
+    /// in Ajisai's numeric core actually get? NTT-based multiplication only
+    /// beats `num-bigint`'s Karatsuba/Toom in the large-operand tail (tens of
+    /// thousands of bits and up), so this records the operand sizes reached by
+    /// representative heavy computations to see whether Ajisai ever lands there.
+    /// Reported; a coarse sanity bound is asserted.
+    #[test]
+    fn ntt_operand_reach_measurement() {
+        // (1) √ expansion: convergent integer size vs term count. The default
+        //     comparison budget is 256 terms; COMPARE-WITHIN admits more.
+        for &k in &[256usize, 1_000, 5_000, 20_000] {
+            let bits = convergent_bits_at(&sqrt_of(2, 1), k);
+            eprintln!("[reach √2 convergent] terms={k:>6} denom_bits={bits}");
+        }
+
+        // (2) best_rational_approximation with a large denominator bound — a
+        //     user-facing entry point that can force big integers.
+        for &dec in &[100u32, 1_000, 5_000] {
+            let bound = BigInt::from(10u8).pow(dec);
+            let approx = sqrt_of(2, 1)
+                .best_rational_approximation(&bound)
+                .expect("approximation exists");
+            let (n, d) = approx.to_bigint_pair();
+            eprintln!(
+                "[reach best-approx] max_denom=10^{dec} num_bits={} den_bits={}",
+                n.bits(),
+                d.bits()
+            );
+        }
+
+        // (3) Deep mixed-field Gosper tree: many distinct surds + a long
+        //     arithmetic chain (the bihom-nesting regime composition does NOT
+        //     flatten). Record the largest coefficient reached.
+        let surds = [2i64, 3, 5, 7, 11, 13, 17, 19, 23, 29];
+        let mut acc = sqrt_of(surds[0], 1);
+        let mut max_coeff = 0u64;
+        for i in 1..2_000usize {
+            let s = sqrt_of(surds[i % surds.len()], 1);
+            acc = match i % 4 {
+                0 => acc.add(&s),
+                1 => acc.sub(&s),
+                2 => acc.mul(&s),
+                _ => acc.div(&s).unwrap_or_else(|| acc.add(&s)),
+            };
+            // Guard against unbounded depth/cost in the measurement itself.
+            let (_total, max) = gosper_coeff_stats(&acc);
+            max_coeff = max_coeff.max(max);
+            if max_coeff > 5_000_000 {
+                eprintln!("[reach deep-gosper] coefficient exceeded 5e6 bits at op {i}");
+                break;
+            }
+        }
+        let (total_bits, max_bits) = gosper_coeff_stats(&acc);
+        eprintln!("[reach deep-gosper] max_coeff_bits={max_bits} total_coeff_bits={total_bits} max_seen={max_coeff}");
+
+        assert!(max_bits > 0, "deep tree produced no Gosper coefficients");
+    }
+
+    /// Measurement (NTT feasibility — COST CURVE). Time `num-bigint`
+    /// multiplication of two n-bit operands across magnitudes, to locate where
+    /// multiply cost turns super-linear and whether the sizes from
+    /// `ntt_operand_reach_measurement` land in a regime where an NTT multiply
+    /// (Θ(n log n)) would beat the current Karatsuba/Toom (≈ Θ(n^1.46)).
+    /// Ignored by default (timing); run with
+    /// `cargo test --lib bench_bigint_multiply_cost_curve -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn bench_bigint_multiply_cost_curve() {
+        use std::time::Instant;
+        let mut seed: u64 = 0xC0FFEE123456789D;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            seed
+        };
+        let random_bits = |n: usize, next: &mut dyn FnMut() -> u64| -> BigInt {
+            let mut x = BigInt::zero();
+            for i in 0..=(n / 64) {
+                x += BigInt::from(next()) << (64 * i);
+            }
+            x
+        };
+        for &nbits in &[256usize, 1_024, 4_096, 16_384, 65_536, 262_144, 1_048_576] {
+            let a = random_bits(nbits, &mut next);
+            let b = random_bits(nbits, &mut next);
+            // Scale repetitions down as size grows to keep total time bounded.
+            let reps = (1_000_000usize / nbits).max(3);
+            let mut sink = 0u64;
+            let t0 = Instant::now();
+            for _ in 0..reps {
+                let p = &a * &b;
+                sink = sink.wrapping_add(p.bits());
+            }
+            let per = t0.elapsed().as_secs_f64() / reps as f64;
+            eprintln!(
+                "[mul cost] bits={nbits:>8} reps={reps:>6} per_mul={:>12.3}us (sink={sink})",
+                per * 1e6
+            );
+        }
+    }
 }
