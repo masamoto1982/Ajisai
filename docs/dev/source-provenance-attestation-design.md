@@ -126,6 +126,27 @@ npm run provenance:check
 node scripts/generate-source-attestation.mjs --stdout
 ```
 
+### Auto-sync at commit time (recommended)
+
+Forgetting the regenerate-and-commit round-trip is the common reason
+`provenance:check` fails in CI. To remove that surprise, the repository ships a
+`pre-commit` hook (`.githooks/pre-commit` → `scripts/sync-source-attestation.sh`)
+that, when the attested surface changed, regenerates the attestation and
+**stages it into the same commit**. Because the regenerated files land in the
+commit (and the PR diff), they are still reviewed — the hook automates the
+chore, not the trust decision. CI keeps verifying with `provenance:check`, so a
+missing or stale attestation is still caught even if the hook never ran.
+
+Enable the repository hooks once per clone:
+
+```sh
+npm run hooks:install   # sets core.hooksPath=.githooks
+```
+
+This is intentionally opt-in (not forced via an `npm install` `prepare` step)
+because `.githooks/pre-commit` also auto-creates dated branches, which would
+otherwise interfere with workflows that commit on a fixed, non-dated branch.
+
 ## Relationship to existing guards
 
 This sits alongside the established drift-guard family and reuses its `--check`
