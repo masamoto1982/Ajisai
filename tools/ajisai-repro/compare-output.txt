@@ -1,4 +1,4 @@
-== 64 identical, 15 divergent of 79 ==
+== 65 identical, 14 divergent of 79 ==
 
 SRC : 5 0 MOD
 orig: {'status': 'error', 'kind': 'custom'}
@@ -55,8 +55,4 @@ repr: {'status': 'ok', 'stack': ['[ 1/1 2/1 3/1 ]'], 'output': []}
 SRC : 'ab' 'cd' CONCAT
 orig: {'status': 'ok', 'stack': ['[ 97/1 98/1 99/1 100/1 ]'], 'output': []}
 repr: {'status': 'ok', 'stack': ["'abcd'"], 'output': []}
-
-SRC : 1114112 CHR
-orig: {'status': 'ok', 'stack': ["''"], 'output': []}
-repr: {'status': 'ok', 'stack': ['NIL'], 'output': []}
 
