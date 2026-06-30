@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:53094790666a0b5fffac894bca784761686f814c66e6681cc1557a344b2ef16b",
-  "fileCount": 284,
+  "rootIdentity": "sha256:b6a64af5c2d3c9fa342cf7486d164f6ad164f5c35073ad6200fc58ab75f3a506",
+  "fileCount": 285,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -49,8 +49,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "507a73e560c6c75a219dcd2f13cf3b319851a27b08ce6bb0c954919d50de8537",
-      "bytes": 2537
+      "sha256": "d1b2819f310eab8e40da86f89cd2f3d86af252196f51521036d4ead5711b430b",
+      "bytes": 2597
     },
     {
       "path": "rust/Cargo.toml",
@@ -1101,6 +1101,11 @@
       "path": "scripts/rebuild-wasm.sh",
       "sha256": "b033cbc413800f0eddc875aa500561d0f46256f8082d6fa33d27559c33b9b8fc",
       "bytes": 2194
+    },
+    {
+      "path": "scripts/sync-source-attestation.sh",
+      "sha256": "38f3d32647117e41af77003fc7c525341d90a5983abc0607f879b236da9eda0e",
+      "bytes": 1694
     },
     {
       "path": "src-tauri/Cargo.toml",
