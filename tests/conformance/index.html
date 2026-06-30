@@ -420,6 +420,103 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- ===================== CORE: SIGNATURES & PARTIALITY ===================== -->
+<!-- These cases pin stack signatures, consumption, and rounding/error rules
+     that SPECIFICATION.html §6.1, §7.1.1, §7.3, §7.6 and §11.2 now state
+     normatively, so that an independent port reproduces them exactly. -->
+
+<section class="ajisai-case" id="core-stak-lt-increasing" data-category="core">
+  <h3>STAK LT is a chained strict-increase predicate over the counted group</h3>
+  <pre class="ajisai-source">1 2 3 4 4 STAK LT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-stak-lt-not-increasing" data-category="core">
+  <h3>STAK LT is FALSE when the counted group is not strictly increasing</h3>
+  <pre class="ajisai-source">5 4 3 2 1 5 STAK LT</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-get-bare-index-retained" data-category="core">
+  <h3>GET accepts a bare scalar index and retains the source vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] 1 GET</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ] 2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-replace-index-element" data-category="core">
+  <h3>REPLACE takes a two-element [ index element ] vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 5 ] REPLACE</pre>
+  <pre class="ajisai-expect-result">[ 1/1 5/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-insert-index-element" data-category="core">
+  <h3>INSERT takes a two-element [ index element ] vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 9 ] INSERT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 9/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-range-with-step" data-category="core">
+  <h3>RANGE accepts an optional step and includes the end point</h3>
+  <pre class="ajisai-source">[ 1 10 2 ] RANGE</pre>
+  <pre class="ajisai-expect-result">[ 1/1 3/1 5/1 7/1 9/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-collect-count" data-category="core">
+  <h3>COLLECT gathers a leading-count N of stack values</h3>
+  <pre class="ajisai-source">1 2 3 3 COLLECT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-concat-text-codepoints" data-category="core">
+  <h3>CONCAT coerces Text operands to their code-point vectors</h3>
+  <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
+  <pre class="ajisai-expect-result">[ 97/1 98/1 99/1 100/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-round-tie-away-from-zero" data-category="core">
+  <h3>ROUND breaks a tie away from zero</h3>
+  <pre class="ajisai-source">-2.5 ROUND</pre>
+  <pre class="ajisai-expect-result">-3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-round-half-up" data-category="core">
+  <h3>ROUND of a positive half rounds up</h3>
+  <pre class="ajisai-source">0.5 ROUND</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-chr-out-of-range-nil" data-category="core">
+  <h3>CHR of an out-of-range code point produces NIL (InvalidEncoding)</h3>
+  <pre class="ajisai-source">1114112 CHR</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-mod-by-zero-error" data-category="core">
+  <h3>MOD by zero raises an error rather than producing NIL</h3>
+  <pre class="ajisai-source">5 0 MOD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Modulo by zero</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-qualified-name-requires-import" data-category="core">
+  <h3>A qualified MODULE@WORD resolves after the module is imported</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ============================ HOSTED ============================ -->
 
 

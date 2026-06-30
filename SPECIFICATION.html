@@ -333,7 +333,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <h5 id="2311-user-facing-transparency">2.3.1.1 User-facing transparency</h5>
 
-<p>Users write the existing comparison words — <code>EQ</code>, <code>NEQ</code>, <code>LT</code>, <code>LTE</code>, <code>GT</code>, and <code>GTE</code> — and their existing sugar. The Identity Model explains those words; it is not a new operation. For every value constructible by the current algebraic Coreword set, comparison is exact and total, so a user can rely on examples such as <code>2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluating to <code>TRUE</code> without knowing the representation or any comparison budget. <code>UNKNOWN</code> and explicit fallback through <code>^</code> (<code>VENT</code>) are the visible, user-chosen escape path for future undecidable observations, not silent approximation. L2 structural identity and L4 display role are implementation and presentation concerns; they do not appear as separate user-facing equality modes.</p>
+<p>Users write the existing comparison words — <code>EQ</code>, <code>NEQ</code>, <code>LT</code>, <code>LTE</code>, <code>GT</code>, and <code>GTE</code> — and their existing sugar. The Identity Model explains those words; it is not a new operation. For every value constructible by the current algebraic Coreword set, comparison is exact and total, so a user can rely on examples such as <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluating to <code>TRUE</code> without knowing the representation or any comparison budget (the leading <code>'math' IMPORT</code> brings the module into scope so the <code>MATH@</code> qualified names resolve; Section 7). <code>UNKNOWN</code> and explicit fallback through <code>^</code> (<code>VENT</code>) are the visible, user-chosen escape path for future undecidable observations, not silent approximation. L2 structural identity and L4 display role are implementation and presentation concerns; they do not appear as separate user-facing equality modes.</p>
 
 <h3 id="24-documentation-layers">2.4 Documentation layers and their responsibilities</h3>
 
@@ -805,10 +805,12 @@ Version: <strong>2026-06-11</strong></p>
 </thead>
 <tbody>
 <tr><td><code>TOP</code></td><td><code>.</code></td><td>The word operates on the top value(s) of the stack (default)</td></tr>
-<tr><td><code>STAK</code></td><td><code>..</code></td><td>The entire stack contents are treated as the operand</td></tr>
+<tr><td><code>STAK</code></td><td><code>..</code></td><td>The word's operands are taken as a group selected by a leading count (see below)</td></tr>
 </tbody>
 </table>
 </div>
+
+<p>Under <code>STAK</code> the word's operands are taken as a group from the stack. The top stack value is a non-negative integer <em>count</em> <code>N</code>; it is consumed first, and the <code>N</code> values immediately below it form the operand group (a <code>stackUnderflow</code> is raised if fewer than <code>N</code> operands are present, so <code>1 2 3 STAK ADD</code> without a count fails). A binary word is left-folded over the group (<code>1 2 3 3 STAK ADD</code> &rarr; <code>6/1</code>, <code>1 2 3 3 STAK SUB</code> &rarr; <code>-4/1</code>). An ordering or equality comparison is evaluated as a chained predicate over adjacent operands and yields a single Boolean: <code>LT</code>/<code>GT</code> require strict monotonicity, <code>LTE</code>/<code>GTE</code> require weak monotonicity, <code>EQ</code> requires all operands equal, and <code>NEQ</code> requires every adjacent pair distinct (<code>1 2 3 4 4 STAK LT</code> &rarr; <code>TRUE</code>, <code>5 4 3 2 1 5 STAK LT</code> &rarr; <code>FALSE</code>). Under the default <code>EAT</code> consumption the count and the operand group are both removed; under <code>KEEP</code> the operand group is retained beneath the result while the count is still consumed (<code>1 2 3 3 STAK KEEP ADD</code> &rarr; <code>1/1 2/1 3/1 6/1</code>).</p>
 
 <h3 id="62-consumption-modifiers">6.2 Consumption modifiers</h3>
 
@@ -862,7 +864,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Independent of canonical home, every built-in word has a set of <strong>listings</strong> identifying which dictionary views surface the word for browsing or documentation. The Core listing view and any module listing view are not necessarily disjoint: a word may be listed in both. Such a word is called a <strong>boundary word</strong>, recognising that it has both a semantic role (Core) and a capability role (module).</p>
 
-<p>Listings are presentation-only. A listing does not change name resolution, IMPORT semantics, or qualified-name resolution: bare names resolve through the Core vocabulary first and then through imported modules; <code>MODULE@WORD</code> resolves only to that module's canonical entries.</p>
+<p>Listings are presentation-only. A listing does not change name resolution, IMPORT semantics, or qualified-name resolution: bare names resolve through the Core vocabulary first and then through imported modules; <code>MODULE@WORD</code> resolves only to that module's canonical entries. A qualified <code>MODULE@WORD</code> resolves only after <code>MODULE</code> has been imported (Section 7.10); referencing it without a prior <code>IMPORT</code> raises <code>unknownWord</code>.</p>
 
 <p>Boundary classes:</p>
 
@@ -929,11 +931,24 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>TAKE</code></td><td>—</td><td>Take the first N elements</td></tr>
 <tr><td><code>SPLIT</code></td><td>—</td><td>Split a vector into sub-vectors by given sizes</td></tr>
 <tr><td><code>REORDER</code></td><td>—</td><td>Reorder elements according to an index list; supports duplication and negative indices</td></tr>
-<tr><td><code>COLLECT</code></td><td>—</td><td>Gather all current stack values into a single vector</td></tr>
+<tr><td><code>COLLECT</code></td><td>—</td><td>Gather a leading-count <code>N</code> of stack values into a single vector (Section 7.1.1)</td></tr>
 <tr><td><code>SORT</code></td><td>—</td><td>Sort elements in ascending order; yields <code>Unknown</code> if any required comparison is undecidable (Section 7.4.3)</td></tr>
 </tbody>
 </table>
 </div>
+
+<h4 id="711-stack-signatures">7.1.1 Stack signatures and consumption (normative)</h4>
+
+<p>The one-line descriptions above are completed by the following stack contracts. Where a word departs from the default <code>EAT</code> consumption (Section 6.2) or requires a wrapped argument, the contract here is normative.</p>
+
+<ul>
+<li><strong>Inspection words retain their source.</strong> <code>LENGTH</code> and <code>GET</code> do not consume the vector they read; they push their result above the unchanged source vector (an exception to the default <code>EAT</code> consumption). Example: <code>[ 1 2 3 ] LENGTH</code> &rarr; <code>[ 1/1 2/1 3/1 ] 3/1</code>.</li>
+<li><strong><code>GET</code> index.</strong> The index may be a bare scalar (<code>[ 1 2 3 ] 1 GET</code>) or wrapped in a one-element vector (<code>[ 1 2 3 ] [ 1 ] GET</code>); both retrieve the element at index 1. A negative index counts from the end (<code>[ 1 2 3 ] [ -1 ] GET</code> &rarr; the last element). An out-of-range index produces <code>NIL</code> (<code>NilReason::IndexOutOfBounds</code>, Section 11.2).</li>
+<li><strong><code>INSERT</code> / <code>REPLACE</code> signature.</strong> These take the target vector and a two-element <code>[ index element ]</code> vector: <code>[ 1 2 3 ] [ 1 5 ] REPLACE</code> &rarr; <code>[ 1/1 5/1 3/1 ]</code>; <code>[ 1 2 3 ] [ 1 9 ] INSERT</code> &rarr; <code>[ 1/1 9/1 2/1 3/1 ]</code>. The flat form <code>vector index element</code> is not accepted.</li>
+<li><strong><code>RANGE</code> signature.</strong> The bounds are supplied as a vector <code>[ start end ]</code>, optionally <code>[ start end step ]</code>; the end is <em>inclusive</em>. Examples: <code>[ 1 5 ] RANGE</code> &rarr; <code>[ 1/1 2/1 3/1 4/1 5/1 ]</code>; <code>[ 1 10 2 ] RANGE</code> &rarr; <code>[ 1/1 3/1 5/1 7/1 9/1 ]</code>. The bare form <code>start end RANGE</code> is not accepted.</li>
+<li><strong><code>COLLECT</code> count.</strong> Like <code>STAK</code> (Section 6.1), <code>COLLECT</code> consumes a leading non-negative integer count <code>N</code> from the top of the stack and gathers the <code>N</code> values below it into one vector: <code>1 2 3 3 COLLECT</code> &rarr; <code>[ 1/1 2/1 3/1 ]</code>.</li>
+<li><strong><code>CONCAT</code> on Text.</strong> <code>CONCAT</code> is a vector operation; a Text operand is coerced to its code-point vector before joining, so concatenating two strings yields a numeric vector rather than Text: <code>'ab' 'cd' CONCAT</code> &rarr; <code>[ 97/1 98/1 99/1 100/1 ]</code>. (A Text value still renders with its quotes wherever it is kept intact as a collection element; Section 12.2.)</li>
+</ul>
 
 <p><code>SORT</code> is a <strong>Canonical Module + core-listed boundary word</strong>: its canonical home is the <code>ALGO</code> module (Section 9.1) and it is additionally surfaced in the Core listing view, so a bare <code>SORT</code> resolves and <code>ALGO@SORT</code> names the same word. It is listed here for its vector role.</p>
 
@@ -982,7 +997,7 @@ Version: <strong>2026-06-11</strong></p>
 <tr><td><code>MOD</code></td><td><code>%</code></td><td>Remainder</td></tr>
 <tr><td><code>FLOOR</code></td><td>—</td><td>Floor (largest integer ≤ value)</td></tr>
 <tr><td><code>CEIL</code></td><td>—</td><td>Ceiling (smallest integer ≥ value)</td></tr>
-<tr><td><code>ROUND</code></td><td>—</td><td>Round to nearest integer</td></tr>
+<tr><td><code>ROUND</code></td><td>—</td><td>Round to nearest integer; a tie (fractional part exactly &frac12;) rounds away from zero (<code>0.5</code> &rarr; <code>1</code>, <code>-2.5</code> &rarr; <code>-3</code>)</td></tr>
 </tbody>
 </table>
 </div>
@@ -991,7 +1006,7 @@ Version: <strong>2026-06-11</strong></p>
 
 <p><code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond \(a_0\).</p>
 
-<p><code>MOD</code> is defined by the identity \(x - \lfloor x / y \rfloor \cdot y\) (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
+<p><code>MOD</code> is defined by the identity \(x - \lfloor x / y \rfloor \cdot y\) (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. Unlike <code>DIV</code>, a zero divisor for <code>MOD</code> is not bubbled: <code>5 0 MOD</code> raises a <code>custom</code> error with message <code>"Modulo by zero"</code> rather than producing NIL (the two words are deliberately asymmetric here). <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
 
 <h3 id="74-comparison">7.4 Comparison</h3>
 
@@ -1665,6 +1680,7 @@ Version: <strong>2026-06-11</strong></p>
 </thead>
 <tbody>
 <tr><td><code>DIV</code> (<code>/</code>)</td><td>Division by zero (<code>NilReason::DivisionByZero</code>); divisor indistinguishable from zero within the comparison budget (<code>NilReason::Undecidable</code>)</td><td>Non-numeric operands or malformed shapes</td></tr>
+<tr><td><code>MOD</code> (<code>%</code>)</td><td>None: <code>MOD</code> does not bubble on a zero divisor</td><td>Zero divisor (<code>custom</code>, <code>"Modulo by zero"</code>); non-numeric operands or malformed shapes</td></tr>
 <tr><td><code>GET</code></td><td>Valid vector target with an out-of-range index (<code>NilReason::IndexOutOfBounds</code>)</td><td>Non-vector target or non-numeric index</td></tr>
 <tr><td><code>NUM</code></td><td>Text cannot be parsed as a number (<code>NilReason::InvalidEncoding</code>)</td><td>Input shape is not convertible text</td></tr>
 <tr><td><code>CHR</code></td><td>Numeric code point is outside the valid Unicode scalar range (<code>NilReason::InvalidEncoding</code>)</td><td>Operand is not numeric, or numeric operand is not an integer</td></tr>
