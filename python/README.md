@@ -21,10 +21,13 @@ python tests/test_spec_examples.py   # spec-example conformance checks
 
 ## What is implemented
 
-- **Exact-real scalars** (Section 4.2) as continued fractions, backed by an
-  `AlgebraicReal` (Q-combinations of square-free surds): rationals plus the
-  square roots `MATH@SQRT` produces. Arithmetic is exact; equality and ordering
-  are exact and total over this domain (Section 2.3.1). See `ajisai/numbers.py`.
+- **Exact-real scalars** (Sections 4.2, 4.2.7) as continued fractions, backed by
+  an `AlgebraicReal` realising the admitted domain `D` — the multiquadratic
+  closure of ℚ (finite Q-combinations of square-free surds: rationals plus the
+  square roots `MATH@SQRT` produces). `D` is closed under `+ - * /` (including
+  division by multi-surd denominators via Galois conjugation); equality and
+  ordering are exact and total and never return `UNKNOWN` over `D` (budget and
+  `UNKNOWN` are confined to `COMPARE-WITHIN`). See `ajisai/numbers.py`.
 - **Value model** (Section 4): Scalar, Boolean (distinct from numbers), Vector,
   Text (codepoint vector with the Text role), Record, NIL with structured
   absence metadata, CodeBlock, process/supervisor handles.

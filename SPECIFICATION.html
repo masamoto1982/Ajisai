@@ -191,7 +191,7 @@
     <h1 id="ajisai-language-specification">Ajisai Language Specification</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Version: <strong>2026-06-11</strong></p>
+Version: <strong>2026-07-01</strong></p>
 
 <p>This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.</p>
 
@@ -329,11 +329,11 @@ Version: <strong>2026-06-11</strong></p>
 </table>
 </div>
 
-<p>The layers have fixed implications. L2 implies L1: identical representation of the same Ajisai value is necessarily the same value. L1 does not imply L2: a rational, algebraic, or Gosper-backed value may denote the same mathematical value through different internal structure, and Corewords and external consumers must not branch on that structure. In the current algebraic domain, L1 comparisons are total and exact; budget exhaustion and <code>UNKNOWN</code> are the honest L3 outcome for future or lazy domains whose order is not settled inside the observation budget. L4 does not imply L1 and must never be used as machine evidence of equality, because display is a pure function of both data and interpretation role. L5 sits above L1–L4: an implementation conforms when its observable projections agree with the suite, while unobserved representation choices remain implementation freedom.</p>
+<p>The layers have fixed implications. L2 implies L1: identical representation of the same Ajisai value is necessarily the same value. L1 does not imply L2: a rational, algebraic, or Gosper-backed value may denote the same mathematical value through different internal structure, and Corewords and external consumers must not branch on that structure. In the current algebraic domain — the admitted domain \(D\) defined in Section 4.2.7 — L1 comparisons are total and exact and never return <code>UNKNOWN</code>; budget exhaustion and <code>UNKNOWN</code> are the honest L3 outcome for future or lazy domains whose order is not settled inside the observation budget. L4 does not imply L1 and must never be used as machine evidence of equality, because display is a pure function of both data and interpretation role. L5 sits above L1–L4: an implementation conforms when its observable projections agree with the suite, while unobserved representation choices remain implementation freedom.</p>
 
 <h5 id="2311-user-facing-transparency">2.3.1.1 User-facing transparency</h5>
 
-<p>Users write the existing comparison words — <code>EQ</code>, <code>NEQ</code>, <code>LT</code>, <code>LTE</code>, <code>GT</code>, and <code>GTE</code> — and their existing sugar. The Identity Model explains those words; it is not a new operation. For every value constructible by the current algebraic Coreword set, comparison is exact and total, so a user can rely on examples such as <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluating to <code>TRUE</code> without knowing the representation or any comparison budget (the leading <code>'math' IMPORT</code> brings the module into scope so the <code>MATH@</code> qualified names resolve; Section 7). <code>UNKNOWN</code> and explicit fallback through <code>^</code> (<code>VENT</code>) are the visible, user-chosen escape path for future undecidable observations, not silent approximation. L2 structural identity and L4 display role are implementation and presentation concerns; they do not appear as separate user-facing equality modes.</p>
+<p>Users write the existing comparison words — <code>EQ</code>, <code>NEQ</code>, <code>LT</code>, <code>LTE</code>, <code>GT</code>, and <code>GTE</code> — and their existing sugar. The Identity Model explains those words; it is not a new operation. For every value constructible by the current algebraic Coreword set (the admitted domain \(D\), Section 4.2.7), comparison is exact and total, so a user can rely on examples such as <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluating to <code>TRUE</code> without knowing the representation or any comparison budget (the leading <code>'math' IMPORT</code> brings the module into scope so the <code>MATH@</code> qualified names resolve; Section 7). <code>UNKNOWN</code> and explicit fallback through <code>^</code> (<code>VENT</code>) are the visible, user-chosen escape path for future undecidable observations, not silent approximation. L2 structural identity and L4 display role are implementation and presentation concerns; they do not appear as separate user-facing equality modes.</p>
 
 <h3 id="24-documentation-layers">2.4 Documentation layers and their responsibilities</h3>
 
@@ -657,6 +657,31 @@ Version: <strong>2026-06-11</strong></p>
 </ul>
 
 <p>The design aim is therefore stronger than “rounding-error-free”: Ajisai aims for numeric flow in which every traditional error class is either absent by construction, represented exactly, or exposed through a visible diagnostic outcome.</p>
+
+<h4 id="427-admitted-exact-real-domain">4.2.7 Admitted exact-real domain of the current Coreword set</h4>
+
+<p>The value model of Section 4.2 describes exact reals in full generality, including lazy continued fractions for irrationals. The current Coreword set, however, produces and operates on a specific, <em>closed</em> sub-domain of the exact reals. Naming that domain precisely is what lets a conforming implementation guarantee that comparison is total and exact (Section 7.4) without appeal to a comparison budget, and it fixes the boundary at which a program leaves the decidable region.</p>
+
+<p><strong>Definition (admitted domain \(D\)).</strong> \(D\) is the smallest set of real numbers that</p>
+
+<ul>
+<li>contains every rational (\(\mathbb{Q} \subseteq D\));</li>
+<li>contains \(\sqrt{r}\) for every non-negative rational \(r\) — the values <code>MATH@SQRT</code> produces (Sections 4.2.2, 7.6); and</li>
+<li>is closed under the four field operations \(+, -, \times, \div\) (<code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code>, with division by a non-zero element).</li>
+</ul>
+
+<p>Equivalently, \(D\) is the field \(\mathbb{Q}(\sqrt{d_1}, \sqrt{d_2}, \dots)\) generated over the rationals by the square roots of square-free positive integers — the <strong>multiquadratic closure of \(\mathbb{Q}\)</strong>. Every element of \(D\) has a unique normal form as a finite \(\mathbb{Q}\)-linear combination \(\sum_d c_d \sqrt{d}\) over distinct square-free integers \(d \ge 1\) (with \(d = 1\) the rational part), because the \(\sqrt{d}\) are linearly independent over \(\mathbb{Q}\). This normal form is a representation detail (Sections 2.3, 4.2.4) and is not observable; only the value it denotes is. It is one concrete realization of the <code>AlgebraicSqrt</code> representation of Section 4.2.2 extended to sums, and an implementation may use continued fractions instead so long as the observable value, order, and display agree.</p>
+
+<p><strong>Closure and boundary of the current Coreword set.</strong></p>
+
+<ul>
+<li><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> keep \(D\) closed: sums, differences, products, and quotients of \(D\)-elements are in \(D\). Division by an element that is exactly zero bubbles to NIL per Section 11.2; no element of \(D\) other than \(0\) is indistinguishable from \(0\), so a non-zero divisor always yields a value and the <code>reason = undecidable</code> DIV case (Section 7.3) cannot arise inside \(D\).</li>
+<li><code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code> and the six comparison relations are total on \(D\): the sign, integer part, and order of any \(D\)-element are exactly computable in finitely many steps.</li>
+<li><code>MATH@SQRT</code> is defined on the rational sub-domain only: its operand must be rational. <code>SQRT</code> of a non-rational \(D\)-element (for example \(\sqrt{\sqrt{2}}\)) is <strong>outside</strong> the current Coreword set and is malformed use → error (Section 11.2); <code>SQRT</code> of a negative rational is a well-formed domain miss → Bubble/NIL. Consequently \(D\) is <em>not</em> closed under <code>SQRT</code>, and the current Coreword set constructs no nested radicals, transcendentals, or other lazy irrationals.</li>
+<li><code>MATH@POW</code> is defined for an integer exponent only, which keeps the result in \(D\); a non-integer exponent is malformed use.</li>
+</ul>
+
+<p>Because \(D\) is exactly this multiquadratic field, equality and order over \(D\) are decidable exactly and totally (Section 7.4). The lazy continued-fraction machinery and the comparison budget (Section 7.4.1) exist for exact reals <em>outside</em> \(D\) — the values reserved by the <code>LazyCf</code> representation for future words (Section 4.2.2) — and for the user-facing <code>COMPARE-WITHIN</code> (Section 7.4.2); they never make a comparison of \(D\)-elements return <code>unknown</code>. This is the mechanism behind the user-facing transparency guarantee of Section 2.3.1.1.</p>
 
 <h3 id="43-vector">4.3 Vector</h3>
 
@@ -1028,6 +1053,8 @@ Version: <strong>2026-06-11</strong></p>
 
 <p>Comparisons return a truth value with the <code>TruthValue</code> interpretation role: <code>true</code> or <code>false</code>, or — when the comparison is not decidable within the comparison budget (see below) — <code>unknown</code> (U, the third value of the three-valued logic of Section 7.5).</p>
 
+<p><strong>Exactness over the admitted domain (normative).</strong> Over the admitted domain \(D\) of Section 4.2.7 — every value the current Coreword set can construct — the six relations are <strong>total and exact</strong>: each returns a definite <code>true</code> or <code>false</code> and <strong>never</strong> <code>unknown</code>. The <code>unknown</code> (U) outcome is reserved for exact reals <em>outside</em> \(D\) (the lazy continued-fraction values reserved for future words, Section 4.2.2) and for the explicit-budget word <code>COMPARE-WITHIN</code> (Section 7.4.2); the implicit comparison budget of the bare relations is therefore not observable through them for any program in the current language. A program written in the current Coreword set can rely on this: for example <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT EQ</code> evaluates to <code>TRUE</code>, and <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluates to <code>TRUE</code>, with no comparison budget in play (Section 2.3.1.1). The budget-and-U account below governs only the lazy case.</p>
+
 <p>The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. <code>GT</code> and <code>GTE</code> are the strict mirrors of <code>LT</code> and <code>LTE</code>; <code>NEQ</code> is the negation of <code>EQ</code>. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (<code>TOP</code> or <code>STAK</code> crossed with <code>EAT</code> or <code>KEEP</code>).</p>
 
 <p>Under <code>STAK</code> mode, an ordering comparison describes a sequence property of the consumed values — it is <code>true</code> iff the sequence satisfies the property:</p>
@@ -1060,7 +1087,7 @@ Version: <strong>2026-06-11</strong></p>
 <li>U flows into the three-valued logic of Section 7.5 directly. It is not a NIL, so the NIL-passthrough machinery of Section 7.12 does not carry it; instead <code>AND</code> <code>OR</code> <code>NOT</code> settle it according to the Kleene truth tables.</li>
 </ul>
 
-<p>The U outcome is required for all six relations (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) and for any downstream Coreword whose result depends on a comparison (notably <code>MIN</code> <code>MAX</code> <code>SORT</code> and the <code>COND</code> clauses whose head reduces to such a comparison); the propagation rule for those words is fixed in Section 7.4.3. The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.</p>
+<p>This budget-and-U account applies only to operands drawn from a lazy domain <em>outside</em> the admitted domain \(D\) (Section 4.2.7) — the values reserved for future words. Over \(D\) the six relations are total and exact and U never arises (Section 7.4, "Exactness over the admitted domain"). For lazy operands, the U outcome is required for all six relations (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) and for any downstream Coreword whose result depends on a comparison (notably <code>MIN</code> <code>MAX</code> <code>SORT</code> and the <code>COND</code> clauses whose head reduces to such a comparison); the propagation rule for those words is fixed in Section 7.4.3. The budget value itself is not part of observable semantics; it must be high enough that distinct rationals always decide.</p>
 
 <p>The agreed-prefix length — the number of leading partial quotients that matched before the budget was exhausted — is carried on the comparison's <code>Unknown</code> result in the machine-readable <code>diagnosis.agreedPrefix</code> field (Section 4.5.0): a non-negative integer. It means "the two values are equal to at least this depth of continued-fraction precision" and is the CF-specific evidence behind the U result. It is diagnostic context only and does not change the observable <code>truthValue</code>.</p>
 
@@ -1844,6 +1871,7 @@ Version: <strong>2026-06-11</strong></p>
 <li>Every NIL-producing path attaches appropriate structured <code>absence</code> metadata (Section 4.5.0).</li>
 <li>Per-Coreword contract tests, NIL reason tests, MC/DC-style tests, and stack-discipline tests exist as required by Section 15.</li>
 <li>Scalar arithmetic and comparison operate on the continued-fraction representation (Section 4.2) without intermediate rounding or truncation; Möbius coefficients in Gosper transforms are BigInt; comparison-budget exhaustion in the comparison words produces the truth value <code>unknown</code> (U) rather than an error or a non-deterministic answer (Section 7.4.1).</li>
+<li>Over the admitted domain \(D\) (Section 4.2.7) the six comparison relations are total and exact and never return <code>unknown</code>; the <code>unknown</code> outcome and the comparison budget are confined to <code>COMPARE-WITHIN</code> (Section 7.4.2) and to exact reals outside \(D\). The admitted domain is closed under <code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code>, <code>MATH@SQRT</code> is defined on rational operands only, and leaving \(D\) (e.g. <code>SQRT</code> of a non-rational) is malformed use (Sections 4.2.7, 7.3).</li>
 <li>Source text contains no <code>(</code> or <code>)</code> outside of string literals; the nested continued-fraction form is a display/serialization artifact only (Sections 3.4, 4.2.3).</li>
 </ol>
 

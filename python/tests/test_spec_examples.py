@@ -53,6 +53,14 @@ CASES = [
     ("'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ", "TRUE"),
     ("'math' IMPORT 9 MATH@SQRT", "3/1"),
     ("'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT MUL", "2/1"),
+    # Section 4.2.7 / 7.4 — six relations total & exact over the admitted domain D
+    # (multiquadratic field), never UNKNOWN. Closed under +,-,*,/.
+    ("'math' IMPORT 2 MATH@SQRT 3 MATH@SQRT ADD 3 MATH@SQRT 2 MATH@SQRT ADD EQ", "TRUE"),
+    ("'math' IMPORT 2 MATH@SQRT 3 MATH@SQRT LT", "TRUE"),
+    ("'math' IMPORT 6 MATH@SQRT 2 MATH@SQRT 3 MATH@SQRT MUL EQ", "TRUE"),
+    # division closure: 1/(√2+√3) * (√2+√3) = 1
+    ("'math' IMPORT 1 2 MATH@SQRT 3 MATH@SQRT ADD DIV "
+     "2 MATH@SQRT 3 MATH@SQRT ADD MUL", "1/1"),
     # Section 7.4.2 — COMPARE-WITHIN decided cases
     ("1 2 3 COMPARE-WITHIN", "-1/1"),
     ("5 5 3 COMPARE-WITHIN", "0/1"),
@@ -93,6 +101,15 @@ def run_all():
     ok = len(i.stack) == 1 and isinstance(i.stack[0], Unknown)
     print(("PASS" if ok else "FAIL"), "COMPARE-WITHIN equal irrationals -> UNKNOWN")
     failures += not ok
+    # Section 4.2.7: SQRT of a non-rational leaves D -> malformed use -> error
+    from ajisai.errors import StructureError
+    raised = False
+    try:
+        run("'math' IMPORT 2 MATH@SQRT MATH@SQRT")
+    except StructureError:
+        raised = True
+    print(("PASS" if raised else "FAIL"), "SQRT of a non-rational raises (Section 4.2.7)")
+    failures += not raised
     return failures
 
 
