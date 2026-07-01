@@ -19,10 +19,11 @@ the rational part). This representation is:
     COMPARE-WITHIN (Section 7.4.2) can honour an explicit partial-quotient
     budget and yield UNKNOWN.
 
-Division is supported when the divisor has at most one surd (rational or
-``a + b*sqrt(d)``); this covers the whole MATH@SQRT-generated domain whose tails
-under reciprocation stay quadratic. Wider divisors raise ``DomainLimitation``
-(tracked as a specification gap).
+Division is total over the whole domain: a single-surd divisor is rationalised
+directly, and a multi-surd divisor is rationalised through the field's Galois
+conjugates (Section 4.2.7). ``DomainLimitation`` is therefore reserved for
+pathological radicand complexity (an implementation resource limit), not for any
+value the current Coreword set can construct.
 """
 
 from __future__ import annotations
@@ -51,6 +52,26 @@ def _squarefree(n: int) -> Tuple[int, int]:
             s *= f
         f += 1 if f == 2 else 2
     return (s, d)
+
+
+def _prime_factors(d: int) -> Tuple[int, ...]:
+    """Distinct prime factors of a square-free positive integer d (d >= 1)."""
+    out = []
+    m = d
+    f = 2
+    while f * f <= m:
+        if m % f == 0:
+            out.append(f)
+            m //= f
+        else:
+            f += 1 if f == 2 else 2
+    if m > 1:
+        out.append(m)
+    return tuple(out)
+
+
+# Guard against pathological blow-up in general reciprocation (2**k conjugates).
+_MAX_RADICAND_PRIMES = 10
 
 
 class AlgebraicReal:
@@ -144,20 +165,50 @@ class AlgebraicReal:
         return AlgebraicReal(out)
 
     def reciprocal(self) -> "AlgebraicReal":
+        """Multiplicative inverse within the multiquadratic field (Section 4.2.7).
+
+        The admitted domain D is a field, so 1/x exists for every non-zero x.
+        For a single surd we rationalise the denominator directly; for several
+        distinct surds we multiply by all non-trivial Galois conjugates (sign
+        flips of each prime radical) so the product with x is a rational norm.
+        """
         if self.is_zero():
             raise ZeroDivisionError("reciprocal of zero")
         sd = self.single_surd()
-        if sd is None:
-            raise DomainLimitation("division by a multi-surd value is outside the port domain")
-        a, b, d = sd
-        if b == 0:
-            return AlgebraicReal({1: 1 / a})
-        # 1/(a + b*sqrt(d)) = (a - b*sqrt(d)) / (a^2 - b^2 d)
-        denom = a * a - b * b * d
+        if sd is not None:
+            a, b, d = sd
+            if b == 0:
+                return AlgebraicReal({1: 1 / a})
+            # 1/(a + b*sqrt(d)) = (a - b*sqrt(d)) / (a^2 - b^2 d)
+            denom = a * a - b * b * d
+            out: Dict[int, Fraction] = {}
+            if a != 0:
+                out[1] = a / denom
+            out[d] = -b / denom
+            return AlgebraicReal(out)
+        # General multiquadratic case: rationalise via the automorphism group.
+        primes = sorted({p for d in self.terms if d != 1
+                         for p in _prime_factors(d)})
+        if len(primes) > _MAX_RADICAND_PRIMES:
+            raise DomainLimitation("reciprocal radicand complexity exceeds limit")
+        numerator = AlgebraicReal.from_rational(1)
+        # every sign assignment except the identity (all +1)
+        for mask in range(1, 1 << len(primes)):
+            flip = {p: (-1 if (mask >> i) & 1 else 1) for i, p in enumerate(primes)}
+            numerator = numerator * self._conjugate(flip)
+        norm = (self * numerator)
+        if not norm.is_rational():  # invariant: the field norm is rational
+            raise DomainLimitation("reciprocal norm is not rational")
+        return numerator * AlgebraicReal({1: 1 / norm.rational_value()})
+
+    def _conjugate(self, flip: Dict[int, int]) -> "AlgebraicReal":
         out: Dict[int, Fraction] = {}
-        if a != 0:
-            out[1] = a / denom
-        out[d] = -b / denom
+        for d, c in self.terms.items():
+            sign = 1
+            if d != 1:
+                for p in _prime_factors(d):
+                    sign *= flip.get(p, 1)
+            out[d] = c * sign
         return AlgebraicReal(out)
 
     def __truediv__(self, other: "AlgebraicReal") -> "AlgebraicReal":

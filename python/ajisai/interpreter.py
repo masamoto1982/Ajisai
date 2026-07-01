@@ -1278,7 +1278,9 @@ def _w_sqrt(interp, target, consume):
         return
     s = _need_scalar(v)
     if not s.num.is_rational():
-        raise err.StructureError("SQRT domain limited to rationals in this port")
+        # Section 4.2.7: SQRT is defined on rational operands only; a non-rational
+        # operand leaves the admitted domain and is malformed use -> error.
+        raise err.StructureError("SQRT requires a rational operand (Section 4.2.7)")
     if s.num.sign() < 0:
         interp.push(Nil(reason="negativeRoot", origin="nilPropagation"))
         return
