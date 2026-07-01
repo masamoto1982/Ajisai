@@ -1255,7 +1255,7 @@
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.7",
-        "SPECIFICATION.html §13.1"
+        "SPECIFICATION.html §13.3"
       ],
       "formalization_sections": [
         "docs/dev/fintech-value-integrity-design.md"
@@ -1265,7 +1265,7 @@
       ],
       "conformance_cases": [],
       "status": "Sketched",
-      "notes": "CONSERVE — value-conservation guard: asserts the exact sum of a scalar parts vector equals a declared total, passing the parts through iff the equality is proven and failing loudly (channel error) on violation or an undecidable comparison. The value-mass complement to the static flow-mass conservation of §13.1, and the enforcement half of penny-perfect allocation alongside QUANTIZE's residual. Rejects NIL operands. Implemented ahead of the canonical §13.3 lift (docs/dev/fintech-value-integrity-design.md); status Sketched pending that lift and a mathematical-formalization entry.",
+      "notes": "CONSERVE — value-conservation guard: asserts the exact sum of a scalar parts vector equals a declared total, passing the parts through iff the equality is proven and failing loudly (channel error) on violation or an undecidable comparison (canonical SPECIFICATION.html §13.3; design docs/dev/fintech-value-integrity-design.md). The value-mass complement to the static flow-mass conservation of §13.1, and the enforcement half of penny-perfect allocation alongside QUANTIZE's residual. Rejects NIL operands. Status Sketched pending a mathematical-formalization entry.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [

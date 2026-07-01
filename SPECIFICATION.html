@@ -1279,6 +1279,7 @@ Version: <strong>2026-07-01</strong></p>
 <tr><td><code>SCAN</code></td><td>—</td><td>Like <code>FOLD</code> but returns all intermediate accumulator values</td></tr>
 <tr><td><code>COND</code></td><td>—</td><td>Evaluate clauses separated by <code>|</code>; execute the first whose guard is definitely true (a U guard does not fire, Section 7.4.3)</td></tr>
 <tr><td><code>IDLE</code></td><td>—</td><td>No-op; does nothing</td></tr>
+<tr><td><code>CONSERVE</code></td><td>—</td><td>Value-conservation guard: assert a vector of scalar parts sums exactly to a total, passing the parts through or raising (Section 13.3)</td></tr>
 <tr><td><code>EXEC</code></td><td>—</td><td>Execute a code block</td></tr>
 <tr><td><code>EVAL</code></td><td>—</td><td>Parse and execute a string as Ajisai code</td></tr>
 <tr><td><code>PRECOMPUTE</code></td><td>—</td><td>Definition-time staging marker: evaluate a code block when a word is defined and splice the resulting values into the definition</td></tr>
@@ -1472,6 +1473,8 @@ Version: <strong>2026-07-01</strong></p>
 <p><code>partiality</code> and <code>nil_policy</code> are independent axes. For example, under the Bubble Rule <code>DIV</code> (<code>/</code>) is <code>Projecting</code> with <code>nil_policy = CreatesNil</code>: <code>DIV</code> <code>GET</code> <code>NUM</code> <code>CHR</code> are <code>Projecting</code> with <code>CreatesNil</code> for well-formed domain misses while malformed inputs remain ordinary errors.</p>
 
 <p><code>QUANTIZE</code> (Section 7.13) is <code>Projecting</code> with <code>nil_policy = CreatesNil</code>, matching the rounding family: it projects an undecidable nearest-multiple onto Bubble/NIL and passes a NIL value operand through, while a non-positive or non-rational step is malformed use and raises. Its <code>safety_level</code> is <code>B</code>, and its flow-mass contract is <code>Fixed { consumes: 2, produces: 2 }</code> (the value and step in, the quantized value and residual out; under <code>KEEP</code> the two operands are additionally retained per Section 13.2).</p>
+
+<p><code>CONSERVE</code> (Section 13.3) is <code>Partial</code> with <code>nil_policy = RejectsNil</code>: it is a guard that raises on a conservation violation, on an undecidable equality, and on a NIL <code>total</code> or NIL part, and otherwise passes the parts vector through unchanged. Its <code>safety_level</code> is <code>B</code>, and its flow-mass contract is <code>Fixed { consumes: 2, produces: 1 }</code> (total and parts in, parts out; under <code>KEEP</code> the two operands are additionally retained). It is pure and deterministic.</p>
 
 <p>Comparison words (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) are <code>Projecting</code>: they are total because every well-shaped input yields a <code>TruthValue</code> result, projecting the undecidable case onto the truth value <code>unknown</code> (U) rather than raising. Their <code>nil_policy</code> is <code>Passthrough</code> (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a <code>TruthValue</code> result and <strong>not</strong> a <code>reason</code>-bearing NIL, so they are no longer classified <code>CreatesNil</code> for that case. (The <code>reason = undecidable</code> NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)</p>
 
@@ -1852,13 +1855,38 @@ Version: <strong>2026-07-01</strong></p>
 
 <h3 id="131-static-mass-conservation">13.1 Static Mass Conservation</h3>
 
-<p>Ajisai treats flow mass conservation as a compile/JIT/load-time property. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior: arity, consumption, and production are carried by the <code>mass</code> contract field (Section 7.14), bifurcation by the <code>KEEP</code> modifier (Section 13.2), and NIL-projection by <code>nil_policy</code>. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.</p>
+<p>Ajisai treats flow mass conservation as a compile/JIT/load-time property. This is conservation of the <em>count</em> of values crossing a boundary; it is distinct from the conservation of their numeric <em>total</em>, which is the separate value-conservation invariant of Section 13.3. A Coreword Contract declares arity, consumption, production, bifurcation, and NIL-projection behavior: arity, consumption, and production are carried by the <code>mass</code> contract field (Section 7.14), bifurcation by the <code>KEEP</code> modifier (Section 13.2), and NIL-projection by <code>nil_policy</code>. Optimized execution paths may be entered only after those contracts have been validated for the surrounding flow.</p>
 
 <p>The ordinary runtime must not maintain per-value <code>FlowToken</code> objects or perform step-by-step mass accounting. Flow-accounting failures such as over-consumption, unconsumed leaks, flow breaks, and bifurcation-ratio violations are contract-validation failures and must be reported by the compiler/JIT, loader, or developer diagnostics before the optimized path executes. A word whose <code>mass</code> is <code>Dynamic</code> has a data-dependent arity that the static validator does not certify; flows through such words are validated only up to that point.</p>
 
 <h3 id="132-bifurcation">13.2 Bifurcation</h3>
 
 <p>The <code>,,</code> (keep/bifurcation) modifier retains source context while also pushing the result. Its mass relationship is specified by the relevant Coreword Contract and is statically checked with the surrounding flow. Runtime execution only performs the value-level stack effects that the contract has already proven.</p>
+
+<h3 id="133-value-conservation">13.3 Value Conservation</h3>
+
+<p>The mass conservation of Section 13.1 is about the <em>count</em> of values a word consumes and produces — a structural property checked statically before an optimized path runs. <strong>Value conservation</strong> is the orthogonal property about the <em>numeric total</em> those values carry: that a transform which claims to preserve a sum preserves it exactly. The two are independent — a split of <code>[ a b ]</code> into four parts may conserve flow-mass counts while silently violating value-mass if the parts do not add back to the inputs — so Ajisai keeps them as distinct invariants. Value conservation is the same law that double-entry bookkeeping enforces continuously (every movement debits and credits equal amounts), lifted from ledgers to ordinary dataflow.</p>
+
+<p>Unlike flow-mass, value conservation is not statically inferable in general, so it is exposed as an explicit guard word, <code>CONSERVE</code>, rather than a compile-time check.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CONSERVE</code></td><td>—</td><td>Assert that a vector of scalar parts sums exactly to a total; pass the parts through on a proven match, else raise</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Stack effect (<code>TOP</code>, <code>EAT</code>).</strong> <code>[ total ] [ parts ] -&gt; [ parts ]</code>, where <code>total</code> is a scalar and <code>parts</code> is a vector of scalars. When the exact sum of <code>parts</code> equals <code>total</code>, <code>parts</code> passes through <strong>unchanged</strong>, so <code>CONSERVE</code> composes transparently inside a pipeline — it is an identity on its data payload and a tripwire on its assumption. On a mismatch it raises a channel error (fail loudly); a broken conservation assumption is exactly the situation that must not flow downstream, so it is never degraded to a Bubble.</p>
+
+<p><strong>Fail loudly, never guess.</strong> <code>CONSERVE</code> is a guard, not an observation: a guard that cannot <em>confirm</em> its safe condition must not let flow pass. Over the admitted domain \(D\) (Section 4.2.7) sum-equality is exact and decidable, so for rational (money-scale) values <code>CONSERVE</code> either passes or raises. If the operands leave \(D\) and the equality cannot be decided within the comparison budget (Section 7.4.1), <code>CONSERVE</code> still raises rather than passing — only a <em>proven</em> equality lets flow through. This strictness is the deliberate difference between <code>CONSERVE</code> (a safety assertion) and <code>EQ</code> (an observation that may return the truth value <code>unknown</code>).</p>
+
+<p><strong>NIL policy.</strong> A NIL <code>total</code> or a NIL element of <code>parts</code> means an amount is absent, which cannot certify conservation (it is exactly &ldquo;lost data&rdquo;), so <code>CONSERVE</code> raises rather than passing NIL through. Its contract (Section 7.14) is <code>Partial</code> with <code>nil_policy = RejectsNil</code>, <code>safety_level = B</code>, and flow-mass <code>Fixed { consumes: 2, produces: 1 }</code>.</p>
+
+<p><strong>Relationship to <code>QUANTIZE</code>.</strong> <code>QUANTIZE</code>'s residual identity \(q + r = x\) (Section 7.13) is the <em>atomic</em> conservation guarantee for a single rounding; <code>CONSERVE</code> is the <em>aggregate</em> one over a whole vector of parts. Together they let a program quantize an amount to a currency grid and then prove that the quantization neither invented nor lost value: quantizing the exact share <code>100 3 /</code> to cents yields <code>3333/100</code> and residual <code>1/300</code>, and <code>100 3 / [ 3333/100 1/300 ] CONSERVE</code> passes because they reconcile to the exact total.</p>
 
 <h2 id="14-ai-first-implementation-rules">14. AI-first Implementation Rules</h2>
 
