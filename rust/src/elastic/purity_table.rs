@@ -81,7 +81,7 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
 
     match key {
         // ── Pure arithmetic ───────────────────────────────────────────────
-        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round => pure_trivial,
+        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round | Quantize => pure_trivial,
 
         // ── Pure comparison ───────────────────────────────────────────────
         Eq | Lt | Le | Gt | Gte | Neq | CompareWithin => pure_trivial,

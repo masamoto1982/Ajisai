@@ -343,6 +343,97 @@ pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
 }
 
+/// The exact rational carried by a scalar value, whether it is stored as a
+/// plain `Scalar` or as an `ExactScalar` that happens to reduce to a rational.
+/// Genuinely irrational exact-reals return `None`.
+fn scalar_as_rational(value: &Value) -> Option<Fraction> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(f.clone()),
+        ValueData::ExactScalar(er) => er.to_fraction(),
+        _ => None,
+    }
+}
+
+/// `QUANTIZE` — explicit banker's-rounding quantization to a rational grid,
+/// emitting the exact residual so nothing is lost (SPEC §7.13 draft; see
+/// docs/dev/fintech-value-integrity-design.md). Stack effect
+/// `[ x ] [ step ] -> [ q ] [ r ]` where `q` is the nearest integer multiple of
+/// `step` (ties to even) and `r = x - q`, so `q + r == x` exactly.
+pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
+        return Err(AjisaiError::ModeUnsupported {
+            word: "QUANTIZE".into(),
+            mode: "Stack".into(),
+        });
+    }
+
+    let stack_len = interp.stack.len();
+    if stack_len < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    // Operand order is `[ x ] [ step ] QUANTIZE`, so `x` is second from top.
+    let x_val = interp.stack[stack_len - 2].clone();
+    let step_val = interp.stack[stack_len - 1].clone();
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    // The step is mandatory and must be a strictly positive rational. A NIL or
+    // otherwise malformed step is a channel error (RejectsNil), matching the
+    // deliberate asymmetry of MOD-by-zero rather than producing a bubble.
+    let step = match scalar_as_rational(&step_val) {
+        Some(s) if s.is_positive() => s,
+        _ => {
+            return Err(AjisaiError::from(
+                "QUANTIZE requires a strictly positive rational step",
+            ));
+        }
+    };
+
+    let pop_operands = |interp: &mut Interpreter| {
+        if !is_keep {
+            interp.stack.pop();
+            interp.stack.pop();
+        }
+    };
+
+    // NIL-passthrough on `x`: a bubble flows through to both outputs, carrying
+    // its reason (SPEC §7.12). The step was already validated above, so a NIL
+    // step never reaches this point.
+    if x_val.is_operational_nil() {
+        pop_operands(interp);
+        interp
+            .stack
+            .push(Value::nil_inheriting_absence_from(&x_val));
+        interp
+            .stack
+            .push(Value::nil_inheriting_absence_from(&x_val));
+        return Ok(());
+    }
+
+    match scalar_as_rational(&x_val) {
+        Some(x) => {
+            let (q, r) = x.quantize_half_even(&step);
+            pop_operands(interp);
+            interp.stack.push(create_number_value(q));
+            interp.stack.push(create_number_value(r));
+            Ok(())
+        }
+        None => {
+            // A genuinely irrational `x` cannot pick a nearest multiple within
+            // the comparison budget, so project both outputs to an Undecidable
+            // bubble rather than guess (SPEC §7.4.1, §11.2).
+            pop_operands(interp);
+            interp
+                .stack
+                .push(Value::nil_with_reason(NilReason::Undecidable));
+            interp
+                .stack
+                .push(Value::nil_with_reason(NilReason::Undecidable));
+            Ok(())
+        }
+    }
+}
+
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {

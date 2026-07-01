@@ -339,6 +339,60 @@ impl Fraction {
         }
     }
 
+    /// Round to the nearest integer with ties resolved to the even neighbour
+    /// (banker's rounding, IEEE 754 roundTiesToEven). Unlike [`round`], which
+    /// breaks ties away from zero, this never introduces the systematic upward
+    /// bias that accumulates when many half-way values are rounded the same
+    /// direction — the property fintech ledgers rely on. The result is an
+    /// integer-valued `Fraction`.
+    pub fn round_half_even(&self) -> Fraction {
+        if self.is_integer() {
+            return Fraction::from_repr(self.repr.clone());
+        }
+        // Denominator is always normalised positive, so the sign lives in the
+        // numerator. Work in BigInt to stay exact and overflow-free for both
+        // the Small and Big reprs.
+        let num = self.numerator();
+        let den = self.denominator();
+        let q_trunc = &num / &den;
+        let r_trunc = &num - &q_trunc * &den;
+        // Adjust the truncated quotient down to the floor so the remainder `r`
+        // lands in (0, den) (it is never 0 here — that is the integer case).
+        let (mut q, r) = if r_trunc < BigInt::zero() {
+            (q_trunc - BigInt::one(), r_trunc + &den)
+        } else {
+            (q_trunc, r_trunc)
+        };
+        // Compare the fractional part r/den against 1/2 by comparing 2r to den.
+        let two_r = &r * BigInt::from(2);
+        match two_r.cmp(&den) {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Greater => q += BigInt::one(),
+            std::cmp::Ordering::Equal => {
+                // Exact half: round to the even neighbour. `q` is the lower
+                // neighbour (floor); step up only when it is odd.
+                if !(&q % BigInt::from(2)).is_zero() {
+                    q += BigInt::one();
+                }
+            }
+        }
+        Fraction::from_bigint_pair(q, BigInt::one())
+    }
+
+    /// Quantize to a positive rational grid `step` using banker's rounding,
+    /// returning the pair `(q, r)` where `q` is the nearest integer multiple of
+    /// `step` (ties to even) and `r = self - q` is the exact residual. By
+    /// construction `q + r == self` exactly, so quantization loses nothing: the
+    /// residual carries the discarded fraction rather than dropping it silently.
+    /// The caller must ensure `step` is a strictly positive rational.
+    pub fn quantize_half_even(&self, step: &Fraction) -> (Fraction, Fraction) {
+        let m = self.div(step);
+        let n = m.round_half_even();
+        let q = n.mul(step);
+        let r = self.sub(&q);
+        (q, r)
+    }
+
     pub fn modulo(&self, other: &Fraction) -> Fraction {
         if other.is_zero() {
             panic!("Modulo by zero");

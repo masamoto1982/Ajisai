@@ -659,7 +659,10 @@ mod ai_first_comparison_tests {
         // budget cannot distinguish from 0; EQ / LT against 0 therefore yield
         // Unknown (U). (Plain √2 − √2 now collapses to an exact 0 in closed
         // form and would decide, so it no longer exercises the U path.)
-        for code in ["2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT"] {
+        for code in [
+            "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ",
+            "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT",
+        ] {
             let mut interp = Interpreter::new();
             interp
                 .execute(&format!("'math' IMPORT {code}"))
@@ -1624,7 +1627,8 @@ mod u_propagation_tests {
     async fn sort_with_undecidable_pair_yields_unknown_not_partial() {
         // Build a runtime vector containing √2−√2 and 0 via stack-mode SORT;
         // the undecidable pair makes the whole order unestablished ⇒ U.
-        let interp = run("'algo' IMPORT 'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 .. SORT").await;
+        let interp =
+            run("'algo' IMPORT 'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 .. SORT").await;
         let v = top(&interp);
         assert!(
             v.is_unknown(),
@@ -1681,11 +1685,129 @@ mod u_propagation_tests {
         // U guard does not fire and there is no else clause ⇒ CondExhausted.
         let mut interp = Interpreter::new();
         let result = interp
-            .execute("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND")
+            .execute(
+                "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND",
+            )
             .await;
         assert!(
             result.is_err(),
             "a U-only COND with no else clause must raise CondExhausted"
         );
+    }
+}
+
+/// `QUANTIZE` (SPEC §7.13 draft; docs/dev/fintech-value-integrity-design.md):
+/// banker's-rounding quantization to a rational grid, emitting the exact
+/// residual so `q + r == x`.
+#[cfg(test)]
+mod quantize_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    /// The whole stack rendered top-to-bottom-preserving, space-joined — the
+    /// same shape the CLI prints after `stack:`.
+    fn stack_str(interp: &Interpreter) -> String {
+        interp
+            .get_stack()
+            .iter()
+            .map(|v| format!("{}", v))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    #[tokio::test]
+    async fn quantizes_to_cents_with_exact_residual() {
+        // 100/3 to the 1/100 grid: q = 3333/100, r = 1/300, and q + r = 100/3.
+        let interp = run("100/3 1/100 QUANTIZE").await;
+        assert_eq!(stack_str(&interp), "3333/100 1/300");
+    }
+
+    #[tokio::test]
+    async fn residual_reconstructs_the_input_exactly() {
+        // Summing q and r must return the original value with no loss.
+        let interp = run("100/7 1/100 QUANTIZE +").await;
+        assert_eq!(stack_str(&interp), "100/7");
+    }
+
+    #[tokio::test]
+    async fn ties_round_to_even_not_away_from_zero() {
+        // 2.5 -> 2 (even), 3.5 -> 4 (even), 1.5 -> 2 (even). This is the
+        // property that distinguishes QUANTIZE from ROUND (half-away-from-zero).
+        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
+        assert_eq!(stack_str(&run("7/2 1 QUANTIZE").await), "4/1 -1/2");
+        assert_eq!(stack_str(&run("3/2 1 QUANTIZE").await), "2/1 -1/2");
+    }
+
+    #[tokio::test]
+    async fn differs_from_round_on_a_tie() {
+        // ROUND breaks the 5/2 tie away from zero (3); QUANTIZE breaks it to
+        // even (2). Same input, deliberately different, documented contrast.
+        assert_eq!(stack_str(&run("5/2 ROUND").await), "3/1");
+        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
+    }
+
+    #[tokio::test]
+    async fn negative_ties_also_round_to_even() {
+        // -2.5 -> -2 (even), residual -1/2.
+        assert_eq!(stack_str(&run("-5/2 1 QUANTIZE").await), "-2/1 -1/2");
+    }
+
+    #[tokio::test]
+    async fn nil_value_passes_through_to_both_outputs() {
+        // A bubble in x flows through to q and r (SPEC §7.12); the step is a
+        // valid positive rational, so no error is raised.
+        let interp = run("1 0 / 1/100 QUANTIZE").await;
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 2, "got {}", stack_str(&interp));
+        assert!(
+            stack[0].is_nil() && stack[1].is_nil(),
+            "got {}",
+            stack_str(&interp)
+        );
+    }
+
+    #[tokio::test]
+    async fn irrational_value_projects_to_undecidable_bubbles() {
+        // sqrt(2) cannot pick a nearest multiple within the comparison budget,
+        // so both outputs project to NIL rather than guess (SPEC §7.4.1).
+        let interp = run("'math' IMPORT 2 SQRT 1/100 QUANTIZE").await;
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 2, "got {}", stack_str(&interp));
+        assert!(
+            stack[0].is_nil() && stack[1].is_nil(),
+            "got {}",
+            stack_str(&interp)
+        );
+    }
+
+    #[tokio::test]
+    async fn zero_step_is_a_channel_error() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1/2 0 QUANTIZE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn negative_step_is_a_channel_error() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1/2 -1/100 QUANTIZE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn stack_mode_is_unsupported() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("100/3 1/100 .. QUANTIZE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn keep_mode_retains_both_operands() {
+        // Under KEEP the value and step are retained (bifurcation, SPEC §13.2)
+        // in addition to the two outputs.
+        let interp = run("100/3 1/100 ,, QUANTIZE").await;
+        assert_eq!(stack_str(&interp), "100/3 1/100 3333/100 1/300");
     }
 }

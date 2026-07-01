@@ -208,7 +208,7 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 51,
+      "derived_word_count": 52,
       "law_test_count": 12,
       "conformance_case_count": 3,
       "derived_words": [
@@ -219,6 +219,7 @@
         "core.floor",
         "core.mod",
         "core.num",
+        "core.quantize",
         "core.round",
         "module.math.gcd",
         "module.math.interval",
@@ -413,7 +414,7 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 15,
+      "derived_word_count": 16,
       "law_test_count": 3,
       "conformance_case_count": 10,
       "derived_words": [
@@ -430,6 +431,7 @@
         "core.mod",
         "core.mul",
         "core.neq",
+        "core.quantize",
         "core.round",
         "core.sub"
       ],

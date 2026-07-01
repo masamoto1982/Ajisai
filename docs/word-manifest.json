@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 86,
+    "corewords": 87,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 204
+    "total": 205
   },
   "entries": [
     {
@@ -1200,6 +1200,22 @@
       "source": "rust/src/builtins/builtin_word_definitions.rs",
       "canonical": "ROUND",
       "coverage_entry_id": "core.round",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize",
+      "kind": "coreword",
+      "surface": "QUANTIZE",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "QUANTIZE",
+      "coverage_entry_id": "core.quantize",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
       "derived_from": [
