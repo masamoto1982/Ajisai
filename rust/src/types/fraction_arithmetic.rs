@@ -313,7 +313,11 @@ impl Fraction {
         match &self.repr {
             FractionRepr::Small(n, d) => {
                 let is_negative = *n < 0;
-                let abs_n = n.abs() as i128;
+                // Widen to i128 *before* taking the absolute value: `i64::MIN`
+                // has no positive i64 counterpart, so `i64::abs()` overflows and
+                // panics in debug (reachable from a `-9223372036854775808/d`
+                // operand, e.g. via QUANTIZE-HALF-AWAY). i128 holds it exactly.
+                let abs_n = (*n as i128).abs();
                 let d128 = *d as i128;
                 let result = ((2 * abs_n + d128) / (2 * d128)) as i64;
                 Fraction::from_repr(FractionRepr::Small(
