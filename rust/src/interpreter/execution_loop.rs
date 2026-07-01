@@ -13,9 +13,8 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "STR" | "CHR" | "JOIN" | "TRIM" | "TRIM-LEFT" | "TRIM-RIGHT" | "SUBSTITUTE" => {
             Some(Interpretation::Text)
         }
-        "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "FOLD" => {
-            Some(Interpretation::RawNumber)
-        }
+        "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "QUANTIZE"
+        | "FOLD" => Some(Interpretation::RawNumber),
         "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
             Some(Interpretation::Interval)
         }

@@ -230,6 +230,16 @@ impl Fraction {
         self.is_integer()
     }
 
+    /// True for values strictly greater than zero. The denominator is always
+    /// normalised positive, so the sign is carried entirely by the numerator.
+    #[inline]
+    pub fn is_positive(&self) -> bool {
+        match &self.repr {
+            FractionRepr::Small(n, _) => *n > 0,
+            FractionRepr::Big { numerator, .. } => numerator > &BigInt::zero(),
+        }
+    }
+
     #[inline]
     pub(crate) fn extract_i64_pair(&self) -> Option<(i64, i64)> {
         match &self.repr {

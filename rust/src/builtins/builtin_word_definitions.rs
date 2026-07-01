@@ -61,6 +61,7 @@ pub enum BuiltinExecutorKey {
     Floor,
     Ceil,
     Round,
+    Quantize,
     Mod,
     Str,
     Num,
@@ -1348,6 +1349,22 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Arithmetic primitive: Round to nearest integer (half-up).",
 
         stack_effect: "[ x ] -> [ round x ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "QUANTIZE",
+        category: "arithmetic",
+        hover_summary: "QUANTIZE — round to a rational grid, keeping the residual",
+        hover_syntax: "100/3 1/100 QUANTIZE",
+        executor_key: Some(BuiltinExecutorKey::Quantize),
+        summary: "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        role: "Arithmetic primitive: banker's-rounding quantization to a rational grid, emitting the exact residual so q + r = x.",
+
+        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
         partiality: Partiality::Projecting,
         nil_policy: NilPolicy::CreatesNil,
         safety_level: SafetyLevel::B,

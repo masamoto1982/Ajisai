@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:18fd27ef92b83d0ed68dda4400d8feae184769e0b97cbc0d410b145bbe4dd505",
+  "rootIdentity": "sha256:8f500a1b6a9b8dbb4cc3a5baaf8f939d4b0893ffe81d52f19ec7206d285251fb",
   "fileCount": 285,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -59,8 +59,8 @@
     },
     {
       "path": "rust/src/arithmetic_operation_tests.rs",
-      "sha256": "4e9e951104e1bd2b643b687ed737c64cd265a2fc223cec19c60e8eaa8c7d0f7a",
-      "bytes": 63020
+      "sha256": "2566f2d7e733c5be0e30a034cd746e14a0d029cc08346ce6daa587d36f3c4b2a",
+      "bytes": 67383
     },
     {
       "path": "rust/src/bin/ajisai.rs",
@@ -69,8 +69,8 @@
     },
     {
       "path": "rust/src/builtins/builtin_word_definitions.rs",
-      "sha256": "43d428be37ec4334dd38359abb3f81d79fcf8fcfdbeda3aec6cfff5a57f74df8",
-      "bytes": 59799
+      "sha256": "4548e9d41849a9c06fc43ba03f1d2e66794c60dbd67e129e35c74d0a61767a01",
+      "bytes": 60557
     },
     {
       "path": "rust/src/builtins/builtin_word_details.rs",
@@ -154,8 +154,8 @@
     },
     {
       "path": "rust/src/coreword_registry.rs",
-      "sha256": "fca086bdbd96160027a0f8daf0d10fc38d1b7b3a612e9628a995cd2dc998d462",
-      "bytes": 45894
+      "sha256": "79fc98e0dbf49d52781afabc18bf0998dfa5ecea4b1ac1912fa2bdd438c6ae6f",
+      "bytes": 46183
     },
     {
       "path": "rust/src/dimension_limit_tests.rs",
@@ -214,8 +214,8 @@
     },
     {
       "path": "rust/src/elastic/purity_table.rs",
-      "sha256": "7c5b212a30d05eb9f3b5a5729ce6a647568979a4d67ac2c15bf7af4ede497857",
-      "bytes": 8658
+      "sha256": "17d27c067d5cb35e83926c77a8b77d19c8051cdad9ec64482e5cd091fd9eef3a",
+      "bytes": 8669
     },
     {
       "path": "rust/src/elastic/tracer.rs",
@@ -484,8 +484,8 @@
     },
     {
       "path": "rust/src/interpreter/execute_builtin.rs",
-      "sha256": "6813270f0bafac456eff42762ac7a9b726bd329086af56760e8256eee05947d6",
-      "bytes": 21598
+      "sha256": "30ea1692bb3ad669318aad0018ea4feb60a87bfc7ea678a1a3c2a8f345929c46",
+      "bytes": 21674
     },
     {
       "path": "rust/src/interpreter/execute_def.rs",
@@ -504,8 +504,8 @@
     },
     {
       "path": "rust/src/interpreter/execution_loop.rs",
-      "sha256": "c77891dde5f125aec2fbe8320c38ee2eb84da60ccbe2e3bbc6dd5422ff144b5b",
-      "bytes": 24763
+      "sha256": "fb915fdbbb9c4ac5a2251666000d942595c77770c7d91fb9daeabf08280bde52",
+      "bytes": 24761
     },
     {
       "path": "rust/src/interpreter/execution_plan_set.rs",
@@ -719,8 +719,8 @@
     },
     {
       "path": "rust/src/interpreter/nil_conformance_tests.rs",
-      "sha256": "3baaf13d3d625f68b60005a3006e5a4866d8044c9442d1303997998daf6d6b77",
-      "bytes": 19476
+      "sha256": "98db8044b7a9eca1219d0ec2d70553e16cd03340bea3e2122e537f3b5922d983",
+      "bytes": 19492
     },
     {
       "path": "rust/src/interpreter/nil_reason_tests.rs",
@@ -809,8 +809,8 @@
     },
     {
       "path": "rust/src/interpreter/tensor_cmds.rs",
-      "sha256": "75ea93f4637997baf2d05797ebdf9c7e33f015950b617051bb21be60a46decef",
-      "bytes": 17080
+      "sha256": "0f5e31473e705b7c9094061a4a6e16e9eb15beffcbf199a5abf99a886d4a74ba",
+      "bytes": 20473
     },
     {
       "path": "rust/src/interpreter/tensor_ops.rs",
@@ -979,13 +979,13 @@
     },
     {
       "path": "rust/src/types/fraction.rs",
-      "sha256": "89c3d59b2dca7c70387c8706b3bb99356b2ca94aea1c6ea2f5cf8d30883e703a",
-      "bytes": 20304
+      "sha256": "7866b0080d930c3a6f67d84889ef3299161d77345c63cd62593c35528f077eaf",
+      "bytes": 20688
     },
     {
       "path": "rust/src/types/fraction_arithmetic.rs",
-      "sha256": "a25c77a61fb24695bddd8281b326dc64da5e412208b7b53e5915a56dcb78ef06",
-      "bytes": 13814
+      "sha256": "a86d8984a9d6f3451a552b4f301617b59f53a0c23b7e678b34a8c4cc4265b27d",
+      "bytes": 16406
     },
     {
       "path": "rust/src/types/fraction_mcdc_tests.rs",
