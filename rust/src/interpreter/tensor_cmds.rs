@@ -434,6 +434,100 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
     }
 }
 
+/// The exact-real value carried by a scalar, whether stored as a rational
+/// `Scalar` or an `ExactScalar`. Non-scalar and NIL values return `None`.
+fn value_as_exact_real(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
+}
+
+/// `CONSERVE` — value-conservation guard (SPEC §13.3 draft; see
+/// docs/dev/fintech-value-integrity-design.md). Stack effect
+/// `[ total ] [ parts ] -> [ parts ]`: asserts that the exact sum of the
+/// scalar vector `parts` equals `total`. On a proven match `parts` passes
+/// through unchanged; otherwise evaluation halts with a channel error (fail
+/// loudly). This is the value-mass complement to the static flow-mass
+/// conservation of §13.1.
+pub fn op_conserve(interp: &mut Interpreter) -> Result<()> {
+    if interp.operation_target_mode == OperationTargetMode::Stack {
+        return Err(AjisaiError::ModeUnsupported {
+            word: "CONSERVE".into(),
+            mode: "Stack".into(),
+        });
+    }
+
+    let stack_len = interp.stack.len();
+    if stack_len < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    // Operand order is `[ total ] [ parts ] CONSERVE`, so `total` is second.
+    let total_val = interp.stack[stack_len - 2].clone();
+    let parts_val = interp.stack[stack_len - 1].clone();
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+
+    // RejectsNil: an absent total or an absent part cannot certify
+    // conservation ("no lost data"), so a NIL operand is a channel error
+    // rather than a bubble that could flow downstream.
+    if total_val.is_nil() || parts_val.is_nil() {
+        return Err(AjisaiError::from(
+            "CONSERVE cannot certify conservation with a NIL operand",
+        ));
+    }
+
+    let total = value_as_exact_real(&total_val)
+        .ok_or_else(|| AjisaiError::from("CONSERVE requires a scalar total"))?;
+    let parts = parts_val
+        .as_vector_view()
+        .ok_or_else(|| AjisaiError::from("CONSERVE requires a vector of scalar parts"))?;
+
+    // Sum the parts exactly. Seed the accumulator with the first element (not
+    // a synthetic zero) so a single-part sum is that element unchanged, which
+    // keeps rational sums exact and avoids wrapping an exact-real part in an
+    // extra Gosper transform that a budgeted comparison might not see through.
+    // A NIL or non-scalar element is malformed use.
+    let scalar_at = |element: &Value| -> Result<ExactReal> {
+        if element.is_nil() {
+            return Err(AjisaiError::from(
+                "CONSERVE parts must not contain a NIL element",
+            ));
+        }
+        value_as_exact_real(element)
+            .ok_or_else(|| AjisaiError::from("CONSERVE parts must be scalars"))
+    };
+    let mut elements = parts.iter();
+    let mut sum = match elements.next() {
+        Some(first) => scalar_at(first)?,
+        None => ExactReal::from_fraction(Fraction::from(0i64)),
+    };
+    for element in elements {
+        sum = sum.add(&scalar_at(element)?);
+    }
+
+    // Only a *proven* equality lets flow pass. A guard that cannot confirm its
+    // safe condition must not pass, so an undecidable comparison fails loudly
+    // rather than returning UNKNOWN or silently succeeding (SPEC §13.3 draft).
+    match sum.eq_with_budget(&total, DEFAULT_COMPARISON_BUDGET) {
+        Some(true) => {
+            if !is_keep {
+                interp.stack.pop();
+                interp.stack.pop();
+            }
+            interp.stack.push(parts_val);
+            Ok(())
+        }
+        Some(false) => Err(AjisaiError::from(
+            "Conservation violated: parts do not sum to the total",
+        )),
+        None => Err(AjisaiError::from(
+            "Conservation undecidable within the comparison budget",
+        )),
+    }
+}
+
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {

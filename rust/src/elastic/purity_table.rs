@@ -100,6 +100,10 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         Get | Length | Concat | Reverse | Range | Reorder => pure_light,
         Take | Split | Insert | Replace | Remove | Collect => pure_light,
 
+        // Value-conservation guard: inspects the parts vector and either passes
+        // it through or raises; pure and deterministic (SPEC §13.3 draft).
+        Conserve => pure_light,
+
         // ── Pure tensor ops ───────────────────────────────────────────────
         Shape | Rank | Reshape | Transpose | Fill => pure_light,
 

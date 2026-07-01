@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 87,
+    "corewords": 88,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 205
+    "total": 206
   },
   "entries": [
     {
@@ -1236,6 +1236,22 @@
       "algebraic_family": "state-transformer",
       "derived_from": [
         "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.conserve",
+      "kind": "coreword",
+      "surface": "CONSERVE",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "CONSERVE",
+      "coverage_entry_id": "core.conserve",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
       ],
       "classification": "Core"
     },

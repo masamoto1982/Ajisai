@@ -34,6 +34,7 @@ pub enum BuiltinExecutorKey {
     Exec,
     Eval,
     Cond,
+    Conserve,
     Def,
     Del,
     Lookup,
@@ -1383,6 +1384,22 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Control primitive: Execute a vector as Ajisai code.",
 
         stack_effect: "[ code ] -> [ result... ]",
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::RejectsNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "CONSERVE",
+        category: "control",
+        hover_summary: "CONSERVE — assert parts sum exactly to a total",
+        hover_syntax: "100 [ 3333/100 6667/100 ] CONSERVE",
+        executor_key: Some(BuiltinExecutorKey::Conserve),
+        summary: "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
+        role: "Control primitive: value-conservation guard; passes the parts through iff their exact sum equals the total, else raises.",
+
+        stack_effect: "[ total ] [ parts ] -> [ parts ]",
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::B,

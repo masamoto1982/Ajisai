@@ -327,6 +327,7 @@ impl Interpreter {
             BuiltinExecutorKey::Ceil => tensor_cmds::op_ceil(self),
             BuiltinExecutorKey::Round => tensor_cmds::op_round(self),
             BuiltinExecutorKey::Quantize => tensor_cmds::op_quantize(self),
+            BuiltinExecutorKey::Conserve => tensor_cmds::op_conserve(self),
             BuiltinExecutorKey::Mod => tensor_cmds::op_mod(self),
             BuiltinExecutorKey::Str => cast::op_str(self),
             BuiltinExecutorKey::Num => cast::op_num(self),
