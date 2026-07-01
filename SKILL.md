@@ -243,6 +243,7 @@ program (then the short name works), or can be called fully qualified.
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
 | `QUANTIZE` | arithmetic | Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual. — e.g. `100/3 1/100 QUANTIZE` |
 | `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
+| `CONSERVE` | control | Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly. — e.g. `100 [ 3333/100 6667/100 ] CONSERVE` |
 | `EVAL` | control | Parse a string as Ajisai source code and execute it. — e.g. `'1 2 +' EVAL` |
 | `IMPORT` | module | Load all public words of a module into the dictionary. — e.g. `'IO' IMPORT` |
 | `IMPORT-ONLY` | module | Load only the listed public words of a module. — e.g. `'json' [ 'parse' ] IMPORT-ONLY` |

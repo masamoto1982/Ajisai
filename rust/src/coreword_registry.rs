@@ -93,6 +93,12 @@ pub fn mass_contract(name: &str) -> MassContract {
             consumes: 2,
             produces: 2,
         },
+        // Value-conservation guard: read total and parts, pass the parts back
+        // (SPEC §13.3 draft).
+        "CONSERVE" => MassContract::Fixed {
+            consumes: 2,
+            produces: 1,
+        },
         _ => MassContract::Dynamic,
     }
 }

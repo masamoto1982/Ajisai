@@ -1249,6 +1249,32 @@
       "algebraic_family": "exact-arithmetic"
     },
     {
+      "id": "core.conserve",
+      "kind": "coreword",
+      "surface": "CONSERVE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.7",
+        "SPECIFICATION.html §13.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/fintech-value-integrity-design.md"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "CONSERVE — value-conservation guard: asserts the exact sum of a scalar parts vector equals a declared total, passing the parts through iff the equality is proven and failing loudly (channel error) on violation or an undecidable comparison. The value-mass complement to the static flow-mass conservation of §13.1, and the enforcement half of penny-perfect allocation alongside QUANTIZE's residual. Rejects NIL operands. Implemented ahead of the canonical §13.3 lift (docs/dev/fintech-value-integrity-design.md); status Sketched pending that lift and a mathematical-formalization entry.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",

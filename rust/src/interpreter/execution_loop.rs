@@ -25,9 +25,8 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
         "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
-        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE" => {
-            Some(Interpretation::Unassigned)
-        }
+        | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE"
+        | "CONSERVE" => Some(Interpretation::Unassigned),
         _ => None,
     };
     if let Some(h) = hint {

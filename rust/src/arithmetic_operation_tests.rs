@@ -1811,3 +1811,97 @@ mod quantize_tests {
         assert_eq!(stack_str(&interp), "100/3 1/100 3333/100 1/300");
     }
 }
+
+/// `CONSERVE` (SPEC §13.3 draft; docs/dev/fintech-value-integrity-design.md):
+/// the value-conservation guard — asserts a vector of parts sums exactly to a
+/// declared total, passing the parts through or failing loudly.
+#[cfg(test)]
+mod conserve_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    fn stack_str(interp: &Interpreter) -> String {
+        interp
+            .get_stack()
+            .iter()
+            .map(|v| format!("{}", v))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    #[tokio::test]
+    async fn passes_parts_through_when_they_sum_to_the_total() {
+        let interp = run("100 [ 3333/100 6667/100 ] CONSERVE").await;
+        assert_eq!(stack_str(&interp), "[ 3333/100 6667/100 ]");
+    }
+
+    #[tokio::test]
+    async fn passes_integer_parts() {
+        let interp = run("10 [ 1 2 3 4 ] CONSERVE").await;
+        assert_eq!(stack_str(&interp), "[ 1/1 2/1 3/1 4/1 ]");
+    }
+
+    #[tokio::test]
+    async fn quantized_shares_plus_residual_reconcile_to_the_total() {
+        // The QUANTIZE outputs of 100/3 to cents (3333/100 and 1/300) sum back
+        // to the exact total, so CONSERVE lets them through — QUANTIZE ①
+        // pairing with CONSERVE ② to make an allocation penny-perfect.
+        let interp = run("100/3 [ 3333/100 1/300 ] CONSERVE").await;
+        assert_eq!(stack_str(&interp), "[ 3333/100 1/300 ]");
+    }
+
+    #[tokio::test]
+    async fn violation_fails_loudly() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("100 [ 50 51 ] CONSERVE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn nil_total_is_rejected() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("1 0 / [ 1 2 ] CONSERVE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn nil_part_is_rejected() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("5 [ 2 1 0 / 3 ] CONSERVE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn non_vector_parts_is_rejected() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("6 5 CONSERVE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn stack_mode_is_unsupported() {
+        let mut interp = Interpreter::new();
+        assert!(interp.execute("10 [ 1 2 3 4 ] .. CONSERVE").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn keep_mode_retains_total_and_parts() {
+        // Under KEEP the total and parts are retained (bifurcation, SPEC §13.2)
+        // in addition to the passed-through parts.
+        let interp = run("10 [ 1 2 3 4 ] ,, CONSERVE").await;
+        assert_eq!(
+            stack_str(&interp),
+            "10/1 [ 1/1 2/1 3/1 4/1 ] [ 1/1 2/1 3/1 4/1 ]"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_irrational_parts_are_decided_not_bubbled() {
+        // A single exact-real part equal to the total passes (the comparison is
+        // decidable), rather than being reported undecidable.
+        let interp = run("'math' IMPORT 2 SQRT [ 2 ] { SQRT } MAP CONSERVE").await;
+        assert_eq!(interp.get_stack().len(), 1);
+        assert!(interp.get_stack()[0].is_vector());
+    }
+}
