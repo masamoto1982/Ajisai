@@ -1227,8 +1227,8 @@
       "surface": "QUANTIZE",
       "classification": "Core",
       "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
+        "SPECIFICATION.html §4.2.6",
+        "SPECIFICATION.html §7.13"
       ],
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §3.2",
@@ -1239,7 +1239,7 @@
       ],
       "conformance_cases": [],
       "status": "Sketched",
-      "notes": "QUANTIZE — banker's-rounding (ties-to-even) quantization of an exact value to a positive rational grid, emitting the exact residual r so that q + r = x with no loss. Implemented ahead of the canonical §7.13 lift (docs/dev/fintech-value-integrity-design.md); FLOOR/CEIL/ROUND are its step=1 special cases. Projecting failures create NIL/Bubble observations (an irrational operand projects to an Undecidable bubble).",
+      "notes": "QUANTIZE — banker's-rounding (ties-to-even) quantization of an exact value to a positive rational grid, emitting the exact residual r so that q + r = x with no loss (canonical SPECIFICATION.html §7.13; design docs/dev/fintech-value-integrity-design.md). FLOOR/CEIL/ROUND are its step=1 special cases. Projecting failures create NIL/Bubble observations (an irrational operand projects to an Undecidable bubble). Status Sketched pending a dedicated entry in the mathematical formalization doc.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
