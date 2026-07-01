@@ -651,6 +651,7 @@ Version: <strong>2026-07-01</strong></p>
 
 <ul>
 <li><strong>Rounding and truncation.</strong> Core numeric operations preserve exact values. Any finite display or observation budget is an observation limit only; it is not a new approximate value and must not be parsed back as canonical data.</li>
+<li><strong>Deliberate quantization.</strong> The only operation that maps an exact value onto a coarser grid, <code>QUANTIZE</code> (Section 7.13), is explicit in its step and emits the exact residual alongside the quantized value; the two reconstruct the input exactly (\(q + r = x\)), so quantization is a visible, lossless-in-aggregate operation rather than a silent approximation.</li>
 <li><strong>Information loss and cancellation.</strong> Algebraically equivalent values remain represented by exact scalar structures rather than by rounded samples, so subtracting near-equal values or combining large and small terms must not discard significant information as an unreported side effect.</li>
 <li><strong>Overflow.</strong> Internal integer state that participates in scalar identity or arithmetic, including Gosper/Möbius coefficients, uses arbitrary precision or an equally exact strategy. If an implementation-specific resource limit is reached, the result is a diagnosed execution/resource failure, not wraparound.</li>
 <li><strong>Undecidable observation.</strong> When a comparison or other observation cannot decide within its budget, the result is the logical <code>UNKNOWN</code> (Section 7.4.1), not a rounded Boolean guess.</li>
@@ -677,6 +678,7 @@ Version: <strong>2026-07-01</strong></p>
 <ul>
 <li><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> keep \(D\) closed: sums, differences, products, and quotients of \(D\)-elements are in \(D\). Division by an element that is exactly zero bubbles to NIL per Section 11.2; no element of \(D\) other than \(0\) is indistinguishable from \(0\), so a non-zero divisor always yields a value and the <code>reason = undecidable</code> DIV case (Section 7.3) cannot arise inside \(D\).</li>
 <li><code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code> and the six comparison relations are total on \(D\): the sign, integer part, and order of any \(D\)-element are exactly computable in finitely many steps.</li>
+<li><code>QUANTIZE</code> (Section 7.13) keeps \(D\) closed and is total on \(D\) given a positive rational step: for a \(D\)-element <code>x</code> and rational <code>step</code>, both the quantized value \(q = n \cdot \mathit{step}\) and the residual \(r = x - q\) are rationals in \(D\), computed in finitely many steps.</li>
 <li><code>MATH@SQRT</code> is defined on the rational sub-domain only: its operand must be rational. <code>SQRT</code> of a non-rational \(D\)-element (for example \(\sqrt{\sqrt{2}}\)) is <strong>outside</strong> the current Coreword set and is malformed use → error (Section 11.2); <code>SQRT</code> of a negative rational is a well-formed domain miss → Bubble/NIL. Consequently \(D\) is <em>not</em> closed under <code>SQRT</code>, and the current Coreword set constructs no nested radicals, transcendentals, or other lazy irrationals.</li>
 <li><code>MATH@POW</code> is defined for an integer exponent only, which keeps the result in \(D\); a non-integer exponent is malformed use.</li>
 </ul>
@@ -1031,6 +1033,8 @@ Version: <strong>2026-07-01</strong></p>
 
 <p><code>FLOOR</code> and <code>CEIL</code> and <code>ROUND</code> pull partial quotients from their operand until the integer part of the result is determined. For finite (rational) operands this terminates after a bounded number of steps; for lazy (irrational) operands it terminates after enough partial quotients have been emitted to fix the integer part, which is always finite for irrationals strictly between consecutive integers. A value that is exactly an integer requires no pull beyond \(a_0\).</p>
 
+<p>These three words round to the <em>integer</em> grid under a fixed rule and discard the fractional part. <code>QUANTIZE</code> (Section 7.13) generalises them to any positive rational grid and, instead of discarding the remainder, emits it as an exact residual; <code>FLOOR</code>, <code>CEIL</code>, and <code>ROUND</code> are recoverable as its step-one special cases.</p>
+
 <p><code>MOD</code> is defined by the identity \(x - \lfloor x / y \rfloor \cdot y\) (the <code>FLOOR</code>-based remainder) and is computed by composing the underlying Gosper transforms. Unlike <code>DIV</code>, a zero divisor for <code>MOD</code> is not bubbled: <code>5 0 MOD</code> raises a <code>custom</code> error with message <code>"Modulo by zero"</code> rather than producing NIL (the two words are deliberately asymmetric here). <code>DIV</code> by a value whose CF reduces to zero produces NIL with <code>reason = divisionByZero</code> (Section 11.2 Bubble Rule); division by an irrational that cannot be distinguished from zero within the comparison budget produces NIL with <code>reason = undecidable</code> (Section 7.4). This is an <em>operational</em> absence — <code>DIV</code> could not produce a number — and remains a NIL; it is distinct from the <em>logical</em> <code>unknown</code> (U) that the comparison words themselves return on budget exhaustion (Section 7.4.1, Section 4.5.2).</p>
 
 <h3 id="74-comparison">7.4 Comparison</h3>
@@ -1363,7 +1367,7 @@ Version: <strong>2026-07-01</strong></p>
 <tr><th>Category</th><th>Words</th></tr>
 </thead>
 <tbody>
-<tr><td>Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> <code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code></td></tr>
+<tr><td>Arithmetic</td><td><code>ADD</code> <code>SUB</code> <code>MUL</code> <code>DIV</code> <code>MOD</code> <code>FLOOR</code> <code>CEIL</code> <code>ROUND</code> <code>QUANTIZE</code> (value operand only; see below)</td></tr>
 <tr><td>Comparison</td><td><code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code> <code>EQ</code> <code>NEQ</code></td></tr>
 <tr><td>Logic</td><td><code>AND</code> <code>OR</code> <code>NOT</code> (three-valued; see below)</td></tr>
 </tbody>
@@ -1373,6 +1377,8 @@ Version: <strong>2026-07-01</strong></p>
 <p><code>AND</code> <code>OR</code> <code>NOT</code> implement strong Kleene three-valued logic (K3) over the truth domain \(\{T, F, U\}\); the truth tables and the U value are defined in Section 7.5. The three-valued behavior listed here concerns NIL operands specifically: NIL combined with a definite false (for <code>AND</code>) or definite true (for <code>OR</code>) collapses to that definite value; in all other cases involving NIL the result is NIL, and <code>NOT</code> of NIL is NIL. The logical third value U is separate from NIL (Section 4.5.2); when both appear, NIL takes priority.</p>
 
 <p>The comparison words are NIL-passthrough for NIL operands as listed above. They do <strong>not</strong> produce a <code>reason = undecidable</code> NIL on budget exhaustion; that case now yields the truth value <code>unknown</code> (Section 7.4.1), which is a <code>TruthValue</code> result rather than an absence.</p>
+
+<p><code>QUANTIZE</code> (Section 7.13) is NIL-passthrough on its <em>value</em> operand only: a NIL <code>x</code> yields NIL for both the quantized value and the residual, carrying its reason. Its <code>step</code> operand is not passthrough — a NIL step is malformed use and raises a channel error rather than producing NIL.</p>
 
 <p>Words not listed here retain their existing handling of NIL. In particular, the following are <strong>not</strong> NIL-passthrough:</p>
 
@@ -1392,6 +1398,54 @@ Version: <strong>2026-07-01</strong></p>
 </div>
 
 <p><code>NUM</code> and <code>CHR</code> can create reasoned Bubble/NIL values for well-formed conversion failures as described by the Bubble Rule.</p>
+
+<h3 id="713-explicit-quantization-and-residual">7.13 Explicit quantization and residual</h3>
+
+<p>The core numeric words keep values exact (Section 4.2.6); the only operation that deliberately maps a value onto a coarser grid is <code>QUANTIZE</code>. It makes that projection explicit in both its step and its outcome, and — unlike <code>FLOOR</code>, <code>CEIL</code>, and <code>ROUND</code> — it does not discard the fraction it rounds away. The discarded amount is emitted as an exact <em>residual</em>, so quantization loses nothing that is not deliberately dropped afterward.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Canonical</th><th>Sugar</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>QUANTIZE</code></td><td>—</td><td>Quantize a scalar to a positive rational grid by banker's rounding, pushing the quantized value and the exact residual</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Stack effect (<code>TOP</code>, <code>EAT</code>).</strong> <code>[ x ] [ step ] -&gt; [ q ] [ r ]</code>, where</p>
+
+<ul>
+<li><code>x</code> is the scalar to quantize;</li>
+<li><code>step</code> is a strictly positive rational quantum — for example <code>1 100 /</code> for a two-decimal (cents) grid or <code>1 100000000 /</code> for a satoshi;</li>
+<li><code>q</code> is the quantized value, an exact integer multiple \(q = n \cdot \mathit{step}\); and</li>
+<li><code>r</code> is the exact residual \(r = x - q\).</li>
+</ul>
+
+<p><strong>Residual identity.</strong> For every well-formed call</p>
+
+\[q + r = x \quad\text{exactly.}\]
+
+<p>Because <code>x</code>, <code>q</code>, and <code>r</code> are all exact, the pair <code>( q r )</code> reconstructs <code>x</code> with no loss. Discarding the residual is still possible, but it requires an explicit stack action, so silent loss of significance cannot occur.</p>
+
+<p><strong>Rounding rule.</strong> <code>q</code> is the multiple of <code>step</code> nearest to <code>x</code>; a tie (when <code>x</code> lies exactly half a step between two multiples) is resolved to the <em>even</em> multiple. This is banker's rounding (round-half-to-even): unlike <code>ROUND</code>, whose ties break away from zero, it introduces no systematic bias when many half-way values are quantized, which is why it is the appropriate default for currency. Let \(m = x / \mathit{step}\); then <code>QUANTIZE</code> chooses the integer \(n\) nearest \(m\), rounding a half-integer \(m\) to the even neighbour, and returns \(q = n \cdot \mathit{step}\).</p>
+
+<p><strong>Relationship to the integer-rounding words.</strong> With <code>step</code> equal to <code>1</code>, <code>QUANTIZE</code> rounds to the integer grid, so <code>x 1 QUANTIZE</code> followed by dropping the residual computes the ties-to-even rounding of <code>x</code>. <code>FLOOR</code>, <code>CEIL</code>, and <code>ROUND</code> (Section 7.3) are the step-one directed and half-away special cases, retained for convenience and discarding their residual by definition.</p>
+
+<p><strong>NIL, error, and decidability.</strong></p>
+
+<ul>
+<li><strong><code>x</code> is NIL.</strong> The bubble passes through to both outputs, carrying its reason; <code>q</code> and <code>r</code> are each NIL (Section 7.12). The step is still required to be valid.</li>
+<li><strong><code>step</code> is not a strictly positive rational</strong> (zero, negative, non-rational, or NIL). This is malformed use and raises a channel error, mirroring the deliberate asymmetry of <code>MOD</code> by zero (Section 7.3); it is not projected to a bubble.</li>
+<li><strong>Decidability.</strong> For <code>x</code> in the admitted domain \(D\) (Section 4.2.7) and rational <code>step</code>, both <code>q</code> and <code>r</code> are exact rationals computable in finitely many steps, so <code>QUANTIZE</code> is total on \(D\). For an <code>x</code> outside \(D\) whose nearest multiple cannot be decided within the comparison budget, both outputs project to an Undecidable Bubble/NIL (Section 7.4.1, Section 11.2) rather than guessing.</li>
+</ul>
+
+<p><strong>Worked example.</strong> Quantizing the exact share <code>100 3 /</code> to cents:</p>
+
+<pre><code>100 3 / 1 100 / QUANTIZE   ( -&gt; q = 3333/100, r = 1/300 )</code></pre>
+
+<p>Here \(q + r = 3333/100 + 1/300 = 100/3\) exactly, so summing the two outputs with <code>ADD</code> returns the original value. Quantizing each share of a split this way and carrying the residuals is what lets an allocation of a total across several parts reconcile to the total with no invented or lost fraction of a cent.</p>
 
 <h3 id="714-coreword-contract-metadata">7.14 Coreword contract metadata</h3>
 
@@ -1416,6 +1470,8 @@ Version: <strong>2026-07-01</strong></p>
 </div>
 
 <p><code>partiality</code> and <code>nil_policy</code> are independent axes. For example, under the Bubble Rule <code>DIV</code> (<code>/</code>) is <code>Projecting</code> with <code>nil_policy = CreatesNil</code>: <code>DIV</code> <code>GET</code> <code>NUM</code> <code>CHR</code> are <code>Projecting</code> with <code>CreatesNil</code> for well-formed domain misses while malformed inputs remain ordinary errors.</p>
+
+<p><code>QUANTIZE</code> (Section 7.13) is <code>Projecting</code> with <code>nil_policy = CreatesNil</code>, matching the rounding family: it projects an undecidable nearest-multiple onto Bubble/NIL and passes a NIL value operand through, while a non-positive or non-rational step is malformed use and raises. Its <code>safety_level</code> is <code>B</code>, and its flow-mass contract is <code>Fixed { consumes: 2, produces: 2 }</code> (the value and step in, the quantized value and residual out; under <code>KEEP</code> the two operands are additionally retained per Section 13.2).</p>
 
 <p>Comparison words (<code>EQ</code> <code>NEQ</code> <code>LT</code> <code>LTE</code> <code>GT</code> <code>GTE</code>) are <code>Projecting</code>: they are total because every well-shaped input yields a <code>TruthValue</code> result, projecting the undecidable case onto the truth value <code>unknown</code> (U) rather than raising. Their <code>nil_policy</code> is <code>Passthrough</code> (they pass NIL operands through per Section 7.12); on budget exhaustion they produce U, which is a <code>TruthValue</code> result and <strong>not</strong> a <code>reason</code>-bearing NIL, so they are no longer classified <code>CreatesNil</code> for that case. (The <code>reason = undecidable</code> NIL of earlier revisions is retired from the comparison path; see Section 7.4.1.)</p>
 
