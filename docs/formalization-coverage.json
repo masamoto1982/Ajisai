@@ -1249,6 +1249,106 @@
       "algebraic_family": "exact-arithmetic"
     },
     {
+      "id": "core.quantize-half-away",
+      "kind": "coreword",
+      "surface": "QUANTIZE-HALF-AWAY",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.13"
+      ],
+      "formalization_sections": [
+        "docs/dev/fintech-value-integrity-design.md"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "QUANTIZE-HALF-AWAY — QUANTIZE-family grid quantization rounding to nearest with ties away from zero (the grid generalisation of ROUND), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.quantize-floor",
+      "kind": "coreword",
+      "surface": "QUANTIZE-FLOOR",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.13"
+      ],
+      "formalization_sections": [
+        "docs/dev/fintech-value-integrity-design.md"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "QUANTIZE-FLOOR — QUANTIZE-family grid quantization toward negative infinity (the grid generalisation of FLOOR), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.quantize-ceil",
+      "kind": "coreword",
+      "surface": "QUANTIZE-CEIL",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.13"
+      ],
+      "formalization_sections": [
+        "docs/dev/fintech-value-integrity-design.md"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "QUANTIZE-CEIL — QUANTIZE-family grid quantization toward positive infinity (the grid generalisation of CEIL), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
+      "id": "core.quantize-trunc",
+      "kind": "coreword",
+      "surface": "QUANTIZE-TRUNC",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.13"
+      ],
+      "formalization_sections": [
+        "docs/dev/fintech-value-integrity-design.md"
+      ],
+      "law_tests": [
+        "rust/src/arithmetic_operation_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "QUANTIZE-TRUNC — QUANTIZE-family grid quantization toward zero (truncation), emitting the exact residual so q + r = x. Distinct from QUANTIZE-FLOOR on negative values. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "algebraic_family": "exact-arithmetic"
+    },
+    {
       "id": "core.conserve",
       "kind": "coreword",
       "surface": "CONSERVE",

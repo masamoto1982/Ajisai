@@ -242,6 +242,10 @@ program (then the short name works), or can be called fully qualified.
 | `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
 | `QUANTIZE` | arithmetic | Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual. — e.g. `100/3 1/100 QUANTIZE` |
+| `QUANTIZE-HALF-AWAY` | arithmetic | Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual. — e.g. `5/2 1 QUANTIZE-HALF-AWAY` |
+| `QUANTIZE-FLOOR` | arithmetic | Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-FLOOR` |
+| `QUANTIZE-CEIL` | arithmetic | Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-CEIL` |
+| `QUANTIZE-TRUNC` | arithmetic | Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-TRUNC` |
 | `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
 | `CONSERVE` | control | Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly. — e.g. `100 [ 3333/100 6667/100 ] CONSERVE` |
 | `EVAL` | control | Parse a string as Ajisai source code and execute it. — e.g. `'1 2 +' EVAL` |

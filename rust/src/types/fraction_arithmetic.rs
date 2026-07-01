@@ -1,4 +1,4 @@
-use super::fraction::{compute_gcd_i64, Fraction, FractionRepr};
+use super::fraction::{compute_gcd_i64, Fraction, FractionRepr, RoundingMode};
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Zero};
@@ -379,15 +379,38 @@ impl Fraction {
         Fraction::from_bigint_pair(q, BigInt::one())
     }
 
-    /// Quantize to a positive rational grid `step` using banker's rounding,
-    /// returning the pair `(q, r)` where `q` is the nearest integer multiple of
-    /// `step` (ties to even) and `r = self - q` is the exact residual. By
-    /// construction `q + r == self` exactly, so quantization loses nothing: the
-    /// residual carries the discarded fraction rather than dropping it silently.
-    /// The caller must ensure `step` is a strictly positive rational.
-    pub fn quantize_half_even(&self, step: &Fraction) -> (Fraction, Fraction) {
+    /// Truncate toward zero, discarding the fractional part. Unlike [`floor`],
+    /// which goes toward negative infinity, this rounds a negative value up
+    /// toward zero. The result is an integer-valued `Fraction`.
+    pub fn trunc(&self) -> Fraction {
+        if self.is_positive() || self.is_zero() {
+            self.floor()
+        } else {
+            self.ceil()
+        }
+    }
+
+    /// Round to the nearest integer under the given [`RoundingMode`]. Each mode
+    /// dispatches to the matching directed or round-to-nearest rule.
+    pub fn round_with_mode(&self, mode: RoundingMode) -> Fraction {
+        match mode {
+            RoundingMode::HalfEven => self.round_half_even(),
+            RoundingMode::HalfAway => self.round(),
+            RoundingMode::Floor => self.floor(),
+            RoundingMode::Ceil => self.ceil(),
+            RoundingMode::Trunc => self.trunc(),
+        }
+    }
+
+    /// Quantize to a positive rational grid `step` under `mode`, returning the
+    /// pair `(q, r)` where `q` is the chosen integer multiple of `step` and
+    /// `r = self - q` is the exact residual. By construction `q + r == self`
+    /// exactly, so quantization loses nothing: the residual carries the
+    /// discarded fraction rather than dropping it silently. The caller must
+    /// ensure `step` is a strictly positive rational.
+    pub fn quantize(&self, step: &Fraction, mode: RoundingMode) -> (Fraction, Fraction) {
         let m = self.div(step);
-        let n = m.round_half_even();
+        let n = m.round_with_mode(mode);
         let q = n.mul(step);
         let r = self.sub(&q);
         (q, r)

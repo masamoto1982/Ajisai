@@ -3,6 +3,24 @@ use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
 use std::str::FromStr;
 
+/// How a value is rounded to an integer (or, via [`Fraction::quantize`], to a
+/// rational grid). Each variant is the grid generalisation of an existing
+/// integer-rounding behaviour: `Floor`/`Ceil`/`Trunc` are directed, `HalfEven`
+/// (banker's) and `HalfAway` (the `ROUND` tie rule) are round-to-nearest.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RoundingMode {
+    /// Nearest; ties to the even multiple (banker's rounding).
+    HalfEven,
+    /// Nearest; ties away from zero (the `ROUND` rule).
+    HalfAway,
+    /// Toward negative infinity (the `FLOOR` rule).
+    Floor,
+    /// Toward positive infinity (the `CEIL` rule).
+    Ceil,
+    /// Toward zero (truncation).
+    Trunc,
+}
+
 #[inline]
 pub(crate) fn compute_gcd_i64(a: i64, b: i64) -> i64 {
     // Reduce in unsigned space: `i64::MIN.abs()` overflows and panics, so the

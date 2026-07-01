@@ -303,6 +303,10 @@ const PROJECTING_WORDS: &[&str] = &[
     "PARSE-ISO",
     "POW",
     "QUANTIZE",
+    "QUANTIZE-CEIL",
+    "QUANTIZE-FLOOR",
+    "QUANTIZE-HALF-AWAY",
+    "QUANTIZE-TRUNC",
     "READ",
     "ROUND",
 ];

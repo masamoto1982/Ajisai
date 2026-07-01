@@ -63,6 +63,10 @@ pub enum BuiltinExecutorKey {
     Ceil,
     Round,
     Quantize,
+    QuantizeHalfAway,
+    QuantizeFloor,
+    QuantizeCeil,
+    QuantizeTrunc,
     Mod,
     Str,
     Num,
@@ -1364,6 +1368,70 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         executor_key: Some(BuiltinExecutorKey::Quantize),
         summary: "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
         role: "Arithmetic primitive: banker's-rounding quantization to a rational grid, emitting the exact residual so q + r = x.",
+
+        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "QUANTIZE-HALF-AWAY",
+        category: "arithmetic",
+        hover_summary: "QUANTIZE-HALF-AWAY — quantize, ties away from zero",
+        hover_syntax: "5/2 1 QUANTIZE-HALF-AWAY",
+        executor_key: Some(BuiltinExecutorKey::QuantizeHalfAway),
+        summary: "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        role: "Arithmetic primitive: grid quantization, nearest with ties away from zero; emits the exact residual so q + r = x.",
+
+        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "QUANTIZE-FLOOR",
+        category: "arithmetic",
+        hover_summary: "QUANTIZE-FLOOR — quantize toward negative infinity",
+        hover_syntax: "100/3 1/100 QUANTIZE-FLOOR",
+        executor_key: Some(BuiltinExecutorKey::QuantizeFloor),
+        summary: "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        role: "Arithmetic primitive: grid quantization toward negative infinity; emits the exact residual so q + r = x.",
+
+        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "QUANTIZE-CEIL",
+        category: "arithmetic",
+        hover_summary: "QUANTIZE-CEIL — quantize toward positive infinity",
+        hover_syntax: "100/3 1/100 QUANTIZE-CEIL",
+        executor_key: Some(BuiltinExecutorKey::QuantizeCeil),
+        summary: "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        role: "Arithmetic primitive: grid quantization toward positive infinity; emits the exact residual so q + r = x.",
+
+        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "QUANTIZE-TRUNC",
+        category: "arithmetic",
+        hover_summary: "QUANTIZE-TRUNC — quantize toward zero",
+        hover_syntax: "100/3 1/100 QUANTIZE-TRUNC",
+        executor_key: Some(BuiltinExecutorKey::QuantizeTrunc),
+        summary: "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        role: "Arithmetic primitive: grid quantization toward zero (truncation); emits the exact residual so q + r = x.",
 
         stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
         partiality: Partiality::Projecting,
