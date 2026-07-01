@@ -87,9 +87,10 @@ pub fn mass_contract(name: &str) -> MassContract {
                 produces: 1,
             }
         }
-        // Quantization: read value and step, push the quantized value and the
-        // exact residual (SPEC §7.13 draft).
-        "QUANTIZE" => MassContract::Fixed {
+        // Quantization family: read value and step, push the quantized value
+        // and the exact residual (SPEC §7.13).
+        "QUANTIZE" | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL"
+        | "QUANTIZE-TRUNC" => MassContract::Fixed {
             consumes: 2,
             produces: 2,
         },
@@ -223,6 +224,10 @@ const CORE_BOUNDARY_LISTINGS: &[(&str, &[&str], &[&str])] = &[
     ("CEIL", &["MATH"], &[]),
     ("ROUND", &["MATH"], &[]),
     ("QUANTIZE", &["MATH"], &[]),
+    ("QUANTIZE-HALF-AWAY", &["MATH"], &[]),
+    ("QUANTIZE-FLOOR", &["MATH"], &[]),
+    ("QUANTIZE-CEIL", &["MATH"], &[]),
+    ("QUANTIZE-TRUNC", &["MATH"], &[]),
     ("SHAPE", &[], &["TENSOR"]),
     ("RANK", &[], &["TENSOR"]),
     ("RESHAPE", &[], &["TENSOR"]),
@@ -1159,6 +1164,10 @@ mod tests {
             "CEIL",
             "ROUND",
             "QUANTIZE",
+            "QUANTIZE-HALF-AWAY",
+            "QUANTIZE-FLOOR",
+            "QUANTIZE-CEIL",
+            "QUANTIZE-TRUNC",
             "SHAPE",
             "RANK",
             "RESHAPE",

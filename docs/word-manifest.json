@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 88,
+    "corewords": 92,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 206
+    "total": 210
   },
   "entries": [
     {
@@ -1216,6 +1216,70 @@
       "source": "rust/src/builtins/builtin_word_definitions.rs",
       "canonical": "QUANTIZE",
       "coverage_entry_id": "core.quantize",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize-half-away",
+      "kind": "coreword",
+      "surface": "QUANTIZE-HALF-AWAY",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "QUANTIZE-HALF-AWAY",
+      "coverage_entry_id": "core.quantize-half-away",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize-floor",
+      "kind": "coreword",
+      "surface": "QUANTIZE-FLOOR",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "QUANTIZE-FLOOR",
+      "coverage_entry_id": "core.quantize-floor",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize-ceil",
+      "kind": "coreword",
+      "surface": "QUANTIZE-CEIL",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "QUANTIZE-CEIL",
+      "coverage_entry_id": "core.quantize-ceil",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.bubble.passthrough"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.quantize-trunc",
+      "kind": "coreword",
+      "surface": "QUANTIZE-TRUNC",
+      "category": "arithmetic",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "QUANTIZE-TRUNC",
+      "coverage_entry_id": "core.quantize-trunc",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
       "derived_from": [

@@ -6,7 +6,7 @@ use crate::interpreter::{
     ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
 };
 use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
-use crate::types::fraction::Fraction;
+use crate::types::fraction::{Fraction, RoundingMode};
 use crate::types::{Interpretation, Value, ValueData};
 
 /// Multiply dimension sizes without ever overflowing `usize`. Returns `None`
@@ -354,15 +354,16 @@ fn scalar_as_rational(value: &Value) -> Option<Fraction> {
     }
 }
 
-/// `QUANTIZE` — explicit banker's-rounding quantization to a rational grid,
-/// emitting the exact residual so nothing is lost (SPEC §7.13 draft; see
+/// Shared engine for the `QUANTIZE` family (SPEC §7.13; see
 /// docs/dev/fintech-value-integrity-design.md). Stack effect
-/// `[ x ] [ step ] -> [ q ] [ r ]` where `q` is the nearest integer multiple of
-/// `step` (ties to even) and `r = x - q`, so `q + r == x` exactly.
-pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
+/// `[ x ] [ step ] -> [ q ] [ r ]` where `q` is the multiple of `step` chosen
+/// by `mode` and `r = x - q`, so `q + r == x` exactly. `word` names the calling
+/// word for diagnostics. The rounding rule is the only thing that varies across
+/// the family; NIL/error/decidability handling is identical.
+fn quantize_with_mode(interp: &mut Interpreter, mode: RoundingMode, word: &str) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::Stack {
         return Err(AjisaiError::ModeUnsupported {
-            word: "QUANTIZE".into(),
+            word: word.into(),
             mode: "Stack".into(),
         });
     }
@@ -372,7 +373,7 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    // Operand order is `[ x ] [ step ] QUANTIZE`, so `x` is second from top.
+    // Operand order is `[ x ] [ step ] <word>`, so `x` is second from top.
     let x_val = interp.stack[stack_len - 2].clone();
     let step_val = interp.stack[stack_len - 1].clone();
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
@@ -383,9 +384,10 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
     let step = match scalar_as_rational(&step_val) {
         Some(s) if s.is_positive() => s,
         _ => {
-            return Err(AjisaiError::from(
-                "QUANTIZE requires a strictly positive rational step",
-            ));
+            return Err(AjisaiError::from(format!(
+                "{} requires a strictly positive rational step",
+                word
+            )));
         }
     };
 
@@ -412,16 +414,17 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
 
     match scalar_as_rational(&x_val) {
         Some(x) => {
-            let (q, r) = x.quantize_half_even(&step);
+            let (q, r) = x.quantize(&step, mode);
             pop_operands(interp);
             interp.stack.push(create_number_value(q));
             interp.stack.push(create_number_value(r));
             Ok(())
         }
         None => {
-            // A genuinely irrational `x` cannot pick a nearest multiple within
-            // the comparison budget, so project both outputs to an Undecidable
-            // bubble rather than guess (SPEC §7.4.1, §11.2).
+            // A genuinely irrational `x` cannot pick a multiple within the
+            // comparison budget for the round-to-nearest modes, so project both
+            // outputs to an Undecidable bubble rather than guess (SPEC §7.4.1,
+            // §11.2). The directed modes take the same conservative path.
             pop_operands(interp);
             interp
                 .stack
@@ -432,6 +435,31 @@ pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
             Ok(())
         }
     }
+}
+
+/// `QUANTIZE` — banker's rounding (ties to even), the currency-safe default.
+pub fn op_quantize(interp: &mut Interpreter) -> Result<()> {
+    quantize_with_mode(interp, RoundingMode::HalfEven, "QUANTIZE")
+}
+
+/// `QUANTIZE-HALF-AWAY` — nearest, ties away from zero (the `ROUND` rule).
+pub fn op_quantize_half_away(interp: &mut Interpreter) -> Result<()> {
+    quantize_with_mode(interp, RoundingMode::HalfAway, "QUANTIZE-HALF-AWAY")
+}
+
+/// `QUANTIZE-FLOOR` — toward negative infinity (the `FLOOR` rule).
+pub fn op_quantize_floor(interp: &mut Interpreter) -> Result<()> {
+    quantize_with_mode(interp, RoundingMode::Floor, "QUANTIZE-FLOOR")
+}
+
+/// `QUANTIZE-CEIL` — toward positive infinity (the `CEIL` rule).
+pub fn op_quantize_ceil(interp: &mut Interpreter) -> Result<()> {
+    quantize_with_mode(interp, RoundingMode::Ceil, "QUANTIZE-CEIL")
+}
+
+/// `QUANTIZE-TRUNC` — toward zero (truncation).
+pub fn op_quantize_trunc(interp: &mut Interpreter) -> Result<()> {
+    quantize_with_mode(interp, RoundingMode::Trunc, "QUANTIZE-TRUNC")
 }
 
 /// The exact-real value carried by a scalar, whether stored as a rational

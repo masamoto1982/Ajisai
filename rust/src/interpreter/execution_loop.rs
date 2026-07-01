@@ -14,7 +14,9 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
             Some(Interpretation::Text)
         }
         "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "QUANTIZE"
-        | "FOLD" => Some(Interpretation::RawNumber),
+        | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL" | "QUANTIZE-TRUNC" | "FOLD" => {
+            Some(Interpretation::RawNumber)
+        }
         "SQRT" | "SQRT_EPS" | "INTERVAL" | "MATH@SQRT" | "MATH@SQRT-EPS" | "MATH@INTERVAL" => {
             Some(Interpretation::Interval)
         }

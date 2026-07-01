@@ -1810,6 +1810,100 @@ mod quantize_tests {
         let interp = run("100/3 1/100 ,, QUANTIZE").await;
         assert_eq!(stack_str(&interp), "100/3 1/100 3333/100 1/300");
     }
+
+    // === Rounding-mode family (SPEC §7.13) ===
+
+    #[tokio::test]
+    async fn half_away_breaks_ties_away_from_zero() {
+        // The grid generalisation of ROUND: 5/2 -> 3 (not 2 as half-even gives).
+        assert_eq!(
+            stack_str(&run("5/2 1 QUANTIZE-HALF-AWAY").await),
+            "3/1 -1/2"
+        );
+        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
+    }
+
+    #[tokio::test]
+    async fn floor_rounds_toward_negative_infinity() {
+        assert_eq!(
+            stack_str(&run("100/3 1/100 QUANTIZE-FLOOR").await),
+            "3333/100 1/300"
+        );
+        // Negative: toward -inf steps down, away from zero.
+        assert_eq!(
+            stack_str(&run("-100/3 1/100 QUANTIZE-FLOOR").await),
+            "-1667/50 1/150"
+        );
+    }
+
+    #[tokio::test]
+    async fn ceil_rounds_toward_positive_infinity() {
+        assert_eq!(
+            stack_str(&run("100/3 1/100 QUANTIZE-CEIL").await),
+            "1667/50 -1/150"
+        );
+    }
+
+    #[tokio::test]
+    async fn trunc_rounds_toward_zero_differing_from_floor_on_negatives() {
+        // TRUNC(-100/3) -> -3333/100 (toward zero), whereas FLOOR gives
+        // -1667/50 (toward -inf); the two modes are genuinely distinct.
+        assert_eq!(
+            stack_str(&run("-100/3 1/100 QUANTIZE-TRUNC").await),
+            "-3333/100 -1/300"
+        );
+        assert_eq!(
+            stack_str(&run("-100/3 1/100 QUANTIZE-FLOOR").await),
+            "-1667/50 1/150"
+        );
+    }
+
+    #[tokio::test]
+    async fn every_family_word_preserves_the_residual_identity() {
+        // q + r reconstructs x under every mode.
+        for word in [
+            "QUANTIZE",
+            "QUANTIZE-HALF-AWAY",
+            "QUANTIZE-FLOOR",
+            "QUANTIZE-CEIL",
+            "QUANTIZE-TRUNC",
+        ] {
+            let interp = run(&format!("100/7 1/100 {} +", word)).await;
+            assert_eq!(stack_str(&interp), "100/7", "{} broke q + r = x", word);
+        }
+    }
+
+    #[tokio::test]
+    async fn family_words_reject_a_non_positive_step() {
+        for word in [
+            "QUANTIZE-HALF-AWAY",
+            "QUANTIZE-FLOOR",
+            "QUANTIZE-CEIL",
+            "QUANTIZE-TRUNC",
+        ] {
+            let mut interp = Interpreter::new();
+            assert!(
+                interp.execute(&format!("1/2 0 {}", word)).await.is_err(),
+                "{} accepted a zero step",
+                word
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn family_words_pass_nil_through_to_both_outputs() {
+        for word in [
+            "QUANTIZE-HALF-AWAY",
+            "QUANTIZE-FLOOR",
+            "QUANTIZE-CEIL",
+            "QUANTIZE-TRUNC",
+        ] {
+            let interp = run(&format!("1 0 / 1/100 {}", word)).await;
+            let stack = interp.get_stack();
+            assert_eq!(stack.len(), 2, "{}", word);
+            assert!(stack[0].is_nil() && stack[1].is_nil(), "{}", word);
+        }
+    }
 }
 
 /// `CONSERVE` (SPEC §13.3 draft; docs/dev/fintech-value-integrity-design.md):
