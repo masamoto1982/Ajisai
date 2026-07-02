@@ -23,7 +23,7 @@ import { collectUserWords } from '../interpreter-execution-utils';
 import type { AjisaiInterpreter } from '../../wasm-interpreter-types';
 import { renderCellDisplay } from './cell-renderer';
 import { createGridView, type GridView } from './grid-view';
-import { parseCellRef, isWithinLimits } from '../../sheet/cell-address';
+import { parseCellRef, formatCellRef, isWithinLimits } from '../../sheet/cell-address';
 
 export const DEFAULT_TABLE_NAME = 'TABLE1';
 
@@ -53,8 +53,12 @@ export function createSheetViewController(
     /** Definition failures reported by the interpreter, keyed by fq word. */
     const defineFailures = new Map<string, string>();
     let grid: GridView | null = null;
-    let statusAddress: HTMLElement | null = null;
-    let statusRaw: HTMLElement | null = null;
+    let nameBox: HTMLInputElement | null = null;
+    let formulaInput: HTMLInputElement | null = null;
+    /** Address the formula bar currently reflects. */
+    let currentAddress = 'A1';
+    /** The formula bar holds uncommitted user input. */
+    let formulaDirty = false;
 
     const evaluator = new SheetEvaluator(async (fqName) => {
         // Empty stack + shared vocabulary (plan §2.1), forced greedy mode:
@@ -82,9 +86,13 @@ export function createSheetViewController(
         return engine.getCell(address)?.error ?? null;
     };
 
-    const refreshStatus = (address: string): void => {
-        if (statusAddress) statusAddress.textContent = address;
-        if (statusRaw) statusRaw.textContent = engine.getCell(address)?.rawText ?? '';
+    const refreshFormulaBar = (address: string): void => {
+        currentAddress = address;
+        formulaDirty = false;
+        if (nameBox) nameBox.value = address;
+        if (formulaInput && document.activeElement !== formulaInput) {
+            formulaInput.value = engine.getCell(address)?.rawText ?? '';
+        }
     };
 
     const paintStates = (states: Map<string, CellEvaluationState>): void => {
@@ -150,7 +158,7 @@ export function createSheetViewController(
             }
         }
 
-        refreshStatus(address);
+        refreshFormulaBar(address);
         await runPlan(update.plan);
         try {
             await callbacks.saveState();
@@ -176,13 +184,114 @@ export function createSheetViewController(
         }
     };
 
+    /** Move the selection one row down after a formula-bar commit. */
+    const selectNextRowAfter = (address: string): void => {
+        const coord = parseCellRef(address);
+        if (!coord || !grid) return;
+        const next = { col: coord.col, row: Math.min(limits.rows - 1, coord.row + 1) };
+        grid.selectAddress(formatCellRef(next));
+    };
+
+    const commitFormulaBar = (moveDown: boolean): void => {
+        if (!grid || !formulaInput) return;
+        const address = currentAddress;
+        if (!formulaDirty) {
+            grid.focus();
+            return;
+        }
+        formulaDirty = false;
+        grid.clearPreview(address);
+        void commitEdit(address, formulaInput.value);
+        if (moveDown) selectNextRowAfter(address);
+        grid.focus();
+    };
+
+    const cancelFormulaBar = (): void => {
+        if (!grid || !formulaInput) return;
+        formulaDirty = false;
+        grid.clearPreview(currentAddress);
+        formulaInput.value = engine.getCell(currentAddress)?.rawText ?? '';
+        grid.focus();
+    };
+
+    // Google Sheets-style formula bar: a name box (selected address; typing
+    // an address jumps to it), the fx affordance, and the editable formula
+    // field that mirrors and edits the selected cell.
+    const buildFormulaBar = (): HTMLElement => {
+        const bar = document.createElement('div');
+        bar.className = 'sheet-formula-bar';
+
+        nameBox = document.createElement('input');
+        nameBox.type = 'text';
+        nameBox.className = 'sheet-name-box';
+        nameBox.setAttribute('aria-label', 'セル位置（入力でジャンプ）');
+        nameBox.spellcheck = false;
+        nameBox.addEventListener('focus', () => nameBox?.select());
+        nameBox.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const coord = parseCellRef(nameBox?.value.trim() ?? '');
+                if (coord && isWithinLimits(coord, limits) && grid) {
+                    grid.selectAddress(formatCellRef(coord));
+                    grid.focus();
+                } else if (nameBox) {
+                    nameBox.value = currentAddress;
+                }
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                if (nameBox) nameBox.value = currentAddress;
+                grid?.focus();
+            }
+        });
+
+        const fxLabel = document.createElement('span');
+        fxLabel.className = 'sheet-fx-label';
+        fxLabel.textContent = 'fx';
+        fxLabel.setAttribute('aria-hidden', 'true');
+
+        formulaInput = document.createElement('input');
+        formulaInput.type = 'text';
+        formulaInput.className = 'sheet-formula-input';
+        formulaInput.setAttribute('aria-label', '選択セルの数式または値');
+        formulaInput.spellcheck = false;
+        formulaInput.addEventListener('input', () => {
+            if (!formulaInput || !grid) return;
+            formulaDirty = true;
+            grid.previewCell(currentAddress, formulaInput.value);
+        });
+        formulaInput.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                commitFormulaBar(true);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelFormulaBar();
+            }
+        });
+        formulaInput.addEventListener('blur', () => {
+            // Clicking elsewhere commits, exactly like the in-cell editor.
+            if (formulaDirty) commitFormulaBar(false);
+        });
+
+        bar.append(nameBox, fxLabel, formulaInput);
+        return bar;
+    };
+
     const init = async (container: HTMLElement): Promise<void> => {
         grid = createGridView(limits, {
-            onSelect: (address) => refreshStatus(address),
+            onSelect: (address) => refreshFormulaBar(address),
             onCommitEdit: (address, rawText) => {
                 void commitEdit(address, rawText);
             },
             resolveRawText: (address) => engine.getCell(address)?.rawText ?? '',
+            onEditInput: (address, rawText) => {
+                // Mirror in-cell typing into the formula bar (Google Sheets
+                // keeps both surfaces live).
+                if (formulaInput && document.activeElement !== formulaInput) {
+                    formulaInput.value = rawText;
+                }
+                currentAddress = address;
+            },
         });
 
         const canvas = document.createElement('div');
@@ -195,19 +304,11 @@ export function createSheetViewController(
         tableCard.append(tableName, grid.element);
         canvas.appendChild(tableCard);
 
-        const statusbar = document.createElement('div');
-        statusbar.className = 'sheet-statusbar';
-        statusAddress = document.createElement('span');
-        statusAddress.className = 'sheet-status-address';
-        statusRaw = document.createElement('code');
-        statusRaw.className = 'sheet-status-raw';
-        statusbar.append(statusAddress, statusRaw);
-
         container.textContent = '';
-        container.append(statusbar, canvas);
+        container.append(buildFormulaBar(), canvas);
 
         restoreCellsFromDictionary();
-        refreshStatus(grid.extractSelectedAddress() ?? 'A1');
+        refreshFormulaBar(grid.extractSelectedAddress() ?? 'A1');
         await runPlan(engine.fullRecalcPlan());
     };
 

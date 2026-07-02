@@ -9,6 +9,8 @@ export interface CellEditorCallbacks {
     /** Commit the edited text; `direction` tells the grid where to move. */
     onCommit(rawText: string, direction: EditCommitDirection): void;
     onCancel(): void;
+    /** Fires on every keystroke so the formula bar can mirror the text. */
+    onInput?(rawText: string): void;
 }
 
 export interface CellEditor {
@@ -65,6 +67,10 @@ export function createCellEditor(callbacks: CellEditorCallbacks): CellEditor {
                 event.preventDefault();
                 settle(() => callbacks.onCancel());
             }
+        });
+        input.addEventListener('input', () => {
+            const current = input;
+            if (current) callbacks.onInput?.(current.value);
         });
         input.addEventListener('blur', () => {
             const current = input;
