@@ -293,6 +293,31 @@ export function formatTextCellLiteral(
 }
 
 /**
+ * Reconstruct a cell's editable text from its word body — the inverse of
+ * the engine's body generation, used on restore until Phase 4 persists the
+ * sheet document: `[ 42 ]` → `42`, `'hello'` → `hello`, anything else →
+ * `= <body>`. Restored formula bodies carry qualified references
+ * (`TABLE1@A1`) — stable through re-preprocessing, just more explicit than
+ * what was originally typed. Ambiguous strings (text that would classify
+ * back to a number or formula) stay explicit formulas.
+ */
+export function reconstructCellText(bodySource: string): string {
+    const trimmed = bodySource.trim();
+    const numberMatch = /^\[\s*(\S+)\s*\]$/.exec(trimmed);
+    if (numberMatch && isAjisaiNumberLiteral(numberMatch[1] as string)) {
+        return numberMatch[1] as string;
+    }
+    const stringMatch = /^'([^]*)'$/.exec(trimmed);
+    if (stringMatch !== null) {
+        const text = stringMatch[1] as string;
+        if (!text.startsWith('=') && !text.includes("'") && !isAjisaiNumberLiteral(text)) {
+            return text;
+        }
+    }
+    return `= ${trimmed}`;
+}
+
+/**
  * Sheet-view protection (plan §3.2): an in-bounds A1-form name is reserved
  * for cells; the host refuses to DEF it for anything else.
  */

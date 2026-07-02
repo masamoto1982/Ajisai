@@ -27,6 +27,7 @@ import { bindGuiEvents } from './gui-event-bindings';
 import { createGuiLayoutState } from './layout/layout-model';
 import { createLayoutController, LayoutController } from './layout/layout-controller';
 import { createInterpreterClient } from './interpreter/interpreter-client';
+import { createSheetViewController, SheetViewController } from './grid/sheet-view-controller';
 
 declare global {
     interface Window {
@@ -198,6 +199,45 @@ export const createGUI = (): GUI => {
         }
     };
 
+    // Sheet ⇄ Editor toggle (spreadsheet redesign plan Phase 2). The Sheet
+    // view is opt-in until the Phase 3 view reorganization: the Playground
+    // stays the default, and this swaps the main layout for the sheet
+    // section. The controller is created lazily on first open so sessions
+    // that never touch the sheet pay nothing.
+    const bindSheetViewToggle = (): void => {
+        const button = document.getElementById('sheet-view-btn');
+        const section = document.getElementById('sheet-view');
+        const main = document.querySelector<HTMLElement>('main.main-layout');
+        if (!button || !section || !main) return;
+
+        let sheetController: SheetViewController | null = null;
+        let sheetInit: Promise<void> | null = null;
+
+        button.addEventListener('click', () => {
+            const opening = section.hidden;
+            if (opening) {
+                section.hidden = false;
+                main.hidden = true;
+                button.setAttribute('aria-pressed', 'true');
+                if (!sheetController) {
+                    sheetController = createSheetViewController(INTERPRETER_CLIENT.getRequired(), {
+                        saveState: () => persistence.saveCurrentState(),
+                        showError: (error) => display.renderError(error),
+                    });
+                    sheetInit = sheetController.init(section).catch((error) => {
+                        console.error('[GUI] Failed to initialize sheet view:', error);
+                        display.renderError(error as Error);
+                    });
+                }
+                void sheetInit?.then(() => sheetController?.focus());
+            } else {
+                section.hidden = true;
+                main.hidden = false;
+                button.setAttribute('aria-pressed', 'false');
+            }
+        });
+    };
+
     const initializeWorkers = async (): Promise<void> => {
         try {
             display.renderInfo('Initializing...', false);
@@ -349,6 +389,8 @@ export const createGUI = (): GUI => {
         }
 
         await initializeWorkers();
+
+        bindSheetViewToggle();
 
         applyPlaygroundCodeFromUrl();
 

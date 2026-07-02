@@ -1,0 +1,199 @@
+/* Sheet view (spreadsheet redesign plan Phase 2) — Numbers-oriented
+   WYSIWYG: a light canvas with one finite table floating on it as a card,
+   quiet chrome, thin separators. Uses the shared design tokens. */
+
+.sheet-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-height: 60vh;
+}
+
+.sheet-view[hidden] {
+    display: none;
+}
+
+/* --- Status bar (selected address + raw text) --------------------------- */
+
+.sheet-statusbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-2xs) var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.sheet-status-address {
+    font-weight: var(--weight-semibold);
+    color: var(--text-body);
+    min-width: 3.5em;
+}
+
+.sheet-status-raw {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Canvas and table card ---------------------------------------------- */
+
+.sheet-canvas {
+    flex: 1;
+    background: var(--color-light);
+    border: var(--border-main);
+    border-radius: 8px;
+    padding: var(--space-lg);
+    overflow: auto;
+}
+
+.sheet-table-card {
+    display: inline-block;
+    background: var(--color-white);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px oklch(0% 0 0 / 0.12), 0 4px 16px oklch(0% 0 0 / 0.06);
+    padding: var(--space-xs) var(--space-sm) var(--space-sm);
+}
+
+.sheet-table-name {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-muted);
+    padding: var(--space-2xs) var(--space-3xs) var(--space-xs);
+}
+
+.sheet-table-frame {
+    position: relative;
+    display: inline-block;
+}
+
+/* --- Table --------------------------------------------------------------- */
+
+.sheet-table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: var(--text-sm);
+    outline: none;
+}
+
+.sheet-table th,
+.sheet-table td {
+    border: 1px solid oklch(92% 0.004 264);
+    padding: 0.3rem 0.5rem;
+    min-width: 6.5em;
+    max-width: 14em;
+    height: 1.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+}
+
+.sheet-table thead th,
+.sheet-table tbody th {
+    background: oklch(97.5% 0.003 264);
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-2xs);
+    text-align: center;
+    min-width: 2.5em;
+    user-select: none;
+}
+
+.sheet-table tbody th {
+    width: 2.5em;
+}
+
+.sheet-corner {
+    background: oklch(97.5% 0.003 264);
+}
+
+.sheet-table td {
+    position: relative;
+    background: var(--color-white);
+    cursor: cell;
+    white-space: pre-wrap;
+}
+
+.sheet-table td.sheet-cell-selected {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    border-radius: 2px;
+}
+
+/* --- Cell value kinds (plan §2.2: partial failure stays visible) -------- */
+
+.sheet-table td[data-kind='number'] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.sheet-table td[data-kind='nil'],
+.sheet-table td[data-kind='unknown'] {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: var(--text-xs);
+}
+
+.sheet-table td[data-kind='error'],
+.sheet-table td[data-kind='cyclic'],
+.sheet-table td[data-kind='blocked'] {
+    color: oklch(50% 0.19 29);
+    background: oklch(97% 0.02 29);
+    font-size: var(--text-xs);
+}
+
+.sheet-table td[data-kind='stack'] {
+    background: oklch(98% 0.02 100);
+}
+
+.sheet-table td[data-kind='vector'] {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+}
+
+/* --- In-cell editor ------------------------------------------------------ */
+
+.sheet-table td.sheet-cell-editing {
+    padding: 0;
+    overflow: visible;
+}
+
+.sheet-cell-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: none;
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    padding: 0.3rem 0.5rem;
+    font: inherit;
+    font-family: var(--font-mono);
+    background: var(--color-white);
+    z-index: 2;
+}
+
+/* --- Add-row / add-column affordances ------------------------------------ */
+
+.sheet-table-controls {
+    display: flex;
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+}
+
+.sheet-add-btn {
+    border: var(--border-main);
+    background: var(--color-white);
+    border-radius: 6px;
+    padding: 0.15rem 0.6rem;
+    font-size: var(--text-2xs);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.sheet-add-btn:hover {
+    background: var(--color-light);
+    color: var(--text-body);
+}
