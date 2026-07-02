@@ -13,29 +13,64 @@
     display: none;
 }
 
-/* --- Status bar (selected address + raw text) --------------------------- */
+/* --- Formula bar (Google Sheets-style: name box + fx + formula field) --- */
 
-.sheet-statusbar {
+.sheet-formula-bar {
+    display: flex;
+    align-items: stretch;
+    background: var(--color-white);
+    border: var(--border-main);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sheet-name-box {
+    width: 6em;
+    border: none;
+    border-right: 1px solid var(--color-medium);
+    outline: none;
+    text-align: center;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-body);
+    padding: 0.35rem 0.25rem;
+    background: transparent;
+}
+
+.sheet-name-box:focus {
+    background: var(--color-light);
+}
+
+.sheet-fx-label {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-2xs) var(--space-xs);
+    padding: 0 0.7em;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
     font-size: var(--text-sm);
     color: var(--text-muted);
+    border-right: 1px solid var(--color-medium);
+    user-select: none;
 }
 
-.sheet-status-address {
-    font-weight: var(--weight-semibold);
+.sheet-formula-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
     color: var(--text-body);
-    min-width: 3.5em;
+    padding: 0.35rem 0.6rem;
+    background: transparent;
 }
 
-.sheet-status-raw {
+/* Live preview while typing in the formula bar (uncommitted text). */
+.sheet-table td.sheet-cell-previewing {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: var(--text-muted);
 }
 
 /* --- Canvas and table card ---------------------------------------------- */

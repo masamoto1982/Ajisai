@@ -16,6 +16,8 @@ export interface GridViewCallbacks {
     onCommitEdit(address: string, rawText: string): void;
     /** Raw text (as typed) to prefill when editing an existing cell. */
     resolveRawText(address: string): string;
+    /** In-cell editor keystrokes, for the formula bar to mirror live. */
+    onEditInput?(address: string, rawText: string): void;
 }
 
 export interface GridView {
@@ -23,6 +25,15 @@ export interface GridView {
     updateCell(address: string, display: CellDisplay): void;
     /** Grow the visible table so `address` is shown (restore path). */
     revealAddress(address: string): void;
+    /** Select `address` (growing the table if needed) — name-box jumps. */
+    selectAddress(address: string): void;
+    /**
+     * Show `text` in the cell without storing it — the live preview while
+     * the formula bar is being typed in (Google Sheets behavior).
+     */
+    previewCell(address: string, text: string): void;
+    /** Drop a preview and restore the cell's real display. */
+    clearPreview(address: string): void;
     extractSelectedAddress(): string | null;
     focus(): void;
 }
@@ -73,6 +84,9 @@ export function createGridView(
         },
         onCancel: () => {
             table.focus();
+        },
+        onInput: (rawText: string) => {
+            callbacks.onEditInput?.(formatCellRef(selected), rawText);
         },
     });
 
@@ -240,6 +254,21 @@ export function createGridView(
 
     renderTable();
 
+    const revealAddress = (address: string): void => {
+        const coord = parseCellRef(address);
+        if (!coord) return;
+        let grown = false;
+        while (coord.row >= visibleRows && visibleRows < limits.rows) {
+            visibleRows = Math.min(limits.rows, visibleRows + ROW_GROWTH);
+            grown = true;
+        }
+        while (coord.col >= visibleCols && visibleCols < limits.cols) {
+            visibleCols = Math.min(limits.cols, visibleCols + COL_GROWTH);
+            grown = true;
+        }
+        if (grown) renderTable();
+    };
+
     return {
         element,
         updateCell: (address: string, display: CellDisplay): void => {
@@ -247,19 +276,33 @@ export function createGridView(
             const cell = lookupCellElement(address);
             if (cell) applyDisplay(cell, display);
         },
-        revealAddress: (address: string): void => {
+        revealAddress,
+        selectAddress: (address: string): void => {
             const coord = parseCellRef(address);
-            if (!coord) return;
-            let grown = false;
-            while (coord.row >= visibleRows && visibleRows < limits.rows) {
-                visibleRows = Math.min(limits.rows, visibleRows + ROW_GROWTH);
-                grown = true;
+            if (!coord || coord.col >= limits.cols || coord.row >= limits.rows) return;
+            if (editor.isOpen()) editor.commitIfOpen();
+            revealAddress(address);
+            selected = coord;
+            refreshSelection();
+        },
+        previewCell: (address: string, text: string): void => {
+            const cell = lookupCellElement(address);
+            if (!cell) return;
+            cell.classList.add('sheet-cell-previewing');
+            cell.textContent = text;
+        },
+        clearPreview: (address: string): void => {
+            const cell = lookupCellElement(address);
+            if (!cell) return;
+            cell.classList.remove('sheet-cell-previewing');
+            const display = displays.get(address);
+            if (display) {
+                applyDisplay(cell, display);
+            } else {
+                cell.textContent = '';
+                delete cell.dataset.kind;
+                cell.removeAttribute('title');
             }
-            while (coord.col >= visibleCols && visibleCols < limits.cols) {
-                visibleCols = Math.min(limits.cols, visibleCols + COL_GROWTH);
-                grown = true;
-            }
-            if (grown) renderTable();
         },
         extractSelectedAddress: () => formatCellRef(selected),
         focus: () => table.focus(),

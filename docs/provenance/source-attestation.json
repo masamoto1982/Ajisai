@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:64dcc6fc9ca9aeee52f9f82f2d6b1495d649b17e8c91e0195ff1a5b0d459731b",
+  "rootIdentity": "sha256:f834853da08f6f7bd36ec06afbd0d809408bf2e7f8b24227f9d980c7f4028274",
   "fileCount": 303,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1199,8 +1199,8 @@
     },
     {
       "path": "src/gui/grid/cell-editor.ts",
-      "sha256": "207759bfd3b63fdf72b55abc5026abf2e82ce0cbb446ec28eb90c543bd79c252",
-      "bytes": 3120
+      "sha256": "66838d51029256097a34953ac70b25d210e5ba87c96d6e94870724948484c492",
+      "bytes": 3389
     },
     {
       "path": "src/gui/grid/cell-renderer.test.ts",
@@ -1214,13 +1214,13 @@
     },
     {
       "path": "src/gui/grid/grid-view.ts",
-      "sha256": "e9f1258df82d310972b09a3d1afe729179e8c84b41574894cafac03e3f374d98",
-      "bytes": 10082
+      "sha256": "5db10cf240bca2e2c27eccb882436b68cbf4c99edef656fda62645ec352aefa1",
+      "bytes": 11848
     },
     {
       "path": "src/gui/grid/sheet-view-controller.ts",
-      "sha256": "6bdb9af797fc4077dd51d6bca90db55dd1bf2e0f1c52ebbaeee257082a9cb8eb",
-      "bytes": 9014
+      "sha256": "e2b38204ff97408e5c74dc196064af7651da5405b5be10ced569545bd64e4cf5",
+      "bytes": 13090
     },
     {
       "path": "src/gui/gui-application.ts",
@@ -1239,8 +1239,8 @@
     },
     {
       "path": "src/gui/gui-event-bindings.ts",
-      "sha256": "ece7ae195e4de185fed79906806f8ecd20655fd57499bdc9b368006ddb17167e",
-      "bytes": 9855
+      "sha256": "88fb3876c57fda7ff46656d4234755041feb0ce0931c257b054b901f74804b45",
+      "bytes": 10382
     },
     {
       "path": "src/gui/gui-layout-state.test.ts",
@@ -1489,8 +1489,8 @@
     },
     {
       "path": "src/styles/sheet.css",
-      "sha256": "7c20cebe89070a580094022d831c8aa444d8318a52084bfc3ada885acea81a58",
-      "bytes": 4532
+      "sha256": "bbb1c057b388444855755a6ca2fdf3588936acf0759e2ce5f7def863a02185bb",
+      "bytes": 5405
     },
     {
       "path": "src/styles/tokens.css",
