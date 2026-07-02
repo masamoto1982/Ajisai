@@ -344,6 +344,51 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
+    /// Dirty-set query for the Sheet view host (spreadsheet redesign plan
+    /// §2.4): every word that transitively depends on `word_name` (fully
+    /// qualified, e.g. `SHEET@A1`), as a sorted JS array of fully-qualified
+    /// names. Thin export of `Interpreter::collect_transitive_dependents` —
+    /// the BFS closure over the reverse-dependency index — so the host can
+    /// turn one cell/word redefinition into the exact recalculation scope.
+    #[wasm_bindgen]
+    pub fn collect_transitive_dependents(&self, word_name: &str) -> JsValue {
+        let mut names: Vec<String> = self
+            .interpreter
+            .collect_transitive_dependents(&word_name.to_uppercase())
+            .into_iter()
+            .collect();
+        names.sort_unstable();
+        let arr = js_sys::Array::new();
+        for name in &names {
+            arr.push(&JsValue::from_str(name));
+        }
+        arr.into()
+    }
+
+    /// Host-only cell definition API for the Sheet view (spreadsheet redesign
+    /// plan §2.4): define or overwrite `name` in `dictionary` with the word
+    /// body `body_source`, bypassing the DEF redefinition guard — overwriting
+    /// a cell that other cells reference is normal spreadsheet operation.
+    /// Returns an error string on tokenization/definition failure; the host
+    /// surfaces it on the cell instead of the Editor output.
+    #[wasm_bindgen]
+    pub fn define_word_forced(
+        &mut self,
+        dictionary: &str,
+        name: &str,
+        body_source: &str,
+    ) -> Result<(), String> {
+        let tokens =
+            tokenizer::tokenize(body_source).map_err(|e| format!("Tokenization error: {}", e))?;
+        interpreter::execute_def::op_def_forced_in_dictionary(
+            &mut self.interpreter,
+            dictionary,
+            name,
+            &tokens,
+        )
+        .map_err(|e| e.to_string())
+    }
+
     #[wasm_bindgen]
     pub fn collect_dictionary_dependencies(&self) -> JsValue {
         let arr = js_sys::Array::new();

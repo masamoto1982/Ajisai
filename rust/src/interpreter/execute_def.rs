@@ -232,6 +232,36 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     Ok(())
 }
 
+/// Host-only DEF entry point for spreadsheet cells (Sheet view; see
+/// docs/dev/ajisai-spreadsheet-app-redesign-plan.md §2.4).
+///
+/// Overwriting a cell that other cells reference is normal spreadsheet
+/// operation, so this takes the force path through the redefinition guard —
+/// the same effect as `! { ... } 'A1' DEF` — and targets `dictionary`
+/// directly without disturbing the interactively selected dictionary.
+/// DEF's user-facing output-buffer chatter ("Defined word: ..." and
+/// redefinition warnings) is rolled back: a cell definition is host
+/// bookkeeping, not a user-visible execution, and must not leak into the
+/// output of the next Editor-view run.
+pub fn op_def_forced_in_dictionary(
+    interp: &mut Interpreter,
+    dictionary: &str,
+    name: &str,
+    tokens: &[Token],
+) -> Result<()> {
+    let prev_dictionary = std::mem::replace(
+        &mut interp.active_user_dictionary,
+        dictionary.to_uppercase(),
+    );
+    let prev_output_len = interp.output_buffer.len();
+    interp.force_flag = true;
+    let result = op_def_inner(interp, name, tokens);
+    interp.active_user_dictionary = prev_dictionary;
+    interp.force_flag = false;
+    interp.output_buffer.truncate(prev_output_len);
+    result
+}
+
 pub(crate) fn parse_definition_body(tokens: &[Token]) -> Result<Vec<ExecutionLine>> {
     let mut lines = Vec::new();
     let mut processed_tokens = Vec::new();
