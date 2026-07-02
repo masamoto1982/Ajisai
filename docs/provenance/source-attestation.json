@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:9dceb5cefc6dbf1a7e1cbce0b5846523e077a55aeb8bc10225e7e049e15f27eb",
-  "fileCount": 292,
+  "rootIdentity": "sha256:a6fbec79acd348d9df75ee16cf8219c7a42c4bb8523bdb194e7f3c8cfae88dae",
+  "fileCount": 301,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -1198,9 +1198,34 @@
       "bytes": 250
     },
     {
+      "path": "src/gui/grid/cell-editor.ts",
+      "sha256": "207759bfd3b63fdf72b55abc5026abf2e82ce0cbb446ec28eb90c543bd79c252",
+      "bytes": 3120
+    },
+    {
+      "path": "src/gui/grid/cell-renderer.test.ts",
+      "sha256": "3046a030eeb5e00ad1814d3977b8ead6d83d14c1b9485bf3c59658b031c961c9",
+      "bytes": 4704
+    },
+    {
+      "path": "src/gui/grid/cell-renderer.ts",
+      "sha256": "11644456d988dc25b69158df115da5a010f2c06d59702ae6d7962589f7ca3935",
+      "bytes": 7329
+    },
+    {
+      "path": "src/gui/grid/grid-view.ts",
+      "sha256": "e9f1258df82d310972b09a3d1afe729179e8c84b41574894cafac03e3f374d98",
+      "bytes": 10082
+    },
+    {
+      "path": "src/gui/grid/sheet-view-controller.ts",
+      "sha256": "30a69e4c994af0034d3cb44f17f6779a361fbb6b425a10365e3541b277c45565",
+      "bytes": 8667
+    },
+    {
       "path": "src/gui/gui-application.ts",
-      "sha256": "31fcc169f2dd8321578dc8bec2f7851942d3eceb597d350480edd3edd54d4794",
-      "bytes": 14632
+      "sha256": "8d224d0344cc0d27da0337f3005ba33162568d6e5679f7153adb9d09ed0a3f6d",
+      "bytes": 16630
     },
     {
       "path": "src/gui/gui-dictionary-sheet.ts",
@@ -1393,14 +1418,19 @@
       "bytes": 5237
     },
     {
+      "path": "src/sheet/cell-text-reconstruction.test.ts",
+      "sha256": "bf7dfead7f68725883ad4d54b1d4000695886c876e4f296aff7942c908e8f730",
+      "bytes": 1729
+    },
+    {
       "path": "src/sheet/formula-preprocessor.test.ts",
       "sha256": "3ed341eb59348c19271e59881a0090a724b8fc89eb7d55b5c0ac6fcf896b5da6",
       "bytes": 9284
     },
     {
       "path": "src/sheet/formula-preprocessor.ts",
-      "sha256": "b1d4e6638121a7aaad0ec471e7df91b6444418d23afd86e9c78d5877b3b7a419",
-      "bytes": 11075
+      "sha256": "290b3582b0626d46d8cb58fe538f52d7847702f8c260d447b7f871b4b13f3598",
+      "bytes": 12167
     },
     {
       "path": "src/sheet/sheet-engine.test.ts",
@@ -1411,6 +1441,16 @@
       "path": "src/sheet/sheet-engine.ts",
       "sha256": "fb9aff861b0ced8163eef7adffb729a8b753dde1f84a7af60a7aaa11d7982e3f",
       "bytes": 16293
+    },
+    {
+      "path": "src/sheet/sheet-evaluator.test.ts",
+      "sha256": "1e12ab104b21b63075c38f7e3e877596fa1c67c72c2660b63389e4854a36afcd",
+      "bytes": 4987
+    },
+    {
+      "path": "src/sheet/sheet-evaluator.ts",
+      "sha256": "3cad55892c156889e4b0a0e05d77696e52561641e01c6a36ef9206678cb4a258",
+      "bytes": 4382
     },
     {
       "path": "src/styles/base.css",
@@ -1438,6 +1478,11 @@
       "bytes": 116
     },
     {
+      "path": "src/styles/sheet.css",
+      "sha256": "7c20cebe89070a580094022d831c8aa444d8318a52084bfc3ada885acea81a58",
+      "bytes": 4532
+    },
+    {
       "path": "src/styles/tokens.css",
       "sha256": "f80fe838779d415f3bdf3f7263c8ff64b1066c1741ce470949193223e30afba3",
       "bytes": 5596
@@ -1449,8 +1494,8 @@
     },
     {
       "path": "src/wasm-interpreter-types.ts",
-      "sha256": "0ee3d0ddc8df6c50a4183238cd7f3a3f345649025111eeafc0e5941825606dcd",
-      "bytes": 6530
+      "sha256": "a4d7ebb580f6d7105de0f987b9dbd670313bdb101d2ccdac69fa639f4f0ecf31",
+      "bytes": 6902
     },
     {
       "path": "src/wasm-module-loader.ts",
