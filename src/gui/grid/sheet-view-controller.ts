@@ -214,6 +214,51 @@ export function createSheetViewController(
         grid.focus();
     };
 
+    // Toolbar (Google Sheets keeps print/undo/formatting above the formula
+    // bar). The buttons are laid out now so the chrome is final; they enable
+    // one by one as their features land (undo/redo, print, then the Phase 8
+    // cell formatting — plan §3.5).
+    const TOOLBAR_TOOLS: ReadonlyArray<
+        { tool: string; label: string; glyph: string } | 'separator'
+    > = [
+        { tool: 'undo', label: '元に戻す', glyph: '↶' },
+        { tool: 'redo', label: 'やり直す', glyph: '↷' },
+        { tool: 'print', label: '印刷', glyph: '⎙' },
+        'separator',
+        { tool: 'bold', label: '太字', glyph: 'B' },
+        { tool: 'italic', label: '斜体', glyph: 'I' },
+        { tool: 'strikethrough', label: '取り消し線', glyph: 'S' },
+        'separator',
+        { tool: 'text-color', label: '文字色', glyph: 'A' },
+        { tool: 'fill-color', label: '塗りつぶしの色', glyph: '◧' },
+        { tool: 'borders', label: '枠線', glyph: '⊞' },
+        { tool: 'align', label: '文字揃え', glyph: '≡' },
+    ];
+
+    const buildToolbar = (): HTMLElement => {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'sheet-toolbar';
+        toolbar.setAttribute('role', 'toolbar');
+        toolbar.setAttribute('aria-label', 'シートツールバー');
+        for (const entry of TOOLBAR_TOOLS) {
+            if (entry === 'separator') {
+                const sep = document.createElement('span');
+                sep.className = 'sheet-toolbar-sep';
+                toolbar.appendChild(sep);
+                continue;
+            }
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.tool = entry.tool;
+            button.textContent = entry.glyph;
+            button.disabled = true;
+            button.title = `${entry.label}（セル書式フェーズで実装予定）`;
+            button.setAttribute('aria-label', entry.label);
+            toolbar.appendChild(button);
+        }
+        return toolbar;
+    };
+
     // Google Sheets-style formula bar: a name box (selected address; typing
     // an address jumps to it), the fx affordance, and the editable formula
     // field that mirrors and edits the selected cell.
@@ -305,7 +350,7 @@ export function createSheetViewController(
         canvas.appendChild(tableCard);
 
         container.textContent = '';
-        container.append(buildFormulaBar(), canvas);
+        container.append(buildToolbar(), buildFormulaBar(), canvas);
 
         restoreCellsFromDictionary();
         refreshFormulaBar(grid.extractSelectedAddress() ?? 'A1');
