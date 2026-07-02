@@ -98,6 +98,20 @@ mod round_tests {
     }
 
     #[tokio::test]
+    async fn test_round_i64_min_numerator_without_overflow() {
+        // Regression: the Small(i64::MIN, d) path used i64::abs(), which
+        // overflows and panics in debug. Must round without aborting.
+        let mut interp = Interpreter::new();
+        interp
+            .execute("-9223372036854775808/3 ROUND")
+            .await
+            .unwrap();
+        let stack = interp.get_stack();
+        assert_eq!(stack.len(), 1);
+        assert_eq!(format!("{}", stack[0]), "-3074457345618258603/1");
+    }
+
+    #[tokio::test]
     async fn test_round_positive_above_half() {
         let mut interp = Interpreter::new();
         interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
@@ -1903,6 +1917,18 @@ mod quantize_tests {
             assert_eq!(stack.len(), 2, "{}", word);
             assert!(stack[0].is_nil() && stack[1].is_nil(), "{}", word);
         }
+    }
+
+    #[tokio::test]
+    async fn half_away_handles_i64_min_without_overflow() {
+        // Regression: a value normalizing to Small(i64::MIN, d) reached
+        // Fraction::round()'s i64::abs() and panicked in debug. The nearest
+        // multiple must be returned with the residual identity intact.
+        let interp = run("-9223372036854775808/3 1 QUANTIZE-HALF-AWAY").await;
+        assert_eq!(stack_str(&interp), "-3074457345618258603/1 1/3");
+        // q + r reconstructs x exactly.
+        let sum = run("-9223372036854775808/3 1 QUANTIZE-HALF-AWAY +").await;
+        assert_eq!(stack_str(&sum), "-9223372036854775808/3");
     }
 }
 
