@@ -314,8 +314,12 @@ Phase 3 で URL パラメータ（例: `?view=editor`）により Reference の
    「セル選択時に手動発火」ボタンとして許すか（セル＝GUI の思想的には後者が面白い）。
 4. ~~**裸 `A1` 書換の適用範囲**~~ **決定（2026-07）**: 数式表面のみで確定。
    Phase 1 の `formula-preprocessor.ts` がこの仕様で実装済み。
-5. **アプリ名/表記**: Sheet ビューの呼称（例: そのまま「Ajisai」、エディタ側を
-   「Words」と呼ぶ等）。ヘッダ・README・Reference の表記に波及。
+5. ~~**アプリ名/表記**~~ **決定（2026-07）**: アプリ（Playground）は Sheet ビューと
+   Script ビューを**包括する呼称**とする。Sheet ビューが既定のホームで、
+   旧 Playground（4 パネル UI）の呼称は「**Script ビュー**」（Apps Script 対応）。
+   本書の「Editor ビュー」表記は Script ビューと読み替える。
+   URL は `?view=script`（旧綴り `?view=editor` も受理）と `#code=` 受け渡しが
+   Script ビュー直行、既定は Sheet。
 
 GUI モデルについては **Numbers 型 WYSIWYG（§0）を採用（2026-07 決定）**。
 セル結合は §3.4 の「表示スパン + 参照透過」方式で Phase 6 に実装する。

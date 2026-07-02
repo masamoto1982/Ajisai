@@ -28,6 +28,7 @@ import { createGuiLayoutState } from './layout/layout-model';
 import { createLayoutController, LayoutController } from './layout/layout-controller';
 import { createInterpreterClient } from './interpreter/interpreter-client';
 import { createSheetViewController, SheetViewController } from './grid/sheet-view-controller';
+import { resolveInitialPlaygroundView, PlaygroundView } from './playground-view';
 
 declare global {
     interface Window {
@@ -199,43 +200,79 @@ export const createGUI = (): GUI => {
         }
     };
 
-    // Sheet ⇄ Editor toggle (spreadsheet redesign plan Phase 2). The Sheet
-    // view is opt-in until the Phase 3 view reorganization: the Playground
-    // stays the default, and this swaps the main layout for the sheet
-    // section. The controller is created lazily on first open so sessions
-    // that never touch the sheet pay nothing.
-    const bindSheetViewToggle = (): void => {
-        const button = document.getElementById('sheet-view-btn');
+    // Playground views (spreadsheet redesign plan Phase 3): the Playground
+    // encompasses the Sheet view (the default home) and the Script view
+    // (the former 4-panel UI, Apps Script positioning). The header button
+    // swaps between them; its label always names the destination view.
+    const setupPlaygroundViews = (): ((view: PlaygroundView) => void) => {
+        const button = document.getElementById('view-toggle-btn');
+        const label = document.getElementById('view-toggle-label');
         const section = document.getElementById('sheet-view');
         const main = document.querySelector<HTMLElement>('main.main-layout');
-        if (!button || !section || !main) return;
+        if (!button || !section || !main) return () => {};
 
         let sheetController: SheetViewController | null = null;
         let sheetInit: Promise<void> | null = null;
+        /** Vocabulary content identities captured when leaving the sheet. */
+        let scriptEntryFingerprint: string | null = null;
+
+        const collectVocabularyFingerprint = (): string => {
+            try {
+                return JSON.stringify(INTERPRETER_CLIENT.getRequired().collect_word_identities());
+            } catch {
+                return '';
+            }
+        };
+
+        const ensureSheetController = (): Promise<void> => {
+            if (!sheetController) {
+                sheetController = createSheetViewController(INTERPRETER_CLIENT.getRequired(), {
+                    saveState: () => persistence.saveCurrentState(),
+                    showError: (error) => display.renderError(error),
+                });
+                sheetInit = sheetController.init(section).catch((error) => {
+                    console.error('[GUI] Failed to initialize sheet view:', error);
+                    display.renderError(error as Error);
+                });
+            }
+            return sheetInit ?? Promise.resolve();
+        };
+
+        const showView = (view: PlaygroundView): void => {
+            const sheet = view === 'sheet';
+            section.hidden = !sheet;
+            main.hidden = sheet;
+            if (label) label.textContent = sheet ? 'Script' : 'Sheet';
+            button.setAttribute(
+                'aria-label',
+                sheet ? 'Script ビューへ切り替え' : 'Sheet ビューへ切り替え',
+            );
+            if (sheet) {
+                void ensureSheetController().then(() => {
+                    // Words may have been (re)defined in the Script view
+                    // while the sheet was hidden. The §8.6 content
+                    // identities are the cheap change detector; any drift
+                    // re-evaluates the sheet so word-dependent cells never
+                    // show stale values.
+                    if (
+                        scriptEntryFingerprint !== null &&
+                        collectVocabularyFingerprint() !== scriptEntryFingerprint
+                    ) {
+                        void sheetController?.refreshAllCells();
+                    }
+                    scriptEntryFingerprint = null;
+                    sheetController?.focus();
+                });
+            } else {
+                scriptEntryFingerprint = collectVocabularyFingerprint();
+            }
+        };
 
         button.addEventListener('click', () => {
-            const opening = section.hidden;
-            if (opening) {
-                section.hidden = false;
-                main.hidden = true;
-                button.setAttribute('aria-pressed', 'true');
-                if (!sheetController) {
-                    sheetController = createSheetViewController(INTERPRETER_CLIENT.getRequired(), {
-                        saveState: () => persistence.saveCurrentState(),
-                        showError: (error) => display.renderError(error),
-                    });
-                    sheetInit = sheetController.init(section).catch((error) => {
-                        console.error('[GUI] Failed to initialize sheet view:', error);
-                        display.renderError(error as Error);
-                    });
-                }
-                void sheetInit?.then(() => sheetController?.focus());
-            } else {
-                section.hidden = true;
-                main.hidden = false;
-                button.setAttribute('aria-pressed', 'false');
-            }
+            showView(section.hidden ? 'sheet' : 'script');
         });
+
+        return showView;
     };
 
     const initializeWorkers = async (): Promise<void> => {
@@ -390,7 +427,10 @@ export const createGUI = (): GUI => {
 
         await initializeWorkers();
 
-        bindSheetViewToggle();
+        const showPlaygroundView = setupPlaygroundViews();
+        showPlaygroundView(
+            resolveInitialPlaygroundView(window.location.search, window.location.hash),
+        );
 
         applyPlaygroundCodeFromUrl();
 

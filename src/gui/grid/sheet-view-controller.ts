@@ -35,6 +35,12 @@ export interface SheetViewCallbacks {
 export interface SheetViewController {
     /** Build the grid into `container`, restore existing cells, recalc. */
     init(container: HTMLElement): Promise<void>;
+    /**
+     * Re-evaluate every cell. The view switcher calls this when the shared
+     * vocabulary changed while the sheet was hidden (a word was redefined
+     * in the Script view), so word-dependent cells never show stale values.
+     */
+    refreshAllCells(): Promise<void>;
     focus(): void;
 }
 
@@ -207,6 +213,7 @@ export function createSheetViewController(
 
     return {
         init,
+        refreshAllCells: () => runPlan(engine.fullRecalcPlan()),
         focus: () => grid?.focus(),
     };
 }
