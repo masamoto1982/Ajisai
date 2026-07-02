@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:ca3d07127e3d260a22c7bafd8ec653d0fe1b4bc9c13be20fe21eb79d813a02ad",
-  "fileCount": 285,
+  "rootIdentity": "sha256:9dceb5cefc6dbf1a7e1cbce0b5846523e077a55aeb8bc10225e7e049e15f27eb",
+  "fileCount": 292,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -489,8 +489,8 @@
     },
     {
       "path": "rust/src/interpreter/execute_def.rs",
-      "sha256": "97ea2bbcd41449913f281d90c2e9ae440648095a7dbaae980baa71627156be87",
-      "bytes": 9712
+      "sha256": "bc3439f4cff6598fc4e931f1831c32f80dbe0e017f1cbde8b3533af15dc5f599",
+      "bytes": 10955
     },
     {
       "path": "rust/src/interpreter/execute_del.rs",
@@ -669,8 +669,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "560f28f9ae25619c97a07c5d70baf6d16f3051c1b9b4ad4e9474993526cce0ff",
-      "bytes": 3028
+      "sha256": "c379ce9607cdd3b0e823c992a730ffede0e1da596a65ba78a2e2f183ba3de667",
+      "bytes": 3074
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -791,6 +791,11 @@
       "path": "rust/src/interpreter/shadow_validation.rs",
       "sha256": "d2f247081855731411f785cff751052c0c94866c45de38e0e286f02136825e83",
       "bytes": 17493
+    },
+    {
+      "path": "rust/src/interpreter/sheet_cell_definition_tests.rs",
+      "sha256": "59f0dc6857da456ab56c7d6e8241cced8defe791deb6ab4721dd0c442875d88d",
+      "bytes": 5486
     },
     {
       "path": "rust/src/interpreter/simd_ops.rs",
@@ -1029,8 +1034,8 @@
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs",
-      "sha256": "e551b2cf50bb7fb432f1cb2d9b2a0b8c03141dca9dfc22e3acc54ee020f07e5c",
-      "bytes": 22957
+      "sha256": "d6cffba30fb0aec6629ceaec41718ccae7b4ecf7c6644fe815a52fcd7d2bc59a",
+      "bytes": 24842
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/wasm_value_conversion.rs",
@@ -1376,6 +1381,36 @@
       "path": "src/platform/web/web-serial.ts",
       "sha256": "ea7249e0515c413e1bc6682c081987c8f55a9a92afeab8266e0bd7d27018b76f",
       "bytes": 9525
+    },
+    {
+      "path": "src/sheet/cell-address.test.ts",
+      "sha256": "305e3abd0a31db934f4b1575c433d5d789faf9abb5451585a1db87fa2ecd6793",
+      "bytes": 4449
+    },
+    {
+      "path": "src/sheet/cell-address.ts",
+      "sha256": "26da33ced56879c4b20b6ef7846f997b6dbcbab29dc468d346415df29352e353",
+      "bytes": 5237
+    },
+    {
+      "path": "src/sheet/formula-preprocessor.test.ts",
+      "sha256": "3ed341eb59348c19271e59881a0090a724b8fc89eb7d55b5c0ac6fcf896b5da6",
+      "bytes": 9284
+    },
+    {
+      "path": "src/sheet/formula-preprocessor.ts",
+      "sha256": "b1d4e6638121a7aaad0ec471e7df91b6444418d23afd86e9c78d5877b3b7a419",
+      "bytes": 11075
+    },
+    {
+      "path": "src/sheet/sheet-engine.test.ts",
+      "sha256": "3a9d0943b0d48d49949fd8d07dee43f86dd7c8aed8779a52ad584a9cfcd05c15",
+      "bytes": 8889
+    },
+    {
+      "path": "src/sheet/sheet-engine.ts",
+      "sha256": "fb9aff861b0ced8163eef7adffb729a8b753dde1f84a7af60a7aaa11d7982e3f",
+      "bytes": 16293
     },
     {
       "path": "src/styles/base.css",
