@@ -83,6 +83,7 @@ banner is removed. Until then, nothing in this file governs the shipped runtime.
 <li><a href="#15-migration">Migration from the Vector-Oriented Canon</a></li>
 <li><a href="#16-conformance-checklist">Conformance Checklist</a></li>
 </ol>
+<p><a href="#appendix-a-water">Appendix A. Water on the Grid (non-normative index)</a></p>
 
 <h2 id="1-language-identity">1. Language Identity</h2>
 
@@ -116,6 +117,10 @@ representation directly, without intermediate rounding.</p>
 searchable implementation. The dependency graph, cell diagnostics, and formula bodies are
 machine-readable at all times; an AI agent can read and repair a document without
 screen-scraping the grid.</p>
+
+<p>The water metaphor of the previous canon — flow, bubbles, stagnation, water levels,
+gates, conservation — carries over intact and is indexed against the normative mechanisms
+of this document in Appendix A.</p>
 
 <h2 id="2-specification-authority">2. Specification Authority</h2>
 
@@ -1377,6 +1382,37 @@ addressing (§8), and the AI-first and test disciplines (§14–§16).</p>
 <li>Implements function tables per Sections 5.6 and 6.6: positional parameter binding, default and named output columns, on-demand sibling-column evaluation, the memo soundness condition (memoization only on exactly decided argument equality, never observable in values), <code>EXPECT</code> invariants with fail-loud semantics (Section 10.3), and the call-recursion/reference-cycle distinction of Section 9.6.</li>
 <li>Exposes the machine-readable surfaces of Section 14.1.</li>
 </ol>
+
+<h2 id="appendix-a-water">Appendix A. Water on the Grid (non-normative index)</h2>
+
+<p>This appendix is <strong>non-normative</strong>. It introduces no new rules, types,
+words, or protocol fields. It is a vocabulary index that maps the water metaphor of
+Ajisai's user-facing material onto the normative mechanisms defined above, continuing the
+role of the previous canon's "Gates and Water Levels" appendix. Where this appendix and
+any numbered section disagree, the numbered section governs.</p>
+
+<p>The metaphor carries over from the vector-oriented canon intact — and becomes more
+literal. A spreadsheet's own vocabulary already speaks of <em>upstream</em> and
+<em>downstream</em> cells: the dependency graph of Section 9.1 <strong>is</strong> a
+watershed, and recalculation is water finding its way downhill. Ajisai — the hydrangea —
+is the flower of the rainy season: many small florets fed by one water system.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead><tr><th>Water vocabulary</th><th>Normative mechanism</th></tr></thead>
+<tbody>
+<tr><td><strong>Watershed</strong> (流域) — upstream and downstream</td><td>The dependency graph and its inverted index (Section 9.1). An edit is <em>rainfall</em> at a point; the dirty closure (Section 9.2) is exactly the watershed downstream of it, and topological recalculation (Section 9.3) is the water running downhill.</td></tr>
+<tr><td><strong>Confluence</strong> (合流) — parted streams rejoin as one</td><td>The order- and parallelism-independence of recalculation (Section 9.3). The functional-programming term for this property <em>is</em> the water word: evaluation orders may branch and rejoin, and the settled document is the same.</td></tr>
+<tr><td><strong>Bubble</strong> (泡) — failed water rising through the flow</td><td>Reason-carrying NIL and its passthrough (Sections 4.5, 7.12, 11.2), received at one visible point by <code>VENT</code> <code>^</code> (Section 7.7). On the grid a bubble is visible in the cell it reaches.</td></tr>
+<tr><td><strong>Stagnation</strong> (淀み) — flow that neither passes nor fails</td><td>The logical Unknown (U) of an undecided observation (Sections 4.3, 7.4.1). A stagnant cell is visible as such; K3 logic (Section 7.5) settles what definite flow can settle and carries the stagnation otherwise.</td></tr>
+<tr><td><strong>Dry bed</strong> (乾いた床) — a channel no water has entered</td><td>Empty (Section 4.6). Distinct from a bubble: aggregation flows past dry cells (Section 7.1), while treating a dry bed as if it held water is refused (no blank-as-zero, Section 4.6).</td></tr>
+<tr><td><strong>Whirlpool</strong> (渦) — water that circles and never settles</td><td>A reference cycle (Section 9.4): diagnosed exactly, every member marked, never spun forever. Function-table call recursion is not a whirlpool — it is a bounded cascade (Section 9.6).</td></tr>
+<tr><td><strong>Water levels</strong> (水位) — how much flow may run</td><td>Per-cell budgets (Sections 6.4, 9.5): each cell is its own basin with its own level, so one overflowing basin never floods the document. Step-budget exhaustion is an operational outcome (NIL, <code>reason = stepBudgetExhausted</code>); an exhausted comparison budget is Stagnation (U, Section 7.4.1) — the previous canon's defining distinction between the two, preserved (Section 4.5.2).</td></tr>
+<tr><td><strong>Gates</strong> (水門) — where flow may cross a boundary</td><td>The host boundary (Section 13.1). Outward: effects leave the pure grid only as host commands. Inward: values enter only as literal entry and import at the host surface (Sections 3.6, 13.3). Inside the gates, the grid is a closed, conserved water system (Section 6.3).</td></tr>
+<tr><td><strong>Conservation</strong> (保存) — no water invented or lost</td><td><code>QUANTIZE</code>'s residual identity \(q + r = x\) captures the runoff of a single rounding instead of spilling it (Section 7.13); <code>CONSERVE</code> proves a whole allocation reconciles to its total (Section 10.2); <code>EXPECT</code> keeps a function table's example flows true (Section 10.3). All three fail loudly rather than let unproven flow pass.</td></tr>
+</tbody>
+</table>
+</div>
 
 </main>
 </body>
