@@ -105,8 +105,6 @@ mod nil_conformance_tests;
 mod nil_reason_tests;
 #[cfg(test)]
 mod nil_unknown_firewall_tests;
-#[cfg(test)]
-mod sheet_cell_definition_tests;
 
 pub use interpreter_core::*;
 

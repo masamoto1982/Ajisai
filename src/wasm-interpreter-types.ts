@@ -55,11 +55,6 @@ export interface AjisaiInterpreter {
     // imports (IMPORT-ONLY / UNIMPORT-ONLY) that module-name lists cannot.
     collect_import_state(): ImportStateEntry[];
     restore_import_state(state: ImportStateEntry[]): void;
-    // Sheet view host APIs (spreadsheet redesign plan §2.4): forced cell
-    // (re)definition into a sheet dictionary, and the sorted dirty-set query
-    // over the reverse-dependency index. Throws a string on failure.
-    define_word_forced(dictionary: string, name: string, body_source: string): void;
-    collect_transitive_dependents(word_name: string): string[];
     set_execution_mode(mode: ExecutionMode): void;
     get_execution_mode(): ExecutionMode;
     collect_hedged_trace(): string[];

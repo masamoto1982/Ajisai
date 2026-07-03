@@ -251,15 +251,6 @@ function bindInteractionEvents(context: GuiEventBindingContext): void {
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
-            // Spreadsheet convention: while typing in the Sheet view's cell
-            // editor or formula bar, Escape cancels the edit — that input
-            // owns the key. The global abort stays in force everywhere else
-            // (including the sheet grid itself, so a runaway recalculation
-            // is still abortable).
-            const target = e.target as HTMLElement | null;
-            if (target instanceof HTMLInputElement && target.closest('#sheet-view')) {
-                return;
-            }
             WORKER_MANAGER.abortAll();
             executionController.abortExecution();
             e.preventDefault();
