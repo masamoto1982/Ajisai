@@ -211,7 +211,7 @@ its equality is codepoint equality.</p>
 
 <h3 id="34-serialized-forms-are-not-source-syntax">3.4 Serialized and display forms are not source syntax</h3>
 
-<p>The nested continued-fraction serialization of Section 4.2.3 and every truncated
+<p>The bracket continued-fraction serialization of Section 4.2.3 and every truncated
 display form are output surfaces only. They are not Ajisai source syntax, must not appear
 in formulas, and must not be parsed back as values.</p>
 
@@ -337,21 +337,24 @@ storage that can overflow during normal evaluation.</p>
 
 <h4 id="423-display-and-serialization">4.2.3 Display and serialization</h4>
 
-<p>The canonical AI-readable serialization of a scalar is the <strong>nested
-right-associative</strong> form:</p>
+<p>The canonical AI-readable serialization of a scalar is the standard mathematical
+(Khinchin) <strong>bracket form</strong>:</p>
 
-<pre><code>( a0 ( a1 ( a2 ... ( a_{n-1} ) ... )))</code></pre>
+<pre><code>[ a0 ; a1 , a2 , ... , a_{n-1} ]</code></pre>
 
-<p>with one integer per nesting level and one closing <code>)</code> per opening
-<code>(</code>. A lazy infinite CF is serialized by emitting partial quotients up to an
-implementation-defined display budget and terminating with the marker <code>...)</code>
-before the unproduced quotients' closing parens; the truncated display is non-canonical
-and must not be parsed back as an exact value.</p>
+<p>with the integer part before the semicolon and the remaining partial quotients
+comma-separated. A lazy infinite CF is serialized by emitting partial quotients up to an
+implementation-defined display budget and terminating with the marker <code>...</code>
+before the closing bracket (e.g. <code>[ 1 ; 2 , 2 , 2 , ... ]</code>); the truncated
+display is non-canonical and must not be parsed back as an exact value.</p>
 
-<p>This nested form is <strong>not</strong> Ajisai source syntax (Section 3.4). It appears
-only in display and serialization output under the <code>ContinuedFraction</code>
-interpretation role (Section 12.2) and in AI-targeted diagnostics. Under the
-<code>RawNumber</code> role a rational scalar renders as a reduced
+<p>Parentheses are <strong>reserved for the infix surface</strong> (grouping and
+function-call syntax, Section 3.6) and never appear in the CF serialization. The bracket
+form is <strong>not</strong> Ajisai source syntax (Section 3.4) and cannot collide with
+the column-reference forms of Section 3.5, which occur only in formulas while the CF form
+occurs only in output surfaces. It appears only in display and serialization output under
+the <code>ContinuedFraction</code> interpretation role (Section 12.2) and in AI-targeted
+diagnostics. Under the <code>RawNumber</code> role a rational scalar renders as a reduced
 <code>numerator/denominator</code> (Section 12.2); the surface literal style of
 Section 3.2 is convenience input syntax only and is not retained for display.</p>
 
@@ -1184,7 +1187,7 @@ render and route values without inspecting internal representations
 <thead><tr><th>Role</th><th>Applies to</th><th>Observation</th></tr></thead>
 <tbody>
 <tr><td><code>RawNumber</code></td><td>Scalar</td><td>Reduced <code>numerator/denominator</code> (rationals); primary display form</td></tr>
-<tr><td><code>ContinuedFraction</code></td><td>Scalar</td><td>The nested serialization of Section 4.2.3; AI-targeted diagnostics</td></tr>
+<tr><td><code>ContinuedFraction</code></td><td>Scalar</td><td>The bracket serialization of Section 4.2.3; AI-targeted diagnostics</td></tr>
 <tr><td><code>TruthValue</code></td><td>Boolean, U</td><td><code>true</code> / <code>false</code> / <code>unknown</code> protocol strings</td></tr>
 <tr><td><code>Text</code></td><td>Text</td><td>The codepoint sequence itself</td></tr>
 <tr><td><code>Absence</code></td><td>NIL</td><td>The <code>absence</code> object of Section 4.5.0</td></tr>
