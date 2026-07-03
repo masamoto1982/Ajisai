@@ -222,6 +222,7 @@ in formulas, and must not be parsed back as values.</p>
 <li><strong>Qualified cell:</strong> <code>TABLE2@B3</code> — the qualified-name form <code>TABLE@ADDRESS</code> reaches any table in the document (Section 5.3).</li>
 <li><strong>Column (same row):</strong> <code>[@NAME]</code> — the value in column <code>NAME</code> of the current row; valid only in a column formula (Section 5.5).</li>
 <li><strong>Range:</strong> <code>A1:A10</code> (rectangular by two corner addresses), <code>[NAME]</code> (a whole named column body), and their <code>TABLE@</code>-qualified forms. A Range is a <em>reference</em>, not a value (Section 4.1): it may appear only as the operand of a range-consuming word (Section 7.1) and can never be a cell's result.</li>
+<li><strong>Function-table application:</strong> <code>TABLE@NAME</code>, where <code>NAME</code> is a bare (unbracketed) column name of a function table, applies that function table to the preceding operands and yields the named column's value (Sections 5.6, 6.6). A bare function-table name alone applies it with its default output column. The three <code>@</code>-qualified forms are disjoint by shape: an address (<code>TABLE@B3</code>) is a cell reference, a bracketed name (<code>TABLE@[NAME]</code>) is a range, a bare name (<code>TABLE@NAME</code>) is an application.</li>
 </ul>
 
 <p><strong>Reference vocabulary is closed (normative).</strong> A bare token matching the
@@ -244,6 +245,7 @@ form</strong>, a projection aimed at spreadsheet users:</p>
 <tr><td><code>=[@PRICE]*[@QTY]</code></td><td><code>[@PRICE] [@QTY] MUL</code></td></tr>
 <tr><td><code>=IF(A1&gt;0, 'yes', 'no')</code></td><td><code>A1 0 GT 'yes' 'no' IF</code></td></tr>
 <tr><td><code>=TAX(B2)</code></td><td><code>B2 TAX</code></td></tr>
+<tr><td><code>=TRIANGLE.AREA(3, 4)</code></td><td><code>3 4 TRIANGLE@AREA</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -253,7 +255,7 @@ form</strong>, a projection aimed at spreadsheet users:</p>
 <ul>
 <li>The infix surface is a <strong>bijective projection</strong>: every infix formula maps to exactly one canonical token sequence, and every canonical sequence expressible in the infix grammar maps back to a unique normal-form infix rendering. Semantics are defined on the canonical form only.</li>
 <li>Operator spellings map to Corewords: <code>+ - * /</code> → <code>ADD SUB MUL DIV</code>; <code>&lt; &lt;= &gt; &gt;= = &lt;&gt;</code> → <code>LT LTE GT GTE EQ NEQ</code>; <code>&amp;</code> (text) → <code>CONCAT</code>. Precedence is the conventional arithmetic precedence; parentheses group.</li>
-<li>Function-call syntax <code>NAME(arg1, arg2, …)</code> maps to <code>arg1 arg2 … NAME</code> for any built-in or user word, so user words are callable from the infix surface without declaration.</li>
+<li>Function-call syntax <code>NAME(arg1, arg2, …)</code> maps to <code>arg1 arg2 … NAME</code> for any built-in word, user word, or function table (default output column), so all of them are callable from the infix surface without declaration. The dot form <code>TABLE.COL(args…)</code> selects a specific output column and maps to <code>args… TABLE@COL</code> (Section 3.5).</li>
 <li>In the host grid, a cell text beginning with <code>=</code> is an infix formula; a cell text that parses as a numeric literal is a Scalar literal; any other text is a Text literal. This entry convention is a host rule (Section 13), not part of formula syntax.</li>
 <li>A canonical sequence that has no infix rendering (e.g. one using code blocks) is displayed in canonical form; the surface layer must not invent lossy renderings.</li>
 </ul>
@@ -616,6 +618,23 @@ in that column. It is the table-oriented successor of the previous canon's
 <li>A cell in a column governed by a column formula cannot also hold an individual formula; the host may allow a per-cell <em>override</em> that detaches the cell from the column formula, and the detachment is machine-visible.</li>
 </ul>
 
+<h3 id="56-function-tables">5.6 Function tables</h3>
+
+<p>A table may declare one or more columns as <strong>parameter columns</strong>. A table
+with at least one parameter column is a <strong>function table</strong>: it defines a pure
+function whose arguments are the parameter columns in left-to-right column order.
+Defining an n-ary function in Ajisai means building a table with n parameter columns —
+there is no lambda form and no variable binding in the formula language
+(<code>docs/dev/ajisai-functional-foundations.md</code>, non-normative rationale).</p>
+
+<ul>
+<li><strong>Declaration.</strong> Parameter status is machine-readable column metadata. The host presents it on the header (presentation choice, Section 13.2); the metadata, not the presentation, is normative.</li>
+<li><strong>Body.</strong> Every non-parameter column of a function table is governed by a column formula (Section 5.5). Its formulas may use <code>[@PARAM]</code> for the parameter columns and <code>[@COL]</code> for the other formula columns of the same table, and may reference cells, ranges, and tables elsewhere in the document.</li>
+<li><strong>Output column.</strong> One formula column is the <strong>default output column</strong>: the rightmost formula column unless the table designates another (machine-readable metadata). A call may also name any formula column explicitly (Section 6.6) — a function table with several formula columns is thereby a function with several named results, one application per named column.</li>
+<li><strong>Example rows.</strong> The body rows of a function table are <strong>example rows</strong>: each row supplies literal values in the parameter columns (and in the <code>EXPECT</code> column, Section 10.3, if present), and its formula columns evaluate as ordinary rows under Section 5.5. Example rows are simultaneously the visible, live definition of the function (intermediate columns included), its test fixture (Section 10.3), and a memo table (Section 6.6). A function table may have zero example rows.</li>
+<li><strong>Namespace.</strong> Table names and user word names share one namespace: a table may not be named like an existing word and vice versa (Section 8.2). Both are document-unique.</li>
+</ul>
+
 <h2 id="6-formula-evaluation">6. Formula Evaluation</h2>
 
 <h3 id="61-evaluation-context">6.1 Evaluation context</h3>
@@ -660,6 +679,31 @@ cells.</p>
 <p>Formula evaluation is deterministic: the same document state produces the same cell
 values, diagnostics, and truth values on every conforming implementation. There is no
 observable randomness, wall-clock, or evaluation-order dependence.</p>
+
+<h3 id="66-function-table-application">6.6 Function-table application</h3>
+
+<p>Naming a function table applies it, exactly as naming a word invokes it (concatenative
+rule: naming is execution; deferral is quotation). For a function table <code>F</code>
+with parameter columns \(p_1, \dots, p_n\) (left-to-right) and a formula column
+<code>COL</code>, the application <code>a1 … an F@COL</code>:</p>
+
+<ol>
+<li><strong>consumes</strong> the top n operands, binding them positionally to \(p_1, \dots, p_n\); fewer than n available operands is malformed use → formula error;</li>
+<li><strong>evaluates</strong> <code>COL</code>'s column formula in a call context in which <code>[@PARAM]</code> resolves to the bound argument and <code>[@X]</code> for a sibling formula column <code>X</code> evaluates <code>X</code>'s formula in the same call context (on demand; each sibling at most once per application);</li>
+<li><strong>produces</strong> the single resulting value. The result must be atomic (Section 4.1); the single-result rule of Section 6.2 continues to apply to the calling formula as a whole.</li>
+</ol>
+
+<p>The bare form <code>a1 … an F</code> applies the default output column
+(Section 5.6).</p>
+
+<ul>
+<li><strong>Purity and budgets.</strong> A call is ordinary evaluation: pure (Section 6.3), deterministic (Section 6.5), and metered against the <em>calling cell's</em> step budget (Section 6.4).</li>
+<li><strong>Arguments are values.</strong> Arguments may be any atomic value, including NIL and U; no implicit passthrough applies at the call boundary — the body's words handle absence per their own contracts. Transient kinds (Range, CodeBlock) are not passable arguments; supplying one is malformed use → formula error.</li>
+<li><strong>Dependencies.</strong> The calling formula depends on the function table's definition (its column formulas, parameter declarations, and output designation) and, transitively, on every cell, range, and word the evaluated body references (Section 9.1). Example-row <em>values</em> are not dependencies of a call, except through the memo rule below.</li>
+<li><strong>Memoization by example rows (normative soundness condition).</strong> An implementation may answer an application from an example row whose parameter values equal the arguments, provided the equality of every argument with the row's parameter value is <em>decided exactly</em> (definite per Section 7.4 — always the case within the admitted domain \(D\), Section 4.2.7). If any such equality would be undecidable, the memo must not be used and the body is evaluated. By purity, the memoized answer and the evaluated answer are the same value; memoization is never observable except through resource use.</li>
+<li><strong>Higher-order use.</strong> To pass a function rather than apply it, wrap the application in a quotation: <code>[SALES] 0 { TAX ADD } FOLD</code>. There is no function-reference value kind.</li>
+<li><strong>Recursion.</strong> A body may apply its own table or tables that apply it back. Call recursion is dynamic and bounded by the step budget; it is not a reference cycle (Section 9.6).</li>
+</ul>
 
 <h2 id="7-formula-words">7. Formula Words</h2>
 
@@ -1025,7 +1069,7 @@ coverage (Section 16).</p>
 <h3 id="82-rules">8.2 Rules</h3>
 
 <ul>
-<li>Word names are case-insensitive, normalized upper case. A name matching the cell-address grammar (Section 3.5) or colliding with a Coreword cannot be defined.</li>
+<li>Word names are case-insensitive, normalized upper case. A name matching the cell-address grammar (Section 3.5), colliding with a Coreword, or colliding with a table name (Section 5.6) cannot be defined; table renames are refused symmetrically when they would collide with a word.</li>
 <li>The dictionary belongs to the document (Section 5.1). Words see the same evaluation context as formulas (Section 6.1) and are subject to the same purity rule (Section 6.3).</li>
 <li>A word body may leave any number of values for its caller (words compose on the operand stack); the single-result rule (Section 6.2) applies to the <em>formula</em>, not to each word.</li>
 <li>Words may reference cells and ranges. Such references participate in the dependency graph (Section 9.1): a cell using the word depends, transitively, on the cells the word reads.</li>
@@ -1085,6 +1129,19 @@ calculation mode in this draft.</p>
 cell yields that cell's NIL/U outcome and normal propagation; it must not abort the
 recalculation of cells that do not depend on it.</p>
 
+<h3 id="96-call-recursion-versus-reference-cycles">9.6 Call recursion versus reference cycles</h3>
+
+<p>Section 9.4's static cycle detection governs <strong>cell-value dependencies</strong>:
+a cell (or example-row cell) whose value transitively requires its own value. It does
+<strong>not</strong> apply to <strong>function-table call recursion</strong>
+(Section 6.6): a function table whose body applies itself (or a mutual group of tables
+applying each other) is well-formed, because each application binds fresh arguments and
+is bounded dynamically by the calling cell's step budget — exhaustion yields NIL with
+<code>reason = stepBudgetExhausted</code>, not <code>referenceCycle</code>. An
+<em>example row</em> whose own evaluation applies its table with arguments equal to that
+same row's parameters (a self-memo loop) is a genuine value cycle and is diagnosed under
+Section 9.4.</p>
+
 <h2 id="10-value-integrity">10. Value Integrity</h2>
 
 <h3 id="101-format-as-quantization">10.1 Cell and column format is quantization</h3>
@@ -1140,6 +1197,19 @@ residual identity \(q + r = x\) (Section 7.13) is the <em>atomic</em> conservati
 guarantee for a single rounding; <code>CONSERVE</code> is the <em>aggregate</em> one over
 a whole range of parts. Together they let a document quantize an allocation to a currency
 grid and then prove that the quantization neither invented nor lost value.</p>
+
+<h3 id="103-expect-example-row-assertions">10.3 <code>EXPECT</code>: example-row assertions</h3>
+
+<p>A function table (Section 5.6) may designate one literal column as its
+<strong>EXPECT column</strong>. The designation declares a table invariant, checked under
+the same regime as <code>CONSERVE</code>'s invariant form (Section 10.2): on every
+recalculation that dirties a participant, and fail loudly.</p>
+
+<ul>
+<li><strong>Assertion.</strong> For every example row whose EXPECT cell is non-Empty, the row's output-column value (Section 5.6) must equal the EXPECT value. Equality is value identity (Section 4.2.4 for Scalars); an Empty EXPECT cell asserts nothing for its row.</li>
+<li><strong>Fail loudly, never guess.</strong> A mismatch, an output value of NIL or U where EXPECT is definite, or an equality that cannot be <em>proven</em> within the comparison budget marks the table with a machine-readable <strong>integrity failure</strong> — the same loud, non-dismissable-by-formatting state as a <code>CONSERVE</code> violation. Cell values remain whatever the formulas produced; the invariant observes, it does not rewrite.</li>
+<li><strong>Role.</strong> Example rows with EXPECT are the function's unit tests, co-located with its definition and re-run by recalculation itself. An edit that breaks the function is visible at the moment it is made.</li>
+</ul>
 
 <h2 id="11-error-model">11. Error Model</h2>
 
@@ -1226,7 +1296,9 @@ constraints on presentation:</p>
 <h3 id="133-persistence-and-interchange">13.3 Persistence and interchange</h3>
 
 <p>The machine-readable document format serializes tables (cell formulas in canonical
-form, literals as exact values), the dictionary, presentation metadata, and invariants.
+form, literals as exact values), function-table metadata (parameter declarations, output
+designation, EXPECT designation — Sections 5.6, 10.3), the dictionary, presentation
+metadata, and invariants.
 Exact values travel in a protocol form that round-trips losslessly; display strings are
 never the interchange form. CSV export writes display values and is lossy by declaration;
 CSV import reads literals under Section 3.6's entry convention.</p>
@@ -1302,6 +1374,7 @@ addressing (§8), and the AI-first and test disciplines (§14–§16).</p>
 <li>Implements <code>QUANTIZE</code> with the residual identity and banker's rounding (Section 7.13), format-as-quantization (Section 10.1), and <code>CONSERVE</code> with fail-loud semantics in both word and invariant forms (Section 10.2).</li>
 <li>Keeps the Bubble Rule boundary of Section 11.2, with machine-readable diagnoses on every error, bubble, U, and cycle outcome.</li>
 <li>Round-trips the canonical ⇄ infix surface bijectively for the grammar of Section 3.6.</li>
+<li>Implements function tables per Sections 5.6 and 6.6: positional parameter binding, default and named output columns, on-demand sibling-column evaluation, the memo soundness condition (memoization only on exactly decided argument equality, never observable in values), <code>EXPECT</code> invariants with fail-loud semantics (Section 10.3), and the call-recursion/reference-cycle distinction of Section 9.6.</li>
 <li>Exposes the machine-readable surfaces of Section 14.1.</li>
 </ol>
 
