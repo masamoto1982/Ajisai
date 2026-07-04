@@ -7,6 +7,7 @@ pub use error::{AjisaiError, ErrorCategory, NilReason};
 pub mod interpreter;
 pub mod semantic;
 pub mod surface_forms;
+pub mod table_core;
 mod tokenizer;
 pub mod types;
 
