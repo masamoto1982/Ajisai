@@ -10,6 +10,7 @@ output, which AI agents and verification scripts consume.
 ```
 ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>]
 ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
+ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never executes
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
 ajisai version [--json]
 ```
@@ -77,6 +78,7 @@ does not prove it will.
 
 `version --json` emits only `{ "schemaVersion", "status", "version" }`.
 `modifier --json` emits `{ "schemaVersion", "status", "modifier": { ... } }` (§12).
+`coverage --json` emits `{ "schemaVersion", "status", "coverage": { ... } }` (§14).
 
 ### Compatibility policy
 
@@ -442,3 +444,51 @@ it is empty when nothing is undecided.
   §7.4.1). The runtime U value carries `agreedPrefix`, but it is not yet
   surfaced to the CLI report, so there is no signal to drive that question here
   without a separate value-protocol change.
+
+## 14. `coverage` (the `coverage` command)
+
+`ajisai coverage <file.ajisai>` mechanically aggregates the **contract
+coverage ratio** defined in
+`docs/dev/capability-transition-measurement-design.md` §4: the fraction of
+word occurrences that resolve to a definition carrying complete SPEC §7.14
+contract metadata. It tokenizes and structure-checks like `check` (same exit
+1 / exit 2 failure envelopes) but never executes. Coverage itself is
+observational: uncovered and unknown words are reported in the ratio, never
+as a failure, so a well-formed file always exits 0.
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "coverage": {
+    "transitionMetricsVersion": 1,
+    "covered": 5,
+    "total": 7,
+    "ratioDisplay": "5/7",
+    "excludedModifierCount": 0,
+    "breakdown": { "core": 4, "module": 1, "userDefined": 1,
+                   "userDictionary": 1, "unregistered": 0, "unknown": 0 },
+    "uncovered": [ { "word": "DOUBLE", "kind": "userDefined", "count": 1 } ]
+  }
+}
+```
+
+- **Denominator** (`total`): `Symbol` token occurrences only. Number/string/
+  vector literals, code-block brackets, `^` (NilCoalesce), pipeline and
+  clause separators, and comments never enter. Modifier words (`TOP` `STAK`
+  `EAT` `KEEP`) are excluded and counted in `excludedModifierCount`.
+  Constant words (`TRUE` `FALSE` `NIL`) are registered §7.14 words and are
+  counted. The ratio is reported as exact integers plus `ratioDisplay`
+  (`"covered/total"`) — never a float. `"0/0"` for a file with no countable
+  occurrences.
+- **`breakdown` kinds**: `core` and `module` are covered; `userDefined`
+  (words the file `DEF`s — no user-word contract mechanism exists yet),
+  `userDictionary` (`DICT@WORD` runtime references), `unregistered` (in the
+  core vocabulary but missing from the §7.14 registry — a registry gap), and
+  `unknown` are uncovered. Resolution mirrors `check`'s static best-effort
+  resolution, including short names imported via `'MODULE' IMPORT`.
+- **`uncovered`**: canonical word names (aliases are canonicalized first)
+  with per-word occurrence counts, in first-appearance order.
+- `transitionMetricsVersion` versions the *counting rules* (design memo §6);
+  ratios are comparable only within one version. It is independent of the
+  envelope `schemaVersion`.
