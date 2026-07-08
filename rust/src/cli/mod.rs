@@ -6,7 +6,8 @@
 //!
 //! ```text
 //! ajisai run <file.ajisai> [--json]
-//! ajisai check <file.ajisai> [--json]   # tokenize + parse + resolve, no execution
+//! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
+//! ajisai coverage <file.ajisai> [--json]  # contract coverage ratio, no execution
 //! ajisai version [--json]
 //! ```
 //!
@@ -21,6 +22,9 @@
 mod clarify;
 #[cfg(test)]
 mod clarify_tests;
+mod coverage;
+#[cfg(test)]
+mod coverage_tests;
 mod explain;
 #[cfg(test)]
 mod explain_tests;
@@ -52,6 +56,9 @@ const USAGE: &str = "Usage: ajisai <command> [options]
 Commands:
   run <file.ajisai> [--json]      Execute a program file
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
+  coverage <file.ajisai> [--json] Contract coverage ratio: the fraction of word
+                                  occurrences resolving to complete SPEC 7.14
+                                  contract metadata (no execution)
   modifier <phrase...>            Infer the modifier (TOP/STAK, EAT/KEEP, ^) for
                                   an operation-intent phrase (no execution)
   version [--json]                Print version information
@@ -110,6 +117,7 @@ pub fn run(args: &[String]) -> i32 {
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
+        ("coverage", [path]) => cmd_coverage(path, &opts),
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
         ("version", []) => cmd_version(json),
         _ => {
@@ -567,6 +575,116 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
     } else {
         0
     }
+}
+
+/// `ajisai coverage <file>`: mechanical contract-coverage aggregation
+/// (`docs/dev/capability-transition-measurement-design.md` §4). Tokenizes and
+/// structure-checks like `check`, never executes. Coverage itself is
+/// observational — an uncovered or unknown word is reported in the ratio, not
+/// as a failure — so a well-formed file always exits 0.
+fn cmd_coverage(path: &str, opts: &Opts) -> i32 {
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(e) => {
+            eprintln!("ajisai: cannot read {}: {}", path, e);
+            return 2;
+        }
+    };
+    let interp = Interpreter::new();
+
+    let tokens = match crate::tokenizer::tokenize(&source) {
+        Ok(tokens) => tokens,
+        Err(message) => {
+            let diagnosis = DebugDiagnosis::from_error_category(
+                ErrorPhase::Tokenize,
+                None,
+                None,
+                None,
+                0,
+                0,
+                Some(message.clone()),
+            );
+            emit(
+                &error_report(
+                    &interp,
+                    &diagnosis,
+                    None,
+                    message,
+                    Vec::new(),
+                    Vec::new(),
+                    opts,
+                ),
+                opts,
+            );
+            return 1;
+        }
+    };
+
+    if let Err(message) = check_structure(&tokens) {
+        let category = ErrorCategory::StructureError;
+        let diagnosis = DebugDiagnosis::from_error_category(
+            ErrorPhase::ParseStructure,
+            None,
+            Some(&category),
+            None,
+            0,
+            0,
+            Some(message.clone()),
+        );
+        emit(
+            &error_report(
+                &interp,
+                &diagnosis,
+                Some(&category),
+                message,
+                Vec::new(),
+                Vec::new(),
+                opts,
+            ),
+            opts,
+        );
+        return 1;
+    }
+
+    let coverage = coverage::analyze(&interp, &tokens);
+    if opts.json {
+        let doc = serde_json::json!({
+            "schemaVersion": report::SCHEMA_VERSION,
+            "status": "ok",
+            "coverage": coverage.to_json(),
+        });
+        println!("{}", pretty(&doc));
+    } else {
+        if coverage.total == 0 {
+            println!("coverage: 0/0 (no countable word occurrences)");
+        } else {
+            println!(
+                "coverage: {}/{} word occurrences contract-covered ({}%)",
+                coverage.covered,
+                coverage.total,
+                coverage.covered * 100 / coverage.total
+            );
+        }
+        let breakdown: Vec<String> = coverage
+            .by_kind
+            .iter()
+            .filter(|(_, count)| *count > 0)
+            .map(|(kind, count)| format!("{}: {}", kind.as_str(), count))
+            .collect();
+        if !breakdown.is_empty() {
+            println!("  {}", breakdown.join("  "));
+        }
+        if coverage.excluded_modifiers > 0 {
+            println!("  modifiers excluded: {}", coverage.excluded_modifiers);
+        }
+        if !coverage.uncovered.is_empty() {
+            println!("uncovered:");
+            for word in &coverage.uncovered {
+                println!("  {} ({}) x{}", word.word, word.kind.as_str(), word.count);
+            }
+        }
+    }
+    0
 }
 
 /// Static bracket balance for vector literals and code blocks. Purely

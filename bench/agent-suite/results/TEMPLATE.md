@@ -13,7 +13,8 @@
 One row per (task, trial). `passed` is the `verify.sh` exit verdict (✅/❌).
 Leave a cell blank if not measured — never invent a value (protocol §5).
 `turbulence` = repairTokensOut / draftTokensOut; `contractCov` = contract
-coverage ratio of the final solution (definitions:
+coverage ratio of the final solution, as reported by
+`ajisai coverage <final-solution> --json` (definitions:
 `docs/dev/capability-transition-measurement-design.md` §3–§4).
 
 | task | trial | passed | onePass | fixCount | finalLines | tokensIn | tokensOut | draftTokensOut | repairTokensOut | turbulence | contractCov | selfResolved | errorQuality(1-5) | energyProxyScore |

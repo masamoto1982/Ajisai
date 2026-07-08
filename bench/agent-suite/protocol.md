@@ -35,7 +35,7 @@ different versions of those definitions are not comparable):
 | derived metric | definition |
 |---|---|
 | sessionTurbulenceRatio | `repairTokensOut / draftTokensOut`; 0 for a onePass session |
-| contractCoverageRatio | fraction of word occurrences in the final solution that resolve to a definition with complete §7.14 contract metadata |
+| contractCoverageRatio | fraction of word occurrences in the final solution that resolve to a definition with complete §7.14 contract metadata; computed mechanically by `ajisai coverage <final-solution> --json` |
 
 `onePass`, `fixCount`, `finalLines`, and `energyProxyScore` are objective.
 `errorQuality` is a tooling observation, not a pass/fail input. If the
