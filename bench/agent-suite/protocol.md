@@ -24,9 +24,23 @@ of correctness (the `verify.sh` exit code is the verdict):
 | selfResolved | whether the agent recovered from its own errors without human hints |
 | errorQuality | 1–5 rating of how actionable the CLI diagnoses were *during* the session (the one subjective field; rate the tool, not the solution) |
 | energyProxyScore | for tensor tasks / energy-refactor, the score of the final solution |
+| draftTokensOut | completion tokens up to and including the **first** submitted solution (cut-point rule: design memo §3) |
+| repairTokensOut | `tokensOut − draftTokensOut` (everything after the first submission) |
+
+Two derived values are computed from the recorded ones (definitions, exclusion
+rules, and `TRANSITION_METRICS_VERSION` live in
+`docs/dev/capability-transition-measurement-design.md`; records made under
+different versions of those definitions are not comparable):
+
+| derived metric | definition |
+|---|---|
+| sessionTurbulenceRatio | `repairTokensOut / draftTokensOut`; 0 for a onePass session |
+| contractCoverageRatio | fraction of word occurrences in the final solution that resolve to a definition with complete §7.14 contract metadata |
 
 `onePass`, `fixCount`, `finalLines`, and `energyProxyScore` are objective.
-`errorQuality` is a tooling observation, not a pass/fail input.
+`errorQuality` is a tooling observation, not a pass/fail input. If the
+draft/repair cut-point cannot be reconstructed from the session log, leave
+`draftTokensOut` / `repairTokensOut` blank rather than estimating (§5).
 
 ## 1. Conditions
 
@@ -41,6 +55,26 @@ context, no memory of other trials):
 The only difference between A and B is the presence of `SKILL.md`. Keep the
 model, temperature, system prompt, tool access, and task text identical
 across the two.
+
+### 1.1 Model capability tiers (transition axis)
+
+Orthogonal to A/B, each condition may be run at up to three **model
+capability tiers**:
+
+- **T1 — small**, **T2 — mid**, **T3 — frontier**, defined as relative
+  tiers **within a single model family** (e.g. Haiku-class / Sonnet-class /
+  Opus-class). Never compare tiers across families.
+- Everything except the model stays identical across tiers: condition
+  materials, temperature, system prompt, tool access, task text.
+- Purpose: plot the **transition curve** — pass rate versus tier, per
+  condition — and observe whether reduced-ambiguity conditions shift the
+  curve toward smaller tiers. Rationale, the hypothesis under test, and the
+  mirage guard (never claim a transition from the binary pass-rate alone;
+  always co-report `fixCount` / turbulence / tokens across tiers) are in
+  `docs/dev/capability-transition-measurement-design.md`.
+- Single-tier measurements remain valid protocol runs; the tier is simply
+  recorded. Tier-comparison claims require ≥ 3 trials per
+  (task, condition, tier), all at the same `TRANSITION_METRICS_VERSION`.
 
 ## 2. Per-trial procedure
 
@@ -76,9 +110,10 @@ honestly (§5).
 ## 4. Recording
 
 Copy `results/TEMPLATE.md` to `results/<date>-<model>-<condition>.md` and fill
-one row per trial. Commit the filled results. The `verify.sh` transcript
-(stdout) for the final solution should be pasted verbatim — it is the
-audit trail for the `passed` column.
+one row per trial (the model name in the filename identifies the tier; the
+tier field in the header makes it explicit). Commit the filled results. The
+`verify.sh` transcript (stdout) for the final solution should be pasted
+verbatim — it is the audit trail for the `passed` column.
 
 ## 5. Honesty rules (binding)
 
@@ -92,6 +127,13 @@ audit trail for the `passed` column.
   a known-correct solution and non-0 on a wrong one, without committing it).
 - **Score honesty.** `energyProxyScore` is a structural proxy, not joules
   (see `docs/quality/energy-proxy-score.md`). Report it as such.
+- **Transition honesty.** `sessionTurbulenceRatio` and
+  `contractCoverageRatio` are observational proxies, not measures of model
+  intelligence or "emergence"
+  (see `docs/dev/capability-transition-measurement-design.md`). Do not use
+  the word "emergence" in result files; a transition claim requires both the
+  binary and the continuous metrics to move together (mirage guard, memo §5).
+  Unfavorable transition results stay published like any other loss.
 
 ## 6. Reproducing from scratch
 
