@@ -74,6 +74,8 @@ Spec links: [§4.5.0 Diagnostic absence metadata](https://masamoto1982.github.io
 
 Ajisai is vector-oriented. A vector is an ordered, indexable sequence, and nested vectors naturally express tensor-like structures. Indexing is 0-origin, and negative indices count from the end.
 
+Nesting exists for exactly two jobs: as the substrate for tensor operations (shape, rank, reshape, transpose, element-wise arithmetic), and for ragged or mixed structured data such as `SPLIT` results, JSON arrays, and multitrack music data. It is **not** a code-as-data mechanism: executable code lives in `{ }` code blocks, a vector is never executable, and Ajisai makes no claim to Lisp-style homoiconicity.
+
 Internally, vectors may be represented either as nested `Value` trees or as dense tensor buffers. Dense tensors use exact small rational lanes plus a validity mask for NIL occupancy. They do not approximate irrational or BigInt-scale exact values just to fit a fast path, and they do not rebuild into nested vectors merely because a lane becomes NIL.
 
 This is part of Ajisai's Virtual Tensor Unit direction: optimize movement and shape operations without weakening exactness.

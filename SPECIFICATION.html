@@ -689,6 +689,15 @@ Version: <strong>2026-07-01</strong></p>
 
 <p>An ordered, indexable sequence of values. Vectors may be nested (tensor-like). Index base is 0. Negative indices count from the end: <code>-1</code> is the last element.</p>
 
+<p><strong>Role of nesting (design intent, normative):</strong> nesting is retained for exactly two jobs, and is to be read through them wherever a design or interpretation question arises:</p>
+
+<ul>
+<li><strong>Tensor substrate.</strong> A nested Vector is the language-visible form of a multi-dimensional array. The tensor operations of Section 7.2 (<code>SHAPE</code>, <code>RANK</code>, <code>RESHAPE</code>, <code>TRANSPOSE</code>, <code>FILL</code>) and element-wise numeric operations over vector lanes are defined on nested Vectors, and the dense representation class of Section 4.3.1 is an optimization of exactly this use.</li>
+<li><strong>Ragged and mixed structured data.</strong> Sub-vector results (<code>SPLIT</code>, Section 7.1), JSON arrays (the <code>JSON</code> module, Section 9.1), and grouped domain structures (for example multitrack music data) require rows of differing length and mixed element types, which a flat buffer plus a shape cannot represent.</li>
+</ul>
+
+<p><strong>Non-goal — code as data:</strong> nesting carries no homoiconic role. Executable code is a distinct value type — the CodeBlock of Section 4.6, delimited by <code>{ }</code> (Section 3.4) — a Vector is never executable, and code is never represented as a nested Vector. Any historical framing of vector nesting as a Lisp-style code/data structure is obsolete and must not guide the interpretation of this specification.</p>
+
 <h4 id="431-internal-representation-classes">4.3.1 Internal representation classes</h4>
 
 <p>A Vector value is internally represented in one of two classes:</p>
