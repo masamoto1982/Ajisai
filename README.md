@@ -231,3 +231,7 @@ Quality process documents live in [`docs/quality/`](docs/quality/), including th
 ## License
 
 MIT ([`LICENSE`](LICENSE))
+
+Ajisai redistributes third-party components (KaTeX, Tauri, and various Rust
+crates). Their copyright and license notices are collected in
+[`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md).
