@@ -34,7 +34,7 @@
     "check:skill": "node scripts/generate-skill-md.mjs --check",
     "simplify:report": "node scripts/ajisai-simplify-report.mjs",
     "primitive:test-map": "node scripts/generate-primitive-test-map.mjs",
-    "vendor:katex": "rm -rf public/vendor/katex && mkdir -p public/vendor/katex/contrib public/vendor/katex/fonts && cp node_modules/katex/dist/katex.min.css node_modules/katex/dist/katex.min.js public/vendor/katex/ && cp node_modules/katex/dist/contrib/auto-render.min.js public/vendor/katex/contrib/ && cp node_modules/katex/dist/fonts/*.woff2 public/vendor/katex/fonts/"
+    "vendor:katex": "rm -rf public/vendor/katex && mkdir -p public/vendor/katex/contrib public/vendor/katex/fonts && cp node_modules/katex/dist/katex.min.css node_modules/katex/dist/katex.min.js public/vendor/katex/ && cp node_modules/katex/dist/contrib/auto-render.min.js public/vendor/katex/contrib/ && cp node_modules/katex/dist/fonts/*.woff2 public/vendor/katex/fonts/ && cp node_modules/katex/LICENSE public/vendor/katex/LICENSE && node scripts/vendor-katex-banner.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
