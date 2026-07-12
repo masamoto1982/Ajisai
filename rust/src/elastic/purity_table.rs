@@ -105,6 +105,11 @@ pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
         // it through or raises; pure and deterministic (SPEC §13.3 draft).
         Conserve => pure_light,
 
+        // ── Diagnostic absence accessors (SPEC §4.5.0) ────────────────────
+        // Read-only inspection of a NIL's diagnostic metadata; pure and
+        // deterministic, retaining the inspected value like LENGTH.
+        NilCheck | NilReason | NilOrigin | NilRecoverable | NilDiagnosis => pure_light,
+
         // ── Pure tensor ops ───────────────────────────────────────────────
         Shape | Rank | Reshape | Transpose | Fill => pure_light,
 

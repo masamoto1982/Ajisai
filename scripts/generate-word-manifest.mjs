@@ -141,25 +141,40 @@ function rustEnumVariantToSnake(value) {
 function extractCoreWords() {
   const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
   const body = constArrayBody(readRepo(sourcePath), 'BUILTIN_SPECS');
-  const entries = [];
   // `constArrayBody` strips the trailing `\n];`, so the final entry has no
   // `BuiltinSpec {` / `];` terminator after it; `$` lets the last block (e.g.
   // SUPERVISE) match at end-of-body instead of being silently dropped.
   const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];|$)/g;
+  const parsed = [];
   for (const match of body.matchAll(pattern)) {
     const item = match[1];
     const name = item.match(/\bname:\s*"([^"]+)"/)?.[1];
     const category = item.match(/\bcategory:\s*"([^"]+)"/)?.[1];
     if (!name || !category) continue;
-    entries.push({
-      id: `core.${slug(name)}`,
-      kind: 'coreword',
-      surface: name,
-      category,
-      source: sourcePath,
-    });
+    parsed.push({ name, category });
   }
-  if (entries.length === 0) fail('no core words extracted');
+  if (parsed.length === 0) fail('no core words extracted');
+
+  // `slug` drops the non-alphanumeric characters it collapses, so a predicate
+  // like `NIL?` and the plain `NIL` share the base slug `nil`. Disambiguate
+  // deterministically (independent of source order): the name that carried no
+  // dropped symbol keeps the base id, and a symbol-bearing name gets a suffix
+  // derived from what was dropped (`?` -> `-p`, the predicate marker), so the
+  // manifest ids stay unique and stable.
+  const baseCounts = new Map();
+  for (const { name } of parsed) {
+    const base = slug(name);
+    baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
+  }
+  const entries = parsed.map(({ name, category }) => {
+    const base = slug(name);
+    const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
+    let id = `core.${base}`;
+    if (baseCounts.get(base) > 1 && dropped) {
+      id = `core.${base}${dropped.includes('?') ? '-p' : `-${slug(dropped) || 'x'}`}`;
+    }
+    return { id, kind: 'coreword', surface: name, category, source: sourcePath };
+  });
   return entries;
 }
 

@@ -55,6 +55,8 @@ mod execution_loop;
 
 mod execute_builtin;
 
+pub(crate) mod nil_diagnostics;
+
 #[cfg(test)]
 mod algo_ops_tests;
 #[cfg(test)]
@@ -101,6 +103,8 @@ mod module_catalog_tests;
 mod module_unimport_tests;
 #[cfg(test)]
 mod nil_conformance_tests;
+#[cfg(test)]
+mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
 #[cfg(test)]

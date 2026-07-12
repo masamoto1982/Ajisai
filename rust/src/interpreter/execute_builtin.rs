@@ -9,8 +9,8 @@ use super::compiled_plan::{
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
-    higher_order, higher_order_fold, interval_ops, io, logic, modules, tensor_cmds, vector_ops,
-    Interpreter,
+    higher_order, higher_order_fold, interval_ops, io, logic, modules, nil_diagnostics,
+    tensor_cmds, vector_ops, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -352,6 +352,11 @@ impl Interpreter {
             BuiltinExecutorKey::Kill => self.op_kill(),
             BuiltinExecutorKey::Monitor => self.op_monitor(),
             BuiltinExecutorKey::Supervise => self.op_supervise(),
+            BuiltinExecutorKey::NilCheck => nil_diagnostics::op_nil_check(self),
+            BuiltinExecutorKey::NilReason => nil_diagnostics::op_nil_reason(self),
+            BuiltinExecutorKey::NilOrigin => nil_diagnostics::op_nil_origin(self),
+            BuiltinExecutorKey::NilRecoverable => nil_diagnostics::op_nil_recoverable(self),
+            BuiltinExecutorKey::NilDiagnosis => nil_diagnostics::op_nil_diagnosis(self),
             BuiltinExecutorKey::ToCf => interval_ops::op_to_cf(self),
             BuiltinExecutorKey::Precompute => Err(AjisaiError::from(
                 "PRECOMPUTE can only be used during definition-time precomputation",

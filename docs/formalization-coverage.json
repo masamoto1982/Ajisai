@@ -889,6 +889,145 @@
       "algebraic_family": "bubble"
     },
     {
+      "id": "core.nil-p",
+      "kind": "coreword",
+      "surface": "NIL?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.12",
+        "SPECIFICATION.html §7.15"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/nil_diagnostics_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-check-true-retains-source",
+        "core-nil-check-false-for-present-value"
+      ],
+      "status": "Formalized",
+      "notes": "Operational-absence predicate; retains the inspected value and projects absence into the K3 truth domain. Reports FALSE for the logical UNKNOWN (§2.3 firewall).",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain",
+        "algebra.k3.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.nil-reason",
+      "kind": "coreword",
+      "surface": "NIL-REASON",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.15"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/nil_diagnostics_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-reason-division-by-zero",
+        "core-nil-reason-present-value-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Reads the direct reason of an operational NIL as a lowerCamelCase protocol-string Text; retains the inspected value; NIL when there is no reason.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.nil-origin",
+      "kind": "coreword",
+      "surface": "NIL-ORIGIN",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.15"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/nil_diagnostics_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-origin-literal"
+      ],
+      "status": "Formalized",
+      "notes": "Reads the required origin protocol string of an operational NIL as Text; retains the inspected value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.nil-recoverable",
+      "kind": "coreword",
+      "surface": "NIL-RECOVERABLE?",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.15"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/nil_diagnostics_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-recoverable-division-by-zero"
+      ],
+      "status": "Formalized",
+      "notes": "Reads the required four-valued recoverability protocol string of an operational NIL as Text (not a two-valued boolean, per §4.5.0); retains the inspected value.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
+      "id": "core.nil-diagnosis",
+      "kind": "coreword",
+      "surface": "NIL-DIAGNOSIS",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §4.5.0",
+        "SPECIFICATION.html §7.15"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §5"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/nil_diagnostics_tests.rs"
+      ],
+      "conformance_cases": [
+        "core-nil-diagnosis-absent-is-nil"
+      ],
+      "status": "Formalized",
+      "notes": "Reads the optional three-layer diagnosis of an operational NIL as a Record whose fields are §4.5.0 protocol strings; retains the inspected value; NIL when no diagnosis is attached.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "observation"
+    },
+    {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
