@@ -573,5 +573,121 @@
   </div>
 </section>
 
+<!-- VENT (^) is a lazy control directive (Section 6.4): a non-NIL top is kept
+     and the following source unit is skipped unevaluated; a NIL top is discarded
+     and the following unit is evaluated as the fallback. -->
+
+<section class="ajisai-case" id="core-vent-nonnil-keeps-top" data-category="core">
+  <h3>VENT keeps a non-NIL top and skips the fallback token</h3>
+  <pre class="ajisai-source">5 ^ 99</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vent-nonnil-fallback-unevaluated" data-category="core">
+  <h3>VENT does not evaluate the fallback when the top is non-NIL</h3>
+  <pre class="ajisai-source">5 ^ UNDEFINED-FALLBACK</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vent-one-token-skip-trap" data-category="core">
+  <h3>VENT skips exactly one source token (multi-token fallback trap)</h3>
+  <pre class="ajisai-source">1 ^ 2 3 ADD</pre>
+  <pre class="ajisai-expect-result">4/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- COND collects consecutive clause blocks, consumes the subject beneath them,
+     runs each guard against a fresh copy of the subject, and returns exactly one
+     value from the winning body (Section 7.7.1). -->
+
+<section class="ajisai-case" id="core-cond-subject-consumed" data-category="core">
+  <h3>COND consumes the subject and returns the winning body's value</h3>
+  <pre class="ajisai-source">9 2 { [ 2 ] EQ } { [ 200 ] } { IDLE } { [ 0 ] } COND</pre>
+  <pre class="ajisai-expect-result">9/1 [ 200/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-idle-else" data-category="core">
+  <h3>COND falls through to the IDLE else clause when no guard fires</h3>
+  <pre class="ajisai-source">5 { [ 2 ] EQ } { [ 200 ] } { IDLE } { [ 0 ] } COND</pre>
+  <pre class="ajisai-expect-result">[ 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-exhausted" data-category="core">
+  <h3>COND with no matching guard and no IDLE clause raises CondExhausted</h3>
+  <pre class="ajisai-source">5 { [ 2 ] EQ } { [ 200 ] } COND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">COND: all guards failed and no else clause</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-cond-unknown-guard-does-not-fire" data-category="core">
+  <h3>A COND guard reducing to UNKNOWN does not fire (Section 7.4.3)</h3>
+  <pre class="ajisai-source">'math' IMPORT 7 { 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ } { [ 111 ] } { IDLE } { [ 999 ] } COND</pre>
+  <pre class="ajisai-expect-result">[ 999/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Higher-order words: normative stack signatures in Section 7.7.1. -->
+
+<section class="ajisai-case" id="core-map-block" data-category="core">
+  <h3>MAP applies a code block element-wise, collecting results</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { 2 MUL } MAP</pre>
+  <pre class="ajisai-expect-result">[ 2/1 4/1 6/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-filter-block" data-category="core">
+  <h3>FILTER keeps elements for which the predicate is TRUE</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 ] { 2 MOD 0 EQ } FILTER</pre>
+  <pre class="ajisai-expect-result">[ 2/1 4/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-fold-bare-init" data-category="core">
+  <h3>FOLD reduces with a bare initial accumulator (vector init block FOLD)</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 ] 0 { ADD } FOLD</pre>
+  <pre class="ajisai-expect-result">10/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-unfold-generator" data-category="core">
+  <h3>UNFOLD generates a sequence from a seed and a generator block</h3>
+  <pre class="ajisai-source">[ 1 ] { { [ 1 ] EQ } { [ 1 2 ] } { [ 2 ] EQ } { [ 2 3 ] } { [ 3 ] EQ } { [ 3 NIL ] } { IDLE } { NIL } COND } UNFOLD</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-any-predicate" data-category="core">
+  <h3>ANY is FALSE when no element satisfies the predicate</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { 5 GT } ANY</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-all-predicate" data-category="core">
+  <h3>ALL is TRUE when every element satisfies the predicate</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { 0 GT } ALL</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-count-predicate" data-category="core">
+  <h3>COUNT returns the number of matching elements as a one-element vector</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 ] { 2 MOD 0 EQ } COUNT</pre>
+  <pre class="ajisai-expect-result">[ 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-scan-intermediate" data-category="core">
+  <h3>SCAN returns every intermediate accumulator</h3>
+  <pre class="ajisai-source">[ 1 2 3 4 ] 0 { ADD } SCAN</pre>
+  <pre class="ajisai-expect-result">[ 1/1 3/1 6/1 10/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 </body>
 </html>

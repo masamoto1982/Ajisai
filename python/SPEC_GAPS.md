@@ -15,6 +15,19 @@ observable divergence.
 ## 1. COND clause collection and stack discipline — *high impact*
 **Sections 3.6, 7.7, 8.1.**
 
+> **RESOLVED (Section 7.7.1).** A new normative subsection *"7.7.1 Stack
+> signatures and consumption"* now fixes the COND contract in the same form as
+> the Section 7.1.1 vector-word contracts: COND consumes *all* consecutive
+> clause blocks on top of the stack, then consumes the subject beneath them;
+> each guard runs in isolation on a *fresh copy* of the subject (so a guard that
+> consumes it does not disturb later guards); the matched body runs in isolation
+> seeded with the subject and contributes exactly one value; `IDLE` is the else
+> clause; a U guard does not fire (Section 7.4.3); and exhaustion raises
+> `CondExhausted`. The subject *is* consumed — `[ 2 ] CLASSIFY → [ 200/1 ]`, not
+> `[ 2/1 ] [ 200/1 ]`. This port and the conformance suite (`core-cond-*`) now
+> match the implementation; the reference interpreter collects consecutive
+> clause blocks and consumes the subject accordingly.
+
 The spec says COND clauses are "separated by `|`", yet the only worked example
 (Section 8.1) writes each clause as its own `{ guard | body }` block followed by
 `COND`:
@@ -48,6 +61,17 @@ words) is needed.
 ## 2. VENT (`^`) behaviour when the top is **not** NIL — *high impact*
 **Section 6.4, 7.12, 11.2.**
 
+> **RESOLVED (Section 6.4).** Section 6.4 now specifies `VENT` (`^`) as a *lazy
+> control directive*, not a two-operand stack word. On a non-NIL top the value
+> is kept and the *following source unit* (one token, or one balanced `[ ]` /
+> `{ }` group) is skipped **unevaluated**; on a NIL top the NIL is discarded and
+> the following unit is evaluated as the fallback. The "next stack value"
+> wording is explicitly superseded. The normative traps are documented too:
+> only one source unit is skipped (`1 ^ 2 3 ADD → 4/1`), and a `{ }` fallback on
+> the NIL branch is pushed as a code block rather than run. This port and the
+> conformance suite (`core-vent-*`) implement the directive form: the fallback
+> after `^` is skipped on the non-NIL branch and evaluated on the NIL branch.
+
 "If the top of the stack is NIL, replace it with the next stack value." The spec
 defines only the NIL branch. It does not say whether the fallback (the next
 value) is consumed when the top is non-NIL. As a coalescing operator that should
@@ -57,6 +81,18 @@ diverges. A two-operand stack contract for VENT would settle it.
 
 ## 3. Higher-order word stack signatures are undefined — *high impact*
 **Section 7.7.**
+
+> **RESOLVED (Section 7.7.1).** The new Section 7.7.1 gives normative stack
+> signatures for every higher-order word: `vector block MAP`,
+> `vector block FILTER`, `vector init block FOLD`, `seed block UNFOLD`,
+> `vector block ANY` / `ALL`, `vector block COUNT` → `[ n ]`, and
+> `vector init block SCAN`. It fixes the argument order (accumulator init before
+> the block for FOLD/SCAN), what the block observes (`acc elem` for FOLD/SCAN),
+> the one-value-out rule, the one-element-vector unwrap for MAP/SCAN, the
+> per-word NIL-target results, and the UNFOLD generator protocol
+> (`state → [ element next-state ] | NIL`). The block argument may be a `{ ... }`
+> code block *or* a quoted word name. This port implements all eight words to
+> match (`core-map-block`, `core-fold-bare-init`, `core-unfold-generator`, etc.).
 
 Section 7.1.1 gives normative stack contracts for the vector words, but the
 control/higher-order words (`MAP FILTER FOLD UNFOLD ANY ALL COUNT SCAN`) get only
