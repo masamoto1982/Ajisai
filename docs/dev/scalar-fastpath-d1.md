@@ -1,7 +1,7 @@
 # D1 scalar-scalar fast path
 
 This note records the implementation of the D1 handoff in
-`handoff-d1-scalar-fastpath.md`. D1 is a value-model optimization: it does not
+`archive/handoff-d1-scalar-fastpath.md`. D1 is a value-model optimization: it does not
 change Ajisai's arithmetic or comparison semantics, only the route taken for the
 smallest StackTop scalar cases.
 

@@ -4,7 +4,7 @@
 
 - **対象**: 新しいセッションで Ajisai のランタイム辞書解決を **content-first** 化する改修を行う。
 - **正典**: `SPECIFICATION.html` のみ（§2.1）。本指示書は非正典の作業指示。
-- **前提分析**: `docs/dev/ajisai-dictionary-word-relationships-analysis.md`（同 PR）を必ず先に読むこと。
+- **前提分析**: `docs/dev/archive/ajisai-dictionary-word-relationships-analysis.md`（同 PR）を必ず先に読むこと。
   本書はその §6〜§7 の設計判断を実装に落とすためのもの。
 - **開発ブランチ**: 指示された feature ブランチで作業し、コミット・プッシュ後にドラフト PR を作る。
 - **スコープ順序**: **まず content-first の仕組みを作る**。Reference（学習向け派生ドキュメント）への
