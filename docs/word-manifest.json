@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 92,
+    "corewords": 97,
     "modulewords": 88,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 210
+    "total": 215
   },
   "entries": [
     {
@@ -301,6 +301,82 @@
       "coverage_entry_id": "core.nil",
       "semantic_role": "Primitive",
       "algebraic_family": "bubble",
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.nil-p",
+      "kind": "coreword",
+      "surface": "NIL?",
+      "category": "absence",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL?",
+      "coverage_entry_id": "core.nil-p",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.bubble.domain",
+        "algebra.k3.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.nil-reason",
+      "kind": "coreword",
+      "surface": "NIL-REASON",
+      "category": "absence",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL-REASON",
+      "coverage_entry_id": "core.nil-reason",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.nil-origin",
+      "kind": "coreword",
+      "surface": "NIL-ORIGIN",
+      "category": "absence",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL-ORIGIN",
+      "coverage_entry_id": "core.nil-origin",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.nil-recoverable",
+      "kind": "coreword",
+      "surface": "NIL-RECOVERABLE?",
+      "category": "absence",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL-RECOVERABLE?",
+      "coverage_entry_id": "core.nil-recoverable",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
+      "derived_from": [
+        "algebra.bubble.domain"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.nil-diagnosis",
+      "kind": "coreword",
+      "surface": "NIL-DIAGNOSIS",
+      "category": "absence",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "NIL-DIAGNOSIS",
+      "coverage_entry_id": "core.nil-diagnosis",
+      "semantic_role": "Derived",
+      "algebraic_family": "observation",
       "derived_from": [
         "algebra.bubble.domain"
       ],

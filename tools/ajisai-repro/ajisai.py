@@ -567,7 +567,10 @@ def w_div(it, mods):
     if fa is None or fb is None:
         raise AjisaiError("structureError", "DIV needs numbers")
     if fb == 0:
-        it.push(Nil(reason="divisionByZero", origin="nilPropagation")); return
+        # A direct division failure originates in the operation itself, not in a
+        # propagated NIL (origin = executionFailure, matching the production
+        # runtime observed through NIL-ORIGIN; SPEC §4.5.0 / §11.2).
+        it.push(Nil(reason="divisionByZero", origin="executionFailure")); return
     it.push(Rational(fa / fb))
 
 def w_mod(it, mods):
@@ -763,6 +766,50 @@ def w_false(it, mods): it.push(FALSE)
 def w_nil(it, mods): it.push(Nil())
 def w_idle(it, mods): pass
 def w_flow(it, mods): pass
+
+# Diagnostic absence accessors (Section 4.5.0 / 7.15) -----------------------
+# All five retain the inspected value on the stack and push their result above
+# it (inspection-word rule, Section 7.1.1). They act on operational NIL only:
+# the logical Unknown (U) is a Bool here, not a Nil, so it is never reported as
+# absent and its internal reason never leaks (Section 2.3 / 7.5 firewall).
+# Applied to a non-operational-NIL value, NIL? is FALSE and the other four are
+# NIL (Bubble Rule, Section 11.2), never an error.
+
+def _operational_nil_top(it):
+    """The retained top-of-stack value when it is an operational NIL, else None.
+    A NIL with no reason and origin 'literal' is still operational."""
+    it.need(1)
+    v = it.stack[-1]
+    return v if isinstance(v, Nil) else None
+
+def _recoverability(nil):
+    """Recoverability protocol string (Section 4.5.0). This reference models the
+    required field as: a reasonless (literal) NIL is 'unknown'; a reasoned
+    Bubble/NIL is 'recoverable' — consistent with the production runtime for the
+    division-by-zero and out-of-bounds bubbles the conformance suite observes."""
+    return "unknown" if nil.reason is None else "recoverable"
+
+def w_nil_check(it, mods):
+    it.need(1)
+    it.push(TRUE if isinstance(it.stack[-1], Nil) else FALSE)
+
+def w_nil_reason(it, mods):
+    nil = _operational_nil_top(it)
+    it.push(Str(nil.reason) if nil and nil.reason else Nil())
+
+def w_nil_origin(it, mods):
+    nil = _operational_nil_top(it)
+    it.push(Str(nil.origin) if nil else Nil())
+
+def w_nil_recoverable(it, mods):
+    nil = _operational_nil_top(it)
+    it.push(Str(_recoverability(nil)) if nil else Nil())
+
+def w_nil_diagnosis(it, mods):
+    # This reference does not attach a structured diagnosis object to operational
+    # NILs (Section 4.5.0 makes `diagnosis` optional), so the accessor yields NIL.
+    it.need(1)
+    it.push(Nil())
 
 # VENT (^) is not a stack word: it is a lazy control directive handled inline in
 # `run_tokens` (Section 6.4). The bare canonical name `VENT` is intentionally not
@@ -1254,6 +1301,8 @@ CORE = {
     "AND": w_and, "OR": w_or, "NOT": w_not,
     "TRUE": w_true, "FALSE": w_false, "NIL": w_nil, "IDLE": w_idle,
     "FLOW": w_flow,
+    "NIL?": w_nil_check, "NIL-REASON": w_nil_reason, "NIL-ORIGIN": w_nil_origin,
+    "NIL-RECOVERABLE?": w_nil_recoverable, "NIL-DIAGNOSIS": w_nil_diagnosis,
     "LENGTH": w_length, "GET": w_get, "CONCAT": w_concat, "REVERSE": w_reverse,
     "RANGE": w_range, "TAKE": w_take, "COLLECT": w_collect,
     "INSERT": w_insert, "REPLACE": w_replace, "REMOVE": w_remove,

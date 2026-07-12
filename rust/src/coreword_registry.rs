@@ -947,6 +947,56 @@ mod tests {
     }
 
     #[test]
+    fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
+        // SPEC §4.5.0 / §7.15: the five diagnostic absence accessors inspect a
+        // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
+        // VENT-family "inspect or branch on NIL" classification). They are pure,
+        // total, safety-A observations that retain their inspection target, so
+        // their mass contract is Dynamic (net +1, like the LENGTH/GET
+        // inspection words of §7.1.1 — a Fixed contract would mis-model the
+        // retained operand for the static depth analyzer).
+        for name in &[
+            "NIL?",
+            "NIL-REASON",
+            "NIL-ORIGIN",
+            "NIL-RECOVERABLE?",
+            "NIL-DIAGNOSIS",
+        ] {
+            let meta = get_coreword_metadata(name)
+                .unwrap_or_else(|| panic!("{} must be in registry", name));
+            assert_eq!(
+                meta.nil_policy,
+                NilPolicy::ConsumesNil,
+                "{} must be ConsumesNil (SPEC §4.5.0)",
+                name
+            );
+            assert_eq!(
+                meta.purity,
+                WordPurity::Pure,
+                "{} must be Pure (SPEC §7.15)",
+                name
+            );
+            assert_eq!(
+                meta.partiality,
+                Partiality::Total,
+                "{} must be Total — a well-formed observation never raises (SPEC §4.5.0)",
+                name
+            );
+            assert_eq!(
+                meta.safety_level,
+                SafetyLevel::A,
+                "{} must be SafetyLevel A (pure, total, deterministic)",
+                name
+            );
+            assert!(
+                matches!(meta.mass, super::MassContract::Dynamic),
+                "{} retains its inspection target, so its mass contract is Dynamic",
+                name
+            );
+        }
+    }
+
+    #[test]
     fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
         let registry = get_builtin_word_registry();
         for word in registry

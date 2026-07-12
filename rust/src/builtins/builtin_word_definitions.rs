@@ -88,6 +88,11 @@ pub enum BuiltinExecutorKey {
     Monitor,
     Supervise,
     Precompute,
+    NilCheck,
+    NilReason,
+    NilOrigin,
+    NilRecoverable,
+    NilDiagnosis,
 }
 
 // WordShape classifies how a word treats its data argument. Used by
@@ -452,6 +457,84 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "-> [ NIL ]",
         nil_policy: NilPolicy::PreservesReason,
+        ..SPEC_DEFAULT
+        },
+
+    // === Diagnostic absence accessors (SPEC §4.5.0 / §7.15) ===
+    // All five retain the inspected value on the stack and push their result
+    // above it, mirroring the LENGTH/GET inspection-word precedent of §7.1.1
+    // (a diagnostic observation is not a consumption). They gate on
+    // operational NIL only: the logical Unknown (U), which shares NIL storage,
+    // is never reported as absent (SPEC §2.3 / §7.5 firewall). Their
+    // nil_policy is ConsumesNil — they inspect NIL rather than propagate it.
+    BuiltinSpec {
+
+        name: "NIL?",
+        category: "absence",
+        hover_summary: "NIL? — test whether a value is absent",
+        hover_syntax: "1 0 / NIL?",
+        executor_key: Some(BuiltinExecutorKey::NilCheck),
+        summary: "Test whether the top value is an operational NIL (absent).",
+        role: "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (SPEC §4.5.0).",
+
+        stack_effect: "[ x ] -> [ x ] [ bool ]",
+        nil_policy: NilPolicy::ConsumesNil,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "NIL-REASON",
+        category: "absence",
+        hover_summary: "NIL-REASON — read the NIL reason protocol string",
+        hover_syntax: "1 0 / NIL-REASON",
+        executor_key: Some(BuiltinExecutorKey::NilReason),
+        summary: "Read the direct reason of an operational NIL as a protocol-string Text.",
+        role: "Diagnostic accessor: the lowerCamelCase reason protocol string (SPEC §4.5.0), or NIL when there is no reason or the value is not an operational NIL.",
+
+        stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
+        nil_policy: NilPolicy::ConsumesNil,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "NIL-ORIGIN",
+        category: "absence",
+        hover_summary: "NIL-ORIGIN — read the NIL origin protocol string",
+        hover_syntax: "1 0 / NIL-ORIGIN",
+        executor_key: Some(BuiltinExecutorKey::NilOrigin),
+        summary: "Read the origin of an operational NIL as a protocol-string Text.",
+        role: "Diagnostic accessor: the lowerCamelCase origin protocol string (a required field, so always Text for an operational NIL), or NIL when the value is not an operational NIL (SPEC §4.5.0).",
+
+        stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
+        nil_policy: NilPolicy::ConsumesNil,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "NIL-RECOVERABLE?",
+        category: "absence",
+        hover_summary: "NIL-RECOVERABLE? — read the NIL recoverability protocol string",
+        hover_syntax: "1 0 / NIL-RECOVERABLE?",
+        executor_key: Some(BuiltinExecutorKey::NilRecoverable),
+        summary: "Read the recoverability of an operational NIL as a protocol-string Text.",
+        role: "Diagnostic accessor: the lowerCamelCase recoverability protocol string (a required four-valued field, so returned as Text to stay consistent with SPEC §4.5.0, not as a two-valued boolean), or NIL when the value is not an operational NIL.",
+
+        stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
+        nil_policy: NilPolicy::ConsumesNil,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+
+        name: "NIL-DIAGNOSIS",
+        category: "absence",
+        hover_summary: "NIL-DIAGNOSIS — read the three-layer NIL diagnosis record",
+        hover_syntax: "1 0 / NIL-DIAGNOSIS",
+        executor_key: Some(BuiltinExecutorKey::NilDiagnosis),
+        summary: "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        role: "Diagnostic accessor: the structured diagnosis object (SPEC §4.5.0) as a Record, or NIL when there is no diagnosis or the value is not an operational NIL.",
+
+        stack_effect: "[ x ] -> [ x ] [ record|NIL ]",
+        nil_policy: NilPolicy::ConsumesNil,
         ..SPEC_DEFAULT
         },
 

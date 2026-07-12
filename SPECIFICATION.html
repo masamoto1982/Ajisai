@@ -760,7 +760,7 @@ Version: <strong>2026-07-01</strong></p>
 </table>
 </div>
 
-<p><code>NIL?</code> checks only whether a value is absent. It must not branch on <code>absence.reason</code>. Reason-specific code must use explicit diagnostic accessors such as <code>NIL-REASON</code> or <code>NIL-ORIGIN</code> or <code>NIL-RECOVERABLE?</code> or <code>NIL-DIAGNOSIS</code> when such words are available.</p>
+<p><code>NIL?</code> checks only whether a value is absent. It must not branch on <code>absence.reason</code>. Reason-specific code must use the explicit diagnostic accessors <code>NIL-REASON</code>, <code>NIL-ORIGIN</code>, <code>NIL-RECOVERABLE?</code>, and <code>NIL-DIAGNOSIS</code>. These five words are Canonical Core words normatively specified in Section 7.15; each reads one facet of this metadata as a protocol string (or, for <code>NIL-DIAGNOSIS</code>, as a Record) without consuming the value it inspects.</p>
 
 <p>The diagnostic object uses the existing three-layer model:</p>
 
@@ -1441,6 +1441,7 @@ Version: <strong>2026-07-01</strong></p>
 <tr><td>IO and utilities</td><td><code>PRINT</code> <code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code> <code>CSPRNG</code> <code>HASH</code></td></tr>
 <tr><td>Child runtime</td><td><code>SPAWN</code> <code>AWAIT</code> <code>STATUS</code> <code>KILL</code> <code>MONITOR</code> <code>SUPERVISE</code></td></tr>
 <tr><td>NIL coalescing</td><td><code>VENT</code> (<code>^</code>) itself, whose entire purpose is to react to NIL</td></tr>
+<tr><td>Diagnostic absence accessors</td><td><code>NIL?</code> <code>NIL-REASON</code> <code>NIL-ORIGIN</code> <code>NIL-RECOVERABLE?</code> <code>NIL-DIAGNOSIS</code> — these <em>handle</em> NIL (they inspect its metadata, Section 7.15), so a NIL operand is not passed through but observed</td></tr>
 </tbody>
 </table>
 </div>
@@ -1556,6 +1557,35 @@ Version: <strong>2026-07-01</strong></p>
 <p><code>IMPORT-ONLY</code> of a selector that is core-listed in the target module's view but not canonically owned by that module is a no-op: the word is already available as a Canonical Core word, so the selector is silently skipped with a single warning line. Selectors that match neither a canonical word nor a listing remain an error.</p>
 
 <p>A bare name may legitimately appear under more than one canonical home (for example core list <code>GET</code> and <code>JSON@GET</code>). In that case bare-name lookup resolves to the Canonical Core entry — matching the runtime's resolution order — while <code>MODULE@WORD</code> always reaches the module entry.</p>
+
+<h3 id="715-diagnostic-absence-accessors">7.15 Diagnostic absence accessors</h3>
+
+<p>The five words below are Canonical Core words that read the diagnostic metadata of Section 4.5.0 from a value on the stack. They are the normative means by which a program observes <em>why</em> a value is absent, so that a Bubble/NIL (Section 11.2) can be triaged rather than uniformly collapsed with a single <code>VENT</code> (<code>^</code>) fallback.</p>
+
+<p><strong>Observation, not consumption.</strong> All five <em>retain</em> the inspected value on the stack and push their result above it, following the inspection-word precedent of Section 7.1.1 (<code>LENGTH</code> and <code>GET</code> do not consume the vector they read). A diagnosis is an observation, not a consumption. Under <code>KEEP</code> the retained target is unaffected; there is nothing extra to bifurcate because the target is already retained. Their static flow-mass contract (Section 13.1) is therefore <code>Dynamic</code>, exactly as for the retain-source inspection words — a <code>Fixed</code> contract would mis-model the retained operand for the static depth analyzer.</p>
+
+<p><strong>Operational NIL only (firewall).</strong> The accessors act on <strong>operational</strong> absence only. The logical truth value <code>Unknown</code> (U, Section 7.5) shares NIL storage but is not an operational absence (Section 4.5.2); applied to U, <code>NIL?</code> yields <code>FALSE</code> and the other four yield NIL. In particular the internal <code>logicallyUnknown</code> reason that U carries is never observable through <code>NIL-REASON</code> — this preserves the Section 2.3 / Section 7.5 firewall that forbids inferring U from <code>semanticKind = absence</code> or from any <code>absence.reason</code>.</p>
+
+<p><strong>Bubble Rule consistency.</strong> Applied to a value that is not an operational NIL, <code>NIL?</code> yields <code>FALSE</code> and each of the other four is a well-formed operation that cannot produce a value, so it yields NIL (Section 11.2). None of the five raises on a well-formed input; only malformed use — an empty stack — raises <code>StackUnderflow</code>. Reason and diagnosis are optional metadata fields, so <code>NIL-REASON</code> and <code>NIL-DIAGNOSIS</code> also yield NIL when an operational NIL simply carries no reason (for example a literal NIL) or no attached diagnosis; origin and recoverability are required fields, so <code>NIL-ORIGIN</code> and <code>NIL-RECOVERABLE?</code> always yield a protocol-string Text for an operational NIL. The protocol strings are the lowerCamelCase forms of Section 4.5.0 (for example <code>divisionByZero</code>, <code>executionFailure</code>, <code>recoverable</code>) — never a host-language <code>Debug</code> rendering. <code>NIL-RECOVERABLE?</code> returns the four-valued recoverability field as Text to stay consistent with Section 4.5.0 rather than collapsing it to a two-valued boolean.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Word</th><th>Stack effect</th><th>Result on an operational NIL</th><th>Result otherwise (present value or U)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NIL?</code></td><td><code>[ x ] -&gt; [ x ] [ bool ]</code></td><td><code>TRUE</code></td><td><code>FALSE</code></td></tr>
+<tr><td><code>NIL-REASON</code></td><td><code>[ x ] -&gt; [ x ] [ text|NIL ]</code></td><td>the <code>reason</code> protocol string as Text, or NIL when there is no reason</td><td>NIL</td></tr>
+<tr><td><code>NIL-ORIGIN</code></td><td><code>[ x ] -&gt; [ x ] [ text|NIL ]</code></td><td>the <code>origin</code> protocol string as Text (a required field)</td><td>NIL</td></tr>
+<tr><td><code>NIL-RECOVERABLE?</code></td><td><code>[ x ] -&gt; [ x ] [ text|NIL ]</code></td><td>the <code>recoverability</code> protocol string as Text (a required field)</td><td>NIL</td></tr>
+<tr><td><code>NIL-DIAGNOSIS</code></td><td><code>[ x ] -&gt; [ x ] [ record|NIL ]</code></td><td>the three-layer <code>diagnosis</code> as a Record, or NIL when none is attached</td><td>NIL</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The <code>NIL-DIAGNOSIS</code> Record mirrors the diagnostic object of Section 4.5.0: string-valued <code>when</code>, <code>why</code>, <code>summary</code>; a nested <code>where</code> record (<code>kind</code>, and any of <code>word</code>, <code>module</code>, <code>dictionary</code>); an <code>evidence</code> vector of Text; a <code>nextChecks</code> vector of <code>{ label, detail }</code> records; and, when the diagnosis came from a continued-fraction comparison, the machine-readable <code>agreedPrefix</code> integer. Every string field is a Section 4.5.0 protocol string except <code>summary</code> and <code>evidence</code>, which are the non-canonical human-readable layer.</p>
+
+<p>Contract metadata (Section 7.14): each of the five is <code>Pure</code>, <code>Total</code>, <code>safety_level = A</code>, with <code>nil_policy = ConsumesNil</code> — the classification for a word that inspects or branches on NIL rather than propagating it.</p>
 
 <h2 id="8-user-words">8. User Words</h2>
 

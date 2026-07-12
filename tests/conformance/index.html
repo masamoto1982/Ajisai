@@ -110,6 +110,55 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-nil-reason-division-by-zero" data-category="core">
+  <h3>NIL-REASON reads the reason of a Bubble/NIL as a protocol string (§4.5.0/§7.15)</h3>
+  <pre class="ajisai-source">1 0 / NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-check-true-retains-source" data-category="core">
+  <h3>NIL? is TRUE for an operational NIL and retains the inspected value (§7.15)</h3>
+  <pre class="ajisai-source">1 0 / NIL?</pre>
+  <pre class="ajisai-expect-result">NIL TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-check-false-for-present-value" data-category="core">
+  <h3>NIL? is FALSE for a present value and retains it (§7.15)</h3>
+  <pre class="ajisai-source">5 NIL?</pre>
+  <pre class="ajisai-expect-result">5/1 FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-reason-present-value-is-nil" data-category="core">
+  <h3>NIL-REASON on a present value is NIL, never an error (Bubble Rule, §7.15)</h3>
+  <pre class="ajisai-source">5 NIL-REASON</pre>
+  <pre class="ajisai-expect-result">5/1 NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-origin-literal" data-category="core">
+  <h3>NIL-ORIGIN of a literal NIL is the required protocol string 'literal' (§4.5.0)</h3>
+  <pre class="ajisai-source">NIL NIL-ORIGIN</pre>
+  <pre class="ajisai-expect-result">NIL 'literal'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-recoverable-division-by-zero" data-category="core">
+  <h3>NIL-RECOVERABLE? returns the recoverability protocol string as Text (§4.5.0/§7.15)</h3>
+  <pre class="ajisai-source">1 0 / NIL-RECOVERABLE?</pre>
+  <pre class="ajisai-expect-result">NIL 'recoverable'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-diagnosis-absent-is-nil" data-category="core">
+  <h3>NIL-DIAGNOSIS is NIL when no diagnosis is attached (optional field, §4.5.0)</h3>
+  <pre class="ajisai-source">1 0 / NIL-DIAGNOSIS</pre>
+  <pre class="ajisai-expect-result">NIL NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-map" data-category="core">
   <h3>MAP applies a user block element-wise</h3>
   <pre class="ajisai-source">{ [ 2 ] * } 'DBL' DEF [ 1 2 3 ] 'DBL' MAP</pre>

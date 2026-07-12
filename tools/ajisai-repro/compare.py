@@ -113,6 +113,10 @@ INLINE_CORPUS = [
     "TRUE NOT", "FALSE NOT", "TRUE 1 EQ",
     # nil / bubble / vent
     "5 0 DIV", "5 0 DIV 99 ^", "5 0 DIV 1 ADD", "NIL", "NIL 7 ^", "42 7 ^",
+    # nil diagnostic accessors (SPEC §4.5.0 / §7.15)
+    "1 0 / NIL-REASON", "1 0 / NIL-ORIGIN", "1 0 / NIL-RECOVERABLE?",
+    "1 0 / NIL-DIAGNOSIS", "1 0 / NIL?", "5 NIL?", "5 NIL-REASON",
+    "NIL NIL-ORIGIN", "NIL NIL-RECOVERABLE?", "NIL NIL-REASON",
     # vectors
     "[ 1 2 3 ] LENGTH", "[ 1 2 3 ] 1 GET", "[ 1 2 3 ] 9 GET", "[ 1 2 3 ] -1 GET",
     "[ 1 2 3 ] REVERSE", "[ 1 2 ] [ 3 4 ] CONCAT", "0 5 RANGE",

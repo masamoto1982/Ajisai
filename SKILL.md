@@ -186,6 +186,11 @@ program (then the short name works), or can be called fully qualified.
 | `TRUE` | constant | Push the boolean TRUE onto the stack. — e.g. `TRUE` |
 | `FALSE` | constant | Push the boolean FALSE onto the stack. — e.g. `FALSE` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
+| `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
+| `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
+| `NIL-ORIGIN` | absence | Read the origin of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-ORIGIN` |
+| `NIL-RECOVERABLE?` | absence | Read the recoverability of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-RECOVERABLE?` |
+| `NIL-DIAGNOSIS` | absence | Read the three-layer debug diagnosis of an operational NIL as a Record. — e.g. `1 0 / NIL-DIAGNOSIS` |
 | `>CF` | conversion | Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2). — e.g. `2 MATH@SQRT >CF` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
