@@ -342,6 +342,22 @@ class Interp:
                 pending_mods += ["STAK", "KEEP"]; word = word[2:]
             elif word.startswith(";") and len(word) > 1:
                 pending_mods += ["TOP", "EAT"]; word = word[1:]
+            if word == "^":
+                # VENT (^) is a lazy NIL-coalescing control directive, not a
+                # stack word (Section 6.4). It pops the top; if it is non-NIL it
+                # is kept and the *following* source unit (one token, or one
+                # balanced [ ] / { } group) is skipped unevaluated; if it is NIL
+                # the NIL is discarded and the following unit is evaluated as the
+                # fallback. Modifiers on ^ are ignored.
+                pending_mods = []
+                self.need(1)
+                top = self.stack.pop()
+                if not isinstance(top, Nil):
+                    self.push(top)
+                    idx = self._skip_one_unit(toks, idx + 1)
+                    continue
+                idx += 1
+                continue
             canon = ALIAS.get(word, word).upper()
             if canon in ("TOP", "STAK", "EAT", "KEEP"):
                 pending_mods.append(canon); idx += 1; continue
@@ -350,6 +366,27 @@ class Interp:
             pending_mods = []
             idx += 1
         # trailing modifiers with no word: ignore (no-op markers)
+
+    def _skip_one_unit(self, toks, j):
+        """Return the index just past one source unit starting at `j`: a single
+        token, or one balanced [ ] / { } group. Used by VENT's non-NIL branch to
+        skip the fallback unevaluated (Section 6.4)."""
+        if j >= len(toks):
+            return j
+        kind, val = toks[j]
+        if kind == "sym" and val in "[{":
+            close = "]" if val == "[" else "}"
+            depth = 1
+            j += 1
+            while j < len(toks) and depth:
+                k2, v2 = toks[j]
+                if k2 == "sym" and v2 == val:
+                    depth += 1
+                elif k2 == "sym" and v2 == close:
+                    depth -= 1
+                j += 1
+            return j
+        return j + 1
 
     # ---- structural readers ----
     def read_vector(self, toks, idx):
@@ -466,30 +503,59 @@ def leftmost_nil_reason(ops):
             return o.reason
     return None
 
+def _arith_scalar_pair(name, fn, a, b):
+    """Exact arithmetic on a single scalar (or NIL) operand pair; returns a
+    value (Rational / Sqrt / Nil) or raises structureError."""
+    # NIL passthrough (Section 4.5.1 / 7.12)
+    if isinstance(a, Nil) or isinstance(b, Nil):
+        return Nil(reason=leftmost_nil_reason([a, b]), origin="nilPropagation")
+    fa, fb = as_fraction(a), as_fraction(b)
+    if fa is None or fb is None:
+        # Exact algebraic identities the spec's own examples rely on
+        # (sqrt x - sqrt x = 0 ; sqrt x * sqrt x = x). A fuller port would
+        # carry a general Gosper bihomographic engine here.
+        if isinstance(a, Sqrt) and isinstance(b, Sqrt) and a.radicand == b.radicand:
+            if name == "SUB":
+                return Rational(Fraction(0))
+            if name == "MUL":
+                return Rational(a.radicand)
+            if name == "ADD":
+                return Sqrt(a.radicand * 4)  # 2*sqrt(x)=sqrt(4x)
+        raise AjisaiError("structureError", f"{name} needs numbers")
+    try:
+        return Rational(fn(fa, fb))
+    except ZeroDivisionError:
+        return Nil(reason="divisionByZero", origin="nilPropagation")
+
+
+def _arith_broadcast(name, fn, a, b):
+    """Elementwise broadcast of a binary numeric op (exact vector broadcast):
+    scalar op vector, vector op scalar, and equal-length vector op vector all
+    map the scalar op over the elements and yield a vector; scalar op scalar is
+    the plain scalar case."""
+    av, bv = isinstance(a, Vec), isinstance(b, Vec)
+    if not av and not bv:
+        return _arith_scalar_pair(name, fn, a, b)
+    if av and bv:
+        if len(a.items) != len(b.items):
+            raise AjisaiError("structureError", f"{name} vector length mismatch")
+        return Vec([_arith_broadcast(name, fn, x, y)
+                    for x, y in zip(a.items, b.items)])
+    if av:
+        return Vec([_arith_broadcast(name, fn, x, b) for x in a.items])
+    return Vec([_arith_broadcast(name, fn, a, y) for y in b.items])
+
+
 def binop_arith(name, fn):
     def impl(it: Interp, mods):
         ops, keep = it.operands(mods, 2)
         a, b = ops[-2], ops[-1]
-        # NIL passthrough (Section 4.5.1 / 7.12)
+        # An operand that is itself NIL short-circuits the whole result
+        # (Section 4.5.1 / 7.12); per-element NIL inside a vector is handled by
+        # the scalar-pair helper during broadcast.
         if isinstance(a, Nil) or isinstance(b, Nil):
             it.push(Nil(reason=leftmost_nil_reason([a, b]), origin="nilPropagation")); return
-        fa, fb = as_fraction(a), as_fraction(b)
-        if fa is None or fb is None:
-            # Exact algebraic identities the spec's own examples rely on
-            # (sqrt x - sqrt x = 0 ; sqrt x * sqrt x = x). A fuller port would
-            # carry a general Gosper bihomographic engine here.
-            if isinstance(a, Sqrt) and isinstance(b, Sqrt) and a.radicand == b.radicand:
-                if name == "SUB":
-                    it.push(Rational(Fraction(0))); return
-                if name == "MUL":
-                    it.push(Rational(a.radicand)); return
-                if name == "ADD":
-                    it.push(Sqrt(a.radicand * 4)); return  # 2*sqrt(x)=sqrt(4x)
-            raise AjisaiError("structureError", f"{name} needs numbers")
-        try:
-            it.push(Rational(fn(fa, fb)))
-        except ZeroDivisionError:
-            it.push(Nil(reason="divisionByZero", origin="nilPropagation"))
+        it.push(_arith_broadcast(name, fn, a, b))
     return impl
 
 def w_div(it, mods):
@@ -582,6 +648,12 @@ def value_equal(a, b):
         return None if s == "U" else (s == 0)
     if isinstance(a, Str) and isinstance(b, Str):
         return a.s == b.s
+    # Scalar vs one-element vector unwraps and compares the element (Rust EQ
+    # one-element rule): 2 [ 2 ] EQ -> TRUE, but 2 [ 2 3 ] EQ -> FALSE.
+    if is_scalar(a) and isinstance(b, Vec):
+        return value_equal(a, b.items[0]) if len(b.items) == 1 else False
+    if isinstance(a, Vec) and is_scalar(b):
+        return value_equal(a.items[0], b) if len(a.items) == 1 else False
     if isinstance(a, Vec) and isinstance(b, Vec):
         if len(a.items) != len(b.items):
             return False
@@ -692,17 +764,10 @@ def w_nil(it, mods): it.push(Nil())
 def w_idle(it, mods): pass
 def w_flow(it, mods): pass
 
-def w_vent(it, mods):
-    # If top is NIL, replace with next value (Section 6.4)
-    it.need(1)
-    top = it.stack.pop()
-    if isinstance(top, Nil):
-        it.need(1)
-        # replace: pop the fallback and push it
-        fb = it.stack.pop()
-        it.push(fb)
-    else:
-        it.push(top)
+# VENT (^) is not a stack word: it is a lazy control directive handled inline in
+# `run_tokens` (Section 6.4). The bare canonical name `VENT` is intentionally not
+# a dictionary entry, matching the implementation (only the `^` surface form is
+# recognized).
 
 # vector words --------------------------------------------------------------
 
@@ -877,42 +942,178 @@ def w_join(it, mods):
     it.push(Str("".join(x.s if isinstance(x, Str) else output_render(x) for x in v.items)))
 
 # higher-order --------------------------------------------------------------
+#
+# Normative stack signatures: SPECIFICATION.html Section 7.7.1. The block
+# argument (top of stack) may be either a { ... } code block or a quoted word
+# name (a Text value naming a word), e.g. 'DBL' or '+'. Each block runs in an
+# isolated evaluation seeded with exactly the contract inputs.
 
-def run_block_on(it, block, value):
-    it.push(value); it.run_block(block)
+def _new_sub(it):
+    sub = Interp()
+    sub.user_words = it.user_words
+    sub.imported = it.imported
+    return sub
+
+def run_callable(sub, callable_val):
+    """Execute a block argument: a { ... } code block or a quoted word name."""
+    if isinstance(callable_val, Block):
+        sub.run_block(callable_val); return
+    if isinstance(callable_val, Str):
+        canon = ALIAS.get(callable_val.s, callable_val.s).upper()
+        sub.exec_word(canon, []); return
+    raise AjisaiError("structureError", "higher-order word needs a block or word name")
+
+def _is_callable(v):
+    return isinstance(v, (Block, Str))
+
+def _unwrap_one_element(v):
+    """A one-element vector result decays to its element (MAP/SCAN rule)."""
+    if isinstance(v, Vec) and len(v.items) == 1:
+        return v.items[0]
+    return v
+
+def _run_block_one(it, callable_val, *inputs):
+    """Run the block on a fresh stack seeded with `inputs`; return its single
+    top result (raising if it left nothing)."""
+    sub = _new_sub(it)
+    for x in inputs:
+        sub.push(x)
+    run_callable(sub, callable_val)
+    if not sub.stack:
+        raise AjisaiError("structureError", "higher-order block returned no value")
+    return sub.stack[-1]
+
+def _predicate_true(res):
+    """Interpret a predicate result as a definite truth (FILTER/ANY/ALL/COUNT).
+    A definite TRUE (bare, or one-element vector) fires; a truthy scalar fires;
+    FALSE / U / zero / NIL do not."""
+    if isinstance(res, Bool):
+        return res.v is True
+    if isinstance(res, Vec) and len(res.items) == 1:
+        return _predicate_true(res.items[0])
+    fa = as_fraction(res)
+    if fa is not None:
+        return fa != 0
+    return False
 
 def w_map(it, mods):
     ops, keep = it.operands(mods, 2)
     vec, blk = ops[-2], ops[-1]
-    if not isinstance(vec, Vec) or not isinstance(blk, Block):
-        raise AjisaiError("structureError", "MAP")
-    res = []
-    for x in vec.items:
-        sub = Interp(); sub.user_words = it.user_words; sub.imported = it.imported
-        sub.push(x); sub.run_block(blk)
-        res.append(sub.pop())
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "MAP needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(Nil()); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "MAP needs a vector")
+    res = [_unwrap_one_element(_run_block_one(it, blk, x)) for x in vec.items]
     it.push(Vec(res))
 
 def w_filter(it, mods):
     ops, keep = it.operands(mods, 2)
     vec, blk = ops[-2], ops[-1]
-    res = []
-    for x in vec.items:
-        sub = Interp(); sub.user_words = it.user_words; sub.imported = it.imported
-        sub.push(x); sub.run_block(blk)
-        r = sub.pop()
-        if isinstance(r, Bool) and r.v is True: res.append(x)
-    it.push(Vec(res))
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "FILTER needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(Nil()); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "FILTER needs a vector")
+    res = [x for x in vec.items if _predicate_true(_run_block_one(it, blk, x))]
+    it.push(Vec(res) if res else Nil())
 
 def w_fold(it, mods):
     ops, keep = it.operands(mods, 3)
     vec, init, blk = ops[-3], ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "FOLD needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(init); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "FOLD needs a vector")
     acc = init
     for x in vec.items:
-        sub = Interp(); sub.user_words = it.user_words; sub.imported = it.imported
-        sub.push(acc); sub.push(x); sub.run_block(blk)
-        acc = sub.pop()
+        acc = _run_block_one(it, blk, acc, x)   # block sees `acc elem`
     it.push(acc)
+
+def w_scan(it, mods):
+    ops, keep = it.operands(mods, 3)
+    vec, init, blk = ops[-3], ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "SCAN needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(Nil()); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "SCAN needs a vector")
+    acc = init
+    res = []
+    for x in vec.items:
+        acc = _run_block_one(it, blk, acc, x)
+        res.append(_unwrap_one_element(acc))
+    it.push(Vec(res) if res else Nil())
+
+def w_unfold(it, mods):
+    ops, keep = it.operands(mods, 2)
+    seed, blk = ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "UNFOLD needs a block or word name")
+    MAX_ITERATIONS = 10000
+    state = seed
+    res = []
+    for _ in range(MAX_ITERATIONS):
+        out = _run_block_one(it, blk, state)
+        if isinstance(out, Nil):
+            break
+        if isinstance(out, Vec) and len(out.items) == 2:
+            res.append(out.items[0])
+            nxt = out.items[1]
+            if isinstance(nxt, Nil):
+                break
+            state = Vec([nxt])
+            continue
+        raise AjisaiError("structureError",
+                          "UNFOLD expected [element, next_state] or NIL")
+    else:
+        raise AjisaiError("executionLimitExceeded", "UNFOLD non-termination")
+    it.push(Vec(res) if res else Nil())
+
+def w_any(it, mods):
+    ops, keep = it.operands(mods, 2)
+    vec, blk = ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "ANY needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(FALSE); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "ANY needs a vector")
+    for x in vec.items:
+        if _predicate_true(_run_block_one(it, blk, x)):
+            it.push(TRUE); return
+    it.push(FALSE)
+
+def w_all(it, mods):
+    ops, keep = it.operands(mods, 2)
+    vec, blk = ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "ALL needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(TRUE); return
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "ALL needs a vector")
+    for x in vec.items:
+        if not _predicate_true(_run_block_one(it, blk, x)):
+            it.push(FALSE); return
+    it.push(TRUE)
+
+def w_count(it, mods):
+    ops, keep = it.operands(mods, 2)
+    vec, blk = ops[-2], ops[-1]
+    if not _is_callable(blk):
+        raise AjisaiError("structureError", "COUNT needs a block or word name")
+    if isinstance(vec, Nil):
+        it.push(Rational(Fraction(0))); return   # bare scalar 0/1 on NIL target
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "COUNT needs a vector")
+    n = sum(1 for x in vec.items if _predicate_true(_run_block_one(it, blk, x)))
+    it.push(Vec([Rational(Fraction(n))]))         # [ n ] on a vector target
 
 def w_exec(it, mods):
     ops, keep = it.operands(mods, 1)
@@ -921,65 +1122,96 @@ def w_exec(it, mods):
     it.run_block(blk)
 
 def w_cond(it, mods):
-    ops, keep = it.operands(mods, 1)
-    blk = ops[-1]
-    if not isinstance(blk, Block): raise AjisaiError("structureError", "COND")
-    # each line inside is a clause: { guard | body } ; we stored as single line list
-    # Re-tokenize: clauses are separated by '|' tokens on each line.
-    clauses = split_cond_clauses(blk)
+    # Collect all consecutive CodeBlock clause values on top of the stack
+    # (source order), then consume the subject beneath them (Section 7.7.1).
+    blocks = []
+    while it.stack and isinstance(it.stack[-1], Block):
+        blocks.append(it.stack.pop())
+    blocks.reverse()
+    if not blocks:
+        raise AjisaiError("structureError", "COND expected clause blocks")
+    clauses = split_cond_blocks(blocks)
+    it.need(1)
+    subject = it.stack.pop()
+
+    else_body = None
     for guard_toks, body_toks in clauses:
-        if guard_toks is None:  # else clause (IDLE)
-            it.run_tokens(body_toks); return
-        # evaluate guard
-        sub_before = len(it.stack)
-        it.run_tokens(list(guard_toks))
-        g = it.pop()
-        if isinstance(g, Bool) and g.v is True:
-            it.run_tokens(list(body_toks)); return
-        # U or FALSE or NIL -> fall through
-    raise AjisaiError("condExhausted")
+        if guard_toks is None:            # IDLE / else clause
+            else_body = body_toks
+            continue
+        if eval_cond_guard(it, guard_toks, subject):
+            run_cond_body(it, body_toks, subject); return
+    if else_body is not None:
+        run_cond_body(it, else_body, subject); return
+    raise AjisaiError("condExhausted", "COND: all guards failed and no else clause")
 
-def split_cond_clauses(blk):
-    """Spec: clauses separated by | , each on one line. Our Block stores token
-    lines. A clause is { guard | body } subblocks, OR inline guard | body."""
-    clauses = []
+def _block_tokens(blk):
+    """Flatten a clause block's token lines into one token list."""
+    toks = []
     for line in blk.lines:
-        # line is list of (kind,val). A clause may itself be a {..} sub-block.
-        # Common form: each clause is a brace block containing  guard | body
-        i = 0
-        while i < len(line):
-            kind, val = line[i]
-            if kind == "sym" and val == "{":
-                depth = 1; j = i+1; inner = []
-                while j < len(line) and depth:
-                    k2, v2 = line[j]
-                    if k2 == "sym" and v2 == "{": depth += 1
-                    elif k2 == "sym" and v2 == "}":
-                        depth -= 1
-                        if depth == 0: break
-                    inner.append((k2, v2)); j += 1
-                # split inner by top-level |
-                clauses.append(parse_clause(inner))
-                i = j + 1
-            else:
-                i += 1
-    return clauses
+        toks.extend(line)
+    return toks
 
-def parse_clause(inner):
-    # split by | at depth 0
-    depth = 0; bar = None
-    for idx, (k, v) in enumerate(inner):
-        if k == "sym" and v in "[{": depth += 1
-        elif k == "sym" and v in "]}": depth -= 1
+def _is_idle_tokens(toks):
+    return len(toks) == 1 and toks[0][0] == "word" and toks[0][1].upper() == "IDLE"
+
+def _split_at_top_bar(toks):
+    depth = 0
+    for i, (k, v) in enumerate(toks):
+        if k == "sym" and v in "[{":
+            depth += 1
+        elif k == "sym" and v in "]}":
+            depth -= 1
         elif k == "sym" and v == "|" and depth == 0:
-            bar = idx; break
-    if bar is None:
-        return (None, inner)   # else clause
-    guard = inner[:bar]; body = inner[bar+1:]
-    # IDLE guard -> else
-    if len(guard) == 1 and guard[0][1].upper() == "IDLE":
-        return (None, body)
-    return (guard, body)
+            return toks[:i], toks[i+1:]
+    return None
+
+def split_cond_blocks(blocks):
+    """Split collected clause blocks into (guard_toks | None, body_toks) pairs.
+    Two styles: every clause is `{ guard | body }`, or every clause is a bare
+    `{ guard }` / `{ body }` pair. Styles may not be mixed (Section 7.7.1)."""
+    token_lists = [_block_tokens(b) for b in blocks]
+    bars = [_split_at_top_bar(t) for t in token_lists]
+    if all(b is not None for b in bars):
+        clauses = []
+        for guard, body in bars:
+            if _is_idle_tokens(guard):
+                clauses.append((None, body))
+            else:
+                clauses.append((guard, body))
+        return clauses
+    if all(b is None for b in bars):
+        if len(token_lists) % 2 != 0:
+            raise AjisaiError("structureError", "COND expected guard/body pairs")
+        clauses = []
+        for i in range(0, len(token_lists), 2):
+            guard, body = token_lists[i], token_lists[i+1]
+            if _is_idle_tokens(guard):
+                clauses.append((None, body))
+            else:
+                clauses.append((guard, body))
+        return clauses
+    raise AjisaiError("structureError", "COND: mixed clause styles are not allowed")
+
+def eval_cond_guard(it, guard_toks, subject):
+    """Run a guard in isolation on a fresh copy of the subject; a definite TRUE
+    fires. A U (unknown) guard does not fire (Section 7.4.3)."""
+    sub = _new_sub(it)
+    sub.push(subject)
+    sub.run_tokens(list(guard_toks))
+    if not sub.stack:
+        raise AjisaiError("structureError", "COND guard returned no value")
+    return _predicate_true(sub.stack[-1])
+
+def run_cond_body(it, body_toks, subject):
+    """Run the winning body in isolation seeded with the subject; push exactly
+    one value (the body's stack top) onto the caller's stack."""
+    sub = _new_sub(it)
+    sub.push(subject)
+    sub.run_tokens(list(body_toks))
+    if not sub.stack:
+        raise AjisaiError("structureError", "COND body must return a value")
+    it.push(sub.stack[-1])
 
 # def / del -----------------------------------------------------------------
 
@@ -1021,13 +1253,15 @@ CORE = {
     "EQ": comparison("EQ", DECIDERS["EQ"]), "NEQ": comparison("NEQ", DECIDERS["NEQ"]),
     "AND": w_and, "OR": w_or, "NOT": w_not,
     "TRUE": w_true, "FALSE": w_false, "NIL": w_nil, "IDLE": w_idle,
-    "FLOW": w_flow, "VENT": w_vent,
+    "FLOW": w_flow,
     "LENGTH": w_length, "GET": w_get, "CONCAT": w_concat, "REVERSE": w_reverse,
     "RANGE": w_range, "TAKE": w_take, "COLLECT": w_collect,
     "INSERT": w_insert, "REPLACE": w_replace, "REMOVE": w_remove,
     "SHAPE": w_shape, "RANK": w_rank,
     "STR": w_str, "NUM": w_num, "BOOL": w_bool, "CHR": w_chr, "CHARS": w_chars, "JOIN": w_join,
-    "MAP": w_map, "FILTER": w_filter, "FOLD": w_fold, "EXEC": w_exec, "COND": w_cond,
+    "MAP": w_map, "FILTER": w_filter, "FOLD": w_fold, "SCAN": w_scan,
+    "UNFOLD": w_unfold, "ANY": w_any, "ALL": w_all, "COUNT": w_count,
+    "EXEC": w_exec, "COND": w_cond,
     "DEF": w_def, "DEL": w_del, "PRINT": w_print, "IMPORT": w_import,
     # TOP/STAK/EAT/KEEP are handled as modifiers, not here.
 }
