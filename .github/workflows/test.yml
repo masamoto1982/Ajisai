@@ -70,6 +70,13 @@ jobs:
       - name: Semantic firewall
         run: npm run check:semantic-firewall
 
+      - name: Rust file-size budget (§14.1)
+        # Enforces the SPECIFICATION §14.1 500-line budget mechanically: new or
+        # substantially-rewritten Rust files must stay at or under 500 lines, and
+        # the recorded over-budget baseline (docs/quality/file-size-baseline.json)
+        # may not grow by >=10%. See scripts/check-file-size-budget.mjs.
+        run: npm run check:file-size
+
       - name: Verify source provenance attestation
         # Injection tripwire: the committed content-addressed attestation over the
         # trust-critical source surface must match the working tree, and the root
