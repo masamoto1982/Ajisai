@@ -1905,7 +1905,7 @@ Version: <strong>2026-07-01</strong></p>
 
 <ul>
 <li>Prefer explicit, structurally searchable function and module names.</li>
-<li>Keep Rust source files under 500 lines.</li>
+<li>Keep newly created Rust source files, and files that are substantially rewritten, at or under 500 lines. Existing over-budget files are recorded as a baseline (<code>docs/quality/file-size-baseline.json</code>) and, as a goal, must not be changed in ways that further increase their line count.</li>
 <li>Keep control flow shallow and phase-separated.</li>
 <li>Separate semantic changes from structural cleanup in change management.</li>
 <li>Maintain single canonical implementations; do not allow dual-mode drift.</li>
