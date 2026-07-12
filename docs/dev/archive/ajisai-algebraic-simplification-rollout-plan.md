@@ -182,7 +182,7 @@ diff must not change any conformance expectation.
 
 ## 5. Artifacts created or changed
 
-- `docs/dev/ajisai-algebraic-simplification-rollout-plan.md` (this file).
+- `docs/dev/archive/ajisai-algebraic-simplification-rollout-plan.md` (this file).
 - `scripts/generate-word-manifest.mjs` (new) and a manifest output.
 - `scripts/check-formalization-coverage.mjs` (extended: manifest cross-check,
   unclassified ratchet, registry reconciliation).
