@@ -62,8 +62,11 @@ fn non_square_radicand() -> impl Strategy<Value = i64> {
 /// operand in `+ 1` keeps it a composed Gosper node the comparison budget
 /// cannot distinguish from 0, so it renders `UNKNOWN`.
 pub fn unknown_src() -> impl Strategy<Value = String> {
+    // The bare relations are total over the admitted domain (SPEC §4.2.7 /
+    // §7.4), so U is produced through the explicit-budget COMPARE-WITHIN
+    // (§7.4.2): two equal composed operands never diverge within the budget.
     non_square_radicand().prop_map(|n| {
-        format!("'math' IMPORT {n} MATH@SQRT 1 ADD {n} MATH@SQRT 1 ADD SUB 0 EQ")
+        format!("'math' IMPORT {n} MATH@SQRT 1 ADD {n} MATH@SQRT 1 ADD 8 COMPARE-WITHIN")
     })
 }
 

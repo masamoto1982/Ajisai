@@ -218,10 +218,12 @@ async fn three_valued_or() {
 
 // --- Three-valued logic with the logical Unknown (SPEC §7.5, §4.5.2) ------
 
-/// Ajisai source that leaves the logical Unknown (U) on the stack: the
-/// comparison of two equal irrationals exhausts the partial-quotient
-/// budget (SPEC §7.4.1).
-const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
+/// Ajisai source that leaves the logical Unknown (U) on the stack. The bare
+/// relations are total over the admitted domain (SPEC §4.2.7 / §7.4), so U
+/// is produced through `COMPARE-WITHIN` — the explicit-budget word §7.4.2
+/// keeps as the observation window on comparison depth: two equal composed
+/// operands never diverge within the 8-quotient budget.
+const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
 
 fn is_unknown(v: &Value) -> bool {
     v.is_unknown()

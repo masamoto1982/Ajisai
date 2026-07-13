@@ -3736,11 +3736,20 @@ mod tests {
 
     #[test]
     fn boolean_wrappers_propagate_undecidable_as_none() {
-        // A composed lazy Gosper zero ((1 + √2) − (1 + √2)) compared
-        // against true zero cannot be resolved within the budget — no
-        // closed-form short-circuit applies to a Gosper operand — so
-        // every boolean wrapper surfaces `None`.
-        let a = composed_lazy_zero();
+        // A degenerate 1/0 transform (division by an exact lazy zero,
+        // built at the type level) is outside the §4.2.7 normal form's
+        // reach and its CF stream exhausts without emitting, so every
+        // boolean wrapper surfaces `None`. (A composed lazy Gosper *zero*
+        // now decides Equal via the normal form and no longer exercises
+        // this path.)
+        let lazy_zero = composed_lazy_zero();
+        let a = ExactReal::Gosper(Arc::new(Gosper::Mobius {
+            a: BigInt::zero(),
+            b: BigInt::one(),
+            c: BigInt::one(),
+            d: BigInt::zero(),
+            x: lazy_zero,
+        }));
         let b = rational(0, 1);
         assert_eq!(a.eq_with_budget(&b, BUDGET), None);
         assert_eq!(a.lt_with_budget(&b, BUDGET), None);

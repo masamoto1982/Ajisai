@@ -26,10 +26,11 @@ use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
-/// Source that yields the logical Unknown (U): ((√2+1) − (√2+1)) == 0 is
-/// undecidable within the comparison budget, so EQ emits U with an
-/// agreedPrefix. (Plain √2 − √2 now collapses to an exact 0 and decides.)
-const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
+/// Source that yields the logical Unknown (U). The bare relations are total
+/// over the admitted domain (SPEC §4.2.7 / §7.4), so U is produced through
+/// `COMPARE-WITHIN` (§7.4.2): two equal composed operands never diverge
+/// within the explicit 8-quotient budget, and the U carries an agreedPrefix.
+const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
 
 async fn run(code: &str) -> Result<Vec<Value>, String> {
     let mut interp = Interpreter::new();

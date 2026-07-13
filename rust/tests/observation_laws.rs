@@ -62,7 +62,9 @@ fn truth_value_is_observably_not_a_number() {
 fn nil_is_observably_operational_absence() {
     let nil = observe_axes(&run_one("NIL"));
     let false_value = observe_axes(&run_one("FALSE"));
-    let unknown = observe_axes(&run_one("'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD SUB 0 EQ"));
+    let unknown = observe_axes(&run_one(
+        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD 8 COMPARE-WITHIN",
+    ));
 
     assert_eq!(nil.semantic_kind, "absence");
     assert_eq!(nil.shape, "absence");
@@ -94,7 +96,7 @@ fn protocol_strings_are_lower_camel_case() {
         "[ 1 2 3 ]",
         "{ 1 ADD }",
         "'math' IMPORT 2 MATH@SQRT",
-        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD SUB 0 EQ",
+        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD 8 COMPARE-WITHIN",
     ] {
         for v in run(src) {
             let o = observe_axes(&v);

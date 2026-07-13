@@ -201,7 +201,10 @@ fn scan_yields_prefix_sums() {
 
 #[test]
 fn cond_u_guard_does_not_fire() {
-    let u_guard = "{ 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ }";
+    // The bare relations are total over the admitted domain (SPEC §4.2.7),
+    // so the U guard is produced through the explicit-budget COMPARE-WITHIN
+    // (§7.4.2): equal composed operands never diverge within the budget.
+    let u_guard = "{ 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN }";
     let prog = |guard: &str| {
         format!("'MATH' IMPORT [ 1 ] {guard} {{ 'fired' }} {{ IDLE }} {{ 'else' }} COND")
     };
