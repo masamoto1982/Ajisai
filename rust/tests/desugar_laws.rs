@@ -107,24 +107,19 @@ fn arithmetic_alias_preserves_nil_absence_metadata() {
 }
 
 #[test]
-fn comparison_alias_preserves_unknown_diagnosis() {
+fn comparison_alias_decides_composed_equality_identically() {
+    // The bare relations are total over the admitted domain (SPEC §4.2.7 /
+    // §7.4): (√2+1)−(√2+1) EQ 0 decides TRUE, and the `=` alias observes
+    // identically. (This law formerly pinned the UNKNOWN diagnosis here;
+    // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,
+    // which has no alias sugar to desugar.)
     let lhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
     let rhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
     let alias = observed(lhs);
     let canonical = observed(rhs);
     assert_eq!(alias, canonical);
     let top = alias.stack.last().expect("comparison leaves a value");
-    assert_eq!(top.axes.truth_value, Some("unknown"));
-    let absence = top
-        .axes
-        .absence
-        .as_ref()
-        .expect("logical UNKNOWN carries structured metadata");
-    assert_eq!(absence.reason, Some("logicallyUnknown"));
-    assert!(
-        absence.diagnosis.is_some(),
-        "UNKNOWN comparison should preserve AI-readable diagnosis"
-    );
+    assert_eq!(top.axes.truth_value, Some("true"));
     assert_eq!(alias.effects, canonical.effects);
     assert_eq!(alias.error_category, None);
 }

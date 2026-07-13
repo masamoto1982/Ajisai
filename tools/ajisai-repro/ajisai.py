@@ -67,6 +67,15 @@ class Sqrt:
     """Lazy sqrt of a non-negative rational (Section 4.2.2 AlgebraicSqrt)."""
     radicand: Fraction               # value is sqrt(radicand)
 
+@dataclass
+class Alg:
+    """A non-rational, non-single-root element of the admitted domain D
+    (Section 4.2.7) in multiquadratic normal form: a map from square-root
+    monomial (an integer product of pairwise-coprime basis elements; 1 keys
+    the rational part) to its non-zero rational coefficient. Values that
+    demote to Rational or Sqrt never stay in this class (see _alg_demote)."""
+    terms: dict                      # {int monomial: Fraction coeff}
+
 class AjisaiError(Exception):
     def __init__(self, kind, msg=""):
         super().__init__(msg or kind); self.kind = kind
@@ -115,7 +124,9 @@ def sqrt_cf_terms(radicand: Fraction, limit: int):
         terms.append(a)
     return terms
 
-CF_DISPLAY_BUDGET = 30
+# 32 terms, matching the production CF display budget (the conformance
+# suite pins the exact term count of the truncated lazy rendering).
+CF_DISPLAY_BUDGET = 32
 
 def cf_terms(val, limit=CF_DISPLAY_BUDGET):
     if isinstance(val, Rational):
@@ -136,16 +147,13 @@ def cf_nested_display(val):
         return build_nested(terms, truncated=True)
 
 def build_nested(terms, truncated):
-    # ( a0 ( a1 ( a2 ... ) ) )  ; truncated lazy CF ends with ...)
-    s = "...)" if truncated else None
-    # build right to left
-    rev = list(reversed(terms))
+    # ( a0 ( a1 ( a2 ) ) ) ; a truncated lazy CF renders its innermost term
+    # as "( aN ...)" — the ")" of "...)" is that term's own closer, matching
+    # the production rendering exactly.
     acc = ""
-    if truncated:
-        acc = "...)"
-    for i, t in enumerate(rev):
+    for t in reversed(terms):
         if acc == "":
-            acc = f"( {t} )"
+            acc = f"( {t} ...)" if truncated else f"( {t} )"
         else:
             acc = f"( {t} {acc} )"
     return acc
@@ -166,10 +174,239 @@ def num_value(val):
     if isinstance(val, Sqrt): return val
     return None
 
-# For arithmetic we keep rationals exact; sqrt mixed with rationals is kept
-# symbolic only where the spec's examples need it (sqrt2 - sqrt2 = 0).
+def is_scalar(v): return isinstance(v, (Rational, Sqrt, Alg))
 
-def is_scalar(v): return isinstance(v, (Rational, Sqrt))
+# --------------------------------------------------------------------------
+# Multiquadratic normal form over the admitted domain D (Section 4.2.7)
+#
+# Mirror of rust/src/types/multiquadratic.rs: every value the current
+# Coreword set constructs lies in Q(sqrt(d1), sqrt(d2), ...), whose elements
+# have a unique normal form sum(c_d * sqrt(d)). Equality and order over D
+# are decided exactly and totally on that form (Section 7.4), which is why
+# the six relations never return UNKNOWN over D. Radicands are refined into
+# a GCD-free basis (pairwise coprime, none a perfect square) instead of
+# factored into primes, so no unbounded factorization is ever needed.
+# --------------------------------------------------------------------------
+
+def _gcd_free_basis(rads):
+    """Pairwise-coprime, non-perfect-square integers covering every radicand."""
+    elems = sorted({int(r) for r in rads if r > 1})
+    while True:
+        found = None
+        for i in range(len(elems)):
+            for j in range(i + 1, len(elems)):
+                if _math.gcd(elems[i], elems[j]) > 1:
+                    found = (i, j)
+                    break
+            if found:
+                break
+        if not found:
+            break
+        i, j = found
+        a, b = elems[i], elems[j]
+        g = _math.gcd(a, b)
+        rest = [e for k, e in enumerate(elems) if k not in (i, j)]
+        for part in (g, a // g, b // g):
+            if part > 1 and part not in rest:
+                rest.append(part)
+        elems = sorted(rest)
+    out = []
+    for e in elems:
+        while _math.isqrt(e) ** 2 == e:
+            e = _math.isqrt(e)
+        out.append(e)
+    return sorted(out)
+
+def _decompose_sqrt(n, basis):
+    """sqrt(n) = outside * sqrt(monomial) over the basis."""
+    rest, outside, mono = int(n), 1, 1
+    for b in basis:
+        e = 0
+        while rest % b == 0:
+            rest //= b
+            e += 1
+        outside *= b ** (e // 2)
+        if e % 2:
+            mono *= b
+    if rest != 1:
+        raise AjisaiError("structureError", "radicand outside basis")
+    return outside, mono
+
+def _collect_rads(v, out):
+    if isinstance(v, Sqrt):
+        out.append(v.radicand.numerator * v.radicand.denominator)
+    elif isinstance(v, Alg):
+        out.extend(m for m in v.terms if m > 1)
+
+def _terms_of(v, basis):
+    if isinstance(v, Rational):
+        return {1: v.f} if v.f != 0 else {}
+    if isinstance(v, Sqrt):
+        # sqrt(p/q) = sqrt(p*q)/q
+        p, q = v.radicand.numerator, v.radicand.denominator
+        outside, mono = _decompose_sqrt(p * q, basis)
+        return {mono: Fraction(outside, q)}
+    out = {}
+    for m, c in v.terms.items():
+        if m == 1:
+            _t_addterm(out, 1, c)
+        else:
+            outside, mono = _decompose_sqrt(m, basis)
+            _t_addterm(out, mono, c * outside)
+    return out
+
+def _t_addterm(t, mono, coeff):
+    s = t.get(mono, Fraction(0)) + coeff
+    if s == 0:
+        t.pop(mono, None)
+    else:
+        t[mono] = s
+
+def _t_add(ta, tb):
+    out = dict(ta)
+    for m, c in tb.items():
+        _t_addterm(out, m, c)
+    return out
+
+def _t_sub(ta, tb):
+    out = dict(ta)
+    for m, c in tb.items():
+        _t_addterm(out, m, -c)
+    return out
+
+def _t_mul(ta, tb):
+    # sqrt(m1)*sqrt(m2) = g*sqrt(m1*m2/g^2) with g = gcd(m1, m2), again a
+    # subset-product monomial because the basis is pairwise coprime.
+    out = {}
+    for m1, c1 in ta.items():
+        for m2, c2 in tb.items():
+            g = _math.gcd(m1, m2)
+            _t_addterm(out, (m1 // g) * (m2 // g), c1 * c2 * g)
+    return out
+
+def _t_inverse(terms, basis):
+    """Multiplicative inverse by recursive conjugation; raises
+    ZeroDivisionError on the zero value. Splitting y = u + v on a basis
+    element b (v = terms whose monomial contains b), y*(u-v) = u^2 - v^2
+    has no b in its support, so each step eliminates one basis element."""
+    if not terms:
+        raise ZeroDivisionError
+    if len(terms) == 1 and 1 in terms:
+        return {1: 1 / terms[1]}
+    b = next(bb for bb in basis if any(m % bb == 0 for m in terms))
+    with_b = {m: c for m, c in terms.items() if m % b == 0}
+    without_b = {m: c for m, c in terms.items() if m % b != 0}
+    conj = _t_sub(without_b, with_b)
+    prod = _t_mul(terms, conj)
+    return _t_mul(conj, _t_inverse(prod, basis))
+
+def _t_bounds(terms, bits):
+    """Rational enclosure at 2^-bits per-monomial precision (no floats)."""
+    lo = Fraction(0)
+    hi = Fraction(0)
+    scale = 1 << bits
+    for m, c in terms.items():
+        if m == 1:
+            lo += c
+            hi += c
+            continue
+        s = _math.isqrt(m << (2 * bits))
+        mlo, mhi = Fraction(s, scale), Fraction(s + 1, scale)
+        if c >= 0:
+            lo += c * mlo
+            hi += c * mhi
+        else:
+            lo += c * mhi
+            hi += c * mlo
+    return lo, hi
+
+def _t_sign(terms):
+    """Exact sign. A non-empty normal form is non-zero (square roots of
+    distinct subset products are linearly independent over Q), so interval
+    refinement always terminates."""
+    if not terms:
+        return 0
+    if len(terms) == 1:
+        c = next(iter(terms.values()))
+        return 1 if c > 0 else -1
+    bits = 8
+    while True:
+        lo, hi = _t_bounds(terms, bits)
+        if lo > 0:
+            return 1
+        if hi < 0:
+            return -1
+        bits *= 2
+
+def _t_floor(terms):
+    if all(m == 1 for m in terms):
+        return _math.floor(terms.get(1, Fraction(0)))
+    bits = 8
+    while True:
+        lo, hi = _t_bounds(terms, bits)
+        fl, fh = _math.floor(lo), _math.floor(hi)
+        if fl == fh:
+            return fl
+        bits *= 2
+
+def _alg_demote(terms):
+    """Re-tag a normal form as the canonical value kind: Rational for the
+    rational case, Sqrt for a single positive-coefficient root, Alg else."""
+    terms = {m: c for m, c in terms.items() if c != 0}
+    if not terms:
+        return Rational(Fraction(0))
+    if len(terms) == 1:
+        (m, c), = terms.items()
+        if m == 1:
+            return Rational(c)
+        if c > 0:
+            return Sqrt(c * c * m)  # c*sqrt(m) = sqrt(c^2 * m)
+    return Alg(terms)
+
+def alg_binop(name, a, b):
+    """Field arithmetic over D for at least one non-rational scalar operand.
+    Raises ZeroDivisionError for DIV by the exact zero."""
+    rads = []
+    _collect_rads(a, rads)
+    _collect_rads(b, rads)
+    basis = _gcd_free_basis(rads)
+    ta, tb = _terms_of(a, basis), _terms_of(b, basis)
+    if name == "ADD":
+        res = _t_add(ta, tb)
+    elif name == "SUB":
+        res = _t_sub(ta, tb)
+    elif name == "MUL":
+        res = _t_mul(ta, tb)
+    elif name == "DIV":
+        res = _t_mul(ta, _t_inverse(tb, basis))
+    else:
+        raise AjisaiError("structureError", f"{name} over algebraic operands")
+    return _alg_demote(res)
+
+def alg_rcf_terms(v, limit):
+    """Regular CF terms of an (irrational) Alg value via exact field
+    arithmetic: a_k = floor(x_k), x_{k+1} = 1/(x_k - a_k)."""
+    rads = []
+    _collect_rads(v, rads)
+    basis = _gcd_free_basis(rads)
+    cur = _terms_of(v, basis)
+    out = []
+    for _ in range(limit):
+        a = _t_floor(cur)
+        out.append(a)
+        _t_addterm(cur, 1, Fraction(-a))
+        if not cur:
+            break  # defensive: an Alg value is irrational by demotion
+        cur = _t_inverse(cur, basis)
+    return out
+
+def value_rcf_terms(v, limit):
+    """(terms, finite) of any admitted-domain scalar's regular CF."""
+    if isinstance(v, Rational):
+        return rcf_terms_rational(v.f.numerator, v.f.denominator), True
+    if isinstance(v, Sqrt):
+        return sqrt_cf_terms(v.radicand, limit), False
+    return alg_rcf_terms(v, limit), False
 
 # --------------------------------------------------------------------------
 # Tokenizer (Section 3)
@@ -475,6 +712,8 @@ def display(v):
         return f"{v.f.numerator}/{v.f.denominator}"
     if isinstance(v, Sqrt):
         return build_nested(sqrt_cf_terms(v.radicand, CF_DISPLAY_BUDGET), truncated=True)
+    if isinstance(v, Alg):
+        return build_nested(alg_rcf_terms(v, CF_DISPLAY_BUDGET), truncated=True)
     if isinstance(v, Bool):
         return {True: "TRUE", False: "FALSE", "U": "UNKNOWN"}[v.v]
     if isinstance(v, Nil):
@@ -511,16 +750,12 @@ def _arith_scalar_pair(name, fn, a, b):
         return Nil(reason=leftmost_nil_reason([a, b]), origin="nilPropagation")
     fa, fb = as_fraction(a), as_fraction(b)
     if fa is None or fb is None:
-        # Exact algebraic identities the spec's own examples rely on
-        # (sqrt x - sqrt x = 0 ; sqrt x * sqrt x = x). A fuller port would
-        # carry a general Gosper bihomographic engine here.
-        if isinstance(a, Sqrt) and isinstance(b, Sqrt) and a.radicand == b.radicand:
-            if name == "SUB":
-                return Rational(Fraction(0))
-            if name == "MUL":
-                return Rational(a.radicand)
-            if name == "ADD":
-                return Sqrt(a.radicand * 4)  # 2*sqrt(x)=sqrt(4x)
+        # Admitted-domain algebraic arithmetic (Section 4.2.7): D is closed
+        # under + - * /, so any mix of Rational/Sqrt/Alg operands stays in
+        # normal form (this subsumes the historical special cases
+        # sqrt x - sqrt x = 0, sqrt x * sqrt x = x, sqrt x + sqrt x = sqrt 4x).
+        if is_scalar(a) and is_scalar(b):
+            return alg_binop(name, a, b)
         raise AjisaiError("structureError", f"{name} needs numbers")
     try:
         return Rational(fn(fa, fb))
@@ -565,6 +800,16 @@ def w_div(it, mods):
         it.push(Nil(reason=leftmost_nil_reason([a, b]), origin="nilPropagation")); return
     fa, fb = as_fraction(a), as_fraction(b)
     if fa is None or fb is None:
+        # Admitted-domain division (Section 4.2.7): D is a field, so the
+        # quotient stays in normal form. A Sqrt/Alg divisor is never zero
+        # (exact zeros demote to Rational 0 and are caught below);
+        # ZeroDivisionError is kept as a defensive projection.
+        if is_scalar(a) and is_scalar(b):
+            try:
+                it.push(alg_binop("DIV", a, b))
+            except ZeroDivisionError:
+                it.push(Nil(reason="divisionByZero", origin="executionFailure"))
+            return
         raise AjisaiError("structureError", "DIV needs numbers")
     if fb == 0:
         # A direct division failure originates in the operation itself, not in a
@@ -613,29 +858,19 @@ def cmp_sign(a: Fraction, b: Fraction):
     return 0
 
 def cmp_values(a, b):
-    """Return -1/0/1, or 'U' if undecidable. NIL handled by caller."""
+    """Return the exact -1/0/1 order. Comparison over the admitted domain D
+    is total and exact (Section 4.2.7 / 7.4): the sign of the difference is
+    decided on the multiquadratic normal form, never on a budgeted CF
+    prefix, so 'U' is unreachable for any current-Coreword operands. NIL is
+    handled by the caller."""
     fa, fb = as_fraction(a), as_fraction(b)
     if fa is not None and fb is not None:
         return cmp_sign(fa, fb)
-    # sqrt vs sqrt or sqrt vs rational: compare by CF prefix within budget
-    BUD = 64
-    ta = sqrt_cf_terms(a.radicand, BUD) if isinstance(a, Sqrt) else rcf_terms_rational(fa.numerator, fa.denominator)
-    tb = sqrt_cf_terms(b.radicand, BUD) if isinstance(b, Sqrt) else rcf_terms_rational(fb.numerator, fb.denominator)
-    for k in range(min(len(ta), len(tb))):
-        if ta[k] != tb[k]:
-            # CF comparison: even index -> larger term means larger value
-            d = 1 if ta[k] > tb[k] else -1
-            return d if k % 2 == 0 else -d
-    # one is prefix of the other
-    if len(ta) == len(tb):
-        # identical within budget but lazy -> undecidable
-        if isinstance(a, Sqrt) and isinstance(b, Sqrt) and a.radicand == b.radicand:
-            return 0
-        return "U"
-    # finite (shorter) decided
-    longer_a = len(ta) > len(tb)
-    k = min(len(ta), len(tb))
-    return "U"
+    rads = []
+    _collect_rads(a, rads)
+    _collect_rads(b, rads)
+    basis = _gcd_free_basis(rads)
+    return _t_sign(_t_sub(_terms_of(a, basis), _terms_of(b, basis)))
 
 def value_equal(a, b):
     """Exact value identity (Section 4.2.4). Distinct value kinds are never
@@ -716,6 +951,54 @@ DECIDERS = {
     "GT": lambda s: s > 0, "GTE": lambda s: s >= 0,
     "EQ": lambda s: s == 0, "NEQ": lambda s: s != 0,
 }
+
+def w_compare_within(it, mods):
+    """COMPARE-WITHIN (Section 7.4.2): three-way compare under an explicit
+    partial-quotient budget. Unlike the six bare relations — total and exact
+    over the admitted domain D (Section 4.2.7) — this word deliberately keeps
+    budget semantics: it is the one current-Coreword observation window on
+    comparison depth, so equal lazily-composed operands whose CF streams
+    never diverge yield the logical UNKNOWN at any budget."""
+    keep = "KEEP" in mods
+    it.need(3)
+    budget_v, b_v, a_v = it.stack[-1], it.stack[-2], it.stack[-3]
+    fbud = as_fraction(budget_v)
+    if fbud is None or fbud.denominator != 1 or fbud <= 0:
+        raise AjisaiError("structureError", "COMPARE-WITHIN needs a positive integer budget")
+    budget = int(fbud)
+    if isinstance(a_v, Nil) or isinstance(b_v, Nil):
+        if not keep:
+            del it.stack[-3:]
+        it.push(Nil(reason=leftmost_nil_reason([a_v, b_v]), origin="nilPropagation"))
+        return
+    if not (is_scalar(a_v) and is_scalar(b_v)):
+        raise AjisaiError("structureError", "COMPARE-WITHIN needs numbers")
+    fa, fb = as_fraction(a_v), as_fraction(b_v)
+    if not keep:
+        del it.stack[-3:]
+    if fa is not None and fb is not None:
+        # Two finite CFs always decide, regardless of budget.
+        it.push(Rational(Fraction(cmp_sign(fa, fb))))
+        return
+    s = cmp_values(a_v, b_v)  # exact sign, used only to orient a divergence
+    if s == 0:
+        # Equal values' CF streams never diverge within any budget.
+        it.push(UNKNOWN)
+        return
+    ta, _ = value_rcf_terms(a_v, budget)
+    tb, _ = value_rcf_terms(b_v, budget)
+    for k in range(budget):
+        in_a, in_b = k < len(ta), k < len(tb)
+        if in_a and in_b:
+            if ta[k] != tb[k]:
+                it.push(Rational(Fraction(s)))
+                return
+        elif in_a != in_b:
+            it.push(Rational(Fraction(s)))
+            return
+        else:
+            break
+    it.push(UNKNOWN)
 
 # logic (K3) ----------------------------------------------------------------
 
@@ -1298,6 +1581,7 @@ CORE = {
     "LT": comparison("LT", DECIDERS["LT"]), "LTE": comparison("LTE", DECIDERS["LTE"]),
     "GT": comparison("GT", DECIDERS["GT"]), "GTE": comparison("GTE", DECIDERS["GTE"]),
     "EQ": comparison("EQ", DECIDERS["EQ"]), "NEQ": comparison("NEQ", DECIDERS["NEQ"]),
+    "COMPARE-WITHIN": w_compare_within,
     "AND": w_and, "OR": w_or, "NOT": w_not,
     "TRUE": w_true, "FALSE": w_false, "NIL": w_nil, "IDLE": w_idle,
     "FLOW": w_flow,

@@ -668,14 +668,15 @@ mod ai_first_comparison_tests {
     }
 
     #[tokio::test]
-    async fn equal_irrationals_compare_unknown() {
-        // (√2 + 1) − (√2 + 1) is, structurally, a composed Gosper node the
-        // budget cannot distinguish from 0; EQ / LT against 0 therefore yield
-        // Unknown (U). (Plain √2 − √2 now collapses to an exact 0 in closed
-        // form and would decide, so it no longer exercises the U path.)
-        for code in [
-            "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ",
-            "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT",
+    async fn equal_composed_irrationals_decide_exactly() {
+        // (√2 + 1) − (√2 + 1) is a composed Gosper node whose CF streams
+        // never diverge from 0, but it is an admitted-domain element
+        // (SPEC §4.2.7), so the bare relations decide it exactly via the
+        // multiquadratic normal form: never Unknown (SPEC §7.4).
+        for (code, expected) in [
+            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ", "TRUE"),
+            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT", "FALSE"),
+            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LTE", "TRUE"),
         ] {
             let mut interp = Interpreter::new();
             interp
@@ -683,9 +684,8 @@ mod ai_first_comparison_tests {
                 .await
                 .unwrap();
             let v = &interp.get_stack()[0];
-            assert!(v.is_unknown(), "`{code}` must be the logical Unknown");
-            assert_eq!(v.truth_value(), Some("unknown"), "`{code}`");
-            assert_eq!(format!("{}", v), "UNKNOWN", "`{code}`");
+            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
+            assert_eq!(format!("{}", v), expected, "`{code}`");
         }
     }
 
@@ -1557,10 +1557,12 @@ mod continued_fraction_role_tests {
 }
 
 /// SPEC §7.4.3 — propagation of the logical `Unknown` (U) through the
-/// comparison-dependent words `MIN`, `MAX`, `SORT`, and `COND`. The
-/// U-producing idiom is `2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 <cmp>`: (√2+1)−(√2+1)
-/// is a composed Gosper node the budget cannot distinguish from 0, so any
-/// comparison against 0 yields U. (Plain √2−√2 now collapses to an exact 0.)
+/// comparison-dependent words `MIN`, `MAX`, `SORT`, and `COND`. Comparison
+/// is total and exact over the admitted domain \(D\) (SPEC §4.2.7), so a
+/// current-Coreword operand can no longer make these words emit U; the
+/// undecidable cases below use a synthetic lazy value outside \(D\)'s
+/// normal-form reach as the stand-in for the future lazy domain of
+/// SPEC §7.4.1.
 #[cfg(test)]
 mod u_propagation_tests {
     use crate::interpreter::Interpreter;
@@ -1573,6 +1575,33 @@ mod u_propagation_tests {
 
     fn top(interp: &Interpreter) -> &crate::types::Value {
         interp.get_stack().last().expect("non-empty stack")
+    }
+
+    /// A synthetic lazy value outside the admitted domain \(D\): a raw
+    /// Möbius `1/x` over an exact lazy zero, i.e. the degenerate transform
+    /// `ExactReal::div`'s zero test exists to prevent, constructed directly
+    /// at the type level. Its CF stream exhausts without emitting, so every
+    /// comparison against it stays undecidable — exactly the future
+    /// lazy-domain shape §7.4.3's U-propagation contract governs.
+    fn out_of_domain_lazy_value() -> crate::types::Value {
+        use crate::types::continued_fraction::{ExactReal, Gosper};
+        use crate::types::fraction::Fraction;
+        use num_bigint::BigInt;
+        use num_traits::{One, Zero};
+        use std::sync::Arc;
+        let sqrt = |n: i64| {
+            ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(n), BigInt::one()))
+                .expect("positive radicand")
+        };
+        let lazy_zero = sqrt(2).add(&sqrt(3)).sub(&sqrt(3).add(&sqrt(2)));
+        let degenerate = ExactReal::Gosper(Arc::new(Gosper::Mobius {
+            a: BigInt::zero(),
+            b: BigInt::one(),
+            c: BigInt::one(),
+            d: BigInt::zero(),
+            x: lazy_zero,
+        }));
+        crate::types::Value::from_exact_real(degenerate)
     }
 
     // ── MIN / MAX ────────────────────────────────────────────────────────
@@ -1591,7 +1620,10 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn min_on_undecidable_yields_unknown_with_prefix() {
-        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 MIN").await;
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT").await.unwrap();
+        interp.stack.push(out_of_domain_lazy_value());
+        interp.execute("0 MIN").await.unwrap();
         let v = top(&interp);
         assert!(
             v.is_unknown(),
@@ -1608,7 +1640,10 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn max_on_undecidable_yields_unknown() {
-        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 MAX").await;
+        let mut interp = Interpreter::new();
+        interp.execute("'math' IMPORT").await.unwrap();
+        interp.stack.push(out_of_domain_lazy_value());
+        interp.execute("0 MAX").await.unwrap();
         assert!(top(&interp).is_unknown());
     }
 
@@ -1639,10 +1674,12 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn sort_with_undecidable_pair_yields_unknown_not_partial() {
-        // Build a runtime vector containing √2−√2 and 0 via stack-mode SORT;
-        // the undecidable pair makes the whole order unestablished ⇒ U.
-        let interp =
-            run("'algo' IMPORT 'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 .. SORT").await;
+        // Stack-mode SORT over an out-of-domain lazy value and 0: the
+        // undecidable pair makes the whole order unestablished ⇒ U.
+        let mut interp = Interpreter::new();
+        interp.execute("'algo' IMPORT 'math' IMPORT").await.unwrap();
+        interp.stack.push(out_of_domain_lazy_value());
+        interp.execute("0 .. SORT").await.unwrap();
         let v = top(&interp);
         assert!(
             v.is_unknown(),

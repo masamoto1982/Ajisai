@@ -6,6 +6,9 @@ mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod interval;
+pub mod multiquadratic;
+#[cfg(test)]
+mod multiquadratic_tests;
 mod value_operations;
 pub(crate) mod value_protocol;
 #[cfg(test)]

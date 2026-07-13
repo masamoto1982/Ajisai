@@ -344,9 +344,11 @@ mod tests {
             interp.execute(code).await.expect("executes");
             interp.get_stack().last().expect("nonempty").clone()
         }
-        // ((√2+1) − (√2+1)) == 0 is undecidable within budget -> U with
-        // agreedPrefix. (Plain √2 − √2 now collapses to an exact 0 and decides.)
-        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
+        // The bare relations are total over the admitted domain (SPEC
+        // §4.2.7 / §7.4), so U is produced through COMPARE-WITHIN: two
+        // equal composed operands never diverge within the explicit
+        // 8-quotient budget, and the U carries agreedPrefix = 8.
+        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
         let base = top(PRODUCE_U).await;
         let k = agreed_prefix_of(&base).expect("U carries an agreedPrefix");
 
