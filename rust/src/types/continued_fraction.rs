@@ -287,16 +287,17 @@ impl ExactReal {
     }
 
     /// Reciprocal `1/x`. Returns `Rational(nil)` for nil; returns
-    /// `None` only if the operand is structurally zero. Lazy zero
-    /// values are *not* caught here — they yield a degenerate Gosper
-    /// whose expansion is undefined; SPEC §11.2's `divisionByZero` /
-    /// `undecidable` projection is enforced at the language boundary,
-    /// not at this internal type-level API.
+    /// `None` if the operand is exactly zero — structurally, or as a
+    /// lazily-built Gosper zero detected via the §4.2.7 multiquadratic
+    /// normal form (same rule as `div`).
     pub fn reciprocal(&self) -> Option<Self> {
         if self.is_nil() {
             return Some(Self::Rational(Fraction::nil()));
         }
         if self.is_structurally_zero() {
+            return None;
+        }
+        if self.is_gosper() && crate::types::multiquadratic::algebraic_is_zero(self) == Some(true) {
             return None;
         }
         match self {
@@ -401,15 +402,21 @@ impl ExactReal {
     }
 
     /// Division `self / other`. Returns `Rational(nil)` for nil
-    /// operands and `None` for division by a structurally-zero divisor;
-    /// lazy zero divisors propagate to a degenerate Gosper, deferring
-    /// the SPEC-level `divisionByZero` / `undecidable` decision to the
-    /// language boundary.
+    /// operands and `None` for division by an exactly-zero divisor.
+    /// A lazily-built zero divisor (a Gosper transform denoting exactly
+    /// 0, e.g. `(√2+√3) − (√3+√2)`) is detected via the §4.2.7
+    /// multiquadratic normal form, so `DIV` inside the admitted domain
+    /// always either yields a value or bubbles `divisionByZero` — the
+    /// `reason = undecidable` branch of SPEC §7.3 cannot arise in \(D\).
     pub fn div(&self, other: &Self) -> Option<Self> {
         if self.is_nil() || other.is_nil() {
             return Some(Self::Rational(Fraction::nil()));
         }
         if other.is_structurally_zero() {
+            return None;
+        }
+        if other.is_gosper() && crate::types::multiquadratic::algebraic_is_zero(other) == Some(true)
+        {
             return None;
         }
         Some(match (self.as_rational(), other.as_rational()) {
@@ -519,9 +526,40 @@ impl ExactReal {
     /// safety budget before the order resolves; `agreed_prefix` is the
     /// number of leading partial quotients that matched before giving up.
     /// When the full `budget` is consumed with every quotient matching,
-    /// `agreed_prefix == budget`. `COMPARE-WITHIN` (SPEC §7.4.2) surfaces
-    /// this field as `diagnosis.agreedPrefix` on its `Unknown` result.
+    /// `agreed_prefix == budget`.
+    ///
+    /// SPEC §4.2.7 / §7.4: both operands of any comparison the current
+    /// Coreword set can express lie in the admitted domain \(D\), whose
+    /// order is decided exactly and totally on the multiquadratic normal
+    /// form. The budgeted partial-quotient streaming below therefore acts
+    /// only as the honest fallback for operands outside the normal form's
+    /// reach (nil, or a degenerate division-by-exact-zero transform) — the
+    /// future lazy domain of §7.4.1. `COMPARE-WITHIN` deliberately does
+    /// *not* route through this method: §7.4.2 defines it as the one word
+    /// that observes the partial-quotient depth, so it uses
+    /// `cmp_streamed_with_budget_tracked` directly.
     pub fn cmp_with_budget_tracked(&self, other: &Self, budget: usize) -> CmpOutcome {
+        // A Gosper operand is the only case the O(1) shortcuts in the
+        // streamed path cannot decide; resolve it via the §4.2.7 normal
+        // form before any partial quotient is spent. Equal values built
+        // through different transforms (e.g. √2+√3 vs √3+√2) decide
+        // `Equal` here — their CF streams would never diverge.
+        if self.is_gosper() || other.is_gosper() {
+            if let Some(order) = crate::types::multiquadratic::algebraic_cmp(self, other) {
+                return CmpOutcome::Decided(order);
+            }
+        }
+        self.cmp_streamed_with_budget_tracked(other, budget)
+    }
+
+    /// The partial-quotient comparison of SPEC §7.4.1 with no algebraic
+    /// normal-form pre-pass: O(1) shortcuts for `Rational`/`AlgebraicSqrt`
+    /// operand pairs, then parallel NICF streaming under `budget`. This is
+    /// `COMPARE-WITHIN`'s entry point (SPEC §7.4.2): that word is defined
+    /// as emitting at most `budget` partial quotients and is the only
+    /// observation window on comparison depth, so the §4.2.7 total
+    /// decision procedure must not pre-empt its `Unknown` outcome.
+    pub fn cmp_streamed_with_budget_tracked(&self, other: &Self, budget: usize) -> CmpOutcome {
         use std::cmp::Ordering;
         if self.is_nil() || other.is_nil() {
             return CmpOutcome::Undecided { agreed_prefix: 0 };
@@ -3596,14 +3634,29 @@ mod tests {
     }
 
     #[test]
-    fn cmp_composed_gosper_zero_against_zero_is_undecidable() {
-        // SPEC §7.4.1 exact case: a composed-Gosper zero, e.g.
-        // (1 + √2) − (1 + √2) = 0, cannot be proven equal to true zero
-        // from finite operand prefixes. The bihom hits its internal
-        // safety budget, surfaces `CfStep::Exhausted`, and the
-        // comparison budget projects to None ⇒ NIL `undecidable`.
+    fn cmp_composed_gosper_zero_against_zero_decides_equal() {
+        // SPEC §4.2.7: a composed-Gosper zero, e.g. (1 + √2) − (1 + √2),
+        // is an admitted-domain element, so the default comparison
+        // decides it Equal via the multiquadratic normal form even
+        // though its CF stream can never prove the cancellation.
         let lazy_zero = composed_lazy_zero();
-        assert_eq!(lazy_zero.cmp_with_budget(&rational(0, 1), BUDGET), None);
+        assert_eq!(
+            lazy_zero.cmp_with_budget(&rational(0, 1), BUDGET),
+            Some(Ordering::Equal)
+        );
+    }
+
+    #[test]
+    fn cmp_streamed_composed_gosper_zero_is_undecidable() {
+        // SPEC §7.4.1 / §7.4.2: the streamed comparison COMPARE-WITHIN
+        // uses keeps the partial-quotient semantics — a composed-Gosper
+        // zero cannot be proven equal to true zero from finite operand
+        // prefixes, so the budget exhausts into Undecided.
+        let lazy_zero = composed_lazy_zero();
+        assert!(matches!(
+            lazy_zero.cmp_streamed_with_budget_tracked(&rational(0, 1), BUDGET),
+            CmpOutcome::Undecided { .. }
+        ));
     }
 
     // -- nil / zero-budget --

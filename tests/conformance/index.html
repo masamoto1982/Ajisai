@@ -187,17 +187,31 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- The six bare relations are total and exact over the admitted domain D
+     (§4.2.7 / §7.4), so an EQ over SQRT-built values can no longer produce
+     UNKNOWN. The explicit-budget COMPARE-WITHIN (§7.4.2) remains the one
+     current-Coreword window onto the partial-quotient budget, and is
+     therefore the canonical UNKNOWN producer for these spelling and
+     propagation cases: two equal lazily-composed operands never diverge
+     within any budget. -->
 <section class="ajisai-case" id="core-unknown-spelling" data-category="core">
-  <h3>UNKNOWN spells as UNKNOWN (an undecidable comparison)</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ</pre>
+  <h3>UNKNOWN spells as UNKNOWN (a budget-exhausted COMPARE-WITHIN)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</pre>
   <pre class="ajisai-expect-result">UNKNOWN</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
 <section class="ajisai-case" id="core-unknown-propagation" data-category="core">
   <h3>UNKNOWN propagates through Kleene AND</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ TRUE AND</pre>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</pre>
   <pre class="ajisai-expect-result">UNKNOWN</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-composed-equality-decides" data-category="core">
+  <h3>EQ is total over the admitted domain: (√2+1)−(√2+1) equals 0 (§4.2.7 / §7.4)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -431,6 +445,54 @@
   <h3>√2 is less than 2</h3>
   <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 LT</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- §4.2.7 / §7.4 exactness over the admitted domain D: the six relations
+     are total and exact for every value the current Coreword set can
+     construct, including sums, products, and quotients of square roots
+     whose continued fractions never diverge. These cases pin the normative
+     "never UNKNOWN over D" guarantee (§16 #11). -->
+
+<section class="ajisai-case" id="core-algebraic-commuted-sum-eq" data-category="core">
+  <h3>√2+√3 equals √3+√2 exactly (equality is total over D, §4.2.7)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 3 SQRT ADD 3 SQRT 2 SQRT ADD EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algebraic-square-expansion-eq" data-category="core">
+  <h3>(√2+√3)·(√2+√3) equals 5+√24 exactly ((√2+√3)² = 5+2√6)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 3 SQRT ADD 2 SQRT 3 SQRT ADD MUL 5 24 SQRT ADD EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algebraic-sum-orders-below-sqrt-ten" data-category="core">
+  <h3>√2+√3 is less than √10 ((√2+√3)² = 5+2√6 &lt; 10)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 3 SQRT ADD 10 SQRT LT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-times-sqrt2-eq-two" data-category="core">
+  <h3>√2·√2 equals 2 exactly (regression: closed-form collapse)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT MUL 2 EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt2-minus-sqrt2-eq-zero" data-category="core">
+  <h3>√2−√2 equals 0 exactly (Section 2.3.1.1's worked example)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-div-by-lazy-zero-bubbles" data-category="core">
+  <h3>DIV by a lazily-built exact zero bubbles divisionByZero (§4.2.7)</h3>
+  <pre class="ajisai-source">'math' IMPORT 10 2 SQRT 3 SQRT ADD 3 SQRT 2 SQRT ADD SUB DIV NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -675,7 +737,7 @@
 
 <section class="ajisai-case" id="core-cond-unknown-guard-does-not-fire" data-category="core">
   <h3>A COND guard reducing to UNKNOWN does not fire (Section 7.4.3)</h3>
-  <pre class="ajisai-source">'math' IMPORT 7 { 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ } { [ 111 ] } { IDLE } { [ 999 ] } COND</pre>
+  <pre class="ajisai-source">'math' IMPORT 7 { 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN } { [ 111 ] } { IDLE } { [ 999 ] } COND</pre>
   <pre class="ajisai-expect-result">[ 999/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

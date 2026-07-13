@@ -761,7 +761,13 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
         // Both finite: decide exactly via Fraction order regardless of
         // budget (SPEC §7.4.2 — finite CFs differ at a bounded index).
         (Some(af), Some(bf)) => CmpOutcome::Decided(af.cmp(bf)),
-        _ => a.cmp_with_budget_tracked(&b, budget),
+        // Deliberately the *streamed* comparison, not the §4.2.7 total
+        // decision procedure: COMPARE-WITHIN is defined as emitting at
+        // most `budget` partial quotients and is the only observation
+        // window on comparison depth (SPEC §7.4.2 / §16 #11), so its
+        // Unknown outcome stays reachable even for admitted-domain
+        // operands whose CF streams do not diverge within the budget.
+        _ => a.cmp_streamed_with_budget_tracked(&b, budget),
     };
 
     if !is_keep_mode {
