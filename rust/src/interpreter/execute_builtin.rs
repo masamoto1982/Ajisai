@@ -1,4 +1,5 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
+#[cfg(feature = "elastic-engine")]
 use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Interpretation, Token, Value};
@@ -29,11 +30,20 @@ fn trace_compile_metrics(interp: &Interpreter) {
 }
 
 impl Interpreter {
+    #[cfg(feature = "elastic-engine")]
     pub(crate) fn is_hedged_mode(&self) -> bool {
         matches!(
             self.elastic_mode(),
             ElasticMode::HedgedSafe | ElasticMode::HedgedTrace
         )
+    }
+
+    /// Without the `elastic-engine` feature the mode is pinned to `Greedy`,
+    /// so hedged classification is statically false and every hedged branch
+    /// guarded by it folds away.
+    #[cfg(not(feature = "elastic-engine"))]
+    pub(crate) fn is_hedged_mode(&self) -> bool {
+        false
     }
 
     /// Public entry point for word execution.

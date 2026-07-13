@@ -80,29 +80,40 @@ fn run_cond_core(
     };
 
     let mut else_clause: Option<&CondClause> = None;
-    if is_hedged_cond_mode(interp) {
-        interp.push_hedged_trace("cond:prefetch-start");
-        if let Some(clause) =
-            evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_clause)?
-        {
-            interp.push_hedged_trace("cond:winner-prefetched-guard");
-            return run_clause_body(interp, clause, &target_value, tail_context);
-        }
-    } else {
-        for clause in clauses {
-            if is_idle_guard(&clause.guard) {
-                else_clause = Some(clause);
-                continue;
-            }
 
-            if evaluate_guard_greedy(
-                interp,
-                &clause.guard,
-                clause.guard_plan.as_deref(),
-                &target_value,
-            )? {
+    // Hedged guard prefetch is part of the opt-in elastic engine; when it
+    // handles the dispatch it returns from here so the greedy loop below is
+    // exactly the code that runs in the default build.
+    #[cfg(feature = "elastic-engine")]
+    {
+        if is_hedged_cond_mode(interp) {
+            interp.push_hedged_trace("cond:prefetch-start");
+            if let Some(clause) =
+                evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_clause)?
+            {
+                interp.push_hedged_trace("cond:winner-prefetched-guard");
                 return run_clause_body(interp, clause, &target_value, tail_context);
             }
+            if let Some(clause) = else_clause {
+                return run_clause_body(interp, clause, &target_value, tail_context);
+            }
+            return Err(AjisaiError::CondExhausted);
+        }
+    }
+
+    for clause in clauses {
+        if is_idle_guard(&clause.guard) {
+            else_clause = Some(clause);
+            continue;
+        }
+
+        if evaluate_guard_greedy(
+            interp,
+            &clause.guard,
+            clause.guard_plan.as_deref(),
+            &target_value,
+        )? {
+            return run_clause_body(interp, clause, &target_value, tail_context);
         }
     }
 
@@ -348,6 +359,7 @@ fn restore_cond_eval_state(
     interp.global_epoch = saved_epoch.global_epoch;
 }
 
+#[cfg(feature = "elastic-engine")]
 fn is_pure_cond_guard(guard_tokens: &[Token]) -> bool {
     let mut symbols: Vec<String> = Vec::new();
     for token in guard_tokens {
@@ -361,6 +373,7 @@ fn is_pure_cond_guard(guard_tokens: &[Token]) -> bool {
     crate::elastic::can_hedge_cond_guard(&symbols)
 }
 
+#[cfg(feature = "elastic-engine")]
 fn is_hedged_cond_mode(interp: &Interpreter) -> bool {
     matches!(
         interp.elastic_mode(),
@@ -368,6 +381,7 @@ fn is_hedged_cond_mode(interp: &Interpreter) -> bool {
     )
 }
 
+#[cfg(feature = "elastic-engine")]
 fn evaluate_guard_hedged_prefetch<'a>(
     interp: &mut Interpreter,
     clauses: &'a [CondClause],

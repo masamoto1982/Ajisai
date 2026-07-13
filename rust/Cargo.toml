@@ -58,6 +58,13 @@ trace-compile = []
 trace-epoch = []
 trace-quant = []
 force-no-quant = []
+# Opt-in elastic/hedged execution engine (hedged races, COND guard prefetch,
+# fast-guarded kernels). Deliberately excluded from default features to keep
+# the default trusted core small (see README "Safety model"): without it the
+# interpreter always executes the plain greedy path. The always-compiled
+# elastic submodules (purity_table / evaluation_unit / cache_manager / tracer /
+# execution_mode) stay in because the greedy path itself depends on them.
+elastic-engine = []
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }

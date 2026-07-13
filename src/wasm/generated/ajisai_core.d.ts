@@ -32,7 +32,6 @@ export class AjisaiInterpreter {
     collect_core_words_info(): any;
     collect_dictionary_dependencies(): any;
     collect_error_flow_trace(): any;
-    collect_hedged_trace(): any;
     /**
      * Detailed import state for persistence. Tuple shape:
      * `(module, importAllPublic: bool, words: string[], samples: string[])`.
@@ -118,7 +117,6 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_core_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_dictionary_dependencies: (a: number) => any;
     readonly ajisaiinterpreter_collect_error_flow_trace: (a: number) => any;
-    readonly ajisaiinterpreter_collect_hedged_trace: (a: number) => any;
     readonly ajisaiinterpreter_collect_import_state: (a: number) => any;
     readonly ajisaiinterpreter_collect_imported_modules: (a: number) => any;
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
@@ -146,8 +144,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h776bc9e3bcad1357: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h4d66c855cf10ebd9: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hd81aa550814a696a: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h475fa7d20c8b5712: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

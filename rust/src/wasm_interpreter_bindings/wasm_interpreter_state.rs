@@ -469,6 +469,9 @@ impl AjisaiInterpreter {
         self.interpreter.elastic_mode().as_str().to_string()
     }
 
+    /// Only exported when the `elastic-engine` feature is compiled in; the
+    /// GUI already tolerates the `hedgedTrace` payload field being absent.
+    #[cfg(feature = "elastic-engine")]
     #[wasm_bindgen]
     pub fn collect_hedged_trace(&mut self) -> JsValue {
         let arr = js_sys::Array::new();

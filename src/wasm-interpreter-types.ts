@@ -57,7 +57,9 @@ export interface AjisaiInterpreter {
     restore_import_state(state: ImportStateEntry[]): void;
     set_execution_mode(mode: ExecutionMode): void;
     get_execution_mode(): ExecutionMode;
-    collect_hedged_trace(): string[];
+    // Only exported by wasm bundles built with the opt-in `elastic-engine`
+    // cargo feature; the default (trusted core) bundle omits it.
+    collect_hedged_trace?(): string[];
     // Serial RX inbox injection (SPECIFICATION.html §9.4). Filled before execution
     // from the platform serial adapter; drained by SERIAL@READ.
     update_serial_inbox(portId: string, bytes: Uint8Array): void;
