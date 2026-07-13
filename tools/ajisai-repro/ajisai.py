@@ -521,6 +521,8 @@ class Interp:
         self.stack: List[Any] = []
         self.user_words = {}      # name -> Block
         self.imported = set()     # module names imported
+        self.visible = set()      # module word surfaces currently visible (§9.2)
+        self.forc = False         # FORC (!) pending: next DEL/DEF skips protection
         self.steps = 0
         self.output = []
 
@@ -552,6 +554,9 @@ class Interp:
             if self.steps > 100000:
                 raise AjisaiError("executionLimitExceeded")
             kind, val = toks[idx]
+            if kind == "val":
+                # A definition-time staged value (PRECOMPUTE, Section 7.7).
+                self.push(val); idx += 1; continue
             if kind == "str":
                 self.push(Str(val)); idx += 1; continue
             if kind == "sym":
@@ -690,10 +695,9 @@ class Interp:
             CORE[w](self, mods); return
         if w in self.user_words:
             self.run_block(self.user_words[w]); return
-        # module words available only if imported (we model MATH minimally)
+        # module words resolve only while visible (IMPORT/UNIMPORT, §9.2)
         if w in MODULE_WORDS:
-            home = MODULE_WORDS[w]
-            if home in self.imported:
+            if w in self.visible:
                 MODULE_IMPL[w](self, mods); return
             raise AjisaiError("unknownWord", w)
         if "@" in w:
@@ -702,6 +706,25 @@ class Interp:
                 MODULE_IMPL[ww](self, mods); return
             raise AjisaiError("unknownWord", w)
         raise AjisaiError("unknownWord", w)
+
+    # ---- STAK operand group (Section 6.1) ----
+    def stak_group(self, mods):
+        """Pop the leading count, then return the N operands beneath it.
+        The count is always consumed; the group is consumed under EAT and
+        retained under KEEP."""
+        keep = "KEEP" in mods
+        self.need(1)
+        cnt = self.stack.pop()
+        f = as_fraction(cnt)
+        if f is None or f.denominator != 1 or f < 0:
+            raise AjisaiError("structureError", "STAK needs a leading count")
+        n = int(f)
+        if len(self.stack) < n:
+            raise AjisaiError("stackUnderflow")
+        group = self.stack[len(self.stack) - n:] if n else []
+        if not keep and n:
+            del self.stack[len(self.stack) - n:]
+        return list(group)
 
 # --------------------------------------------------------------------------
 # Display (Section 12)
@@ -768,12 +791,24 @@ def _arith_broadcast(name, fn, a, b):
     scalar op vector, vector op scalar, and equal-length vector op vector all
     map the scalar op over the elements and yield a vector; scalar op scalar is
     the plain scalar case."""
+    # Text operands coerce to their code-point vectors at the numeric boundary.
+    if isinstance(a, Str):
+        a = Vec([Rational(Fraction(ord(c))) for c in a.s])
+    if isinstance(b, Str):
+        b = Vec([Rational(Fraction(ord(c))) for c in b.s])
     av, bv = isinstance(a, Vec), isinstance(b, Vec)
     if not av and not bv:
         return _arith_scalar_pair(name, fn, a, b)
     if av and bv:
         if len(a.items) != len(b.items):
-            raise AjisaiError("structureError", f"{name} vector length mismatch")
+            # A one-element vector broadcasts across the other operand.
+            if len(a.items) == 1:
+                return Vec([_arith_broadcast(name, fn, a.items[0], y) for y in b.items])
+            if len(b.items) == 1:
+                return Vec([_arith_broadcast(name, fn, x, b.items[0]) for x in a.items])
+            raise AjisaiError(
+                "custom",
+                f"Cannot broadcast shapes [{len(a.items)}] and [{len(b.items)}]")
         return Vec([_arith_broadcast(name, fn, x, y)
                     for x, y in zip(a.items, b.items)])
     if av:
@@ -783,6 +818,19 @@ def _arith_broadcast(name, fn, a, b):
 
 def binop_arith(name, fn):
     def impl(it: Interp, mods):
+        if "STAK" in mods:
+            # Left fold of the binary word over the counted group (§6.1).
+            group = it.stak_group(mods)
+            if not group:
+                raise AjisaiError("stackUnderflow")
+            acc = group[0]
+            for x in group[1:]:
+                if isinstance(acc, Nil) or isinstance(x, Nil):
+                    acc = Nil(reason=leftmost_nil_reason([acc, x]), origin="nilPropagation")
+                    continue
+                acc = _arith_broadcast(name, fn, acc, x)
+            it.push(acc)
+            return
         ops, keep = it.operands(mods, 2)
         a, b = ops[-2], ops[-1]
         # An operand that is itself NIL short-circuits the whole result
@@ -827,7 +875,9 @@ def w_mod(it, mods):
     if fa is None or fb is None:
         raise AjisaiError("structureError", "MOD needs numbers")
     if fb == 0:
-        it.push(Nil(reason="divisionByZero", origin="nilPropagation")); return
+        # MOD by zero is malformed use and raises rather than producing NIL
+        # (Section 7.3's deliberate asymmetry with DIV).
+        raise AjisaiError("custom", "Modulo by zero")
     # FLOOR-based remainder: x - floor(x/y)*y
     import math
     q = fa / fb
@@ -847,8 +897,11 @@ def unary_round(name, fn):
     return impl
 
 import math as _math
-def _round_half_even(f):  # ROUND — spec says "round to nearest integer"
-    return int(_math.floor(f + Fraction(1, 2)))   # round half up
+def _round_half_away(f):
+    """ROUND breaks ties away from zero (Section 7.3): -2.5 -> -3, 0.5 -> 1."""
+    if f >= 0:
+        return int(_math.floor(f + Fraction(1, 2)))
+    return -int(_math.floor(-f + Fraction(1, 2)))
 
 # comparison ----------------------------------------------------------------
 
@@ -924,14 +977,20 @@ def comparison(name, decide):
     return impl
 
 def stak_comparison(name, decide, it, mods):
-    keep = "KEEP" in mods
-    ops = list(it.stack)
-    if not keep: it.stack = []
+    # Chained predicate over the counted group's adjacent pairs (§6.1).
+    ops = it.stak_group(mods)
+    if len(ops) < 2:
+        # Observed production behavior: a group too small to form a pair is
+        # vacuously TRUE and is retained on the stack (only the count is
+        # consumed): 3 2 1 .. LT -> 3/1 2/1 TRUE.
+        if "KEEP" not in mods:
+            for o in ops:
+                it.push(o)
+        it.push(TRUE)
+        return
     # NIL priority
     if any(isinstance(o, Nil) for o in ops):
         it.push(Nil(reason=leftmost_nil_reason(ops), origin="nilPropagation")); return
-    # sequence property over adjacent pairs (Section 7.4)
-    result = TRUE
     for i in range(len(ops) - 1):
         s = cmp_values(ops[i], ops[i+1])
         if s == "U":
@@ -944,7 +1003,7 @@ def stak_comparison(name, decide, it, mods):
             ok = decide(s)
         if not ok:
             it.push(FALSE); return
-    it.push(result)
+    it.push(TRUE)
 
 DECIDERS = {
     "LT": lambda s: s < 0, "LTE": lambda s: s <= 0,
@@ -1102,20 +1161,16 @@ def w_nil_diagnosis(it, mods):
 # vector words --------------------------------------------------------------
 
 def w_length(it, mods):
-    if "STAK" in mods:
-        n = len(it.stack)
-        if "KEEP" not in mods: pass  # LENGTH STAK counts all; spec: total count
-        it.push(Rational(Fraction(n))); 
-        if "KEEP" not in mods:
-            # default EAT would consume operands; STAK total-count consumes all
-            it.stack = it.stack[:-1] if False else it.stack
-        return
-    ops, keep = it.operands(mods, 1)
-    v = ops[-1]
+    # Inspection word: the operand is retained and the count pushed above it
+    # (Section 7.1.1). A NIL operand is retained with count 0.
+    it.need(1)
+    v = it.stack[-1]
     if isinstance(v, Vec):
         it.push(Rational(Fraction(len(v.items))))
     elif isinstance(v, Str):
         it.push(Rational(Fraction(len(v.s))))
+    elif isinstance(v, Nil):
+        it.push(Rational(Fraction(0)))
     else:
         raise AjisaiError("structureError", "LENGTH needs a vector")
 
@@ -1123,36 +1178,46 @@ def norm_index(i, n):
     if i < 0: i += n
     return i
 
-def w_get(it, mods):
-    ops, keep = it.operands(mods, 2)
-    vec, idx = ops[-2], ops[-1]
-    if isinstance(vec, Nil) or isinstance(idx, Nil):
-        it.push(Nil(reason=leftmost_nil_reason([vec, idx]), origin="nilPropagation")); return
-    if not isinstance(vec, Vec): raise AjisaiError("structureError", "GET needs a vector")
+def _int_index(idx):
+    """A bare integer scalar or a one-element integer vector; else None."""
+    if isinstance(idx, Vec) and len(idx.items) == 1:
+        idx = idx.items[0]
     fi = as_fraction(idx)
-    if fi is None or fi.denominator != 1: raise AjisaiError("structureError", "GET index")
-    i = norm_index(int(fi), len(vec.items))
+    if fi is None or fi.denominator != 1:
+        return None
+    return int(fi)
+
+def w_get(it, mods):
+    # GET retains the source vector and pushes the element above it
+    # (inspection rule, Section 7.1.1); the index operand is consumed.
+    it.need(2)
+    idx = it.stack.pop()
+    vec = it.stack[-1]
+    if not isinstance(vec, Vec):
+        raise AjisaiError("structureError", "GET needs a vector")
+    i = _int_index(idx)
+    if i is None:
+        raise AjisaiError("structureError", "GET needs a single-element integer index")
+    i = norm_index(i, len(vec.items))
     if 0 <= i < len(vec.items):
         it.push(vec.items[i])
     else:
         it.push(Nil(reason="indexOutOfBounds", origin="nilPropagation"))
 
+def _codepoint_vec(s):
+    return Vec([Rational(Fraction(ord(c))) for c in s.s])
+
 def w_concat(it, mods):
-    if "STAK" in mods:
-        ops = list(it.stack); 
-        if "KEEP" not in mods: it.stack = []
-        items = []
-        for o in ops:
-            if isinstance(o, Vec): items += o.items
-            else: raise AjisaiError("structureError", "CONCAT needs vectors")
-        it.push(Vec(items)); return
     ops, keep = it.operands(mods, 2)
     a, b = ops[-2], ops[-1]
-    if isinstance(a, Vec) and isinstance(b, Vec):
-        it.push(Vec(a.items + b.items)); return
-    if isinstance(a, Str) and isinstance(b, Str):
-        it.push(Str(a.s + b.s)); return
-    raise AjisaiError("structureError", "CONCAT needs vectors")
+    # Text operands coerce to their code-point vectors (Section 7.1).
+    if isinstance(a, Str):
+        a = _codepoint_vec(a)
+    if isinstance(b, Str):
+        b = _codepoint_vec(b)
+    a_items = a.items if isinstance(a, Vec) else [a]
+    b_items = b.items if isinstance(b, Vec) else [b]
+    it.push(Vec(a_items + b_items))
 
 def w_reverse(it, mods):
     ops, keep = it.operands(mods, 1)
@@ -1161,49 +1226,140 @@ def w_reverse(it, mods):
     else: raise AjisaiError("structureError", "REVERSE needs a vector")
 
 def w_range(it, mods):
-    ops, keep = it.operands(mods, 2)
-    a, b = ops[-2], ops[-1]
-    fa, fb = as_fraction(a), as_fraction(b)
-    if fa is None or fb is None or fa.denominator != 1 or fb.denominator != 1:
-        raise AjisaiError("structureError", "RANGE needs integers")
-    it.push(Vec([Rational(Fraction(x)) for x in range(int(fa), int(fb))]))
+    # [ start end ] RANGE or [ start end step ] RANGE — inclusive of the end
+    # point (Section 7.1).
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not isinstance(v, Vec) or len(v.items) not in (2, 3):
+        raise AjisaiError("custom", "RANGE requires [start end] or [start end step]")
+    fs = [as_fraction(x) for x in v.items]
+    if any(f is None for f in fs):
+        raise AjisaiError("custom", "RANGE requires numbers")
+    start, end = fs[0], fs[1]
+    step = fs[2] if len(fs) == 3 else (Fraction(1) if end >= start else Fraction(-1))
+    if step == 0:
+        raise AjisaiError("custom", "RANGE step must be non-zero")
+    out = []
+    x = start
+    if step > 0:
+        while x <= end:
+            out.append(Rational(x)); x += step
+    else:
+        while x >= end:
+            out.append(Rational(x)); x += step
+    it.push(Vec(out) if out else Nil())
 
 def w_take(it, mods):
     ops, keep = it.operands(mods, 2)
     v, k = ops[-2], ops[-1]
     if not isinstance(v, Vec): raise AjisaiError("structureError", "TAKE")
-    fk = as_fraction(k); 
-    if fk is None: raise AjisaiError("structureError", "TAKE")
-    it.push(Vec(v.items[:int(fk)]))
+    n = _int_index(k)
+    if n is None:
+        raise AjisaiError("structureError",
+                          "expected single-element value with integer, got NIL"
+                          if isinstance(k, Nil) else "TAKE count")
+    if n == 0:
+        it.push(Nil()); return
+    if n > len(v.items):
+        raise AjisaiError("custom", "Take count exceeds vector length")
+    it.push(Vec(v.items[:n]))
 
 def w_collect(it, mods):
-    items = list(it.stack); it.stack = []
-    it.push(Vec(items))
+    # Gather a leading-count N of stack values (Section 7.1.1).
+    it.need(1)
+    cnt = it.stack.pop()
+    f = as_fraction(cnt)
+    if f is None or f.denominator != 1 or f < 0:
+        raise AjisaiError("structureError", "COLLECT needs a leading count")
+    n = int(f)
+    if len(it.stack) < n:
+        raise AjisaiError("stackUnderflow")
+    items = it.stack[len(it.stack) - n:] if n else []
+    if n:
+        del it.stack[len(it.stack) - n:]
+    it.push(Vec(items) if items else Nil())
+
+def _index_element_pair(pair):
+    """The two-element [ index element ] argument of INSERT/REPLACE."""
+    if not (isinstance(pair, Vec) and len(pair.items) == 2):
+        raise AjisaiError("custom", "expected a two-element [ index element ] vector")
+    i = _int_index(pair.items[0])
+    if i is None:
+        raise AjisaiError("custom", "expected a two-element [ index element ] vector")
+    return i, pair.items[1]
 
 def w_insert(it, mods):
-    ops, keep = it.operands(mods, 3)
-    v, idx, val = ops[-3], ops[-2], ops[-1]
-    if not isinstance(v, Vec): raise AjisaiError("structureError", "INSERT")
-    i = norm_index(int(as_fraction(idx)), len(v.items))
+    ops, keep = it.operands(mods, 2)
+    v, pair = ops[-2], ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError("custom", "INSERT requires a vector and an [ index element ] vector")
+    i, val = _index_element_pair(pair)
+    i = norm_index(i, len(v.items))
+    if not (0 <= i <= len(v.items)):
+        raise AjisaiError("indexOutOfBounds",
+                          f"Index {i} out of bounds for vector of length {len(v.items)}")
     items = list(v.items); items.insert(i, val); it.push(Vec(items))
 
 def w_replace(it, mods):
-    ops, keep = it.operands(mods, 3)
-    v, idx, val = ops[-3], ops[-2], ops[-1]
-    if not isinstance(v, Vec): raise AjisaiError("structureError", "REPLACE")
-    i = norm_index(int(as_fraction(idx)), len(v.items))
+    ops, keep = it.operands(mods, 2)
+    v, pair = ops[-2], ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError("custom", "REPLACE requires a vector and an [ index element ] vector")
+    i, val = _index_element_pair(pair)
+    i = norm_index(i, len(v.items))
     if not (0 <= i < len(v.items)):
-        it.push(Nil(reason="indexOutOfBounds", origin="nilPropagation")); return
+        raise AjisaiError("indexOutOfBounds",
+                          f"Index {i} out of bounds for vector of length {len(v.items)}")
     items = list(v.items); items[i] = val; it.push(Vec(items))
 
 def w_remove(it, mods):
     ops, keep = it.operands(mods, 2)
     v, idx = ops[-2], ops[-1]
     if not isinstance(v, Vec): raise AjisaiError("structureError", "REMOVE")
-    i = norm_index(int(as_fraction(idx)), len(v.items))
-    if not (0 <= i < len(v.items)):
-        it.push(Nil(reason="indexOutOfBounds", origin="nilPropagation")); return
-    items = list(v.items); del items[i]; it.push(Vec(items))
+    i = _int_index(idx)
+    if i is None: raise AjisaiError("structureError", "REMOVE index")
+    j = norm_index(i, len(v.items))
+    if not (0 <= j < len(v.items)):
+        raise AjisaiError("indexOutOfBounds",
+                          f"Index {i} out of bounds for vector of length {len(v.items)}")
+    items = list(v.items); del items[j]; it.push(Vec(items))
+
+def w_split(it, mods):
+    # vector [ sizes... ] SPLIT -> each sub-vector pushed separately (§7.1).
+    ops, keep = it.operands(mods, 2)
+    v, sizes = ops[-2], ops[-1]
+    if not (isinstance(v, Vec) and isinstance(sizes, Vec)):
+        raise AjisaiError("custom", "SPLIT requires a vector and a sizes vector")
+    ns = []
+    for s in sizes.items:
+        f = as_fraction(s)
+        if f is None or f.denominator != 1 or f < 0:
+            raise AjisaiError("custom", "SPLIT sizes must be non-negative integers")
+        ns.append(int(f))
+    if sum(ns) > len(v.items):
+        raise AjisaiError("custom", "Split sizes sum exceeds vector length")
+    at = 0
+    for n in ns:
+        it.push(Vec(v.items[at:at + n]))
+        at += n
+
+def w_reorder(it, mods):
+    ops, keep = it.operands(mods, 2)
+    v, idxs = ops[-2], ops[-1]
+    if not (isinstance(v, Vec) and isinstance(idxs, Vec)):
+        raise AjisaiError("custom", "REORDER requires a vector and an index vector")
+    out = []
+    for ix in idxs.items:
+        f = as_fraction(ix)
+        if f is None or f.denominator != 1:
+            raise AjisaiError("custom", "REORDER indices must be integers")
+        i = int(f)
+        j = norm_index(i, len(v.items))
+        if not (0 <= j < len(v.items)):
+            raise AjisaiError("indexOutOfBounds",
+                              f"Index {i} out of bounds for vector of length {len(v.items)}")
+        out.append(v.items[j])
+    it.push(Vec(out))
 
 # tensor --------------------------------------------------------------------
 
@@ -1218,24 +1374,105 @@ def shape_of(v):
 def w_shape(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    it.push(Vec([Rational(Fraction(x)) for x in shape_of(v)]))
+    dims = shape_of(v)
+    it.push(Vec([Rational(Fraction(x)) for x in dims]) if dims else Nil())
 
 def w_rank(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
     it.push(Rational(Fraction(len(shape_of(v)))))
 
+def _flatten(v, out):
+    for x in v.items:
+        if isinstance(x, Vec):
+            _flatten(x, out)
+        else:
+            out.append(x)
+
+def _build_shape(flat, dims, at):
+    if len(dims) == 1:
+        return Vec(flat[at:at + dims[0]]), at + dims[0]
+    rows = []
+    for _ in range(dims[0]):
+        row, at = _build_shape(flat, dims[1:], at)
+        rows.append(row)
+    return Vec(rows), at
+
+def w_reshape(it, mods):
+    ops, keep = it.operands(mods, 2)
+    v, shape = ops[-2], ops[-1]
+    if not (isinstance(v, Vec) and isinstance(shape, Vec)):
+        raise AjisaiError("custom", "RESHAPE requires a vector and a shape vector")
+    dims = []
+    for d in shape.items:
+        f = as_fraction(d)
+        if f is None or f.denominator != 1 or f <= 0:
+            raise AjisaiError("custom", "RESHAPE shape must be positive integers")
+        dims.append(int(f))
+    flat = []
+    _flatten(v, flat)
+    need = 1
+    for d in dims:
+        need *= d
+    if need != len(flat):
+        raise AjisaiError(
+            "custom",
+            f"RESHAPE failed: data length {len(flat)} doesn't match shape {dims}")
+    out, _ = _build_shape(flat, dims, 0)
+    it.push(out)
+
+def w_transpose(it, mods):
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not (isinstance(v, Vec) and v.items
+            and all(isinstance(r, Vec) for r in v.items)
+            and len({len(r.items) for r in v.items}) == 1):
+        raise AjisaiError("custom", "TRANSPOSE requires 2D vector")
+    rows = [r.items for r in v.items]
+    it.push(Vec([Vec(list(col)) for col in zip(*rows)]))
+
+def w_fill(it, mods):
+    # [ shape... value ] FILL (Section 7.2): at least one dimension + a value.
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not (isinstance(v, Vec) and len(v.items) >= 2):
+        raise AjisaiError("custom", "FILL requires [shape... value] (at least 2 elements)")
+    dims = []
+    for d in v.items[:-1]:
+        f = as_fraction(d)
+        if f is None or f.denominator != 1 or f <= 0:
+            raise AjisaiError("custom", "FILL shape must be positive integers")
+        dims.append(int(f))
+    value = v.items[-1]
+    def build(ds):
+        if len(ds) == 1:
+            return Vec([value for _ in range(ds[0])])
+        return Vec([build(ds[1:]) for _ in range(ds[0])])
+    it.push(build(dims))
+
 # string/conv ---------------------------------------------------------------
+
+def _str_render(v):
+    """STR's Text rendering: integers drop the /1 denominator (Section 7.6)."""
+    if isinstance(v, Rational):
+        if v.f.denominator == 1:
+            return str(v.f.numerator)
+        return f"{v.f.numerator}/{v.f.denominator}"
+    return output_render(v)
 
 def w_str(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    it.push(Str(output_render(v) if not isinstance(v, Str) else v.s))
+    if isinstance(v, Nil):
+        it.push(Nil(reason=v.reason, origin=v.origin)); return
+    it.push(Str(_str_render(v) if not isinstance(v, Str) else v.s))
 
 def w_num(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    if not isinstance(v, Str): raise AjisaiError("structureError", "NUM needs text")
+    if isinstance(v, Nil):
+        raise AjisaiError("custom", "NUM: expected String, got Nil")
+    if not isinstance(v, Str): raise AjisaiError("custom", "NUM: expected String")
     n = number_of(v.s.strip())
     if n is None: it.push(Nil(reason="invalidEncoding", origin="nilPropagation")); return
     it.push(n)
@@ -1244,16 +1481,28 @@ def w_bool(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
     if isinstance(v, Bool): it.push(v); return
+    if isinstance(v, Nil):
+        raise AjisaiError("custom", "BOOL: expected String or Number, got Nil")
+    if isinstance(v, Str):
+        low = v.s.strip().lower()
+        if low == "true": it.push(TRUE); return
+        if low == "false": it.push(FALSE); return
+        n = number_of(v.s.strip())
+        if n is not None and as_fraction(n) is not None:
+            it.push(TRUE if as_fraction(n) != 0 else FALSE); return
+        it.push(Nil()); return
     fa = as_fraction(v)
     if fa is not None: it.push(TRUE if fa != 0 else FALSE); return
-    raise AjisaiError("structureError", "BOOL")
+    raise AjisaiError("custom", "BOOL: expected String or Number")
 
 def w_chr(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
+    if isinstance(v, Nil):
+        raise AjisaiError("custom", "CHR: expected Number, got Nil")
     fa = as_fraction(v)
     if fa is None or fa.denominator != 1:
-        raise AjisaiError("structureError", "CHR needs integer")
+        raise AjisaiError("custom", "CHR: expected Number input")
     cp = int(fa)
     if cp < 0 or cp > 0x10FFFF or (0xD800 <= cp <= 0xDFFF):
         it.push(Nil(reason="invalidEncoding", origin="nilPropagation")); return
@@ -1262,14 +1511,148 @@ def w_chr(it, mods):
 def w_chars(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    if not isinstance(v, Str): raise AjisaiError("structureError", "CHARS")
+    if not isinstance(v, Str): raise AjisaiError("custom", "CHARS: expected String")
     it.push(Vec([Str(c) for c in v.s]))
 
 def w_join(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    if not isinstance(v, Vec): raise AjisaiError("structureError", "JOIN")
-    it.push(Str("".join(x.s if isinstance(x, Str) else output_render(x) for x in v.items)))
+    if not isinstance(v, Vec):
+        kindname = "Number" if as_fraction(v) is not None else type(v).__name__
+        raise AjisaiError("custom", f"JOIN: expected Vector, got {kindname}")
+    parts = []
+    for x in v.items:
+        if isinstance(x, Str):
+            parts.append(x.s)
+            continue
+        f = as_fraction(x)
+        if f is not None and f.denominator == 1 and 0 <= int(f) <= 0x10FFFF:
+            # A numeric element is a code point (Section 7.6).
+            parts.append(chr(int(f)))
+            continue
+        parts.append(_str_render(x))
+    it.push(Str("".join(parts)))
+
+# text words (Section 7.6) ---------------------------------------------------
+
+def _text_op(word, argname="String"):
+    def check(v, role="String"):
+        if not isinstance(v, Str):
+            kindname = "Number" if as_fraction(v) is not None else type(v).__name__
+            raise AjisaiError("custom", f"{word}: expected {role}, got {kindname}")
+        return v.s
+    return check
+
+def w_trim(it, mods):
+    ops, keep = it.operands(mods, 1)
+    s = _text_op("TRIM")(ops[-1])
+    it.push(Str(s.strip()))
+
+def w_trim_left(it, mods):
+    ops, keep = it.operands(mods, 1)
+    s = _text_op("TRIM-LEFT")(ops[-1])
+    it.push(Str(s.lstrip()))
+
+def w_trim_right(it, mods):
+    ops, keep = it.operands(mods, 1)
+    s = _text_op("TRIM-RIGHT")(ops[-1])
+    it.push(Str(s.rstrip()))
+
+def w_tokenize(it, mods):
+    ops, keep = it.operands(mods, 2)
+    s = _text_op("TOKENIZE")(ops[-2])
+    sep = _text_op("TOKENIZE")(ops[-1], "separator as String")
+    if sep == "":
+        raise AjisaiError("custom", "TOKENIZE: empty separator")
+    it.push(Vec([Str(p) for p in s.split(sep)]))
+
+def w_substitute(it, mods):
+    ops, keep = it.operands(mods, 3)
+    s = _text_op("SUBSTITUTE")(ops[-3])
+    frm = _text_op("SUBSTITUTE")(ops[-2], "from as String")
+    to = _text_op("SUBSTITUTE")(ops[-1], "to as String")
+    it.push(Str(s.replace(frm, to)))
+
+def w_starts_with(it, mods):
+    ops, keep = it.operands(mods, 2)
+    s = _text_op("STARTS-WITH?")(ops[-2])
+    affix = _text_op("STARTS-WITH?")(ops[-1], "affix as String")
+    it.push(TRUE if s.startswith(affix) else FALSE)
+
+def w_ends_with(it, mods):
+    ops, keep = it.operands(mods, 2)
+    s = _text_op("ENDS-WITH?")(ops[-2])
+    affix = _text_op("ENDS-WITH?")(ops[-1], "affix as String")
+    it.push(TRUE if s.endswith(affix) else FALSE)
+
+def w_tocf(it, mods):
+    # >CF changes only the requested display role (Section 3.9), never the
+    # value; this reference keeps the value unchanged.
+    it.need(1)
+    pass
+
+# QUANTIZE family and CONSERVE (Sections 7.13, 13.3) -------------------------
+
+def _quantize_multiple(mode, m):
+    """The integer grid multiple n chosen from m = x/step for each mode."""
+    if mode == "floor":
+        return _math.floor(m)
+    if mode == "ceil":
+        return _math.ceil(m)
+    if mode == "trunc":
+        return _math.floor(m) if m >= 0 else _math.ceil(m)
+    if mode == "half-away":
+        return _round_half_away(m)
+    # banker's (round-half-to-even), the QUANTIZE default
+    fl = _math.floor(m)
+    frac = m - fl
+    if frac > Fraction(1, 2):
+        return fl + 1
+    if frac < Fraction(1, 2):
+        return fl
+    return fl if fl % 2 == 0 else fl + 1
+
+def quantize_word(name, mode):
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 2)
+        x, step = ops[-2], ops[-1]
+        fstep = as_fraction(step)
+        if fstep is None or fstep <= 0:
+            raise AjisaiError("custom",
+                              f"{name} requires a strictly positive rational step")
+        if isinstance(x, Nil):
+            # NIL passes through to BOTH outputs, carrying its reason (§7.13).
+            it.push(Nil(reason=x.reason, origin=x.origin))
+            it.push(Nil(reason=x.reason, origin=x.origin))
+            return
+        fx = as_fraction(x)
+        if fx is None:
+            raise AjisaiError("custom", f"{name} requires a rational value")
+        n = _quantize_multiple(mode, fx / fstep)
+        q = n * fstep
+        it.push(Rational(q))
+        it.push(Rational(fx - q))
+    return impl
+
+def w_conserve(it, mods):
+    ops, keep = it.operands(mods, 2)
+    total, parts = ops[-2], ops[-1]
+    if isinstance(total, Nil) or (isinstance(parts, Vec)
+                                  and any(isinstance(p, Nil) for p in parts.items)):
+        raise AjisaiError("custom",
+                          "CONSERVE cannot certify conservation with a NIL operand")
+    ftotal = as_fraction(total)
+    if ftotal is None or not isinstance(parts, Vec):
+        raise AjisaiError("custom", "CONSERVE requires a scalar total and a parts vector")
+    s = Fraction(0)
+    for p in parts.items:
+        fp = as_fraction(p)
+        if fp is None:
+            raise AjisaiError("custom", "CONSERVE requires scalar parts")
+        s += fp
+    if s != ftotal:
+        raise AjisaiError("custom", "Conservation violated: parts do not sum to the total")
+    it.push(parts)
 
 # higher-order --------------------------------------------------------------
 #
@@ -1282,6 +1665,7 @@ def _new_sub(it):
     sub = Interp()
     sub.user_words = it.user_words
     sub.imported = it.imported
+    sub.visible = it.visible
     return sub
 
 def run_callable(sub, callable_val):
@@ -1545,19 +1929,103 @@ def run_cond_body(it, body_toks, subject):
 
 # def / del -----------------------------------------------------------------
 
+def _stage_precompute(it, body):
+    """Definition-time staging (Section 7.7): each `{ ... } PRECOMPUTE` inside a
+    DEF body is evaluated once now and its resulting values are spliced into the
+    compiled definition as literal ('val', v) tokens."""
+    staged_lines = []
+    for line in body.lines:
+        out = []
+        i = 0
+        while i < len(line):
+            k, v = line[i]
+            if (k == "word" and ALIAS.get(v, v).upper() == "PRECOMPUTE"
+                    and out and out[-1] == ("sym", "}")):
+                # find the matching '{' backwards in `out`
+                depth = 0
+                j = len(out) - 1
+                while j >= 0:
+                    kk, vv = out[j]
+                    if kk == "sym" and vv == "}":
+                        depth += 1
+                    elif kk == "sym" and vv == "{":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j -= 1
+                if j >= 0:
+                    inner = out[j + 1:len(out) - 1]
+                    del out[j:]
+                    sub = _new_sub(it)
+                    sub.run_tokens(list(inner))
+                    out.extend(("val", val) for val in sub.stack)
+                    i += 1
+                    continue
+            out.append((k, v))
+            i += 1
+        staged_lines.append(out)
+    return Block(staged_lines)
+
 def w_def(it, mods):
     name = it.pop(); body = it.pop()
     if not isinstance(name, Str): raise AjisaiError("structureError", "DEF name must be string")
     if not isinstance(body, Block): raise AjisaiError("structureError", "DEF body must be block")
     nm = name.s.upper()
     if nm in CORE: raise AjisaiError("builtinProtection")
-    it.user_words[nm] = body
+    it.forc = False
+    it.user_words[nm] = _stage_precompute(it, body)
+
+def _dependents_of(it, nm):
+    """User words whose body references `nm` (dependency protection, §8.2)."""
+    out = []
+    for other, blk in it.user_words.items():
+        if other == nm:
+            continue
+        for line in blk.lines:
+            if any(k == "word" and ALIAS.get(v, v).upper() == nm for k, v in line):
+                out.append(other)
+                break
+    return out
 
 def w_del(it, mods):
     name = it.pop()
+    if not isinstance(name, Str):
+        raise AjisaiError("structureError", "DEL name must be string")
     nm = name.s.upper()
-    if nm in it.user_words: del it.user_words[nm]
-    else: raise AjisaiError("unknownWord")
+    force = it.forc
+    it.forc = False
+    if nm not in it.user_words:
+        raise AjisaiError("custom", f"Word '{nm}' is not defined")
+    deps = _dependents_of(it, nm)
+    if deps and not force:
+        raise AjisaiError("custom",
+                          f"Cannot delete '{nm}': referenced by {', '.join(deps)}."
+                          f" Use ! '{nm}' DEL to force.")
+    del it.user_words[nm]
+
+def w_forc(it, mods):
+    it.forc = True
+
+def w_lookup(it, mods):
+    # LOOKUP consumes the word name; its definition goes to the human-readable
+    # output surface, which is not an observation target of the suite.
+    name = it.pop()
+    if not isinstance(name, Str):
+        raise AjisaiError("structureError", "LOOKUP name must be string")
+
+def w_eval(it, mods):
+    src = it.pop()
+    if not isinstance(src, Str):
+        raise AjisaiError("custom", "EVAL: expected String")
+    for raw in src.s.split("\n"):
+        toks = tokenize_line(raw)
+        if toks:
+            it.run_tokens(toks)
+
+def w_precompute(it, mods):
+    # Reaching the word at runtime means it was not staged by DEF (§7.7).
+    raise AjisaiError("custom",
+                      "PRECOMPUTE can only be used during definition-time precomputation")
 
 def w_print(it, mods):
     keep = "KEEP" in mods
@@ -1565,10 +2033,38 @@ def w_print(it, mods):
     v = it.stack[-1] if keep else it.stack.pop()
     it.output.append(output_render(v))
 
+def _module_of(name_val):
+    if not isinstance(name_val, Str):
+        raise AjisaiError("structureError", "module name must be string")
+    up = name_val.s.upper()
+    if up not in MODULES:
+        raise AjisaiError("unknownModule", f"Unknown module: {up}")
+    return up
+
+def _selector_names(v):
+    if not isinstance(v, Vec) or not all(isinstance(x, Str) for x in v.items):
+        raise AjisaiError("structureError", "expected a vector of word names")
+    return {x.s.upper() for x in v.items}
+
 def w_import(it, mods):
-    name = it.pop()
-    if not isinstance(name, Str): raise AjisaiError("structureError")
-    it.imported.add(name.s.upper())
+    up = _module_of(it.pop())
+    it.imported.add(up)
+    it.visible |= MODULES[up]
+
+def w_import_only(it, mods):
+    names = _selector_names(it.pop())
+    up = _module_of(it.pop())
+    it.imported.add(up)
+    it.visible |= (MODULES[up] & names)
+
+def w_unimport(it, mods):
+    up = _module_of(it.pop())
+    it.visible -= MODULES[up]
+
+def w_unimport_only(it, mods):
+    names = _selector_names(it.pop())
+    up = _module_of(it.pop())
+    it.visible -= (MODULES[up] & names)
 
 CORE = {
     "ADD": binop_arith("ADD", lambda a, b: a + b),
@@ -1577,7 +2073,7 @@ CORE = {
     "DIV": w_div, "MOD": w_mod,
     "FLOOR": unary_round("FLOOR", lambda f: _math.floor(f)),
     "CEIL": unary_round("CEIL", lambda f: _math.ceil(f)),
-    "ROUND": unary_round("ROUND", _round_half_even),
+    "ROUND": unary_round("ROUND", _round_half_away),
     "LT": comparison("LT", DECIDERS["LT"]), "LTE": comparison("LTE", DECIDERS["LTE"]),
     "GT": comparison("GT", DECIDERS["GT"]), "GTE": comparison("GTE", DECIDERS["GTE"]),
     "EQ": comparison("EQ", DECIDERS["EQ"]), "NEQ": comparison("NEQ", DECIDERS["NEQ"]),
@@ -1590,12 +2086,27 @@ CORE = {
     "LENGTH": w_length, "GET": w_get, "CONCAT": w_concat, "REVERSE": w_reverse,
     "RANGE": w_range, "TAKE": w_take, "COLLECT": w_collect,
     "INSERT": w_insert, "REPLACE": w_replace, "REMOVE": w_remove,
+    "SPLIT": w_split, "REORDER": w_reorder,
     "SHAPE": w_shape, "RANK": w_rank,
+    "RESHAPE": w_reshape, "TRANSPOSE": w_transpose, "FILL": w_fill,
     "STR": w_str, "NUM": w_num, "BOOL": w_bool, "CHR": w_chr, "CHARS": w_chars, "JOIN": w_join,
+    ">CF": w_tocf,
+    "TRIM": w_trim, "TRIM-LEFT": w_trim_left, "TRIM-RIGHT": w_trim_right,
+    "TOKENIZE": w_tokenize, "SUBSTITUTE": w_substitute,
+    "STARTS-WITH?": w_starts_with, "ENDS-WITH?": w_ends_with,
+    "QUANTIZE": quantize_word("QUANTIZE", "even"),
+    "QUANTIZE-FLOOR": quantize_word("QUANTIZE-FLOOR", "floor"),
+    "QUANTIZE-CEIL": quantize_word("QUANTIZE-CEIL", "ceil"),
+    "QUANTIZE-TRUNC": quantize_word("QUANTIZE-TRUNC", "trunc"),
+    "QUANTIZE-HALF-AWAY": quantize_word("QUANTIZE-HALF-AWAY", "half-away"),
+    "CONSERVE": w_conserve,
     "MAP": w_map, "FILTER": w_filter, "FOLD": w_fold, "SCAN": w_scan,
     "UNFOLD": w_unfold, "ANY": w_any, "ALL": w_all, "COUNT": w_count,
-    "EXEC": w_exec, "COND": w_cond,
-    "DEF": w_def, "DEL": w_del, "PRINT": w_print, "IMPORT": w_import,
+    "EXEC": w_exec, "EVAL": w_eval, "COND": w_cond, "PRECOMPUTE": w_precompute,
+    "DEF": w_def, "DEL": w_del, "FORC": w_forc, "LOOKUP": w_lookup,
+    "PRINT": w_print,
+    "IMPORT": w_import, "IMPORT-ONLY": w_import_only,
+    "UNIMPORT": w_unimport, "UNIMPORT-ONLY": w_unimport_only,
     # TOP/STAK/EAT/KEEP are handled as modifiers, not here.
 }
 
@@ -1629,8 +2140,21 @@ def w_abs(it, mods):
     if fa is None: raise AjisaiError("structureError", "ABS")
     it.push(Rational(abs(fa)))
 
-MODULE_IMPL = {"SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs}
-MODULE_WORDS = {"SQRT": "MATH", "NEG": "MATH", "ABS": "MATH"}
+def w_sort(it, mods):
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError("structureError", "SORT needs a vector")
+    import functools
+    items = sorted(v.items, key=functools.cmp_to_key(cmp_values))
+    it.push(Vec(items))
+
+MODULE_IMPL = {"SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs, "SORT": w_sort}
+MODULE_WORDS = {"SQRT": "MATH", "NEG": "MATH", "ABS": "MATH", "SORT": "ALGO"}
+MODULES = {
+    "MATH": {"SQRT", "NEG", "ABS"},
+    "ALGO": {"SORT"},
+}
 
 # --------------------------------------------------------------------------
 # CLI: run a file, emit compact JSON comparable to probe.py
