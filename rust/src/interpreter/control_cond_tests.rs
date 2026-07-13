@@ -2,6 +2,7 @@
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "elastic-engine")]
     use crate::elastic::ElasticMode;
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
@@ -191,6 +192,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn test_cond_hedged_prefetch_preserves_clause_order() {
         let mut interp = Interpreter::new();
@@ -208,6 +210,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn test_cond_hedged_prefetch_metrics_increment() {
         let mut interp = Interpreter::new();

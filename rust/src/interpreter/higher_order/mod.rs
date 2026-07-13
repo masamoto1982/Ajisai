@@ -13,7 +13,8 @@ mod runners;
 
 pub(crate) use common::{execute_executable_code, extract_executable_code, ExecutableCode};
 pub(crate) use hedged::execute_hedged_fold_kernel;
-#[cfg(test)]
+// Re-exported only for `fast_guarded_tests`, which is elastic-engine-gated.
+#[cfg(all(test, feature = "elastic-engine"))]
 pub(crate) use hedged::{execute_hedged_map_kernel, execute_hedged_predicate_kernel};
 
 pub use all::op_all;

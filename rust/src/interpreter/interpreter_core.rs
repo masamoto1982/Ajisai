@@ -521,7 +521,23 @@ impl Interpreter {
     // ── Elastic Engine public API ─────────────────────────────────────────
 
     /// Set the execution mode (greedy / elastic-safe / elastic-force).
+    #[cfg(feature = "elastic-engine")]
     pub fn set_elastic_mode(&mut self, mode: crate::elastic::ElasticMode) {
+        self.elastic_mode = mode;
+    }
+
+    /// Without the `elastic-engine` cargo feature only `Greedy` is supported:
+    /// requests for any other mode are ignored with a warning so the execution
+    /// path stays exactly the greedy one.
+    #[cfg(not(feature = "elastic-engine"))]
+    pub fn set_elastic_mode(&mut self, mode: crate::elastic::ElasticMode) {
+        if mode != crate::elastic::ElasticMode::Greedy {
+            eprintln!(
+                "[warn] Execution mode '{}' requires the 'elastic-engine' cargo feature; staying greedy.",
+                mode
+            );
+            return;
+        }
         self.elastic_mode = mode;
     }
 

@@ -26,6 +26,7 @@ impl AjisaiInterpreter {
                 if let Some(def_str) = self.interpreter.definition_to_load.take() {
                     set_js_prop(&obj, "definition_to_load", &(def_str.into()));
                 }
+                #[cfg(feature = "elastic-engine")]
                 set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }
@@ -34,6 +35,7 @@ impl AjisaiInterpreter {
                 set_js_prop(&obj, "status", &("ERROR".into()));
                 set_js_prop(&obj, "message", &(error_msg.into()));
                 set_js_prop(&obj, "error", &(true.into()));
+                #[cfg(feature = "elastic-engine")]
                 set_js_prop(&obj, "hedgedTrace", &(self.collect_hedged_trace()));
                 set_js_prop(&obj, "errorFlowTrace", &(self.collect_error_flow_trace()));
             }

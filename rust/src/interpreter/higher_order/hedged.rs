@@ -1,25 +1,59 @@
+//! HOF kernel entry points shared by the greedy and elastic execution paths.
+//!
+//! The `execute_hedged_*_kernel` functions are the single dispatch site the
+//! HOF words (MAP / FILTER / FOLD / ANY / ALL / COUNT) call for a quantized
+//! kernel. In the default build (no `elastic-engine` feature) they compile to
+//! the plain greedy behavior: run the quantized kernel directly — exactly the
+//! branch the full implementations take when the mode is `Greedy`. The hedged
+//! quantized-vs-plain races and the fast-guarded path only exist when the
+//! `elastic-engine` cargo feature is enabled.
+
+#[cfg(feature = "elastic-engine")]
 use super::common::ExecutableCode;
+#[cfg(feature = "elastic-engine")]
 use super::runners::{
     execute_plain_fold_kernel, execute_plain_map_kernel, execute_plain_predicate_kernel,
-    execute_quantized_fold_kernel, execute_quantized_map_kernel,
-    execute_quantized_predicate_kernel,
 };
+use super::runners::{
+    execute_quantized_fold_kernel, execute_quantized_map_kernel, execute_quantized_predicate_kernel,
+};
+use crate::elastic::ElasticMode;
+#[cfg(feature = "elastic-engine")]
 use crate::elastic::{
-    can_hedge_hof_kernel, validate_hedged_winner, ElasticMode, HedgedCandidateResult, HedgedPath,
+    can_hedge_hof_kernel, validate_hedged_winner, HedgedCandidateResult, HedgedPath,
 };
 use crate::error::Result;
 use crate::interpreter::quantized_block::QuantizedBlock;
 use crate::interpreter::Interpreter;
 use crate::types::{Interpretation, Token, Value};
 
+/// Hedged-mode classifier. Statically `false` without the `elastic-engine`
+/// feature, where the mode is pinned to `Greedy`.
 pub(super) fn hedged_mode(mode: ElasticMode) -> bool {
-    matches!(mode, ElasticMode::HedgedSafe | ElasticMode::HedgedTrace)
+    #[cfg(feature = "elastic-engine")]
+    {
+        matches!(mode, ElasticMode::HedgedSafe | ElasticMode::HedgedTrace)
+    }
+    #[cfg(not(feature = "elastic-engine"))]
+    {
+        let _ = mode;
+        false
+    }
 }
 
 fn fast_guarded_mode(mode: ElasticMode) -> bool {
-    matches!(mode, ElasticMode::FastGuarded)
+    #[cfg(feature = "elastic-engine")]
+    {
+        matches!(mode, ElasticMode::FastGuarded)
+    }
+    #[cfg(not(feature = "elastic-engine"))]
+    {
+        let _ = mode;
+        false
+    }
 }
 
+#[cfg(feature = "elastic-engine")]
 fn is_quantized_block_guard_valid(interp: &Interpreter, qb: &QuantizedBlock) -> bool {
     let epoch_ok = qb.guard_signature.dictionary_epoch == interp.dictionary_epoch
         && qb.guard_signature.module_epoch == interp.module_epoch
@@ -38,6 +72,7 @@ fn is_quantized_block_guard_valid(interp: &Interpreter, qb: &QuantizedBlock) -> 
     true
 }
 
+#[cfg(feature = "elastic-engine")]
 fn trace_hedged(interp: &Interpreter, msg: &str) {
     if interp.elastic_mode() == ElasticMode::HedgedTrace {
         eprintln!("[hedged] {}", msg);
@@ -58,6 +93,20 @@ fn normalize_map_kernel_result(value: Value) -> Value {
     value
 }
 
+/// Default-build map kernel: the greedy path always runs the quantized kernel
+/// (identical to the `Greedy` branch of the full implementation below).
+#[cfg(not(feature = "elastic-engine"))]
+pub(crate) fn execute_hedged_map_kernel(
+    interp: &mut Interpreter,
+    _op_name: &str,
+    qb: &QuantizedBlock,
+    _plain_tokens: Option<&[Token]>,
+    elem: Value,
+) -> Result<Value> {
+    execute_quantized_map_kernel(interp, qb, elem).map(normalize_map_kernel_result)
+}
+
+#[cfg(feature = "elastic-engine")]
 pub(crate) fn execute_hedged_map_kernel(
     interp: &mut Interpreter,
     op_name: &str,
@@ -198,6 +247,19 @@ pub(crate) fn execute_hedged_predicate_kernel(
     Ok(result)
 }
 
+/// Default-build predicate kernel: greedy always runs the quantized kernel.
+#[cfg(not(feature = "elastic-engine"))]
+fn execute_hedged_predicate_kernel_inner(
+    interp: &mut Interpreter,
+    _op_name: &str,
+    qb: &QuantizedBlock,
+    _plain_tokens: Option<&[Token]>,
+    elem: Value,
+) -> Result<bool> {
+    execute_quantized_predicate_kernel(interp, qb, elem)
+}
+
+#[cfg(feature = "elastic-engine")]
 fn execute_hedged_predicate_kernel_inner(
     interp: &mut Interpreter,
     op_name: &str,
@@ -259,6 +321,20 @@ fn execute_hedged_predicate_kernel_inner(
     }
 }
 
+/// Default-build fold kernel: greedy always runs the quantized kernel.
+#[cfg(not(feature = "elastic-engine"))]
+pub(crate) fn execute_hedged_fold_kernel(
+    interp: &mut Interpreter,
+    _op_name: &str,
+    qb: &QuantizedBlock,
+    _plain_tokens: Option<&[Token]>,
+    acc: Value,
+    elem: Value,
+) -> Result<Value> {
+    execute_quantized_fold_kernel(interp, qb, acc, elem)
+}
+
+#[cfg(feature = "elastic-engine")]
 pub(crate) fn execute_hedged_fold_kernel(
     interp: &mut Interpreter,
     op_name: &str,

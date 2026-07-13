@@ -58,8 +58,13 @@ impl Interpreter {
         plan_set: &ExecutionPlanSet,
         stack_len: usize,
     ) -> bool {
-        if self.is_hedged_mode() {
-            return true;
+        // Hedged modes (elastic engine only) force validation on every call so
+        // the compiled-vs-plain race is always observable.
+        #[cfg(feature = "elastic-engine")]
+        {
+            if self.is_hedged_mode() {
+                return true;
+            }
         }
 
         self.validation_policy.enable_shadow_validation
@@ -77,12 +82,15 @@ impl Interpreter {
         let compiled = plan_set.compiled.as_ref().expect("compiled plan required");
 
         self.runtime_metrics.shadow_validation_started_count += 1;
-        if self.is_hedged_mode() {
-            self.runtime_metrics.hedged_race_started_count += 1;
-            self.push_hedged_trace(format!(
-                "race:start compiled-vs-plain word={}",
-                resolved_name
-            ));
+        #[cfg(feature = "elastic-engine")]
+        {
+            if self.is_hedged_mode() {
+                self.runtime_metrics.hedged_race_started_count += 1;
+                self.push_hedged_trace(format!(
+                    "race:start compiled-vs-plain word={}",
+                    resolved_name
+                ));
+            }
         }
 
         let saved_stack = self.stack.clone();

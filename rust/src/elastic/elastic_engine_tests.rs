@@ -387,8 +387,10 @@ mod tests {
     // M5 — FallbackBridge
     // ────────────────────────────────────────────────────────────────────────
 
+    #[cfg(feature = "elastic-engine")]
     use crate::elastic::fallback_bridge::{FallbackBridge, FallbackReason};
 
+    #[cfg(feature = "elastic-engine")]
     fn make_unit(pure: bool, order_sensitive: bool, eager: bool) -> EvaluationUnit {
         let mut u = EvaluationUnit::new("TEST");
         u.pure = pure;
@@ -397,6 +399,7 @@ mod tests {
         u
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn fallback_impure_word_returns_unknown_purity() {
         let mut bridge = FallbackBridge::new();
@@ -406,6 +409,7 @@ mod tests {
         assert_eq!(bridge.fallback_log.len(), 1);
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn fallback_order_sensitive_returns_order_sensitive() {
         let mut bridge = FallbackBridge::new();
@@ -414,6 +418,7 @@ mod tests {
         assert_eq!(reason, Some(FallbackReason::OrderSensitive));
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn fallback_eager_required_returns_order_sensitive() {
         let mut bridge = FallbackBridge::new();
@@ -422,6 +427,7 @@ mod tests {
         assert_eq!(reason, Some(FallbackReason::OrderSensitive));
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn fallback_pure_non_sensitive_returns_none() {
         let mut bridge = FallbackBridge::new();
@@ -431,6 +437,7 @@ mod tests {
         assert!(bridge.fallback_log.is_empty());
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn fallback_elastic_force_never_falls_back() {
         let mut bridge = FallbackBridge::new();
@@ -451,6 +458,7 @@ mod tests {
     use crate::interpreter::Interpreter;
 
     /// Run `code` in greedy mode and return the stack snapshot.
+    #[cfg(feature = "elastic-engine")]
     async fn run_greedy(code: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::Greedy);
@@ -459,6 +467,7 @@ mod tests {
     }
 
     /// Run `code` in elastic-safe mode and return the stack snapshot.
+    #[cfg(feature = "elastic-engine")]
     async fn run_elastic(code: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::ElasticSafe);
@@ -469,6 +478,7 @@ mod tests {
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
+    #[cfg(feature = "elastic-engine")]
     async fn run_hedged_safe(code: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::HedgedSafe);
@@ -479,6 +489,7 @@ mod tests {
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
+    #[cfg(feature = "elastic-engine")]
     async fn run_fast_guarded(code: &str) -> Vec<String> {
         let mut interp = Interpreter::new();
         interp.set_elastic_mode(ElasticMode::FastGuarded);
@@ -489,6 +500,7 @@ mod tests {
         interp.stack.iter().map(|v| format!("{:?}", v)).collect()
     }
 
+    #[cfg(feature = "elastic-engine")]
     macro_rules! assert_semantics_match {
         ($code:expr) => {{
             let greedy = run_greedy($code).await;
@@ -501,36 +513,43 @@ mod tests {
         }};
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_basic_arithmetic() {
         assert_semantics_match!("[1] [2] +");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_vector_ops() {
         assert_semantics_match!("[1 2 3] [4 5 6] CONCAT");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_logic() {
         assert_semantics_match!("[1] [2] < NOT");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_map() {
         assert_semantics_match!("[1 2 3] { [2] * } MAP");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_fold() {
         assert_semantics_match!("[1 2 3 4] [0] { + } FOLD");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_filter() {
         assert_semantics_match!("[1 2 3 4 5 6] { [2] MOD [0] = } FILTER");
     }
 
+    #[cfg(feature = "elastic-engine")]
     macro_rules! assert_greedy_hedged_match {
         ($code:expr) => {{
             let greedy = run_greedy($code).await;
@@ -543,6 +562,7 @@ mod tests {
         }};
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_hedged_hof_kernels() {
         assert_greedy_hedged_match!("[1 2 3] { [2] * } MAP");
@@ -551,6 +571,7 @@ mod tests {
         assert_greedy_hedged_match!("[1 2 3 4] [0] { + } SCAN");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_fast_guarded_hof_kernels() {
         let code =
@@ -564,6 +585,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn fast_guarded_avoids_hedged_race_start() {
         let mut interp = Interpreter::new();
@@ -580,6 +602,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn hedged_metrics_increment_for_hof_kernels() {
         let mut interp = Interpreter::new();
@@ -595,6 +618,7 @@ mod tests {
         assert!(m.hedged_race_winner_quantized_count >= 1 || m.hedged_race_winner_plain_count >= 1);
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn compiled_plan_plain_race_runs_in_hedged_mode() {
         let mut interp = Interpreter::new();
@@ -610,6 +634,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn hedged_trace_collects_events() {
         let mut interp = Interpreter::new();
@@ -622,27 +647,32 @@ mod tests {
         assert!(!trace.is_empty(), "hedged trace should record events");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_cond_first_clause() {
         // Separate guard/body pairs: { guard } { body } ... COND
         assert_semantics_match!("[1] { [1] = } { [42] } { IDLE } { [99] } COND");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_cond_else_clause() {
         assert_semantics_match!("[9] { [1] = } { [42] } { IDLE } { [99] } COND");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_range_and_length() {
         assert_semantics_match!("[0 9] RANGE LENGTH");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_nested_arithmetic() {
         assert_semantics_match!("[3] [4] * [2] + [10] -");
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn semantics_user_defined_word() {
         let code = "{ [2] * } 'DOUBLE' DEF [5] DOUBLE";
@@ -709,6 +739,7 @@ mod tests {
         assert_eq!(interp.elastic_mode(), ElasticMode::Greedy);
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn interpreter_set_elastic_mode() {
         let mut interp = Interpreter::new();
@@ -716,6 +747,26 @@ mod tests {
         assert_eq!(interp.elastic_mode(), ElasticMode::ElasticSafe);
     }
 
+    /// Without the `elastic-engine` feature, requesting a non-greedy mode is
+    /// ignored (with a stderr warning) and the mode stays `Greedy`, so the
+    /// execution path is always the greedy one.
+    #[cfg(not(feature = "elastic-engine"))]
+    #[test]
+    fn interpreter_set_elastic_mode_ignored_without_engine() {
+        let mut interp = Interpreter::new();
+        for mode in &[
+            ElasticMode::ElasticSafe,
+            ElasticMode::HedgedSafe,
+            ElasticMode::HedgedTrace,
+            ElasticMode::FastGuarded,
+            ElasticMode::ElasticForce,
+        ] {
+            interp.set_elastic_mode(*mode);
+            assert_eq!(interp.elastic_mode(), ElasticMode::Greedy);
+        }
+    }
+
+    #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn interpreter_elastic_safe_runs_without_error() {
         let mut interp = Interpreter::new();

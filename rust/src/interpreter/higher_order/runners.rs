@@ -32,6 +32,7 @@ pub(crate) fn execute_quantized_map_kernel(
     res
 }
 
+#[cfg(feature = "elastic-engine")]
 pub(super) fn execute_plain_map_kernel(
     interp: &mut Interpreter,
     exec: &ExecutableCode,
@@ -120,6 +121,7 @@ pub(crate) fn execute_quantized_fold_kernel(
     res
 }
 
+#[cfg(feature = "elastic-engine")]
 pub(super) fn execute_plain_fold_kernel(
     interp: &mut Interpreter,
     exec: &ExecutableCode,

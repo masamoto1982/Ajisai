@@ -137,7 +137,7 @@ mod cond_dispatch_tests;
 mod core_word_canonicalization_tests;
 #[cfg(test)]
 mod differential_tests;
-#[cfg(test)]
+#[cfg(all(test, feature = "elastic-engine"))]
 mod fast_guarded_tests;
 #[cfg(test)]
 mod perf_regression_tests;

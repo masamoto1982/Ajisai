@@ -9,6 +9,7 @@
 
 - **Non-canonical.** 本書は Ajisai の意味論・ランタイム挙動・互換性方針を **定義しない**。
 - **Canonical source は `SPECIFICATION.html` のみ。** 本書が意味論を制約するように見える場合は、常に仕様が勝つ。
+- **実装状態の注記**: elastic/hedged 実行エンジン（hedged レース・COND ガード prefetch・fast-guarded カーネル）は opt-in の cargo feature `elastic-engine` に隔離された。デフォルトビルド（信頼コア）には含まれず、実行経路は常に greedy と同一。
 - 本書が記述するのは「**どう速くするか**」であって「**何が真であるか**」ではない。観測可能な挙動を変える変更は、必ず仕様改訂を先行させること。
 
 ---

@@ -151,10 +151,18 @@ jobs:
         working-directory: rust
         run: cargo check
 
-      - name: Run all Rust tests
+      # Default build = trusted core: the elastic/hedged engine is NOT
+      # compiled in (opt-in `elastic-engine` cargo feature).
+      - name: Run all Rust tests (default features, elastic engine off)
         working-directory: rust
-        run: cargo test --verbose
+        run: cargo test --lib --verbose && cargo test --tests --verbose
 
+      - name: Run Rust tests (--features elastic-engine)
+        working-directory: rust
+        run: cargo test --lib --features elastic-engine --verbose && cargo test --tests --features elastic-engine --verbose
+
+      # The wasm bundle ships the trusted core only, so the build check runs
+      # with the elastic engine off (default features + wasm).
       - name: Verify WASM build
         working-directory: rust
         run: |

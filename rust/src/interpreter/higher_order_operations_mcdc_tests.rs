@@ -51,6 +51,10 @@ use crate::types::Token;
 mod hedged_mode_classifier {
     use super::*;
 
+    // Rows 1 and 2 exercise the hedged arm of the classifier, which only
+    // exists with the `elastic-engine` feature (without it `set_elastic_mode`
+    // ignores non-Greedy modes and `is_hedged_mode` is statically false).
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn aq_ver_006_a_row1_hedged_safe_is_hedged() {
         // (A=T, B=F) -> true
@@ -62,6 +66,7 @@ mod hedged_mode_classifier {
         );
     }
 
+    #[cfg(feature = "elastic-engine")]
     #[test]
     fn aq_ver_006_a_row2_hedged_trace_is_hedged() {
         // (A=F, B=T) -> true
