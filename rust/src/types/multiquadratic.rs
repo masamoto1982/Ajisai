@@ -2,32 +2,29 @@
 //! (SPEC §4.2.7).
 //!
 //! Every value the current Coreword set can construct lies in the
-//! multiquadratic closure of the rationals: the field
-//! \(\mathbb{Q}(\sqrt{d_1}, \sqrt{d_2}, \dots)\). Each element of that field
-//! has a unique normal form \(\sum_d c_d \sqrt{d}\) as a finite
-//! \(\mathbb{Q}\)-linear combination of square-root monomials, because the
+//! multiquadratic closure \(\mathbb{Q}(\sqrt{d_1}, \sqrt{d_2}, \dots)\),
+//! whose elements have a unique normal form \(\sum_d c_d \sqrt{d}\) because
 //! square roots of multiplicatively independent integers are linearly
 //! independent over \(\mathbb{Q}\). This module derives that normal form
-//! from an `ExactReal` (including composed `Gosper` trees, whose leaves are
-//! always `Rational` or `AlgebraicSqrt` in the current Coreword set) and
-//! decides equality and order on it **exactly and totally** — the mechanism
-//! behind the §7.4 guarantee that the six comparison relations never return
-//! `unknown` over \(D\).
+//! from an `ExactReal` (including composed `Gosper` trees, whose leaves
+//! are always `Rational` or `AlgebraicSqrt` in the current Coreword set)
+//! and decides equality and order on it exactly — the mechanism behind the
+//! §7.4 guarantee that the six relations never return `unknown` over
+//! \(D\).
 //!
-//! Per SPEC §2.3 / §4.2.4 the normal form is a representation detail: it is
-//! never observable, display stays the canonical continued fraction, and no
-//! protocol string changes. `algebraic_cmp` returns `None` — sending the
-//! caller to the budgeted CF path — only for operands outside its reach
-//! (nil, or a degenerate transform recording a division by exact zero), so
-//! it can never *wrongly* decide.
+//! Per SPEC §2.3 / §4.2.4 the normal form is a representation detail: it
+//! is never observable and display stays the canonical continued fraction.
+//! `algebraic_cmp` returns `None` — sending the caller to the budgeted CF
+//! path — only for operands outside its reach (nil, a degenerate
+//! division-by-exact-zero transform, or a value over the internal work
+//! budgets below), so it can never *wrongly* decide.
 //!
 //! Instead of factoring radicands into primes (unbounded cost for large
-//! semiprimes), the normal form is taken over a **GCD-free basis**: the
-//! radicands of both operands are refined into pairwise-coprime integers,
-//! none a perfect square, such that every radicand is a product of powers
-//! of basis elements. Distinct subset products of such a basis are never
-//! perfect squares, which is exactly the hypothesis the linear-independence
-//! theorem needs; primality is not required.
+//! semiprimes), the normal form is taken over a **GCD-free basis**:
+//! pairwise-coprime integers, none a perfect square, covering every
+//! radicand as a product of powers. Distinct subset products of such a
+//! basis are then never perfect squares — exactly the hypothesis the
+//! linear-independence theorem needs; primality is not required.
 
 use crate::types::continued_fraction::{ExactReal, Gosper};
 use crate::types::fraction::Fraction;
@@ -35,47 +32,63 @@ use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+// Internal safety budgets on normal-form derivation (the same species as
+// `GOSPER_INGEST_SAFETY`: safety valves, not observable semantics).
+// Coefficients of a value built by a long arithmetic chain can grow
+// exponentially in the chain length (repeated squaring doubles the width
+// per step). Each coefficient multiplication is charged quadratically with
+// the operands' bit widths *before* it runs — BigInt gcd reduction is
+// quadratic — and once the total crosses the budget the derivation gives
+// up and the caller falls back to the lazy behavior. Tuned so realistic
+// algebraic programs (a handful of radicals, coefficients up to thousands
+// of bits) decide with room to spare, while adversarial exponential values
+// bail out in bounded time instead of grinding on huge integers. `DIV`'s
+// zero test runs on *every* division by a lazy divisor, so it gets a much
+// smaller budget than a user-requested comparison.
+const CMP_WORK_BUDGET: u64 = 20_000_000;
+const DIV_ZERO_WORK_BUDGET: u64 = 1_000_000;
 
 /// Exact three-way comparison of two admitted-domain (SPEC §4.2.7) exact
 /// reals via the multiquadratic normal form. Total for every operand pair
-/// the current Coreword set can construct; returns `None` (fall back to the
-/// budgeted CF comparison) only when an operand is nil or contains a
-/// degenerate division-by-exact-zero transform.
+/// the current Coreword set can realistically construct; `None` (fall back
+/// to the budgeted CF comparison) when an operand is nil, contains a
+/// degenerate division-by-exact-zero transform, or exceeds the budget.
 pub fn algebraic_cmp(a: &ExactReal, b: &ExactReal) -> Option<Ordering> {
     let basis = Basis::for_operands(&[a, b])?;
-    let va = eval(a, &basis)?;
-    let vb = eval(b, &basis)?;
+    let mut ctx = EvalCtx::new(&basis, CMP_WORK_BUDGET);
+    let va = eval(a, &mut ctx)?;
+    let vb = eval(b, &mut ctx)?;
     Some(va.sub(&vb).sign())
 }
 
 /// Whether an admitted-domain exact real is exactly zero. Used by `DIV` to
 /// project a lazily-built zero divisor onto the `divisionByZero` Bubble
-/// (SPEC §4.2.7: "Division by an element that is exactly zero bubbles to
-/// NIL per Section 11.2"). `None` when the value is outside the normal
-/// form's reach (nil or a degenerate transform).
+/// (SPEC §4.2.7). `None` when the value is outside the normal form's reach
+/// (nil, degenerate transform, or over the work budget) — the caller then
+/// keeps the pre-existing lazy behavior.
 pub fn algebraic_is_zero(x: &ExactReal) -> Option<bool> {
     let basis = Basis::for_operands(&[x])?;
-    Some(eval(x, &basis)?.is_zero())
+    let mut ctx = EvalCtx::new(&basis, DIV_ZERO_WORK_BUDGET);
+    Some(eval(x, &mut ctx)?.is_zero())
 }
 
-// =========================================================================
-// GCD-free radicand basis
-// =========================================================================
+// ---- GCD-free radicand basis ----
 
 /// Pairwise-coprime positive integers, each ≥ 2 and none a perfect square,
 /// such that every collected radicand is a product of powers of basis
-/// elements. Distinct subset products of the basis are then never perfect
-/// squares (a product of pairwise-coprime integers is a square iff each
-/// factor is), so the square roots of distinct subset products are linearly
-/// independent over ℚ and the coefficient map below is a true normal form.
+/// elements. A product of pairwise-coprime non-squares is never a square,
+/// so the √ of distinct subset products are linearly independent over ℚ
+/// and the coefficient map below is a true normal form.
 struct Basis(Vec<BigInt>);
 
 impl Basis {
     fn for_operands(operands: &[&ExactReal]) -> Option<Basis> {
         let mut radicands = Vec::new();
+        let mut seen = HashSet::new();
         for op in operands {
-            collect_radicands(op, &mut radicands)?;
+            collect_radicands(op, &mut radicands, &mut seen)?;
         }
         Some(Self::build(radicands))
     }
@@ -130,9 +143,8 @@ impl Basis {
     /// √n as `outside · √monomial` over the basis: factor n into basis-
     /// element powers, halve even exponents into `outside`, and keep the
     /// odd-exponent elements' product as the monomial key. `None` only if
-    /// n is not covered by the basis, which the construction rules out for
-    /// collected radicands (kept as a defensive fallback, never a wrong
-    /// answer).
+    /// n is not covered by the basis — impossible for collected radicands
+    /// (defensive fallback, never a wrong answer).
     fn decompose_sqrt(&self, n: &BigInt) -> Option<(BigInt, BigInt)> {
         let mut rest = n.clone();
         let mut outside = BigInt::one();
@@ -155,10 +167,15 @@ impl Basis {
     }
 }
 
-/// Push the integer radicand of every `AlgebraicSqrt` leaf: √(p/q) is
-/// carried as √(p·q)/q, so the integer whose square-root monomial matters
-/// is p·q. `None` for a nil leaf (outside any comparison).
-fn collect_radicands(er: &ExactReal, out: &mut Vec<BigInt>) -> Option<()> {
+/// Push the integer radicand of every `AlgebraicSqrt` leaf (√(p/q) is
+/// carried as √(p·q)/q, so the relevant integer is p·q). Shared `Gosper`
+/// nodes are walked once — arithmetic reuses subtrees behind `Arc`, so a
+/// value is a DAG, not a tree. `None` for a nil leaf.
+fn collect_radicands(
+    er: &ExactReal,
+    out: &mut Vec<BigInt>,
+    seen: &mut HashSet<usize>,
+) -> Option<()> {
     match er {
         ExactReal::Rational(f) => {
             if f.is_nil() {
@@ -168,20 +185,23 @@ fn collect_radicands(er: &ExactReal, out: &mut Vec<BigInt>) -> Option<()> {
         ExactReal::AlgebraicSqrt { radicand } => {
             out.push(radicand.numerator() * radicand.denominator());
         }
-        ExactReal::Gosper(g) => match &**g {
-            Gosper::Mobius { x, .. } => collect_radicands(x, out)?,
-            Gosper::Bihomographic { x, y, .. } => {
-                collect_radicands(x, out)?;
-                collect_radicands(y, out)?;
+        ExactReal::Gosper(g) => {
+            if !seen.insert(std::sync::Arc::as_ptr(g) as usize) {
+                return Some(());
             }
-        },
+            match &**g {
+                Gosper::Mobius { x, .. } => collect_radicands(x, out, seen)?,
+                Gosper::Bihomographic { x, y, .. } => {
+                    collect_radicands(x, out, seen)?;
+                    collect_radicands(y, out, seen)?;
+                }
+            }
+        }
     }
     Some(())
 }
 
-// =========================================================================
-// Normal-form values and field arithmetic
-// =========================================================================
+// ---- Normal-form values and field arithmetic ----
 
 /// An element of the multiquadratic field in normal form: a map from a
 /// square-root monomial (a product of a subset of the basis; `1` keys the
@@ -191,6 +211,33 @@ fn collect_radicands(er: &ExactReal, out: &mut Vec<BigInt>) -> Option<()> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct MqValue {
     terms: BTreeMap<BigInt, Fraction>,
+}
+
+/// Shared basis, remaining work budget, and a memo of already-normalized
+/// `Gosper` nodes so a shared subtree (DAG) is derived once.
+struct EvalCtx<'a> {
+    basis: &'a Basis,
+    remaining: i64,
+    memo: HashMap<usize, MqValue>,
+}
+
+impl<'a> EvalCtx<'a> {
+    fn new(basis: &'a Basis, budget: u64) -> Self {
+        EvalCtx {
+            basis,
+            remaining: budget as i64,
+            memo: HashMap::new(),
+        }
+    }
+
+    fn charge(&mut self, amount: u64) -> Option<()> {
+        self.remaining -= amount.min(i64::MAX as u64) as i64;
+        (self.remaining >= 0).then_some(())
+    }
+}
+
+fn coeff_bits(f: &Fraction) -> u64 {
+    f.numerator().bits() + f.denominator().bits()
 }
 
 impl MqValue {
@@ -210,7 +257,6 @@ impl MqValue {
         self.terms.is_empty()
     }
 
-    /// Sole rational coefficient when the value is rational, else `None`.
     fn as_rational(&self) -> Option<Fraction> {
         if self.terms.is_empty() {
             return Some(Fraction::new(BigInt::zero(), BigInt::one()));
@@ -261,28 +307,31 @@ impl MqValue {
 
     /// Product. For monomials over a pairwise-coprime basis,
     /// √m₁·√m₂ = g·√(m₁m₂/g²) with g = gcd(m₁, m₂), which is again a
-    /// subset-product monomial.
-    fn mul(&self, other: &MqValue) -> MqValue {
+    /// subset-product monomial. Each coefficient multiplication is charged
+    /// against the work budget *before* it runs, so a pair of
+    /// astronomically wide coefficients aborts instead of multiplying.
+    fn mul(&self, other: &MqValue, ctx: &mut EvalCtx) -> Option<MqValue> {
         let mut out = MqValue::zero();
         for (m1, c1) in &self.terms {
             for (m2, c2) in &other.terms {
+                let w = coeff_bits(c1) + coeff_bits(c2);
+                ctx.charge(w.saturating_mul(w) / 64 + 64)?;
                 let g = m1.gcd(m2);
                 let monomial = (m1 / &g) * (m2 / &g);
                 let coeff = c1.mul(c2).mul(&Fraction::new(g, BigInt::one()));
                 out.add_term(monomial, coeff);
             }
         }
-        out
+        Some(out)
     }
 
-    /// Multiplicative inverse by recursive conjugation, or `None` for the
-    /// zero value. Splitting on a basis element b as y = u + v (v = the
-    /// terms whose monomial contains b), the product y·(u − v) = u² − v²
-    /// contains no b in its support, so recursion eliminates one basis
-    /// element per step and bottoms out at a rational. u² − v² = 0 would
-    /// force y = 0 (a field has no zero divisors), which is excluded
-    /// upfront, so the recursion never divides by zero.
-    fn inverse(&self, basis: &Basis) -> Option<MqValue> {
+    /// Multiplicative inverse by recursive conjugation; `None` for the zero
+    /// value or on budget exhaustion. Splitting on a basis element b as
+    /// y = u + v (v = the terms whose monomial contains b), y·(u − v) =
+    /// u² − v² has no b in its support, so each step eliminates one basis
+    /// element and bottoms out at a rational. u² − v² = 0 would force
+    /// y = 0 (no zero divisors in a field), which is excluded upfront.
+    fn inverse(&self, ctx: &mut EvalCtx) -> Option<MqValue> {
         if self.is_zero() {
             return None;
         }
@@ -290,30 +339,31 @@ impl MqValue {
             let (n, d) = q.to_bigint_pair();
             return Some(MqValue::from_rational(&Fraction::new(d, n)));
         }
-        let split_on = basis
+        let split_on = ctx
+            .basis
             .0
             .iter()
-            .find(|b| self.terms.keys().any(|m| (m % *b).is_zero()))?;
+            .find(|b| self.terms.keys().any(|m| (m % *b).is_zero()))?
+            .clone();
         let mut with_b = MqValue::zero();
         let mut without_b = MqValue::zero();
         for (m, c) in &self.terms {
-            if (m % split_on).is_zero() {
+            if (m % &split_on).is_zero() {
                 with_b.add_term(m.clone(), c.clone());
             } else {
                 without_b.add_term(m.clone(), c.clone());
             }
         }
         let conjugate = without_b.sub(&with_b);
-        let product = self.mul(&conjugate);
-        let inverse = product.inverse(basis)?;
-        Some(conjugate.mul(&inverse))
+        let product = self.mul(&conjugate, ctx)?;
+        let inverse = product.inverse(ctx)?;
+        conjugate.mul(&inverse, ctx)
     }
 
     /// Exact sign of the value. A non-empty normal form is non-zero by
     /// linear independence, so interval refinement over rational √ bounds
-    /// is guaranteed to separate the sum from zero after finitely many
-    /// doublings; no budget and no floating point are involved (SPEC
-    /// §4.2.6).
+    /// separates the sum from zero after finitely many doublings; no
+    /// budget and no floating point are involved (SPEC §4.2.6).
     fn sign(&self) -> Ordering {
         if self.terms.is_empty() {
             return Ordering::Equal;
@@ -341,19 +391,16 @@ impl MqValue {
         }
     }
 
-    /// Rational enclosure of the value at 2⁻ᵇⁱᵗˢ per-monomial precision:
-    /// with s = ⌊√(m·4ᵇⁱᵗˢ)⌋, √m ∈ [s, s+1]/2ᵇⁱᵗˢ, tightened to a point for
-    /// the rational monomial m = 1.
+    /// Rational enclosure at 2⁻ᵇⁱᵗˢ per-monomial precision: with
+    /// s = ⌊√(m·4ᵇⁱᵗˢ)⌋, √m ∈ [s, s+1]/2ᵇⁱᵗˢ; a point for m = 1.
     fn bounds(&self, bits: u64) -> (Fraction, Fraction) {
         let scale = BigInt::one() << bits;
         let mut lo = Fraction::new(BigInt::zero(), BigInt::one());
         let mut hi = lo.clone();
         for (m, c) in &self.terms {
             let (m_lo, m_hi) = if m.is_one() {
-                (
-                    Fraction::new(BigInt::one(), BigInt::one()),
-                    Fraction::new(BigInt::one(), BigInt::one()),
-                )
+                let one = Fraction::new(BigInt::one(), BigInt::one());
+                (one.clone(), one)
             } else {
                 let s = (m.clone() << (2 * bits)).sqrt();
                 (
@@ -373,17 +420,15 @@ impl MqValue {
     }
 }
 
-// =========================================================================
-// ExactReal → normal form
-// =========================================================================
+// ---- ExactReal → normal form ----
 
-/// Evaluate an `ExactReal` into the normal form over `basis`. Möbius and
-/// bihomographic transforms are replayed as exact field arithmetic, so a
-/// composed Gosper tree collapses to the same normal form as the value it
-/// denotes. `None` for nil and for a transform whose denominator is exactly
-/// zero (a degenerate division recorded before the divisor was known to be
-/// zero) — the budgeted CF path remains the honest fallback there.
-fn eval(er: &ExactReal, basis: &Basis) -> Option<MqValue> {
+/// Evaluate an `ExactReal` into the normal form over the context's basis;
+/// composed Gosper trees collapse to the normal form of the value they
+/// denote, with shared nodes memoized per comparison. `None` for nil, for
+/// a transform whose denominator is exactly zero (a degenerate division
+/// recorded before the divisor was known to be zero), and on work-budget
+/// exhaustion — the budgeted CF path remains the honest fallback.
+fn eval(er: &ExactReal, ctx: &mut EvalCtx) -> Option<MqValue> {
     match er {
         ExactReal::Rational(f) => {
             if f.is_nil() {
@@ -394,46 +439,59 @@ fn eval(er: &ExactReal, basis: &Basis) -> Option<MqValue> {
         ExactReal::AlgebraicSqrt { radicand } => {
             // √(p/q) = √(p·q)/q.
             let (p, q) = radicand.to_bigint_pair();
-            let (outside, monomial) = basis.decompose_sqrt(&(p * &q))?;
+            let (outside, monomial) = ctx.basis.decompose_sqrt(&(p * &q))?;
             let mut v = MqValue::zero();
             v.add_term(monomial, Fraction::new(outside, q));
             Some(v)
         }
-        ExactReal::Gosper(g) => match &**g {
-            Gosper::Mobius { a, b, c, d, x } => {
-                let xv = eval(x, basis)?;
-                let num = xv.mul(&int_value(a)).add(&int_value(b));
-                let den = xv.mul(&int_value(c)).add(&int_value(d));
-                Some(num.mul(&den.inverse(basis)?))
+        ExactReal::Gosper(g) => {
+            let key = std::sync::Arc::as_ptr(g) as usize;
+            if let Some(hit) = ctx.memo.get(&key) {
+                return Some(hit.clone());
             }
-            Gosper::Bihomographic {
-                a,
-                b,
-                c,
-                d,
-                e,
-                f,
-                g,
-                h,
-                x,
-                y,
-            } => {
-                let xv = eval(x, basis)?;
-                let yv = eval(y, basis)?;
-                let xy = xv.mul(&yv);
-                let num = xy
-                    .mul(&int_value(a))
-                    .add(&xv.mul(&int_value(b)))
-                    .add(&yv.mul(&int_value(c)))
-                    .add(&int_value(d));
-                let den = xy
-                    .mul(&int_value(e))
-                    .add(&xv.mul(&int_value(f)))
-                    .add(&yv.mul(&int_value(g)))
-                    .add(&int_value(h));
-                Some(num.mul(&den.inverse(basis)?))
-            }
-        },
+            ctx.charge(64)?;
+            let value = eval_gosper(g, ctx)?;
+            ctx.memo.insert(key, value.clone());
+            Some(value)
+        }
+    }
+}
+
+fn eval_gosper(node: &Gosper, ctx: &mut EvalCtx) -> Option<MqValue> {
+    match node {
+        Gosper::Mobius { a, b, c, d, x } => {
+            let xv = eval(x, ctx)?;
+            let num = xv.mul(&int_value(a), ctx)?.add(&int_value(b));
+            let den = xv.mul(&int_value(c), ctx)?.add(&int_value(d));
+            num.mul(&den.inverse(ctx)?, ctx)
+        }
+        Gosper::Bihomographic {
+            a,
+            b,
+            c,
+            d,
+            e,
+            f,
+            g,
+            h,
+            x,
+            y,
+        } => {
+            let xv = eval(x, ctx)?;
+            let yv = eval(y, ctx)?;
+            let xy = xv.mul(&yv, ctx)?;
+            let num = xy
+                .mul(&int_value(a), ctx)?
+                .add(&xv.mul(&int_value(b), ctx)?)
+                .add(&yv.mul(&int_value(c), ctx)?)
+                .add(&int_value(d));
+            let den = xy
+                .mul(&int_value(e), ctx)?
+                .add(&xv.mul(&int_value(f), ctx)?)
+                .add(&yv.mul(&int_value(g), ctx)?)
+                .add(&int_value(h));
+            num.mul(&den.inverse(ctx)?, ctx)
+        }
     }
 }
 
