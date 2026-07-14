@@ -469,6 +469,18 @@ impl AjisaiInterpreter {
         self.interpreter.elastic_mode().as_str().to_string()
     }
 
+    /// Override the execution step budget (water level, SPEC §5.3) for
+    /// subsequent executions. A runtime safety control, not a language
+    /// semantic: the host may raise or lower it; never calling this keeps
+    /// the default (100,000). A zero or non-positive value is ignored so a
+    /// malformed host call cannot disable the safety budget entirely.
+    #[wasm_bindgen]
+    pub fn set_max_execution_steps(&mut self, steps: usize) {
+        if steps > 0 {
+            self.interpreter.set_max_execution_steps(steps);
+        }
+    }
+
     /// Only exported when the `elastic-engine` feature is compiled in; the
     /// GUI already tolerates the `hedgedTrace` payload field being absent.
     #[cfg(feature = "elastic-engine")]

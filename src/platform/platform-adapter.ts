@@ -68,6 +68,20 @@ export interface Runtime {
     onReady(callback: () => void): void;
 }
 
+/**
+ * Host-configurable execution water levels (SPECIFICATION.html §5.3).
+ * These are runtime safety controls, not language semantics: a host may
+ * raise or lower them without changing what any program means, and
+ * conformance never depends on a particular value.
+ */
+export interface ExecutionConfig {
+    /**
+     * Execution step budget for one run. Positive integer; `undefined`
+     * keeps the interpreter default (100,000).
+     */
+    readonly stepLimit?: number;
+}
+
 export interface SerialPortInfo {
     readonly portId: string;
     readonly label?: string;
@@ -112,4 +126,10 @@ export interface PlatformAdapter {
     readonly fileIO: FileIO;
     readonly runtime: Runtime;
     readonly serial: SerialAdapter;
+    /**
+     * Where a platform surfaces host execution settings (§5.3 water levels).
+     * Both current adapters return the empty config (all defaults); a Tauri
+     * settings store or a web host embedding the playground fills this in.
+     */
+    readonly executionConfig: ExecutionConfig;
 }

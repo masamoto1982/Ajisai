@@ -8,7 +8,7 @@ output, which AI agents and verification scripts consume.
 ## 1. Commands and exit codes
 
 ```
-ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>]
+ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>] [--step-limit <N>]
 ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
 ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never executes
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
@@ -22,6 +22,14 @@ all plain-language output (default `ja`). All are additive and never change the
 structured fields; with neither `--explain` nor `--contract`, output is
 unchanged. `--contract` raises exit 1 when it finds a malformed (over-consuming)
 plan; advisories and notes do not change the exit code.
+
+`--step-limit <N>` overrides the execution step budget for `run` (the water
+level of SPECIFICATION.html §5.3; default 100,000). `N` must be a positive
+integer; `0` or a non-number is a CLI usage error (exit 2). The budget is a
+runtime safety control, not a language semantic: it changes only *whether*
+`ExecutionLimitExceeded` is raised, never the shape of any output field.
+Exceeding the budget is an ordinary language error (exit 1, `status:
+"error"`).
 
 | Exit code | Meaning |
 |---|---|

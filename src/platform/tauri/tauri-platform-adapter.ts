@@ -9,6 +9,10 @@ export const TAURI_PLATFORM_ADAPTER: PlatformAdapter = {
     persistence: new TauriPersistence(),
     fileIO: new TauriFileIO(),
     serial: new TauriSerialAdapter(),
+    // Host execution settings seam (SPEC §5.3 water levels). Empty = all
+    // interpreter defaults; a future Tauri settings store fills in e.g.
+    // stepLimit here.
+    executionConfig: {},
     runtime: {
         kind: 'tauri',
         buildTimestamp: __AJISAI_BUILD_TIMESTAMP__,

@@ -30,7 +30,10 @@ export const createExecutionSnapshot = (interpreter: AjisaiInterpreter): Interpr
         userWords: collectUserWords(interpreter),
         importedModules: interpreter.collect_imported_modules(),
         executionMode: interpreter.get_execution_mode(),
-        serialInbox: collectSerialInbox()
+        serialInbox: collectSerialInbox(),
+        // Host-configured step budget (SPEC §5.3 water level); undefined
+        // keeps the interpreter default of 100,000.
+        stepLimit: getPlatform().executionConfig.stepLimit
     });
 
 export const syncInterpreterState = (

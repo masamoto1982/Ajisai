@@ -38,6 +38,8 @@ mod plan_check_tests;
 mod report;
 #[cfg(test)]
 mod report_tests;
+#[cfg(test)]
+mod step_limit_tests;
 
 use explain::{Explanation, Lang};
 
@@ -54,7 +56,8 @@ use std::sync::Arc;
 const USAGE: &str = "Usage: ajisai <command> [options]
 
 Commands:
-  run <file.ajisai> [--json]      Execute a program file
+  run <file.ajisai> [--json] [--step-limit <N>]
+                                  Execute a program file
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
   coverage <file.ajisai> [--json] Contract coverage ratio: the fraction of word
                                   occurrences resolving to complete SPEC 7.14
@@ -71,6 +74,10 @@ Options:
                                   flow-mass and NIL-flow contract check
   --lang <ja|en>                  Language for --explain / --contract / modifier
                                   output (default: ja)
+  --step-limit <N>                With `run`: override the execution step
+                                  budget (water level, SPEC 5.3). N is a
+                                  positive integer; default: 100000. A runtime
+                                  safety control, not a language semantic
 
 Exit codes:
   0  success
@@ -87,6 +94,7 @@ pub fn run(args: &[String]) -> i32 {
     let mut want_explain = false;
     let mut contract = false;
     let mut lang = Lang::Ja;
+    let mut step_limit: Option<usize> = None;
     let mut positional: Vec<&str> = Vec::new();
     let mut iter = rest.iter();
     while let Some(arg) = iter.next() {
@@ -101,6 +109,15 @@ pub fn run(args: &[String]) -> i32 {
                     return 2;
                 }
             },
+            "--step-limit" => {
+                match iter.next().and_then(|value| value.parse::<usize>().ok()) {
+                    Some(parsed) if parsed > 0 => step_limit = Some(parsed),
+                    _ => {
+                        eprintln!("--step-limit expects a positive integer\n\n{}", USAGE);
+                        return 2;
+                    }
+                }
+            }
             flag if flag.starts_with('-') => {
                 eprintln!("Unknown option: {}\n\n{}", flag, USAGE);
                 return 2;
@@ -113,6 +130,7 @@ pub fn run(args: &[String]) -> i32 {
         explain: want_explain,
         contract,
         lang,
+        step_limit,
     };
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
@@ -133,6 +151,10 @@ struct Opts {
     explain: bool,
     contract: bool,
     lang: Lang,
+    /// Execution step budget override (water level, SPEC §5.3). `None` keeps
+    /// the interpreter default (`DEFAULT_MAX_EXECUTION_STEPS`); only `run`
+    /// executes, so only `run` reads it.
+    step_limit: Option<usize>,
 }
 
 fn cmd_version(json: bool) -> i32 {
@@ -244,6 +266,9 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
     }
 
     let mut interp = Interpreter::with_host(Arc::new(host::CliHostEnv));
+    if let Some(limit) = opts.step_limit {
+        interp.set_max_execution_steps(limit);
+    }
     let result = block_on(interp.execute(&source));
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
