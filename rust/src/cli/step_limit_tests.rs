@@ -41,7 +41,10 @@ fn down_probe_exceeds_default_budget_without_step_limit() {
     let path = write_program("default", DOWN_PROBE);
     let code = run_cli(&["run", path.to_str().unwrap()]);
     let _ = std::fs::remove_file(&path);
-    assert_eq!(code, 1, "200000 DOWN must exceed the default 100,000 budget");
+    assert_eq!(
+        code, 1,
+        "200000 DOWN must exceed the default 100,000 budget"
+    );
 }
 
 #[test]
@@ -49,13 +52,15 @@ fn down_probe_succeeds_with_raised_step_limit() {
     let path = write_program("raised", DOWN_PROBE);
     let code = run_cli(&["run", path.to_str().unwrap(), "--step-limit", "1000000"]);
     let _ = std::fs::remove_file(&path);
-    assert_eq!(code, 0, "200000 DOWN must complete under --step-limit 1000000");
+    assert_eq!(
+        code, 0,
+        "200000 DOWN must complete under --step-limit 1000000"
+    );
 }
 
 /// Twelve word executions (a step counts a *word* execution, not a literal),
 /// so this trips a 10-step budget but is far below the 100,000 default.
-const SIMPLE_PROGRAM: &str =
-    "[ 1 ] [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + \
+const SIMPLE_PROGRAM: &str = "[ 1 ] [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + \
      [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] + [ 1 ] +";
 
 #[test]

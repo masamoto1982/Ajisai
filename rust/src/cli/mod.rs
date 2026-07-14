@@ -109,15 +109,13 @@ pub fn run(args: &[String]) -> i32 {
                     return 2;
                 }
             },
-            "--step-limit" => {
-                match iter.next().and_then(|value| value.parse::<usize>().ok()) {
-                    Some(parsed) if parsed > 0 => step_limit = Some(parsed),
-                    _ => {
-                        eprintln!("--step-limit expects a positive integer\n\n{}", USAGE);
-                        return 2;
-                    }
+            "--step-limit" => match iter.next().and_then(|value| value.parse::<usize>().ok()) {
+                Some(parsed) if parsed > 0 => step_limit = Some(parsed),
+                _ => {
+                    eprintln!("--step-limit expects a positive integer\n\n{}", USAGE);
+                    return 2;
                 }
-            }
+            },
             flag if flag.starts_with('-') => {
                 eprintln!("Unknown option: {}\n\n{}", flag, USAGE);
                 return 2;
