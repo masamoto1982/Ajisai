@@ -2097,5 +2097,46 @@ COND</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- JSON module basics (pure words, so `core` per the established contract:
+     cf. core-qualified-name-requires-import, which exercises MATH@SQRT).
+     The role assertions pin SPEC §12.1: a role is decided once, at
+     construction, and the consumed input string's Text role must never leak
+     onto the result at the same stack position. -->
+
+<section class="ajisai-case" id="core-json-parse-record-structural-role" data-category="core">
+  <h3>JSON@PARSE yields a Record rendered structurally, not under the consumed input's Text role (§12.1)</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1}' JSON@PARSE</pre>
+  <pre class="ajisai-expect-result">[ [ 'a' 1/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-keys-are-text" data-category="core">
+  <h3>JSON@KEYS yields a vector whose elements keep their Text role (§12.2)</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE JSON@KEYS</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-get-by-key" data-category="core">
+  <h3>JSON@GET extracts a field value by key</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1}' JSON@PARSE 'a' JSON@GET</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-stringify-roundtrip" data-category="core">
+  <h3>JSON@STRINGIFY round-trips a parsed object (keys in canonical sorted order)</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":"x"}' JSON@PARSE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":1,"b":"x"}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-parse-failure-reasoned-nil" data-category="core">
+  <h3>JSON@PARSE of undecodable text bubbles a reasoned NIL (invalidEncoding, §11.2/§15.2) with no output effect</h3>
+  <pre class="ajisai-source">'json' IMPORT 'not json' JSON@PARSE NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 </body>
 </html>

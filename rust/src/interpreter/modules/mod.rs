@@ -3,6 +3,7 @@ mod module_import_execution;
 mod module_registry;
 mod module_word_docs;
 mod module_word_types;
+mod semantic_sync;
 
 use crate::coreword_registry::CorewordMetadata;
 use crate::error::Result;

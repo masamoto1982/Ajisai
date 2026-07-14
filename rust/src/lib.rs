@@ -49,4 +49,7 @@ mod tensor_operation_tests;
 mod json_io_tests;
 
 #[cfg(test)]
+mod json_semantic_role_tests;
+
+#[cfg(test)]
 mod conformance_tests;
