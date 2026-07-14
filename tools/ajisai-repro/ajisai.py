@@ -70,6 +70,14 @@ class Rational:
     f: Fraction
 
 @dataclass
+class Interval:
+    """A sound rational interval [lo, hi] (MATH@INTERVAL / MATH@SQRT-EPS).
+    Displayed as `[lo, hi]` with both endpoints in n/d form, mirroring the
+    Rust Interval Display."""
+    lo: Fraction
+    hi: Fraction
+
+@dataclass
 class Sqrt:
     """Lazy sqrt of a non-negative rational (Section 4.2.2 AlgebraicSqrt)."""
     radicand: Fraction               # value is sqrt(radicand)
@@ -748,6 +756,9 @@ def display(v):
         return {True: "TRUE", False: "FALSE", "U": "UNKNOWN"}[v.v]
     if isinstance(v, Nil):
         return "NIL"
+    if isinstance(v, Interval):
+        return (f"[{v.lo.numerator}/{v.lo.denominator}, "
+                f"{v.hi.numerator}/{v.hi.denominator}]")
     if isinstance(v, Str):
         return "'" + v.s + "'"
     if isinstance(v, (Vec, Rec)):
@@ -2137,24 +2148,486 @@ def w_sqrt(it, mods):
 
 def w_neg(it, mods):
     ops, keep = it.operands(mods, 1)
-    v = ops[-1]; fa = as_fraction(v)
+    v = ops[-1]
+    if isinstance(v, Nil): it.push(v); return
+    fa = as_fraction(v)
     if fa is None: raise AjisaiError("structureError", "NEG")
     it.push(Rational(-fa))
 
 def w_abs(it, mods):
     ops, keep = it.operands(mods, 1)
-    v = ops[-1]; fa = as_fraction(v)
+    v = ops[-1]
+    if isinstance(v, Nil): it.push(v); return
+    fa = as_fraction(v)
     if fa is None: raise AjisaiError("structureError", "ABS")
     it.push(Rational(abs(fa)))
+
+def _sort_cmp(a, b):
+    if isinstance(a, Str) and isinstance(b, Str):
+        return -1 if a.s < b.s else (1 if a.s > b.s else 0)
+    return cmp_values(a, b)
 
 def w_sort(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
     if not isinstance(v, Vec):
-        raise AjisaiError("structureError", "SORT needs a vector")
+        raise AjisaiError("structureError", "SORT: expected vector")
     import functools
-    items = sorted(v.items, key=functools.cmp_to_key(cmp_values))
+    items = sorted(v.items, key=functools.cmp_to_key(_sort_cmp))
     it.push(Vec(items))
+
+# MATH scalar utilities ------------------------------------------------------
+
+def _first_nil(ops):
+    for o in ops:
+        if isinstance(o, Nil):
+            return o
+    return None
+
+def w_math_sign(it, mods):
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if isinstance(v, Nil): it.push(v); return
+    fa = as_fraction(v)
+    if fa is None: raise AjisaiError("custom", "SIGN: expected a number")
+    it.push(Rational(Fraction(-1 if fa < 0 else (1 if fa > 0 else 0))))
+
+def _minmax_word(name, pick):
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 2)
+        nil = _first_nil(ops[-2:])
+        if nil is not None: it.push(nil); return
+        fa, fb = as_fraction(ops[-2]), as_fraction(ops[-1])
+        if fa is None or fb is None:
+            raise AjisaiError("custom", f"{name}: expected two numbers")
+        it.push(Rational(pick(fa, fb)))
+    return impl
+
+def w_math_pow(it, mods):
+    ops, keep = it.operands(mods, 2)
+    nil = _first_nil(ops[-2:])
+    if nil is not None: it.push(nil); return
+    fa, fb = as_fraction(ops[-2]), as_fraction(ops[-1])
+    if fa is None or fb is None:
+        raise AjisaiError("custom", "POW: expected two numbers")
+    if fb.denominator != 1:
+        raise AjisaiError("custom", "POW: exponent must be an integer")
+    e = int(fb)
+    if e < 0 and fa == 0:
+        it.push(Nil(reason="divisionByZero", origin="executionFailure")); return
+    it.push(Rational(fa ** e))
+
+def _gcd_lcm_word(name, fn):
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 2)
+        nil = _first_nil(ops[-2:])
+        if nil is not None: it.push(nil); return
+        fa, fb = as_fraction(ops[-2]), as_fraction(ops[-1])
+        if fa is None or fb is None or fa.denominator != 1 or fb.denominator != 1:
+            raise AjisaiError("custom", f"{name}: expected two integers")
+        it.push(Rational(Fraction(fn(abs(int(fa)), abs(int(fb))))))
+    return impl
+
+# MATH interval words (exact-rational interval arithmetic) -------------------
+
+def _value_to_interval(v):
+    if isinstance(v, Rational):
+        return Interval(v.f, v.f)
+    if isinstance(v, Interval):
+        return v
+    return None
+
+def w_math_interval(it, mods):
+    ops, keep = it.operands(mods, 2)
+    lo_v, hi_v = ops[-2], ops[-1]
+    if not isinstance(lo_v, Rational):
+        raise AjisaiError("custom", "INTERVAL: lower bound must be scalar")
+    if not isinstance(hi_v, Rational):
+        raise AjisaiError("custom", "INTERVAL: upper bound must be scalar")
+    if lo_v.f > hi_v.f:
+        raise AjisaiError("custom", "invalid interval: lo must be <= hi")
+    it.push(Interval(lo_v.f, hi_v.f))
+
+def _interval_accessor(pick):
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 1)
+        iv = _value_to_interval(ops[-1])
+        if iv is None:
+            raise AjisaiError(
+                "custom", "interval accessor: expected Number or Interval")
+        it.push(Rational(pick(iv)))
+    return impl
+
+def w_math_is_exact(it, mods):
+    ops, keep = it.operands(mods, 1)
+    iv = _value_to_interval(ops[-1])
+    if iv is None:
+        raise AjisaiError("custom", "IS_EXACT: expected Number or Interval")
+    it.push(TRUE if iv.lo == iv.hi else FALSE)
+
+def _exact_rational_sqrt(q: Fraction):
+    if q < 0:
+        return None
+    sp = _math.isqrt(q.numerator); sq = _math.isqrt(q.denominator)
+    if sp * sp == q.numerator and sq * sq == q.denominator:
+        return Fraction(sp, sq)
+    return None
+
+def _sqrt_rational_interval(q: Fraction, eps: Fraction):
+    """Mirror of the Rust bisection: lo=0, hi=max(q,1), halve until <= eps."""
+    if q < 0:
+        raise AjisaiError("custom", "sqrt of negative value")
+    if q == 0:
+        return Interval(Fraction(0), Fraction(0))
+    exact = _exact_rational_sqrt(q)
+    if exact is not None:
+        return Interval(exact, exact)
+    if eps <= 0:
+        raise AjisaiError("custom", "sqrt precision must be positive")
+    lo = Fraction(0)
+    hi = q if q >= 1 else Fraction(1)
+    while hi - lo > eps:
+        mid = (lo + hi) / 2
+        if mid * mid <= q:
+            lo = mid
+        else:
+            hi = mid
+    return Interval(lo, hi)
+
+def _sqrt_interval_with_eps(iv: Interval, eps: Fraction):
+    if iv.hi < 0:
+        raise AjisaiError("custom", "sqrt of negative value")
+    if iv.lo < 0:
+        hi = _sqrt_rational_interval(iv.hi, eps)
+        return Interval(Fraction(0), hi.hi)
+    lo = _sqrt_rational_interval(iv.lo, eps)
+    hi = _sqrt_rational_interval(iv.hi, eps)
+    return Interval(lo.lo, hi.hi)
+
+def w_math_sqrt_eps(it, mods):
+    ops, keep = it.operands(mods, 2)
+    iv = _value_to_interval(ops[-2])
+    if iv is None:
+        raise AjisaiError(
+            "custom", "SQRT_EPS: expected Number or Interval as first arg")
+    if not isinstance(ops[-1], Rational):
+        raise AjisaiError("custom", "SQRT_EPS: eps must be scalar rational")
+    result = _sqrt_interval_with_eps(iv, ops[-1].f)
+    it.push(Rational(result.lo) if result.lo == result.hi else result)
+
+# ALGO words -----------------------------------------------------------------
+
+def _algo_eq(a, b):
+    if isinstance(a, Nil) and isinstance(b, Nil):
+        return True
+    return value_equal(a, b) is True
+
+def w_algo_unique(it, mods):
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError("structureError", "UNIQUE: expected vector")
+    out = []
+    for x in v.items:
+        if not any(_algo_eq(x, y) for y in out):
+            out.append(x)
+    it.push(Vec(out))
+
+def w_algo_contains(it, mods):
+    ops, keep = it.operands(mods, 2)
+    v, needle = ops[-2], ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError(
+            "structureError", "CONTAINS: expected vector as first operand")
+    it.push(TRUE if any(_algo_eq(x, needle) for x in v.items) else FALSE)
+
+def w_algo_index_of(it, mods):
+    ops, keep = it.operands(mods, 2)
+    v, needle = ops[-2], ops[-1]
+    if not isinstance(v, Vec):
+        raise AjisaiError(
+            "structureError", "INDEX-OF: expected vector as first operand")
+    for i, x in enumerate(v.items):
+        if _algo_eq(x, needle):
+            it.push(Rational(Fraction(i))); return
+    it.push(Nil(reason="missingField", origin="executionFailure"))
+
+# TIME words (exact, timezone-free civil calendar; §9.1) ---------------------
+# days_from_civil / civil_from_days follow the standard proleptic-Gregorian
+# arithmetic (Howard Hinnant's algorithms), mirroring rust time_calendar.
+
+def _days_from_civil(y, m, d):
+    y -= m <= 2
+    era = (y if y >= 0 else y - 399) // 400
+    yoe = y - era * 400
+    doy = (153 * (m + (-3 if m > 2 else 9)) + 2) // 5 + d - 1
+    doe = yoe * 365 + yoe // 4 - yoe // 100 + doy
+    return era * 146097 + doe - 719468
+
+def _civil_from_days(z):
+    z += 719468
+    era = (z if z >= 0 else z - 146096) // 146097
+    doe = z - era * 146097
+    yoe = (doe - doe // 1460 + doe // 36524 - doe // 146096) // 365
+    y = yoe + era * 400
+    doy = doe - (365 * yoe + yoe // 4 - yoe // 100)
+    mp = (5 * doy + 2) // 153
+    d = doy - (153 * mp + 2) // 5 + 1
+    m = mp + (3 if mp < 10 else -9)
+    return (y + (m <= 2), m, d)
+
+def _is_leap(y):
+    return y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)
+
+def _days_in_month(y, m):
+    if m == 2:
+        return 29 if _is_leap(y) else 28
+    return 31 if m in (1, 3, 5, 7, 8, 10, 12) else 30
+
+def _civil_components(v, word, lens):
+    if not isinstance(v, Vec) or not all(
+        isinstance(x, Rational) for x in v.items
+    ):
+        raise AjisaiError("custom", f"{word}: expected a civil vector")
+    if len(v.items) not in lens:
+        want = " or ".join(str(n) for n in sorted(lens))
+        raise AjisaiError(
+            "custom", f"{word}: civil vector must have {want} elements")
+    return v.items
+
+def _int_field(x, word, what):
+    if not isinstance(x, Rational):
+        raise AjisaiError("custom", f"{word}: {what} must be a number")
+    if x.f.denominator != 1:
+        raise AjisaiError("custom", f"{word}: {what} must be an integer")
+    return int(x.f)
+
+def _scalar_field(x, word, what):
+    if not isinstance(x, Rational):
+        raise AjisaiError("custom", f"{word}: {what} must be a number")
+    return x.f
+
+def _civil_date_fields(comps, word):
+    return (_int_field(comps[0], word, "year"),
+            _int_field(comps[1], word, "month"),
+            _int_field(comps[2], word, "day"))
+
+def _rvec(nums):
+    return Vec([Rational(Fraction(n)) for n in nums])
+
+def w_time_datetime(it, mods):
+    ops, keep = it.operands(mods, 2)
+    if not isinstance(ops[-2], Rational):
+        raise AjisaiError("custom", "DATETIME: timestamp must be a number")
+    if not isinstance(ops[-1], Rational):
+        raise AjisaiError("custom", "DATETIME: offset must be a number")
+    local = ops[-2].f + ops[-1].f * 3600
+    days = _math.floor(local / 86400)
+    rem = local - days * 86400
+    hour = int(rem // 3600); rem -= hour * 3600
+    minute = int(rem // 60); second = rem - minute * 60
+    y, m, d = _civil_from_days(days)
+    it.push(Vec([Rational(Fraction(y)), Rational(Fraction(m)),
+                 Rational(Fraction(d)), Rational(Fraction(hour)),
+                 Rational(Fraction(minute)), Rational(second)]))
+
+def w_time_timestamp(it, mods):
+    ops, keep = it.operands(mods, 2)
+    comps = _civil_components(ops[-2], "TIMESTAMP", {6})
+    if not isinstance(ops[-1], Rational):
+        raise AjisaiError("custom", "TIMESTAMP: offset must be a number")
+    y, m, d = _civil_date_fields(comps, "TIMESTAMP")
+    h = _int_field(comps[3], "TIMESTAMP", "hour")
+    mi = _int_field(comps[4], "TIMESTAMP", "minute")
+    s = _scalar_field(comps[5], "TIMESTAMP", "second")
+    instant = (Fraction(_days_from_civil(y, m, d)) * 86400
+               + h * 3600 + mi * 60 + s - ops[-1].f * 3600)
+    it.push(Rational(instant))
+
+def w_time_date(it, mods):
+    ops, keep = it.operands(mods, 1)
+    comps = _civil_components(ops[-1], "DATE", {6})
+    it.push(Vec(list(comps[0:3])))
+
+def w_time_time(it, mods):
+    ops, keep = it.operands(mods, 1)
+    comps = _civil_components(ops[-1], "TIME", {6})
+    it.push(Vec(list(comps[3:6])))
+
+def _time_field_word(word, date_index):
+    """YEAR/MONTH/DAY read indices 0-2 of a date or datetime."""
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 1)
+        comps = _civil_components(ops[-1], word, {3, 6})
+        it.push(comps[date_index])
+    return impl
+
+def _time_of_day_word(word, tod_index):
+    """HOUR/MINUTE/SECOND read the time fields of a time or datetime."""
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 1)
+        comps = _civil_components(ops[-1], word, {3, 6})
+        it.push(comps[tod_index + 3] if len(comps) == 6 else comps[tod_index])
+    return impl
+
+def w_time_weekday(it, mods):
+    ops, keep = it.operands(mods, 1)
+    comps = _civil_components(ops[-1], "WEEKDAY", {3, 6})
+    y, m, d = _civil_date_fields(comps, "WEEKDAY")
+    it.push(Rational(Fraction((_days_from_civil(y, m, d) + 3) % 7 + 1)))
+
+def w_time_add_days(it, mods):
+    ops, keep = it.operands(mods, 2)
+    comps = _civil_components(ops[-2], "ADD-DAYS", {3, 6})
+    if not isinstance(ops[-1], Rational):
+        raise AjisaiError("custom", "ADD-DAYS: day count must be a number")
+    if ops[-1].f.denominator != 1:
+        raise AjisaiError("custom", "ADD-DAYS: day count must be an integer")
+    y, m, d = _civil_date_fields(comps, "ADD-DAYS")
+    y2, m2, d2 = _civil_from_days(_days_from_civil(y, m, d) + int(ops[-1].f))
+    out = [Rational(Fraction(y2)), Rational(Fraction(m2)), Rational(Fraction(d2))]
+    if len(comps) == 6:
+        out += list(comps[3:6])
+    it.push(Vec(out))
+
+def w_time_diff_days(it, mods):
+    ops, keep = it.operands(mods, 2)
+    ca = _civil_components(ops[-2], "DIFF-DAYS", {3, 6})
+    cb = _civil_components(ops[-1], "DIFF-DAYS", {3, 6})
+    ya, ma, da = _civil_date_fields(ca, "DIFF-DAYS")
+    yb, mb, db = _civil_date_fields(cb, "DIFF-DAYS")
+    it.push(Rational(Fraction(
+        _days_from_civil(ya, ma, da) - _days_from_civil(yb, mb, db))))
+
+def w_time_format(it, mods):
+    ops, keep = it.operands(mods, 1)
+    comps = _civil_components(ops[-1], "FORMAT", {3, 6})
+    y, m, d = _civil_date_fields(comps, "FORMAT")
+    text = f"{y:04d}-{m:02d}-{d:02d}"
+    if len(comps) == 6:
+        h = _int_field(comps[3], "FORMAT", "hour")
+        mi = _int_field(comps[4], "FORMAT", "minute")
+        s = _scalar_field(comps[5], "FORMAT", "second")
+        text += f"T{h:02d}:{mi:02d}:{int(s):02d}"
+    it.push(Str(text))
+
+_ISO_RE = None
+
+def w_time_parse_iso(it, mods):
+    import re
+    global _ISO_RE
+    if _ISO_RE is None:
+        _ISO_RE = re.compile(
+            r"^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2}))?$")
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    if not isinstance(v, Str):
+        raise AjisaiError("custom", "PARSE: expected an ISO-8601 text value")
+    m = _ISO_RE.match(v.s)
+    if not m:
+        it.push(Nil(reason="invalidEncoding", origin="invalidEncoding")); return
+    parts = [int(m.group(1)), int(m.group(2)), int(m.group(3)),
+             int(m.group(4) or 0), int(m.group(5) or 0), int(m.group(6) or 0)]
+    it.push(_rvec(parts))
+
+def _time_add_months_civil(y, m, d, n):
+    total = y * 12 + (m - 1) + n
+    y2, m2 = total // 12, total % 12 + 1
+    return y2, m2, min(d, _days_in_month(y2, m2))
+
+def _add_months_word(word, factor):
+    def impl(it, mods):
+        ops, keep = it.operands(mods, 2)
+        comps = _civil_components(ops[-2], word, {3, 6})
+        if not isinstance(ops[-1], Rational) or ops[-1].f.denominator != 1:
+            raise AjisaiError("custom", f"{word}: count must be an integer")
+        y, m, d = _civil_date_fields(comps, word)
+        y2, m2, d2 = _time_add_months_civil(y, m, d, int(ops[-1].f) * factor)
+        out = [Rational(Fraction(y2)), Rational(Fraction(m2)),
+               Rational(Fraction(d2))]
+        if len(comps) == 6:
+            out += list(comps[3:6])
+        it.push(Vec(out))
+    return impl
+
+# CRYPTO@HASH (pure multi-prime polynomial hash) -----------------------------
+
+_HASH_P1 = 170141183460469231731687303715884105727
+_HASH_P2 = 170141183460469231731687303715884105655
+_HASH_P3 = 170141183460469231731687303715884104993
+
+def _hash_serialize(v, out: bytearray):
+    if isinstance(v, Nil):
+        out.append(0x06); return
+    if isinstance(v, Bool) and v.v in (True, False):
+        out.append(0x07); out.append(0x01 if v.v else 0x00); return
+    if isinstance(v, Rational):
+        out.append(0x01)
+        num, den = v.f.numerator, v.f.denominator
+        out.append(0x00 if num < 0 else 0x01)
+        for part in (abs(num), den):
+            b = part.to_bytes(max(1, (part.bit_length() + 7) // 8), "little")
+            out.extend(len(b).to_bytes(4, "little")); out.extend(b)
+        return
+    if isinstance(v, Str):
+        # Text is a code-point vector at the value level (Section 4.3).
+        out.append(0x04)
+        out.extend(len(v.s).to_bytes(4, "little"))
+        for ch in v.s:
+            _hash_serialize(Rational(Fraction(ord(ch))), out)
+        return
+    if isinstance(v, (Vec, Rec)):
+        out.append(0x04)
+        out.extend(len(v.items).to_bytes(4, "little"))
+        for x in v.items:
+            _hash_serialize(x, out)
+
+def _hash_poly(data: bytes, prime: int):
+    h, power = 0, 1
+    for byte in data:
+        h = (h + power * byte) % prime
+        power = (power * 257) % prime
+    return h
+
+def _hash_bits_of(v):
+    if isinstance(v, Rational):
+        f = v.f
+    elif isinstance(v, Vec) and len(v.items) == 1 and isinstance(v.items[0], Rational):
+        f = v.items[0].f
+    else:
+        return None
+    if f.denominator != 1 or f <= 0 or int(f) > 0xFFFFFFFF:
+        return None
+    return int(f)
+
+def w_crypto_hash(it, mods):
+    keep = "KEEP" in mods
+    if not it.stack:
+        raise AjisaiError("custom", "HASH requires a value to hash")
+    if keep:
+        target = it.stack[-1]
+        bits = (_hash_bits_of(it.stack[-2])
+                if len(it.stack) >= 2 else None) or 256
+    else:
+        target = it.stack.pop()
+        bits = None
+        if it.stack:
+            bits = _hash_bits_of(it.stack[-1])
+            if bits is not None:
+                it.stack.pop()
+        bits = bits or 256
+    if bits < 32 or bits > 1024:
+        raise AjisaiError("custom", "HASH: output bits must be between 32 and 1024")
+    data = bytearray()
+    _hash_serialize(target, data)
+    h1 = _hash_poly(bytes(data), _HASH_P1)
+    h2 = _hash_poly(bytes(data), _HASH_P2)
+    h3 = _hash_poly(bytes(data), _HASH_P3)
+    r = h1 + (h2 << 127) + (h3 << 254)
+    r ^= r >> (bits // 3)
+    r ^= r >> (bits * 2 // 3)
+    r %= 1 << bits
+    it.push(Vec([Rational(Fraction(r, 1 << bits))]))
 
 # JSON module (pure words only; Section 12.1: the role of every produced
 # value is decided at construction — a parsed object is a Record rendered
@@ -2233,17 +2706,114 @@ def w_json_keys(it, mods):
     else:
         it.push(Nil())
 
-MODULE_IMPL = {"SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs, "SORT": w_sort,
-               "PARSE": w_json_parse, "STRINGIFY": w_json_stringify,
-               "GET": w_json_get, "KEYS": w_json_keys}
-MODULE_WORDS = {"SQRT": "MATH", "NEG": "MATH", "ABS": "MATH", "SORT": "ALGO",
-                "PARSE": "JSON", "STRINGIFY": "JSON",
-                "GET": "JSON", "KEYS": "JSON"}
-MODULES = {
-    "MATH": {"SQRT", "NEG", "ABS"},
-    "ALGO": {"SORT"},
-    "JSON": {"PARSE", "STRINGIFY", "GET", "KEYS"},
+def _key_text(key):
+    return key.s if isinstance(key, Str) else display(key)
+
+def _pairs_as_sorted_rec(mapping):
+    return Rec([Vec([Str(k), mapping[k]]) for k in sorted(mapping)])
+
+def _pairs_dict(v):
+    pairs = _record_pairs(v)
+    if pairs is None:
+        return None
+    return {p.items[0].s: p.items[1] for p in pairs}
+
+def w_json_set(it, mods):
+    ops, keep = it.operands(mods, 3)
+    obj, key, val = ops[-3], ops[-2], ops[-1]
+    mapping = _pairs_dict(obj) or {}
+    mapping[_key_text(key)] = val
+    it.push(_pairs_as_sorted_rec(mapping))
+
+def w_json_has(it, mods):
+    ops, keep = it.operands(mods, 2)
+    mapping = _pairs_dict(ops[-2]) or {}
+    it.push(TRUE if _key_text(ops[-1]) in mapping else FALSE)
+
+def w_json_values(it, mods):
+    ops, keep = it.operands(mods, 1)
+    pairs = _record_pairs(ops[-1])
+    if pairs:
+        it.push(Vec([p.items[1] for p in pairs]))
+    else:
+        it.push(Nil())
+
+def w_json_merge(it, mods):
+    ops, keep = it.operands(mods, 2)
+    mapping = _pairs_dict(ops[-2]) or {}
+    mapping.update(_pairs_dict(ops[-1]) or {})
+    it.push(_pairs_as_sorted_rec(mapping))
+
+def w_json_delete(it, mods):
+    ops, keep = it.operands(mods, 2)
+    obj, key = ops[-2], ops[-1]
+    if isinstance(obj, Nil):
+        it.push(obj); return
+    mapping = _pairs_dict(obj) or {}
+    mapping.pop(_key_text(key), None)
+    it.push(_pairs_as_sorted_rec(mapping))
+
+MODULE_IMPL = {
+    # MATH
+    "SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs, "SIGN": w_math_sign,
+    "MIN": _minmax_word("MIN", min), "MAX": _minmax_word("MAX", max),
+    "POW": w_math_pow,
+    "GCD": _gcd_lcm_word("GCD", _math.gcd), "LCM": _gcd_lcm_word("LCM", _math.lcm),
+    "INTERVAL": w_math_interval,
+    "LOWER": _interval_accessor(lambda iv: iv.lo),
+    "UPPER": _interval_accessor(lambda iv: iv.hi),
+    "WIDTH": _interval_accessor(lambda iv: iv.hi - iv.lo),
+    "IS-EXACT": w_math_is_exact, "SQRT-EPS": w_math_sqrt_eps,
+    # ALGO
+    "SORT": w_sort, "UNIQUE": w_algo_unique,
+    "CONTAINS": w_algo_contains, "INDEX-OF": w_algo_index_of,
+    # JSON
+    "PARSE": w_json_parse, "STRINGIFY": w_json_stringify,
+    "GET": w_json_get, "KEYS": w_json_keys, "SET": w_json_set,
+    "HAS": w_json_has, "VALUES": w_json_values, "MERGE": w_json_merge,
+    "DELETE": w_json_delete,
+    # TIME (pure civil words; the Hosted TIME@NOW is out of Core scope)
+    "DATETIME": w_time_datetime, "TIMESTAMP": w_time_timestamp,
+    "DATE": w_time_date, "TIME": w_time_time,
+    "YEAR": _time_field_word("YEAR", 0),
+    "MONTH": _time_field_word("MONTH", 1),
+    "DAY": _time_field_word("DAY", 2),
+    "HOUR": _time_of_day_word("HOUR", 0),
+    "MINUTE": _time_of_day_word("MINUTE", 1),
+    "SECOND": _time_of_day_word("SECOND", 2),
+    "WEEKDAY": w_time_weekday,
+    "ADD-DAYS": w_time_add_days, "DIFF-DAYS": w_time_diff_days,
+    "FORMAT": w_time_format, "PARSE-ISO": w_time_parse_iso,
+    "ADD-MONTHS": _add_months_word("ADD-MONTHS", 1),
+    "ADD-YEARS": _add_months_word("ADD-YEARS", 12),
+    # CRYPTO
+    "HASH": w_crypto_hash,
 }
+MODULE_WORDS = {
+    "SQRT": "MATH", "NEG": "MATH", "ABS": "MATH", "SIGN": "MATH",
+    "MIN": "MATH", "MAX": "MATH", "POW": "MATH", "GCD": "MATH", "LCM": "MATH",
+    "INTERVAL": "MATH", "LOWER": "MATH", "UPPER": "MATH", "WIDTH": "MATH",
+    "IS-EXACT": "MATH", "SQRT-EPS": "MATH",
+    "SORT": "ALGO", "UNIQUE": "ALGO", "CONTAINS": "ALGO", "INDEX-OF": "ALGO",
+    "PARSE": "JSON", "STRINGIFY": "JSON", "GET": "JSON", "KEYS": "JSON",
+    "SET": "JSON", "HAS": "JSON", "VALUES": "JSON", "MERGE": "JSON",
+    "DELETE": "JSON",
+    "DATETIME": "TIME", "TIMESTAMP": "TIME", "DATE": "TIME", "TIME": "TIME",
+    "YEAR": "TIME", "MONTH": "TIME", "DAY": "TIME", "HOUR": "TIME",
+    "MINUTE": "TIME", "SECOND": "TIME", "WEEKDAY": "TIME",
+    "ADD-DAYS": "TIME", "DIFF-DAYS": "TIME", "FORMAT": "TIME",
+    "PARSE-ISO": "TIME", "ADD-MONTHS": "TIME", "ADD-YEARS": "TIME",
+    "HASH": "CRYPTO",
+}
+MODULES = {
+    m: {w for w, mod in MODULE_WORDS.items() if mod == m}
+    for m in set(MODULE_WORDS.values())
+}
+# Importable modules whose words are host-mediated and out of the Core
+# reference's scope (PORTABILITY.md Core/Hosted split): IMPORT succeeds,
+# their words stay unimplemented here.
+for _hosted_mod in ("MUSIC", "SERIAL", "IO"):
+    MODULES.setdefault(_hosted_mod, set())
 
 # --------------------------------------------------------------------------
 # CLI: run a file, emit compact JSON comparable to probe.py
