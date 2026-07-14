@@ -54,6 +54,13 @@ class Str:
     s: str
 
 @dataclass
+class Rec:
+    """A Record (Section 4.4): key-indexed [key, value] pairs, as produced by
+    JSON@PARSE. There is no record-specific interpretation role (Section 12.2),
+    so it renders in its raw structural form, exactly like a vector of pairs."""
+    items: List[Any]                 # each a Vec([Str(key), value])
+
+@dataclass
 class Block:
     """A CodeBlock: a list of source lines (Section 3.4, 4.6)."""
     lines: List[List[str]]            # each line is a token list
@@ -743,7 +750,7 @@ def display(v):
         return "NIL"
     if isinstance(v, Str):
         return "'" + v.s + "'"
-    if isinstance(v, Vec):
+    if isinstance(v, (Vec, Rec)):
         return "[ " + " ".join(display(x) for x in v.items) + " ]" if v.items else "[ ]"
     if isinstance(v, Block):
         return "{ ... }"
@@ -2149,11 +2156,93 @@ def w_sort(it, mods):
     items = sorted(v.items, key=functools.cmp_to_key(cmp_values))
     it.push(Vec(items))
 
-MODULE_IMPL = {"SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs, "SORT": w_sort}
-MODULE_WORDS = {"SQRT": "MATH", "NEG": "MATH", "ABS": "MATH", "SORT": "ALGO"}
+# JSON module (pure words only; Section 12.1: the role of every produced
+# value is decided at construction — a parsed object is a Record rendered
+# structurally, its keys stay Text, and a failed parse is a reasoned
+# Bubble/NIL (invalidEncoding, Section 11.2) with no output effect.
+
+def _json_to_value(j):
+    """Mirror of the Rust `json_to_arena_node` mapping. Objects keep their
+    keys in canonical sorted order (serde_json uses an ordered map)."""
+    if j is None: return Nil()
+    if isinstance(j, bool): return TRUE if j else FALSE
+    if isinstance(j, int): return Rational(Fraction(j))
+    if isinstance(j, float): return Rational(Fraction(str(j)))
+    if isinstance(j, str): return Str(j)
+    if isinstance(j, list):
+        if not j: return Nil()
+        return Vec([_json_to_value(x) for x in j])
+    # dict: Record as a vector of [key, value] pairs, keys sorted
+    if not j: return Nil()
+    return Rec([Vec([Str(k), _json_to_value(v)]) for k, v in sorted(j.items())])
+
+def _value_to_json(v):
+    """Mirror of the Rust `arena_node_to_json` mapping (record -> object)."""
+    if isinstance(v, Nil): return None
+    if isinstance(v, Bool): return bool(v.v) if v.v != "U" else "unknown"
+    if isinstance(v, Rational):
+        f = v.f
+        return int(f) if f.denominator == 1 else f.numerator / f.denominator
+    if isinstance(v, Str): return v.s
+    if isinstance(v, Rec):
+        out = {}
+        for pair in v.items:
+            if isinstance(pair, Vec) and len(pair.items) == 2 and isinstance(pair.items[0], Str):
+                out[pair.items[0].s] = _value_to_json(pair.items[1])
+        return out
+    if isinstance(v, Vec): return [_value_to_json(x) for x in v.items]
+    return None
+
+def _record_pairs(v):
+    """[key, value] pairs of an object value (canonical Rec or raw Vec form)."""
+    if isinstance(v, (Rec, Vec)):
+        return [p for p in v.items
+                if isinstance(p, Vec) and len(p.items) == 2 and isinstance(p.items[0], Str)]
+    return None
+
+def w_json_parse(it, mods):
+    ops, keep = it.operands(mods, 1)
+    v = ops[-1]
+    text = v.s if isinstance(v, Str) else display(v)
+    try:
+        it.push(_json_to_value(json.loads(text)))
+    except ValueError:
+        it.push(Nil(reason="invalidEncoding", origin="invalidEncoding"))
+
+def w_json_stringify(it, mods):
+    ops, keep = it.operands(mods, 1)
+    it.push(Str(json.dumps(_value_to_json(ops[-1]), sort_keys=True,
+                           separators=(",", ":"))))
+
+def w_json_get(it, mods):
+    ops, keep = it.operands(mods, 2)
+    obj, key = ops[-2], ops[-1]
+    key_s = key.s if isinstance(key, Str) else display(key)
+    pairs = _record_pairs(obj)
+    if pairs is not None:
+        for p in pairs:
+            if p.items[0].s == key_s:
+                it.push(p.items[1]); return
+    it.push(Nil())
+
+def w_json_keys(it, mods):
+    ops, keep = it.operands(mods, 1)
+    pairs = _record_pairs(ops[-1])
+    if pairs:
+        it.push(Vec([p.items[0] for p in pairs]))
+    else:
+        it.push(Nil())
+
+MODULE_IMPL = {"SQRT": w_sqrt, "NEG": w_neg, "ABS": w_abs, "SORT": w_sort,
+               "PARSE": w_json_parse, "STRINGIFY": w_json_stringify,
+               "GET": w_json_get, "KEYS": w_json_keys}
+MODULE_WORDS = {"SQRT": "MATH", "NEG": "MATH", "ABS": "MATH", "SORT": "ALGO",
+                "PARSE": "JSON", "STRINGIFY": "JSON",
+                "GET": "JSON", "KEYS": "JSON"}
 MODULES = {
     "MATH": {"SQRT", "NEG", "ABS"},
     "ALGO": {"SORT"},
+    "JSON": {"PARSE", "STRINGIFY", "GET", "KEYS"},
 }
 
 # --------------------------------------------------------------------------

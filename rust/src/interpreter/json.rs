@@ -1,5 +1,6 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::arena::{
     arena_node_to_json, arena_to_value, json_to_arena_node, value_to_arena, ValueArena,
 };
@@ -32,31 +33,26 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
 
     let json_str = extract_string_content_from_value(&val);
 
-    match serde_json::from_str::<serde_json::Value>(&json_str) {
-        Ok(json_val) => {
+    // Text that cannot be decoded as JSON projects onto a reasoned
+    // Bubble/NIL — the same projection NUM uses for unparseable numeric text
+    // (SPEC §11.2, reason = invalidEncoding). PARSE is registered as Pure,
+    // so the failure is reported only through this value, never via an
+    // output side effect.
+    let parsed = serde_json::from_str::<serde_json::Value>(&json_str)
+        .ok()
+        .and_then(|json_val| {
             let mut arena = ValueArena::new();
-            match json_to_arena_node(&mut arena, json_val) {
-                Ok(parsed) => {
-                    interp.stack.push(arena_to_value(&arena, parsed));
-                    Ok(())
-                }
-                Err(e) => {
-                    interp
-                        .output_buffer
-                        .push_str(&format!("PARSE error: {}\n", e));
-                    interp.stack.push(Value::nil());
-                    Ok(())
-                }
-            }
-        }
-        Err(e) => {
-            interp
-                .output_buffer
-                .push_str(&format!("PARSE error: {}\n", e));
-            interp.stack.push(Value::nil());
-            Ok(())
-        }
-    }
+            let root = json_to_arena_node(&mut arena, json_val).ok()?;
+            Some(arena_to_value(&arena, root))
+        });
+    interp.stack.push(parsed.unwrap_or_else(|| {
+        Value::bubble_with_reason(
+            NilReason::InvalidEncoding,
+            AbsenceOrigin::InvalidEncoding,
+            Recoverability::Recoverable,
+        )
+    }));
+    Ok(())
 }
 
 pub fn op_stringify(interp: &mut Interpreter) -> Result<()> {
