@@ -2138,5 +2138,1296 @@ COND</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- ===================== MODULE WORDS (§9.1) ===================== -->
+<!-- Coverage extension for the module vocabulary. Categorization follows the
+     registry portability profile (§7.14 metadata): a module word whose profile
+     is Core (pure, no host capability) is a `core` case; a word whose profile
+     is Hosted (TIME@NOW, CRYPTO@CSPRNG, all MUSIC words, SERIAL, JSON@EXPORT,
+     IO) is a `hosted` case, even when its executor is a pure constructor.
+     Every expected value below was observed against the reference Rust
+     implementation before being written down.
+
+     Deliberately NOT pinned here, pending the suite-arbitration rule of
+     docs/dev/spec-impl-drift-tactic.md §3.3 (a case would cement one side):
+       - `NIL ALGO@SORT` / a NIL element under ALGO@SORT: SPEC §7.4.3/§7.14
+         declares SORT NIL-passthrough, but the implementation raises
+         StructureError. Suite stays silent; listed as a divergence.
+       - The reason string of the MATH@SQRT negative-radicand Bubble
+         (implementation reports `divisionByZero`; the §11.2 taxonomy has no
+         pinned reason for a negative radicand). Only the NIL projection
+         itself is pinned (core-math-sqrt-negative-nil).
+       - NIL-operand handling of TIME civil words, ALGO@UNIQUE/CONTAINS/
+         INDEX-OF (vector operand), MATH interval words, and CRYPTO@HASH:
+         registry metadata says Passthrough, the implementation raises (or, for
+         HASH, hashes NIL as a value). Failure cases below therefore use
+         unambiguous malformed-use operands (wrong type/shape), never NIL.
+
+     Out of suite scope (no observable on the structured host-effect channel,
+     which is the only effect observation target per the Contract above):
+       - MUSIC@SINE / MUSIC@SQUARE / MUSIC@SAW / MUSIC@TRI and MUSIC@ADSR:
+         they annotate a vector in place (stack display is unchanged) and fire
+         no host effect; the annotation is only visible to a later PLAY host.
+       - MUSIC@EXPLAIN: writes the human-readable output buffer only.
+       - IO@INPUT with host-provided input: the suite has no input-injection
+         attribute; only the empty-inbox projection is pinned below.
+       - IO@OUTPUT's buffer content: the output buffer is not the effect
+         channel; only its stack contract (consume one value) is pinned. -->
+
+<!-- ===================== JSON module (core: pure words) ===================== -->
+
+<section class="ajisai-case" id="core-json-set-adds-key" data-category="core">
+  <h3>JSON@SET adds a key-value pair (canonical sorted key order)</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"b":2}' JSON@PARSE 'a' 1 JSON@SET JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":1,"b":2}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-set-on-nil-starts-fresh-object" data-category="core">
+  <h3>JSON@SET on the canonical absence starts a fresh object</h3>
+  <pre class="ajisai-source">'json' IMPORT NIL 'a' 1 JSON@SET JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":1}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-has-present-key" data-category="core">
+  <h3>JSON@HAS is TRUE for a present key</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE 'a' JSON@HAS</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-has-absent-key" data-category="core">
+  <h3>JSON@HAS is FALSE for an absent key</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE 'z' JSON@HAS</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-has-nil-object-false" data-category="core">
+  <h3>JSON@HAS on the canonical absence is FALSE (nothing contains a key)</h3>
+  <pre class="ajisai-source">'json' IMPORT NIL 'a' JSON@HAS</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-values" data-category="core">
+  <h3>JSON@VALUES lists field values in canonical key order</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE JSON@VALUES</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-values-nil-object" data-category="core">
+  <h3>JSON@VALUES of the canonical absence is NIL</h3>
+  <pre class="ajisai-source">'json' IMPORT NIL JSON@VALUES</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-merge-right-wins" data-category="core">
+  <h3>JSON@MERGE lets right-hand keys win on conflict</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1}' JSON@PARSE '{"b":2,"a":9}' JSON@PARSE JSON@MERGE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":9,"b":2}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-merge-nil-identity" data-category="core">
+  <h3>JSON@MERGE with a NIL operand is the identity on the other object</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1}' JSON@PARSE NIL JSON@MERGE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":1}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-delete-removes-key" data-category="core">
+  <h3>JSON@DELETE removes a present key</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE 'a' JSON@DELETE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"b":2}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-delete-absent-key-identity" data-category="core">
+  <h3>JSON@DELETE of an absent key is the identity</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1,"b":2}' JSON@PARSE 'z' JSON@DELETE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":1,"b":2}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-delete-nil-object" data-category="core">
+  <h3>JSON@DELETE on the canonical absence stays NIL</h3>
+  <pre class="ajisai-source">'json' IMPORT NIL 'a' JSON@DELETE</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-get-missing-key-nil" data-category="core">
+  <h3>JSON@GET of an absent key is a well-formed miss projected to NIL</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":1}' JSON@PARSE 'z' JSON@GET</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-keys-non-object-nil" data-category="core">
+  <h3>JSON@KEYS of a non-object is NIL (a keyless value has no key set)</h3>
+  <pre class="ajisai-source">'json' IMPORT 5 JSON@KEYS</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-parse-empty-object-nil" data-category="core">
+  <h3>JSON@PARSE of an empty object is NIL — the canonical absence, no empty vector exists</h3>
+  <pre class="ajisai-source">'json' IMPORT '{}' JSON@PARSE</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-parse-nested-roundtrip" data-category="core">
+  <h3>JSON@PARSE/STRINGIFY round-trips nested arrays, objects, null, and booleans</h3>
+  <pre class="ajisai-source">'json' IMPORT '{"a":[1,{"b":null}],"c":true}' JSON@PARSE JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'{"a":[1,{"b":null}],"c":true}'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-stringify-vector" data-category="core">
+  <h3>JSON@STRINGIFY renders a vector as a JSON array</h3>
+  <pre class="ajisai-source">'json' IMPORT [ 1 2 ] JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'[1,2]'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-json-stringify-nil-null" data-category="core">
+  <h3>JSON@STRINGIFY maps the canonical absence to JSON null</h3>
+  <pre class="ajisai-source">'json' IMPORT NIL JSON@STRINGIFY</pre>
+  <pre class="ajisai-expect-result">'null'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== MATH module (core: pure words) ===================== -->
+
+<section class="ajisai-case" id="core-math-abs" data-category="core">
+  <h3>MATH@ABS of a negative rational</h3>
+  <pre class="ajisai-source">'math' IMPORT -7 MATH@ABS</pre>
+  <pre class="ajisai-expect-result">7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-abs-nil-passthrough" data-category="core">
+  <h3>MATH@ABS passes NIL through (§7.12)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL MATH@ABS</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-neg" data-category="core">
+  <h3>MATH@NEG negates a negative rational back to positive</h3>
+  <pre class="ajisai-source">'math' IMPORT -7 MATH@NEG</pre>
+  <pre class="ajisai-expect-result">7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-neg-nil-passthrough" data-category="core">
+  <h3>MATH@NEG passes NIL through (§7.12)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL MATH@NEG</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sign-negative" data-category="core">
+  <h3>MATH@SIGN of a negative number is -1</h3>
+  <pre class="ajisai-source">'math' IMPORT -7 MATH@SIGN</pre>
+  <pre class="ajisai-expect-result">-1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sign-zero" data-category="core">
+  <h3>MATH@SIGN of zero is 0</h3>
+  <pre class="ajisai-source">'math' IMPORT 0 MATH@SIGN</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sign-nil-passthrough" data-category="core">
+  <h3>MATH@SIGN passes NIL through (§7.12)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL MATH@SIGN</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-min" data-category="core">
+  <h3>MATH@MIN picks the smaller of two numbers</h3>
+  <pre class="ajisai-source">'math' IMPORT 3 5 MATH@MIN</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-min-nil-passthrough" data-category="core">
+  <h3>MATH@MIN passes a NIL operand through (§7.4.3 Passthrough)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL 5 MATH@MIN</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-max" data-category="core">
+  <h3>MATH@MAX picks the larger of two numbers</h3>
+  <pre class="ajisai-source">'math' IMPORT 3 5 MATH@MAX</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-max-nil-passthrough" data-category="core">
+  <h3>MATH@MAX passes a NIL operand through (§7.4.3 Passthrough)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL 5 MATH@MAX</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-pow-integer-exponent" data-category="core">
+  <h3>MATH@POW with an integer exponent is exact</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 10 MATH@POW</pre>
+  <pre class="ajisai-expect-result">1024/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-pow-negative-exponent" data-category="core">
+  <h3>MATH@POW with a negative exponent yields the exact reciprocal power</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 -2 MATH@POW</pre>
+  <pre class="ajisai-expect-result">1/4</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-pow-zero-negative-bubble" data-category="core">
+  <h3>MATH@POW of 0 to a negative exponent projects to a reasoned Bubble (§7.14 CreatesNil)</h3>
+  <pre class="ajisai-source">'math' IMPORT 0 -1 MATH@POW NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-pow-fractional-exponent-error" data-category="core">
+  <h3>MATH@POW with a fractional exponent is malformed use and raises (§11.2)</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 1/2 MATH@POW</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">POW: exponent must be an integer</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-gcd" data-category="core">
+  <h3>MATH@GCD of two integers</h3>
+  <pre class="ajisai-source">'math' IMPORT 12 18 MATH@GCD</pre>
+  <pre class="ajisai-expect-result">6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-gcd-noninteger-error" data-category="core">
+  <h3>MATH@GCD of a non-integer is malformed use and raises (§7.14 Partial)</h3>
+  <pre class="ajisai-source">'math' IMPORT 1/2 4 MATH@GCD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">GCD: expected two integers</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-gcd-nil-passthrough" data-category="core">
+  <h3>MATH@GCD passes a NIL operand through (§7.14 Passthrough)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL 4 MATH@GCD</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-lcm" data-category="core">
+  <h3>MATH@LCM of two integers</h3>
+  <pre class="ajisai-source">'math' IMPORT 4 6 MATH@LCM</pre>
+  <pre class="ajisai-expect-result">12/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-lcm-nil-passthrough" data-category="core">
+  <h3>MATH@LCM passes a NIL operand through (§7.14 Passthrough)</h3>
+  <pre class="ajisai-source">'math' IMPORT NIL 4 MATH@LCM</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sqrt-rational-collapse" data-category="core">
+  <h3>MATH@SQRT of an exact square rational stays an exact rational</h3>
+  <pre class="ajisai-source">'math' IMPORT 1/4 MATH@SQRT</pre>
+  <pre class="ajisai-expect-result">1/2</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sqrt-negative-nil" data-category="core">
+  <h3>MATH@SQRT of a negative radicand projects to NIL (reason left unpinned pending §3.3 arbitration)</h3>
+  <pre class="ajisai-source">'math' IMPORT -4 MATH@SQRT</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sqrt-eps" data-category="core">
+  <h3>MATH@SQRT-EPS returns a sound interval no wider than eps (bisection from [0, max(q,1)])</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 1/100 MATH@SQRT-EPS</pre>
+  <pre class="ajisai-expect-result">[181/128, 91/64]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-sqrt-eps-nonpositive-error" data-category="core">
+  <h3>MATH@SQRT-EPS with a non-positive eps is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 0 MATH@SQRT-EPS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">sqrt precision must be positive</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-interval-display" data-category="core">
+  <h3>MATH@INTERVAL builds [lo, hi] and renders both exact endpoints</h3>
+  <pre class="ajisai-source">'math' IMPORT 1 2 MATH@INTERVAL</pre>
+  <pre class="ajisai-expect-result">[1/1, 2/1]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-interval-misordered-error" data-category="core">
+  <h3>MATH@INTERVAL with lo &gt; hi is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 2 1 MATH@INTERVAL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">invalid interval: lo must be &lt;= hi</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-lower" data-category="core">
+  <h3>MATH@LOWER reads the lower endpoint of an interval</h3>
+  <pre class="ajisai-source">'math' IMPORT 1 2 MATH@INTERVAL MATH@LOWER</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-lower-non-numeric-error" data-category="core">
+  <h3>MATH@LOWER of a non-numeric operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 'x' MATH@LOWER</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">interval accessor: expected Number or Interval</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-upper" data-category="core">
+  <h3>MATH@UPPER reads the upper endpoint of an interval</h3>
+  <pre class="ajisai-source">'math' IMPORT 1 2 MATH@INTERVAL MATH@UPPER</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-upper-non-numeric-error" data-category="core">
+  <h3>MATH@UPPER of a non-numeric operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 'x' MATH@UPPER</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">interval accessor: expected Number or Interval</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-width" data-category="core">
+  <h3>MATH@WIDTH is hi - lo of an interval</h3>
+  <pre class="ajisai-source">'math' IMPORT 1 2 MATH@INTERVAL MATH@WIDTH</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-width-scalar-zero" data-category="core">
+  <h3>MATH@WIDTH of a bare number (degenerate interval) is 0</h3>
+  <pre class="ajisai-source">'math' IMPORT 5 MATH@WIDTH</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-width-non-numeric-error" data-category="core">
+  <h3>MATH@WIDTH of a non-numeric operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 'x' MATH@WIDTH</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">interval accessor: expected Number or Interval</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-is-exact-interval-false" data-category="core">
+  <h3>MATH@IS-EXACT is FALSE for a non-degenerate interval</h3>
+  <pre class="ajisai-source">'math' IMPORT 1 2 MATH@INTERVAL MATH@IS-EXACT</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-is-exact-scalar-true" data-category="core">
+  <h3>MATH@IS-EXACT is TRUE for an exact number</h3>
+  <pre class="ajisai-source">'math' IMPORT 5 MATH@IS-EXACT</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-math-is-exact-non-numeric-error" data-category="core">
+  <h3>MATH@IS-EXACT of a non-numeric operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'math' IMPORT 'x' MATH@IS-EXACT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">IS_EXACT: expected Number or Interval</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== ALGO module (core: pure words) ===================== -->
+
+<section class="ajisai-case" id="core-algo-unique-first-occurrence" data-category="core">
+  <h3>ALGO@UNIQUE removes duplicates preserving first-occurrence order</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 3 1 2 1 ] ALGO@UNIQUE</pre>
+  <pre class="ajisai-expect-result">[ 3/1 1/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-unique-non-vector-error" data-category="core">
+  <h3>ALGO@UNIQUE of a non-vector is malformed use and raises</h3>
+  <pre class="ajisai-source">'algo' IMPORT 5 ALGO@UNIQUE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">UNIQUE: expected vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-contains-true" data-category="core">
+  <h3>ALGO@CONTAINS is TRUE when an equal element exists</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 1 2 3 ] 2 ALGO@CONTAINS</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-contains-false" data-category="core">
+  <h3>ALGO@CONTAINS is FALSE when no equal element exists</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 1 2 3 ] 9 ALGO@CONTAINS</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-contains-non-vector-error" data-category="core">
+  <h3>ALGO@CONTAINS with a non-vector subject is malformed use and raises</h3>
+  <pre class="ajisai-source">'algo' IMPORT 5 2 ALGO@CONTAINS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">CONTAINS: expected vector as first operand</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-index-of-hit" data-category="core">
+  <h3>ALGO@INDEX-OF returns the index of the first equal element</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 10 20 30 ] 20 ALGO@INDEX-OF</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-index-of-miss-reason" data-category="core">
+  <h3>ALGO@INDEX-OF projects a well-formed miss to a reasoned Bubble (§7.14 CreatesNil)</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 10 20 30 ] 99 ALGO@INDEX-OF NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-sort-text" data-category="core">
+  <h3>ALGO@SORT orders Text elements</h3>
+  <pre class="ajisai-source">'algo' IMPORT [ 'b' 'a' ] ALGO@SORT</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-algo-sort-non-vector-error" data-category="core">
+  <h3>ALGO@SORT of a non-vector is malformed use and raises</h3>
+  <pre class="ajisai-source">'algo' IMPORT 5 ALGO@SORT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">SORT: expected vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== TIME module (core: pure civil words) ===================== -->
+<!-- Value shapes (§9.1): instant = exact seconds since the Unix epoch;
+     datetime = [ Y M D h m s ]; date = [ Y M D ]; time = [ h m s ].
+     The timezone appears only at the instant<->civil boundary as a UTC
+     offset in hours. TIME@NOW is Hosted and covered in the hosted section. -->
+
+<section class="ajisai-case" id="core-time-datetime-utc" data-category="core">
+  <h3>TIME@DATETIME renders an instant as civil fields at UTC offset 0</h3>
+  <pre class="ajisai-source">'time' IMPORT 1700000000 0 TIME@DATETIME</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 14/1 22/1 13/1 20/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-datetime-offset" data-category="core">
+  <h3>TIME@DATETIME applies a positive UTC offset in hours</h3>
+  <pre class="ajisai-source">'time' IMPORT 1700000000 9 TIME@DATETIME</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 15/1 7/1 13/1 20/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-datetime-non-numeric-error" data-category="core">
+  <h3>TIME@DATETIME with a non-numeric timestamp is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 'x' 0 TIME@DATETIME</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">DATETIME: timestamp must be a number</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-timestamp" data-category="core">
+  <h3>TIME@TIMESTAMP resolves a civil datetime to an exact instant</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] 0 TIME@TIMESTAMP</pre>
+  <pre class="ajisai-expect-result">1700000000/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-timestamp-short-vector-error" data-category="core">
+  <h3>TIME@TIMESTAMP requires a full 6-element datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] 0 TIME@TIMESTAMP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">TIMESTAMP: civil vector must have 6 elements</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-date-extraction" data-category="core">
+  <h3>TIME@DATE extracts [ Y M D ] from a datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@DATE</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 14/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-date-non-civil-error" data-category="core">
+  <h3>TIME@DATE of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@DATE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">DATE: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-time-extraction" data-category="core">
+  <h3>TIME@TIME extracts [ h m s ] from a datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@TIME</pre>
+  <pre class="ajisai-expect-result">[ 22/1 13/1 20/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-time-non-civil-error" data-category="core">
+  <h3>TIME@TIME of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@TIME</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">TIME: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-year-of-datetime" data-category="core">
+  <h3>TIME@YEAR reads the year field of a datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@YEAR</pre>
+  <pre class="ajisai-expect-result">2023/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-year-of-date" data-category="core">
+  <h3>TIME@YEAR also accepts a 3-element date</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] TIME@YEAR</pre>
+  <pre class="ajisai-expect-result">2023/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-year-non-civil-error" data-category="core">
+  <h3>TIME@YEAR of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@YEAR</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">YEAR: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-month-field" data-category="core">
+  <h3>TIME@MONTH reads the month field</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@MONTH</pre>
+  <pre class="ajisai-expect-result">11/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-month-non-civil-error" data-category="core">
+  <h3>TIME@MONTH of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@MONTH</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MONTH: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-day-field" data-category="core">
+  <h3>TIME@DAY reads the day field</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@DAY</pre>
+  <pre class="ajisai-expect-result">14/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-day-non-civil-error" data-category="core">
+  <h3>TIME@DAY of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@DAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">DAY: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-hour-of-datetime" data-category="core">
+  <h3>TIME@HOUR reads the hour field of a datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@HOUR</pre>
+  <pre class="ajisai-expect-result">22/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-hour-of-time" data-category="core">
+  <h3>TIME@HOUR also accepts a 3-element time-of-day</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 22 13 20 ] TIME@HOUR</pre>
+  <pre class="ajisai-expect-result">22/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-hour-non-civil-error" data-category="core">
+  <h3>TIME@HOUR of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@HOUR</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">HOUR: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-minute-field" data-category="core">
+  <h3>TIME@MINUTE reads the minute field</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@MINUTE</pre>
+  <pre class="ajisai-expect-result">13/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-minute-non-civil-error" data-category="core">
+  <h3>TIME@MINUTE of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@MINUTE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MINUTE: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-second-field" data-category="core">
+  <h3>TIME@SECOND reads the second field</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@SECOND</pre>
+  <pre class="ajisai-expect-result">20/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-second-non-civil-error" data-category="core">
+  <h3>TIME@SECOND of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@SECOND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">SECOND: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-weekday-iso" data-category="core">
+  <h3>TIME@WEEKDAY is the ISO weekday (2023-11-14 is a Tuesday = 2)</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] TIME@WEEKDAY</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-weekday-non-civil-error" data-category="core">
+  <h3>TIME@WEEKDAY of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@WEEKDAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">WEEKDAY: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-days" data-category="core">
+  <h3>TIME@ADD-DAYS shifts a date by whole days</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] 7 TIME@ADD-DAYS</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 21/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-days-fractional-error" data-category="core">
+  <h3>TIME@ADD-DAYS with a fractional day count is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] 5/2 TIME@ADD-DAYS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">ADD-DAYS: day count must be an integer</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-diff-days" data-category="core">
+  <h3>TIME@DIFF-DAYS is the whole-day difference a-b</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2024 2 29 ] [ 2023 11 14 ] TIME@DIFF-DAYS</pre>
+  <pre class="ajisai-expect-result">107/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-diff-days-non-civil-error" data-category="core">
+  <h3>TIME@DIFF-DAYS of non-civil operands is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 5 TIME@DIFF-DAYS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">DIFF-DAYS: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-format-date" data-category="core">
+  <h3>TIME@FORMAT renders a date as ISO-8601 YYYY-MM-DD</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 ] TIME@FORMAT</pre>
+  <pre class="ajisai-expect-result">'2023-11-14'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-format-datetime" data-category="core">
+  <h3>TIME@FORMAT renders a datetime as ISO-8601 with a T separator</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] TIME@FORMAT</pre>
+  <pre class="ajisai-expect-result">'2023-11-14T22:13:20'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-format-truncates-fractional-second" data-category="core">
+  <h3>TIME@FORMAT truncates a fractional second toward zero</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 41/2 ] TIME@FORMAT</pre>
+  <pre class="ajisai-expect-result">'2023-11-14T22:13:20'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-format-non-civil-error" data-category="core">
+  <h3>TIME@FORMAT of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 TIME@FORMAT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">FORMAT: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-parse-iso-datetime" data-category="core">
+  <h3>TIME@PARSE-ISO parses a full ISO datetime</h3>
+  <pre class="ajisai-source">'time' IMPORT '2023-11-14T22:13:20' TIME@PARSE-ISO</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 14/1 22/1 13/1 20/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-parse-iso-date-fills-midnight" data-category="core">
+  <h3>TIME@PARSE-ISO of a date-only string fills the time fields with zero</h3>
+  <pre class="ajisai-source">'time' IMPORT '2023-11-14' TIME@PARSE-ISO</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 14/1 0/1 0/1 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-parse-iso-failure-reason" data-category="core">
+  <h3>TIME@PARSE-ISO of unparsable text bubbles a reasoned NIL (§7.14 CreatesNil)</h3>
+  <pre class="ajisai-source">'time' IMPORT 'not a date' TIME@PARSE-ISO NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'invalidEncoding'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-parse-iso-timestamp-roundtrip" data-category="core">
+  <h3>PARSE-ISO then TIMESTAMP round-trips to the exact instant</h3>
+  <pre class="ajisai-source">'time' IMPORT '2023-11-14T22:13:20' TIME@PARSE-ISO 0 TIME@TIMESTAMP</pre>
+  <pre class="ajisai-expect-result">1700000000/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-months-clamps" data-category="core">
+  <h3>TIME@ADD-MONTHS clamps to the target month's end (Jan 31 + 1 month = Feb 29)</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2024 1 31 ] 1 TIME@ADD-MONTHS</pre>
+  <pre class="ajisai-expect-result">[ 2024/1 2/1 29/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-months-non-civil-error" data-category="core">
+  <h3>TIME@ADD-MONTHS of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 1 TIME@ADD-MONTHS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">ADD-MONTHS: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-years-clamps-leap-day" data-category="core">
+  <h3>TIME@ADD-YEARS clamps Feb 29 in a non-leap target year</h3>
+  <pre class="ajisai-source">'time' IMPORT [ 2024 2 29 ] 1 TIME@ADD-YEARS</pre>
+  <pre class="ajisai-expect-result">[ 2025/1 2/1 28/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-time-add-years-non-civil-error" data-category="core">
+  <h3>TIME@ADD-YEARS of a non-civil operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'time' IMPORT 5 1 TIME@ADD-YEARS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">ADD-YEARS: expected a civil vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== CRYPTO module (core: CRYPTO@HASH) ===================== -->
+<!-- CRYPTO@HASH is pure and deterministic (Core profile); only CSPRNG is
+     Hosted. The hash value is pinned exactly: it is part of the phenomenon
+     (multi-prime polynomial hash over the canonical value serialization,
+     result = hash / 2^bits as a reduced exact rational in a one-element
+     vector). -->
+
+<section class="ajisai-case" id="core-crypto-hash-text-default-bits" data-category="core">
+  <h3>CRYPTO@HASH of Text at the default 256 bits is a reduced exact rational in [0,1)</h3>
+  <pre class="ajisai-source">'crypto' IMPORT 'abc' CRYPTO@HASH</pre>
+  <pre class="ajisai-expect-result">[ 14439276638180122122763881414389536639950680334493468159630655736247715444683/14474011154664524427946373126085988481658748083205070504932198000989141204992 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-crypto-hash-explicit-bits" data-category="core">
+  <h3>CRYPTO@HASH accepts an explicit output-bit count beneath the value</h3>
+  <pre class="ajisai-source">'crypto' IMPORT 32 'abc' CRYPTO@HASH</pre>
+  <pre class="ajisai-expect-result">[ 99011803/4294967296 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-crypto-hash-bits-out-of-range-error" data-category="core">
+  <h3>CRYPTO@HASH with output bits outside 32..1024 is malformed use and raises</h3>
+  <pre class="ajisai-source">'crypto' IMPORT 16 'abc' CRYPTO@HASH</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">HASH: output bits must be between 32 and 1024</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== HOSTED: TIME@NOW / CRYPTO@CSPRNG compositions ===================== -->
+
+<section class="ajisai-case" id="hosted-now-datetime-composition" data-category="hosted" data-host-now-millis="1700000000123" data-host-capabilities="clock">
+  <h3>TIME@NOW carries exact milliseconds into the pure civil words</h3>
+  <pre class="ajisai-source">'time' IMPORT NOW 0 TIME@DATETIME</pre>
+  <pre class="ajisai-expect-result">[ 2023/1 11/1 14/1 22/1 13/1 20123/1000 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-now-missing-capability" data-category="hosted" data-host-capabilities="">
+  <h3>TIME@NOW without the clock capability fails with a diagnostic effect</h3>
+  <pre class="ajisai-source">'time' IMPORT NOW</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">NOW requires missing host capability clock</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="diagnostic" data-payload='{"capability":"clock","op":"missingCapability","word":"NOW"}'></span>
+  </div>
+</section>
+
+<!-- ===================== HOSTED: IO module ===================== -->
+
+<section class="ajisai-case" id="hosted-io-input-empty-inbox-nil" data-category="hosted">
+  <h3>IO@INPUT with no host-provided input projects a reasoned NIL</h3>
+  <pre class="ajisai-source">'io' IMPORT IO@INPUT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'emptySequence'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-io-output-consumes-value" data-category="hosted">
+  <h3>IO@OUTPUT consumes its operand; the output buffer is not the structured effect channel</h3>
+  <pre class="ajisai-source">'io' IMPORT 42 IO@OUTPUT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== HOSTED: JSON@EXPORT ===================== -->
+
+<section class="ajisai-case" id="hosted-json-export-effect" data-category="hosted">
+  <h3>JSON@EXPORT fires one json_export host effect with the serialized payload</h3>
+  <pre class="ajisai-source">'json' IMPORT [ 1 2 ] JSON@EXPORT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="json_export" data-payload='[1,2]'></span>
+  </div>
+</section>
+
+<!-- ===================== HOSTED: SERIAL remaining words ===================== -->
+
+<section class="ajisai-case" id="hosted-serial-configure" data-category="hosted">
+  <h3>SERIAL@CONFIGURE fires a configure effect and keeps the port handle</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN 9600 SERIAL@CONFIGURE</pre>
+  <pre class="ajisai-expect-result">'COM1'</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"baudRate":9600,"op":"configure","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-configure-nonpositive-baud-error" data-category="hosted">
+  <h3>SERIAL@CONFIGURE with a non-positive baud rate is malformed use and raises (§9.4)</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN 0 SERIAL@CONFIGURE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Serial baud rate must be positive</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-write-byte-range-error" data-category="hosted">
+  <h3>SERIAL@WRITE with a byte outside 0-255 is malformed use and raises (§9.4)</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN [ 300 ] SERIAL@WRITE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected integer byte 0-255</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-flush" data-category="hosted">
+  <h3>SERIAL@FLUSH fires a flush effect and keeps the port handle</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN SERIAL@FLUSH</pre>
+  <pre class="ajisai-expect-result">'COM1'</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"flush","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-close" data-category="hosted">
+  <h3>SERIAL@CLOSE fires a close effect and consumes the port handle</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN SERIAL@CLOSE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"close","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-serial-read-no-data-reason" data-category="hosted">
+  <h3>SERIAL@READ with an empty inbox projects reason noData (§9.4 Projecting/CreatesNil)</h3>
+  <pre class="ajisai-source">'serial' IMPORT 'COM1' SERIAL@OPEN SERIAL@READ NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'noData'</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="serial" data-payload='{"op":"open","portId":"COM1"}'></span>
+  </div>
+</section>
+
+<!-- ===================== HOSTED: MUSIC pure constructors ===================== -->
+<!-- These executors are pure and deterministic, but every MUSIC word is
+     Hosted-profile (required capability: audio) in the §7.14 registry, so
+     they are hosted cases. Music values are structural records whose display
+     is pinned exactly. -->
+
+<section class="ajisai-case" id="hosted-music-hz" data-category="hosted">
+  <h3>MUSIC@HZ builds a music.pitch record from an exact frequency</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 MUSIC@HZ</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.pitch' ] [ 'pitch_kind' 'hz' ] [ 'hz' 440/1 ] [ 'provenance' 'explicit:MUSIC@HZ' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-hz-non-number-error" data-category="hosted">
+  <h3>MUSIC@HZ of a non-number is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@HZ</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@HZ requires a number (frequency in Hz)</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-dur" data-category="hosted">
+  <h3>MUSIC@DUR builds a music.duration record from exact seconds</h3>
+  <pre class="ajisai-source">'music' IMPORT 1/2 MUSIC@DUR</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.duration' ] [ 'seconds' 1/2 ] [ 'provenance' 'explicit:MUSIC@DUR' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-dur-nonpositive-error" data-category="hosted">
+  <h3>MUSIC@DUR of a non-positive duration is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT -1 MUSIC@DUR</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@DUR duration must be positive</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-note" data-category="hosted">
+  <h3>MUSIC@NOTE combines a pitch and a duration into a music.note record</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 MUSIC@HZ 1/2 MUSIC@DUR MUSIC@NOTE</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.note' ] [ 'pitch' [ [ 'kind' 'music.pitch' ] [ 'pitch_kind' 'hz' ] [ 'hz' 440/1 ] [ 'provenance' 'explicit:MUSIC@HZ' ] ] ] [ 'duration' [ [ 'kind' 'music.duration' ] [ 'seconds' 1/2 ] [ 'provenance' 'explicit:MUSIC@DUR' ] ] ] [ 'provenance' 'explicit:MUSIC@NOTE' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-note-non-pitch-error" data-category="hosted">
+  <h3>MUSIC@NOTE without a music.pitch first operand is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT 1 2 MUSIC@NOTE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@NOTE expects a music.pitch (use MUSIC@HZ or MUSIC@STEP) as the first operand</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-rest" data-category="hosted">
+  <h3>MUSIC@REST builds a music.rest record from a duration</h3>
+  <pre class="ajisai-source">'music' IMPORT 1/2 MUSIC@DUR MUSIC@REST</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.rest' ] [ 'duration' [ [ 'kind' 'music.duration' ] [ 'seconds' 1/2 ] [ 'provenance' 'explicit:MUSIC@DUR' ] ] ] [ 'provenance' 'explicit:MUSIC@REST' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-rest-non-duration-error" data-category="hosted">
+  <h3>MUSIC@REST without a music.duration is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@REST</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@REST expects a music.duration (use MUSIC@DUR)</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-edo" data-category="hosted">
+  <h3>MUSIC@EDO builds an equal-division-of-the-octave music.tuning</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 12 MUSIC@EDO</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.tuning' ] [ 'reference_hz' 440/1 ] [ 'equave' [ 2/1 1/1 ] ] [ 'divisions' 12/1 ] [ 'provenance' 'explicit:MUSIC@EDO' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-edo-zero-divisions-error" data-category="hosted">
+  <h3>MUSIC@EDO with non-positive divisions is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 0 MUSIC@EDO</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@EDO divisions must be a positive integer</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-edr" data-category="hosted">
+  <h3>MUSIC@EDR builds a non-octave equal-division music.tuning (tritave shown)</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 3 13 MUSIC@EDR</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.tuning' ] [ 'reference_hz' 440/1 ] [ 'equave' [ 3/1 1/1 ] ] [ 'divisions' 13/1 ] [ 'provenance' 'explicit:MUSIC@EDR' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-edr-zero-divisions-error" data-category="hosted">
+  <h3>MUSIC@EDR with non-positive divisions is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 3 0 MUSIC@EDR</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@EDR divisions must be a positive integer</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-step" data-category="hosted">
+  <h3>MUSIC@STEP resolves a step within a tuning into a music.pitch record</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 12 MUSIC@EDO 7 MUSIC@STEP</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.pitch' ] [ 'pitch_kind' 'edo' ] [ 'reference_hz' 440/1 ] [ 'equave' [ 2/1 1/1 ] ] [ 'divisions' 12/1 ] [ 'step' 7/1 ] [ 'provenance' 'explicit:MUSIC@STEP' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-step-non-tuning-error" data-category="hosted">
+  <h3>MUSIC@STEP without a music.tuning is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT 5 7 MUSIC@STEP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@STEP expects a music.tuning (use MUSIC@EDO or MUSIC@EDR) as the first operand</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-seq-group" data-category="hosted">
+  <h3>MUSIC@SEQ-GROUP builds an explicit sequential music.group record</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 3 ] MUSIC@SEQ-GROUP</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'seq' ] [ 'role' 'generic' ] [ 'provenance' 'explicit:MUSIC@SEQ-GROUP' ] [ 'children' [ 1/1 2/1 3/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-seq-group-scalar-error" data-category="hosted">
+  <h3>MUSIC@SEQ-GROUP of a scalar is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT 5 MUSIC@SEQ-GROUP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@SEQ-GROUP requires a vector or music group</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-sim-group" data-category="hosted">
+  <h3>MUSIC@SIM-GROUP builds an explicit simultaneous music.group record</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 3 ] MUSIC@SIM-GROUP</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'sim' ] [ 'role' 'generic' ] [ 'provenance' 'explicit:MUSIC@SIM-GROUP' ] [ 'children' [ 1/1 2/1 3/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-sim-group-empty-error" data-category="hosted">
+  <h3>MUSIC@SIM-GROUP of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@SIM-GROUP</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@SIM-GROUP requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-chord" data-category="hosted">
+  <h3>MUSIC@CHORD builds a chord-mode music.group record</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 440 550 ] MUSIC@CHORD</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'chord' ] [ 'role' 'chord' ] [ 'provenance' 'explicit:MUSIC@CHORD' ] [ 'children' [ 440/1 550/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-chord-empty-error" data-category="hosted">
+  <h3>MUSIC@CHORD of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@CHORD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@CHORD requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-voice" data-category="hosted">
+  <h3>MUSIC@VOICE builds a voice-role sequential music.group</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 ] MUSIC@VOICE</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'seq' ] [ 'role' 'voice' ] [ 'provenance' 'explicit:MUSIC@VOICE' ] [ 'children' [ 1/1 2/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-voice-empty-error" data-category="hosted">
+  <h3>MUSIC@VOICE of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@VOICE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@VOICE requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-track" data-category="hosted">
+  <h3>MUSIC@TRACK builds a track-role sequential music.group</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 ] MUSIC@TRACK</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'seq' ] [ 'role' 'track' ] [ 'provenance' 'explicit:MUSIC@TRACK' ] [ 'children' [ 1/1 2/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-track-empty-error" data-category="hosted">
+  <h3>MUSIC@TRACK of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@TRACK</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@TRACK requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-measure" data-category="hosted">
+  <h3>MUSIC@MEASURE builds a measure-role sequential music.group</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 ] MUSIC@MEASURE</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'seq' ] [ 'role' 'measure' ] [ 'provenance' 'explicit:MUSIC@MEASURE' ] [ 'children' [ 1/1 2/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-measure-empty-error" data-category="hosted">
+  <h3>MUSIC@MEASURE of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@MEASURE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@MEASURE requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-phrase" data-category="hosted">
+  <h3>MUSIC@PHRASE builds a phrase-role sequential music.group</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 1 2 ] MUSIC@PHRASE</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.group' ] [ 'mode' 'seq' ] [ 'role' 'phrase' ] [ 'provenance' 'explicit:MUSIC@PHRASE' ] [ 'children' [ 1/1 2/1 ] ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-phrase-empty-error" data-category="hosted">
+  <h3>MUSIC@PHRASE of the canonical absence is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@PHRASE</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@PHRASE requires a non-empty vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-with-tuning" data-category="hosted">
+  <h3>MUSIC@WITH-TUNING binds a tuning over a body block as a music.scope record</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 12 MUSIC@EDO { 0 4 7 } MUSIC@WITH-TUNING</pre>
+  <pre class="ajisai-expect-result">[ [ 'kind' 'music.scope' ] [ 'scope_kind' 'tuning' ] [ 'tuning' [ [ 'kind' 'music.tuning' ] [ 'reference_hz' 440/1 ] [ 'equave' [ 2/1 1/1 ] ] [ 'divisions' 12/1 ] [ 'provenance' 'explicit:MUSIC@EDO' ] ] ] [ 'body' 0 4 7 ] [ 'provenance' 'explicit:MUSIC@WITH-TUNING' ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-with-tuning-missing-operand-error" data-category="hosted">
+  <h3>MUSIC@WITH-TUNING without a tuning beneath the body underflows</h3>
+  <pre class="ajisai-source">'music' IMPORT NIL MUSIC@WITH-TUNING</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Stack underflow</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- ===================== HOSTED: MUSIC control and playback effects ===================== -->
+<!-- The observation target is the structured host-effect channel. MUSIC@SEQ
+     and MUSIC@SIM set the playback mode silently; the mode is observed
+     through the structure of the following MUSIC@PLAY audio effect. -->
+
+<section class="ajisai-case" id="hosted-music-slot-config-effect" data-category="hosted">
+  <h3>MUSIC@SLOT fires one config host effect with the slot duration</h3>
+  <pre class="ajisai-source">'music' IMPORT 1/2 MUSIC@SLOT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="config" data-payload='{"slot_duration":0.5}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-slot-nonpositive-error" data-category="hosted">
+  <h3>MUSIC@SLOT with a non-positive duration is malformed use and raises</h3>
+  <pre class="ajisai-source">'music' IMPORT -1 MUSIC@SLOT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">SLOT duration must be positive</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-gain-effect" data-category="hosted">
+  <h3>MUSIC@GAIN fires one effect with the gain level</h3>
+  <pre class="ajisai-source">'music' IMPORT 1/2 MUSIC@GAIN</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="effect" data-payload='{"gain":0.5}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-gain-reset-effect" data-category="hosted">
+  <h3>MUSIC@GAIN-RESET fires one effect restoring gain 1.0</h3>
+  <pre class="ajisai-source">'music' IMPORT MUSIC@GAIN-RESET</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="effect" data-payload='{"gain":1.0}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-pan-effect" data-category="hosted">
+  <h3>MUSIC@PAN fires one effect with the stereo position</h3>
+  <pre class="ajisai-source">'music' IMPORT -1/2 MUSIC@PAN</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="effect" data-payload='{"pan":-0.5}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-pan-reset-effect" data-category="hosted">
+  <h3>MUSIC@PAN-RESET fires one effect restoring center pan</h3>
+  <pre class="ajisai-source">'music' IMPORT MUSIC@PAN-RESET</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="effect" data-payload='{"pan":0.0}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-fx-reset-effect" data-category="hosted">
+  <h3>MUSIC@FX-RESET fires one effect restoring gain and pan defaults</h3>
+  <pre class="ajisai-source">'music' IMPORT MUSIC@FX-RESET</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="effect" data-payload='{"gain":1.0,"pan":0.0}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-play-tone" data-category="hosted">
+  <h3>MUSIC@PLAY of a bare frequency fires one audio effect with a tone structure</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="audio" data-payload='{"type":"play","structure":{"type":"tone","frequency":440.0,"duration":1.0}}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-play-note-structure" data-category="hosted">
+  <h3>MUSIC@PLAY of an explicit note resolves pitch and duration into the audio structure</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 MUSIC@HZ 1 MUSIC@DUR MUSIC@NOTE MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="audio" data-payload='{"type":"play","structure":{"type":"tone","frequency":440.0,"duration":1.0}}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-seq-mode-play" data-category="hosted">
+  <h3>MUSIC@SEQ mode is observable as a seq structure in the following PLAY effect</h3>
+  <pre class="ajisai-source">'music' IMPORT MUSIC@SEQ [ 440 550 ] MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="audio" data-payload='{"type":"play","structure":{"type":"seq","children":[{"type":"tone","frequency":440.0,"duration":1.0},{"type":"tone","frequency":550.0,"duration":1.0}]}}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-sim-mode-play" data-category="hosted">
+  <h3>MUSIC@SIM mode is observable as a sim structure in the following PLAY effect</h3>
+  <pre class="ajisai-source">'music' IMPORT MUSIC@SIM [ 440 550 ] MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="audio" data-payload='{"type":"play","structure":{"type":"sim","children":[{"type":"tone","frequency":440.0,"duration":1.0},{"type":"tone","frequency":550.0,"duration":1.0}]}}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-play-chord-group" data-category="hosted">
+  <h3>MUSIC@PLAY of a chord group renders as a sim structure</h3>
+  <pre class="ajisai-source">'music' IMPORT [ 440 550 ] MUSIC@CHORD MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="audio" data-payload='{"type":"play","structure":{"type":"sim","children":[{"type":"tone","frequency":440.0,"duration":1.0},{"type":"tone","frequency":550.0,"duration":1.0}]}}'></span>
+  </div>
+</section>
+
+<section class="ajisai-case" id="hosted-music-missing-capability" data-category="hosted" data-host-capabilities="">
+  <h3>MUSIC@PLAY without the audio capability fails with a diagnostic effect</h3>
+  <pre class="ajisai-source">'music' IMPORT 440 MUSIC@PLAY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">MUSIC@PLAY requires missing host capability audio</pre>
+  <div class="ajisai-expect-effects">
+    <span class="ajisai-effect" data-kind="diagnostic" data-payload='{"capability":"audio","op":"missingCapability","word":"MUSIC@PLAY"}'></span>
+  </div>
+</section>
+
 </body>
 </html>
