@@ -148,6 +148,7 @@ impl CauseClass {
             ErrorCategory::IndexOutOfBounds => CauseClass::Index,
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
             ErrorCategory::ExecutionLimitExceeded => CauseClass::UserLogic,
+            ErrorCategory::RecursionLimitExceeded => CauseClass::UserLogic,
             ErrorCategory::ModeUnsupported => CauseClass::ContractViolation,
             ErrorCategory::BuiltinProtection => CauseClass::ContractViolation,
             ErrorCategory::CondExhausted => CauseClass::UserLogic,
@@ -313,7 +314,8 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         | Some(ErrorCategory::ModeUnsupported)
         | Some(ErrorCategory::CondExhausted) => "fixProgram",
         Some(ErrorCategory::BuiltinProtection) => "fixCapabilityOrForce",
-        Some(ErrorCategory::ExecutionLimitExceeded) => "addBudgetOrFixRecursion",
+        Some(ErrorCategory::ExecutionLimitExceeded)
+        | Some(ErrorCategory::RecursionLimitExceeded) => "addBudgetOrFixRecursion",
         Some(ErrorCategory::Custom) | None => match why {
             CauseClass::Environment | CauseClass::Effect => "fixHost",
             CauseClass::NilFlow => "handleUnknownOrNil",
@@ -550,6 +552,15 @@ fn build_next_checks(
                 out.push(check(
                     "Check input size",
                     "大きすぎる入力に対して想定外の反復が発生していないか確認する",
+                ));
+            } else if matches!(category, Some(ErrorCategory::RecursionLimitExceeded)) {
+                out.push(check(
+                    "Check recursion base",
+                    "再帰呼び出しの停止条件を確認する",
+                ));
+                out.push(check(
+                    "Check tail position",
+                    "COND 節末尾のガード付き末尾再帰 (SPEC 8.4) に書き換えると深度制限を受けない",
                 ));
             } else if matches!(category, Some(ErrorCategory::CondExhausted)) {
                 out.push(check(

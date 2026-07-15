@@ -26,6 +26,16 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Any
 import sys, json
 
+# Native recursion headroom. This reference interpreter evaluates user-word
+# recursion by plain Python recursion (it does not implement the guarded
+# tail-call backward jump of SPEC Section 8.4), so its recursion-depth guard
+# *is* Python's recursion limit — an implementation-defined depth, which the
+# spec permits. Raise it far enough that the conformance suite's guarded
+# tail-recursion case (depth 1000, ~7 Python frames per Ajisai level) fits;
+# unbounded recursion still trips RecursionError, reported as
+# recursionLimitExceeded (SPEC Section 11.1).
+sys.setrecursionlimit(20000)
+
 # --------------------------------------------------------------------------
 # Value model (Section 4)
 # --------------------------------------------------------------------------
@@ -716,8 +726,13 @@ class Interp:
                 MODULE_IMPL[w](self, mods); return
             raise AjisaiError("unknownWord", w)
         if "@" in w:
+            # Section 9.2 (observable resolution contract): the qualified form
+            # is not a backdoor around a partial import — MODULE@WORD resolves
+            # only while the word is in the current import set, exactly like
+            # the bare name.
             mod, _, ww = w.partition("@")
-            if ww in MODULE_IMPL and MODULE_WORDS.get(ww) == mod:
+            if (ww in MODULE_IMPL and MODULE_WORDS.get(ww) == mod
+                    and ww in self.visible):
                 MODULE_IMPL[ww](self, mods); return
             raise AjisaiError("unknownWord", w)
         raise AjisaiError("unknownWord", w)
@@ -957,6 +972,14 @@ def value_equal(a, b):
         return None if s == "U" else (s == 0)
     if isinstance(a, Str) and isinstance(b, Str):
         return a.s == b.s
+    if isinstance(a, Nil) and isinstance(b, Nil):
+        # Structural equality treats all NIL values uniformly (Sections 4.5.0,
+        # 7.4 "NIL operands and NIL equality"): diagnostic metadata (reason,
+        # origin, diagnosis) never participates in equality. Top-level NIL
+        # operands never reach here — the relations pass them through
+        # (Section 7.12) — so this rule is observable only for NIL elements
+        # embedded in containers.
+        return True
     # Scalar vs one-element vector unwraps and compares the element (Rust EQ
     # one-element rule): 2 [ 2 ] EQ -> TRUE, but 2 [ 2 3 ] EQ -> FALSE.
     if is_scalar(a) and isinstance(b, Vec):
@@ -1471,18 +1494,47 @@ def w_fill(it, mods):
 # string/conv ---------------------------------------------------------------
 
 def _str_render(v):
-    """STR's Text rendering: integers drop the /1 denominator (Section 7.6)."""
+    """STR's Text rendering (Section 7.6.1): integers drop the /1 denominator;
+    a Vector or Record flattens to its space-joined leaves."""
     if isinstance(v, Rational):
         if v.f.denominator == 1:
             return str(v.f.numerator)
         return f"{v.f.numerator}/{v.f.denominator}"
+    if isinstance(v, (Vec, Rec)):
+        return " ".join(_str_leaves(v))
     return output_render(v)
+
+def _str_leaves(v):
+    """Flat leaf sequence of a container for STR (Section 7.6.1): scalar
+    leaves render by _str_render, Booleans by their spelling, NIL (and U,
+    which shares absence storage on this surface) as the letters NIL, and a
+    Text element decays to its code-point scalars."""
+    out = []
+    items = v.items
+    for x in items:
+        if isinstance(x, Str):
+            out.extend(str(ord(c)) for c in x.s)
+        elif isinstance(x, (Vec, Rec)):
+            out.extend(_str_leaves(x))
+        elif isinstance(x, Nil):
+            out.append("NIL")
+        elif isinstance(x, Bool):
+            out.append({True: "TRUE", False: "FALSE", "U": "NIL"}[x.v])
+        else:
+            out.append(_str_render(x))
+    return out
 
 def w_str(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
+    if isinstance(v, Bool) and v.v == "U":
+        # Section 7.6.1: U has no text surface; the result is a fresh NIL and
+        # the logical identity is not observable through it.
+        it.push(Nil()); return
     if isinstance(v, Nil):
-        it.push(Nil(reason=v.reason, origin=v.origin)); return
+        # Section 7.6.1: STR is not a Section 7.12 passthrough word — the NIL
+        # result is fresh and does not carry the operand's reason.
+        it.push(Nil()); return
     it.push(Str(_str_render(v) if not isinstance(v, Str) else v.s))
 
 def w_num(it, mods):
@@ -1498,16 +1550,21 @@ def w_num(it, mods):
 def w_bool(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
-    if isinstance(v, Bool): it.push(v); return
+    if isinstance(v, Bool):
+        if v.v == "U":
+            # Section 7.6.1: U is malformed use for BOOL, through the same
+            # channel as NIL.
+            raise AjisaiError("custom", "BOOL: expected String or Number, got Nil")
+        it.push(v); return
     if isinstance(v, Nil):
         raise AjisaiError("custom", "BOOL: expected String or Number, got Nil")
     if isinstance(v, Str):
-        low = v.s.strip().lower()
+        low = v.s.lower()
         if low == "true": it.push(TRUE); return
         if low == "false": it.push(FALSE); return
-        n = number_of(v.s.strip())
-        if n is not None and as_fraction(n) is not None:
-            it.push(TRUE if as_fraction(n) != 0 else FALSE); return
+        # Section 7.6.1: any other Text — including numeric text like '42' —
+        # is a well-formed conversion failure -> NIL. Text is never routed
+        # through the numeric zero/non-zero rule.
         it.push(Nil()); return
     fa = as_fraction(v)
     if fa is not None: it.push(TRUE if fa != 0 else FALSE); return
@@ -1535,20 +1592,32 @@ def w_chars(it, mods):
 def w_join(it, mods):
     ops, keep = it.operands(mods, 1)
     v = ops[-1]
+    if isinstance(v, Str):
+        # Section 7.6.1: a Text target is a code-point vector; it joins back
+        # to itself. (This is also why JOIN has no separator operand — a Text
+        # on top of the stack is JOIN's target, never a separator.)
+        it.push(Str(v.s)); return
     if not isinstance(v, Vec):
         kindname = "Number" if as_fraction(v) is not None else type(v).__name__
         raise AjisaiError("custom", f"JOIN: expected Vector, got {kindname}")
     parts = []
-    for x in v.items:
+    for i, x in enumerate(v.items):
         if isinstance(x, Str):
             parts.append(x.s)
             continue
         f = as_fraction(x)
-        if f is not None and f.denominator == 1 and 0 <= int(f) <= 0x10FFFF:
-            # A numeric element is a code point (Section 7.6).
-            parts.append(chr(int(f)))
-            continue
-        parts.append(_str_render(x))
+        if f is not None:
+            # A numeric element is a code point (Section 7.6.1); a scalar
+            # outside the valid code-point range is malformed use.
+            if f.denominator == 1 and 0 <= int(f) <= 0x10FFFF and not (0xD800 <= int(f) <= 0xDFFF):
+                parts.append(chr(int(f)))
+                continue
+            raise AjisaiError("custom", f"JOIN: invalid character code at index {i}")
+        kindname = ("nil" if isinstance(x, Nil)
+                    else "boolean" if isinstance(x, Bool)
+                    else "other format")
+        raise AjisaiError("custom",
+                          f"JOIN: all elements must be strings, found {kindname} at index {i}")
     it.push(Str("".join(parts)))
 
 # text words (Section 7.6) ---------------------------------------------------
@@ -1947,6 +2016,12 @@ def run_cond_body(it, body_toks, subject):
 
 # def / del -----------------------------------------------------------------
 
+# Words whose execution is not definition-time-safe for PRECOMPUTE (§7.7):
+# effectful/observable words must not fire at DEF time. Production derives
+# this from the Section 7.14 contract registry (purity/effects); this
+# Core-only reference interpreter's effectful surface is PRINT.
+_NOT_COMPTIME_SAFE = frozenset({"PRINT"})
+
 def _stage_precompute(it, body):
     """Definition-time staging (Section 7.7): each `{ ... } PRECOMPUTE` inside a
     DEF body is evaluated once now and its resulting values are spliced into the
@@ -1974,8 +2049,30 @@ def _stage_precompute(it, body):
                 if j >= 0:
                     inner = out[j + 1:len(out) - 1]
                     del out[j:]
+                    # Section 7.7 (observable staging contract): the staged
+                    # block must be definition-time-safe — an effectful word
+                    # would fire its effect at DEF rather than at call time.
+                    # Production decides this from the Section 7.14 registry;
+                    # this Core-only reference's effectful surface is PRINT.
+                    for kk, vv in inner:
+                        if kk == "word" and ALIAS.get(vv, vv).upper() in _NOT_COMPTIME_SAFE:
+                            raise AjisaiError(
+                                "custom",
+                                f"PRECOMPUTE rejected: word {ALIAS.get(vv, vv).upper()} is not comptime-safe")
                     sub = _new_sub(it)
-                    sub.run_tokens(list(inner))
+                    # Isolated, *empty* definition-time evaluation (§7.7): the
+                    # block never sees the definition-time stack, and any
+                    # failure is a definition-time error surfaced by DEF.
+                    try:
+                        sub.run_tokens(list(inner))
+                    except AjisaiError as e:
+                        detail = e.args[1] if len(e.args) > 1 else e.args[0]
+                        raise AjisaiError("custom", f"PRECOMPUTE failed: {detail}")
+                    for val in sub.stack:
+                        if isinstance(val, Nil):
+                            raise AjisaiError(
+                                "custom",
+                                "PRECOMPUTE failed: result contains unsupported value type")
                     out.extend(("val", val) for val in sub.stack)
                     i += 1
                     continue
@@ -2829,7 +2926,10 @@ def run_program(src):
     except AjisaiError as e:
         return {"status": "error", "kind": e.kind}
     except RecursionError:
-        return {"status": "error", "kind": "executionLimitExceeded"}
+        # Native recursion-depth guard (SPEC Section 8.4): a runtime safety
+        # control of the same rank as the step budget, with its own user-level
+        # category (Section 11.1).
+        return {"status": "error", "kind": "recursionLimitExceeded"}
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "run":

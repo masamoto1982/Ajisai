@@ -684,6 +684,33 @@
   </div>
 </section>
 
+<!-- Child runtime (Section 10.8): AWAIT's [status result-stack] is a pure
+     function of the spawned block and dictionary snapshot; scheduling (eager
+     vs concurrent) is implementation freedom and is deliberately NOT pinned
+     here. Categorized hosted: the Core-only reference interpreter does not
+     implement the (Quarantined) child-runtime words. -->
+
+<section class="ajisai-case" id="hosted-child-await-completed-deterministic" data-category="hosted">
+  <h3>AWAIT of a completed child is deterministic: status and final stack</h3>
+  <pre class="ajisai-source">{ 1 2 ADD } SPAWN AWAIT</pre>
+  <pre class="ajisai-expect-result">[ 'completed' [ 3/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-child-await-failed-child" data-category="hosted">
+  <h3>A child that raises reports 'failed' with its stack as of the failure</h3>
+  <pre class="ajisai-source">{ NIL BOOL } SPAWN AWAIT</pre>
+  <pre class="ajisai-expect-result">[ 'failed' [ NIL ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="hosted-child-bubble-completes" data-category="hosted">
+  <h3>A Bubble/NIL inside a child is a value, not a failure</h3>
+  <pre class="ajisai-source">{ 0 0 DIV } SPAWN AWAIT</pre>
+  <pre class="ajisai-expect-result">[ 'completed' [ NIL ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- VENT (^) is a lazy control directive (Section 6.4): a non-NIL top is kept
      and the following source unit is skipped unevaluated; a NIL top is discarded
      and the following unit is evaluated as the fallback. -->
@@ -1363,6 +1390,103 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- STR per-type contract (Section 7.6.1). -->
+
+<section class="ajisai-case" id="core-str-nil-yields-fresh-nil" data-category="core">
+  <h3>STR of NIL yields a fresh NIL that carries no reason (Section 7.6.1)</h3>
+  <pre class="ajisai-source">0 0 DIV STR NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-str-flattens-container-leaves" data-category="core">
+  <h3>STR of a vector space-joins its flat leaves; Text elements decay to code points</h3>
+  <pre class="ajisai-source">[ 'AB' 'CD' ] STR</pre>
+  <pre class="ajisai-expect-result">'65 66 67 68'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-str-nil-leaf-renders-letters" data-category="core">
+  <h3>STR renders a NIL leaf inside a vector as the letters NIL</h3>
+  <pre class="ajisai-source">[ 1 NIL ] STR</pre>
+  <pre class="ajisai-expect-result">'1 NIL'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- BOOL per-type contract (Section 7.6.1). -->
+
+<section class="ajisai-case" id="core-bool-numeric-text-is-nil" data-category="core">
+  <h3>BOOL never routes Text through the numeric rule: numeric text yields NIL</h3>
+  <pre class="ajisai-source">'42' BOOL</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- JOIN argument-shape contract (Section 7.6.1): exactly one operand,
+     no separator form. -->
+
+<section class="ajisai-case" id="core-join-no-separator-operand" data-category="core">
+  <h3>JOIN has no separator operand: a Text on top is the target, not a separator</h3>
+  <pre class="ajisai-source">[ 'A' 'B' 'C' ] ',' JOIN</pre>
+  <pre class="ajisai-expect-result">[ 'A' 'B' 'C' ] ','</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-mixed-text-and-codepoints" data-category="core">
+  <h3>JOIN appends Text elements as content and integer elements as code points</h3>
+  <pre class="ajisai-source">[ 'AJIS' 65 73 ] JOIN</pre>
+  <pre class="ajisai-expect-result">'AJISAI'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-rejects-boolean-element" data-category="core">
+  <h3>JOIN rejects a non-Text, non-code-point element as malformed use</h3>
+  <pre class="ajisai-source">[ 'A' TRUE ] JOIN</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">JOIN: all elements must be strings, found boolean at index 1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-rejects-invalid-codepoint" data-category="core">
+  <h3>JOIN rejects a numeric element outside the valid code-point range</h3>
+  <pre class="ajisai-source">[ 'A' -3 ] JOIN</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">JOIN: invalid character code at index 1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- NIL operands vs NIL equality on EQ (Sections 4.5.0, 7.4, 7.12). -->
+
+<section class="ajisai-case" id="core-eq-nil-nil-passthrough" data-category="core">
+  <h3>NIL NIL EQ is NIL, never TRUE: EQ passes top-level NIL operands through</h3>
+  <pre class="ajisai-source">NIL NIL EQ</pre>
+  <pre class="ajisai-expect-result">NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-eq-nil-passthrough-preserves-reason" data-category="core">
+  <h3>EQ passthrough preserves the leftmost NIL operand's reason (Section 4.5.1)</h3>
+  <pre class="ajisai-source">1 0 DIV 1 EQ NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-eq-structural-nil-uniform" data-category="core">
+  <h3>Structural equality treats all NIL elements uniformly, ignoring reasons</h3>
+  <pre class="ajisai-source">0 0 DIV 1 COLLECT NIL 1 COLLECT EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Default rendering of a computed scalar (Section 12.2). -->
+
+<section class="ajisai-case" id="core-scalar-default-rendering" data-category="core">
+  <h3>A computed rational scalar renders as reduced numerator/denominator by default</h3>
+  <pre class="ajisai-source">3 7 2 DIV</pre>
+  <pre class="ajisai-expect-result">3/1 7/2</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-join-scalar-error" data-category="core">
   <h3>JOIN of a bare scalar is a type error</h3>
   <pre class="ajisai-source">5 JOIN</pre>
@@ -1893,6 +2017,51 @@ COND</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Observable staging contract of PRECOMPUTE (Section 7.7). -->
+
+<section class="ajisai-case" id="core-precompute-splices-values-in-order" data-category="core">
+  <h3>PRECOMPUTE splices every staged value in place, in order</h3>
+  <pre class="ajisai-source">{ { 1 2 } PRECOMPUTE 10 ADD } 'STAGED-PAIR' DEF STAGED-PAIR</pre>
+  <pre class="ajisai-expect-result">1/1 12/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-precompute-empty-seed-stack" data-category="core">
+  <h3>The staged block runs on an empty isolated stack, never the DEF-time stack</h3>
+  <pre class="ajisai-source">5 { { 2 MUL } PRECOMPUTE } 'STAGED-ISO' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">PRECOMPUTE failed: Stack underflow</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-precompute-rejects-effectful-word" data-category="core">
+  <h3>A staged block containing an effectful word is rejected at DEF time</h3>
+  <pre class="ajisai-source">{ { 'HI' PRINT 7 } PRECOMPUTE } 'STAGED-FX' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">PRECOMPUTE rejected: word PRINT is not comptime-safe</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Native recursion-depth guard (Sections 8.4, 11.1): a runtime safety
+     control with its own recoverable error category. The expected error
+     text deliberately omits the depth value — the guard's depth is
+     implementation-defined and not conformance surface. -->
+
+<section class="ajisai-case" id="core-recursion-limit-recoverable-error" data-category="core">
+  <h3>Unguarded self-recursion trips the depth guard as a recoverable error</h3>
+  <pre class="ajisai-source">{ DOOMY } 'DOOMY' DEF DOOMY</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">recursion limit exceeded</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-guarded-tail-recursion-exempt" data-category="core">
+  <h3>Guarded tail recursion (COND tail position) is exempt from the depth guard</h3>
+  <pre class="ajisai-source">{ { [ 0 ] EQ } { IDLE } { IDLE } { [ 1 ] SUB LOOPY } COND } 'LOOPY' DEF 1000 LOOPY</pre>
+  <pre class="ajisai-expect-result">[ 0/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-del-removes-word" data-category="core">
   <h3>DEL removes a user word; calling it afterwards is unknownWord</h3>
   <pre class="ajisai-source">{ 2 MUL } 'D2' DEF 'D2' DEL 5 D2</pre>
@@ -1983,6 +2152,33 @@ COND</pre>
   <pre class="ajisai-source">'nope' IMPORT</pre>
   <pre class="ajisai-expect-result"></pre>
   <pre class="ajisai-expect-error">Unknown module: NOPE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- Observable resolution contract of a partial import (Section 9.2):
+     selected words resolve bare and qualified; unselected siblings resolve
+     in neither form. -->
+
+<section class="ajisai-case" id="core-import-only-selected-qualified" data-category="core">
+  <h3>A word selected by IMPORT-ONLY also resolves in qualified form</h3>
+  <pre class="ajisai-source">'math' [ 'SQRT' ] IMPORT-ONLY 4 MATH@SQRT</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-import-only-sibling-bare-unresolved" data-category="core">
+  <h3>An unselected sibling word does not resolve as a bare name</h3>
+  <pre class="ajisai-source">'math' [ 'SQRT' ] IMPORT-ONLY -5 ABS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Unknown word: ABS</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-import-only-sibling-qualified-unresolved" data-category="core">
+  <h3>The qualified form is not a backdoor around a partial import</h3>
+  <pre class="ajisai-source">'math' [ 'SQRT' ] IMPORT-ONLY -5 MATH@ABS</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Unknown word: MATH@ABS</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

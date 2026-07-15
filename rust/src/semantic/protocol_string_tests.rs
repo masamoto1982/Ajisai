@@ -27,6 +27,10 @@ fn absence_and_diagnosis_protocol_strings_do_not_use_debug_names() {
         ErrorCategory::DivisionByZero.as_protocol_str(),
         "divisionByZero"
     );
+    assert_eq!(
+        ErrorCategory::RecursionLimitExceeded.as_protocol_str(),
+        "recursionLimitExceeded"
+    );
     assert_eq!(ErrorPhase::ResolveWord.as_protocol_str(), "resolveWord");
     assert_eq!(ErrorLocusKind::CoreWord.as_protocol_str(), "coreWord");
     assert_eq!(
