@@ -25,6 +25,7 @@
       "coverage_entry_id": "core.top",
       "semantic_role": "Derived",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.modifier.region.top",
         "algebra.state-transformer.combinator"
@@ -41,6 +42,7 @@
       "coverage_entry_id": "core.modifier.stak",
       "semantic_role": "Derived",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.modifier.region.stack",
         "algebra.state-transformer.combinator"
@@ -57,6 +59,7 @@
       "coverage_entry_id": "core.eat",
       "semantic_role": "Derived",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.modifier.consumption.eat",
         "algebra.state-transformer.combinator"
@@ -73,6 +76,7 @@
       "coverage_entry_id": "core.modifier.keep",
       "semantic_role": "Derived",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.modifier.consumption.keep",
         "algebra.state-transformer.combinator"
@@ -89,6 +93,7 @@
       "coverage_entry_id": "core.get",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.bubble.domain"
@@ -105,6 +110,7 @@
       "coverage_entry_id": "core.insert",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -120,6 +126,7 @@
       "coverage_entry_id": "core.replace",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -135,6 +142,7 @@
       "coverage_entry_id": "core.remove",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.bubble.domain"
@@ -151,6 +159,7 @@
       "coverage_entry_id": "core.length",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -166,6 +175,7 @@
       "coverage_entry_id": "core.take",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -181,6 +191,7 @@
       "coverage_entry_id": "core.split",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -196,6 +207,7 @@
       "coverage_entry_id": "core.concat",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -211,6 +223,7 @@
       "coverage_entry_id": "core.reverse",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -226,6 +239,7 @@
       "coverage_entry_id": "core.range",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -241,6 +255,7 @@
       "coverage_entry_id": "core.reorder",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -256,6 +271,7 @@
       "coverage_entry_id": "core.collect",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -271,6 +287,7 @@
       "coverage_entry_id": "core.true",
       "semantic_role": "Primitive",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.k3.domain"
       ],
@@ -286,6 +303,7 @@
       "coverage_entry_id": "core.false",
       "semantic_role": "Primitive",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.k3.domain"
       ],
@@ -301,6 +319,7 @@
       "coverage_entry_id": "core.nil",
       "semantic_role": "Primitive",
       "algebraic_family": "bubble",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
       ],
@@ -316,6 +335,7 @@
       "coverage_entry_id": "core.nil-p",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain",
         "algebra.k3.domain"
@@ -332,6 +352,7 @@
       "coverage_entry_id": "core.nil-reason",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
       ],
@@ -347,6 +368,7 @@
       "coverage_entry_id": "core.nil-origin",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
       ],
@@ -362,6 +384,7 @@
       "coverage_entry_id": "core.nil-recoverable",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
       ],
@@ -377,6 +400,7 @@
       "coverage_entry_id": "core.nil-diagnosis",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.domain"
       ],
@@ -392,6 +416,7 @@
       "coverage_entry_id": "core.cf",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.continued-fraction"
       ],
@@ -407,6 +432,7 @@
       "coverage_entry_id": "core.chars",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -422,6 +448,7 @@
       "coverage_entry_id": "core.join",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -437,6 +464,7 @@
       "coverage_entry_id": "core.trim",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -452,6 +480,7 @@
       "coverage_entry_id": "core.trim-left",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -467,6 +496,7 @@
       "coverage_entry_id": "core.trim-right",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -482,6 +512,7 @@
       "coverage_entry_id": "core.tokenize",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -497,6 +528,7 @@
       "coverage_entry_id": "core.substitute",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -512,6 +544,7 @@
       "coverage_entry_id": "core.starts-with",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
@@ -528,6 +561,7 @@
       "coverage_entry_id": "core.ends-with",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
@@ -544,6 +578,7 @@
       "coverage_entry_id": "core.num",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.exact-real.continued-fraction",
@@ -561,6 +596,7 @@
       "coverage_entry_id": "core.str",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
@@ -576,6 +612,7 @@
       "coverage_entry_id": "core.bool",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
@@ -592,6 +629,7 @@
       "coverage_entry_id": "core.chr",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.bubble.domain"
@@ -608,6 +646,7 @@
       "coverage_entry_id": "core.add",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
@@ -625,6 +664,7 @@
       "coverage_entry_id": "core.sub",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
@@ -642,6 +682,7 @@
       "coverage_entry_id": "core.mul",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
@@ -659,6 +700,7 @@
       "coverage_entry_id": "core.div",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
@@ -676,6 +718,7 @@
       "coverage_entry_id": "core.compare-within",
       "semantic_role": "Primitive",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -693,6 +736,7 @@
       "coverage_entry_id": "core.eq",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -711,6 +755,7 @@
       "coverage_entry_id": "core.lt",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -729,6 +774,7 @@
       "coverage_entry_id": "core.lte",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -747,6 +793,7 @@
       "coverage_entry_id": "core.gt",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -765,6 +812,7 @@
       "coverage_entry_id": "core.gte",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -783,6 +831,7 @@
       "coverage_entry_id": "core.neq",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain",
@@ -801,6 +850,7 @@
       "coverage_entry_id": "core.and",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.k3.meet"
       ],
@@ -817,6 +867,7 @@
       "coverage_entry_id": "core.or",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.k3.join"
       ],
@@ -833,6 +884,7 @@
       "coverage_entry_id": "core.not",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.k3.involution"
       ],
@@ -849,6 +901,7 @@
       "coverage_entry_id": "core.idle",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.identity"
       ],
@@ -864,6 +917,7 @@
       "coverage_entry_id": "core.cond",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.k3.domain",
         "algebra.state-transformer.composition"
@@ -880,6 +934,7 @@
       "coverage_entry_id": "core.flow",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.identity"
       ],
@@ -895,6 +950,7 @@
       "coverage_entry_id": "core.vent",
       "semantic_role": "Derived",
       "algebraic_family": "bubble",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.bubble.handler",
         "algebra.bubble.domain"
@@ -911,6 +967,7 @@
       "coverage_entry_id": "core.map",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.applicative",
         "algebra.state-transformer.composition"
@@ -928,6 +985,7 @@
       "coverage_entry_id": "core.filter",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain",
@@ -946,6 +1004,7 @@
       "coverage_entry_id": "core.fold",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
@@ -963,6 +1022,7 @@
       "coverage_entry_id": "core.unfold",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
@@ -980,6 +1040,7 @@
       "coverage_entry_id": "core.any",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
@@ -997,6 +1058,7 @@
       "coverage_entry_id": "core.all",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
@@ -1014,6 +1076,7 @@
       "coverage_entry_id": "core.count",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain",
@@ -1032,6 +1095,7 @@
       "coverage_entry_id": "core.scan",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.state-transformer.composition"
@@ -1049,6 +1113,7 @@
       "coverage_entry_id": "core.print",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1069,6 +1134,7 @@
       "coverage_entry_id": "core.precompute",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.composition",
         "algebra.dictionary.finite-partial-map"
@@ -1085,6 +1151,7 @@
       "coverage_entry_id": "core.import.name-resolution",
       "semantic_role": "Primitive",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.state-transformer.composition"
@@ -1101,6 +1168,7 @@
       "coverage_entry_id": "core.del",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
@@ -1117,6 +1185,7 @@
       "coverage_entry_id": "core.lookup",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.observation.structured-diagnostic"
@@ -1133,6 +1202,7 @@
       "coverage_entry_id": "core.forc",
       "semantic_role": "Derived",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.modifier.consumption.eat",
         "algebra.dictionary.finite-partial-map"
@@ -1149,6 +1219,7 @@
       "coverage_entry_id": "core.shape",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
@@ -1165,6 +1236,7 @@
       "coverage_entry_id": "core.rank",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
@@ -1181,6 +1253,7 @@
       "coverage_entry_id": "core.reshape",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
@@ -1197,6 +1270,7 @@
       "coverage_entry_id": "core.transpose",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
@@ -1213,6 +1287,7 @@
       "coverage_entry_id": "core.fill",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
@@ -1229,6 +1304,7 @@
       "coverage_entry_id": "core.mod",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.bihomographic",
         "algebra.exact-real.continued-fraction",
@@ -1246,6 +1322,7 @@
       "coverage_entry_id": "core.floor",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1262,6 +1339,7 @@
       "coverage_entry_id": "core.ceil",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1278,6 +1356,7 @@
       "coverage_entry_id": "core.round",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1294,6 +1373,7 @@
       "coverage_entry_id": "core.quantize",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1310,6 +1390,7 @@
       "coverage_entry_id": "core.quantize-half-away",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1326,6 +1407,7 @@
       "coverage_entry_id": "core.quantize-floor",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1342,6 +1424,7 @@
       "coverage_entry_id": "core.quantize-ceil",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1358,6 +1441,7 @@
       "coverage_entry_id": "core.quantize-trunc",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
@@ -1374,6 +1458,7 @@
       "coverage_entry_id": "core.exec",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
@@ -1389,6 +1474,7 @@
       "coverage_entry_id": "core.conserve",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
@@ -1405,6 +1491,7 @@
       "coverage_entry_id": "core.eval",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.state-transformer.composition"
@@ -1421,6 +1508,7 @@
       "coverage_entry_id": "core.exact-real.sqrt",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.gosper"
@@ -1437,6 +1525,7 @@
       "coverage_entry_id": "core.import-only",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.dictionary.finite-partial-map",
@@ -1454,6 +1543,7 @@
       "coverage_entry_id": "core.unimport",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.dictionary.finite-partial-map",
@@ -1471,6 +1561,7 @@
       "coverage_entry_id": "core.unimport-only",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.dictionary.finite-partial-map",
@@ -1488,6 +1579,7 @@
       "coverage_entry_id": "core.spawn",
       "semantic_role": "Exploratory",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
@@ -1512,6 +1604,7 @@
       "coverage_entry_id": "core.await",
       "semantic_role": "Exploratory",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.state-transformer.composition",
@@ -1537,6 +1630,7 @@
       "coverage_entry_id": "core.status",
       "semantic_role": "Exploratory",
       "algebraic_family": "observation",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.exact-scalar.codepoint-sequence"
@@ -1561,6 +1655,7 @@
       "coverage_entry_id": "core.kill",
       "semantic_role": "Exploratory",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.state-transformer.composition",
@@ -1586,6 +1681,7 @@
       "coverage_entry_id": "core.monitor",
       "semantic_role": "Exploratory",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
@@ -1610,6 +1706,7 @@
       "coverage_entry_id": "core.supervise",
       "semantic_role": "Exploratory",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.handle.domain",
         "algebra.state-transformer.composition"
@@ -1636,6 +1733,7 @@
       "coverage_entry_id": "module.music.seq",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
@@ -1653,6 +1751,7 @@
       "coverage_entry_id": "module.music.sim",
       "semantic_role": "Derived",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
@@ -1670,6 +1769,7 @@
       "coverage_entry_id": "module.music.slot",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1693,6 +1793,7 @@
       "coverage_entry_id": "module.music.gain",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1716,6 +1817,7 @@
       "coverage_entry_id": "module.music.gain-reset",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1739,6 +1841,7 @@
       "coverage_entry_id": "module.music.pan",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1762,6 +1865,7 @@
       "coverage_entry_id": "module.music.pan-reset",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1785,6 +1889,7 @@
       "coverage_entry_id": "module.music.fx-reset",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1808,6 +1913,7 @@
       "coverage_entry_id": "module.music.play",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -1831,6 +1937,7 @@
       "coverage_entry_id": "module.music.seq-group",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1858,6 +1965,7 @@
       "coverage_entry_id": "module.music.sim-group",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1885,6 +1993,7 @@
       "coverage_entry_id": "module.music.chord",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1912,6 +2021,7 @@
       "coverage_entry_id": "module.music.hz",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1939,6 +2049,7 @@
       "coverage_entry_id": "module.music.dur",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1966,6 +2077,7 @@
       "coverage_entry_id": "module.music.note",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -1993,6 +2105,7 @@
       "coverage_entry_id": "module.music.rest",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2020,6 +2133,7 @@
       "coverage_entry_id": "module.music.edo",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2047,6 +2161,7 @@
       "coverage_entry_id": "module.music.edr",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2074,6 +2189,7 @@
       "coverage_entry_id": "module.music.step",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2101,6 +2217,7 @@
       "coverage_entry_id": "module.music.voice",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2128,6 +2245,7 @@
       "coverage_entry_id": "module.music.track",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2155,6 +2273,7 @@
       "coverage_entry_id": "module.music.measure",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2182,6 +2301,7 @@
       "coverage_entry_id": "module.music.phrase",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2209,6 +2329,7 @@
       "coverage_entry_id": "module.music.with-tuning",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2236,6 +2357,7 @@
       "coverage_entry_id": "module.music.explain",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "material",
       "derived_from": [
         "algebra.observation.structured-diagnostic",
         "algebra.structure-lift.indexed-sequence"
@@ -2254,6 +2376,7 @@
       "coverage_entry_id": "module.music.adsr",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2281,6 +2404,7 @@
       "coverage_entry_id": "module.music.sine",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2308,6 +2432,7 @@
       "coverage_entry_id": "module.music.square",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2335,6 +2460,7 @@
       "coverage_entry_id": "module.music.saw",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2362,6 +2488,7 @@
       "coverage_entry_id": "module.music.tri",
       "semantic_role": "Exploratory",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence",
@@ -2389,6 +2516,7 @@
       "coverage_entry_id": "module.json.parse",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.dictionary.finite-partial-map",
@@ -2408,6 +2536,7 @@
       "coverage_entry_id": "module.json.stringify",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.dictionary.finite-partial-map"
@@ -2426,6 +2555,7 @@
       "coverage_entry_id": "module.json.get",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.dictionary.finite-partial-map",
@@ -2445,6 +2575,7 @@
       "coverage_entry_id": "module.json.keys",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence"
@@ -2463,6 +2594,7 @@
       "coverage_entry_id": "module.json.set",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
@@ -2481,6 +2613,7 @@
       "coverage_entry_id": "module.json.has",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.dictionary.finite-partial-map",
@@ -2500,6 +2633,7 @@
       "coverage_entry_id": "module.json.values",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence"
@@ -2518,6 +2652,7 @@
       "coverage_entry_id": "module.json.merge",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
@@ -2536,6 +2671,7 @@
       "coverage_entry_id": "module.json.delete",
       "semantic_role": "Derived",
       "algebraic_family": "dictionary",
+      "core_tier": "material",
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
@@ -2554,6 +2690,7 @@
       "coverage_entry_id": "module.json.export",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -2576,6 +2713,7 @@
       "coverage_entry_id": "module.io.input",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "capability.check",
         "algebra.exact-scalar.codepoint-sequence",
@@ -2598,6 +2736,7 @@
       "coverage_entry_id": "module.io.output",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check",
@@ -2623,6 +2762,7 @@
       "coverage_entry_id": "hosted.clock.deterministic",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -2644,6 +2784,7 @@
       "coverage_entry_id": "module.time.datetime",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
@@ -2662,6 +2803,7 @@
       "coverage_entry_id": "module.time.timestamp",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
@@ -2680,6 +2822,7 @@
       "coverage_entry_id": "module.time.date",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -2697,6 +2840,7 @@
       "coverage_entry_id": "module.time.time",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
@@ -2714,6 +2858,7 @@
       "coverage_entry_id": "module.time.year",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2732,6 +2877,7 @@
       "coverage_entry_id": "module.time.month",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2750,6 +2896,7 @@
       "coverage_entry_id": "module.time.day",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2768,6 +2915,7 @@
       "coverage_entry_id": "module.time.hour",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2786,6 +2934,7 @@
       "coverage_entry_id": "module.time.minute",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2804,6 +2953,7 @@
       "coverage_entry_id": "module.time.second",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2822,6 +2972,7 @@
       "coverage_entry_id": "module.time.weekday",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
@@ -2840,6 +2991,7 @@
       "coverage_entry_id": "module.time.add-days",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
@@ -2858,6 +3010,7 @@
       "coverage_entry_id": "module.time.diff-days",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
@@ -2876,6 +3029,7 @@
       "coverage_entry_id": "module.time.format",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-scalar.codepoint-sequence"
@@ -2894,6 +3048,7 @@
       "coverage_entry_id": "module.time.parse-iso",
       "semantic_role": "Derived",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.structure-lift.indexed-sequence",
@@ -2913,6 +3068,7 @@
       "coverage_entry_id": "module.time.add-months",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
@@ -2931,6 +3087,7 @@
       "coverage_entry_id": "module.time.add-years",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
@@ -2952,6 +3109,7 @@
       "coverage_entry_id": "hosted.csprng.deterministic",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -2973,6 +3131,7 @@
       "coverage_entry_id": "module.crypto.hash",
       "semantic_role": "Derived",
       "algebraic_family": "observation",
+      "core_tier": "material",
       "derived_from": [
         "algebra.observation.digest",
         "algebra.exact-scalar.codepoint-sequence"
@@ -2991,6 +3150,7 @@
       "coverage_entry_id": "module.algo.sort",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
@@ -3010,6 +3170,7 @@
       "coverage_entry_id": "module.algo.unique",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
@@ -3029,6 +3190,7 @@
       "coverage_entry_id": "module.algo.contains",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
@@ -3048,6 +3210,7 @@
       "coverage_entry_id": "module.algo.index-of",
       "semantic_role": "Derived",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.budgeted-order",
@@ -3070,6 +3233,7 @@
       "coverage_entry_id": "core.exact-real.sqrt",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.gosper"
@@ -3088,6 +3252,7 @@
       "coverage_entry_id": "module.math.sqrt-eps",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
@@ -3106,6 +3271,7 @@
       "coverage_entry_id": "module.math.interval",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
@@ -3124,6 +3290,7 @@
       "coverage_entry_id": "module.math.lower",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
@@ -3142,6 +3309,7 @@
       "coverage_entry_id": "module.math.upper",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
@@ -3160,6 +3328,7 @@
       "coverage_entry_id": "module.math.width",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.gosper",
         "algebra.structure-lift.indexed-sequence"
@@ -3178,6 +3347,7 @@
       "coverage_entry_id": "module.math.is-exact",
       "semantic_role": "Derived",
       "algebraic_family": "k3-truth",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -3196,6 +3366,7 @@
       "coverage_entry_id": "module.math.abs",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.exact-real.gosper"
@@ -3214,6 +3385,7 @@
       "coverage_entry_id": "module.math.neg",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.gosper"
       ],
@@ -3231,6 +3403,7 @@
       "coverage_entry_id": "module.math.sign",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -3249,6 +3422,7 @@
       "coverage_entry_id": "module.math.min",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -3267,6 +3441,7 @@
       "coverage_entry_id": "module.math.max",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
@@ -3285,6 +3460,7 @@
       "coverage_entry_id": "module.math.pow",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.gosper",
         "algebra.exact-real.continued-fraction"
@@ -3303,6 +3479,7 @@
       "coverage_entry_id": "module.math.gcd",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
@@ -3321,6 +3498,7 @@
       "coverage_entry_id": "module.math.lcm",
       "semantic_role": "Derived",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
@@ -3342,6 +3520,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3366,6 +3545,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3390,6 +3570,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3414,6 +3595,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3438,6 +3620,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3462,6 +3645,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3486,6 +3670,7 @@
       "coverage_entry_id": "hosted.serial.effects",
       "semantic_role": "HostedEffect",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "derived_from": [
         "algebra.eff.append",
         "capability.check"
@@ -3504,6 +3689,7 @@
       "coverage_entry_id": "alias.plus",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "ADD",
       "classification": "Surface"
@@ -3517,6 +3703,7 @@
       "coverage_entry_id": "alias.minus",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "SUB",
       "classification": "Surface"
@@ -3530,6 +3717,7 @@
       "coverage_entry_id": "alias.asterisk",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "MUL",
       "classification": "Surface"
@@ -3543,6 +3731,7 @@
       "coverage_entry_id": "core.import.name-resolution",
       "semantic_role": "Primitive",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "derived_from": [
         "algebra.dictionary.lookup",
         "algebra.state-transformer.composition"
@@ -3558,6 +3747,7 @@
       "coverage_entry_id": "alias.percent",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "MOD",
       "classification": "Surface"
@@ -3571,6 +3761,7 @@
       "coverage_entry_id": "alias.equals",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "EQ",
       "classification": "Surface"
@@ -3584,6 +3775,7 @@
       "coverage_entry_id": "alias.less-than",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "LT",
       "classification": "Surface"
@@ -3597,6 +3789,7 @@
       "coverage_entry_id": "alias.less-than-or-equal",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "LTE",
       "classification": "Surface"
@@ -3610,6 +3803,7 @@
       "coverage_entry_id": "alias.greater-than",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "GT",
       "classification": "Surface"
@@ -3623,6 +3817,7 @@
       "coverage_entry_id": "alias.greater-than-or-equal",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "GTE",
       "classification": "Surface"
@@ -3636,6 +3831,7 @@
       "coverage_entry_id": "alias.not-equal",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "NEQ",
       "classification": "Surface"
@@ -3649,6 +3845,7 @@
       "coverage_entry_id": "alias.bang",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "FORC",
       "classification": "Surface"
@@ -3662,6 +3859,7 @@
       "coverage_entry_id": "alias.ampersand",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "AND",
       "classification": "Surface"
@@ -3675,6 +3873,7 @@
       "coverage_entry_id": "alias.dot",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "TOP",
       "classification": "Surface"
@@ -3688,6 +3887,7 @@
       "coverage_entry_id": "alias.dot-dot",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STAK",
       "classification": "Surface"
@@ -3701,6 +3901,7 @@
       "coverage_entry_id": "alias.comma",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "EAT",
       "classification": "Surface"
@@ -3714,6 +3915,7 @@
       "coverage_entry_id": "alias.comma-comma",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "KEEP",
       "classification": "Surface"
@@ -3727,6 +3929,7 @@
       "coverage_entry_id": "alias.quote",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STRING-QUOTE",
       "classification": "Surface"
@@ -3740,6 +3943,7 @@
       "coverage_entry_id": "alias.question",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "LOOKUP",
       "classification": "Surface"
@@ -3753,6 +3957,7 @@
       "coverage_entry_id": "alias.tilde",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "FLOW",
       "classification": "Surface"
@@ -3768,6 +3973,7 @@
       "coverage_entry_id": "surface.hash",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "COMMENT-LINE",
       "classification": "Surface"
@@ -3783,6 +3989,7 @@
       "coverage_entry_id": "surface.pipe",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "COND-CLAUSE",
       "classification": "Surface"
@@ -3798,6 +4005,7 @@
       "coverage_entry_id": "surface.left-bracket",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "BEGIN-VECTOR",
       "classification": "Surface"
@@ -3813,6 +4021,7 @@
       "coverage_entry_id": "surface.right-bracket",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "END-VECTOR",
       "classification": "Surface"
@@ -3828,6 +4037,7 @@
       "coverage_entry_id": "surface.left-brace",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "BEGIN-BLOCK",
       "classification": "Surface"
@@ -3843,6 +4053,7 @@
       "coverage_entry_id": "surface.right-brace",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "END-BLOCK",
       "classification": "Surface"
@@ -3858,6 +4069,7 @@
       "coverage_entry_id": "alias.quote",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STRING-QUOTE",
       "classification": "Surface"
@@ -3873,6 +4085,7 @@
       "coverage_entry_id": "surface.semicolon",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": ". ,",
       "classification": "Surface"
@@ -3888,6 +4101,7 @@
       "coverage_entry_id": "surface.semicolon-semicolon",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": ".. ,,",
       "classification": "Surface"
@@ -3903,6 +4117,7 @@
       "coverage_entry_id": "surface.left-paren",
       "semantic_role": "Sugar",
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "RESERVED-BEGIN",
       "classification": "Surface"

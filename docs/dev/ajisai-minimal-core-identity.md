@@ -156,9 +156,15 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
 
 ## 8. 次の手順（段階的・後戻り可能）
 
-1. **境界の命名（コード変更ゼロ）.** `formalization-coverage.json` の 213 エントリに
-   `core_tier: identity | flow | material` を付す（30 family への既存 `derived_from` から
-   機械的に導出可能）。ここまでで懸念 1 が大きく緩和する。
+1. **境界の命名（コード変更ゼロ）— ✅ 実装済み.** `formalization-coverage.json` の
+   30 プリミティブと 213 エントリに `core_tier: identity | flow | material | sugar` を
+   付与した（同ファイル `core_tier_summary` に決定規則を記録）。規則は優先順位付きの
+   決定的導出——(1) Sugar→sugar、(2) Exploratory→material、(3) moduleword→material
+   （Hosted Modules §9.3）、(4) 残りは home `algebraic_family`（observation は digest/handle
+   由来なら material、他は identity）。`derived_from` は「語が従う法則の全列挙」であって
+   「語が何であるか」ではないため、第一信号には使わない。`core_tier` は
+   `check-formalization-coverage.mjs` で必須化し、`word-manifest.json` へも伝播させた。
+   結果: **Minimal Core（identity+flow）= 47 語**、material = 138、sugar = 28。
 2. **仕様提案.** `SPECIFICATION.html` に "Ajisai Minimal Core" を規範的に追記し、§4 の
    比較境界語の契約を裁定する。正典変更は本メモではなく別 PR で行う。
 3. **セルフホスト 1 語実証.** 素材の派生語を 1 つ選び、Core だけを使って Ajisai prelude

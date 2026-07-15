@@ -47,6 +47,13 @@ const allowedAlgebraicFamilies = new Set([
   'observation',
 ]);
 
+const allowedCoreTiers = new Set([
+  'identity',
+  'flow',
+  'material',
+  'sugar',
+]);
+
 function fail(message) {
   throw new Error(`[formalization-coverage] ${message}`);
 }
@@ -107,6 +114,9 @@ function validateUniqueEntryIds(entries) {
     if (seenIds.has(entry.id)) {
       const firstIndex = seenIds.get(entry.id);
       fail(`${entry.id}: duplicate id at entries[${index}] (first seen at entries[${firstIndex}])`);
+    }
+    if (!allowedCoreTiers.has(entry.core_tier)) {
+      fail(`${entry.id}: entry needs a known core_tier (identity|flow|material|sugar)`);
     }
     seenIds.set(entry.id, index);
   }
@@ -222,6 +232,9 @@ if ('algebra_primitives' in coverage) {
       !allowedAlgebraicFamilies.has(prim.algebraic_family)
     ) {
       fail(`${pw}: primitive needs a known algebraic_family`);
+    }
+    if (!allowedCoreTiers.has(prim.core_tier)) {
+      fail(`${pw}: primitive needs a known core_tier (identity|flow|material|sugar)`);
     }
     if (!hasNonEmptyString(prim.description)) fail(`${pw}: primitive needs description`);
     if (!hasNonEmptyString(prim.kind)) fail(`${pw}: primitive needs kind`);

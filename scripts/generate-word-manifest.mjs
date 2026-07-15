@@ -118,6 +118,7 @@ function semanticMetadataForEntry(entry, coverageEntries) {
     for (const key of [
       'semantic_role',
       'algebraic_family',
+      'core_tier',
       'derived_from',
       'desugars_to',
       'capability',

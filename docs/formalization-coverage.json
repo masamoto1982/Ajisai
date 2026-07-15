@@ -1,9 +1,29 @@
 {
   "version": 1,
+  "core_tier_summary": {
+    "derivation": "Deterministic, precedence-ordered: (1) semantic_role Sugar -> sugar; (2) semantic_role Exploratory -> material (child-runtime is outside the Core contract, algebra.handle.domain); (3) kind moduleword -> material (Hosted Modules, SPECIFICATION.html section 9.3); (4) otherwise the tier of the entry home algebraic_family, where observation splits to material iff derived_from includes algebra.observation.digest or algebra.handle.domain, else identity. derived_from is NOT used as the primary signal because it lists every law a word obeys (e.g. arithmetic obeys Bubble pass-through), not what the word is. See docs/dev/ajisai-minimal-core-identity.md.",
+    "tiers": {
+      "identity": "Value-space separation and the three propagation disciplines (Bubble/NIL, Kleene K3 U, structured diagnostic). Part of Minimal Core.",
+      "flow": "State-transformer monoid, modifiers, dictionary resolution. Part of Minimal Core.",
+      "material": "Algorithms and hosted layers (exact arithmetic, vectors/tensors, hosted modules and effects, child runtime). Derived library / self-host targets; bound by identity laws but outside Minimal Core.",
+      "sugar": "Sealed surface grammar (delimiters, symbol sugar, directives). Fixed frame, not a self-host target."
+    },
+    "minimal_core": [
+      "identity",
+      "flow"
+    ],
+    "entry_counts": {
+      "flow": 20,
+      "identity": 27,
+      "material": 138,
+      "sugar": 28
+    }
+  },
   "algebra_primitives": [
     {
       "id": "algebra.k3.domain",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "kind": "domain",
       "description": "Kleene three-valued truth domain {T,F,U}; a direct-sum component of V, disjoint from numbers.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -48,6 +68,7 @@
     {
       "id": "algebra.k3.meet",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -62,6 +83,7 @@
     {
       "id": "algebra.k3.join",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -76,6 +98,7 @@
     {
       "id": "algebra.k3.involution",
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -90,6 +113,7 @@
     {
       "id": "algebra.exact-real.bihomographic",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "kind": "operation",
       "description": "Bihomographic (Gosper) transform over exact reals; ADD/SUB/MUL/DIV are coefficient instances.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -114,6 +138,7 @@
     {
       "id": "algebra.exact-real.budgeted-order",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Budgeted exact-real ordering; decides <, =, > within a budget or yields the logical U.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -157,6 +182,7 @@
     {
       "id": "algebra.exact-real.continued-fraction",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "kind": "construction",
       "description": "Continued-fraction construction of exact reals; canonical irrational observation, not an approximation.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -201,6 +227,7 @@
     {
       "id": "algebra.exact-real.gosper",
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "kind": "operation",
       "description": "Gosper normalization over continued fractions; exact-real combination without rational fallback.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -231,6 +258,7 @@
     {
       "id": "algebra.exact-scalar.codepoint-sequence",
       "algebraic_family": "exact-scalar",
+      "core_tier": "material",
       "kind": "domain",
       "description": "Text value domain as a codepoint sequence, tracked separately from numeric scalar arithmetic.",
       "admission_reason": "Accepted as the shared exact-scalar schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -275,6 +303,7 @@
     {
       "id": "algebra.bubble.domain",
       "algebraic_family": "bubble",
+      "core_tier": "identity",
       "kind": "domain",
       "description": "Operational absence/Bubble domain for NIL values with structured reasons; disjoint from FALSE, zero, and logical UNKNOWN.",
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -311,6 +340,7 @@
     {
       "id": "algebra.bubble.passthrough",
       "algebraic_family": "bubble",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Bubble monad pass-through: an operational NIL with reason propagates through a derived word unchanged.",
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -350,6 +380,7 @@
     {
       "id": "algebra.bubble.handler",
       "algebraic_family": "bubble",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Bubble/NIL handler that replaces operational absence with a fallback while preserving present values.",
       "admission_reason": "Accepted as the shared bubble schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -364,6 +395,7 @@
     {
       "id": "algebra.structure-lift.indexed-sequence",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "kind": "domain",
       "description": "Finite ordered index structure for vector values; GET/LENGTH/TAKE/SPLIT/CONCAT/REVERSE/RANGE/REORDER/COLLECT derive from this sequence algebra.",
       "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -408,6 +440,7 @@
     {
       "id": "algebra.structure-lift.applicative",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "kind": "operation",
       "description": "Functorial/applicative lift of a scalar operation over a tensor index structure (map).",
       "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -424,6 +457,7 @@
     {
       "id": "algebra.structure-lift.zip",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "kind": "operation",
       "description": "zipWith lift of a scalar binary operation with documented broadcast rules.",
       "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -438,6 +472,7 @@
     {
       "id": "algebra.structure-lift.reshape-group",
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "kind": "operation",
       "description": "Shape/index isomorphisms for tensors; RESHAPE, TRANSPOSE, SHAPE, RANK, and FILL derive from this reshape-group action.",
       "admission_reason": "Accepted as the shared structure-lift schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -460,6 +495,7 @@
     {
       "id": "algebra.modifier.consumption.keep",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Consumption policy that preserves operands; one axis of the modifier combinator.",
       "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -474,6 +510,7 @@
     {
       "id": "algebra.modifier.consumption.eat",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Consumption policy that removes operands after applying a word; one axis of the modifier combinator.",
       "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -490,6 +527,7 @@
     {
       "id": "algebra.modifier.region.stack",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Region selection over the whole operand stack; one axis of the modifier combinator.",
       "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -504,6 +542,7 @@
     {
       "id": "algebra.modifier.region.top",
       "algebraic_family": "modifier",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Region selection over the top stack item; one axis of the modifier combinator.",
       "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -518,6 +557,7 @@
     {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Combinator that transforms a base state transformer (region x consumption x reconstruction).",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -538,6 +578,7 @@
     {
       "id": "algebra.state-transformer.composition",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Monoid composition of state transformers over Sigma = Stack x Dict x Eff.",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -582,6 +623,7 @@
     {
       "id": "algebra.state-transformer.identity",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it.",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -598,6 +640,7 @@
     {
       "id": "algebra.dictionary.lookup",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Deterministic dictionary lookup / name resolution over Dict.",
       "admission_reason": "Accepted as the shared dictionary schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -624,6 +667,7 @@
     {
       "id": "algebra.dictionary.finite-partial-map",
       "algebraic_family": "dictionary",
+      "core_tier": "flow",
       "kind": "domain",
       "description": "Finite partial map with insertion order; the value-domain component records inhabit.",
       "admission_reason": "Accepted as the shared dictionary schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -668,6 +712,7 @@
     {
       "id": "algebra.eff.append",
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "kind": "operation",
       "description": "Append into the free-monoid effect log Eff, the third component of Sigma.",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -705,6 +750,7 @@
     {
       "id": "algebra.observation.structured-diagnostic",
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "kind": "operation",
       "description": "Structured diagnostic observation; never a leaked host/Rust error variant.",
       "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -725,6 +771,7 @@
     {
       "id": "algebra.observation.digest",
       "algebraic_family": "observation",
+      "core_tier": "material",
       "kind": "operation",
       "description": "Deterministic digest observation over canonical serialized values; pure CRYPTO@HASH derives from it without a host read effect.",
       "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -739,6 +786,7 @@
     {
       "id": "capability.check",
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "kind": "capability",
       "description": "Capability gate guarding a hosted effect; failure is a structured diagnostic, not a Core value.",
       "admission_reason": "Accepted as the shared hosted-effect schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -778,6 +826,7 @@
     {
       "id": "algebra.handle.domain",
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "kind": "domain",
       "description": "Child-runtime/supervisor handle value domain; currently Exploratory, outside the Core contract.",
       "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
@@ -827,7 +876,8 @@
       "derived_from": [
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "core_tier": "identity"
     },
     {
       "id": "core.false",
@@ -855,7 +905,8 @@
       "derived_from": [
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil",
@@ -886,7 +937,8 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "bubble"
+      "algebraic_family": "bubble",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil-p",
@@ -916,7 +968,8 @@
         "algebra.bubble.domain",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil-reason",
@@ -944,7 +997,8 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil-origin",
@@ -971,7 +1025,8 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil-recoverable",
@@ -998,7 +1053,8 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.nil-diagnosis",
@@ -1025,7 +1081,8 @@
       "derived_from": [
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.and",
@@ -1053,6 +1110,7 @@
         "algebra.k3.meet"
       ],
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
@@ -1080,6 +1138,7 @@
         "algebra.k3.join"
       ],
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values"
     },
     {
@@ -1107,6 +1166,7 @@
         "algebra.k3.involution"
       ],
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value"
     },
     {
@@ -1137,7 +1197,8 @@
         "algebra.exact-real.bihomographic",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.add",
@@ -1166,6 +1227,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "implementation_schema": "exact_arithmetic_schema(Add) via apply_exact_arithmetic_schema"
     },
     {
@@ -1193,6 +1255,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "implementation_schema": "exact_arithmetic_schema(Sub) via apply_exact_arithmetic_schema"
     },
     {
@@ -1222,6 +1285,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "implementation_schema": "exact_arithmetic_schema(Mul) via apply_exact_arithmetic_schema"
     },
     {
@@ -1252,6 +1316,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "implementation_schema": "exact_arithmetic_schema(Div) via apply_exact_arithmetic_schema"
     },
     {
@@ -1280,7 +1345,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.floor",
@@ -1306,7 +1372,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.ceil",
@@ -1332,7 +1399,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.round",
@@ -1358,7 +1426,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.quantize",
@@ -1385,7 +1454,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.quantize-half-away",
@@ -1410,7 +1480,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.quantize-floor",
@@ -1435,7 +1506,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.quantize-ceil",
@@ -1460,7 +1532,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.quantize-trunc",
@@ -1485,7 +1558,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.passthrough"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.conserve",
@@ -1511,7 +1585,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.comparison",
@@ -1544,7 +1619,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.eq",
@@ -1578,6 +1654,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "budgeted_order_projection(EQ) via pairwise_eq/scalar_pair_eq"
     },
     {
@@ -1607,6 +1684,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "budgeted_order_projection(NEQ) via pairwise_eq/scalar_pair_eq"
     },
     {
@@ -1639,6 +1717,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "ordering_schema(Lt) via apply_ordering_schema"
     },
     {
@@ -1668,6 +1747,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "ordering_schema(Le) via apply_ordering_schema"
     },
     {
@@ -1697,6 +1777,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "ordering_schema(Gt) via apply_ordering_schema"
     },
     {
@@ -1726,6 +1807,7 @@
         "algebra.bubble.passthrough"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema"
     },
     {
@@ -1756,6 +1838,7 @@
         "algebra.k3.domain"
       ],
       "algebraic_family": "observation",
+      "core_tier": "identity",
       "implementation_schema": "explicit_budgeted_order via op_compare_within"
     },
     {
@@ -1787,7 +1870,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "core.modifier.keep",
@@ -1817,7 +1901,8 @@
         "algebra.modifier.consumption.keep",
         "algebra.state-transformer.combinator"
       ],
-      "algebraic_family": "modifier"
+      "algebraic_family": "modifier",
+      "core_tier": "flow"
     },
     {
       "id": "core.modifier.stak",
@@ -1847,7 +1932,8 @@
         "algebra.modifier.region.stack",
         "algebra.state-transformer.combinator"
       ],
-      "algebraic_family": "modifier"
+      "algebraic_family": "modifier",
+      "core_tier": "flow"
     },
     {
       "id": "core.top",
@@ -1873,7 +1959,8 @@
         "algebra.modifier.region.top",
         "algebra.state-transformer.combinator"
       ],
-      "algebraic_family": "modifier"
+      "algebraic_family": "modifier",
+      "core_tier": "flow"
     },
     {
       "id": "core.eat",
@@ -1899,7 +1986,8 @@
         "algebra.modifier.consumption.eat",
         "algebra.state-transformer.combinator"
       ],
-      "algebraic_family": "modifier"
+      "algebraic_family": "modifier",
+      "core_tier": "flow"
     },
     {
       "id": "core.flow",
@@ -1924,7 +2012,8 @@
       "derived_from": [
         "algebra.state-transformer.identity"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.vent",
@@ -1952,7 +2041,8 @@
         "algebra.bubble.handler",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "bubble"
+      "algebraic_family": "bubble",
+      "core_tier": "identity"
     },
     {
       "id": "core.idle",
@@ -1976,7 +2066,8 @@
       "derived_from": [
         "algebra.state-transformer.identity"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.cond",
@@ -2001,7 +2092,8 @@
         "algebra.k3.domain",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.exec",
@@ -2025,7 +2117,8 @@
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.eval",
@@ -2050,7 +2143,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.map",
@@ -2078,6 +2172,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "implementation_schema": "traversal_scheme(map) -> block_application -> structure_lift"
     },
     {
@@ -2105,6 +2200,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "implementation_schema": "traversal_scheme(filter) -> predicate_application -> sequence_projection"
     },
     {
@@ -2134,6 +2230,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy"
     },
     {
@@ -2160,6 +2257,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "implementation_schema": "state_seed -> block_application -> sequence_generation_policy"
     },
     {
@@ -2186,6 +2284,7 @@
         "algebra.k3.domain"
       ],
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection"
     },
     {
@@ -2212,6 +2311,7 @@
         "algebra.k3.domain"
       ],
       "algebraic_family": "k3-truth",
+      "core_tier": "identity",
       "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection"
     },
     {
@@ -2239,6 +2339,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
       "implementation_schema": "predicate_fold(count) via traversal_scheme + exact count projection"
     },
     {
@@ -2265,6 +2366,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "flow",
       "implementation_schema": "traversal_scheme(scan) -> block_application -> prefix_accumulator_policy"
     },
     {
@@ -2294,6 +2396,7 @@
         "capability.check"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "time.read",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -2326,6 +2429,7 @@
         "capability.check"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "crypto.random",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -2359,6 +2463,7 @@
         "capability.check"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "serial.port",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -2390,6 +2495,7 @@
         "algebra.observation.structured-diagnostic"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "diagnostic.capability",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -2425,7 +2531,8 @@
         "algebra.structure-lift.applicative",
         "algebra.structure-lift.zip"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.get",
@@ -2455,7 +2562,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.insert",
@@ -2480,7 +2588,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.replace",
@@ -2505,7 +2614,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.remove",
@@ -2531,7 +2641,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.length",
@@ -2558,7 +2669,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.take",
@@ -2585,7 +2697,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.split",
@@ -2610,7 +2723,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.concat",
@@ -2637,7 +2751,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.reverse",
@@ -2664,7 +2779,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.range",
@@ -2691,7 +2807,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.reorder",
@@ -2716,7 +2833,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.collect",
@@ -2741,7 +2859,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.shape",
@@ -2769,7 +2888,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.rank",
@@ -2797,7 +2917,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.reshape",
@@ -2823,7 +2944,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.transpose",
@@ -2849,7 +2971,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.fill",
@@ -2875,7 +2998,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.structure-lift.reshape-group"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "core.structural.record",
@@ -2899,7 +3023,8 @@
       "derived_from": [
         "algebra.dictionary.finite-partial-map"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.structural.string",
@@ -2923,7 +3048,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.cf",
@@ -2947,7 +3073,8 @@
       "derived_from": [
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.chars",
@@ -2972,7 +3099,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.join",
@@ -2997,7 +3125,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.trim",
@@ -3022,7 +3151,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.trim-left",
@@ -3047,7 +3177,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.trim-right",
@@ -3072,7 +3203,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.tokenize",
@@ -3097,7 +3229,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.substitute",
@@ -3122,7 +3255,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.starts-with",
@@ -3148,7 +3282,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.ends-with",
@@ -3174,7 +3309,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.num",
@@ -3201,7 +3337,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.str",
@@ -3226,7 +3363,8 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.bool",
@@ -3252,7 +3390,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "core_tier": "identity"
     },
     {
       "id": "core.chr",
@@ -3278,7 +3417,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "core.import.name-resolution",
@@ -3310,7 +3450,8 @@
         "algebra.dictionary.lookup",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.print",
@@ -3339,6 +3480,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -3367,7 +3509,8 @@
         "algebra.state-transformer.composition",
         "algebra.dictionary.finite-partial-map"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     },
     {
       "id": "core.del",
@@ -3393,7 +3536,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.lookup",
@@ -3419,7 +3563,8 @@
         "algebra.dictionary.lookup",
         "algebra.observation.structured-diagnostic"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "identity"
     },
     {
       "id": "core.forc",
@@ -3445,7 +3590,8 @@
         "algebra.modifier.consumption.eat",
         "algebra.dictionary.finite-partial-map"
       ],
-      "algebraic_family": "modifier"
+      "algebraic_family": "modifier",
+      "core_tier": "flow"
     },
     {
       "id": "core.import-only",
@@ -3472,7 +3618,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.unimport",
@@ -3499,7 +3646,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.unimport-only",
@@ -3526,7 +3674,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.spawn",
@@ -3552,6 +3701,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
       "exit_options": [
         "Derived",
@@ -3586,6 +3736,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
       "exit_options": [
         "Derived",
@@ -3619,6 +3770,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "observation",
+      "core_tier": "material",
       "reason": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
       "exit_options": [
         "Derived",
@@ -3653,6 +3805,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
       "exit_options": [
         "Derived",
@@ -3686,6 +3839,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
       "exit_options": [
         "Derived",
@@ -3719,6 +3873,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "SUPERVISE runs a child group under a one-for-one restart policy, producing a supervisor handle over the supervised children; the API remains exploratory/quarantined.",
       "exit_options": [
         "Derived",
@@ -3753,6 +3908,7 @@
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
+      "core_tier": "material",
       "reason": "Child-runtime semantics are modeled but not yet part of the Core portability contract.",
       "exit_options": [
         "Derived",
@@ -3787,7 +3943,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.stringify",
@@ -3813,7 +3970,8 @@
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.dictionary.finite-partial-map"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "module.json.get",
@@ -3840,7 +3998,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.keys",
@@ -3866,7 +4025,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.set",
@@ -3892,7 +4052,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.has",
@@ -3919,7 +4080,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.values",
@@ -3945,7 +4107,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.merge",
@@ -3971,7 +4134,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.delete",
@@ -3997,7 +4161,8 @@
         "algebra.dictionary.finite-partial-map",
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "dictionary"
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
     },
     {
       "id": "module.json.export",
@@ -4025,6 +4190,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "serialization.export",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -4055,6 +4221,7 @@
         "algebra.observation.structured-diagnostic"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "io.read",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -4085,6 +4252,7 @@
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -4113,7 +4281,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.timestamp",
@@ -4139,7 +4308,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.date",
@@ -4164,7 +4334,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.time",
@@ -4189,7 +4360,8 @@
       "derived_from": [
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.year",
@@ -4215,7 +4387,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.month",
@@ -4241,7 +4414,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.day",
@@ -4267,7 +4441,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.hour",
@@ -4293,7 +4468,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.minute",
@@ -4319,7 +4495,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.second",
@@ -4345,7 +4522,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.time.weekday",
@@ -4371,7 +4549,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.add-days",
@@ -4397,7 +4576,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.diff-days",
@@ -4423,7 +4603,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.format",
@@ -4449,7 +4630,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "module.time.parse-iso",
@@ -4476,7 +4658,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-scalar"
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
     },
     {
       "id": "module.time.add-months",
@@ -4502,7 +4685,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.time.add-years",
@@ -4528,7 +4712,8 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.crypto.hash",
@@ -4555,7 +4740,8 @@
         "algebra.observation.digest",
         "algebra.exact-scalar.codepoint-sequence"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "material"
     },
     {
       "id": "module.algo.sort",
@@ -4584,7 +4770,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.algo.unique",
@@ -4610,7 +4797,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.algo.contains",
@@ -4636,7 +4824,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "core_tier": "material"
     },
     {
       "id": "module.algo.index-of",
@@ -4662,7 +4851,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "structure-lift"
+      "algebraic_family": "structure-lift",
+      "core_tier": "material"
     },
     {
       "id": "module.math.sqrt-eps",
@@ -4690,7 +4880,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.interval",
@@ -4718,7 +4909,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.exact-real.budgeted-order"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.lower",
@@ -4746,7 +4938,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.upper",
@@ -4774,7 +4967,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.width",
@@ -4802,7 +4996,8 @@
         "algebra.exact-real.gosper",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.is-exact",
@@ -4830,7 +5025,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth"
+      "algebraic_family": "k3-truth",
+      "core_tier": "material"
     },
     {
       "id": "module.math.abs",
@@ -4858,7 +5054,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.neg",
@@ -4885,7 +5082,8 @@
       "derived_from": [
         "algebra.exact-real.gosper"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.sign",
@@ -4913,7 +5111,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.min",
@@ -4941,7 +5140,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.max",
@@ -4969,7 +5169,8 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.pow",
@@ -4997,7 +5198,8 @@
         "algebra.exact-real.gosper",
         "algebra.exact-real.continued-fraction"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.gcd",
@@ -5025,7 +5227,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "module.math.lcm",
@@ -5053,7 +5256,8 @@
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
       ],
-      "algebraic_family": "exact-arithmetic"
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
     },
     {
       "id": "surface.hash",
@@ -5077,6 +5281,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "COMMENT-LINE"
     },
     {
@@ -5101,6 +5306,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "COND-CLAUSE"
     },
     {
@@ -5125,6 +5331,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "BEGIN-VECTOR"
     },
     {
@@ -5149,6 +5356,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "END-VECTOR"
     },
     {
@@ -5173,6 +5381,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "BEGIN-BLOCK"
     },
     {
@@ -5197,6 +5406,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "END-BLOCK"
     },
     {
@@ -5221,6 +5431,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": ". ,"
     },
     {
@@ -5245,6 +5456,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": ".. ,,"
     },
     {
@@ -5269,6 +5481,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "RESERVED-BEGIN"
     },
     {
@@ -5296,7 +5509,8 @@
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "material"
     },
     {
       "id": "module.music.sim",
@@ -5323,7 +5537,8 @@
       "derived_from": [
         "algebra.state-transformer.composition"
       ],
-      "algebraic_family": "state-transformer"
+      "algebraic_family": "state-transformer",
+      "core_tier": "material"
     },
     {
       "id": "module.music.slot",
@@ -5354,6 +5569,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5387,6 +5603,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5420,6 +5637,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5453,6 +5671,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5486,6 +5705,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5519,6 +5739,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5552,6 +5773,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "hosted-effect",
+      "core_tier": "material",
       "capability": "audio.output",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
@@ -5584,6 +5806,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds an explicit sequential music group from an indexed sequence of child music values.",
       "exit_options": [
         "Derived",
@@ -5621,6 +5844,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
       "exit_options": [
         "Derived",
@@ -5658,6 +5882,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
       "exit_options": [
         "Derived",
@@ -5695,6 +5920,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
       "exit_options": [
         "Derived",
@@ -5732,6 +5958,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Wraps a positive exact scalar duration into an explicit music.duration record.",
       "exit_options": [
         "Derived",
@@ -5769,6 +5996,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Combines a music.pitch and music.duration record into a music.note record.",
       "exit_options": [
         "Derived",
@@ -5806,6 +6034,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds a music.rest record from a music.duration record.",
       "exit_options": [
         "Derived",
@@ -5843,6 +6072,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
       "exit_options": [
         "Derived",
@@ -5880,6 +6110,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
       "exit_options": [
         "Derived",
@@ -5917,6 +6148,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Resolves a step index within a tuning record into a derived music.pitch record.",
       "exit_options": [
         "Derived",
@@ -5954,6 +6186,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Tags a music group with the role of a single melodic voice.",
       "exit_options": [
         "Derived",
@@ -5991,6 +6224,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Tags a music group with the role of an instrument track.",
       "exit_options": [
         "Derived",
@@ -6028,6 +6262,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Tags a music group with the role of a measure/bar.",
       "exit_options": [
         "Derived",
@@ -6065,6 +6300,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Tags a music group with the role of a phrase.",
       "exit_options": [
         "Derived",
@@ -6102,6 +6338,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
       "exit_options": [
         "Derived",
@@ -6139,6 +6376,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
       "exit_options": [
         "Derived",
@@ -6176,6 +6414,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
       "exit_options": [
         "Derived",
@@ -6213,6 +6452,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
       "exit_options": [
         "Derived",
@@ -6250,6 +6490,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
       "exit_options": [
         "Derived",
@@ -6287,6 +6528,7 @@
         "algebra.exact-real.continued-fraction"
       ],
       "algebraic_family": "structure-lift",
+      "core_tier": "material",
       "reason": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
       "exit_options": [
         "Derived",
@@ -6322,7 +6564,8 @@
         "algebra.observation.structured-diagnostic",
         "algebra.structure-lift.indexed-sequence"
       ],
-      "algebraic_family": "observation"
+      "algebraic_family": "observation",
+      "core_tier": "material"
     },
     {
       "id": "alias.plus",
@@ -6345,6 +6588,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "ADD"
     },
     {
@@ -6368,6 +6612,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "SUB"
     },
     {
@@ -6391,6 +6636,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "MUL"
     },
     {
@@ -6414,6 +6660,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "MOD"
     },
     {
@@ -6437,6 +6684,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "EQ"
     },
     {
@@ -6460,6 +6708,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "LT"
     },
     {
@@ -6483,6 +6732,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "LTE"
     },
     {
@@ -6506,6 +6756,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "GT"
     },
     {
@@ -6529,6 +6780,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "GTE"
     },
     {
@@ -6552,6 +6804,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "NEQ"
     },
     {
@@ -6575,6 +6828,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "FORC"
     },
     {
@@ -6598,6 +6852,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "AND"
     },
     {
@@ -6621,6 +6876,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "TOP"
     },
     {
@@ -6644,6 +6900,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "STAK"
     },
     {
@@ -6667,6 +6924,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "EAT"
     },
     {
@@ -6690,6 +6948,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "KEEP"
     },
     {
@@ -6711,6 +6970,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "STRING-QUOTE"
     },
     {
@@ -6734,6 +6994,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "LOOKUP"
     },
     {
@@ -6757,6 +7018,7 @@
       "primitive": false,
       "derived_from": [],
       "algebraic_family": "syntax-sugar",
+      "core_tier": "sugar",
       "desugars_to": "FLOW"
     }
   ],
