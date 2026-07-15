@@ -183,12 +183,17 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    User 語 `SIGN2` として再実装し、有理数域と NIL で両者が一致することを法則テスト
    （`rust/tests/minimal_core_derivation.rs`, proptest 128 例＋スポット＋NIL）で示した。
    これは trusted Rust core を縮めるのではなく、**Minimal Core の導出力を裏付ける証拠**。
-   加えて witness は**オラクルとしての発見**を surface した：`SIGN2` は遅延無理数 `2 SQRT` を
-   正しく `1` と符号付けする一方、ビルトイン `MATH@SIGN` は `apply_unary`（有理数限定）の
-   ため同入力を `SIGN: expected a number` で拒否する。派生語は現行ビルトインの**全域拡張**で
-   あり、これは Python 移植が SPEC_GAPS を炙り出したのと同じ機序（`MATH@MIN`/`MAX` は
-   全数域を扱うのに `MATH@SIGN` だけが有理数限定、という §7.4/§7.4.3 との不整合）。この
-   ギャップの是正（`MATH@SIGN` を全数域対応にし、未決時の U 挙動を §7.4.3 に追記するか）は
-   本 witness の範囲外の別課題として記録する。
+   加えて witness は**オラクルとしての発見**を surface し、それを**是正済み**である：当初
+   `SIGN2` は遅延無理数 `2 SQRT` を正しく `1` と符号付けする一方、ビルトイン `MATH@SIGN` は
+   `apply_unary`（有理数限定）のため同入力を `SIGN: expected a number` で拒否していた。これは
+   Python 移植が SPEC_GAPS を炙り出したのと同じ機序（`MATH@MIN`/`MAX` は全数域を扱うのに
+   `MATH@SIGN` だけが有理数限定、という §7.4/§7.4.3 との不整合）。**バグとして修正**し、
+   `op_sign` を `MATH@MIN`/`MAX` と同じ予算付き比較（対 `0`）に置き換えて全数域対応にし、
+   未決時は U を返す挙動を **§7.4.3 に規範追記**（SIGN を comparison-dependent words に追加、
+   §7.14 の Projecting/Passthrough 分類にも追加）。これにより witness の等価性は有理数だけで
+   なく**遅延無理数まで含む全 admitted domain で成立**するようになった（同テストの
+   `minimal_core_sign_matches_builtin_on_lazy_irrationals` が防護）。導出可能性の witness が
+   ビルトインの欠陥を炙り出し、その修正によって Minimal Core と material 層の一致がむしろ
+   強まった——「素材語は Core の規律に拘束される」という §2.6 の枠組みが実地で機能した例。
 4. **移行の計測.** `primitive-test-map` / `word-manifest` から「Core だけで書ける素材語」を
    静的判定し、trusted Rust core 行数をファイルサイズ予算と同じ発想で予算化する。

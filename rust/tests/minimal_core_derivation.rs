@@ -18,16 +18,19 @@
 //! appears in the definition, so a green run witnesses that `MATH@SIGN`'s
 //! observable contract is reconstructible from the Minimal Core alone.
 //!
-//! Scope. The equivalence is asserted over `MATH@SIGN`'s actual domain: the
-//! admitted *rational* values (§4.2.7) and NIL. It is deliberately not asserted
-//! over lazy irrationals, because the two diverge there — and that divergence is
-//! itself a finding this witness surfaced, recorded in
-//! `minimal_core_sign_extends_builtin_note` below: the derived `SIGN2` correctly
-//! signs `2 SQRT` (→ `1`) via Core comparison's admitted-domain totality (§7.4),
-//! whereas the built-in `MATH@SIGN` rejects the lazy operand with
-//! `SIGN: expected a number`. The Minimal Core derivation is thus a *total
-//! extension* of the current built-in, in the same way the Python port surfaced
-//! specification gaps — the derivation acts as an oracle for the material word.
+//! Scope. The equivalence is asserted over the admitted domain (§4.2.7): both
+//! rational values and lazy continued-fraction irrationals such as `2 SQRT`,
+//! plus NIL. Earlier this witness could only assert equivalence over rationals,
+//! because the two *diverged* on lazy irrationals — the derived `SIGN2` signed
+//! `2 SQRT` correctly (→ `1`) via Core comparison's admitted-domain totality
+//! (§7.4), while the built-in `MATH@SIGN` rejected the lazy operand with
+//! `SIGN: expected a number`. That divergence was a finding this witness
+//! surfaced — the derivation acting as an oracle for the material word, exactly
+//! as the Python port surfaced specification gaps — and it has since been fixed:
+//! `MATH@SIGN` now decides its sign through the budgeted comparison against `0`
+//! (§7.4.3), so the derivation and the built-in agree over the whole admitted
+//! domain. `minimal_core_sign_matches_builtin_on_lazy_irrationals` below guards
+//! that the two remain in agreement there.
 
 use ajisai_core::interpreter::Interpreter;
 use proptest::prelude::*;
@@ -129,36 +132,26 @@ fn minimal_core_sign_decided_spot_checks() {
     }
 }
 
-/// Oracle finding (documented, not a divergence in the witness above). The
-/// Minimal-Core `SIGN2` is a *total extension* of the current built-in: it signs
-/// the lazy irrational `2 SQRT` as `1` through Core comparison's admitted-domain
-/// totality (§7.4), while the built-in `MATH@SIGN` rejects the same operand.
-/// This test pins the current, divergent behavior so that a later fix to
-/// `MATH@SIGN` (making it accept the full numeric domain like `MATH@MIN`/`MAX`)
-/// will flip the built-in branch and flag this note for update.
+/// Lazy-irrational agreement. Both the Minimal-Core `SIGN2` and the built-in
+/// `MATH@SIGN` sign lazy continued-fraction values through the budgeted
+/// comparison against `0` (§7.4.3), so they agree over the whole admitted
+/// domain — not only the rationals. This is the closed form of the oracle
+/// finding this witness first surfaced: the built-in used to reject these
+/// operands with `SIGN: expected a number` while the derivation handled them,
+/// and once `MATH@SIGN` was fixed the two became fully equivalent here too.
+/// Each operand needs the math module in scope to be *constructed*; `SIGN2`
+/// itself still uses only Minimal Core words.
 #[test]
-fn minimal_core_sign_extends_builtin_note() {
-    // Derived side handles the lazy irrational and reports the correct sign.
-    // `2 SQRT` needs the math module in scope to construct the operand; `SIGN2`
-    // itself still uses only Minimal Core words.
-    let derived_sqrt = eval(&format!("'math' IMPORT {SIGN2_DEF}2 SQRT SIGN2"));
-    assert_eq!(derived_sqrt, "1/1", "SIGN2 should sign 2 SQRT as +1");
-
-    // Built-in side currently errors on the same input. Encode that as an
-    // observed error rather than a value, so the note is self-verifying.
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .expect("tokio current-thread runtime");
-    let builtin_errs = rt.block_on(async {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT MATH@SIGN")
-            .await
-            .is_err()
-    });
-    assert!(
-        builtin_errs,
-        "MATH@SIGN now accepts 2 SQRT; the Minimal Core derivation is no longer a \
-         strict extension — update §2.6 witness note in this file"
-    );
+fn minimal_core_sign_matches_builtin_on_lazy_irrationals() {
+    for (x, want) in [
+        ("2 SQRT", "1/1"),            // √2 > 0
+        ("0 2 SQRT SUB", "-1/1"),     // -√2 < 0 (built without NEG)
+        ("2 SQRT 2 SQRT SUB", "0/1"), // √2 - √2 = 0
+        ("3 SQRT 2 SQRT SUB", "1/1"), // √3 - √2 > 0
+    ] {
+        let derived = eval(&format!("'math' IMPORT {SIGN2_DEF}{x} SIGN2"));
+        let builtin = eval(&format!("'math' IMPORT {x} MATH@SIGN"));
+        assert_eq!(derived, builtin, "SIGN2 vs MATH@SIGN on `{x}`");
+        assert_eq!(derived, want, "SIGN2(`{x}`)");
+    }
 }
