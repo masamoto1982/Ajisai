@@ -47,6 +47,7 @@ pub enum ErrorCategory {
     IndexOutOfBounds,
     VectorLengthMismatch,
     ExecutionLimitExceeded,
+    RecursionLimitExceeded,
     ModeUnsupported,
     BuiltinProtection,
     CondExhausted,
@@ -64,6 +65,7 @@ impl ErrorCategory {
             ErrorCategory::IndexOutOfBounds => "indexOutOfBounds",
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
             ErrorCategory::ExecutionLimitExceeded => "executionLimitExceeded",
+            ErrorCategory::RecursionLimitExceeded => "recursionLimitExceeded",
             ErrorCategory::ModeUnsupported => "modeUnsupported",
             ErrorCategory::BuiltinProtection => "builtinProtection",
             ErrorCategory::CondExhausted => "condExhausted",
@@ -81,6 +83,7 @@ impl ErrorCategory {
             AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
             AjisaiError::ExecutionLimitExceeded { .. } => ErrorCategory::ExecutionLimitExceeded,
+            AjisaiError::RecursionLimitExceeded { .. } => ErrorCategory::RecursionLimitExceeded,
             AjisaiError::ModeUnsupported { .. } => ErrorCategory::ModeUnsupported,
             AjisaiError::BuiltinProtection { .. } => ErrorCategory::BuiltinProtection,
             AjisaiError::CondExhausted => ErrorCategory::CondExhausted,
@@ -112,15 +115,40 @@ impl NilReason {
 #[derive(Debug, Clone)]
 pub enum AjisaiError {
     StackUnderflow,
-    StructureError { expected: String, got: String },
+    StructureError {
+        expected: String,
+        got: String,
+    },
     UnknownWord(String),
     UnknownModule(String),
     DivisionByZero,
-    IndexOutOfBounds { index: i64, length: usize },
-    VectorLengthMismatch { len1: usize, len2: usize },
-    ExecutionLimitExceeded { limit: usize },
-    ModeUnsupported { word: String, mode: String },
-    BuiltinProtection { word: String, operation: String },
+    IndexOutOfBounds {
+        index: i64,
+        length: usize,
+    },
+    VectorLengthMismatch {
+        len1: usize,
+        len2: usize,
+    },
+    ExecutionLimitExceeded {
+        limit: usize,
+    },
+    /// The native recursion-depth guard (SPEC §8.4) tripped: `word` reached
+    /// `limit` non-tail recursive activations. A runtime safety control of the
+    /// same rank as the step budget (§5.3), not language semantics; guarded
+    /// tail recursion (§7.7.1) never raises this.
+    RecursionLimitExceeded {
+        limit: usize,
+        word: String,
+    },
+    ModeUnsupported {
+        word: String,
+        mode: String,
+    },
+    BuiltinProtection {
+        word: String,
+        operation: String,
+    },
     Custom(String),
 
     CondExhausted,
@@ -157,6 +185,9 @@ impl fmt::Display for AjisaiError {
             }
             AjisaiError::ExecutionLimitExceeded { limit } => {
                 write!(f, "Execution step limit ({}) exceeded", limit)
+            }
+            AjisaiError::RecursionLimitExceeded { limit, word } => {
+                write!(f, "recursion limit exceeded ({}) in '{}'", limit, word)
             }
             AjisaiError::ModeUnsupported { word, mode } => {
                 write!(f, "{} does not support {} mode (..)", word, mode)

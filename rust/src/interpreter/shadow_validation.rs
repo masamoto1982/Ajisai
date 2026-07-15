@@ -239,8 +239,12 @@ impl Interpreter {
                     used_plain_fallback: true,
                 }
             }
+            // Both paths failed: surface the fast path's error as-is. It must
+            // keep its typed identity (not be re-wrapped as a Custom string) so
+            // the user-level category — e.g. RecursionLimitExceeded (SPEC
+            // §11.1) — survives to the diagnosis and protocol surfaces.
             (Err(e), Err(_)) => ValidationOutcome {
-                result: Err(AjisaiError::from(format!("{}", e))),
+                result: Err(e.clone()),
                 used_plain_fallback: false,
             },
             // Compiled path "succeeded" where the reference path failed. The

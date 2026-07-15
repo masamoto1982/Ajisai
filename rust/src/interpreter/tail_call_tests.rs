@@ -134,7 +134,15 @@ async fn unguarded_self_recursion_still_hits_depth_limit() {
     // than spin forever or trap. This pins the boundary of the optimization.
     let mut interp = fresh();
     interp.execute("{ REC } 'REC' DEF").await.unwrap();
-    let err = interp.execute("REC").await.unwrap_err().to_string();
+    let err = interp.execute("REC").await.unwrap_err();
+    // SPEC §11.1: the depth guard has its own user-level category — it must
+    // not surface as a stringly-typed Custom error.
+    assert_eq!(
+        crate::error::ErrorCategory::from_error(&err),
+        crate::error::ErrorCategory::RecursionLimitExceeded,
+        "depth guard must carry the RecursionLimitExceeded category: {err}"
+    );
+    let err = err.to_string();
     assert!(
         err.contains("recursion limit exceeded"),
         "bare self-recursion must stay on the depth-limited path: {err}"

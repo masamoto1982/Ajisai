@@ -105,11 +105,10 @@ impl Interpreter {
         // The matching decrement is just before the return below; there are
         // no `?` early returns between this point and the decrement.
         if self.call_depth + 1 > super::interpreter_core::MAX_USER_WORD_DEPTH {
-            return Err(AjisaiError::from(format!(
-                "recursion limit exceeded ({}) in '{}'",
-                super::interpreter_core::MAX_USER_WORD_DEPTH,
-                resolved_name
-            )));
+            return Err(AjisaiError::RecursionLimitExceeded {
+                limit: super::interpreter_core::MAX_USER_WORD_DEPTH,
+                word: resolved_name.clone(),
+            });
         }
         self.call_depth += 1;
 

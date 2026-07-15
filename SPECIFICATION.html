@@ -191,7 +191,7 @@
     <h1 id="ajisai-language-specification">Ajisai Language Specification</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Version: <strong>2026-07-01</strong></p>
+Version: <strong>2026-07-15</strong></p>
 
 <p>This document is the single design authority for Ajisai. It describes Ajisai as it is. It does not record development history or transitional states. If any other document conflicts with this document, this document takes precedence.</p>
 
@@ -733,7 +733,7 @@ Version: <strong>2026-07-01</strong></p>
 
 <h4 id="450-diagnostic-absence-metadata">4.5.0 Diagnostic absence metadata</h4>
 
-<p>NIL is a diagnostic absence value. NIL identity is separate from its reason, origin, recoverability, and diagnostic context. Surface display, equality, hashing, and serialization treat all NIL values uniformly unless a protocol explicitly asks for diagnostic metadata.</p>
+<p>NIL is a diagnostic absence value. NIL identity is separate from its reason, origin, recoverability, and diagnostic context. Surface display, equality, hashing, and serialization treat all NIL values uniformly unless a protocol explicitly asks for diagnostic metadata. The equality named here is <em>structural</em> equality — the reason-blind element equality used inside containers and for hashing and deduplication; the comparison word <code>EQ</code> passes top-level NIL operands through per Section 7.12 and never compares two NILs directly (see Section 7.4, "NIL operands and NIL equality").</p>
 
 <p>For any NIL value:</p>
 
@@ -827,6 +827,8 @@ Version: <strong>2026-07-01</strong></p>
 <h3 id="53-execution-step-limit">5.3 Execution step limit</h3>
 
 <p>Each execution has a step budget. The default limit is 100,000 steps. Exceeding the limit raises <code>ExecutionLimitExceeded</code>. This is a runtime safety control, not a language semantic constraint. The host may configure this budget, raising or lowering it; because the budget is a runtime safety control rather than language semantics, conformance judgments must not depend on any particular budget value.</p>
+
+<p>The step budget is one of two runtime safety controls of equal rank; the other is the native recursion-depth guard of Section 8.4, which bounds non-tail user-word recursion and raises <code>RecursionLimitExceeded</code> (Section 11.1). Both bound <em>how much</em> a program may run without being language semantics, and conformance judgments must not depend on either limit's particular value.</p>
 
 <h2 id="6-modifiers">6. Modifiers</h2>
 
@@ -1085,6 +1087,8 @@ Version: <strong>2026-07-01</strong></p>
 
 <p><strong>Exactness over the admitted domain (normative).</strong> Over the admitted domain \(D\) of Section 4.2.7 — every value the current Coreword set can construct — the six relations are <strong>total and exact</strong>: each returns a definite <code>true</code> or <code>false</code> and <strong>never</strong> <code>unknown</code>. The <code>unknown</code> (U) outcome is reserved for exact reals <em>outside</em> \(D\) (the lazy continued-fraction values reserved for future words, Section 4.2.2) and for the explicit-budget word <code>COMPARE-WITHIN</code> (Section 7.4.2); the implicit comparison budget of the bare relations is therefore not observable through them for any program in the current language. A program written in the current Coreword set can rely on this: for example <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT EQ</code> evaluates to <code>TRUE</code>, and <code>'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ</code> evaluates to <code>TRUE</code>, with no comparison budget in play (Section 2.3.1.1). The budget-and-U account below governs only the lazy case.</p>
 
+<p><strong>NIL operands and NIL equality (normative).</strong> The six relations are NIL-passthrough (Sections 4.5.1, 7.12): whenever a <em>top-level</em> operand consumed by the relation is NIL, the relation consumes its operands and produces NIL, preserving the leftmost operand reason (<code>1 0 DIV 1 EQ NIL-REASON</code> &rarr; <code>NIL 'divisionByZero'</code>). This holds even when <em>both</em> operands are NIL: <code>NIL NIL EQ</code> is NIL, not <code>TRUE</code> — the <code>EQ</code> word never actually compares two top-level NILs, so no program can observe a truth value from doing so. The "equality &hellip; treat all NIL values uniformly" rule of Section 4.5.0 governs a different surface: <strong>structural equality</strong> — the element-wise equality used when comparing containers (and for hashing and deduplication). Inside a Vector or Record, a NIL element is an ordinary element value, and two NIL elements compare equal regardless of their diagnostic metadata: <code>0 0 DIV 1 COLLECT NIL 1 COLLECT EQ</code> &rarr; <code>TRUE</code> even though one NIL carries <code>reason = divisionByZero</code> and the other is a literal NIL. The two rules compose: passthrough applies to the operands the relation itself consumes; uniform reason-blind equality applies to NILs already embedded in the values being compared.</p>
+
 <p>The set of comparison primitives is intentionally complete (all six standard ordering relations), so that an automated producer can emit the relation that matches its intent directly rather than rewriting it as a negation or operand swap. <code>GT</code> and <code>GTE</code> are the strict mirrors of <code>LT</code> and <code>LTE</code>; <code>NEQ</code> is the negation of <code>EQ</code>. Every relation is independently registered with its own Coreword contract metadata (Section 7.14), is NIL-passthrough (Section 7.12), and supports the same modifier combinations (<code>TOP</code> or <code>STAK</code> crossed with <code>EAT</code> or <code>KEEP</code>).</p>
 
 <p>Under <code>STAK</code> mode, an ordering comparison describes a sequence property of the consumed values — it is <code>true</code> iff the sequence satisfies the property:</p>
@@ -1270,7 +1274,7 @@ Version: <strong>2026-07-01</strong></p>
 <tr><td><code>BOOL</code></td><td>—</td><td>Convert to boolean</td></tr>
 <tr><td><code>CHR</code></td><td>—</td><td>Convert a number to its Unicode character</td></tr>
 <tr><td><code>CHARS</code></td><td>—</td><td>Split a string into a vector of individual characters</td></tr>
-<tr><td><code>JOIN</code></td><td>—</td><td>Join a vector of strings, with optional separator</td></tr>
+<tr><td><code>JOIN</code></td><td>—</td><td>Join a vector of Texts and code points into one Text (exactly one operand; there is no separator operand — Section 7.6.1)</td></tr>
 <tr><td><code>TRIM</code></td><td>—</td><td>Strip whitespace from both ends of a string</td></tr>
 <tr><td><code>TRIM-LEFT</code></td><td>—</td><td>Strip leading whitespace</td></tr>
 <tr><td><code>TRIM-RIGHT</code></td><td>—</td><td>Strip trailing whitespace</td></tr>
@@ -1286,6 +1290,57 @@ Version: <strong>2026-07-01</strong></p>
 <p><code>&gt;CF</code> is the conversion-word surface form of Section 3.9: it changes only the requested display/serialization role of its operand (the nested-parentheses continued-fraction form of Section 3.2 / Section 4.2), never the value. It is a Canonical Core word.</p>
 
 <p><code>TRIM</code> <code>TRIM-LEFT</code> <code>TRIM-RIGHT</code> <code>TOKENIZE</code> <code>SUBSTITUTE</code> <code>STARTS-WITH?</code> <code>ENDS-WITH?</code> are Canonical Core words also listed in the <code>TEXT</code> documentation category alongside <code>CHR</code> <code>CHARS</code> <code>JOIN</code>. The listing is presentation-only and does not introduce a <code>TEXT</code> module.</p>
+
+<h4 id="761-str-bool-join-contracts">7.6.1 <code>STR</code>, <code>BOOL</code>, and <code>JOIN</code> conversion contracts (normative)</h4>
+
+<p>The one-line descriptions above are completed by the following per-type contracts, in the same form as the vector-word contracts of Section 7.1.1 and the control-word contracts of Section 7.7.1. Each word consumes its operand under the default <code>TOP</code>/<code>EAT</code> modes (<code>KEEP</code> additionally retains it, Section 6.2).</p>
+
+<p><strong><code>STR</code> — <code>[ x ] -&gt; [ text | NIL ]</code>.</strong> <code>STR</code> is total: no operand type is malformed use. The result is fixed per operand type:</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Operand</th><th><code>STR</code> result</th></tr>
+</thead>
+<tbody>
+<tr><td>Text</td><td>the same Text, unchanged (<code>'AB' STR</code> &rarr; <code>'AB'</code>)</td></tr>
+<tr><td>rational scalar</td><td>the reduced fraction as Text: an integer renders as bare digits with <strong>no</strong> <code>/1</code> (<code>42 STR</code> &rarr; <code>'42'</code>); a non-integer renders as <code>numerator/denominator</code> (<code>1 2 DIV STR</code> &rarr; <code>'1/2'</code>). This compact text surface deliberately differs from the Stack rendering <code>42/1</code> (Section 12.2); the two are distinct surfaces of the same value.</td></tr>
+<tr><td>non-rational scalar (Section 4.2.7)</td><td>an <strong>implementation-defined</strong> rational-approximation Text. It is non-canonical and must not be parsed back as the exact value; the exact text serialization of a lazy scalar is the <code>ContinuedFraction</code> rendering (Sections 4.2.3, 12.2), not <code>STR</code>.</td></tr>
+<tr><td>Boolean</td><td><code>'TRUE'</code> or <code>'FALSE'</code></td></tr>
+<tr><td>NIL</td><td>NIL — a well-formed conversion with no text to produce (Bubble Rule, Section 11.2). <code>STR</code> is <em>not</em> a Section 7.12 passthrough word: the resulting NIL is fresh and does <strong>not</strong> carry the operand's <code>reason</code> (<code>0 0 DIV STR NIL-REASON</code> &rarr; <code>NIL NIL</code>).</td></tr>
+<tr><td>Unknown (U, Section 7.5)</td><td>NIL — U has no text surface, and per the Section 7.15 firewall its logical identity is not observable through the result</td></tr>
+<tr><td>Vector · Record</td><td>the space-joined flat sequence of its leaves, each leaf rendered by this table's scalar/Boolean/NIL rows (a NIL leaf renders as the letters <code>NIL</code>). Text elements are <strong>not</strong> preserved as text: they flatten to their code-point scalars (<code>[ 'AB' 'CD' ] STR</code> &rarr; <code>'65 66 67 68'</code>, <code>[ 1 NIL ] STR</code> &rarr; <code>'1 NIL'</code>).</td></tr>
+<tr><td>CodeBlock · ProcessHandle · SupervisorHandle</td><td>an implementation-defined opaque placeholder Text; non-canonical, never parseable</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong><code>BOOL</code> — <code>[ x ] -&gt; [ bool | NIL ]</code>.</strong> <code>BOOL</code> is defined over Booleans, rational scalars, and Text; every other operand type is malformed use &rarr; error (Section 11.2):</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Operand</th><th><code>BOOL</code> result</th></tr>
+</thead>
+<tbody>
+<tr><td>Boolean</td><td>unchanged</td></tr>
+<tr><td>rational scalar</td><td>exactly zero &rarr; <code>FALSE</code>; any non-zero &rarr; <code>TRUE</code></td></tr>
+<tr><td>non-rational scalar (Section 4.2.7)</td><td>malformed use &rarr; error — <code>BOOL</code>'s numeric domain is the rational sub-domain</td></tr>
+<tr><td>Text</td><td>case-insensitive <code>'TRUE'</code> / <code>'FALSE'</code> &rarr; that Boolean; <strong>any</strong> other Text — including numeric text such as <code>'42'</code> — &rarr; NIL (a well-formed conversion failure, Bubble Rule). Text is never routed through the numeric zero/non-zero rule.</td></tr>
+<tr><td>NIL</td><td>malformed use &rarr; error (<code>RejectsNil</code>; Section 7.12 lists <code>BOOL</code> as not passthrough)</td></tr>
+<tr><td>Unknown (U)</td><td>malformed use &rarr; error, through the same channel as NIL</td></tr>
+<tr><td>Vector · Record · CodeBlock · handles</td><td>malformed use &rarr; error</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong><code>JOIN</code> — <code>[ vector ] -&gt; [ text ]</code>, exactly one operand.</strong> The following contract supersedes the "optional separator" wording of earlier revisions:</p>
+
+<ul>
+<li><strong>No separator operand.</strong> <code>JOIN</code> consumes exactly one value — the vector on top of the stack — and never inspects or consumes a second value. There is no separator form; interposing a separator requires explicit program-level composition. Consequently <code>[ 'A' 'B' 'C' ] ',' JOIN</code> does <em>not</em> join the vector with commas: it joins the top value <code>','</code> itself (a Text is a code-point vector, which joins back to itself) and leaves the vector untouched, giving <code>[ 'A' 'B' 'C' ] ','</code>.</li>
+<li><strong>Element rule.</strong> Each element in order: a Text element is appended as its character content; an integer scalar element that is a valid Unicode scalar value is appended as that code point's character (<code>[ 'AJIS' 65 73 ] JOIN</code> &rarr; <code>'AJISAI'</code>); an integer scalar outside the valid code-point range is malformed use &rarr; error; every other element type — NIL, Boolean, nested Vector, Record, CodeBlock — is malformed use &rarr; error.</li>
+<li><strong>Target rule.</strong> A NIL target is malformed use &rarr; error (<code>JOIN</code> is not passthrough, Section 7.12). A Text target is a code-point vector and joins to itself unchanged. A scalar, Boolean, or other non-vector target is malformed use &rarr; error.</li>
+</ul>
 
 <h3 id="77-control-and-higher-order-words">7.7 Control and higher-order words</h3>
 
@@ -1314,6 +1369,15 @@ Version: <strong>2026-07-01</strong></p>
 </div>
 
 <p><code>PRECOMPUTE</code> is a <strong>definition-time-only</strong> Canonical Core word, not a macro. It consumes a code block (<code>[ { body } ] -&gt; [ value... ]</code>) and is meaningful only while a <code>DEF</code> body is being compiled: the block is evaluated once at definition time and its result values are staged into the compiled definition, so the cost is not paid on each later call. It is <code>Partial</code> (it raises on malformed use such as a non-block operand) with <code>nil_policy = RejectsNil</code>; using it outside a definition-time context is an error.</p>
+
+<p><strong>Observable staging contract (normative).</strong> The following is the complete conformance surface of <code>PRECOMPUTE</code>; staging mechanics beyond it (caching layout, when the compiled body is materialized) are implementation freedom.</p>
+
+<ul>
+<li><strong>Isolated, empty definition-time evaluation.</strong> The staged block runs once, when <code>DEF</code> compiles the definition, in an isolated evaluation seeded with an <em>empty</em> stack: it does not see the values on the stack at definition time (a block that consumes an operand fails with a definition-time <code>StackUnderflow</code>-class error, and the surrounding stack is never read or disturbed).</li>
+<li><strong>In-place splice, in order.</strong> Every value the block leaves (bottom-to-top) is spliced into the definition at the marker's position, in order, as if those values had been written as literals there: <code>{ { 1 2 } PRECOMPUTE 10 ADD } 'STAGED-PAIR' DEF</code> then <code>STAGED-PAIR</code> &rarr; <code>1/1 12/1</code>. Later calls replay the staged values without re-evaluating the block.</li>
+<li><strong>Staging failure is a definition-time error.</strong> If the block raises, if a staged result value cannot be represented as a literal in the compiled body (for example NIL), or if the block contains a word that is not definition-time-safe (an effectful or observable word such as <code>PRINT</code> — the effect would otherwise fire at <code>DEF</code> rather than at call time), then <code>DEF</code> itself fails and no word is defined. Which words are definition-time-safe follows the contract metadata of Section 7.14 (<code>purity</code>/<code>effects</code>); the rejection of unsafe words is normative, the exact diagnostic text is not.</li>
+<li><strong>Outside <code>DEF</code>.</strong> Executing <code>PRECOMPUTE</code> outside a definition-time context is malformed use &rarr; error, as stated above.</li>
+</ul>
 
 <h4 id="771-stack-signatures">7.7.1 Stack signatures and consumption (normative)</h4>
 
@@ -1369,7 +1433,7 @@ Version: <strong>2026-07-01</strong></p>
 </table>
 </div>
 
-<p>Only <code>PRINT</code> is a Canonical Core word here; it is additionally boundary-listed in the <code>IO</code> view (Section 7). <code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code> are canonically owned by the <code>TIME</code> module and <code>CSPRNG</code> <code>HASH</code> by the <code>CRYPTO</code> module (Section 9.1): they are <strong>not</strong> Core-listed, so a bare name resolves only after <code>IMPORT</code>, and they are always reachable in qualified form (<code>TIME@NOW</code> and <code>CRYPTO@HASH</code> and so on). They are grouped here by utility role, not by canonical home.</p>
+<p>Only <code>PRINT</code> is a Canonical Core word here; it is additionally boundary-listed in the <code>IO</code> view (Section 7). <code>NOW</code> <code>DATETIME</code> <code>TIMESTAMP</code> are canonically owned by the <code>TIME</code> module and <code>CSPRNG</code> <code>HASH</code> by the <code>CRYPTO</code> module (Section 9.1): they are <strong>not</strong> Core-listed, so the word resolves only after an import that includes it (Section 9.2): <code>IMPORT</code> brings both the bare name and the qualified form (<code>TIME@NOW</code> and <code>CRYPTO@HASH</code> and so on) into scope, and the qualified form remains reachable even when the bare name is shadowed. Neither form resolves before the module is imported. They are grouped here by utility role, not by canonical home.</p>
 
 <p><code>PRINT</code> renders the value at the <em>output</em> boundary \(\pi_{\mathrm{Output}}\) (Section 12.3), which is not the same surface as the Stack projection \(\pi_{\mathrm{Stack}}\). A value with the <code>Text</code> role is shown on the Stack wrapped in single quotes (<code>'TEST'</code>) so the reader can tell a string from a bare numeric vector; those quotes are a Stack affordance, not part of the value. At the output boundary <code>PRINT</code> emits the raw character content with the surrounding quotes removed: <code>'TEST'</code> on the Stack prints as <code>TEST</code>. Quote characters that are part of the content are preserved — a string whose content is <code>T'ES'T</code> (shown on the Stack as <code>'T'ES'T'</code>) prints as <code>T'ES'T</code>. Non-text values print exactly as they render on the Stack (a number prints as <code>42/1</code>, a boolean as <code>TRUE</code>). The surrounding-quote removal applies only to a top-level <code>Text</code> value; a string nested inside a collection keeps its role and its quotes, so <code>[ 'AB' 'CD' ]</code> prints as <code>[ 'AB' 'CD' ]</code> (each element stays recognizable as a string, never decayed to its codepoint fractions). <code>PRINT</code> consumes the top stack value only; to keep it on the stack while printing, use the KEEP modifier <code>,,</code> (Section 5).</p>
 
@@ -1627,6 +1691,10 @@ Version: <strong>2026-07-01</strong></p>
 
 <p>User words may call themselves or other user words recursively. There is no hard-coded call-depth limit as a language semantic rule.</p>
 
+<p><strong>Native recursion-depth guard (runtime safety control, normative).</strong> A conforming implementation bounds the depth of <em>native</em> user-word recursion — recursive calls that must each hold a live stack frame because work remains after the call returns — with an implementation-defined depth guard (the reference implementation's guard is 256 frames). Exceeding the guard raises <code>RecursionLimitExceeded</code> (Section 11.1): a recoverable, diagnosable error rather than a host-level stack trap. This guard has exactly the same standing as the execution step budget of Section 5.3: it is a <strong>runtime safety control, not language semantics</strong>, its specific depth value is not conformance surface, and it does not contradict the no-hard-limit rule above or conformance item 3 of Section 16, which forbid depth limits only <em>as language semantic rules</em>.</p>
+
+<p><strong>Guarded tail recursion is exempt.</strong> A self-call in tail position of a <code>COND</code> clause body (Section 7.7.1) is executed as a backward jump that reuses the current frame, so it consumes no guard depth: a guarded tail-recursive word iterates without bound, limited only by the step budget of Section 5.3. Deep recursion that is not in guarded tail position — direct self-calls with pending work, or unguarded self-calls such as <code>{ W } 'W' DEF W</code> — is what the depth guard bounds. Rewriting a recursion into the guarded tail form is therefore the supported way to run unbounded-depth iterations.</p>
+
 <h3 id="85-naming-conventions">8.5 Naming conventions</h3>
 
 <p>Word names follow action-object convention (e.g. <code>APPLY-GAIN</code> and <code>RESOLVE-PATH</code>). The runtime emits a warning for:</p>
@@ -1699,6 +1767,8 @@ Version: <strong>2026-07-01</strong></p>
 <p><code>UNIMPORT-ONLY</code> hides only the specified Module Words. It fails if a selected item is referenced by a User Word; use dictionary-level <code>UNIMPORT</code> when the desired operation is to clean up unused module imports while preserving referenced items.</p>
 
 <p>Selectors that name Core words merely listed in a module view are no-ops for <code>IMPORT-ONLY</code> and <code>UNIMPORT-ONLY</code>, because Core words are always available and cannot be imported or unimported through a module.</p>
+
+<p><strong>Observable resolution contract of a partial import (normative).</strong> After <code>'M' [ 'W1' 'W2' ] IMPORT-ONLY</code>, exactly the selected canonical Module Words resolve, and they resolve in <em>both</em> forms — the bare name (<code>W1</code>) and the qualified name (<code>M@W1</code>). A module word that was <em>not</em> selected resolves in <strong>neither</strong> form: both the bare and the qualified reference raise <code>UnknownWord</code> (Section 11.1). The qualified form is therefore not a backdoor around a partial import: <code>MODULE@WORD</code> resolution requires the word to be in the current import set, exactly as the bare name does (before any import, neither form of any module word resolves). How an implementation represents the partial-import state internally — per-word flags, a shrunk dictionary view, or otherwise — is not observable and is implementation freedom; only the resolution outcomes above are conformance surface.</p>
 
 <h3 id="93-dictionary-word-tiers">9.3 Dictionary word tiers</h3>
 
@@ -1802,6 +1872,17 @@ Version: <strong>2026-07-01</strong></p>
 
 <p><code>MONITOR</code> marks a child runtime for observation. <code>SUPERVISE</code> creates a SupervisorHandle that manages a group of child runtimes.</p>
 
+<h3 id="108-observable-guarantees-and-scheduling-freedom">10.8 Observable guarantees and scheduling freedom (normative)</h3>
+
+<p>Section 10 deliberately specifies no concurrency or scheduling model. The conformance surface of the child-runtime words is exactly the following guarantees; everything else — threads, event loops, eager execution at <code>SPAWN</code>, deferred execution at <code>AWAIT</code>, preemption granularity — is implementation freedom.</p>
+
+<ul>
+<li><strong><code>AWAIT</code> determinism.</strong> For a child whose block is deterministic (Section 7.14 <code>deterministic</code> words only), the <code>[status result-stack]</code> pair that <code>AWAIT</code> returns is a pure function of the spawned block and the dictionary snapshot: normal completion yields <code>'completed'</code> with the child's final stack (<code>{ 1 2 ADD } SPAWN AWAIT</code> &rarr; <code>[ 'completed' [ 3/1 ] ]</code>), and a child that raises yields <code>'failed'</code> with the child's stack as of the failure (<code>{ NIL BOOL } SPAWN AWAIT</code> &rarr; <code>[ 'failed' [ NIL ] ]</code>). A Bubble/NIL inside the child is a value, not a failure: <code>{ 0 0 DIV } SPAWN AWAIT</code> &rarr; <code>[ 'completed' [ NIL ] ]</code>. Scheduling never changes an <code>AWAIT</code> result.</li>
+<li><strong>Parent/child isolation.</strong> As Section 10.1 states, the child receives a snapshot of the parent dictionary at <code>SPAWN</code> and shares neither stack nor dictionary afterwards; nothing a child does is observable in the parent except through the handle words. Definitions made by the parent after <code>SPAWN</code> are invisible to the child and vice versa.</li>
+<li><strong>Terminal-state stability.</strong> The states of Section 10.2 are the complete state space. Once a terminal state (<code>completed</code> <code>failed</code> <code>killed</code> <code>timeout</code>) has been reported by <code>STATUS</code> or <code>AWAIT</code>, every later observation of that child reports the same terminal state.</li>
+<li><strong><code>STATUS</code> before completion is schedule-dependent.</strong> Whether, and for how long, <code>STATUS</code> reports <code>running</code> for an in-flight child depends on the scheduling model and is <strong>not</strong> conformance surface: an implementation that runs the child eagerly and synchronously at <code>SPAWN</code> (so <code>running</code> is never observed) conforms, and so does one with genuine concurrency (where <code>STATUS</code> immediately after <code>SPAWN</code> may report <code>running</code>). Programs must not depend on observing <code>running</code>.</li>
+</ul>
+
 <h2 id="11-error-model">11. Error Model</h2>
 
 <h3 id="111-user-level-error-categories">11.1 User-level error categories</h3>
@@ -1820,6 +1901,7 @@ Version: <strong>2026-07-01</strong></p>
 <tr><td><code>IndexOutOfBounds</code></td><td>Index is outside the valid range of the vector</td></tr>
 <tr><td><code>VectorLengthMismatch</code></td><td>Operation requires equal-length vectors but lengths differ</td></tr>
 <tr><td><code>ExecutionLimitExceeded</code></td><td>Step budget exhausted</td></tr>
+<tr><td><code>RecursionLimitExceeded</code></td><td>Native recursion-depth guard exceeded (runtime safety control, Sections 5.3, 8.4; guarded tail recursion is exempt)</td></tr>
 <tr><td><code>ModeUnsupported</code></td><td>The modifier combination is not supported for this word</td></tr>
 <tr><td><code>BuiltinProtection</code></td><td>Attempt to redefine or delete a built-in word</td></tr>
 <tr><td><code>CondExhausted</code></td><td>COND expression has no matching clause</td></tr>
@@ -1894,6 +1976,8 @@ Version: <strong>2026-07-01</strong></p>
 <p>Interpretation roles are applied only at explicit semantic boundaries: rendering, <code>PRINT</code>, and module-level output operations. A value's role and the surface style of any literal that produced it are independent: surface literal forms (Section 3.2) are convenience input syntax and are never retained as display state. Two values render identically on a given surface whenever their data and role are equal. The Stack projection \(\pi_{\mathrm{Stack}}\) and the output projection \(\pi_{\mathrm{Output}}\) are distinct surfaces, so the same value may render differently across them: a <code>Text</code>-role value is shown wrapped in single quotes on the Stack (so a string is distinguishable from a numeric vector) but emitted as its bare character content at the output boundary (<code>PRINT</code>, Section 7.9). The quotes are a Stack affordance, not data; the role itself is unchanged. Every element of a collection is rendered in its own role on each surface, so a nested <code>Text</code> element stays a quoted string (<code>[ 'AB' 'CD' ]</code>) rather than decaying to its codepoint fractions.</p>
 
 <p>The <code>ContinuedFraction</code> role is the canonical AI-readable numeric serialization form. Machine-readable tooling that needs to round-trip exact values across the WASM boundary or diagnostic logs must request this role; the <code>RawNumber</code> role may lose information for lazy irrationals.</p>
+
+<p><strong>Default role of a computed scalar (normative).</strong> A scalar produced by literal input or by Coreword computation renders, on every surface and with no explicit role assignment, as follows: a <strong>rational</strong> scalar renders as its reduced <code>numerator/denominator</code> — the <code>RawNumber</code> rendering, which is why every worked example shows <code>3</code> as <code>3/1</code>; a <strong>non-rational</strong> scalar (producible in the current Coreword set only via <code>MATH@SQRT</code> of a non-square rational and field arithmetic over such values, Section 4.2.7) renders as the nested continued-fraction form of Section 4.2.3 with its display-budget <code>...)</code> truncation marker — the <code>ContinuedFraction</code> rendering. The "raw structural form" of the <code>Unassigned</code> role is, for a numeric scalar, <em>identical</em> to this default, so whether an implementation tags a fresh scalar <code>Unassigned</code> or <code>RawNumber</code>/<code>ContinuedFraction</code> is not observable and is implementation freedom. Because no current Coreword assigns the <code>RawNumber</code> role to a non-rational scalar, the otherwise-undefined "<code>RawNumber</code> surface of a lazy irrational" is unreachable; the only compact text surface for a non-rational scalar is <code>STR</code> (Section 7.6.1), which is explicitly an implementation-defined, non-canonical approximation.</p>
 
 <h3 id="123-observation-surfaces">12.3 Observation surfaces</h3>
 
@@ -2069,6 +2153,7 @@ Version: <strong>2026-07-01</strong></p>
 </thead>
 <tbody>
 <tr><td>Evaluation step budget</td><td>step limit, default 100,000 (Section 5.3)</td><td>raises <code>ExecutionLimitExceeded</code> (Section 11.1)</td></tr>
+<tr><td>Native recursion depth</td><td>recursion-depth guard (Section 8.4); guarded tail recursion (Section 7.7.1) is exempt</td><td>raises <code>RecursionLimitExceeded</code> (Section 11.1)</td></tr>
 <tr><td>Comparison and observation depth</td><td>comparison budget (Section 7.4.1); explicitly via <code>COMPARE-WITHIN</code> (Section 7.4.2)</td><td>yields the logical <code>Unknown</code> (U, Stagnation), <strong>not</strong> a Bubble/NIL (Sections 4.5.2, 7.4.3)</td></tr>
 </tbody>
 </table>

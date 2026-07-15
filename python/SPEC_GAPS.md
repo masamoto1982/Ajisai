@@ -114,6 +114,13 @@ leaves their observable stack effect open.
 ## 4. "Exact/total" six relations vs. budgeted UNKNOWN — *high impact, interpretive fork*
 **Sections 2.3.1, 2.3.1.1 vs. 7.4.1, 7.4.2.**
 
+> **RESOLVED (re-confirmed, spec version 2026-07-15).** CLI probes re-verified
+> the Section 7.4 "Exactness over the admitted domain" contract against the
+> implementation: `2 MATH@SQRT 2 MATH@SQRT EQ → TRUE`,
+> `2 MATH@SQRT 2 MATH@SQRT SUB 0 EQ → TRUE`, and multi-surd equality
+> `√2+√3 = √3+√2 → TRUE`, all with no budget in play. No further spec change
+> was needed; the 2026-07-01 resolution below stands.
+
 > **RESOLVED (spec version 2026-07-01).** Section 7.4 now carries a normative
 > paragraph *"Exactness over the admitted domain"*: over the admitted domain `D`
 > (new Section 4.2.7) the six relations are total and exact and never return
@@ -138,6 +145,16 @@ the six relations exactly and reserves budget/`UNKNOWN` for `COMPARE-WITHIN`.
 
 ## 5. The boundary of the "current algebraic domain" is never delimited — *high impact*
 **Sections 4.2, 4.2.2, 7.3, 9.1 (MATH).**
+
+> **RESOLVED (re-confirmed, spec version 2026-07-15).** CLI probes re-verified
+> every Section 4.2.7 boundary against the implementation: `√2+√3` is
+> in-domain, division by the multi-surd `√2+√3` is exact
+> (`1 (√2+√3) DIV (√2+√3) MUL 1 EQ → TRUE`), `SQRT` of a non-rational
+> (`√√2`) is malformed use → error, and `MATH@POW` rejects a non-integer
+> exponent. No further spec change was needed. One implementation wrinkle was
+> found and reported (not fixed here): `-4 MATH@SQRT` correctly projects to
+> Bubble/NIL, but with `reason = divisionByZero` where a domain-miss reason
+> would be expected.
 
 > **RESOLVED (spec version 2026-07-01).** New Section 4.2.7 defines the admitted
 > domain `D` as the multiquadratic closure of ℚ — the field ℚ(√d₁, √d₂, …)
@@ -167,6 +184,23 @@ Coreword set must support (and what happens at its edge — error vs. lazy CF).
 ## 6. Default interpretation role of a scalar, and RawNumber for irrationals — *medium impact*
 **Section 12.2.**
 
+> **RESOLVED (Section 12.2, spec version 2026-07-15).** A new normative
+> paragraph *"Default role of a computed scalar"* fixes both points from CLI
+> probes: a computed **rational** scalar renders as its reduced
+> `numerator/denominator` (the `RawNumber` rendering — `3` renders `3/1`),
+> and a computed **non-rational** scalar renders as the truncated
+> `ContinuedFraction` nested form (`2 MATH@SQRT` displays
+> `( 1 ( 2 ( 2 ...`). Whether the internal role tag is `Unassigned` or
+> `RawNumber`/`ContinuedFraction` is declared not observable (implementation
+> freedom), because `Unassigned`'s "raw structural form" for a scalar is
+> defined to coincide with these renderings. The "RawNumber surface of a lazy
+> irrational" is declared unreachable — no current Coreword assigns that role
+> to a non-rational — and the only compact text surface for a non-rational,
+> `STR`, is normatively an implementation-defined non-canonical approximation
+> (Section 7.6.1; the probe shows the reference implementation prints a
+> rational convergent such as `665857/470832` for `√2`). Conformance case:
+> `core-scalar-default-rendering`.
+
 - Every spec example renders a bare number as `n/1` (the `RawNumber` surface),
   but 12.2 says the default role is `Unassigned`, whose scalar rendering is "raw
   structural form" — left undefined for numbers. To reproduce `3/1` the port
@@ -182,6 +216,28 @@ Coreword set must support (and what happens at its edge — error vs. lazy CF).
 ## 7. `STR` and `BOOL` conversion semantics — *medium impact*
 **Section 7.6.**
 
+> **RESOLVED (Section 7.6.1, spec version 2026-07-15).** A new normative
+> subsection gives per-type conversion tables for both words, fixed by CLI
+> probes of the implementation. `STR` is total: Text is identity; a rational
+> renders compactly (`42 STR → '42'` — deliberately *not* the Stack surface
+> `42/1` — and `1 2 DIV STR → '1/2'`); a non-rational yields an
+> implementation-defined, non-canonical approximation Text; Booleans render
+> by spelling; NIL and U yield a *fresh, reasonless* NIL
+> (`0 0 DIV STR NIL-REASON → NIL NIL`); a Vector/Record flattens to its
+> space-joined leaves with Text elements decaying to code points
+> (`[ 'AB' 'CD' ] STR → '65 66 67 68'`); CodeBlocks/handles yield an
+> implementation-defined placeholder. `BOOL` is defined over Booleans,
+> rational scalars (zero → FALSE, else TRUE), and Text (case-insensitive
+> `'TRUE'`/`'FALSE'`; **any** other text — including `'42'` — is a
+> well-formed failure → NIL); NIL, U, non-rational scalars, and containers
+> are malformed use → error. This port's guesses ("Output-surface rendering"
+> for STR; "NIL → FALSE, other → TRUE" for BOOL) are superseded; the
+> conformance reference interpreter (`tools/ajisai-repro/ajisai.py`) now
+> implements the adjudicated tables. Conformance cases:
+> `core-str-nil-yields-fresh-nil`, `core-str-flattens-container-leaves`,
+> `core-str-nil-leaf-renders-letters`, `core-bool-numeric-text-is-nil`
+> (plus the pre-existing `core-str-*` / `core-bool-*` cases).
+
 - `STR` "convert value to its string representation" does not say which surface
   or role drives the text. Is `42 STR` the text `42/1` (RawNumber)? The
   ContinuedFraction form? The port uses the Output-surface rendering.
@@ -192,6 +248,21 @@ Coreword set must support (and what happens at its edge — error vs. lazy CF).
 ## 8. `JOIN` argument shape — *medium impact*
 **Section 7.6.**
 
+> **RESOLVED (Section 7.6.1, spec version 2026-07-15).** Probes settled the
+> ambiguity in the simplest possible way: **there is no separator operand at
+> all.** `JOIN` consumes exactly one value — the vector on top of the stack —
+> and the "optional separator" wording is superseded in the Section 7.6 table
+> and Section 7.6.1 contract. `[ 'A' 'B' 'C' ] ',' JOIN` joins the `','`
+> itself (a Text is a code-point vector, joining to itself) and leaves the
+> vector untouched. Element rule: Text elements append as content; integer
+> scalars append as Unicode code points; invalid code points and all other
+> element types (NIL, Boolean, nested Vector, …) are malformed use → error;
+> a NIL target is malformed use → error. The type-sniffing separator
+> detection this port implemented is superseded; the reference interpreter
+> now matches. Conformance cases: `core-join-no-separator-operand`,
+> `core-join-mixed-text-and-codepoints`, `core-join-rejects-boolean-element`,
+> `core-join-rejects-invalid-codepoint`.
+
 "Join a vector of strings, with optional separator" — no stack signature and no
 rule for detecting whether the optional separator is present. The port detects it
 by type (a top-of-stack Text is the separator), which is ambiguous if the vector
@@ -199,6 +270,22 @@ itself could be confused with a separator.
 
 ## 9. NIL equality vs. NIL-passthrough on `EQ` — *medium impact*
 **Sections 4.5.0, 7.4, 7.12.**
+
+> **RESOLVED (Sections 4.5.0 and 7.4, spec version 2026-07-15).** A new
+> normative paragraph *"NIL operands and NIL equality"* in Section 7.4
+> disambiguates the two surfaces exactly as this finding suspected. The `EQ`
+> word is NIL-passthrough for **top-level** operands: `NIL NIL EQ → NIL`
+> (never TRUE), preserving the leftmost reason
+> (`1 0 DIV 1 EQ NIL-REASON → NIL 'divisionByZero'`). Section 4.5.0's
+> "uniform" equality governs **structural equality** — the element-wise
+> equality inside containers (and hashing/dedup) — where two NIL elements
+> compare equal regardless of diagnostic metadata:
+> `0 0 DIV 1 COLLECT NIL 1 COLLECT EQ → TRUE`. Section 4.5.0 now
+> cross-references this split. The reference interpreter's structural
+> equality was aligned (NIL elements were previously never equal).
+> Conformance cases: `core-eq-nil-nil-passthrough`,
+> `core-eq-nil-passthrough-preserves-reason`,
+> `core-eq-structural-nil-uniform`.
 
 Section 4.5.0 says "equality … treat all NIL values uniformly", suggesting
 `NIL NIL EQ` is meaningful, but `EQ` is NIL-passthrough (7.12), so any NIL operand
@@ -209,6 +296,22 @@ which surface it governs.
 
 ## 10. Child-runtime concurrency model is unobservable / unspecified — *low impact*
 **Section 10.**
+
+> **RESOLVED (Section 10.8, spec version 2026-07-15).** A new normative
+> subsection fixes only the observable guarantees and declares scheduling
+> implementation freedom, directly answering this finding's question: **eager
+> synchronous execution at `SPAWN` conforms.** Normative surface: `AWAIT`'s
+> `[status result-stack]` is deterministic for a deterministic block
+> (`{ 1 2 ADD } SPAWN AWAIT → [ 'completed' [ 3/1 ] ]`; a raising child →
+> `[ 'failed' [ stack-at-failure ] ]`; a Bubble/NIL is a value →
+> `'completed'`); parent/child isolation per Section 10.1; and
+> terminal-state stability. Whether `STATUS` ever reports `running` is
+> schedule-dependent and explicitly **not** conformance surface — programs
+> must not depend on observing it (the current Rust implementation happens
+> to expose a `running` window; this port's never-observable `running` is
+> equally conforming). Conformance cases (hosted category, outside this
+> Core-only port's scope): `hosted-child-await-completed-deterministic`,
+> `hosted-child-await-failed-child`, `hosted-child-bubble-completes`.
 
 `AWAIT` "blocks until the child finishes" and `STATUS` reports state "without
 blocking", but no concurrency or scheduling model is given. A conforming
@@ -221,6 +324,22 @@ thus an observable `running` window) is required.
 ## 11. `IMPORT-ONLY` / `UNIMPORT-ONLY` produce no clear observable — *low impact*
 **Section 9.2, 7.14.**
 
+> **RESOLVED (Section 9.2, spec version 2026-07-15).** A new normative
+> paragraph *"Observable resolution contract of a partial import"* reduces
+> the narrative to a testable observable, fixed by CLI probes: after
+> `'M' [ 'W' ] IMPORT-ONLY`, exactly the selected words resolve — in **both**
+> bare and qualified form — and unselected siblings resolve in **neither**
+> form (`'math' [ 'SQRT' ] IMPORT-ONLY -5 ABS` and `… -5 MATH@ABS` both raise
+> `UnknownWord`). The qualified form is explicitly not a backdoor around a
+> partial import, and Section 7.9's "always reachable in qualified form"
+> wording was tightened to require an import that includes the word. The
+> internal representation of the partial-import state is declared
+> implementation freedom. This port's coarse full-import model is superseded;
+> the reference interpreter now gates qualified resolution on the import set.
+> Conformance cases: `core-import-only-selected-qualified`,
+> `core-import-only-sibling-bare-unresolved`,
+> `core-import-only-sibling-qualified-unresolved`.
+
 The partial-import / "shrink to explicit partial-import state" rules are described
 narratively but do not reduce to a definite, testable stack/resolution observable
 from the spec text alone. This port models per-word import coarsely as a full
@@ -229,6 +348,27 @@ expect siblings to remain unresolved.
 
 ## 12. `PRECOMPUTE` staging has no observable contract — *low impact*
 **Section 7.7.**
+
+> **RESOLVED (Section 7.7, spec version 2026-07-15).** A normative
+> *"Observable staging contract"* now follows the `PRECOMPUTE` paragraph,
+> fixed by CLI probes: (1) the staged block runs once at `DEF` time in an
+> isolated evaluation seeded with an **empty** stack — it never sees the
+> definition-time stack (`5 { { 2 MUL } PRECOMPUTE } '…' DEF` is a
+> definition-time error); (2) all values the block leaves are spliced
+> in place, in order (`{ { 1 2 } PRECOMPUTE 10 ADD } '…' DEF` then calling
+> gives `1/1 12/1`); (3) staging failures — a raising block, an unsupported
+> staged value such as NIL, or a non-definition-time-safe (effectful) word
+> like `PRINT` — fail `DEF` itself, so staging *is* positively observable as
+> the definition-time firing/rejection of what would otherwise happen at
+> call time; (4) outside `DEF` it is an error. Everything else (caching
+> layout, materialization timing) is implementation freedom. This port's
+> "immediate evaluation" approximation is superseded; the reference
+> interpreter now implements the isolation, error-wrapping, and
+> effect-rejection rules. Conformance cases:
+> `core-precompute-splices-values-in-order`,
+> `core-precompute-empty-seed-stack`,
+> `core-precompute-rejects-effectful-word` (plus the pre-existing
+> `core-precompute-*` cases).
 
 "Evaluate a code block at definition time and splice the resulting values into the
 definition." The splicing mechanics — how staged values interleave with the rest
