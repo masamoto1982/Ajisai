@@ -311,6 +311,17 @@ export class AjisaiInterpreter {
         wasm.ajisaiinterpreter_set_execution_mode(this.__wbg_ptr, ptr0, len0);
     }
     /**
+     * Override the execution step budget (water level, SPEC §5.3) for
+     * subsequent executions. A runtime safety control, not a language
+     * semantic: the host may raise or lower it; never calling this keeps
+     * the default (100,000). A zero or non-positive value is ignored so a
+     * malformed host call cannot disable the safety budget entirely.
+     * @param {number} steps
+     */
+    set_max_execution_steps(steps) {
+        wasm.ajisaiinterpreter_set_max_execution_steps(this.__wbg_ptr, steps);
+    }
+    /**
      * @param {string} text
      */
     update_input_buffer(text) {
@@ -533,7 +544,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return wasm_bindgen__convert__closures_____invoke__h475fa7d20c8b5712(a, state0.b, arg0, arg1);
+                        return wasm_bindgen__convert__closures_____invoke__ha665bb70d3c43529(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -644,7 +655,7 @@ function __wbg_get_imports() {
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 184, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hd81aa550814a696a);
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__ha370fd0906e0d210);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -678,15 +689,15 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__hd81aa550814a696a(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__hd81aa550814a696a(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__ha370fd0906e0d210(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__ha370fd0906e0d210(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h475fa7d20c8b5712(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h475fa7d20c8b5712(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__ha665bb70d3c43529(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__ha665bb70d3c43529(arg0, arg1, arg2, arg3);
 }
 
 const AjisaiInterpreterFinalization = (typeof FinalizationRegistry === 'undefined')

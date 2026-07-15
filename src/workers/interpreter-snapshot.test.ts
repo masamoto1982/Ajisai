@@ -14,6 +14,7 @@ const makeMock = () => {
         restore_stack: vi.fn(),
         restore_user_words: vi.fn(),
         set_execution_mode: vi.fn(),
+        set_max_execution_steps: vi.fn(),
         update_serial_inbox: vi.fn(),
         mark_serial_disconnected: vi.fn(),
     };
@@ -50,6 +51,20 @@ describe('applyInterpreterSnapshot robustness', () => {
         expect(Array.from(bytes as Uint8Array)).toEqual([1, 2, 3]);
         expect(fns.mark_serial_disconnected).toHaveBeenCalledWith('COM1');
     });
+
+    test('applies a positive integer stepLimit', () => {
+        const { fns, interpreter } = makeMock();
+        applyInterpreterSnapshot(interpreter, { stepLimit: 1_000_000 } as never);
+        expect(fns.set_max_execution_steps).toHaveBeenCalledWith(1_000_000);
+    });
+
+    for (const stepLimit of [0, -1, 1.5, NaN, Infinity, '100000', null]) {
+        test(`ignores invalid stepLimit ${String(stepLimit)}`, () => {
+            const { fns, interpreter } = makeMock();
+            applyInterpreterSnapshot(interpreter, { stepLimit } as never);
+            expect(fns.set_max_execution_steps).not.toHaveBeenCalled();
+        });
+    }
 
     test('skips a malformed entry but keeps a valid sibling', () => {
         const { fns, interpreter } = makeMock();

@@ -13,6 +13,12 @@ export interface InterpreterSnapshot {
     readonly executionMode: ExecutionMode;
     /** Host-received serial bytes to inject before this run (SERIAL@READ). */
     readonly serialInbox?: SerialInboxEntry[];
+    /**
+     * Host override for the execution step budget (water level, SPEC §5.3).
+     * A positive integer; omitted keeps the interpreter default (100,000).
+     * Runtime safety control, not a language semantic.
+     */
+    readonly stepLimit?: number;
 }
 
 export const createInterpreterSnapshot = (snapshot: {
@@ -21,12 +27,14 @@ export const createInterpreterSnapshot = (snapshot: {
     readonly importedModules?: string[];
     readonly executionMode?: ExecutionMode;
     readonly serialInbox?: SerialInboxEntry[];
+    readonly stepLimit?: number;
 }): InterpreterSnapshot => ({
     stack: snapshot.stack,
     userWords: snapshot.userWords,
     importedModules: snapshot.importedModules ?? [],
     executionMode: snapshot.executionMode ?? "greedy",
-    serialInbox: snapshot.serialInbox
+    serialInbox: snapshot.serialInbox,
+    stepLimit: snapshot.stepLimit
 });
 
 export const applyInterpreterSnapshot = (
@@ -47,6 +55,14 @@ export const applyInterpreterSnapshot = (
     }
     if (snapshot.executionMode) {
         interpreter.set_execution_mode(snapshot.executionMode);
+    }
+    // Untrusted partial snapshot: only a positive finite integer is a valid
+    // budget; anything else keeps the interpreter default (the wasm side
+    // ignores non-positive values as a second line of defence).
+    if (typeof snapshot.stepLimit === 'number'
+        && Number.isInteger(snapshot.stepLimit)
+        && snapshot.stepLimit > 0) {
+        interpreter.set_max_execution_steps(snapshot.stepLimit);
     }
     // The parameter is an explicitly partial/untrusted snapshot, so validate
     // each serial entry instead of trusting its shape: a non-array inbox, a

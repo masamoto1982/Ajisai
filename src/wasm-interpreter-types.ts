@@ -57,6 +57,10 @@ export interface AjisaiInterpreter {
     restore_import_state(state: ImportStateEntry[]): void;
     set_execution_mode(mode: ExecutionMode): void;
     get_execution_mode(): ExecutionMode;
+    // Execution step budget override (water level, SPECIFICATION.html §5.3).
+    // Host-side runtime safety control, not a language semantic; the wasm
+    // side ignores non-positive values and defaults to 100,000.
+    set_max_execution_steps(steps: number): void;
     // Only exported by wasm bundles built with the opt-in `elastic-engine`
     // cargo feature; the default (trusted core) bundle omits it.
     collect_hedged_trace?(): string[];

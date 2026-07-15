@@ -85,6 +85,14 @@ export class AjisaiInterpreter {
     restore_stack(stack_js: any): void;
     restore_user_words(words_js: any): void;
     set_execution_mode(mode: string): void;
+    /**
+     * Override the execution step budget (water level, SPEC §5.3) for
+     * subsequent executions. A runtime safety control, not a language
+     * semantic: the host may raise or lower it; never calling this keeps
+     * the default (100,000). A zero or non-positive value is ignored so a
+     * malformed host call cannot disable the safety budget entirely.
+     */
+    set_max_execution_steps(steps: number): void;
     update_input_buffer(text: string): void;
     /**
      * Inject the host-received bytes for a serial port (Section 9.4). Replaces
@@ -141,11 +149,12 @@ export interface InitOutput {
     readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_restore_user_words: (a: number, b: any) => [number, number];
     readonly ajisaiinterpreter_set_execution_mode: (a: number, b: number, c: number) => void;
+    readonly ajisaiinterpreter_set_max_execution_steps: (a: number, b: number) => void;
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__hd81aa550814a696a: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h475fa7d20c8b5712: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__ha370fd0906e0d210: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__ha665bb70d3c43529: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

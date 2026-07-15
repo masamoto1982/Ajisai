@@ -826,7 +826,7 @@ Version: <strong>2026-07-01</strong></p>
 
 <h3 id="53-execution-step-limit">5.3 Execution step limit</h3>
 
-<p>Each execution has a step budget. The default limit is 100,000 steps. Exceeding the limit raises <code>ExecutionLimitExceeded</code>. This is a runtime safety control, not a language semantic constraint.</p>
+<p>Each execution has a step budget. The default limit is 100,000 steps. Exceeding the limit raises <code>ExecutionLimitExceeded</code>. This is a runtime safety control, not a language semantic constraint. The host may configure this budget, raising or lowering it; because the budget is a runtime safety control rather than language semantics, conformance judgments must not depend on any particular budget value.</p>
 
 <h2 id="6-modifiers">6. Modifiers</h2>
 
