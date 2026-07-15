@@ -175,7 +175,20 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    と明記——契約は既存 §7.4 で決着済みのため裁定は追認にとどめた。既存の三つの "Core"
    語義(§9.3 Core Words 階層・Core Profile・§7.14 Coreword)との区別、および「新しい
    権威層・実行特権を作らない」ことも明記(self-hosting memo の非目標を引き継ぐ)。
-3. **セルフホスト 1 語実証.** 素材の派生語を 1 つ選び、Core だけを使って Ajisai prelude
-   で再定義し、既存 conformance suite（`core-*`）が緑のままであることを確認する。
+3. **導出可能性の実証 — ✅ 実装済み（当初案は §8.2 により再構成）.**
+   当初の「Ajisai prelude でビルトインを再定義して差し替える」案は **§8.2「ビルトイン語は
+   再定義できない」により不可**。真のセルフホストは独立した別インタプリタ（Python 移植と
+   同格）を意味し、1 語差し替えでは実現しない。代わりに **導出可能性の witness** を採った：
+   素材語 `MATH@SIGN` を Minimal Core の語だけ（`NIL?` `LT` `GT` `COND` `IDLE` とリテラル）で
+   User 語 `SIGN2` として再実装し、有理数域と NIL で両者が一致することを法則テスト
+   （`rust/tests/minimal_core_derivation.rs`, proptest 128 例＋スポット＋NIL）で示した。
+   これは trusted Rust core を縮めるのではなく、**Minimal Core の導出力を裏付ける証拠**。
+   加えて witness は**オラクルとしての発見**を surface した：`SIGN2` は遅延無理数 `2 SQRT` を
+   正しく `1` と符号付けする一方、ビルトイン `MATH@SIGN` は `apply_unary`（有理数限定）の
+   ため同入力を `SIGN: expected a number` で拒否する。派生語は現行ビルトインの**全域拡張**で
+   あり、これは Python 移植が SPEC_GAPS を炙り出したのと同じ機序（`MATH@MIN`/`MAX` は
+   全数域を扱うのに `MATH@SIGN` だけが有理数限定、という §7.4/§7.4.3 との不整合）。この
+   ギャップの是正（`MATH@SIGN` を全数域対応にし、未決時の U 挙動を §7.4.3 に追記するか）は
+   本 witness の範囲外の別課題として記録する。
 4. **移行の計測.** `primitive-test-map` / `word-manifest` から「Core だけで書ける素材語」を
    静的判定し、trusted Rust core 行数をファイルサイズ予算と同じ発想で予算化する。
