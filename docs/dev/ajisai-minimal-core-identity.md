@@ -165,8 +165,16 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    「語が何であるか」ではないため、第一信号には使わない。`core_tier` は
    `check-formalization-coverage.mjs` で必須化し、`word-manifest.json` へも伝播させた。
    結果: **Minimal Core（identity+flow）= 47 語**、material = 138、sugar = 28。
-2. **仕様提案.** `SPECIFICATION.html` に "Ajisai Minimal Core" を規範的に追記し、§4 の
-   比較境界語の契約を裁定する。正典変更は本メモではなく別 PR で行う。
+2. **仕様提案 — ✅ 実装済み.** `SPECIFICATION.html` に §2.6 "Ajisai Minimal Core" を
+   規範的に追記した。Minimal Core = `core_tier` の `identity`+`flow`（機械可読な
+   `formalization-coverage.json` を tier 帰属の典拠とする）。**後方互換保証(規範)**——
+   Minimal Core 語の可観測契約(スタック効果・NIL パススルー・UNKNOWN・構造化診断下の
+   挙動)は版を超えて安定であり、それを変えることは Ajisai の同一性への破壊的変更。
+   material/sugar 層は保証対象外(園芸品種が育つ層)だが Minimal Core の伝播規律には拘束
+   される。比較境界語(`EQ`〜`GTE`)は「契約は Minimal Core・実装(連分数順序)は material」
+   と明記——契約は既存 §7.4 で決着済みのため裁定は追認にとどめた。既存の三つの "Core"
+   語義(§9.3 Core Words 階層・Core Profile・§7.14 Coreword)との区別、および「新しい
+   権威層・実行特権を作らない」ことも明記(self-hosting memo の非目標を引き継ぐ)。
 3. **セルフホスト 1 語実証.** 素材の派生語を 1 つ選び、Core だけを使って Ajisai prelude
    で再定義し、既存 conformance suite（`core-*`）が緑のままであることを確認する。
 4. **移行の計測.** `primitive-test-map` / `word-manifest` から「Core だけで書ける素材語」を
