@@ -294,6 +294,27 @@ pub struct RuntimeMetrics {
     pub hof_memo_miss_count: u64,
     /// Pure per-element MAP kernel results written into the cache.
     pub hof_memo_store_count: u64,
+
+    // ── Comparison budget (SPEC §7.4.1 / §7.4.2) ──────────────────────────
+    // Observability for "when is the comparison budget consumed?" — the
+    // cost-model question the bare relations never expose over the admitted
+    // domain D (they decide exactly via the multiquadratic normal form).
+    // COMPARE-WITHIN is the one Coreword that streams partial quotients under
+    // an explicit budget, so it is the only place a budget term is spent.
+    /// COMPARE-WITHIN invocations that reached the comparison step (past NIL
+    /// passthrough and the malformed-budget guard). Observational only.
+    pub compare_within_count: u64,
+    /// Of those, invocations whose operands took the streamed partial-quotient
+    /// path (at least one non-Rational operand) rather than the exact Fraction
+    /// order — the set that can actually spend budget.
+    pub compare_within_lazy_count: u64,
+    /// COMPARE-WITHIN invocations that exhausted the budget and returned the
+    /// logical Unknown (U).
+    pub compare_within_unknown_count: u64,
+    /// Total partial-quotient (NICF) terms consumed by budget-exhausted
+    /// COMPARE-WITHIN comparisons — the sum of agreedPrefix over the Unknown
+    /// results. Never altered by the bare relations. Observational only.
+    pub compare_within_budget_terms_consumed: u64,
 }
 
 pub struct Interpreter {

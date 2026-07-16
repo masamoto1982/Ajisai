@@ -258,6 +258,18 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
             "proxyVersion": proxy.proxy_version,
             "suggestions": proxy.suggestions,
         },
+        // Cost-model observability (SPECIFICATION.html Cost Model section).
+        // Small-rational scalar-scalar operations that took the D1 fast lane.
+        "scalarFastpathCount": metrics.scalar_fastpath_count,
+        // When is the comparison budget consumed? Over the admitted domain the
+        // bare relations decide exactly and spend nothing; COMPARE-WITHIN is
+        // the one Coreword that streams partial quotients under a budget.
+        "comparison": {
+            "compareWithinCount": metrics.compare_within_count,
+            "compareWithinLazyCount": metrics.compare_within_lazy_count,
+            "compareWithinUnknownCount": metrics.compare_within_unknown_count,
+            "compareWithinBudgetTermsConsumed": metrics.compare_within_budget_terms_consumed,
+        },
     })
 }
 

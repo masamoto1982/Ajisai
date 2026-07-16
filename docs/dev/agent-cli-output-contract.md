@@ -208,13 +208,27 @@ machine-readable reason a value is NIL: `reason` (e.g. `divisionByZero`,
            "sparseSkippableZeroElements": 0, "candidateBlockCount": 0,
            "rejectedBlockCount": 0, "fusionCandidateCount": 0,
            "bulkKernelUseCount": 0,
-           "energyProxyScore": 0, "proxyVersion": 1, "suggestions": [ ] } }
+           "energyProxyScore": 0, "proxyVersion": 1, "suggestions": [ ] },
+  "scalarFastpathCount": 0,
+  "comparison": { "compareWithinCount": 0, "compareWithinLazyCount": 0,
+                  "compareWithinUnknownCount": 0,
+                  "compareWithinBudgetTermsConsumed": 0 } }
 ```
 
-The 18 leading fields are the Virtual Tensor Unit observation counters
+The 18 leading `vtu` fields are the Virtual Tensor Unit observation counters
 (`docs/dev/virtual-tensor-unit-design.md`). They describe observed
 structural work (data movement, allocation, kernel selection) and are
 deterministic for a given program and input.
+
+`scalarFastpathCount` and the `comparison` group are the Cost Model
+observability surface (SPECIFICATION.html §4.8). `scalarFastpathCount` counts
+small-rational scalar–scalar operations that took the fast lane. The
+`comparison` group answers "when is the comparison budget consumed": the bare
+relations decide the admitted domain exactly and spend nothing, so only
+`COMPARE-WITHIN` moves these counters — `compareWithinLazyCount` is the
+streamed subset that can spend budget, and `compareWithinBudgetTermsConsumed`
+sums the NICF terms consumed on the Unknown results. Like the VTU counters,
+these are observational proxies and never part of value identity (§4.2.2).
 
 - `energyProxyScore` — a single deterministic integer aggregating those
   counters with fixed weights (`docs/quality/energy-proxy-score.md`).

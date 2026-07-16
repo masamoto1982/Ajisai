@@ -1226,6 +1226,65 @@ mod compare_within_tests {
     }
 }
 
+/// Cost-model observability (SPECIFICATION.html Cost Model section): the
+/// RuntimeMetrics comparison-budget counters make "when is the budget
+/// consumed?" observable. Over the admitted domain the bare relations spend
+/// nothing; only COMPARE-WITHIN streams partial quotients under a budget.
+#[cfg(test)]
+mod compare_within_metrics_tests {
+    use crate::interpreter::Interpreter;
+
+    async fn run(source: &str) -> Interpreter {
+        let mut interp = Interpreter::new();
+        interp.execute(source).await.unwrap();
+        interp
+    }
+
+    #[tokio::test]
+    async fn bare_relation_over_admitted_domain_spends_no_budget() {
+        // Square roots are in the admitted domain D: the six relations decide
+        // them exactly via the multiquadratic normal form, never touching
+        // COMPARE-WITHIN's streamed budget path.
+        let m = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ")
+            .await
+            .runtime_metrics();
+        assert_eq!(m.compare_within_count, 0);
+        assert_eq!(m.compare_within_budget_terms_consumed, 0);
+        assert_eq!(m.compare_within_unknown_count, 0);
+    }
+
+    #[tokio::test]
+    async fn compare_within_rational_counts_but_spends_no_budget() {
+        // Both operands rational: COMPARE-WITHIN decides via the exact
+        // Fraction order, so it counts as an invocation but takes no lazy /
+        // budget-spending path.
+        let m = run("1 2 16 COMPARE-WITHIN").await.runtime_metrics();
+        assert_eq!(m.compare_within_count, 1);
+        assert_eq!(m.compare_within_lazy_count, 0);
+        assert_eq!(m.compare_within_unknown_count, 0);
+        assert_eq!(m.compare_within_budget_terms_consumed, 0);
+    }
+
+    #[tokio::test]
+    async fn compare_within_equal_lazy_spends_budget_and_is_unknown() {
+        // Two equal lazily-composed operands (√2+1 vs √2+1) never diverge, so
+        // the explicit budget is exhausted: the lazy path is taken, the result
+        // is U, and the consumed NICF terms are recorded.
+        let m = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN")
+            .await
+            .runtime_metrics();
+        assert_eq!(m.compare_within_count, 1);
+        assert_eq!(m.compare_within_lazy_count, 1);
+        assert_eq!(m.compare_within_unknown_count, 1);
+        assert!(
+            m.compare_within_budget_terms_consumed > 0
+                && m.compare_within_budget_terms_consumed <= 8,
+            "budget terms consumed must be in (0, 8], got {}",
+            m.compare_within_budget_terms_consumed
+        );
+    }
+}
+
 #[cfg(test)]
 mod ragged_broadcast_tests {
     use crate::interpreter::Interpreter;

@@ -47,6 +47,19 @@ fn ok_report_envelope_has_contract_fields() {
     assert!(doc["runtimeMetrics"]["vtu"]["energyProxyScore"].is_number());
     assert_eq!(doc["runtimeMetrics"]["vtu"]["proxyVersion"], 1);
     assert!(doc["runtimeMetrics"]["vtu"]["suggestions"].is_array());
+    // Cost-model observability surface (SPECIFICATION.html §4.8): the scalar
+    // fast-path count and the COMPARE-WITHIN budget group. This program uses
+    // no comparison, so every comparison counter is zero.
+    assert!(doc["runtimeMetrics"]["scalarFastpathCount"].is_number());
+    let comparison = doc["runtimeMetrics"]["comparison"]
+        .as_object()
+        .expect("comparison metrics group present");
+    assert_eq!(comparison.len(), 4);
+    assert_eq!(doc["runtimeMetrics"]["comparison"]["compareWithinCount"], 0);
+    assert_eq!(
+        doc["runtimeMetrics"]["comparison"]["compareWithinBudgetTermsConsumed"],
+        0
+    );
 }
 
 #[test]

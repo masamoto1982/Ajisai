@@ -757,6 +757,7 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     let a = extract_exact_real_for_comparison(&a_val)?;
     let b = extract_exact_real_for_comparison(&b_val)?;
 
+    let both_rational = a.as_rational().is_some() && b.as_rational().is_some();
     let outcome = match (a.as_rational(), b.as_rational()) {
         // Both finite: decide exactly via Fraction order regardless of
         // budget (SPEC §7.4.2 — finite CFs differ at a bounded index).
@@ -769,6 +770,20 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
         // operands whose CF streams do not diverge within the budget.
         _ => a.cmp_streamed_with_budget_tracked(&b, budget),
     };
+
+    // Cost-model observability (SPEC §7.4.2): COMPARE-WITHIN is the one
+    // Coreword that spends partial-quotient budget, so count invocations, the
+    // streamed (lazy) subset that can spend it, and the terms actually
+    // consumed when the budget is exhausted. Observational only; does not
+    // affect the pushed value.
+    interp.runtime_metrics.compare_within_count += 1;
+    if !both_rational {
+        interp.runtime_metrics.compare_within_lazy_count += 1;
+    }
+    if let CmpOutcome::Undecided { agreed_prefix } = outcome {
+        interp.runtime_metrics.compare_within_unknown_count += 1;
+        interp.runtime_metrics.compare_within_budget_terms_consumed += agreed_prefix as u64;
+    }
 
     if !is_keep_mode {
         interp.stack.truncate(stack_len - 3);
