@@ -195,5 +195,10 @@ NIL を受ければ Core の Bubble パススルーに従って NIL を透過し
    `minimal_core_sign_matches_builtin_on_lazy_irrationals` が防護）。導出可能性の witness が
    ビルトインの欠陥を炙り出し、その修正によって Minimal Core と material 層の一致がむしろ
    強まった——「素材語は Core の規律に拘束される」という §2.6 の枠組みが実地で機能した例。
+   さらに同じ `apply_unary`（有理数限定）欠陥を共有していた**隣接語 `MATH@NEG`/`MATH@ABS`
+   も是正**：`NEG` は `ExactReal::neg` で連分数表現に直接作用する純粋算術として全数域 total 化
+   （比較を含まず U を生じない）、`ABS` は対 `0` の予算付き比較で符号を決め負なら否定する
+   比較依存語として全数域対応（未決時 U）。仕様は `ABS` を §7.4.3 の comparison-dependent
+   words と §7.14 の Projecting/Passthrough に追加、`NEG` は Total/Passthrough と明記した。
 4. **移行の計測.** `primitive-test-map` / `word-manifest` から「Core だけで書ける素材語」を
    静的判定し、trusted Rust core 行数をファイルサイズ予算と同じ発想で予算化する。

@@ -145,7 +145,7 @@ fn minimal_core_sign_decided_spot_checks() {
 fn minimal_core_sign_matches_builtin_on_lazy_irrationals() {
     for (x, want) in [
         ("2 SQRT", "1/1"),            // √2 > 0
-        ("0 2 SQRT SUB", "-1/1"),     // -√2 < 0 (built without NEG)
+        ("0 2 SQRT SUB", "-1/1"),     // -√2 < 0 (via 0 - √2)
         ("2 SQRT 2 SQRT SUB", "0/1"), // √2 - √2 = 0
         ("3 SQRT 2 SQRT SUB", "1/1"), // √3 - √2 > 0
     ] {

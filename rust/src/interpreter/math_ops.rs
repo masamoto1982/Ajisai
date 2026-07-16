@@ -9,8 +9,9 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::types::continued_fraction::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::{Interpretation, Value, ValueData};
 
 /// Runtime safety bound on `POW` exponent magnitude, analogous to the
 /// execution step budget (SPEC §5.3). It prevents a single well-formed
@@ -35,37 +36,87 @@ fn extract_scalar(value: &Value, word: &str) -> Result<Fraction> {
         .ok_or_else(|| AjisaiError::from(format!("{}: expected a number", word)))
 }
 
-fn apply_unary<F>(interp: &mut Interpreter, word: &str, op: F) -> Result<()>
-where
-    F: Fn(Fraction) -> Fraction,
-{
-    require_stack_top(interp, word)?;
+/// Exact-real view of a numeric operand: a rational `Scalar` lifts to
+/// `ExactReal::Rational`; a lazy `ExactScalar` (an `AlgebraicSqrt` or `Gosper`
+/// value) is taken as-is. Non-numeric kinds return `None` — the malformed-use
+/// path.
+fn exact_real_of(value: &Value) -> Option<ExactReal> {
+    match &value.data {
+        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
+        ValueData::ExactScalar(er) => Some(er.clone()),
+        _ => None,
+    }
+}
+
+/// `NEG` is the additive inverse `-x` over exact numeric values. It computes
+/// directly on the exact-real representation, so it accepts the full numeric
+/// domain including lazy continued-fraction operands (`2 SQRT NEG` is `-√2`),
+/// and is total — no comparison and therefore no `Unknown` is ever involved.
+/// NIL-passthrough; a non-numeric operand is malformed use and raises an error.
+pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
+    require_stack_top(interp, "NEG")?;
     if nil_passthrough_unary(interp) {
         return Ok(());
     }
     let operands = extract_operands(interp, 1)?;
-    let scalar = match extract_scalar(&operands[0], word) {
-        Ok(s) => s,
-        Err(e) => {
-            if interp.consumption_mode != crate::interpreter::ConsumptionMode::Keep {
-                interp.stack.extend(operands);
-            }
-            return Err(e);
+    match exact_real_of(&operands[0]) {
+        Some(er) => {
+            push_result(interp, Value::from_exact_real(er.neg()));
+            interp
+                .semantic_registry
+                .push_hint(Interpretation::RawNumber);
+            Ok(())
         }
-    };
-    push_result(interp, Value::from_fraction(op(scalar)));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::RawNumber);
-    Ok(())
+        None => {
+            restore_operands(interp, operands);
+            Err(AjisaiError::from("NEG: expected a number"))
+        }
+    }
 }
 
+/// `ABS` is the absolute value `|x|`, derived from the sign and exact
+/// arithmetic (SPEC §7.4.3): it decides the order of `x` against `0` through
+/// the same budgeted comparison as the relations and negates when `x < 0`,
+/// otherwise returns `x` unchanged. It therefore accepts the full numeric
+/// domain including lazy continued-fraction operands, and over the admitted
+/// domain (§4.2.7) is total and exact. When the order against `0` does not
+/// decide within the budget, the result is the logical `Unknown` (U) carrying
+/// `diagnosis.agreedPrefix`. NIL-passthrough, with NIL taking priority over a
+/// U-producing comparison (§4.5.2); a non-numeric operand raises an error.
 pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
-    apply_unary(interp, "ABS", |f| f.abs())
-}
-
-pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
-    apply_unary(interp, "NEG", |f| Fraction::from(0).sub(&f))
+    require_stack_top(interp, "ABS")?;
+    if nil_passthrough_unary(interp) {
+        return Ok(());
+    }
+    let operands = extract_operands(interp, 1)?;
+    let zero = Value::from_fraction(Fraction::from(0));
+    match crate::interpreter::comparison::three_way_compare(&operands[0], &zero) {
+        Ok(crate::interpreter::comparison::OrderOutcome::Decided(std::cmp::Ordering::Less)) => {
+            // |x| = -x for x < 0; a value that compared is numeric.
+            let er = exact_real_of(&operands[0]).expect("comparable operand is numeric");
+            push_result(interp, Value::from_exact_real(er.neg()));
+            interp
+                .semantic_registry
+                .push_hint(Interpretation::RawNumber);
+            Ok(())
+        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Decided(_)) => {
+            // x >= 0: |x| = x, returned unchanged to preserve its exact form.
+            push_result(interp, operands[0].clone());
+            interp
+                .semantic_registry
+                .push_hint(Interpretation::RawNumber);
+            Ok(())
+        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
+            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
+            Ok(())
+        }
+        Err(e) => {
+            restore_operands(interp, operands);
+            Err(e)
+        }
+    }
 }
 
 /// `SIGN` extracts the sign of a number as the scalar `-1`, `0`, or `1`

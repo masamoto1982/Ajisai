@@ -18,6 +18,17 @@ mod tests {
             .expect("expected integer result")
     }
 
+    /// Render the top stack value, for comparing exact-real values (including
+    /// lazy irrationals) by observation rather than by an integer projection.
+    async fn render_top(program: &str) -> String {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(program)
+            .await
+            .expect("program should succeed");
+        interp.stack.last().expect("non-empty stack").to_string()
+    }
+
     #[tokio::test]
     async fn abs_of_negative_is_positive() {
         assert_eq!(top_i64("'math' IMPORT -7 ABS").await, 7);
@@ -27,6 +38,42 @@ mod tests {
     async fn neg_flips_sign() {
         assert_eq!(top_i64("'math' IMPORT 5 NEG").await, -5);
         assert_eq!(top_i64("'math' IMPORT -3 NEG").await, 3);
+    }
+
+    /// NEG computes the additive inverse directly on the exact-real
+    /// representation, so it accepts lazy continued-fraction operands (not only
+    /// rationals) and round-trips under double negation.
+    #[tokio::test]
+    async fn neg_handles_lazy_irrationals() {
+        // NEG(√2) equals 0 - √2 (both -√2), compared exactly through EQ.
+        assert_eq!(
+            render_top("'math' IMPORT 2 SQRT NEG 0 2 SQRT SUB EQ").await,
+            "TRUE"
+        );
+        // Double negation returns √2.
+        assert_eq!(
+            render_top("'math' IMPORT 2 SQRT NEG NEG 2 SQRT EQ").await,
+            "TRUE"
+        );
+    }
+
+    /// ABS decides the sign against 0 through the budgeted comparison
+    /// (SPEC §7.4.3) and negates when negative, so it accepts the full numeric
+    /// domain including lazy continued-fraction operands.
+    #[tokio::test]
+    async fn abs_handles_lazy_irrationals() {
+        // |√2| = √2.
+        assert_eq!(
+            render_top("'math' IMPORT 2 SQRT ABS 2 SQRT EQ").await,
+            "TRUE"
+        );
+        // |−√2| = √2, with −√2 built via 0 - √2.
+        assert_eq!(
+            render_top("'math' IMPORT 0 2 SQRT SUB ABS 2 SQRT EQ").await,
+            "TRUE"
+        );
+        // |√2 − √2| = 0 decides exactly.
+        assert_eq!(top_i64("'math' IMPORT 2 SQRT 2 SQRT SUB ABS").await, 0);
     }
 
     #[tokio::test]
@@ -42,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn sign_handles_lazy_irrationals() {
         assert_eq!(top_i64("'math' IMPORT 2 SQRT SIGN").await, 1);
-        // -√2, built without NEG (which does not yet accept lazy operands).
+        // -√2, built via 0 - √2.
         assert_eq!(top_i64("'math' IMPORT 0 2 SQRT SUB SIGN").await, -1);
         // √2 - √2 = 0 decides exactly to sign 0.
         assert_eq!(top_i64("'math' IMPORT 2 SQRT 2 SQRT SUB SIGN").await, 0);
