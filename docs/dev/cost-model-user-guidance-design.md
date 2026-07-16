@@ -58,10 +58,11 @@ The cost model lives in the **Reference** (`public/docs/index.html`), not in
 | A dense vector needs uniform small-rational lanes and a rectangular shape | §4.3.1 dense representation class + exactness rule |
 | A lane becoming NIL does **not** rebuild a dense vector into nested form | §4.3.1 No-Rebuild Principle |
 | Mixed-type / ragged vectors are nested, not dense | §4.3 Role of nesting; §4.3.1 nested class |
-| Finite rationals always decide a comparison; no observable budget | §7.4 Exactness over the admitted domain; §4.2.7 |
-| Lazy irrationals run under a partial-quotient budget and can yield `UNKNOWN` | §7.4.1 Decidability and comparison budget |
+| The six bare relations decide exactly over the whole admitted domain — rationals **and** square roots and their field combinations — and never return `UNKNOWN` for a value current words can build | §7.4 Exactness over the admitted domain; §4.2.7; impl `continued_fraction.rs::cmp_with_budget_tracked` (multiquadratic short-circuit) |
+| Comparing exact irrationals is exact but costs algebraic-normal-form work, not a single integer step | §4.2.7 multiquadratic normal form; `multiquadratic::algebraic_cmp` |
+| `COMPARE-WITHIN` is the one window onto the partial-quotient budget and the only current-Coreword `UNKNOWN` producer | §7.4.2; conformance `core-unknown-spelling` |
+| A general `UNKNOWN` from bare relations is reserved for lazy values outside the admitted domain (future words) | §7.4.1; §4.2.2 (LazyCf) |
 | Budget unit is one nearest-integer CF (NICF) term | §4.2.5; §7.4.1.1 |
-| `COMPARE-WITHIN` names the budget explicitly | §7.4.2 |
 | Exactness is preserved — no truncation, rounding, or overflow wraparound | §4.2.6 Numeric error policy |
 
 The measured "small-rational fast path is ~1.21× the broadcast path in a
