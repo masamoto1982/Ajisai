@@ -820,6 +820,49 @@ Version: <strong>2026-07-15</strong></p>
 
 <p>References to child runtimes and supervisors respectively. Created by <code>SPAWN</code> and <code>SUPERVISE</code>. Used with the child runtime API (see Section 10).</p>
 
+<h3 id="48-cost-model">4.8 Cost model (performance contract)</h3>
+
+<p>Ajisai keeps every numeric value exact (Section 4.2), yet most values run on a fast representation. This section states, as a <strong>performance contract</strong>, which values are fast, what moves a value to a costlier representation, and when a comparison spends budget. It answers the user-facing "how do I predict performance" question without changing any observable value.</p>
+
+<p><strong>Relationship to the value model (normative).</strong> The cost model constrains <em>performance</em>, never <em>meaning</em>. The internal representation of a value is not observable and is not part of value identity (Section 4.2.2, Section 4.3.1); this section does not weaken that rule. Consequently:</p>
+
+<ul>
+<li>A conforming implementation MAY use any representation for a value, and MAY move a value between representations at any time, as long as the observable value, order, display, and serialization are unchanged.</li>
+<li>Conformance judgments MUST NOT depend on which representation or "lane" a value took, nor on any cost counter (see "Observable cost surface" below). The performance classes named here are guidance about expected cost, not a required internal layout.</li>
+<li>The exactness guarantees of Section 4.2.6 are unconditional: no cost class ever licenses rounding, truncation, silent overflow, or loss of significance.</li>
+</ul>
+
+<p><strong>Representation cost classes (informative-normative).</strong> The following classes describe expected cost. They are the concrete realizations of the representations of Section 4.2.2 and the vector classes of Section 4.3.1.</p>
+
+<div class="ref-table-wrap">
+<table class="ref-table">
+<thead>
+<tr><th>Class</th><th>What lands here</th><th>Expected cost</th></tr>
+</thead>
+<tbody>
+<tr><td>Small-rational fast lane</td><td>A scalar whose reduced rational fits machine-integer numerator and denominator (Section 4.2.2 Rational, small form; Section 4.3.1 dense-lane admission).</td><td>Fixed, near machine-integer speed. Scalar–scalar arithmetic and comparison over this class may take a direct fast path.</td></tr>
+<tr><td>Big-integer rational</td><td>A rational whose reduced form needs arbitrary-precision integers (Section 4.2.2 Rational, BigInt form).</td><td>Exact; cost grows with the operand digit count. Not admitted to the small-lane dense tensor.</td></tr>
+<tr><td>Lazy irrational</td><td>A value produced by <code>SQRT</code> of a non-square rational or by arithmetic that consumes such a value (Section 4.2.2 AlgebraicSqrt, Gosper).</td><td>Exact; an observation (for example <code>FLOOR</code>) costs per continued-fraction term emitted, and a comparison is settled through the exact algebraic decision procedure of Section 4.2.7 rather than a single integer step.</td></tr>
+<tr><td>Dense vector</td><td>A rectangular vector whose every leaf is a small-rational lane (Section 4.3.1 dense class).</td><td>Structure-of-arrays buffers, eligible for SIMD and bulk kernels; fast element-wise work.</td></tr>
+<tr><td>Nested vector</td><td>A vector with mixed element types, ragged rows, or big-integer / irrational leaves (Section 4.3.1 nested class).</td><td>Handled element by element.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Promotion (informative).</strong> A value leaves the fast lane when it can no longer be a small rational. Each promotion preserves the exact value; only the representation, and therefore the cost, changes: a result that outgrows the machine-integer range becomes a big-integer rational; <code>SQRT</code> of a non-square becomes a lazy irrational; arithmetic that consumes a lazy operand yields a lazy result; and a vector with a mixed, ragged, big-integer, or irrational element is nested rather than dense. By the No-Rebuild Principle (Section 4.3.1) a dense vector does <em>not</em> promote merely because a lane becomes <code>NIL</code>: the validity bit is cleared in place.</p>
+
+<p><strong>Comparison budget (normative restatement).</strong> The comparison-budget cost is fixed by Section 7.4 and Section 4.2.7 and is restated here for the cost model: over the admitted domain \(D\) — every value the current Coreword set can construct — the six relations are total and exact and spend no observable budget, because order is decided on the multiquadratic normal form (Section 4.2.7) before any partial quotient is streamed. A budget is reached only by (a) exact lazy values outside \(D\), reserved for future words (Section 4.2.2, LazyCf), and (b) the explicit-budget word <code>COMPARE-WITHIN</code> (Section 7.4.2), which is the one Coreword that streams partial quotients and the only one whose result can be the logical Unknown for an in-domain operand. One budget term is one nearest-integer continued-fraction term (Section 4.2.5, Section 7.4.1.1), and that unit is what <code>COMPARE-WITHIN</code>'s depth counts.</p>
+
+<p><strong>Observable cost surface (normative).</strong> Cost is made observable only through <em>observational counters</em>, never through the value model. A conforming implementation MAY expose runtime cost counters — for example the scalar fast-path count, the dense/nested data-movement counters (see <code>docs/dev/virtual-tensor-unit-design.md</code>), and the <code>COMPARE-WITHIN</code> budget counters — through host tooling such as the CLI <code>--json</code> report and the runtime-metrics query. These counters are proxies for cost and are subject to the following rules:</p>
+
+<ul>
+<li>They MUST NOT enter value identity, equality, ordering, display, serialization, or any guard/cache signature; reading them MUST NOT change any result. This is the same discipline the VTU counters already follow.</li>
+<li>They are not part of the conformance surface: two conforming implementations MAY report different counts for the same program, and a program MUST NOT branch on them (there is no Coreword that reads them).</li>
+<li>They are diagnostic context in the sense of Section 4.5.0: informative, host-observable, and non-canonical.</li>
+</ul>
+
+<p>This section introduces no new value type, Coreword, or protocol field, and no second design authority (Section 16.1): it consolidates existing guarantees into a user-facing performance contract and fixes the one new rule that cost counters stay observational-only.</p>
+
 <h2 id="5-stack">5. Stack</h2>
 
 <h3 id="51-structure">5.1 Structure</h3>

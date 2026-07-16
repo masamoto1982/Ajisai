@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 
 mod wasm_interpreter_execution;
 mod wasm_interpreter_state;
+mod wasm_runtime_metrics;
 pub(crate) mod wasm_value_conversion;
 
 /// Install console_error_panic_hook so any panic on the WASM side
