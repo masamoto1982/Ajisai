@@ -884,8 +884,8 @@
                             <tbody>
                                 <tr>
                                     <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</code></td>
-                                    <td><code>UNKNOWN</code></td>
-                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\) cannot be told apart from 0 within the comparison budget, so the honest answer is the third truth value.</td>
+                                    <td><code>TRUE</code></td>
+                                    <td class="notes">\(\sqrt{2} - \sqrt{2}\) is exactly 0. Square roots and their sums, differences, products, and quotients are compared exactly, so the six relations decide them without a budget.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -913,7 +913,26 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Comparing exact lazy values (like square roots) cannot always terminate, so every comparison runs under a budget. Equal irrationals exhaust it and yield <code>UNKNOWN</code> — a logical truth value, distinct from <code>NIL</code>.</p>
+                    <div class="sample">
+                        <div class="ref-table-wrap">
+                        <table class="ref-table">
+                            <thead>
+                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</code></td>
+                                    <td><code>UNKNOWN</code></td>
+                                    <td class="notes">Two equal lazy values never diverge, so a small explicit budget runs out and returns the third truth value. <code>COMPARE-WITHIN</code> is the one word today that can produce <code>UNKNOWN</code>.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div class="sample-actions">
+                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
+                        </div>
+                    </div>
+                    <p class="ref-note">The six relations decide exactly over every value the current words can build — rationals and square roots alike — so they never return <code>UNKNOWN</code>. The budget lives behind <code>COMPARE-WITHIN</code>, which lets you name a partial-quotient depth and returns <code>UNKNOWN</code> — a logical truth value, distinct from <code>NIL</code> — when two lazy values do not diverge within it. A general <code>UNKNOWN</code> from the bare relations is reserved for exact lazy values that only future words will introduce.</p>
                 </section>
 
                 <section id="logic" class="ref-page">
@@ -984,9 +1003,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ TRUE AND</code></td>
+                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</code></td>
                                     <td><code>UNKNOWN</code></td>
-                                    <td class="notes">Unknown flows through the Kleene tables: true AND unknown is unknown.</td>
+                                    <td class="notes">A budget-exhausted <code>COMPARE-WITHIN</code> yields unknown, which flows through the Kleene tables: true AND unknown is unknown.</td>
                                 </tr>
                             </tbody>
                         </table>
