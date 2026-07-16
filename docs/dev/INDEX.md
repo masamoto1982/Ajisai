@@ -68,6 +68,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `scalar-fastpath-d1.md` | D1 スカラー算術 fast path の実装記録 | `[実装済み記録]` |
 | `hof-kernel-memoization.md` | 純粋 HOF カーネルのメモ化（MAP / 述語族） | `[実装済み記録]` |
 | `dependents-inverted-index-reads.md` | 逆依存クエリの転置インデックス読み出し化 | `[実装済み記録]` |
+| `hidden-class-shape-optimizations.md` | Hidden class 流の形状最適化（Record レイアウト intern 化・ビルトイン呼び出しサイト特殊化・shape IC） | `[実装済み記録]` |
 
 ## 提案・未実施の作業
 

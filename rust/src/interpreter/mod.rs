@@ -36,6 +36,7 @@ pub mod random;
 mod resolve_cache;
 pub mod serial;
 mod shadow_validation;
+pub(crate) mod shape_ic;
 pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
@@ -64,8 +65,6 @@ mod arithmetic_exact_div_tests;
 #[cfg(test)]
 mod child_runtime_tests;
 #[cfg(test)]
-mod exact_vector_broadcast_tests;
-#[cfg(test)]
 mod control_cond_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
@@ -83,6 +82,8 @@ mod dictionary_tier_tests;
 mod energy_proxy_regression_tests;
 #[cfg(test)]
 mod error_flow_trace_tests;
+#[cfg(test)]
+mod exact_vector_broadcast_tests;
 #[cfg(test)]
 mod hash_tests;
 #[cfg(test)]
@@ -109,6 +110,8 @@ mod nil_diagnostics_tests;
 mod nil_reason_tests;
 #[cfg(test)]
 mod nil_unknown_firewall_tests;
+#[cfg(test)]
+mod shape_ic_tests;
 
 pub use interpreter_core::*;
 

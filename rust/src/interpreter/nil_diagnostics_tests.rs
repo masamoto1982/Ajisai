@@ -48,10 +48,10 @@ fn top_is_true(interp: &Interpreter) -> bool {
 }
 
 fn record_field_string(record: &Value, key: &str) -> Option<String> {
-    let ValueData::Record { pairs, index } = &record.data else {
+    let ValueData::Record { pairs, shape } = &record.data else {
         return None;
     };
-    let pos = *index.get(key)?;
+    let pos = shape.slot(key)?;
     let ValueData::Vector(kv) = &pairs.get(pos)?.data else {
         return None;
     };
@@ -259,11 +259,11 @@ async fn nil_diagnosis_returns_record_with_protocol_string_fields() {
         "why is a lowerCamelCase protocol string, not the Debug name NilFlow"
     );
     // agreedPrefix is carried through as a machine-readable integer.
-    let ValueData::Record { index, .. } = &record.data else {
+    let ValueData::Record { shape, .. } = &record.data else {
         panic!("record");
     };
     assert!(
-        index.contains_key("agreedPrefix"),
+        shape.contains_key("agreedPrefix"),
         "a CF-comparison diagnosis surfaces agreedPrefix"
     );
 }

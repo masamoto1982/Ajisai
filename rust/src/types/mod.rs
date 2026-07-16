@@ -9,12 +9,14 @@ pub mod interval;
 pub mod multiquadratic;
 #[cfg(test)]
 mod multiquadratic_tests;
+pub mod record_shape;
 mod value_operations;
 pub(crate) mod value_protocol;
 #[cfg(test)]
 mod value_protocol_tests;
 
 use self::fraction::Fraction;
+pub use self::record_shape::RecordShape;
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::continued_fraction::ExactReal;
@@ -382,7 +384,9 @@ pub enum ValueData {
     },
     Record {
         pairs: Arc<Vec<Value>>,
-        index: HashMap<String, usize>,
+        /// Interned key→slot layout shared by every same-layout Record
+        /// (hidden-class-style shape sharing; see `record_shape.rs`).
+        shape: Arc<RecordShape>,
     },
     Nil,
     CodeBlock(Vec<Token>),
@@ -414,13 +418,13 @@ impl PartialEq for ValueData {
             (
                 ValueData::Record {
                     pairs: ap,
-                    index: ai,
+                    shape: ai,
                 },
                 ValueData::Record {
                     pairs: bp,
-                    index: bi,
+                    shape: bi,
                 },
-            ) => ap == bp && ai == bi,
+            ) => ap == bp && (Arc::ptr_eq(ai, bi) || ai == bi),
             (ValueData::Nil, ValueData::Nil) => true,
             (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
             (ValueData::ProcessHandle(a), ValueData::ProcessHandle(b)) => a == b,

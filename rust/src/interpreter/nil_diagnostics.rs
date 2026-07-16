@@ -25,7 +25,6 @@ use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
 use crate::types::{Interpretation, Value, ValueData};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Borrow the operational-NIL metadata of the top-of-stack value without
@@ -149,15 +148,15 @@ fn plain_vector(children: Vec<Value>) -> Value {
 /// `[ key value ]` pair layout used elsewhere in the runtime.
 fn record(fields: Vec<(&str, Value)>) -> Value {
     let mut pairs = Vec::with_capacity(fields.len());
-    let mut index = HashMap::with_capacity(fields.len());
-    for (i, (key, value)) in fields.into_iter().enumerate() {
-        index.insert(key.to_string(), i);
+    let mut keys = Vec::with_capacity(fields.len());
+    for (key, value) in fields {
+        keys.push(key);
         pairs.push(plain_vector(vec![text(key), value]));
     }
     Value {
         data: ValueData::Record {
             pairs: Arc::new(pairs),
-            index,
+            shape: crate::types::record_shape::record_shape_from_ordered_keys(keys),
         },
         hint: Interpretation::Unassigned,
         absence: None,
