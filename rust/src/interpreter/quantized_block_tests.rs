@@ -959,9 +959,21 @@ fn vtu_phase_iii_count_bulk_kernel_matches_per_element() {
 }
 
 #[test]
-fn vtu_phase_iii_map_bulk_division_by_zero_propagates() {
-    let result = run_code_result("[ 1 2 3 ] { [ 0 ] / } MAP");
-    assert!(result.is_err(), "division by zero should error out");
+fn vtu_phase_iii_map_bulk_division_by_zero_bubbles() {
+    // A zero divisor is the generic route's case: the kernel declines and
+    // the Bubble Rule yields a NIL bubble per element, exactly as the same
+    // division would outside MAP. Route equivalence is pinned in
+    // `fast_kernel_route_tests.rs`.
+    let interp =
+        run_code_result("[ 1 2 3 ] { [ 0 ] / } MAP").expect("division by zero must not error");
+    let result = interp.get_stack().last().cloned().expect("MAP result");
+    assert_eq!(result.len(), 3, "MAP must keep the element count");
+    for i in 0..3 {
+        assert!(
+            result.child(i).map(|e| e.is_nil()).unwrap_or(false),
+            "element {i} must be a NIL bubble"
+        );
+    }
 }
 
 #[test]

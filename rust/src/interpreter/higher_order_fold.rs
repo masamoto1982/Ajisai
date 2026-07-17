@@ -73,7 +73,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             // directly. Disabled in hedged modes so the race observes events.
             if let ExecutableCode::QuantizedBlock(qb) = &executable {
                 if !crate::interpreter::higher_order::hedged_mode_active(interp) {
-                    if let Some(bulk) =
+                    if let Some(result) =
                         crate::interpreter::higher_order::try_bulk_quantized_fold_pub(
                             interp,
                             qb,
@@ -81,23 +81,11 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                             &target_val,
                         )
                     {
-                        match bulk {
-                            Ok(result) => {
-                                if is_keep_mode {
-                                    interp.stack.push(target_val);
-                                }
-                                interp.stack.push(result);
-                                return Ok(());
-                            }
-                            Err(e) => {
-                                if !is_keep_mode {
-                                    interp.stack.push(target_val);
-                                }
-                                interp.stack.push(init_val);
-                                interp.stack.push(code_val);
-                                return Err(e);
-                            }
+                        if is_keep_mode {
+                            interp.stack.push(target_val);
                         }
+                        interp.stack.push(result);
+                        return Ok(());
                     }
                 }
             }

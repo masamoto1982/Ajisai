@@ -66,26 +66,15 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             // quantized/plain race still observes per-element kernel events.
             if let ExecutableCode::QuantizedBlock(qb) = &executable {
                 if !super::hedged::hedged_mode(interp.elastic_mode()) {
-                    if let Some(bulk) =
+                    if let Some(out) =
                         super::fast_kernels::try_bulk_quantized_map(interp, qb, &target_val)
                     {
-                        match bulk {
-                            Ok(out) => {
-                                let result = Value::from_tensor(out.data, vec![n_elements]);
-                                if is_keep_mode {
-                                    interp.stack.push(target_val);
-                                }
-                                interp.stack.push(result);
-                                return Ok(());
-                            }
-                            Err(e) => {
-                                if !is_keep_mode {
-                                    interp.stack.push(target_val);
-                                }
-                                interp.stack.push(code_val);
-                                return Err(e);
-                            }
+                        let result = Value::from_tensor(out.data, vec![n_elements]);
+                        if is_keep_mode {
+                            interp.stack.push(target_val);
                         }
+                        interp.stack.push(result);
+                        return Ok(());
                     }
                 }
             }

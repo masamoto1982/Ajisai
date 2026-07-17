@@ -86,6 +86,8 @@ mod error_flow_trace_tests;
 #[cfg(test)]
 mod exact_vector_broadcast_tests;
 #[cfg(test)]
+mod fast_kernel_route_tests;
+#[cfg(test)]
 mod hash_tests;
 #[cfg(test)]
 mod higher_order_fold_tests;
