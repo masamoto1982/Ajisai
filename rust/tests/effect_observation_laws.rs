@@ -55,8 +55,9 @@ fn obs(src: &str) -> (Vec<String>, Vec<(String, String)>) {
         .expect("tokio current-thread runtime");
     rt.block_on(async {
         let mut interp = Interpreter::new();
+        let program = test_support::observe::prepare(&mut interp, src);
         interp
-            .execute(src)
+            .execute(program)
             .await
             .unwrap_or_else(|e| panic!("program failed: {src:?}: {e}"));
         let stack = interp

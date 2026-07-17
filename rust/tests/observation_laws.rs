@@ -62,9 +62,10 @@ fn truth_value_is_observably_not_a_number() {
 fn nil_is_observably_operational_absence() {
     let nil = observe_axes(&run_one("NIL"));
     let false_value = observe_axes(&run_one("FALSE"));
-    let unknown = observe_axes(&run_one(
-        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD 8 COMPARE-WITHIN",
-    ));
+    let unknown = observe_axes(&run_one(&format!(
+        "{} 0 8 COMPARE-WITHIN",
+        test_support::observe::TIER2_WITNESS
+    )));
 
     assert_eq!(nil.semantic_kind, "absence");
     assert_eq!(nil.shape, "absence");

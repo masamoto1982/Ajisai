@@ -124,6 +124,14 @@ impl Algebraic {
         self.terms.len()
     }
 
+    /// Structural identity of the stored normal form — same basis, same
+    /// term map. Cheaper than semantic equality (`==`, which rebases) and
+    /// used where a conservative "unchanged?" check suffices; a false
+    /// negative (equal values, different granularity) is always safe.
+    pub fn same_representation(&self, other: &Algebraic) -> bool {
+        self.basis == other.basis && self.terms == other.terms
+    }
+
     /// Package raw terms produced over `source`'s basis into a result
     /// (demoting to Tier 0 when the shape allows). Internal helper for
     /// the field-operation module.

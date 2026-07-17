@@ -56,17 +56,18 @@ fn non_square_radicand() -> impl Strategy<Value = i64> {
     prop::sample::select(vec![2i64, 3, 5, 6, 7, 8, 10, 11, 13])
 }
 
-/// Pushes the logical Unknown (U): an undecidable comparison of equal
-/// composed irrationals, `(√n+1) (√n+1) SUB 0 EQ`. A plain `√n √n SUB` now
-/// collapses to an exact 0 in closed form and would decide; wrapping each
-/// operand in `+ 1` keeps it a composed Gosper node the comparison budget
-/// cannot distinguish from 0, so it renders `UNKNOWN`.
+/// Pushes the logical Unknown (U). Comparison is total over Tier ≤ 1 —
+/// everything the current vocabulary constructs — so U is produced through
+/// `COMPARE-WITHIN` against a pre-loaded **Tier 2** starvation witness
+/// (`observe::TIER2_WITNESS`): the enclosure process never separates from
+/// zero, so the explicit water budget is exhausted and the comparison
+/// starves to U.
 pub fn unknown_src() -> impl Strategy<Value = String> {
-    // The bare relations are total over the admitted domain (SPEC §4.2.7 /
-    // §7.4), so U is produced through the explicit-budget COMPARE-WITHIN
-    // (§7.4.2): two equal composed operands never diverge within the budget.
-    non_square_radicand().prop_map(|n| {
-        format!("'math' IMPORT {n} MATH@SQRT 1 ADD {n} MATH@SQRT 1 ADD 8 COMPARE-WITHIN")
+    prop::sample::select(vec![4usize, 8, 16]).prop_map(|budget| {
+        format!(
+            "{} 0 {budget} COMPARE-WITHIN",
+            crate::test_support::observe::TIER2_WITNESS
+        )
     })
 }
 

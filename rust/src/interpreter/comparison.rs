@@ -6,7 +6,7 @@ use crate::interpreter::value_extraction_helpers::{
     nil_passthrough_value,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::continued_fraction::{CmpOutcome, ExactReal, DEFAULT_COMPARISON_BUDGET};
+use crate::types::exact::{ExactCmp, ExactReal, Water};
 use crate::types::fraction::Fraction;
 use crate::types::interval::Interval;
 use crate::types::{Interpretation, Value, ValueData};
@@ -14,8 +14,8 @@ use crate::types::{Interpretation, Value, ValueData};
 /// One of the four ordering comparisons. Carries the dispatch
 /// decision through the SCALAR-comparison helper so the helper can
 /// keep the Fraction fast path for both-Rational operands while
-/// routing any non-Rational ExactReal pair through
-/// `ExactReal::cmp_with_budget` (SPEC §7.4.1).
+/// routing any non-Rational ExactReal pair through the total Tier 1
+/// comparison `ExactReal::cmp_exact` (SPEC §7.4.1).
 #[derive(Debug, Clone, Copy)]
 enum OrderingKind {
     Lt,
@@ -72,9 +72,12 @@ impl OrderingKind {
 }
 
 /// Result of a three-valued scalar comparison (SPEC §7.4.1): a decided
-/// boolean, or the logical `Unknown` (U) carrying the CF agreed-prefix
-/// length — the number of leading partial quotients that matched before
-/// the budget was exhausted, surfaced as `diagnosis.agreedPrefix`.
+/// boolean, or the logical `Unknown` (U) carrying the refinement-step
+/// diagnosis surfaced as `diagnosis.agreedPrefix`. Tier ≤ 1 operands —
+/// everything the current vocabulary can construct — always decide, so
+/// the `Unknown` arm is reserved for Tier 2 observations (and, as a
+/// defensive fallback, an absent operand that slipped past the NIL
+/// passthrough).
 enum ScalarCmp {
     Decided(bool),
     Unknown(usize),
@@ -90,10 +93,10 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
 }
 
 /// Push the SPEC §7.4.1 logical `Unknown` (U): a `TruthValue`-role value
-/// produced when the partial-quotient budget is exhausted before two
-/// continued fractions decide. U is a logical truth value, not an
-/// operational NIL — it flows into the three-valued logic of SPEC §7.5
-/// directly. The `TruthValue` interpretation role makes it observable as
+/// produced when an observation cannot separate two values within its
+/// water (Tier 2 only). U is a logical truth value, not an operational
+/// NIL — it flows into the three-valued logic of SPEC §7.5 directly. The
+/// `TruthValue` interpretation role makes it observable as
 /// `truthValue = unknown`.
 fn push_unknown(interp: &mut Interpreter, agreed_prefix: Option<usize>) {
     let value = match agreed_prefix {
@@ -108,75 +111,59 @@ fn push_unknown(interp: &mut Interpreter, agreed_prefix: Option<usize>) {
         .update_hint_at(stack_len - 1, Interpretation::TruthValue);
 }
 
-/// Compare two scalar values under an ordering kind. Returns `Ok(Some(bool))`
-/// when the comparison decides, `Ok(None)` when the comparison budget
-/// exhausts (SPEC §7.4.1) — the caller projects `None` to the logical
-/// `Unknown` (U). Returns `Err(_)` for structurally-non-comparable operands.
-///
-/// Both-Rational operands take the Fraction fast path (always
-/// decidable per SPEC §7.4.1: "the budget value itself is not part
-/// of observable semantics; it must be high enough that distinct
-/// rationals always decide"). Any non-Rational ExactReal operand
-/// routes through `ExactReal::cmp_with_budget` under the
-/// `DEFAULT_COMPARISON_BUDGET`; budget exhaustion surfaces as
-/// `Ok(None)` here.
+/// Compare two scalar values under an ordering kind. Returns `Err(_)`
+/// for structurally-non-comparable operands. Both-Rational operands take
+/// the Fraction fast path; any pair involving a Tier 1 algebraic decides
+/// through the total `ExactReal::cmp_exact` — budget-free per SPEC
+/// §7.4.1, so `Unknown` cannot arise from the current vocabulary (it is
+/// reserved for Tier 2 and for a defensively-handled absent operand).
 fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<ScalarCmp> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
     Ok(match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ScalarCmp::Decided(kind.apply_to_fraction(af, bf)),
-        _ => match cmp_default_budget(&a, &b) {
-            CmpOutcome::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
-            CmpOutcome::Undecided { agreed_prefix } => ScalarCmp::Unknown(agreed_prefix),
+        _ => match a.cmp_exact(&b) {
+            ExactCmp::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
+            ExactCmp::Starved { steps } => ScalarCmp::Unknown(steps),
+            ExactCmp::Absent => ScalarCmp::Unknown(0),
         },
     })
 }
 
-/// Outcome of a budgeted three-way order comparison shared by the
+/// Outcome of a three-way order comparison shared by the
 /// comparison-dependent words of SPEC §7.4.3 (`MIN`, `MAX`, `SORT`).
-/// `Decided` carries the exact `a` vs `b` ordering. `Undecided` carries the
-/// agreed-prefix length of the budget-exhausted continued-fraction
-/// comparison; the caller projects it to the logical `Unknown` (U) with
-/// `diagnosis.agreedPrefix`.
+/// `Decided` carries the exact `a` vs `b` ordering. `Undecided` is
+/// reserved for Tier 2 observations that cannot separate within their
+/// water (and the defensive absent-operand fallback); it carries the
+/// refinement-step diagnosis the caller projects to the logical
+/// `Unknown` (U) with `diagnosis.agreedPrefix`. Tier ≤ 1 operands never
+/// produce it.
 pub(crate) enum OrderOutcome {
     Decided(std::cmp::Ordering),
     Undecided(usize),
 }
 
-/// Three-way order of two scalar values under the SPEC §7.4.1 comparison
-/// budget. Returns `Err(_)` for structurally non-comparable operands (the
-/// malformed-use path). Both-`Rational` operands take the exact `Fraction`
-/// fast path; any non-`Rational` `ExactReal` routes through the budgeted CF
-/// comparison and may yield `Undecided`.
+/// Three-way order of two scalar values (SPEC §7.4.1). Returns `Err(_)`
+/// for structurally non-comparable operands (the malformed-use path).
+/// Both-`Rational` operands take the exact `Fraction` fast path; any pair
+/// involving a Tier 1 algebraic decides through the total, budget-free
+/// `ExactReal::cmp_exact`.
 pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOutcome> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
     Ok(match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => OrderOutcome::Decided(af.cmp(bf)),
-        _ => match cmp_default_budget(&a, &b) {
-            CmpOutcome::Decided(o) => OrderOutcome::Decided(o),
-            CmpOutcome::Undecided { agreed_prefix } => OrderOutcome::Undecided(agreed_prefix),
+        _ => match a.cmp_exact(&b) {
+            ExactCmp::Decided(o) => OrderOutcome::Decided(o),
+            ExactCmp::Starved { steps } => OrderOutcome::Undecided(steps),
+            ExactCmp::Absent => OrderOutcome::Undecided(0),
         },
     })
 }
 
-/// Default-budget order of two scalar `ExactReal`s. A cheap interval
-/// pre-filter decides well-separated values in O(1) without streaming
-/// (SPEC §7.4.1 — a proven separation is the true order); when the
-/// enclosures overlap it falls back to the budgeted NICF comparison under
-/// `DEFAULT_COMPARISON_BUDGET`. Used only by the default-budget relations and
-/// comparison-dependent words — never by `COMPARE-WITHIN`, whose `U` is
-/// measured in NICF terms and must not be pre-empted by the filter.
-fn cmp_default_budget(a: &ExactReal, b: &ExactReal) -> CmpOutcome {
-    if let Some(order) = a.cmp_via_interval_filter(b) {
-        return CmpOutcome::Decided(order);
-    }
-    a.cmp_with_budget_tracked(b, DEFAULT_COMPARISON_BUDGET)
-}
-
-/// Push the logical `Unknown` (U) carrying an agreed-prefix diagnosis, for
-/// the comparison-dependent words of SPEC §7.4.3. Mirrors the relations'
-/// own U production: a `TruthValue`-role value observed as
+/// Push the logical `Unknown` (U) carrying a refinement-step diagnosis,
+/// for the comparison-dependent words of SPEC §7.4.3. Mirrors the
+/// relations' own U production: a `TruthValue`-role value observed as
 /// `truthValue = unknown` with `diagnosis.agreedPrefix`.
 pub(crate) fn push_comparison_unknown(interp: &mut Interpreter, agreed_prefix: usize) {
     push_unknown(interp, Some(agreed_prefix));
@@ -581,11 +568,9 @@ pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// Three-valued pairwise equality matching the SPEC §7.4.1
-/// discipline: `Some(true)` / `Some(false)` for decidable pairs,
-/// `None` when budget exhaustion makes the comparison undecidable
-/// (the caller projects `None` to the logical `Unknown` U).
-/// `None` is only reachable for scalar pairs where at least one
-/// operand is a non-Rational `ExactReal`; the structural Vector /
+/// discipline. Every pair the current vocabulary can build decides
+/// (`Decided`); the `Unknown` arm is reserved for Tier 2 observations
+/// and the defensive absent-operand fallback. The structural Vector /
 /// Tensor / Record paths and the singleton-projection paths always
 /// decide.
 fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
@@ -625,12 +610,11 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     }
 }
 
-/// Scalar–scalar equality routed through `ExactReal::eq_with_budget`
-/// (SPEC §7.4.1). Both-Rational operands decide via `Fraction`
-/// `PartialEq` — value equality on canonical reduced rationals.
-/// Anything mixing in a non-Rational `ExactReal` runs the budgeted
-/// CF expansion; budget exhaustion returns `None` and the caller
-/// projects it to the Undecidable NIL.
+/// Scalar–scalar equality (SPEC §7.4.1). Both-Rational operands decide
+/// via `Fraction` `PartialEq` — value equality on canonical reduced
+/// rationals. Anything mixing in a Tier 1 algebraic decides through the
+/// total `ExactReal::cmp_exact` — equal values built through different
+/// histories (√8 vs √2+√2) decide `Equal` exactly.
 fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     let (a, b) = match (
         extract_exact_real_for_comparison(a_val),
@@ -643,9 +627,10 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     };
     match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ScalarCmp::Decided(af == bf),
-        _ => match cmp_default_budget(&a, &b) {
-            CmpOutcome::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
-            CmpOutcome::Undecided { agreed_prefix } => ScalarCmp::Unknown(agreed_prefix),
+        _ => match a.cmp_exact(&b) {
+            ExactCmp::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
+            ExactCmp::Starved { steps } => ScalarCmp::Unknown(steps),
+            ExactCmp::Absent => ScalarCmp::Unknown(0),
         },
     }
 }
@@ -736,18 +721,19 @@ fn push_sign_result(interp: &mut Interpreter, sign: i64) {
 }
 
 /// `COMPARE-WITHIN` (SPEC §7.4.2): three-way compare two values within an
-/// explicit partial-quotient budget.
+/// explicit observation budget (water).
 ///
 /// Stack effect: `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]`.
 ///
-/// Emits the partial quotients of `a` and `b` in parallel for at most
-/// `budget` steps (SPEC §7.4.1) and pushes the exact sign of `a − b`
-/// (`-1` if `a < b`, `0` if equal, `1` if `a > b`) when the order is
-/// decided, or the logical `Unknown` (U) carrying `diagnosis.agreedPrefix`
-/// when the budget is exhausted first. Two finite (rational) operands
-/// always decide regardless of `budget`. A non-positive / non-integer
-/// `budget` or non-numeric `a`/`b` is malformed use and raises an error
-/// (not U); a NIL `a`/`b` operand passes through per SPEC §7.12.
+/// Pushes the exact sign of `a − b` (`-1` if `a < b`, `0` if equal, `1`
+/// if `a > b`). Tier ≤ 1 operands — everything the current vocabulary
+/// can construct — are decidable, so the budget does not affect their
+/// result; it bounds the refinement only when a Tier 2 observation is
+/// involved, where exhaustion yields the logical `Unknown` (U) carrying
+/// `diagnosis.agreedPrefix` (the refinement steps spent without
+/// separation). A non-positive / non-integer `budget` or non-numeric
+/// `a`/`b` is malformed use and raises an error (not U); a NIL `a`/`b`
+/// operand passes through per SPEC §7.12.
 pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     if interp.stack.len() < 3 {
@@ -785,32 +771,28 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     let a = extract_exact_real_for_comparison(&a_val)?;
     let b = extract_exact_real_for_comparison(&b_val)?;
 
-    let both_rational = a.as_rational().is_some() && b.as_rational().is_some();
+    // The explicit budget is water for Tier 2 observations; Tier ≤ 1
+    // pairs decide via the exact Fraction order or the total algebraic
+    // comparison, unaffected by it.
+    let refinement_capable = matches!(a, ExactReal::Computable(_))
+        || matches!(b, ExactReal::Computable(_));
     let outcome = match (a.as_rational(), b.as_rational()) {
-        // Both finite: decide exactly via Fraction order regardless of
-        // budget (SPEC §7.4.2 — finite CFs differ at a bounded index).
-        (Some(af), Some(bf)) => CmpOutcome::Decided(af.cmp(bf)),
-        // Deliberately the *streamed* comparison, not the §4.2.7 total
-        // decision procedure: COMPARE-WITHIN is defined as emitting at
-        // most `budget` partial quotients and is the only observation
-        // window on comparison depth (SPEC §7.4.2 / §16 #11), so its
-        // Unknown outcome stays reachable even for admitted-domain
-        // operands whose CF streams do not diverge within the budget.
-        _ => a.cmp_streamed_with_budget_tracked(&b, budget),
+        (Some(af), Some(bf)) => ExactCmp::Decided(af.cmp(bf)),
+        _ => a.cmp_within(&b, Water(budget as u64)),
     };
 
     // Cost-model observability (SPEC §7.4.2): COMPARE-WITHIN is the one
-    // Coreword that spends partial-quotient budget, so count invocations, the
-    // streamed (lazy) subset that can spend it, and the terms actually
-    // consumed when the budget is exhausted. Observational only; does not
-    // affect the pushed value.
+    // Coreword whose budget can be spent by a Tier 2 observation, so
+    // count invocations, the refinement-capable subset, and the steps
+    // actually consumed on exhaustion. Tier ≤ 1 comparisons spend
+    // nothing. Observational only; does not affect the pushed value.
     interp.runtime_metrics.compare_within_count += 1;
-    if !both_rational {
+    if refinement_capable {
         interp.runtime_metrics.compare_within_lazy_count += 1;
     }
-    if let CmpOutcome::Undecided { agreed_prefix } = outcome {
+    if let ExactCmp::Starved { steps } = outcome {
         interp.runtime_metrics.compare_within_unknown_count += 1;
-        interp.runtime_metrics.compare_within_budget_terms_consumed += agreed_prefix as u64;
+        interp.runtime_metrics.compare_within_budget_terms_consumed += steps as u64;
     }
 
     if !is_keep_mode {
@@ -818,7 +800,7 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     }
 
     match outcome {
-        CmpOutcome::Decided(o) => {
+        ExactCmp::Decided(o) => {
             use std::cmp::Ordering;
             let sign = match o {
                 Ordering::Less => -1,
@@ -827,11 +809,21 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
             };
             push_sign_result(interp, sign);
         }
-        CmpOutcome::Undecided { agreed_prefix } => {
+        ExactCmp::Starved { steps } => {
             interp.stack.push(Value::unknown_with_agreed_prefix(
                 Some("COMPARE-WITHIN"),
-                agreed_prefix,
+                steps,
             ));
+            let len = interp.stack.len();
+            interp.semantic_registry.normalize_to_stack_len(len);
+            interp
+                .semantic_registry
+                .update_hint_at(len - 1, Interpretation::TruthValue);
+        }
+        ExactCmp::Absent => {
+            interp
+                .stack
+                .push(Value::unknown_with_agreed_prefix(Some("COMPARE-WITHIN"), 0));
             let len = interp.stack.len();
             interp.semantic_registry.normalize_to_stack_len(len);
             interp

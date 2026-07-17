@@ -218,12 +218,28 @@ async fn three_valued_or() {
 
 // --- Three-valued logic with the logical Unknown (SPEC §7.5, §4.5.2) ------
 
-/// Ajisai source that leaves the logical Unknown (U) on the stack. The bare
-/// relations are total over the admitted domain (SPEC §4.2.7 / §7.4), so U
-/// is produced through `COMPARE-WITHIN` — the explicit-budget word §7.4.2
-/// keeps as the observation window on comparison depth: two equal composed
-/// operands never diverge within the 8-quotient budget.
-const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
+/// Run `rest` with the logical Unknown (U) already on the stack.
+///
+/// Comparison is total over Tier ≤ 1 (everything the current vocabulary
+/// constructs, SPEC §7.4), so U is produced authentically through a
+/// `COMPARE-WITHIN` against a **Tier 2** observation — a type-level
+/// starvation witness no word can build yet — exhausting the explicit
+/// 8-step water budget.
+async fn run_ok_with_u(rest: &str) -> Vec<Value> {
+    use crate::types::exact::{Computable, ExactReal};
+    let mut interp = Interpreter::new();
+    interp
+        .stack
+        .push(Value::from_exact_real(ExactReal::Computable(
+            Computable::vanishing(),
+        )));
+    let code = format!("0 8 COMPARE-WITHIN {rest}");
+    interp
+        .execute(&code)
+        .await
+        .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"));
+    interp.get_stack().to_vec()
+}
 
 fn is_unknown(v: &Value) -> bool {
     v.is_unknown()
@@ -231,28 +247,31 @@ fn is_unknown(v: &Value) -> bool {
 
 #[tokio::test]
 async fn unknown_is_produced_by_undecidable_comparison() {
-    let stack = run_ok(PRODUCE_U).await;
+    let stack = run_ok_with_u("").await;
     assert_eq!(stack.len(), 1);
-    assert!(is_unknown(&stack[0]), "undecidable EQ must yield Unknown");
+    assert!(
+        is_unknown(&stack[0]),
+        "a starved Tier 2 comparison must yield Unknown"
+    );
     assert_eq!(stack[0].truth_value(), Some("unknown"));
 }
 
 #[tokio::test]
 async fn k3_and_or_not_with_unknown() {
     // U AND TRUE = U ; U AND FALSE = FALSE (F absorbs).
-    let s = run_ok(&format!("{PRODUCE_U} TRUE AND")).await;
+    let s = run_ok_with_u("TRUE AND").await;
     assert!(is_unknown(&s[0]), "U AND TRUE must be Unknown");
-    let s = run_ok(&format!("{PRODUCE_U} FALSE AND")).await;
+    let s = run_ok_with_u("FALSE AND").await;
     assert!(is_false(&s[0]), "U AND FALSE must be FALSE");
 
     // U OR FALSE = U ; U OR TRUE = TRUE (T absorbs).
-    let s = run_ok(&format!("{PRODUCE_U} FALSE OR")).await;
+    let s = run_ok_with_u("FALSE OR").await;
     assert!(is_unknown(&s[0]), "U OR FALSE must be Unknown");
-    let s = run_ok(&format!("{PRODUCE_U} TRUE OR")).await;
+    let s = run_ok_with_u("TRUE OR").await;
     assert!(is_true(&s[0]), "U OR TRUE must be TRUE");
 
     // NOT U = U.
-    let s = run_ok(&format!("{PRODUCE_U} NOT")).await;
+    let s = run_ok_with_u("NOT").await;
     assert!(is_unknown(&s[0]), "NOT U must be Unknown");
 }
 
@@ -261,19 +280,19 @@ async fn nil_takes_priority_over_unknown_in_logic() {
     // SPEC §4.5.2: when NIL and U meet with no absorbing definite, NIL wins
     // (it carries a diagnostic reason that must be preserved). The result is
     // an operational NIL, not U.
-    let s = run_ok(&format!("{PRODUCE_U} NIL AND")).await;
+    let s = run_ok_with_u("NIL AND").await;
     assert!(
         is_nil(&s[0]) && !is_unknown(&s[0]),
         "U AND NIL must be NIL, not Unknown"
     );
-    let s = run_ok(&format!("{PRODUCE_U} NIL OR")).await;
+    let s = run_ok_with_u("NIL OR").await;
     assert!(
         is_nil(&s[0]) && !is_unknown(&s[0]),
         "U OR NIL must be NIL, not Unknown"
     );
 
     // But an absorbing definite still decides over both.
-    let s = run_ok(&format!("{PRODUCE_U} FALSE AND")).await;
+    let s = run_ok_with_u("FALSE AND").await;
     assert!(
         is_false(&s[0]),
         "U AND FALSE must be FALSE even though U is present"
@@ -284,7 +303,7 @@ async fn nil_takes_priority_over_unknown_in_logic() {
 async fn unknown_passes_through_pipeline_distinct_from_nil() {
     // U flowing through a logic pipeline stays U (not collapsed to NIL) until
     // an absorbing element or a real NIL intervenes.
-    let s = run_ok(&format!("{PRODUCE_U} NOT NOT")).await;
+    let s = run_ok_with_u("NOT NOT").await;
     assert!(is_unknown(&s[0]), "NOT NOT U must remain Unknown");
 }
 

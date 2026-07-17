@@ -340,8 +340,8 @@ mod interval_tests {
         let val = &interp.get_stack()[0];
         assert!(
             matches!(&val.data, crate::types::ValueData::ExactScalar(er)
-                if er.sqrt_radicand().map(|r| *r == crate::types::fraction::Fraction::from(2)).unwrap_or(false)),
-            "SQRT(2) must be ExactScalar(AlgebraicSqrt {{ radicand: 2/1 }}), got: {val}"
+                if er.mul(er) == crate::types::exact::ExactReal::from_fraction(crate::types::fraction::Fraction::from(2))),
+            "SQRT(2) must be the exact irrational whose square is 2/1, got: {val}"
         );
 
         // SQRT-EPS still returns an interval (interval path unchanged)
@@ -1159,18 +1159,33 @@ mod compare_within_tests {
         assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
     }
 
-    // ── Source level: budget-undecided → Unknown with agreedPrefix ──────
+    // ── Source level: Tier ≤ 1 totality; Tier 2 starvation → Unknown ────
 
     #[tokio::test]
-    async fn compare_within_equal_irrationals_yield_unknown_with_prefix() {
-        // √2 − √2 is a Gosper node the budget cannot distinguish from 0,
-        // so comparing it against 0 never decides → logical Unknown (U).
+    async fn compare_within_composed_algebraic_operands_decide_exactly() {
+        // (√2+1) − (√2+1) demotes to the exact rational 0, so comparing it
+        // against 0 decides 0 regardless of the budget: comparison is
+        // total over Tier ≤ 1 (SPEC §7.4.2).
         let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 8 COMPARE-WITHIN").await;
         let v = &interp.get_stack()[0];
-        assert!(
-            v.is_unknown(),
-            "equal irrationals must yield Unknown, got {v}"
-        );
+        assert_eq!(format!("{v}"), "0/1", "equal Tier ≤ 1 operands decide 0");
+    }
+
+    #[tokio::test]
+    async fn compare_within_tier2_starves_to_unknown_with_prefix() {
+        // A Tier 2 observation (type-level starvation witness; no word
+        // constructs one yet) cannot be separated from 0 within the 8-step
+        // water budget → logical Unknown (U) carrying agreedPrefix.
+        use crate::types::exact::{Computable, ExactReal};
+        let mut interp = Interpreter::new();
+        interp
+            .stack
+            .push(crate::types::Value::from_exact_real(ExactReal::Computable(
+                Computable::vanishing(),
+            )));
+        interp.execute("0 8 COMPARE-WITHIN").await.unwrap();
+        let v = &interp.get_stack()[0];
+        assert!(v.is_unknown(), "a starved Tier 2 comparison must be U");
         assert_eq!(v.truth_value(), Some("unknown"));
 
         // The Unknown result carries the machine-readable agreedPrefix.
@@ -1266,13 +1281,34 @@ mod compare_within_metrics_tests {
     }
 
     #[tokio::test]
-    async fn compare_within_equal_lazy_spends_budget_and_is_unknown() {
-        // Two equal lazily-composed operands (√2+1 vs √2+1) never diverge, so
-        // the explicit budget is exhausted: the lazy path is taken, the result
-        // is U, and the consumed NICF terms are recorded.
+    async fn compare_within_composed_algebraic_spends_no_budget() {
+        // Two equal composed Tier 1 operands (√2+1 vs √2+1) decide exactly:
+        // comparison is total over Tier ≤ 1, so the invocation counts but
+        // no refinement budget is spent and no U is produced.
         let m = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN")
             .await
             .runtime_metrics();
+        assert_eq!(m.compare_within_count, 1);
+        assert_eq!(m.compare_within_lazy_count, 0);
+        assert_eq!(m.compare_within_unknown_count, 0);
+        assert_eq!(m.compare_within_budget_terms_consumed, 0);
+    }
+
+    #[tokio::test]
+    async fn compare_within_tier2_spends_budget_and_is_unknown() {
+        // A Tier 2 observation (no vocabulary word constructs one yet) is
+        // the refinement-capable operand: its comparison against 0 starves
+        // within the 8-step budget, records the lazy path, the U outcome,
+        // and the refinement steps consumed.
+        use crate::types::exact::{Computable, ExactReal};
+        let mut interp = Interpreter::new();
+        interp
+            .stack
+            .push(crate::types::Value::from_exact_real(ExactReal::Computable(
+                Computable::vanishing(),
+            )));
+        interp.execute("0 8 COMPARE-WITHIN").await.unwrap();
+        let m = interp.runtime_metrics();
         assert_eq!(m.compare_within_count, 1);
         assert_eq!(m.compare_within_lazy_count, 1);
         assert_eq!(m.compare_within_unknown_count, 1);
@@ -1428,14 +1464,14 @@ mod exact_scalar_tests {
 
     #[tokio::test]
     async fn sqrt_of_irrational_produces_exact_scalar() {
-        // 2 MATH@SQRT → ExactScalar(AlgebraicSqrt { radicand: 2/1 })
+        // 2 MATH@SQRT → an irrational ExactScalar (Tier 1 algebraic)
         let mut interp = Interpreter::new();
         interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
         let val = &interp.get_stack()[0];
         assert!(
             matches!(&val.data, ValueData::ExactScalar(er)
-                if er.is_algebraic_sqrt()),
-            "SQRT(2) must be ExactScalar(AlgebraicSqrt), got: {val}"
+                if !er.is_rational()),
+            "SQRT(2) must be an irrational ExactScalar, got: {val}"
         );
     }
 
@@ -1636,31 +1672,14 @@ mod u_propagation_tests {
         interp.get_stack().last().expect("non-empty stack")
     }
 
-    /// A synthetic lazy value outside the admitted domain \(D\): a raw
-    /// Möbius `1/x` over an exact lazy zero, i.e. the degenerate transform
-    /// `ExactReal::div`'s zero test exists to prevent, constructed directly
-    /// at the type level. Its CF stream exhausts without emitting, so every
-    /// comparison against it stays undecidable — exactly the future
-    /// lazy-domain shape §7.4.3's U-propagation contract governs.
+    /// A synthetic value outside the decidable Tier ≤ 1 domain: a Tier 2
+    /// observation process whose enclosures never separate from zero
+    /// (the canonical starvation witness). No vocabulary word constructs
+    /// Tier 2 yet, so it is pushed at the type level — exactly the shape
+    /// §7.4.3's U-propagation contract governs.
     fn out_of_domain_lazy_value() -> crate::types::Value {
-        use crate::types::continued_fraction::{ExactReal, Gosper};
-        use crate::types::fraction::Fraction;
-        use num_bigint::BigInt;
-        use num_traits::{One, Zero};
-        use std::sync::Arc;
-        let sqrt = |n: i64| {
-            ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(n), BigInt::one()))
-                .expect("positive radicand")
-        };
-        let lazy_zero = sqrt(2).add(&sqrt(3)).sub(&sqrt(3).add(&sqrt(2)));
-        let degenerate = ExactReal::Gosper(Arc::new(Gosper::Mobius {
-            a: BigInt::zero(),
-            b: BigInt::one(),
-            c: BigInt::one(),
-            d: BigInt::zero(),
-            x: lazy_zero,
-        }));
-        crate::types::Value::from_exact_real(degenerate)
+        use crate::types::exact::{Computable, ExactReal};
+        crate::types::Value::from_exact_real(ExactReal::Computable(Computable::vanishing()))
     }
 
     // ── MIN / MAX ────────────────────────────────────────────────────────
@@ -1755,8 +1774,14 @@ mod u_propagation_tests {
     // ── COND ─────────────────────────────────────────────────────────────
     //
     // Syntax: `[ value ] { guard | body } { IDLE | body } COND`. The guard is
-    // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. The
-    // value `2 SQRT 1 ADD 2 SQRT 1 ADD SUB` (≈ √2−√2) compares Unknown against 0.
+    // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. A
+    // Tier 2 observation (pushed at the type level — no word constructs one)
+    // compares Unknown against 0, driving the U-guard rows.
+
+    fn tier2_value() -> crate::types::Value {
+        use crate::types::exact::{Computable, ExactReal};
+        crate::types::Value::from_exact_real(ExactReal::Computable(Computable::vanishing()))
+    }
 
     #[tokio::test]
     async fn cond_fires_clause_with_definite_true_guard() {
@@ -1766,13 +1791,15 @@ mod u_propagation_tests {
 
     #[tokio::test]
     async fn cond_u_guard_does_not_fire_falls_through_to_next_clause() {
-        // First clause guard reduces to U (√2−√2 == 0 is Unknown — and √2−√2
-        // is in fact Unknown against every rational); it must NOT fire. The
-        // second guard `TRUE` is value-independent and definitely fires.
-        let interp = run(
-            "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND",
-        )
-        .await;
+        // First clause guard reduces to U (a Tier 2 value == 0 is Unknown);
+        // it must NOT fire. The second guard `TRUE` is value-independent
+        // and definitely fires.
+        let mut interp = Interpreter::new();
+        interp.stack.push(tier2_value());
+        interp
+            .execute("{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND")
+            .await
+            .unwrap();
         assert_eq!(
             format!("{}", top(&interp)),
             "'second'",
@@ -1783,10 +1810,12 @@ mod u_propagation_tests {
     #[tokio::test]
     async fn cond_u_guard_then_else_clause() {
         // The only non-else guard is U ⇒ does not fire ⇒ IDLE/else runs.
-        let interp = run(
-            "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND",
-        )
-        .await;
+        let mut interp = Interpreter::new();
+        interp.stack.push(tier2_value());
+        interp
+            .execute("{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND")
+            .await
+            .unwrap();
         assert_eq!(format!("{}", top(&interp)), "'else'");
     }
 
@@ -1794,10 +1823,9 @@ mod u_propagation_tests {
     async fn cond_u_guard_with_no_match_is_cond_exhausted() {
         // U guard does not fire and there is no else clause ⇒ CondExhausted.
         let mut interp = Interpreter::new();
+        interp.stack.push(tier2_value());
         let result = interp
-            .execute(
-                "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB\n{ [ 0 ] = | 'fired-on-U' }\nCOND",
-            )
+            .execute("{ [ 0 ] = | 'fired-on-U' }\nCOND")
             .await;
         assert!(
             result.is_err(),

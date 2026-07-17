@@ -20,7 +20,7 @@ use self::fraction::Fraction;
 pub use self::record_shape::RecordShape;
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
-use crate::types::continued_fraction::ExactReal;
+use crate::types::exact::ExactReal;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

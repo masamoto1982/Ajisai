@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::continued_fraction::ExactReal;
+use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::interval::{
     default_sqrt_eps, exact_rational_sqrt, sqrt_rational_interval, Interval,

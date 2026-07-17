@@ -7,7 +7,7 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
-use crate::types::continued_fraction::ExactReal;
+use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
 use std::sync::Arc;

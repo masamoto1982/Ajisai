@@ -1,4 +1,4 @@
-use super::continued_fraction::ExactReal;
+use super::exact::ExactReal;
 use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Value, ValueData};
 use num_bigint::BigInt;
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn irrational_renders_as_nested_cf_not_approximation() {
         use super::format_exact_real;
-        use crate::types::continued_fraction::ExactReal;
+        use crate::types::exact::ExactReal;
         use crate::types::fraction::Fraction;
         use num_bigint::BigInt;
 

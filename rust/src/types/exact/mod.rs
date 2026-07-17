@@ -11,8 +11,13 @@ mod algebraic_floor;
 #[cfg(test)]
 mod algebraic_tests;
 pub(crate) mod basis;
+pub mod computable;
 pub mod observation;
+pub mod value;
+mod value_approx;
 
 pub use algebraic::{Algebraic, AlgebraicResult};
 pub use algebraic_floor::AlgebraicObservation;
+pub use computable::{Computable, ComputableObservation};
 pub use observation::{Observation, RatInterval, Refine, Water};
+pub use value::{ExactCmp, ExactReal, DEFAULT_COMPARISON_WATER};

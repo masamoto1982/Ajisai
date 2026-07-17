@@ -326,7 +326,7 @@ impl Value {
     }
 
     #[inline]
-    pub fn from_exact_real(er: crate::types::continued_fraction::ExactReal) -> Self {
+    pub fn from_exact_real(er: crate::types::exact::ExactReal) -> Self {
         // If the ExactReal is already rational, use the fast Fraction path.
         if let Some(f) = er.as_rational() {
             return Self {

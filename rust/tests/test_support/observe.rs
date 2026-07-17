@@ -153,17 +153,42 @@ pub fn observe_program(src: &str) -> ProgramObservation {
     })
 }
 
+/// Source marker for a pre-loaded Tier 2 starvation witness. Comparison is
+/// total over Tier ≤ 1 — everything the vocabulary can construct — so laws
+/// that need the logical Unknown (U) start from a type-level Tier 2 value:
+/// a program beginning with this marker runs with a `Computable` enclosure
+/// process (never separable from zero) already on the stack.
+pub const TIER2_WITNESS: &str = "<<tier2-witness>>";
+
+/// Strip a leading [`TIER2_WITNESS`] marker, pre-loading the witness onto
+/// the interpreter's stack when present; returns the program to execute.
+/// Every harness that runs generator sources routes through this.
+pub fn prepare<'a>(interp: &mut Interpreter, src: &'a str) -> &'a str {
+    match src.strip_prefix(TIER2_WITNESS) {
+        Some(rest) => {
+            use ajisai_core::types::exact::{Computable, ExactReal};
+            interp.update_stack(vec![Value::from_exact_real(ExactReal::Computable(
+                Computable::vanishing(),
+            ))]);
+            rest
+        }
+        None => src,
+    }
+}
+
 /// Run an Ajisai program and return the final stack. Panics on execution error
 /// so a malformed law program is loud rather than silently skipped (mirrors the
-/// existing `algebraic_laws.rs` harness).
+/// existing `algebraic_laws.rs` harness). A leading [`TIER2_WITNESS`] marker
+/// pre-loads the Tier 2 starvation witness (see the marker's docs).
 pub fn run(src: &str) -> Vec<Value> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
         .expect("tokio current-thread runtime");
     rt.block_on(async {
         let mut interp = Interpreter::new();
+        let program = prepare(&mut interp, src);
         interp
-            .execute(src)
+            .execute(program)
             .await
             .unwrap_or_else(|e| panic!("program failed: {src:?}: {e}"));
         interp.get_stack().clone()

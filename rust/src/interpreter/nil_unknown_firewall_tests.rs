@@ -26,16 +26,39 @@ use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
-/// Source that yields the logical Unknown (U). The bare relations are total
-/// over the admitted domain (SPEC §4.2.7 / §7.4), so U is produced through
-/// `COMPARE-WITHIN` (§7.4.2): two equal composed operands never diverge
-/// within the explicit 8-quotient budget, and the U carries an agreedPrefix.
-const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
-
-async fn run(code: &str) -> Result<Vec<Value>, String> {
+/// The logical Unknown (U), produced authentically through a comparison.
+/// Comparison is total over Tier ≤ 1 (everything the current vocabulary
+/// constructs, SPEC §7.4), so U comes from `COMPARE-WITHIN` against a
+/// **Tier 2** observation — a type-level starvation witness no word can
+/// build yet — exhausting the explicit 8-step water budget; the U carries
+/// an agreedPrefix.
+async fn u_value() -> Value {
+    use crate::types::exact::{Computable, ExactReal};
     let mut interp = Interpreter::new();
+    interp
+        .stack
+        .push(Value::from_exact_real(ExactReal::Computable(
+            Computable::vanishing(),
+        )));
+    interp
+        .execute("0 8 COMPARE-WITHIN")
+        .await
+        .expect("COMPARE-WITHIN executes");
+    interp.get_stack().last().expect("U on stack").clone()
+}
+
+/// Run `code` with `preload` already on the stack (bottom first).
+async fn run_with(preload: Vec<Value>, code: &str) -> Result<Vec<Value>, String> {
+    let mut interp = Interpreter::new();
+    for v in preload {
+        interp.stack.push(v);
+    }
     interp.execute(code).await.map_err(|e| e.to_string())?;
     Ok(interp.get_stack().to_vec())
+}
+
+async fn run(code: &str) -> Result<Vec<Value>, String> {
+    run_with(Vec::new(), code).await
 }
 
 async fn run_ok(code: &str) -> Vec<Value> {
@@ -51,7 +74,7 @@ async fn run_ok(code: &str) -> Vec<Value> {
 /// `LogicallyUnknown` reason erased.
 #[tokio::test]
 async fn u_into_arithmetic_does_not_silently_collapse_to_reasonless_nil() {
-    let res = run(&format!("{PRODUCE_U} 1 +")).await;
+    let res = run_with(vec![u_value().await], "1 +").await;
     match res {
         Err(_) => {
             // Acceptable: U reaches the broadcast guard and errors explicitly
@@ -99,7 +122,9 @@ async fn operational_nil_passthrough_preserves_reason() {
 /// the task's `U DUP AND`, exercising the same `Unknown AND Unknown` cell.)
 #[tokio::test]
 async fn u_and_u_is_unknown() {
-    let stack = run_ok(&format!("{PRODUCE_U} {PRODUCE_U} AND")).await;
+    let stack = run_with(vec![u_value().await, u_value().await], "AND")
+        .await
+        .unwrap_or_else(|e| panic!("`U U AND` unexpectedly errored: {e}"));
     assert_eq!(stack.len(), 1);
     assert!(
         stack[0].is_unknown(),

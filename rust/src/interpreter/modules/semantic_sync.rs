@@ -16,7 +16,7 @@
 //! such as `>CF` (which retags a slot without rebuilding its value) and NIL
 //! passthrough.
 
-use crate::types::continued_fraction::ExactReal;
+use crate::types::exact::{Algebraic, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use std::sync::Arc;
@@ -34,8 +34,11 @@ pub(super) enum SlotFingerprint {
     Boolean(bool),
     Scalar(Fraction),
     ExactRational(Fraction),
-    ExactSqrt(Fraction),
-    ExactGosper(*const ()),
+    /// A Tier 1 algebraic slot, identified by its stored normal form.
+    /// Structural identity (`same_representation`) is the cheap check
+    /// here: a rebuilt value with a different basis granularity compares
+    /// as changed, which safely re-derives the role.
+    ExactAlgebraic(Algebraic),
     Vector(*const (), Interpretation),
     Tensor(*const (), Interpretation),
     Record(*const (), Interpretation),
@@ -50,12 +53,12 @@ fn fingerprint(value: &Value) -> SlotFingerprint {
         ValueData::Boolean(b) => SlotFingerprint::Boolean(*b),
         ValueData::Scalar(f) => SlotFingerprint::Scalar(f.clone()),
         ValueData::ExactScalar(ExactReal::Rational(f)) => SlotFingerprint::ExactRational(f.clone()),
-        ValueData::ExactScalar(ExactReal::AlgebraicSqrt { radicand }) => {
-            SlotFingerprint::ExactSqrt(radicand.clone())
+        ValueData::ExactScalar(ExactReal::Algebraic(a)) => {
+            SlotFingerprint::ExactAlgebraic(a.clone())
         }
-        ValueData::ExactScalar(ExactReal::Gosper(g)) => {
-            SlotFingerprint::ExactGosper(Arc::as_ptr(g).cast())
-        }
+        // A Tier 2 process has no cheap value identity; Opaque compares
+        // as changed, which safely re-derives the role.
+        ValueData::ExactScalar(ExactReal::Computable(_)) => SlotFingerprint::Opaque,
         ValueData::Vector(v) => SlotFingerprint::Vector(Arc::as_ptr(v).cast(), value.hint),
         ValueData::Tensor { data, .. } => {
             SlotFingerprint::Tensor(Arc::as_ptr(data).cast(), value.hint)
@@ -77,12 +80,8 @@ fn slot_unchanged(before: &SlotFingerprint, now: &Value) -> bool {
         (SlotFingerprint::ExactRational(f), ValueData::ExactScalar(ExactReal::Rational(n))) => {
             f == n
         }
-        (
-            SlotFingerprint::ExactSqrt(f),
-            ValueData::ExactScalar(ExactReal::AlgebraicSqrt { radicand }),
-        ) => f == radicand,
-        (SlotFingerprint::ExactGosper(p), ValueData::ExactScalar(ExactReal::Gosper(g))) => {
-            std::ptr::eq(*p, Arc::as_ptr(g).cast())
+        (SlotFingerprint::ExactAlgebraic(a), ValueData::ExactScalar(ExactReal::Algebraic(n))) => {
+            a.same_representation(n)
         }
         (SlotFingerprint::Vector(p, hint), ValueData::Vector(v)) => {
             *hint == now.hint && std::ptr::eq(*p, Arc::as_ptr(v).cast())

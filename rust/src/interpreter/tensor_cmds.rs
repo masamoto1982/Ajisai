@@ -5,7 +5,7 @@ use crate::interpreter::value_extraction_helpers::{
 use crate::interpreter::{
     ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
 };
-use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
+use crate::types::exact::ExactReal;
 use crate::types::fraction::{Fraction, RoundingMode};
 use crate::types::{Interpretation, Value, ValueData};
 
@@ -535,11 +535,13 @@ pub fn op_conserve(interp: &mut Interpreter) -> Result<()> {
         sum = sum.add(&scalar_at(element)?);
     }
 
-    // Only a *proven* equality lets flow pass. A guard that cannot confirm its
-    // safe condition must not pass, so an undecidable comparison fails loudly
-    // rather than returning UNKNOWN or silently succeeding (SPEC §13.3 draft).
-    match sum.eq_with_budget(&total, DEFAULT_COMPARISON_BUDGET) {
-        Some(true) => {
+    // Only a *proven* equality lets flow pass. Over Tier ≤ 1 the equality
+    // is decidable, so the guard always confirms or refutes; the `None`
+    // arm remains for an operand outside the decidable domain (a guard
+    // that cannot confirm its safe condition must not pass — it fails
+    // loudly rather than returning UNKNOWN, SPEC §13.3 draft).
+    match sum.cmp_exact(&total) {
+        crate::types::exact::ExactCmp::Decided(std::cmp::Ordering::Equal) => {
             if !is_keep {
                 interp.stack.pop();
                 interp.stack.pop();
@@ -547,12 +549,14 @@ pub fn op_conserve(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(parts_val);
             Ok(())
         }
-        Some(false) => Err(AjisaiError::from(
+        crate::types::exact::ExactCmp::Decided(_) => Err(AjisaiError::from(
             "Conservation violated: parts do not sum to the total",
         )),
-        None => Err(AjisaiError::from(
-            "Conservation undecidable within the comparison budget",
-        )),
+        crate::types::exact::ExactCmp::Starved { .. } | crate::types::exact::ExactCmp::Absent => {
+            Err(AjisaiError::from(
+                "Conservation undecidable within the comparison budget",
+            ))
+        }
     }
 }
 
@@ -568,7 +572,7 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    // ExactScalar path: a mod b = a - b * floor(a/b) via CF (SPEC §4.2.2)
+    // ExactScalar path: a mod b = a - b * floor(a/b), exact over Tier 1
     if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a_ref = &interp.stack[stack_len - 2];
@@ -587,17 +591,15 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
                 _ => None,
             };
             if let (Some(a), Some(b)) = (a_er, b_er) {
-                let zero = ExactReal::from_fraction(Fraction::from(0i64));
-                let b_is_zero = b
-                    .eq_with_budget(&zero, DEFAULT_COMPARISON_BUDGET)
-                    .unwrap_or(false);
-                if b_is_zero {
+                // Zero-ness of the divisor is decidable on the normal
+                // form: a Tier 1 algebraic is never zero, and a rational
+                // shows it structurally.
+                if b.is_structurally_zero() {
                     return Err(AjisaiError::from("Modulo by zero"));
                 }
                 // a mod b = a - b * floor(a/b). A `None` here (after the
-                // zero check) means the CF division/floor exhausted its
-                // budget, so the result is undecidable: project to a
-                // Bubble NIL (SPEC §7.4.1) rather than erroring.
+                // zero check) means an absent operand slipped through:
+                // project to a Bubble NIL rather than erroring.
                 let modulo = a
                     .div(&b)
                     .and_then(|q| q.floor())

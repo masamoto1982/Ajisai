@@ -1099,11 +1099,10 @@
         "rust/tests/algebraic_laws.rs"
       ],
       "conformance_cases": [
-        "core-kleene-and-definite",
-        "core-unknown-propagation"
+        "core-kleene-and-definite"
       ],
       "status": "Formalized",
-      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN.",
+      "notes": "Strong Kleene conjunction over TRUE/FALSE/UNKNOWN. The U rows require a Tier 2 operand no current word constructs; they are pinned by native logic tests.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
