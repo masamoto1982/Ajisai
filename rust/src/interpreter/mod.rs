@@ -4,6 +4,7 @@ pub mod audio;
 pub mod cast;
 pub mod child_runtime;
 pub mod comparison;
+pub(crate) mod compiled_call;
 pub mod compiled_plan;
 pub mod comptime;
 pub mod control;
