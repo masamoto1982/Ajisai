@@ -21,11 +21,6 @@ use num_traits::{One, Zero};
 pub(crate) struct Basis(Vec<BigInt>);
 
 impl Basis {
-    /// The empty basis (rational values only).
-    pub(crate) fn empty() -> Basis {
-        Basis(Vec::new())
-    }
-
     pub(crate) fn elements(&self) -> &[BigInt] {
         &self.0
     }

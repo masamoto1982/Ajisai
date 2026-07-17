@@ -907,7 +907,7 @@ mod phase_seven_eq_budget_tests {
     use crate::error::NilReason;
     use crate::interpreter::Interpreter;
     use crate::semantic::AbsenceOrigin;
-    use crate::types::continued_fraction::{ExactReal, DEFAULT_COMPARISON_BUDGET};
+    use crate::types::exact::{ExactCmp, ExactReal};
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
@@ -1005,45 +1005,42 @@ mod phase_seven_eq_budget_tests {
         assert!(interp.get_stack()[0].is_nil());
     }
 
-    // ── ExactReal-level dispatch boundary (Phase 7 hook) ─────────────────
+    // ── ExactReal-level dispatch boundary ────────────────────────────────
     //
-    // These cover the budgeted CF path that `pairwise_eq` /
-    // `scalar_pair_eq` routes through whenever at least one operand
-    // is non-Rational. `eq_with_budget` is exercised here so the
-    // dispatch boundary is pinned even before a runtime path can
-    // place such a value on the stack.
+    // These cover the exact comparison that `pairwise_eq` /
+    // `scalar_pair_eq` route through whenever at least one operand is
+    // non-Rational: total and budget-free over Tier ≤ 1.
 
     fn rational(n: i64, d: i64) -> ExactReal {
         ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
     }
 
     #[test]
-    fn exact_real_eq_with_budget_decides_equal_rationals() {
+    fn exact_real_cmp_decides_equal_rationals() {
         assert_eq!(
-            rational(2, 4).eq_with_budget(&rational(1, 2), DEFAULT_COMPARISON_BUDGET),
-            Some(true)
+            rational(2, 4).cmp_exact(&rational(1, 2)),
+            ExactCmp::Decided(std::cmp::Ordering::Equal)
         );
     }
 
     #[test]
-    fn exact_real_eq_with_budget_decides_unequal_rationals() {
+    fn exact_real_cmp_decides_unequal_rationals() {
         assert_eq!(
-            rational(1, 2).eq_with_budget(&rational(2, 3), DEFAULT_COMPARISON_BUDGET),
-            Some(false)
+            rational(1, 2).cmp_exact(&rational(2, 3)),
+            ExactCmp::Decided(std::cmp::Ordering::Less)
         );
     }
 
     #[test]
-    fn exact_real_eq_with_budget_decides_rational_vs_algebraic_sqrt() {
-        // √2 is irrational; it can never equal 7/5 (or any rational).
-        // The CF streams diverge in fewer than `DEFAULT_COMPARISON_BUDGET`
-        // steps, so the result is decidable.
+    fn exact_real_cmp_decides_rational_vs_algebraic_sqrt() {
+        // √2 is irrational; it can never equal 7/5 (or any rational), and
+        // the algebraic comparison decides the order exactly.
         let sqrt_two =
             ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
                 .expect("sqrt(2) constructible");
         assert_eq!(
-            sqrt_two.eq_with_budget(&rational(7, 5), DEFAULT_COMPARISON_BUDGET),
-            Some(false)
+            sqrt_two.cmp_exact(&rational(7, 5)),
+            ExactCmp::Decided(std::cmp::Ordering::Greater)
         );
     }
 
@@ -1074,7 +1071,7 @@ mod phase_seven_eq_budget_tests {
 #[cfg(test)]
 mod compare_within_tests {
     use crate::interpreter::Interpreter;
-    use crate::types::continued_fraction::{CmpOutcome, ExactReal};
+    use crate::types::exact::{ExactCmp, ExactReal, Water};
     use crate::types::fraction::Fraction;
     use num_bigint::BigInt;
 
@@ -1088,47 +1085,23 @@ mod compare_within_tests {
         ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
     }
 
-    // ── Unit level: the tracked three-way compare reports the prefix ─────
+    // ── Unit level: Tier ≤ 1 comparison is water-independent ─────────────
 
     #[test]
-    fn tracked_undecided_reports_agreed_prefix_equal_to_budget() {
-        // CF(1/2) = [0; 2], CF(1/3) = [0; 3]. They share index 0 (both 0)
-        // and first differ at index 1. With budget 1 only index 0 is
-        // consumed, so the order is undecided and the agreed prefix is the
-        // full consumed budget, 1.
-        assert_eq!(
-            rational(1, 2).cmp_with_budget_tracked(&rational(1, 3), 1),
-            CmpOutcome::Undecided { agreed_prefix: 1 }
-        );
-    }
-
-    #[test]
-    fn tracked_decides_when_budget_reaches_divergence() {
-        // The same pair decides at budget 2 (index 1 differs: 2 vs 3),
-        // 1/2 > 1/3.
-        assert_eq!(
-            rational(1, 2).cmp_with_budget_tracked(&rational(1, 3), 2),
-            CmpOutcome::Decided(std::cmp::Ordering::Greater)
-        );
-    }
-
-    #[test]
-    fn tracked_equal_finite_decides_when_budget_reaches_termination() {
-        // CF(1/2) = CF(2/4) = [0; 2]: index 0 = 0, index 1 = 2, then both
-        // streams end at index 2. The raw tracked compare has no Fraction
-        // fast path, so it only decides Equal once the budget reaches the
-        // shared termination (budget >= 3); below that it is genuinely
-        // undecided, reporting the matched prefix. (The COMPARE-WITHIN word
-        // adds a finite fast path that decides regardless of budget — see
-        // `compare_within_finite_decides_even_at_budget_one`.)
-        assert_eq!(
-            rational(1, 2).cmp_with_budget_tracked(&rational(2, 4), 3),
-            CmpOutcome::Decided(std::cmp::Ordering::Equal)
-        );
-        assert_eq!(
-            rational(1, 2).cmp_with_budget_tracked(&rational(2, 4), 2),
-            CmpOutcome::Undecided { agreed_prefix: 2 }
-        );
+    fn cmp_within_decides_rationals_regardless_of_water() {
+        // Tier ≤ 1 pairs decide exactly whatever the water budget is —
+        // even the minimum. The retired CF engine could report Undecided
+        // here; the tiered comparison cannot.
+        for water in [1u64, 2, 256] {
+            assert_eq!(
+                rational(1, 2).cmp_within(&rational(1, 3), Water(water)),
+                ExactCmp::Decided(std::cmp::Ordering::Greater)
+            );
+            assert_eq!(
+                rational(1, 2).cmp_within(&rational(2, 4), Water(water)),
+                ExactCmp::Decided(std::cmp::Ordering::Equal)
+            );
+        }
     }
 
     // ── Source level: decided signs ─────────────────────────────────────

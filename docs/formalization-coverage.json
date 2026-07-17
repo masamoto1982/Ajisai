@@ -1854,7 +1854,7 @@
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
-        "rust/tests/nicf_gosper_feasibility.rs"
+        "rust/src/types/exact/algebraic_tests.rs"
       ],
       "conformance_cases": [
         "core-sqrt2-continued-fraction",

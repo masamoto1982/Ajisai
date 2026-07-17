@@ -1,5 +1,4 @@
 pub mod arena;
-pub mod continued_fraction;
 pub mod display;
 pub mod exact;
 pub mod fraction;
@@ -7,9 +6,6 @@ mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod interval;
-pub mod multiquadratic;
-#[cfg(test)]
-mod multiquadratic_tests;
 pub mod record_shape;
 mod value_operations;
 pub(crate) mod value_protocol;

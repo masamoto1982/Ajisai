@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:8a44ec26d9a608fd732750e33b552a2b7abecad5d1bb5726bdd3571abd9c0769",
+  "rootIdentity": "sha256:9423af225cf872482b0cac81aa1313c8003a219bd3d2435ebede32cf27e03077",
   "fileCount": 312,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -59,8 +59,8 @@
     },
     {
       "path": "rust/src/arithmetic_operation_tests.rs",
-      "sha256": "ea680f6bff527b71cc36010d218e864e7030974ff2d0fbeaa107602496d5a820",
-      "bytes": 80319
+      "sha256": "0b3057997a07783bc8b814f7e51655fe8ab3303d30dbd145e90df6cbd74a7100",
+      "bytes": 79048
     },
     {
       "path": "rust/src/bin/ajisai.rs",
@@ -1033,11 +1033,6 @@
       "bytes": 21095
     },
     {
-      "path": "rust/src/types/continued_fraction.rs",
-      "sha256": "bd51216038b9deabbf2eb0bee0d70679a435bced879ca6e45d4220ff0375b12d",
-      "bytes": 200228
-    },
-    {
       "path": "rust/src/types/display.rs",
       "sha256": "58d9a9030e52fd0d79f8de63e7b4d92e032871ff1b052eed71416bea44f90ee3",
       "bytes": 21837
@@ -1064,8 +1059,13 @@
     },
     {
       "path": "rust/src/types/exact/basis.rs",
-      "sha256": "d0bd3bbcdc933a4b01d33e17055626f6af503402d0e2740f79ca4cd9ebd56dd1",
-      "bytes": 7205
+      "sha256": "1187812ff1bc8d45d3d7b42dbfb4a0c539ec617fab3ad4d5b289f0abd08fa2d0",
+      "bytes": 7087
+    },
+    {
+      "path": "rust/src/types/exact/computable.rs",
+      "sha256": "ff2927dce639618b641cec16baa9027a8c80ade3c45fc3353426c9c96886eb77",
+      "bytes": 5278
     },
     {
       "path": "rust/src/types/exact/mod.rs",
@@ -1076,6 +1076,16 @@
       "path": "rust/src/types/exact/observation.rs",
       "sha256": "de67b286e628564632b8767777050ae1779f1502c5688196d6340a37692a2d65",
       "bytes": 6725
+    },
+    {
+      "path": "rust/src/types/exact/value.rs",
+      "sha256": "11cded03ab905bc52b367c21e5ac2c5b449d19ee81ae99654730959185cb524a",
+      "bytes": 16733
+    },
+    {
+      "path": "rust/src/types/exact/value_approx.rs",
+      "sha256": "486389e9764836ecee1fd56904a91d1dd1f42a1aa57d0065775e078c201f2875",
+      "bytes": 6598
     },
     {
       "path": "rust/src/types/fraction.rs",
@@ -1099,18 +1109,8 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "1e7b7725ee77281762953865a7e54cf974b05482fb8b3cd14e1739ec419854cb",
-      "bytes": 24611
-    },
-    {
-      "path": "rust/src/types/multiquadratic.rs",
-      "sha256": "aa1f82914d05dc785c51d27760ce73adaa90292fde42b6a9431e524f6d68b545",
-      "bytes": 18840
-    },
-    {
-      "path": "rust/src/types/multiquadratic_tests.rs",
-      "sha256": "2d6a80082b694fce6afce3fa3a7ef98bfeb613f1a0866f81da79d2fa70a9fb41",
-      "bytes": 7836
+      "sha256": "fb1f8d0e5bb9121c19cd19bafe49c509c540d9350554c195d4b94de26a700cb3",
+      "bytes": 24520
     },
     {
       "path": "rust/src/types/record_shape.rs",
