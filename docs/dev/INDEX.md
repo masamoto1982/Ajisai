@@ -77,3 +77,4 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `vtu-verified-lowering-design.md` | VTU verified lowering 設計案（未承認。実装禁止ゲートつき） | `[提案・未実施]` |
 | `human-surface-blackbox-instruction-review.md` | Human/Machine Surface 二層化・`debug_diagnosis` 配置是正の指示書レビュー（未実施） | `[提案・未実施]` |
 | `semantic-metadata-refactor-checklist.md` | 意味論的混在排除チェックリスト（一部実施済み、`Capabilities::PURE` 排除等が残） | `[提案・未実施]` |
+| `user-surface-information-hiding.md` | ユーザー表面への情報隠蔽の対費用効果調査と実施範囲（経路依存エラー恒等性違反の実測記録を含む） | `[提案・未実施]` |
