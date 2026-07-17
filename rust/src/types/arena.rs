@@ -21,7 +21,7 @@ pub enum NodeKind {
     },
     Record {
         pairs: Vec<NodeId>,
-        index: HashMap<String, usize>,
+        shape: std::sync::Arc<crate::types::RecordShape>,
     },
     CodeBlock(Vec<Token>),
     ProcessHandle(u64),
@@ -66,10 +66,10 @@ impl ValueArena {
     pub fn alloc_record(
         &mut self,
         pairs: Vec<NodeId>,
-        index: HashMap<String, usize>,
+        shape: std::sync::Arc<crate::types::RecordShape>,
         hint: Interpretation,
     ) -> NodeId {
-        self.alloc_node(NodeKind::Record { pairs, index }, hint)
+        self.alloc_node(NodeKind::Record { pairs, shape }, hint)
     }
 
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
@@ -142,12 +142,12 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             ValueData::Tensor { data, shape } => {
                 arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
             }
-            ValueData::Record { pairs, index } => {
+            ValueData::Record { pairs, shape } => {
                 let pair_ids = pairs
                     .iter()
                     .map(|pair| alloc_recursive(pair, arena))
                     .collect();
-                arena.alloc_record(pair_ids, index.clone(), value.hint)
+                arena.alloc_record(pair_ids, shape.clone(), value.hint)
             }
             ValueData::CodeBlock(tokens) => {
                 arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), value.hint)
@@ -209,7 +209,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                 hint: arena.hint(id),
                 absence: None,
             },
-            NodeKind::Record { pairs, index } => {
+            NodeKind::Record { pairs, shape } => {
                 let values = pairs
                     .iter()
                     .map(|pair_id| rebuild_recursive(arena, *pair_id))
@@ -217,7 +217,7 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                 Value {
                     data: ValueData::Record {
                         pairs: Arc::new(values),
-                        index: index.clone(),
+                        shape: shape.clone(),
                     },
                     hint: arena.hint(id),
                     absence: None,
@@ -285,7 +285,11 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
                     arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
                 pairs.push(pair_id);
             }
-            Ok(arena.alloc_record(pairs, index, Interpretation::Unassigned))
+            Ok(arena.alloc_record(
+                pairs,
+                crate::types::record_shape::intern_record_shape(index),
+                Interpretation::Unassigned,
+            ))
         }
     }
 }

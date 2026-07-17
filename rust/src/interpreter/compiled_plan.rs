@@ -5,6 +5,7 @@ use crate::error::Result;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Token, Value, WordDefinition};
 
+use super::compiled_call::{execute_compiled_call, CompiledCall};
 use super::{modules, ConsumptionMode, EpochSnapshot, Interpreter, OperationTargetMode};
 
 #[derive(Debug, Clone)]
@@ -33,7 +34,7 @@ pub enum CompiledOp {
     SetTargetModeStack,
     SetConsumptionConsume,
     SetConsumptionKeep,
-    CallBuiltin(String),
+    CallBuiltin(Arc<CompiledCall>),
     /// A `COND` whose guard/body clauses were split once at compile time. The
     /// preceding `PushCodeBlock` ops are kept (they still push the clause blocks
     /// so stack discipline and the dynamic fallback are preserved); this op
@@ -71,7 +72,7 @@ fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> Compiled
         "NIL" => CompiledOp::PushLiteral(Value::nil()),
         _ => {
             if lookup_builtin_spec(symbol).is_some() {
-                CompiledOp::CallBuiltin(symbol.to_string())
+                CompiledOp::CallBuiltin(Arc::new(CompiledCall::resolve(symbol)))
             } else if let Some((resolved, _)) = interp.resolve_word_entry_readonly(symbol) {
                 if let Some((namespace, word)) = resolved.split_once('@') {
                     CompiledOp::CallQualifiedWord {
@@ -297,7 +298,7 @@ fn compile_clause_plan(tokens: &[Token], interp: &Interpreter) -> Option<Arc<Com
 
 fn is_cond_tail_op(op: &CompiledOp) -> bool {
     matches!(op, CompiledOp::CondDispatch(_))
-        || matches!(op, CompiledOp::CallBuiltin(n) if n == "COND")
+        || matches!(op, CompiledOp::CallBuiltin(c) if c.name == "COND")
 }
 
 /// Whether `op` is a call to the word currently being trampolined
@@ -340,7 +341,7 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
     type Replacement = ((usize, usize), Arc<[super::control_cond::CondClause]>);
     let mut replacements: Vec<Replacement> = Vec::new();
     for (flat_idx, &(li, oi)) in positions.iter().enumerate() {
-        if !matches!(&lines[li].ops[oi], CompiledOp::CallBuiltin(n) if n == "COND") {
+        if !matches!(&lines[li].ops[oi], CompiledOp::CallBuiltin(c) if c.name == "COND") {
             continue;
         }
         let mut blocks: Vec<Vec<Token>> = Vec::new();
@@ -470,9 +471,16 @@ fn execute_compiled_line(
                 interp.update_consumption_mode(ConsumptionMode::Consume)
             }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
-            CompiledOp::CallBuiltin(name) => {
-                interp.execute_builtin(name)?;
-                post_call_cleanup(interp, name);
+            CompiledOp::CallBuiltin(call) => {
+                execute_compiled_call(interp, call)?;
+                // `post_call_cleanup` with the mode-preservation answer
+                // precomputed at compile time (no per-call uppercase scan).
+                interp
+                    .semantic_registry
+                    .normalize_to_stack_len(interp.stack.len());
+                if !call.mode_preserving {
+                    interp.reset_execution_modes();
+                }
             }
             CompiledOp::CondDispatch(clauses) => {
                 super::control_cond::op_cond_dispatch(interp, clauses)?;

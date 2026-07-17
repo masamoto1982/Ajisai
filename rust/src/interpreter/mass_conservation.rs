@@ -81,15 +81,15 @@ pub fn validate_mass_conservation(plan: &CompiledPlan) -> MassReport {
                 CompiledOp::SetConsumptionConsume => consume = Consume::Eat,
                 CompiledOp::SetConsumptionKeep => consume = Consume::Keep,
                 CompiledOp::LineBreak | CompiledOp::BeginGuardedBlock => {}
-                CompiledOp::CallBuiltin(name) => {
-                    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+                CompiledOp::CallBuiltin(call) => {
                     // STAK folds the top `count` items — a data-dependent arity
                     // (§6.1) we cannot pin statically; abstain.
                     if target == Target::Stack {
                         all_known = false;
                         break 'outer;
                     }
-                    match mass_contract(canonical.as_ref()).fixed() {
+                    // `CompiledCall.name` is already canonical.
+                    match mass_contract(&call.name).fixed() {
                         Some((consumes, produces)) => {
                             // The word reads `consumes` operands (a depth dip),
                             // then pushes `produces`; under KEEP the operands

@@ -315,6 +315,15 @@ pub struct RuntimeMetrics {
     /// COMPARE-WITHIN comparisons — the sum of agreedPrefix over the Unknown
     /// results. Never altered by the bare relations. Observational only.
     pub compare_within_budget_terms_consumed: u64,
+
+    // ── Call-site shape inline cache (see shape_ic.rs) ────────────────────
+    /// Compiled builtin call sites completed through the shape-IC scalar
+    /// route (site monomorphic on scalar-fastpath-shaped operands).
+    /// Observational only; never alters value results.
+    pub shape_ic_hit_count: u64,
+    /// Shape-IC probes whose operands the scalar fast path rejected; the site
+    /// demoted itself to the generic route. Observational only.
+    pub shape_ic_miss_count: u64,
 }
 
 pub struct Interpreter {
@@ -463,6 +472,13 @@ pub struct Interpreter {
     /// every other case runs the kernel unchanged. Disable via
     /// `AJISAI_NO_HOF_MEMO` for an A/B comparison.
     pub(crate) hof_memo_enabled: bool,
+
+    /// When true (default), compiled builtin call sites keep a monomorphic
+    /// shape cache that routes scalar-fastpath-shaped operands straight to
+    /// the D1 fast path (hidden-class-style call-site specialization; see
+    /// `shape_ic.rs`). Routing only — observable values are unchanged.
+    /// Disable via `AJISAI_NO_SHAPE_IC` for an A/B comparison.
+    pub(crate) shape_ic_enabled: bool,
 }
 
 impl Interpreter {
@@ -533,6 +549,7 @@ impl Interpreter {
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
             hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
+            shape_ic_enabled: std::env::var("AJISAI_NO_SHAPE_IC").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -832,6 +849,14 @@ impl Interpreter {
     /// plan toggles this affects subsequent primitive executions immediately.
     pub fn set_scalar_fastpath_enabled(&mut self, enabled: bool) {
         self.scalar_fastpath_enabled = enabled;
+    }
+
+    /// Enable or disable the call-site shape inline cache for compiled
+    /// builtin calls. In-process equivalent of `AJISAI_NO_SHAPE_IC`; takes
+    /// effect immediately for subsequent compiled call sites. Routing only —
+    /// disabling it never changes observable values, just the route taken.
+    pub fn set_shape_ic_enabled(&mut self, enabled: bool) {
+        self.shape_ic_enabled = enabled;
     }
 
     /// Enable or disable pure HOF kernel memoization (`MAP`). In-process

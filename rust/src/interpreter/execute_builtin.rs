@@ -260,7 +260,7 @@ impl Interpreter {
             .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
     }
 
-    fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {
+    pub(crate) fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {
         match key {
             BuiltinExecutorKey::Add => arithmetic::op_add(self),
             BuiltinExecutorKey::Sub => arithmetic::op_sub(self),

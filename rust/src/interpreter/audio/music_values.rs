@@ -19,7 +19,6 @@ use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 use num_traits::ToPrimitive;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub(crate) const PITCH_KIND: &str = "music.pitch";
@@ -40,15 +39,15 @@ fn plain_vector(children: Vec<Value>) -> Value {
 /// Build a record value from ordered key/value fields.
 pub(crate) fn make_record(fields: Vec<(&str, Value)>) -> Value {
     let mut pairs = Vec::with_capacity(fields.len());
-    let mut index = HashMap::with_capacity(fields.len());
-    for (i, (key, value)) in fields.into_iter().enumerate() {
-        index.insert(key.to_string(), i);
+    let mut keys = Vec::with_capacity(fields.len());
+    for (key, value) in fields {
+        keys.push(key);
         pairs.push(plain_vector(vec![Value::from_string(key), value]));
     }
     Value {
         data: ValueData::Record {
             pairs: Arc::new(pairs),
-            index,
+            shape: crate::types::record_shape::record_shape_from_ordered_keys(keys),
         },
         hint: Interpretation::Unassigned,
         absence: None,
@@ -57,8 +56,8 @@ pub(crate) fn make_record(fields: Vec<(&str, Value)>) -> Value {
 
 /// Borrow a record field's value by key.
 pub(crate) fn record_field<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
-    if let ValueData::Record { pairs, index } = &value.data {
-        let pos = *index.get(key)?;
+    if let ValueData::Record { pairs, shape } = &value.data {
+        let pos = shape.slot(key)?;
         if let ValueData::Vector(kv) = &pairs.get(pos)?.data {
             if kv.len() == 2 {
                 return Some(&kv[1]);

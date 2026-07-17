@@ -511,6 +511,34 @@ fn interval_relation_for_kind(interp: &mut Interpreter, kind: OrderingKind) -> O
     })
 }
 
+/// Shape-IC entry points (see `shape_ic.rs`): attempt exactly the D1 scalar
+/// fast path for one comparison word. Same equivalence argument as the
+/// arithmetic wrappers — the fast path only accepts operands the preceding
+/// NIL-passthrough check would have ignored.
+pub(crate) fn scalar_fastpath_lt(interp: &mut Interpreter) -> bool {
+    push_ordering_scalar_fastpath(interp, OrderingKind::Lt)
+}
+
+pub(crate) fn scalar_fastpath_le(interp: &mut Interpreter) -> bool {
+    push_ordering_scalar_fastpath(interp, OrderingKind::Le)
+}
+
+pub(crate) fn scalar_fastpath_gt(interp: &mut Interpreter) -> bool {
+    push_ordering_scalar_fastpath(interp, OrderingKind::Gt)
+}
+
+pub(crate) fn scalar_fastpath_ge(interp: &mut Interpreter) -> bool {
+    push_ordering_scalar_fastpath(interp, OrderingKind::Ge)
+}
+
+pub(crate) fn scalar_fastpath_eq(interp: &mut Interpreter) -> bool {
+    push_equality_scalar_fastpath(interp, false)
+}
+
+pub(crate) fn scalar_fastpath_neq(interp: &mut Interpreter) -> bool {
+    push_equality_scalar_fastpath(interp, true)
+}
+
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
     if interp.operation_target_mode == OperationTargetMode::StackTop
         && nil_passthrough_binary(interp)

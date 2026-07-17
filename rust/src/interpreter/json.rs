@@ -99,8 +99,8 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
 
     let key_str = extract_string_content_from_value(&key_val);
 
-    let (pairs, index) = match &obj_val.data {
-        ValueData::Record { pairs, index } => (pairs.as_slice(), Some(index)),
+    let (pairs, shape) = match &obj_val.data {
+        ValueData::Record { pairs, shape } => (pairs.as_slice(), Some(shape)),
         ValueData::Vector(v) => (v.as_slice(), None),
         _ => {
             interp.stack.push(Value::nil());
@@ -108,8 +108,8 @@ pub fn op_json_get(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    if let Some(index) = index {
-        if let Some(&idx) = index.get(&key_str) {
+    if let Some(shape) = shape {
+        if let Some(idx) = shape.slot(&key_str) {
             if let Some(pair) = pairs.get(idx) {
                 if let ValueData::Vector(kv) = &pair.data {
                     if kv.len() == 2 {
@@ -193,17 +193,19 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
 
     let key_str = extract_string_content_from_value(&key_val);
 
-    let (old_pairs, old_index) = match &obj_val.data {
-        ValueData::Record { pairs, index } => (Some(pairs.as_slice()), Some(index)),
+    let (old_pairs, old_shape) = match &obj_val.data {
+        ValueData::Record { pairs, shape } => (Some(pairs.as_slice()), Some(shape)),
         ValueData::Vector(v) => (Some(v.as_slice()), None),
         _ => (None, None),
     };
 
     if let Some(old_pairs) = old_pairs {
         let mut new_pairs: Vec<Value> = Vec::with_capacity(old_pairs.len() + 1);
-        let mut new_index: HashMap<String, usize> = old_index.cloned().unwrap_or_default();
-        let found_idx = if let Some(idx) = old_index {
-            idx.get(&key_str).copied()
+        let mut new_index: HashMap<String, usize> = old_shape
+            .map(|shape| shape.mapping().clone())
+            .unwrap_or_default();
+        let found_idx = if let Some(shape) = old_shape {
+            shape.slot(&key_str)
         } else {
             old_pairs.iter().position(|pair| {
                 if let ValueData::Vector(kv) = &pair.data {
@@ -243,7 +245,7 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
             });
         }
 
-        if old_index.is_none() {
+        if old_shape.is_none() {
             new_index.clear();
             for (i, pair) in new_pairs.iter().enumerate() {
                 if let ValueData::Vector(kv) = &pair.data {
@@ -258,21 +260,24 @@ pub fn op_json_set(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value {
             data: ValueData::Record {
                 pairs: Arc::new(new_pairs),
-                index: new_index,
+                shape: crate::types::record_shape::intern_record_shape(new_index),
             },
             hint: Interpretation::Unassigned,
             absence: None,
         });
     } else {
-        let mut index = HashMap::new();
-        index.insert(key_str.clone(), 0);
         let pairs = Arc::new(vec![Value {
             data: ValueData::Vector(Arc::new(vec![Value::from_string(&key_str), new_value])),
             hint: Interpretation::Unassigned,
             absence: None,
         }]);
         interp.stack.push(Value {
-            data: ValueData::Record { pairs, index },
+            data: ValueData::Record {
+                pairs,
+                shape: crate::types::record_shape::record_shape_from_ordered_keys(
+                    [key_str.clone()],
+                ),
+            },
             hint: Interpretation::Unassigned,
             absence: None,
         });
@@ -334,7 +339,7 @@ fn build_record(pairs: Vec<Value>) -> Value {
     Value {
         data: ValueData::Record {
             pairs: Arc::new(pairs),
-            index,
+            shape: crate::types::record_shape::intern_record_shape(index),
         },
         hint: Interpretation::Unassigned,
         absence: None,

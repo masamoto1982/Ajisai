@@ -266,9 +266,9 @@ fn analyze_compiled_plan_with_context(
                 | CompiledOp::BeginGuardedBlock
                 | CompiledOp::LineBreak => {}
 
-                CompiledOp::CallBuiltin(name) => {
-                    let normalized = crate::core_word_aliases::canonicalize_core_word_name(name);
-                    let key: &str = normalized.as_ref();
+                CompiledOp::CallBuiltin(call) => {
+                    // `CompiledCall.name` is already canonical.
+                    let key: &str = &call.name;
                     if is_side_effecting_builtin(key) {
                         is_pure = false;
                     }
