@@ -64,11 +64,35 @@ export interface AjisaiInterpreter {
     // Only exported by wasm bundles built with the opt-in `elastic-engine`
     // cargo feature; the default (trusted core) bundle omits it.
     collect_hedged_trace?(): string[];
+    // Cost-model counters (SPECIFICATION.html §4.8): observational only,
+    // session-cumulative, reset with the interpreter. Optional so the GUI
+    // degrades gracefully against a wasm bundle that predates the API.
+    collect_runtime_metrics?(): RuntimeMetricsSnapshot;
     // Serial RX inbox injection (SPECIFICATION.html §9.4). Filled before execution
     // from the platform serial adapter; drained by SERIAL@READ.
     update_serial_inbox(portId: string, bytes: Uint8Array): void;
     mark_serial_disconnected(portId: string): void;
     clear_serial_inboxes(): void;
+}
+
+/**
+ * Cost-model counters as exposed by `collect_runtime_metrics()`
+ * (SPECIFICATION.html §4.8). These are the machine-channel names; the GUI
+ * renders them in the Reference cost-model vocabulary (fast lane, dense
+ * vectors, comparison depth) and never shows these identifiers to users.
+ * Counters are diagnostics: reading them changes no result.
+ */
+export interface RuntimeMetricsSnapshot {
+    scalarFastpathCount: number;
+    bulkKernelUseCount: number;
+    simdKernelUseCount: number;
+    tensorFlattenCount: number;
+    tensorRebuildCount: number;
+    sparseCandidateCount: number;
+    compareWithinCount: number;
+    compareWithinLazyCount: number;
+    compareWithinUnknownCount: number;
+    compareWithinBudgetTermsConsumed: number;
 }
 
 export interface ProtocolDiagnosis {
@@ -157,6 +181,10 @@ export interface ExecuteResult {
     hedgedCancelled?: string[];
     errorFlowTrace?: ErrorFlowTraceEvent[];
 
+    // Per-run cost-model activity: the counter delta across this execution,
+    // attached by the execution worker. Diagnostics only (SPEC §4.8); the
+    // GUI renders it in cost-model vocabulary, collapsed by default.
+    runtimeMetricsDelta?: RuntimeMetricsSnapshot;
 }
 
 export interface Fraction {

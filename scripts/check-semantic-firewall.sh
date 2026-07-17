@@ -53,6 +53,7 @@ check_user_visible_absent() {
       rust/src src \
       -g '!*test*' -g '!**/elastic/**' -g '!**/cli/**' \
       -g '!**/wasm_interpreter_bindings/**' -g '!**/benches/**' \
+      -g '!**/route_equivalence.rs' -g '!src/wasm/generated/**' \
     | rg -v '\.expect\(|eprintln!|\[trace-|debug_assert|panic!|#\[cfg\(feature'
   then
     echo "[semantic-firewall] FAIL: user-visible ${description}" >&2

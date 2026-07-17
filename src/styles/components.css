@@ -348,6 +348,25 @@
     accent-color: var(--color-primary);
 }
 
+/* Cost summary: per-run cost-model activity (Reference: Cost Model),
+   collapsed by default at the bottom of the Output area. Rendered muted so
+   it reads as an optional diagnostic, never part of the program's output. */
+.cost-summary {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+.cost-summary summary {
+    cursor: pointer;
+    user-select: none;
+}
+
+.cost-summary-body {
+    white-space: pre-wrap;
+    padding: 0.25rem 0 0 1rem;
+}
+
 .stack-node-math {
     display: inline-block;
     max-width: 100%;

@@ -1,6 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import type { Value, ExecuteResult } from '../wasm-interpreter-types';
+import type { Value, ExecuteResult, RuntimeMetricsSnapshot } from '../wasm-interpreter-types';
 import { AUDIO_ENGINE } from '../audio/audio-engine';
 import { getPlatform } from '../platform';
 import { valueToLatex } from './value-latex';
@@ -503,6 +503,73 @@ const createJsonDownloadLinkElement = (jsonCompact: string): HTMLAnchorElement =
     return a;
 };
 
+// ── Cost summary (Reference: Cost Model) ──────────────────────────────────
+// Per-run cost-model activity, rendered strictly in the Reference page's
+// vocabulary (fast lane, dense/nested vectors, COMPARE-WITHIN depth) — the
+// machine counter names never appear. Collapsed by default and omitted
+// entirely when the run had no cost-model activity, so users who never open
+// it never see it. Diagnostics only (SPEC §4.8): nothing here is a value.
+const buildCostSummaryLines = (delta: RuntimeMetricsSnapshot): string[] => {
+    const lines: string[] = [];
+    const plural = (n: number): string => (n === 1 ? '' : 's');
+
+    if (delta.scalarFastpathCount > 0) {
+        const n = delta.scalarFastpathCount;
+        const lane = `Fast lane: ${n} scalar operation${plural(n)}`;
+        lines.push(lane);
+    }
+
+    if (delta.bulkKernelUseCount > 0 || delta.simdKernelUseCount > 0) {
+        const n = delta.bulkKernelUseCount;
+        const simd = delta.simdKernelUseCount;
+        let line = `Dense vectors: ${n} bulk operation${plural(n)}`;
+        if (simd > 0) line += ` (${simd} SIMD)`;
+        lines.push(line);
+    }
+
+    if (delta.tensorFlattenCount > 0 || delta.tensorRebuildCount > 0) {
+        lines.push(
+            `Vector storage: ${delta.tensorFlattenCount} conversion${plural(delta.tensorFlattenCount)} to dense, ` +
+                `${delta.tensorRebuildCount} back to nested`
+        );
+    }
+
+    if (delta.compareWithinCount > 0) {
+        let line = `COMPARE-WITHIN: ${delta.compareWithinCount} call${plural(delta.compareWithinCount)}`;
+        if (delta.compareWithinUnknownCount > 0) {
+            line += `, ${delta.compareWithinUnknownCount} reached the requested depth (UNKNOWN)`;
+        }
+        if (delta.compareWithinBudgetTermsConsumed > 0) {
+            const t = delta.compareWithinBudgetTermsConsumed;
+            line += `, ${t} continued-fraction term${plural(t)} examined`;
+        }
+        lines.push(line);
+    }
+
+    return lines;
+};
+
+const renderCostSummary = (result: ExecuteResult, outputDisplay: HTMLElement): void => {
+    const delta = result.runtimeMetricsDelta;
+    if (!delta) return;
+    const lines = buildCostSummaryLines(delta);
+    if (lines.length === 0) return;
+
+    const details = document.createElement('details');
+    details.className = 'cost-summary';
+
+    const summary = document.createElement('summary');
+    summary.textContent = 'Cost';
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'cost-summary-body';
+    body.textContent = lines.join('\n');
+    details.appendChild(body);
+
+    appendToElement(outputDisplay, details);
+};
+
 const renderJsonExportLinks = (jsonExportCommands: readonly string[], outputDisplay: HTMLElement): void => {
     jsonExportCommands.forEach(jsonCompact => {
         const link = createJsonDownloadLinkElement(jsonCompact);
@@ -582,6 +649,8 @@ export const createDisplay = (elements: DisplayElements): Display => {
         if (!debug && !program && parsed.jsonExport.length === 0 && result.status === 'OK') {
             appendSpan('OK', '#333');
         }
+
+        renderCostSummary(result, elements.outputDisplay);
     };
 
     const appendExecutionResult = (result: ExecuteResult): void => {
