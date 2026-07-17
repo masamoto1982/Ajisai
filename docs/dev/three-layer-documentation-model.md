@@ -355,6 +355,23 @@ Phase 2 — LOOKUP body:
 5. Replace the placeholder body of `lookup_builtin_detail` with a renderer that emits the §3.4 template from those fields.
 6. Add the registry-vs-§7.14 consistency test (see §5.3).
 
+> **Phase 2 implementation status (2026-07):** landed with one deliberate
+> deviation from item 4. The file-size budget (§14.1) rules out growing
+> `builtin_word_definitions.rs` by the authored content, so the authored
+> fields (`behavior` / `examples` / failure note / `related`) live in a
+> keyed side table, `rust/src/builtins/builtin_word_lookup_docs.rs`,
+> mirroring the `module_word_docs.rs` precedent; an orphan-check test keeps
+> it drift-free against `BuiltinSpec`. `failure` and `side_effects` are not
+> authored at all — they are **derived at render time** from the §7.14
+> contract metadata (`partiality` / `nil_policy` / `effects`), so every
+> word renders the full template (Examples fall back to `hover_syntax`)
+> and those sections can never contradict the registry. Authored entries
+> exist for a first batch of core words (vector access, arithmetic,
+> comparison, casts/text, control/HOF, dictionary words, and the §2.3
+> Bubble-Rule set GET / DIV / NUM / CHR); remaining words render the
+> derived template until authored. `syntax_forms` and
+> `modifier_interaction` are still open.
+
 Phase 3 — Reference site:
 
 7. Add `concept: Option<&'static str>` to `BuiltinSpec`.
