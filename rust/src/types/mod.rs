@@ -1,6 +1,7 @@
 pub mod arena;
 pub mod continued_fraction;
 pub mod display;
+pub mod exact;
 pub mod fraction;
 mod fraction_arithmetic;
 #[cfg(test)]
