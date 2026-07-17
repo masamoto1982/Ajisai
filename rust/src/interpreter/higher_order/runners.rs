@@ -17,7 +17,7 @@ pub(crate) fn execute_quantized_map_kernel(
     elem: Value,
 ) -> Result<Value> {
     if let Some(fast) = try_execute_fast_quantized_map_kernel(interp, qb, elem.clone()) {
-        return fast;
+        return Ok(fast);
     }
 
     let saved = interp.stack.clone();
@@ -56,7 +56,7 @@ pub(crate) fn execute_quantized_predicate_kernel(
     elem: Value,
 ) -> Result<bool> {
     if let Some(fast) = try_execute_fast_quantized_predicate_kernel(interp, qb, elem.clone()) {
-        return fast;
+        return Ok(fast);
     }
 
     let saved = interp.stack.clone();
@@ -66,11 +66,7 @@ pub(crate) fn execute_quantized_predicate_kernel(
         interp
             .stack
             .pop()
-            .ok_or_else(|| {
-                AjisaiError::from(
-                    "predicate: expected boolean value from quantized block, got empty stack",
-                )
-            })
+            .ok_or_else(|| AjisaiError::from("predicate: expected boolean value, got empty stack"))
             .and_then(extract_predicate_boolean)
     });
     interp.stack = saved;
@@ -105,7 +101,7 @@ pub(crate) fn execute_quantized_fold_kernel(
     if let Some(fast) =
         try_execute_fast_quantized_fold_kernel(interp, qb, acc.clone(), elem.clone())
     {
-        return fast;
+        return Ok(fast);
     }
 
     let saved = interp.stack.clone();
@@ -113,9 +109,10 @@ pub(crate) fn execute_quantized_fold_kernel(
     interp.stack.push(acc);
     interp.stack.push(elem);
     let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| {
-        interp.stack.pop().ok_or_else(|| {
-            AjisaiError::from("FOLD: expected return value from quantized block, got empty stack")
-        })
+        interp
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::from("FOLD: expected return value, got empty stack"))
     });
     interp.stack = saved;
     res

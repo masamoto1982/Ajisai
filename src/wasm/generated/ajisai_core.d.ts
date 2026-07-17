@@ -52,6 +52,11 @@ export class AjisaiInterpreter {
      * Tuple shape: `(name, description)`.
      */
     collect_module_words_info(module_name: string): any;
+    /**
+     * Cost-model counters for the Playground. Counts are session-cumulative
+     * and reset with the interpreter. Observational only (SPEC §4.8).
+     */
+    collect_runtime_metrics(): any;
     collect_stack(): any;
     collect_user_words_info(): any;
     /**
@@ -130,6 +135,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_collect_input_helper_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_module_catalog_words_info: (a: number, b: number, c: number) => any;
     readonly ajisaiinterpreter_collect_module_words_info: (a: number, b: number, c: number) => any;
+    readonly ajisaiinterpreter_collect_runtime_metrics: (a: number) => any;
     readonly ajisaiinterpreter_collect_stack: (a: number) => any;
     readonly ajisaiinterpreter_collect_user_words_info: (a: number) => any;
     readonly ajisaiinterpreter_collect_word_identities: (a: number) => any;
@@ -153,8 +159,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__ha370fd0906e0d210: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__ha665bb70d3c43529: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h0ce73f1573c0c60c: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h7fc9e503cc7024b3: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

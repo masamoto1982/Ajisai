@@ -23,7 +23,6 @@ pub use count::op_count;
 pub use filter::op_filter;
 pub use map::op_map;
 
-use crate::error::Result;
 use crate::interpreter::quantized_block::QuantizedBlock;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
@@ -43,7 +42,7 @@ pub(crate) fn try_bulk_quantized_fold_pub(
     qb: &QuantizedBlock,
     init: &Value,
     target: &Value,
-) -> Option<Result<Value>> {
+) -> Option<Value> {
     fast_kernels::try_bulk_quantized_fold(interp, qb, init, target)
 }
 

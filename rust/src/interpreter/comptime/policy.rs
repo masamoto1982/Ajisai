@@ -12,7 +12,7 @@ pub(crate) fn assert_comptime_safe_tokens(
         if let Token::Symbol(name) = token {
             if name.eq_ignore_ascii_case("PRECOMPUTE") {
                 return Err(AjisaiError::from(
-                    "PRECOMPUTE rejected: nested PRECOMPUTE is not supported in Phase 1",
+                    "PRECOMPUTE rejected: nested PRECOMPUTE is not supported",
                 ));
             }
 

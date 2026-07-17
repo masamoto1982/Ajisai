@@ -479,6 +479,15 @@ pub struct Interpreter {
     /// `shape_ic.rs`). Routing only — observable values are unchanged.
     /// Disable via `AJISAI_NO_SHAPE_IC` for an A/B comparison.
     pub(crate) shape_ic_enabled: bool,
+
+    /// When true (default), `MAP`/`FILTER`/`FOLD` and the predicate family may
+    /// route eligible quantized blocks through the specialized kernels in
+    /// `higher_order/fast_kernels.rs` (per-element and bulk). Routing only —
+    /// the kernels decline any input whose outcome the generic route defines
+    /// differently (e.g. division by zero), so observable values, errors, and
+    /// NIL reasons are unchanged. Disable via `AJISAI_NO_FAST_KERNEL` for an
+    /// A/B comparison.
+    pub(crate) fast_kernel_enabled: bool,
 }
 
 impl Interpreter {
@@ -550,6 +559,7 @@ impl Interpreter {
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
             hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
             shape_ic_enabled: std::env::var("AJISAI_NO_SHAPE_IC").is_err(),
+            fast_kernel_enabled: std::env::var("AJISAI_NO_FAST_KERNEL").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -865,6 +875,15 @@ impl Interpreter {
     /// immediately for subsequent `MAP` calls.
     pub fn set_hof_memo_enabled(&mut self, enabled: bool) {
         self.hof_memo_enabled = enabled;
+    }
+
+    /// Enable or disable the specialized HOF kernels (per-element and bulk)
+    /// in `higher_order/fast_kernels.rs`. In-process equivalent of
+    /// `AJISAI_NO_FAST_KERNEL`; lets a differential test or benchmark A/B the
+    /// kernel route against the generic quantized-block route. Routing only —
+    /// disabling it never changes observable values, errors, or NIL reasons.
+    pub fn set_fast_kernel_enabled(&mut self, enabled: bool) {
+        self.fast_kernel_enabled = enabled;
     }
 
     /// Override the execution step budget (water level). Raising it lets a

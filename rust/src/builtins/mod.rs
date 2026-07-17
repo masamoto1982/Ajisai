@@ -1,5 +1,6 @@
 mod builtin_word_definitions;
 mod builtin_word_details;
+mod builtin_word_lookup_docs;
 
 pub use builtin_word_definitions::{
     builtin_specs, collect_core_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,

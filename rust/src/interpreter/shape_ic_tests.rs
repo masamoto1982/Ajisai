@@ -1,68 +1,26 @@
-//! Differential coverage for the call-site shape inline cache (`shape_ic.rs`).
-//! The IC is routing state only: with it enabled or disabled, the stack
-//! values, rendered forms, and per-value hints must be identical for every
-//! program. These tests drive compiled word plans (the only place the IC
-//! lives) through hits, misses, and demotions.
+//! Differential coverage for the call-site shape inline cache (`shape_ic.rs`),
+//! on the shared route-equivalence harness (`route_equivalence.rs`). The IC
+//! is routing state only: with it enabled or disabled, the execution outcome
+//! — Ok stack or error, rendered forms, hints, and NIL protocol reasons —
+//! must be identical for every program. These tests drive compiled word
+//! plans (the only place the IC lives) through hits, misses, and demotions.
 
+use super::route_equivalence::{assert_configs_equal, observe};
 use crate::interpreter::Interpreter;
 
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    use std::task::{Context, Poll};
-    let mut fut = Box::pin(fut);
-    let waker = std::task::Waker::noop();
-    let mut cx = Context::from_waker(waker);
-    loop {
-        match fut.as_mut().poll(&mut cx) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => std::thread::yield_now(),
-        }
-    }
-}
-
 fn run_lines(lines: &[&str], ic_enabled: bool) -> Interpreter {
-    let mut interp = Interpreter::new();
-    interp.set_shape_ic_enabled(ic_enabled);
-    for line in lines {
-        block_on(interp.execute(line)).unwrap();
-    }
+    let (interp, obs) = observe(|i| i.set_shape_ic_enabled(ic_enabled), lines);
+    assert_eq!(obs.outcome, Ok(()), "unexpected error for: {lines:?}");
     interp
-}
-
-fn rendered_stack(interp: &Interpreter) -> Vec<String> {
-    interp
-        .get_stack()
-        .iter()
-        .map(|value| format!("{value}"))
-        .collect()
-}
-
-fn hint_stack(interp: &Interpreter) -> Vec<String> {
-    interp
-        .get_stack()
-        .iter()
-        .map(|value| format!("{:?}", value.hint))
-        .collect()
 }
 
 fn assert_ic_on_equals_off(lines: &[&str]) -> (Interpreter, Interpreter) {
-    let on = run_lines(lines, true);
-    let off = run_lines(lines, false);
-    assert_eq!(
-        format!("{:?}", on.get_stack()),
-        format!("{:?}", off.get_stack()),
-        "shape IC ON vs OFF stack diverged for: {lines:?}"
-    );
-    assert_eq!(
-        rendered_stack(&on),
-        rendered_stack(&off),
-        "shape IC ON vs OFF render diverged for: {lines:?}"
-    );
-    assert_eq!(
-        hint_stack(&on),
-        hint_stack(&off),
-        "shape IC ON vs OFF hints diverged for: {lines:?}"
-    );
-    (on, off)
+    assert_configs_equal(
+        "shape IC",
+        |i| i.set_shape_ic_enabled(true),
+        |i| i.set_shape_ic_enabled(false),
+        lines,
+    )
 }
 
 #[test]
