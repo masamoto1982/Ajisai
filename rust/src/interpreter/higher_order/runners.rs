@@ -67,9 +67,7 @@ pub(crate) fn execute_quantized_predicate_kernel(
             .stack
             .pop()
             .ok_or_else(|| {
-                AjisaiError::from(
-                    "predicate: expected boolean value from quantized block, got empty stack",
-                )
+                AjisaiError::from("predicate: expected boolean value, got empty stack")
             })
             .and_then(extract_predicate_boolean)
     });
@@ -113,9 +111,10 @@ pub(crate) fn execute_quantized_fold_kernel(
     interp.stack.push(acc);
     interp.stack.push(elem);
     let res = execute_quantized_block_stack_top(interp, qb).and_then(|_| {
-        interp.stack.pop().ok_or_else(|| {
-            AjisaiError::from("FOLD: expected return value from quantized block, got empty stack")
-        })
+        interp
+            .stack
+            .pop()
+            .ok_or_else(|| AjisaiError::from("FOLD: expected return value, got empty stack"))
     });
     interp.stack = saved;
     res
