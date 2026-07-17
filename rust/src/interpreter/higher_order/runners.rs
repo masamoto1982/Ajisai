@@ -66,9 +66,7 @@ pub(crate) fn execute_quantized_predicate_kernel(
         interp
             .stack
             .pop()
-            .ok_or_else(|| {
-                AjisaiError::from("predicate: expected boolean value, got empty stack")
-            })
+            .ok_or_else(|| AjisaiError::from("predicate: expected boolean value, got empty stack"))
             .and_then(extract_predicate_boolean)
     });
     interp.stack = saved;
