@@ -55,6 +55,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割再定義（Lisp 的動機の廃止、テンソル/構造データ基盤への固定） | `[方針記録]` |
 | `implicit-parallelism-roadmap.md` | 暗黙並列の設計原理（Same Result / Never Slower / Zero Syntax）。elastic/hedged 実行エンジンは opt-in cargo feature `elastic-engine` に隔離済み（デフォルトビルドは常に greedy） | `[設計根拠]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察（`_attachments/cf_probe.py` を含む） | `[観察ノート]` |
+| `semantic-role-ownership-phase4-design.md` | Phase 4 の意味役割所有権整理メモ（`Value.hint` / `stack_hints` / `semantic_sync` の段階移行案） | `[提案・未実施]` |
 
 ## 実装済み最適化の設計記録
 
