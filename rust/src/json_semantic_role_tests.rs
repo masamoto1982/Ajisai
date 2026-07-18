@@ -27,6 +27,17 @@ fn top_protocol_node(interp: &Interpreter) -> ProtocolNode {
     value_to_protocol(value, Some(hint))
 }
 
+/// Phase 4 role-ownership regression guard: until the stack abstraction owns
+/// `(value, role)` as one unit, every observable execution boundary must keep
+/// the two legacy vectors position-aligned.
+fn assert_stack_hints_aligned(interp: &Interpreter) {
+    assert_eq!(
+        interp.get_stack().len(),
+        interp.collect_stack_hints().len(),
+        "stack values and semantic-plane roles must remain position-aligned"
+    );
+}
+
 #[tokio::test]
 async fn parse_record_role_is_record_not_text() {
     let mut interp = Interpreter::new();
@@ -97,6 +108,55 @@ async fn keep_mode_preserves_untouched_slot_roles() {
     // (re)derived from the constructed value.
     assert_eq!(hints[0], Interpretation::Text);
     assert_ne!(hints[1], Interpretation::Text);
+}
+
+#[tokio::test]
+async fn cf_retag_updates_only_target_stack_slot_role() {
+    let mut interp = Interpreter::new();
+    interp.execute("'anchor' 5/2 >CF").await.unwrap();
+
+    assert_stack_hints_aligned(&interp);
+    let stack = interp.get_stack();
+    let hints = interp.collect_stack_hints();
+    assert_eq!(stack.len(), 2);
+    assert_eq!(hints[0], Interpretation::Text);
+    assert_eq!(hints[1], Interpretation::ContinuedFraction);
+    assert_eq!(format_with_hint(&stack[0], hints[0]), "'anchor'");
+    assert_eq!(format_with_hint(&stack[1], hints[1]), "( 2 ( 2 ) )");
+}
+
+#[tokio::test]
+async fn cond_keep_preserves_outer_slot_role_alignment() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("[ -5 ] ,, { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND")
+        .await
+        .unwrap();
+
+    assert_stack_hints_aligned(&interp);
+    let hints = interp.collect_stack_hints();
+    assert_eq!(hints.len(), 2);
+    assert_eq!(hints[0], Interpretation::RawNumber);
+    assert_eq!(hints[1], Interpretation::Text);
+}
+
+#[tokio::test]
+async fn nil_passthrough_keeps_reason_and_effective_role_alignment() {
+    let mut interp = Interpreter::new();
+    interp.execute("1 0 /").await.unwrap();
+
+    assert_stack_hints_aligned(&interp);
+    let value = interp.get_stack().last().unwrap();
+    assert!(value.is_nil());
+    assert!(
+        value.nil_reason().is_some(),
+        "division by zero must keep a structured NIL reason"
+    );
+    let node = top_protocol_node(&interp);
+    // Arithmetic NIL passthrough keeps the effective operand/result role while
+    // carrying absence metadata in the value payload. Phase 4 must preserve
+    // that existing stack-position role behavior unless SPEC changes it.
+    assert_eq!(node.display_hint, Interpretation::RawNumber);
 }
 
 #[tokio::test]

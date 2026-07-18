@@ -94,6 +94,8 @@ fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
         "mayBubble": check.may_bubble,
         "hasFallback": check.has_fallback,
         "rejectsNil": check.rejects_nil,
+        "unguardedNil": check.unguarded_nil,
+        "rejectsNilFlows": check.rejects_nil_flows,
         "findings": findings,
         "clarifications": clarifications_json(&clarify::from_plan_check(check, lang)),
     })
@@ -134,15 +136,12 @@ fn explanation_json(explanation: &Explanation) -> Json {
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
-    let hints = interp.collect_stack_hints();
-    let nodes: Vec<Json> = interp
-        .get_stack()
+    let stack = interp
+        .semantic_stack_snapshot()
+        .expect("stack values and semantic roles must remain position-aligned");
+    let nodes: Vec<Json> = stack
         .iter()
-        .enumerate()
-        .map(|(i, value)| {
-            let hint = hints.get(i).copied().unwrap_or(Interpretation::Unassigned);
-            protocol_node_json(&value_to_protocol(value, Some(hint)))
-        })
+        .map(|slot| protocol_node_json(&value_to_protocol(slot.value(), Some(slot.role()))))
         .collect();
     Json::Array(nodes)
 }

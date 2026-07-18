@@ -621,6 +621,7 @@ impl Interpreter {
     pub(crate) fn invalidate_execution_artifacts(&mut self) {
         self.clear_resolve_cache();
         self.elastic_cache.clear();
+        self.clear_word_contract_cache();
     }
 
     pub(crate) fn bump_dictionary_epoch(&mut self) {
@@ -720,48 +721,6 @@ impl Interpreter {
         let order = self.next_registration_order;
         self.next_registration_order += 1;
         order
-    }
-
-    pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear();
-        self.core_vocabulary.clear();
-        self.user_words.clear();
-        self.user_dictionaries.clear();
-        self.dependents.clear();
-        self.output_buffer.clear();
-        self.host_effects.clear();
-        self.definition_to_load = None;
-        self.reset_execution_modes();
-        self.force_flag = false;
-        self.pending_tokens = None;
-        self.pending_token_index = 0;
-        self.module_state.clear();
-        self.call_stack.clear();
-        self.call_depth = 0;
-        self.tail_self_word = None;
-        self.in_tail_context = false;
-        self.tail_jump_pending = false;
-        // `cond_dispatch_enabled` is a configuration flag, not run state, so it
-        // is intentionally not reset here.
-        self.owning_dictionary_context = None;
-        self.word_identities.clear();
-        self.body_store.clear();
-        self.defer_identity_recompute = false;
-        self.import_table.modules.clear();
-        self.module_vocabulary.clear();
-        self.dictionary_dependencies.clear();
-        self.next_registration_order = 1;
-        self.active_user_dictionary = "EXAMPLE".to_string();
-        self.semantic_registry.clear();
-        self.child_runtimes.clear();
-        self.next_child_id = 1;
-        self.monitor_notifications.clear();
-        self.next_supervisor_id = 1;
-        self.runtime_metrics = RuntimeMetrics::default();
-        self.hedged_trace_log.clear();
-        self.error_flow_trace_log.clear();
-        crate::builtins::register_builtins(&mut self.core_vocabulary);
-        Ok(())
     }
 
     pub fn collect_output(&mut self) -> String {

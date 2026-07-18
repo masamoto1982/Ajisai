@@ -33,6 +33,17 @@ check_absent \
   'DivisionByZero|SafeCaught|ExecuteWord|ParseStructure|ResolveWord' \
   src rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs
 
+# Module declarations that carry inherent impl blocks must appear only once:
+# declaring the same file module twice duplicates every inherent method and
+# breaks Rust/WASM compilation with E0428/E0592/E0034.
+semantic_stack_adapter_count=$(
+  rg -n --color never '^pub mod semantic_stack_adapter;$' rust/src/interpreter/mod.rs | wc -l
+)
+if [[ "${semantic_stack_adapter_count//[[:space:]]/}" != "1" ]]; then
+  echo "[semantic-firewall] FAIL: semantic_stack_adapter must be declared exactly once" >&2
+  failed=1
+fi
+
 # ── Internal-vocabulary firewall over user-visible strings ────────────────
 # Two-tier disclosure (docs/dev/user-surface-information-hiding.md, S2):
 # language users see optimizations only as speed, so error text, NIL
