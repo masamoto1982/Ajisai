@@ -35,6 +35,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `natural-language-surface-design.md` | CLI 自然言語サーフェス（explain / plan-check / modifier / clarify）設計 | `[設計根拠]` |
 | `capability-transition-measurement-design.md` | モデル能力階級スイープ計測の設計（`bench/agent-suite/`） | `[設計根拠]` |
 | `ai-first-competitive-upgrade-instructions.md` | AI-first 改修 work order。Phase 1–3 実装済み。§6.3 が verified lowering の実装ゲートとして現役。`scripts/generate-skill-md.mjs` が参照 | `[設計根拠]` |
+| `ajisai-evolution-codex-handoff.md` | ユーザー語契約から DATA モジュールまでの 8 フェーズ発展改修 handoff（未着手の作業指示） | `[提案・未実施]` |
 | `ajisai-use-language-identity.md` | 「使う言語」に振り切る設計判断の計測接続記録 | `[方針記録]` |
 
 ## ランタイム・値モデル設計
@@ -54,6 +55,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割再定義（Lisp 的動機の廃止、テンソル/構造データ基盤への固定） | `[方針記録]` |
 | `implicit-parallelism-roadmap.md` | 暗黙並列の設計原理（Same Result / Never Slower / Zero Syntax）。elastic/hedged 実行エンジンは opt-in cargo feature `elastic-engine` に隔離済み（デフォルトビルドは常に greedy） | `[設計根拠]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察（`_attachments/cf_probe.py` を含む） | `[観察ノート]` |
+| `semantic-role-ownership-phase4-design.md` | Phase 4 の意味役割所有権整理メモ（`Value.hint` / `stack_hints` / `semantic_sync` の段階移行案） | `[提案・未実施]` |
 
 ## 実装済み最適化の設計記録
 
