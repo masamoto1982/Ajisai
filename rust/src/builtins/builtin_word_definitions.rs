@@ -1,4 +1,4 @@
-use crate::coreword_registry::{NilPolicy, Partiality, SafetyLevel, WordPurity};
+use crate::coreword_registry::{MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuiltinExecutorKey {
@@ -123,6 +123,9 @@ pub struct BuiltinSpec {
     /// three-layer-documentation-model.md §4.3.
     pub hover_syntax: &'static str,
     pub executor_key: Option<BuiltinExecutorKey>,
+    /// Static flow-mass contract (SPEC §13.1). This is the canonical
+    /// per-builtin source consumed by the Coreword registry and analyzers.
+    pub mass: MassContract,
 
     // Layer 2 (LOOKUP) fields. Four-section template:
     //   Category / Summary / Role / Stack Effect
@@ -155,6 +158,7 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     hover_summary: "",
     hover_syntax: "",
     executor_key: None,
+    mass: MassContract::Dynamic,
     summary: "",
     role: "",
     stack_effect: "",
@@ -714,6 +718,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "STR",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "cast",
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
@@ -730,6 +735,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "BOOL",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "cast",
         hover_summary: "BOOL — convert to boolean",
         hover_syntax: "1 BOOL",
@@ -765,6 +771,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "ADD",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "arithmetic",
         hover_summary: "ADD — add values",
         hover_syntax: "1 2 +",
@@ -779,6 +786,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "SUB",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "arithmetic",
         hover_summary: "SUB — subtract values",
         hover_syntax: "5 3 -",
@@ -793,6 +801,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "MUL",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "arithmetic",
         hover_summary: "MUL — multiply values",
         hover_syntax: "2 4 *",
@@ -807,6 +816,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "DIV",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "arithmetic",
         hover_summary: "DIV — divide values",
         hover_syntax: "10 2 /",
@@ -839,6 +849,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "EQ",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "EQ — test equality",
         hover_syntax: "1 1 =",
@@ -855,6 +866,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "LT",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "LT — test less than",
         hover_syntax: "1 2 <",
@@ -871,6 +883,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "LTE",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "LTE — test less than or equal",
         hover_syntax: "1 1 <=",
@@ -887,6 +900,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "GT",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "GT — test greater than",
         hover_syntax: "2 1 >",
@@ -903,6 +917,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "GTE",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "GTE — test greater than or equal",
         hover_syntax: "1 1 >=",
@@ -919,6 +934,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "NEQ",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "comparison",
         hover_summary: "NEQ — test inequality",
         hover_syntax: "1 2 <>",
@@ -937,6 +953,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "AND",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "logic",
         hover_summary: "AND — logical AND",
         hover_syntax: "TRUE TRUE &",
@@ -950,6 +967,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "OR",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "logic",
         hover_summary: "OR — logical OR",
         hover_syntax: "TRUE FALSE OR",
@@ -963,6 +981,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "NOT",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "logic",
         hover_summary: "NOT — logical negation",
         hover_syntax: "TRUE NOT",
@@ -1381,6 +1400,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "MOD",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "arithmetic",
         hover_summary: "MOD — modulo",
         hover_syntax: "7 3 %",
@@ -1397,6 +1417,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "FLOOR",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "arithmetic",
         hover_summary: "FLOOR — round toward negative infinity",
         hover_syntax: "[ 7/3 ] FLOOR",
@@ -1413,6 +1434,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "CEIL",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "arithmetic",
         hover_summary: "CEIL — round toward positive infinity",
         hover_syntax: "[ 7/3 ] CEIL",
@@ -1429,6 +1451,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "ROUND",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
         category: "arithmetic",
         hover_summary: "ROUND — round to nearest integer",
         hover_syntax: "[ 5/2 ] ROUND",
@@ -1445,6 +1468,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "QUANTIZE",
+        mass: MassContract::Fixed { consumes: 2, produces: 2 },
         category: "arithmetic",
         hover_summary: "QUANTIZE — round to a rational grid, keeping the residual",
         hover_syntax: "100/3 1/100 QUANTIZE",
@@ -1461,6 +1485,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "QUANTIZE-HALF-AWAY",
+        mass: MassContract::Fixed { consumes: 2, produces: 2 },
         category: "arithmetic",
         hover_summary: "QUANTIZE-HALF-AWAY — quantize, ties away from zero",
         hover_syntax: "5/2 1 QUANTIZE-HALF-AWAY",
@@ -1477,6 +1502,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "QUANTIZE-FLOOR",
+        mass: MassContract::Fixed { consumes: 2, produces: 2 },
         category: "arithmetic",
         hover_summary: "QUANTIZE-FLOOR — quantize toward negative infinity",
         hover_syntax: "100/3 1/100 QUANTIZE-FLOOR",
@@ -1493,6 +1519,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "QUANTIZE-CEIL",
+        mass: MassContract::Fixed { consumes: 2, produces: 2 },
         category: "arithmetic",
         hover_summary: "QUANTIZE-CEIL — quantize toward positive infinity",
         hover_syntax: "100/3 1/100 QUANTIZE-CEIL",
@@ -1509,6 +1536,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "QUANTIZE-TRUNC",
+        mass: MassContract::Fixed { consumes: 2, produces: 2 },
         category: "arithmetic",
         hover_summary: "QUANTIZE-TRUNC — quantize toward zero",
         hover_syntax: "100/3 1/100 QUANTIZE-TRUNC",
@@ -1543,6 +1571,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
     BuiltinSpec {
 
         name: "CONSERVE",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         category: "control",
         hover_summary: "CONSERVE — assert parts sum exactly to a total",
         hover_syntax: "100 [ 3333/100 6667/100 ] CONSERVE",
