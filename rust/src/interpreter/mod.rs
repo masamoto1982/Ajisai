@@ -117,6 +117,8 @@ mod nil_unknown_firewall_tests;
 mod route_equivalence;
 #[cfg(test)]
 mod shape_ic_tests;
+#[cfg(test)]
+mod tier2_isolation_tests;
 
 pub use interpreter_core::*;
 

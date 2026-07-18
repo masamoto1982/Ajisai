@@ -112,3 +112,29 @@ Notes:
 `npm run check`, `npm run test` (192), `check:semantic-firewall`,
 `provenance:check`, `check:file-size` (0 violations),
 `check:formalization-coverage` (215/215) all green.
+
+## 4. Completion record (Phases 1-6)
+
+- The tiered core lives in `rust/src/types/exact/`: `observation.rs`
+  (Observation/Refine/Water/RatInterval), `basis.rs` + `algebraic*.rs`
+  (Tier 1), `computable.rs` (Tier 2 receptacle), `value.rs` +
+  `value_approx.rs` (the `ExactReal` enum behind `ValueData::ExactScalar`).
+  `continued_fraction.rs` and `multiquadratic.rs` are deleted (−6,779
+  lines); CF terms survive as display-side derivation only.
+- D1 resolved with the default: the multiquadratic normal form covers the
+  whole reachable domain; nested `SQRT` keeps its historical error
+  boundary. D2: `SQRT-EPS`/`POW` observations unchanged. D3: `agreedPrefix`
+  kept, redefined as refinement steps without separation (Tier 2 only).
+  D4: no protocol change was needed (no CF internals ever crossed the
+  boundary).
+- Every golden in §2 was re-verified after the switch; the two rows marked
+  as intended changes now read `0/1` (COMPARE-WITHIN decides) and `1/1`
+  (demotion), as specified.
+- Performance: wall-clock comparison of release CLIs (pre-rework 8f8f389
+  vs post-Phase 5) on a 5,000-lane rational vector chain and a chained
+  algebraic-comparison workload showed parity or better on both; the
+  rational path is byte-identical code, and the algebraic path replaces
+  Gosper streaming with normal-form arithmetic.
+- Tier 2 isolation is pinned by `interpreter/tier2_isolation_tests.rs`
+  (vocabulary sweep reaches neither Tier 2 nor UNKNOWN; the Starved → U
+  projection stays wired for future words).
