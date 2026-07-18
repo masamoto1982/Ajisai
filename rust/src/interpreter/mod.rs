@@ -36,6 +36,7 @@ pub mod quantized_block;
 pub mod random;
 mod resolve_cache;
 pub mod serial;
+pub mod semantic_stack_adapter;
 mod shadow_validation;
 pub(crate) mod shape_ic;
 pub(crate) mod simd_ops;
