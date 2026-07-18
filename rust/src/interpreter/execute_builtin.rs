@@ -4,9 +4,7 @@ use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Interpretation, Token, Value};
 
-use super::compiled_plan::{
-    arc_plan, compile_word_definition, execute_compiled_plan, is_plan_valid, plan_is_all_fallback,
-};
+use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
@@ -409,12 +407,10 @@ impl Interpreter {
         let mut set =
             super::execution_plan_set::ExecutionPlanSet::new(self.current_epoch_snapshot());
 
-        let compiled = compile_word_definition(def, self);
-        if !plan_is_all_fallback(&compiled) {
-            self.bump_execution_epoch();
-            self.runtime_metrics.compiled_plan_build_count += 1;
-            set.compiled = Some(arc_plan(compiled));
-        }
+        // Phase 5: reuse the word's compiled plan from the cross-reset artifact
+        // store when its content identity matches, otherwise compile and store
+        // it. See `build_or_reuse_compiled_plan` for the reuse/rebuild contract.
+        set.compiled = self.build_or_reuse_compiled_plan(resolved_name, def);
 
         if !self.force_no_quant && def.lines.len() == 1 {
             let tokens: Vec<_> = def.lines[0].body_tokens.iter().cloned().collect();

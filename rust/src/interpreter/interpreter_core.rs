@@ -324,6 +324,17 @@ pub struct RuntimeMetrics {
     /// Shape-IC probes whose operands the scalar fast path rejected; the site
     /// demoted itself to the generic route. Observational only.
     pub shape_ic_miss_count: u64,
+
+    // ── Cross-reset artifact cache (Phase 5, see artifact_store.rs) ────────
+    /// Compiled plans built and inserted into the cross-reset artifact store.
+    pub artifact_cache_build_count: u64,
+    /// Compiled plans reused from the artifact store instead of recompiling —
+    /// the reuse that survives a GUI session reset. Observational only.
+    pub artifact_cache_hit_count: u64,
+    /// Artifact-store lookups that found no stored plan for the key.
+    pub artifact_cache_miss_count: u64,
+    /// Artifact-store entries evicted to stay within the store's capacity.
+    pub artifact_cache_eviction_count: u64,
 }
 
 pub struct Interpreter {
@@ -488,6 +499,19 @@ pub struct Interpreter {
     /// NIL reasons are unchanged. Disable via `AJISAI_NO_FAST_KERNEL` for an
     /// A/B comparison.
     pub(crate) fast_kernel_enabled: bool,
+
+    /// Cross-reset compiled-artifact cache (Phase 5). Keyed by word content
+    /// identity plus compile flags and plan schema version, it lets an unchanged
+    /// user word survive a *session* reset (`execute_session_reset`) without
+    /// recompiling its `CompiledPlan`. The full `execute_reset` clears it.
+    pub(crate) artifact_store: super::artifact_store::ArtifactStore,
+
+    /// When true (default), a `CompiledPlan` cache miss consults the
+    /// `artifact_store` before recompiling, and freshly compiled plans are
+    /// stored there. Reuse is observationally transparent (content-identity
+    /// keyed), so disabling it via `AJISAI_NO_ARTIFACT_REUSE` only changes how
+    /// often plans are rebuilt, never a result.
+    pub(crate) artifact_reuse_enabled: bool,
 }
 
 impl Interpreter {
@@ -560,6 +584,8 @@ impl Interpreter {
             hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
             shape_ic_enabled: std::env::var("AJISAI_NO_SHAPE_IC").is_err(),
             fast_kernel_enabled: std::env::var("AJISAI_NO_FAST_KERNEL").is_err(),
+            artifact_store: super::artifact_store::ArtifactStore::default(),
+            artifact_reuse_enabled: std::env::var("AJISAI_NO_ARTIFACT_REUSE").is_err(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -654,7 +680,13 @@ impl Interpreter {
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
-        self.runtime_metrics
+        let mut metrics = self.runtime_metrics;
+        let artifact = self.artifact_store.metrics();
+        metrics.artifact_cache_build_count = artifact.build_count;
+        metrics.artifact_cache_hit_count = artifact.hit_count;
+        metrics.artifact_cache_miss_count = artifact.miss_count;
+        metrics.artifact_cache_eviction_count = artifact.eviction_count;
+        metrics
     }
 
     pub fn push_hedged_trace(&mut self, message: impl Into<String>) {
@@ -721,48 +753,6 @@ impl Interpreter {
         let order = self.next_registration_order;
         self.next_registration_order += 1;
         order
-    }
-
-    pub fn execute_reset(&mut self) -> Result<()> {
-        self.stack.clear();
-        self.core_vocabulary.clear();
-        self.user_words.clear();
-        self.user_dictionaries.clear();
-        self.dependents.clear();
-        self.output_buffer.clear();
-        self.host_effects.clear();
-        self.definition_to_load = None;
-        self.reset_execution_modes();
-        self.force_flag = false;
-        self.pending_tokens = None;
-        self.pending_token_index = 0;
-        self.module_state.clear();
-        self.call_stack.clear();
-        self.call_depth = 0;
-        self.tail_self_word = None;
-        self.in_tail_context = false;
-        self.tail_jump_pending = false;
-        // `cond_dispatch_enabled` is a configuration flag, not run state, so it
-        // is intentionally not reset here.
-        self.owning_dictionary_context = None;
-        self.word_identities.clear();
-        self.body_store.clear();
-        self.defer_identity_recompute = false;
-        self.import_table.modules.clear();
-        self.module_vocabulary.clear();
-        self.dictionary_dependencies.clear();
-        self.next_registration_order = 1;
-        self.active_user_dictionary = "EXAMPLE".to_string();
-        self.semantic_registry.clear();
-        self.child_runtimes.clear();
-        self.next_child_id = 1;
-        self.monitor_notifications.clear();
-        self.next_supervisor_id = 1;
-        self.runtime_metrics = RuntimeMetrics::default();
-        self.hedged_trace_log.clear();
-        self.error_flow_trace_log.clear();
-        crate::builtins::register_builtins(&mut self.core_vocabulary);
-        Ok(())
     }
 
     pub fn collect_output(&mut self) -> String {

@@ -122,6 +122,21 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
+        self.reset_with(true)
+    }
+
+    /// Session reset (Phase 5): reinitializes session state but keeps the
+    /// cross-reset compiled-artifact cache alive. The GUI worker calls this
+    /// before restoring a snapshot so an unchanged user word's `CompiledPlan`
+    /// is reused instead of recompiled. Reuse is content-identity keyed and
+    /// observationally transparent, so the run's result is identical to a full
+    /// `reset`.
+    #[wasm_bindgen]
+    pub fn reset_session(&mut self) -> JsValue {
+        self.reset_with(false)
+    }
+
+    fn reset_with(&mut self, full: bool) -> JsValue {
         let obj = js_sys::Object::new();
 
         self.step_mode = false;
@@ -129,7 +144,13 @@ impl AjisaiInterpreter {
         self.step_position = 0;
         self.current_step_code.clear();
 
-        match self.interpreter.execute_reset() {
+        let outcome = if full {
+            self.interpreter.execute_reset()
+        } else {
+            self.interpreter.execute_session_reset()
+        };
+
+        match outcome {
             Ok(()) => {
                 set_js_prop(&obj, "status", &("OK".into()));
                 set_js_prop(&obj, "output", &("System reinitialized.".into()));

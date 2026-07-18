@@ -60,6 +60,29 @@ impl AjisaiInterpreter {
             &num(m.compare_within_budget_terms_consumed),
         );
 
+        // Cross-reset artifact cache (Phase 5): how often an unchanged word's
+        // compiled plan survived a session reset instead of being rebuilt.
+        set_js_prop(
+            &obj,
+            "artifactCacheBuildCount",
+            &num(m.artifact_cache_build_count),
+        );
+        set_js_prop(
+            &obj,
+            "artifactCacheHitCount",
+            &num(m.artifact_cache_hit_count),
+        );
+        set_js_prop(
+            &obj,
+            "artifactCacheMissCount",
+            &num(m.artifact_cache_miss_count),
+        );
+        set_js_prop(
+            &obj,
+            "artifactCacheEvictionCount",
+            &num(m.artifact_cache_eviction_count),
+        );
+
         obj.into()
     }
 }

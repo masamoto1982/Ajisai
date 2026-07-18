@@ -279,6 +279,19 @@ export class AjisaiInterpreter {
         return ret;
     }
     /**
+     * Session reset (Phase 5): reinitializes session state but keeps the
+     * cross-reset compiled-artifact cache alive. The GUI worker calls this
+     * before restoring a snapshot so an unchanged user word's `CompiledPlan`
+     * is reused instead of recompiled. Reuse is content-identity keyed and
+     * observationally transparent, so the run's result is identical to a full
+     * `reset`.
+     * @returns {any}
+     */
+    reset_session() {
+        const ret = wasm.ajisaiinterpreter_reset_session(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * Restore a detailed import state previously captured by
      * `collect_import_state`. Reinstates partial imports exactly, unlike
      * `restore_imported_modules` which forces a full IMPORT per module.
@@ -553,7 +566,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return wasm_bindgen__convert__closures_____invoke__h7fc9e503cc7024b3(a, state0.b, arg0, arg1);
+                        return wasm_bindgen__convert__closures_____invoke__h30a1a451a5ab21ed(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -663,8 +676,8 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 183, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h0ce73f1573c0c60c);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 191, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h4d90ba99feb135fa);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -698,15 +711,15 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h0ce73f1573c0c60c(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h0ce73f1573c0c60c(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h4d90ba99feb135fa(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h4d90ba99feb135fa(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h7fc9e503cc7024b3(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h7fc9e503cc7024b3(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__h30a1a451a5ab21ed(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h30a1a451a5ab21ed(arg0, arg1, arg2, arg3);
 }
 
 const AjisaiInterpreterFinalization = (typeof FinalizationRegistry === 'undefined')
