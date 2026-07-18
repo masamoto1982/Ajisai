@@ -621,6 +621,7 @@ impl Interpreter {
     pub(crate) fn invalidate_execution_artifacts(&mut self) {
         self.clear_resolve_cache();
         self.elastic_cache.clear();
+        self.clear_word_contract_cache();
     }
 
     pub(crate) fn bump_dictionary_epoch(&mut self) {
