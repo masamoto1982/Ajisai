@@ -36,6 +36,7 @@ pub mod quantized_block;
 pub mod random;
 mod resolve_cache;
 pub mod serial;
+pub mod semantic_stack_adapter;
 mod shadow_validation;
 pub(crate) mod shape_ic;
 pub(crate) mod simd_ops;
@@ -47,6 +48,10 @@ pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_exec;
 pub mod vector_ops;
+pub mod word_contract;
+mod word_contract_lattice;
+#[cfg(test)]
+mod word_contract_tests;
 mod word_identity;
 
 pub mod interpreter_core;

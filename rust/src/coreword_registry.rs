@@ -68,40 +68,15 @@ impl MassContract {
 }
 
 /// The canonical mass contract for a Coreword, keyed by its canonical name.
-/// Single source of truth for static arity: the compiled-plan analyzer
-/// (`quantized_block::builtin_arity`) and the §7.14 contract registry both read
-/// this so they cannot drift. Values are probe-verified against the reference
-/// implementation; unpinned words are `Dynamic`.
+/// Builtin mass is authored on `BuiltinSpec`; this adapter exists for older
+/// analyzers until Phase 3 finishes moving all metadata consumers to the shared
+/// typed spec directly. Unknown or non-core names conservatively return
+/// `Dynamic`.
 pub fn mass_contract(name: &str) -> MassContract {
-    match name {
-        // Binary arithmetic / comparison / logic: read two, push one.
-        "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ"
-        | "AND" | "OR" => MassContract::Fixed {
-            consumes: 2,
-            produces: 1,
-        },
-        // Unary arithmetic / math / cast: read one, push one.
-        "NOT" | "ABS" | "NEG" | "SQRT" | "FLOOR" | "CEIL" | "ROUND" | "STR" | "BOOL" => {
-            MassContract::Fixed {
-                consumes: 1,
-                produces: 1,
-            }
-        }
-        // Quantization family: read value and step, push the quantized value
-        // and the exact residual (SPEC §7.13).
-        "QUANTIZE" | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL"
-        | "QUANTIZE-TRUNC" => MassContract::Fixed {
-            consumes: 2,
-            produces: 2,
-        },
-        // Value-conservation guard: read total and parts, pass the parts back
-        // (SPEC §13.3 draft).
-        "CONSERVE" => MassContract::Fixed {
-            consumes: 2,
-            produces: 1,
-        },
-        _ => MassContract::Dynamic,
-    }
+    let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
+    crate::builtins::lookup_builtin_spec(&canonical)
+        .map(|spec| spec.mass)
+        .unwrap_or(MassContract::Dynamic)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -538,7 +513,7 @@ fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> Coreword
         partiality: spec.partiality,
         nil_policy: spec.nil_policy,
         safety_level: spec.safety_level,
-        mass: mass_contract(spec.name),
+        mass: spec.mass,
         profile,
         required_capability,
         canonical_home: CanonicalHome::Core,
@@ -1033,6 +1008,18 @@ mod tests {
                 spec.stability, expected,
                 "{}: BuiltinSpec.stability = {:?} but safety_level = {:?} maps to {:?}",
                 spec.name, spec.stability, meta.safety_level, expected
+            );
+        }
+    }
+
+    #[test]
+    fn aq_ver_contract_f_mass_contract_is_derived_from_builtin_spec() {
+        for spec in crate::builtins::builtin_specs() {
+            assert_eq!(
+                super::mass_contract(spec.name),
+                spec.mass,
+                "{}: mass_contract adapter must read BuiltinSpec.mass",
+                spec.name
             );
         }
     }

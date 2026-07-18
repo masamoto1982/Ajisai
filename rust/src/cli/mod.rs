@@ -49,7 +49,7 @@ use crate::interpreter::debug_diagnosis::{
 };
 use crate::interpreter::{HostEffect, Interpreter, RuntimeMetrics};
 use crate::types::display::format_with_hint;
-use crate::types::{Interpretation, Token};
+use crate::types::Token;
 use report::Report;
 use std::sync::Arc;
 
@@ -385,15 +385,12 @@ fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 fn stack_display(interp: &Interpreter) -> Vec<String> {
-    let hints = interp.collect_stack_hints();
-    interp
-        .get_stack()
+    let stack = interp
+        .semantic_stack_snapshot()
+        .expect("stack values and semantic roles must remain position-aligned");
+    stack
         .iter()
-        .enumerate()
-        .map(|(i, value)| {
-            let hint = hints.get(i).copied().unwrap_or(Interpretation::Unassigned);
-            format_with_hint(value, hint)
-        })
+        .map(|slot| format_with_hint(slot.value(), slot.role()))
         .collect()
 }
 
