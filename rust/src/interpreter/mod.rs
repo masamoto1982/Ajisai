@@ -35,6 +35,7 @@ pub mod parallel;
 pub mod quantized_block;
 pub mod random;
 mod resolve_cache;
+pub mod semantic_stack_adapter;
 pub mod serial;
 mod shadow_validation;
 pub(crate) mod shape_ic;
@@ -47,9 +48,14 @@ pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
 pub mod vector_exec;
 pub mod vector_ops;
+pub mod word_contract;
+mod word_contract_lattice;
+#[cfg(test)]
+mod word_contract_tests;
 mod word_identity;
 
 pub mod interpreter_core;
+mod interpreter_reset;
 
 mod resolve_word;
 
@@ -63,6 +69,8 @@ pub(crate) mod nil_diagnostics;
 mod algo_ops_tests;
 #[cfg(test)]
 mod arithmetic_exact_div_tests;
+#[cfg(test)]
+mod artifact_reuse_tests;
 #[cfg(test)]
 mod child_runtime_tests;
 #[cfg(test)]
