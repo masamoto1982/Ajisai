@@ -7,16 +7,23 @@
 //! are joined. When recursion or a dynamic structure prevents a complete proof,
 //! the result is conservative rather than Ajisai's logical `UNKNOWN` value.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::coreword_registry::{get_coreword_metadata, MassContract, NilPolicy, WordPurity};
 use crate::types::{Capabilities, Token, WordDefinition};
 
+use super::word_contract_lattice::{
+    widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity, widen_unknown,
+    widen_water,
+};
 use super::Interpreter;
 
 pub const WORD_CONTRACT_SCHEMA_VERSION: u32 = 1;
 pub const WORD_CONTRACT_CORE_SCHEMA_VERSION: u32 = 1;
+
+type WordContractCache = HashMap<WordContractCacheKey, Arc<WordContract>>;
+const WORD_CONTRACT_CACHE_STATE_KEY: &str = "__ajisai_word_contract_cache";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WordContract {
@@ -243,77 +250,6 @@ impl AccumulatedContract {
     }
 }
 
-fn widen_purity(a: ContractPurity, b: ContractPurity) -> ContractPurity {
-    match (a, b) {
-        (ContractPurity::Effectful, _) | (_, ContractPurity::Effectful) => {
-            ContractPurity::Effectful
-        }
-        (ContractPurity::Observable, _) | (_, ContractPurity::Observable) => {
-            ContractPurity::Observable
-        }
-        _ => ContractPurity::Pure,
-    }
-}
-
-fn widen_determinism(a: ContractDeterminism, b: ContractDeterminism) -> ContractDeterminism {
-    if matches!(a, ContractDeterminism::NonDeterministic)
-        || matches!(b, ContractDeterminism::NonDeterministic)
-    {
-        ContractDeterminism::NonDeterministic
-    } else {
-        ContractDeterminism::Deterministic
-    }
-}
-
-fn widen_order(a: OrderSensitivity, b: OrderSensitivity) -> OrderSensitivity {
-    if matches!(a, OrderSensitivity::OrderSensitive)
-        || matches!(b, OrderSensitivity::OrderSensitive)
-    {
-        OrderSensitivity::OrderSensitive
-    } else {
-        OrderSensitivity::OrderIndependent
-    }
-}
-
-fn widen_nil(a: NilBehavior, b: NilBehavior) -> NilBehavior {
-    use NilBehavior::*;
-    match (a, b) {
-        (MayCreate, _) | (_, MayCreate) => MayCreate,
-        (RejectsNil, _) | (_, RejectsNil) => RejectsNil,
-        (ConsumesNil, _) | (_, ConsumesNil) => ConsumesNil,
-        (Propagates, _) | (_, Propagates) => Propagates,
-        _ => NeverCreates,
-    }
-}
-
-fn widen_unknown(a: UnknownBehavior, b: UnknownBehavior) -> UnknownBehavior {
-    if matches!(a, UnknownBehavior::MayCreate) || matches!(b, UnknownBehavior::MayCreate) {
-        UnknownBehavior::MayCreate
-    } else {
-        UnknownBehavior::NeverCreates
-    }
-}
-
-fn widen_water(a: WaterSensitivity, b: WaterSensitivity) -> WaterSensitivity {
-    if matches!(a, WaterSensitivity::WaterSensitive)
-        || matches!(b, WaterSensitivity::WaterSensitive)
-    {
-        WaterSensitivity::WaterSensitive
-    } else {
-        WaterSensitivity::NotWaterSensitive
-    }
-}
-
-fn widen_confidence(a: ContractConfidence, b: ContractConfidence) -> ContractConfidence {
-    if matches!(a, ContractConfidence::Conservative)
-        || matches!(b, ContractConfidence::Conservative)
-    {
-        ContractConfidence::Conservative
-    } else {
-        ContractConfidence::Complete
-    }
-}
-
 fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
     let key = WordContractCacheKey {
         word_identity: format!("static:{}:{}", name, def.registration_order),
@@ -366,9 +302,28 @@ impl Interpreter {
         self.infer_word_contract_inner(&resolved_name, &def, &mut visiting)
     }
 
+    pub(crate) fn clear_word_contract_cache(&mut self) {
+        self.module_state.remove(WORD_CONTRACT_CACHE_STATE_KEY);
+    }
+
     #[cfg(test)]
     pub(crate) fn word_contract_cache_len(&self) -> usize {
-        self.word_contracts.len()
+        self.word_contract_cache_ref()
+            .map_or(0, WordContractCache::len)
+    }
+
+    fn word_contract_cache_ref(&self) -> Option<&WordContractCache> {
+        self.module_state
+            .get(WORD_CONTRACT_CACHE_STATE_KEY)
+            .and_then(|cache| cache.downcast_ref::<WordContractCache>())
+    }
+
+    fn word_contract_cache_mut(&mut self) -> &mut WordContractCache {
+        self.module_state
+            .entry(WORD_CONTRACT_CACHE_STATE_KEY.to_string())
+            .or_insert_with(|| Box::<WordContractCache>::default())
+            .downcast_mut::<WordContractCache>()
+            .expect("word contract cache state must keep its concrete type")
     }
 
     fn infer_word_contract_inner(
@@ -382,13 +337,16 @@ impl Interpreter {
         }
 
         let key = self.contract_cache_key(resolved_name, def);
-        if let Some(cached) = self.word_contracts.get(&key) {
+        if let Some(cached) = self
+            .word_contract_cache_ref()
+            .and_then(|cache| cache.get(&key))
+        {
             return Some(cached.clone());
         }
 
         if !visiting.insert(resolved_name.to_string()) {
             let contract = Arc::new(WordContract::conservative(key));
-            self.word_contracts
+            self.word_contract_cache_mut()
                 .insert(contract.cache_key.clone(), contract.clone());
             return Some(contract);
         }
@@ -460,7 +418,7 @@ impl Interpreter {
             confidence: acc.confidence,
             cache_key: key,
         });
-        self.word_contracts
+        self.word_contract_cache_mut()
             .insert(contract.cache_key.clone(), contract.clone());
         Some(contract)
     }

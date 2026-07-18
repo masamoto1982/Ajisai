@@ -5,7 +5,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use super::epoch::EpochSnapshot;
-use super::word_contract::{WordContract, WordContractCacheKey};
 
 pub const DEFAULT_MAX_EXECUTION_STEPS: usize = 100_000;
 
@@ -413,10 +412,6 @@ pub struct Interpreter {
     /// changes.
     pub(crate) word_identities: HashMap<String, String>,
 
-    /// Inferred user-word contracts keyed by content/dependency identity and schema versions.
-    /// Cleared with the other execution artifacts on DEF/DEL/import epoch changes.
-    pub(crate) word_contracts: HashMap<WordContractCacheKey, Arc<WordContract>>,
-
     /// Content store for definition bodies (Section 8.6), keyed by content key.
     /// Textually identical bodies share a single `Arc<[ExecutionLine]>`, so
     /// re-importing or copying a word group does not duplicate its code in
@@ -552,7 +547,6 @@ impl Interpreter {
             validation_policy: ValidationPolicy::default(),
             owning_dictionary_context: None,
             word_identities: HashMap::new(),
-            word_contracts: HashMap::new(),
             body_store: HashMap::new(),
             defer_identity_recompute: false,
             tail_call_enabled: std::env::var("AJISAI_NO_TAIL_CALL").is_err(),
@@ -627,7 +621,7 @@ impl Interpreter {
     pub(crate) fn invalidate_execution_artifacts(&mut self) {
         self.clear_resolve_cache();
         self.elastic_cache.clear();
-        self.word_contracts.clear();
+        self.clear_word_contract_cache();
     }
 
     pub(crate) fn bump_dictionary_epoch(&mut self) {
@@ -752,7 +746,6 @@ impl Interpreter {
         // is intentionally not reset here.
         self.owning_dictionary_context = None;
         self.word_identities.clear();
-        self.word_contracts.clear();
         self.body_store.clear();
         self.defer_identity_recompute = false;
         self.import_table.modules.clear();
