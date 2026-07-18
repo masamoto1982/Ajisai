@@ -974,8 +974,8 @@
     },
     {
       "path": "rust/src/json_semantic_role_tests.rs",
-      "sha256": "36e1a1669828e416aaf3aca025d9b02b4fce10e468791bab09347063a3ddbced",
-      "bytes": 5798
+      "sha256": "0e720a76990b93d517fbf1b682c45473aecad4ffe6fa78a0a230e0ecff0707dc",
+      "bytes": 8031
     },
     {
       "path": "rust/src/lib.rs",
