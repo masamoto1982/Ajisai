@@ -1,13 +1,14 @@
 mod builtin_word_definitions;
 mod builtin_word_details;
 mod builtin_word_lookup_docs;
+mod builtin_word_types;
 
 pub use builtin_word_definitions::{
-    builtin_specs, collect_core_builtin_definitions, lookup_builtin_spec, BuiltinExecutorKey,
-    BuiltinSpec, WordShape,
+    builtin_specs, collect_core_builtin_definitions, lookup_builtin_spec, BuiltinSpec,
 };
 pub use builtin_word_details::lookup_builtin_detail;
 pub use builtin_word_details::render_four_section;
+pub use builtin_word_types::{BuiltinExecutorKey, WordShape};
 
 use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};
