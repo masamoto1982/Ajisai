@@ -17,10 +17,11 @@ ajisai version [--json]
 
 `--explain` adds a deterministic plain-language projection of the diagnosis
 (`explanation`, §10). `--contract` adds a light, execution-free flow-mass and
-NIL-flow check to `check` (`planCheck`, §11). `--lang` selects the language for
-all plain-language output (default `ja`). All are additive and never change the
-structured fields; with neither `--explain` nor `--contract`, output is
-unchanged. `--contract` raises exit 1 when it finds a malformed (over-consuming)
+NIL-flow check to `check` (`planCheck`, §11). `--receipt` adds an execution
+receipt to a successful `run` (`receipt`, §15). `--lang` selects the language
+for all plain-language output (default `ja`). All are additive and never change
+the structured fields; with none of `--explain`, `--contract`, or `--receipt`,
+output is unchanged. `--contract` raises exit 1 when it finds a malformed (over-consuming)
 plan; advisories and notes do not change the exit code.
 
 `--step-limit <N>` overrides the execution step budget for `run` (the water
@@ -65,7 +66,8 @@ does not prove it will.
   "aiDiagnostic": { ... } | null,
   "runtimeMetrics": { "vtu": { ... } },
   "explanation": { ... } | null,
-  "planCheck": { ... } | null
+  "planCheck": { ... } | null,
+  "receipt": { ... } | null
 }
 ```
 
@@ -83,6 +85,7 @@ does not prove it will.
 | `runtimeMetrics` | object | VTU observation counters (§7). All zeros for `check`. |
 | `explanation` | object \| null | Plain-language projection of the diagnosis (§10). Present only with `--explain`; `null` otherwise. |
 | `planCheck` | object \| null | Light contract / flow-mass check (§11). Present only with `check --contract`; `null` otherwise. |
+| `receipt` | object \| null | Execution receipt (§15). Present only with `run --receipt` on a successful run; `null` otherwise. |
 
 `version --json` emits only `{ "schemaVersion", "status", "version" }`.
 `modifier --json` emits `{ "schemaVersion", "status", "modifier": { ... } }` (§12).
@@ -514,3 +517,69 @@ as a failure, so a well-formed file always exits 0.
 - `transitionMetricsVersion` versions the *counting rules* (design memo §6);
   ratios are comparable only within one version. It is independent of the
   envelope `schemaVersion`.
+
+## 15. Execution receipt (`run --receipt`)
+
+`run --json --receipt` attaches a `receipt` object to a successful run. It
+records what the result was based on — the source, the content-identified words
+that executed, the host capabilities required and granted, the observable host
+effects in order, the water spent, and whether the compiled path agreed with
+the reference path — plus a stable identity of the result. It is a provenance
+record, **not** a proof of correctness or tamper-evidence. On an error run (or
+without `--receipt`) the field is `null`.
+
+Producing a receipt is observational: enabling it never changes the run's
+result. Only stable, public facts appear — internal optimization details (SIMD
+lane widths, shape-IC state, quantized-block internals, tier representations,
+pointer identity, Rust `Debug` names, unstable cache keys) are never included.
+
+```json
+"receipt": {
+  "schemaVersion": 1,
+  "sourceIdentity": "#<hex>",
+  "implementation": { "name": "ajisai-core", "version": "0.1.0" },
+  "specification": { "declaredVersion": null },
+  "executedWords": [
+    { "resolvedName": "EXAMPLE@DBL", "contentIdentity": "#<hex>",
+      "firstSeenOrder": 1, "callCount": 3 }
+  ],
+  "requiredCapabilities": [ "effect" ],
+  "grantedCapabilities": [ "clock", "secureRandom", "jsonExport", "config", "effect" ],
+  "observedEffects": [ { "order": 0, "kind": "print", "payload": "[ 10/1 ]" } ],
+  "water": { "stepLimit": 100000, "stepsUsed": 3, "comparisonRefinements": 0 },
+  "integrity": { "shadowValidationPerformed": false, "referenceAgreement": true,
+                 "plainFallbacks": 0, "integrityMismatches": 0 },
+  "absenceEvents": [
+    { "kind": "nilProduced", "word": "DIV", "reason": "divisionByZero",
+      "origin": "executionFailure", "recoverability": "recoverable" }
+  ],
+  "resultIdentity": "#<hex>"
+}
+```
+
+- **`sourceIdentity` / `resultIdentity`**: `#`-prefixed content digests (the
+  same hash family as §8.6 word identity). `resultIdentity` is computed from
+  the canonical bytes of the final stack's value protocol (§3) — value kind,
+  exact numerator/denominator, interpretation, absence reason/origin/
+  recoverability, logical-Unknown diagnosis, and Vector/Tensor/Record
+  structure — **never** from a display string. Equal inputs yield equal
+  identities; a different result yields a different identity.
+- **`executedWords`**: content-identified (user) words that ran, aggregated by
+  word and ordered by first execution (`firstSeenOrder`, `callCount`). Core and
+  module words carry no §8.6 content identity and are omitted; they belong to
+  the implementation (`implementation`), not user provenance.
+- **`requiredCapabilities` / `grantedCapabilities`**: capabilities Hosted words
+  required during the run, and those the active host grants — protocol strings.
+- **`observedEffects`**: every emitted host effect in order, with its stable
+  `kind` tag and `payload`.
+- **`water`**: the step budget (`stepLimit`), steps consumed (`stepsUsed`), and
+  Tier-2 comparison refinements spent (`comparisonRefinements`).
+- **`integrity`**: whether shadow validation ran, whether the compiled and
+  reference paths agreed, and the fallback / mismatch counts. When
+  `shadowValidationPerformed` is `false`, `referenceAgreement` means only that
+  no disagreement was observed — read the two together.
+- **`absenceEvents`**: NIL productions observed during the run, in order, each
+  keeping its reason, origin, and recoverability — never collapsed to a generic
+  failure.
+- `receipt.schemaVersion` versions the receipt object shape independently of the
+  envelope `schemaVersion`; additive fields keep it unchanged.

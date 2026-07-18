@@ -88,6 +88,10 @@ impl Interpreter {
             }
         })?;
 
+        // Provenance (Phase 6): record the resolved word for the execution
+        // receipt. No-op unless receipt recording is enabled.
+        self.receipt_recorder.record_executed(&resolved_name);
+
         self.execution_step_count += 1;
         if self.execution_step_count > self.max_execution_steps {
             return Err(AjisaiError::ExecutionLimitExceeded {

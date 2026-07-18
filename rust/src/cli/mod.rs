@@ -35,6 +35,9 @@ mod modifier_tests;
 mod plan_check;
 #[cfg(test)]
 mod plan_check_tests;
+mod receipt;
+#[cfg(test)]
+mod receipt_tests;
 mod report;
 #[cfg(test)]
 mod report_tests;
@@ -56,7 +59,7 @@ use std::sync::Arc;
 const USAGE: &str = "Usage: ajisai <command> [options]
 
 Commands:
-  run <file.ajisai> [--json] [--step-limit <N>]
+  run <file.ajisai> [--json] [--receipt] [--step-limit <N>]
                                   Execute a program file
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
   coverage <file.ajisai> [--json] Contract coverage ratio: the fraction of word
@@ -72,6 +75,9 @@ Options:
                                   diagnosis (headline, next step, details)
   --contract                      With `check`: add a light, execution-free
                                   flow-mass and NIL-flow contract check
+  --receipt                       With `run --json`: attach an execution receipt
+                                  (source/result identity, executed words,
+                                  capabilities, effects, water, integrity)
   --lang <ja|en>                  Language for --explain / --contract / modifier
                                   output (default: ja)
   --step-limit <N>                With `run`: override the execution step
@@ -93,6 +99,7 @@ pub fn run(args: &[String]) -> i32 {
     let mut json = false;
     let mut want_explain = false;
     let mut contract = false;
+    let mut receipt = false;
     let mut lang = Lang::Ja;
     let mut step_limit: Option<usize> = None;
     let mut positional: Vec<&str> = Vec::new();
@@ -102,6 +109,7 @@ pub fn run(args: &[String]) -> i32 {
             "--json" => json = true,
             "--explain" => want_explain = true,
             "--contract" => contract = true,
+            "--receipt" => receipt = true,
             "--lang" => match iter.next().map(String::as_str).and_then(Lang::parse) {
                 Some(parsed) => lang = parsed,
                 None => {
@@ -127,6 +135,7 @@ pub fn run(args: &[String]) -> i32 {
         json,
         explain: want_explain,
         contract,
+        receipt,
         lang,
         step_limit,
     };
@@ -148,6 +157,10 @@ struct Opts {
     json: bool,
     explain: bool,
     contract: bool,
+    /// With `run --json`: attach an execution receipt (Phase 6). Additive; a run
+    /// without it is byte-for-byte unchanged. Only `run` executes and records
+    /// provenance, so only `run` reads it.
+    receipt: bool,
     lang: Lang,
     /// Execution step budget override (water level, SPEC §5.3). `None` keeps
     /// the interpreter default (`DEFAULT_MAX_EXECUTION_STEPS`); only `run`
@@ -267,6 +280,11 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
     if let Some(limit) = opts.step_limit {
         interp.set_max_execution_steps(limit);
     }
+    // Phase 6: opt-in provenance recording. Enabling it is observational and
+    // does not change the run's result.
+    if opts.receipt {
+        interp.set_receipt_recording(true);
+    }
     let result = block_on(interp.execute(&source));
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
@@ -274,6 +292,9 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
     match result {
         Ok(()) => {
             let explanation = nil_explanation(&trace, opts);
+            let receipt = opts
+                .receipt
+                .then(|| receipt::build_receipt(&interp, &source, &trace));
             let report = Report {
                 status: "ok",
                 stack: report::stack_json(&interp),
@@ -286,6 +307,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
                 runtime_metrics: interp.runtime_metrics(),
                 explanation,
                 plan_check: None,
+                receipt,
                 lang: opts.lang,
             };
             emit(&report, opts);
@@ -340,6 +362,8 @@ fn error_report(
         runtime_metrics: interp.runtime_metrics(),
         explanation,
         plan_check: None,
+        // A receipt certifies a completed result; error runs carry none.
+        receipt: None,
         lang: opts.lang,
     }
 }
@@ -577,6 +601,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             runtime_metrics: RuntimeMetrics::default(),
             explanation: None,
             plan_check,
+            receipt: None,
             lang: opts.lang,
         };
         println!("{}", pretty(&report.to_json()));

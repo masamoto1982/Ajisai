@@ -43,7 +43,9 @@ fn poly_hash(bytes: &[u8], modulus: &BigInt) -> BigInt {
 }
 
 /// Deterministic content digest. Returns a `#`-prefixed 64-hex-char string.
-fn content_digest(bytes: &[u8]) -> String {
+/// Reused for execution-receipt source and result identity (Phase 6) so those
+/// identities share the same content-hash family as word identities (§8.6).
+pub(crate) fn content_digest(bytes: &[u8]) -> String {
     let a = poly_hash(bytes, &ID_PRIME_A);
     let b = poly_hash(bytes, &ID_PRIME_B);
     format!("#{:0>32}{:0>32}", a.to_str_radix(16), b.to_str_radix(16))
