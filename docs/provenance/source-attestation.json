@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:9674a035f55adae5db5bd696f98bee387d3678871a084eb8b38a44447b771458",
-  "fileCount": 313,
+  "rootIdentity": "sha256:b37aa580ad0161fe1005aca5fd0beb8bd86399595bf2d6a391ba85f684657184",
+  "fileCount": 319,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -69,8 +69,8 @@
     },
     {
       "path": "rust/src/builtins/builtin_word_definitions.rs",
-      "sha256": "24dbd5726471f45ac818c7027e192fad239f7d94e82cde5c198349508c7ebb90",
-      "bytes": 68307
+      "sha256": "dc9ac1db81f12be44f66db17cf16040654c9c5ac0535aee743871d8fc5336145",
+      "bytes": 71843
     },
     {
       "path": "rust/src/builtins/builtin_word_details.rs",
@@ -83,9 +83,14 @@
       "bytes": 16066
     },
     {
+      "path": "rust/src/builtins/builtin_word_types.rs",
+      "sha256": "0baccafa790465b68a72c08724592c377e811f5a039ddd63c49bb10cb23b56c9",
+      "bytes": 1659
+    },
+    {
       "path": "rust/src/builtins/mod.rs",
-      "sha256": "8cfe98ea0cbda148741be61877fb645e12dbba345e0e8e29d78681aff62dcb5e",
-      "bytes": 2669
+      "sha256": "f92f60205758738f8cae2f4dc6ecda1cafe51bed8826e856f8af71182fc74dc2",
+      "bytes": 2719
     },
     {
       "path": "rust/src/cli/clarify.rs",
@@ -139,18 +144,18 @@
     },
     {
       "path": "rust/src/cli/plan_check.rs",
-      "sha256": "5fa3288fa191f2bee7f9bd5d87a50bcf6a1789a2ac2dd8b89b52d1189bf058ac",
-      "bytes": 8631
+      "sha256": "2b4072f240125be664120e16fe456b65a45664b17ba496560f9b9c2d05a021c3",
+      "bytes": 12826
     },
     {
       "path": "rust/src/cli/plan_check_tests.rs",
-      "sha256": "f7bfa0aeb417b6721ef88f714b42c2fbcac009c9f31eb23187a1ad72ceb6e16e",
-      "bytes": 2544
+      "sha256": "aecbb0d68cc73896ee2e3276bf498ea34f04730413de3b6c3b8d534df26a02ed",
+      "bytes": 3877
     },
     {
       "path": "rust/src/cli/report.rs",
-      "sha256": "8e3c4f6cb2ed14b9e8a0c3bff01224d738b8fdc568bdef4a1315aaadb071a577",
-      "bytes": 14517
+      "sha256": "d04d15401d2a57cc9ffc090bcddbe0f4e4d04bc0719df8cf186de830c4f8aac2",
+      "bytes": 14614
     },
     {
       "path": "rust/src/cli/report_tests.rs",
@@ -174,8 +179,8 @@
     },
     {
       "path": "rust/src/coreword_registry.rs",
-      "sha256": "60c84e81cb476ffcbe079ac0aa4918b8b3dab1d188fc6bd1d9cdf9ae1ef1b8f9",
-      "bytes": 48692
+      "sha256": "f0434a1659b3dd6b55923466585673b283591e3e1ca62c7d1bf4368f801c22b9",
+      "bytes": 48082
     },
     {
       "path": "rust/src/dimension_limit_tests.rs",
@@ -234,8 +239,8 @@
     },
     {
       "path": "rust/src/elastic/purity_table.rs",
-      "sha256": "e96bf3e5e27be34897685d011132450da27d36208e36789b1807b2e61b67a818",
-      "bytes": 9288
+      "sha256": "e67cc42fda08d012aca1264e38f95c34c8ac90d82969211b322de26748070700",
+      "bytes": 6324
     },
     {
       "path": "rust/src/elastic/tracer.rs",
@@ -639,8 +644,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "40686732efa1a816d2a675654e9fbc7052b3da42cd08d0a8ee7eadaf80bb73e8",
-      "bytes": 40804
+      "sha256": "29ba01b98ce5e1cfb2ddb75c2db2d8255eb218d1a59acec1b2e6e5fca7c7a24a",
+      "bytes": 40846
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -699,8 +704,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "03c5bb31c210b954e4e7c7b731c5c3b8c6116b114c459315b14384e07089d7a7",
-      "bytes": 3340
+      "sha256": "1554eb2922334b664b11fee2529fc8003c0a857adaf84546b4d24d80eced8f9e",
+      "bytes": 3460
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -823,6 +828,11 @@
       "bytes": 7285
     },
     {
+      "path": "rust/src/interpreter/semantic_stack_adapter.rs",
+      "sha256": "4d2edc2fa0f3241fea1a28adaddde6c301197007a1035bac82f6cbb9c539288b",
+      "bytes": 2581
+    },
+    {
       "path": "rust/src/interpreter/serial/execute_serial_commands.rs",
       "sha256": "8fef411743ca533e279863e9f154b54f3ba8d8be85cd6a64598af27426010c41",
       "bytes": 6487
@@ -943,6 +953,21 @@
       "bytes": 12475
     },
     {
+      "path": "rust/src/interpreter/word_contract.rs",
+      "sha256": "411282d4ed5408ff1f6183dc49a33718d06c1402e4ad638e72d2c6f9e3c5b15d",
+      "bytes": 15771
+    },
+    {
+      "path": "rust/src/interpreter/word_contract_lattice.rs",
+      "sha256": "dd0e238bd2a050c38b908ac05d741775851b996daac7c0e31ac64a8a4c55e59b",
+      "bytes": 2569
+    },
+    {
+      "path": "rust/src/interpreter/word_contract_tests.rs",
+      "sha256": "15d369b2e1c919afb72421292ff95f6c1c778406a82325b4c50a6c6ae25780e9",
+      "bytes": 5763
+    },
+    {
       "path": "rust/src/interpreter/word_identity.rs",
       "sha256": "e695ad02d008fcb75c3c7fa7e03552f3430caa5425889165742b91982629af9a",
       "bytes": 17968
@@ -954,8 +979,8 @@
     },
     {
       "path": "rust/src/json_semantic_role_tests.rs",
-      "sha256": "36e1a1669828e416aaf3aca025d9b02b4fce10e468791bab09347063a3ddbced",
-      "bytes": 5798
+      "sha256": "0e720a76990b93d517fbf1b682c45473aecad4ffe6fa78a0a230e0ecff0707dc",
+      "bytes": 8031
     },
     {
       "path": "rust/src/lib.rs",
@@ -1114,13 +1139,18 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "fb1f8d0e5bb9121c19cd19bafe49c509c540d9350554c195d4b94de26a700cb3",
-      "bytes": 24520
+      "sha256": "260d2319dfe362b7b70a725c8c706fd40ecf6be5cc8ba0f7b26fbfa34c0d88dd",
+      "bytes": 24622
     },
     {
       "path": "rust/src/types/record_shape.rs",
       "sha256": "6ce4f0bb65a070b0eed02486c6ca82b42059ba36f22e562173099857e0b34f61",
       "bytes": 5935
+    },
+    {
+      "path": "rust/src/types/semantic_stack.rs",
+      "sha256": "605b9648f32776bdf427d095ec9279fa12cd0a4676e052d846885513437a72b3",
+      "bytes": 5149
     },
     {
       "path": "rust/src/types/value_operations.rs",
