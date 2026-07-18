@@ -81,6 +81,15 @@ export class AjisaiInterpreter {
     remove_word(name: string): void;
     reset(): any;
     /**
+     * Session reset (Phase 5): reinitializes session state but keeps the
+     * cross-reset compiled-artifact cache alive. The GUI worker calls this
+     * before restoring a snapshot so an unchanged user word's `CompiledPlan`
+     * is reused instead of recompiled. Reuse is content-identity keyed and
+     * observationally transparent, so the run's result is identical to a full
+     * `reset`.
+     */
+    reset_session(): any;
+    /**
      * Restore a detailed import state previously captured by
      * `collect_import_state`. Reinstates partial imports exactly, unlike
      * `restore_imported_modules` which forces a full IMPORT per module.
@@ -150,6 +159,7 @@ export interface InitOutput {
     readonly ajisaiinterpreter_push_json_string: (a: number, b: number, c: number) => [number, number, number];
     readonly ajisaiinterpreter_remove_word: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_reset: (a: number) => any;
+    readonly ajisaiinterpreter_reset_session: (a: number) => any;
     readonly ajisaiinterpreter_restore_import_state: (a: number, b: any) => void;
     readonly ajisaiinterpreter_restore_imported_modules: (a: number, b: any) => void;
     readonly ajisaiinterpreter_restore_stack: (a: number, b: any) => [number, number];
@@ -159,8 +169,8 @@ export interface InitOutput {
     readonly ajisaiinterpreter_update_input_buffer: (a: number, b: number, c: number) => void;
     readonly ajisaiinterpreter_update_serial_inbox: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly init_panic_hook: () => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h0ce73f1573c0c60c: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h7fc9e503cc7024b3: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h4d90ba99feb135fa: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h30a1a451a5ab21ed: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

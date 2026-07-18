@@ -546,6 +546,19 @@ const buildCostSummaryLines = (delta: RuntimeMetricsSnapshot): string[] => {
         lines.push(line);
     }
 
+    // Cross-reset artifact cache (Phase 5): reuse of compiled word plans that
+    // survived the per-run session reset instead of being recompiled. Optional
+    // counters, so guard against an older wasm bundle that omits them.
+    const artifactHits = delta.artifactCacheHitCount ?? 0;
+    const artifactBuilds = delta.artifactCacheBuildCount ?? 0;
+    if (artifactHits > 0 || artifactBuilds > 0) {
+        let line = `Compiled word reuse: ${artifactHits} reused`;
+        if (artifactBuilds > 0) line += `, ${artifactBuilds} compiled`;
+        const evictions = delta.artifactCacheEvictionCount ?? 0;
+        if (evictions > 0) line += `, ${evictions} evicted`;
+        lines.push(line);
+    }
+
     return lines;
 };
 

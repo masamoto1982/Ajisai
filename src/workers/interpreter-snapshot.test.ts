@@ -74,4 +74,21 @@ describe('applyInterpreterSnapshot robustness', () => {
         expect(fns.update_serial_inbox).toHaveBeenCalledTimes(1);
         expect(fns.update_serial_inbox.mock.calls[0]![0]).toBe('COM2');
     });
+
+    // Phase 5: prefer the session reset (keeps the cross-reset artifact cache)
+    // when the wasm bundle exposes it, and fall back to the full reset otherwise.
+    test('prefers reset_session when available', () => {
+        const { fns, interpreter } = makeMock();
+        const reset_session = vi.fn(() => ({}));
+        (interpreter as unknown as { reset_session: () => unknown }).reset_session = reset_session;
+        applyInterpreterSnapshot(interpreter, null);
+        expect(reset_session).toHaveBeenCalledTimes(1);
+        expect(fns.reset).not.toHaveBeenCalled();
+    });
+
+    test('falls back to reset when reset_session is absent', () => {
+        const { fns, interpreter } = makeMock();
+        applyInterpreterSnapshot(interpreter, null);
+        expect(fns.reset).toHaveBeenCalledTimes(1);
+    });
 });

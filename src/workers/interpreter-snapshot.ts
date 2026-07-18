@@ -41,7 +41,16 @@ export const applyInterpreterSnapshot = (
     interpreter: AjisaiInterpreter,
     snapshot?: Partial<InterpreterSnapshot> | null
 ): void => {
-    interpreter.reset();
+    // Phase 5: a session reset reinitializes the session but keeps the
+    // cross-reset compiled-artifact cache, so an unchanged user word's compiled
+    // plan is reused across runs instead of recompiled. Reuse is content-identity
+    // keyed and observationally transparent; fall back to the full reset against
+    // a wasm bundle that predates the API.
+    if (typeof interpreter.reset_session === 'function') {
+        interpreter.reset_session();
+    } else {
+        interpreter.reset();
+    }
     if (!snapshot) return;
 
     if (snapshot.importedModules?.length) {

@@ -1,5 +1,6 @@
 pub mod algo_ops;
 pub mod arithmetic;
+pub mod artifact_store;
 pub mod audio;
 pub mod cast;
 pub mod child_runtime;
@@ -35,8 +36,9 @@ pub mod parallel;
 pub mod quantized_block;
 pub mod random;
 mod resolve_cache;
-pub mod serial;
 pub mod semantic_stack_adapter;
+pub mod serial;
+mod session_lifecycle;
 mod shadow_validation;
 pub(crate) mod shape_ic;
 pub(crate) mod simd_ops;
@@ -68,6 +70,8 @@ pub(crate) mod nil_diagnostics;
 mod algo_ops_tests;
 #[cfg(test)]
 mod arithmetic_exact_div_tests;
+#[cfg(test)]
+mod artifact_store_tests;
 #[cfg(test)]
 mod child_runtime_tests;
 #[cfg(test)]
@@ -133,9 +137,12 @@ pub use host::{
 
 pub use crate::types::WordDefinition;
 
+pub use artifact_store::{
+    ArtifactKey, ArtifactMetrics, ArtifactStore, CompileFlags, DEFAULT_ARTIFACT_STORE_CAPACITY,
+};
 pub use compiled_plan::{
     compile_word_definition, execute_compiled_plan, is_plan_valid, CompiledLine, CompiledOp,
-    CompiledPlan,
+    CompiledPlan, COMPILED_PLAN_SCHEMA_VERSION,
 };
 pub use epoch::EpochSnapshot;
 pub use quantized_block::{

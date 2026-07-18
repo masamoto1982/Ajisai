@@ -8,6 +8,12 @@ use crate::types::{Interpretation, Token, Value, WordDefinition};
 use super::compiled_call::{execute_compiled_call, CompiledCall};
 use super::{modules, ConsumptionMode, EpochSnapshot, Interpreter, OperationTargetMode};
 
+/// Schema version of the `CompiledPlan` lowering. Bump whenever the set of
+/// `CompiledOp` variants or their semantics change in a way that makes an
+/// older-lowered plan unsafe to reuse. Part of the cross-reset artifact key so
+/// a plan compiled by a different schema is never reused (Phase 5).
+pub const COMPILED_PLAN_SCHEMA_VERSION: u32 = 1;
+
 #[derive(Debug, Clone)]
 pub struct CompiledPlan {
     pub lines: Vec<CompiledLine>,

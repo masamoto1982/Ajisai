@@ -24,6 +24,11 @@ export interface AjisaiInterpreter {
     execute(code: string): Promise<ExecuteResult>;
     execute_step(code: string): ExecuteResult;
     reset(): ExecuteResult;
+    // Session reset (Phase 5): reinitializes session state but keeps the
+    // cross-reset compiled-artifact cache alive so an unchanged user word's
+    // compiled plan is reused instead of recompiled. Optional so the GUI
+    // degrades to a full `reset()` against a wasm bundle that predates the API.
+    reset_session?(): ExecuteResult;
     collect_stack(): Value[];
     // Tuple shape: [dictionary, name, isProtected].
     collect_user_words_info(): Array<[string, string, boolean]>;
@@ -93,6 +98,13 @@ export interface RuntimeMetricsSnapshot {
     compareWithinLazyCount: number;
     compareWithinUnknownCount: number;
     compareWithinBudgetTermsConsumed: number;
+    // Cross-reset artifact cache (Phase 5): compiled plans reused across a GUI
+    // session reset instead of being rebuilt. Optional so the GUI degrades
+    // gracefully against a wasm bundle that predates the counters.
+    artifactCacheBuildCount?: number;
+    artifactCacheHitCount?: number;
+    artifactCacheMissCount?: number;
+    artifactCacheEvictionCount?: number;
 }
 
 export interface ProtocolDiagnosis {
