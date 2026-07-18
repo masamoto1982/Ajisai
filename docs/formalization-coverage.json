@@ -115,7 +115,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "kind": "operation",
-      "description": "Bihomographic (Gosper) transform over exact reals; ADD/SUB/MUL/DIV are coefficient instances.",
+      "description": "Exact binary field arithmetic over the numeric cost tiers (Tier 0 rationals, Tier 1 algebraic normal form), with cheapest-tier demotion; ADD/SUB/MUL/DIV are instances. Historical id: the retired Gosper bihomographic schema.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "ADD/SUB/MUL/DIV",
@@ -184,7 +184,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "kind": "construction",
-      "description": "Continued-fraction construction of exact reals; canonical irrational observation, not an approximation.",
+      "description": "Canonical continued-fraction observation sequence of an exact real, derived from the value for display and serialization; not an internal representation and not an approximation.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "MOD",
@@ -229,7 +229,7 @@
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material",
       "kind": "operation",
-      "description": "Gosper normalization over continued fractions; exact-real combination without rational fallback.",
+      "description": "Exact-real combination over the tiered representation (Tier 1 multiquadratic normal form) without rational fallback. Historical id: the retired Gosper normalization.",
       "admission_reason": "Accepted as the shared exact-arithmetic schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "'math' IMPORT SQRT",

@@ -1993,7 +1993,7 @@ COND</code></td>
                         <tbody>
                             <tr><td>Small rational (numerator and denominator fit a machine integer)</td><td class="notes">Compact reduced fraction — the fast lane.</td><td class="notes">Fixed, near integer speed.</td></tr>
                             <tr><td>Big rational (needs arbitrary-precision integers)</td><td class="notes">Big-integer fraction.</td><td class="notes">Exact; grows with the number of digits.</td></tr>
-                            <tr><td>Square root or other lazy irrational</td><td class="notes">Lazy continued fraction.</td><td class="notes">Exact; paid per continued-fraction term you actually observe.</td></tr>
+                            <tr><td>Square root or other algebraic irrational</td><td class="notes">Exact algebraic normal form (Tier 1).</td><td class="notes">Exact; comparisons and integer parts are decided algebraically, and a continued-fraction display is paid per derived term.</td></tr>
                         </tbody>
                     </table>
                     </div>
@@ -2101,12 +2101,12 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">The budget is measured in nearest-integer continued-fraction terms, which is the unit <code>COMPARE-WITHIN</code>'s depth counts. The bare relations spend no observable budget on any value you can construct today; a general <code>UNKNOWN</code> outcome from them is reserved for exact lazy values that only future words will introduce.</p>
+                    <p class="ref-note">The budget is measured in enclosure-refinement steps (water). No comparison spends it on any value you can construct today — <code>COMPARE-WITHIN</code> included, whatever budget you name; the <code>UNKNOWN</code> outcome is reserved for the general computable reals that only future words will introduce.</p>
 
                     <h3>Rules of thumb</h3>
                     <ul>
                         <li>Keep hot numeric data as small rationals to stay on the fast lane and, for vectors, on the dense path.</li>
-                        <li>Expect square roots and other lazy values to cost more than small rationals: an observation like <code>FLOOR</code> pulls only as many continued-fraction terms as it needs, and a comparison settles them through exact algebraic work.</li>
+                        <li>Expect square roots and other irrational values to cost more than small rationals: comparisons and integer parts settle through exact algebraic work on the normal form, and a continued-fraction display derives only as many terms as it shows.</li>
                         <li>Big integers stay exact; if you are near the machine-integer edge, that is where the cost changes, not the meaning.</li>
                         <li>Reach for <code>COMPARE-WITHIN</code> when you want a bounded, explicit answer instead of the implicit budget.</li>
                     </ul>
