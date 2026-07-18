@@ -41,6 +41,123 @@ pub(crate) struct PlanCheck {
     pub has_fallback: bool,
     /// Words whose `nil_policy = RejectsNil` (they raise on a NIL operand).
     pub rejects_nil: Vec<String>,
+    /// Flow-sensitive NIL producers whose result may still be NIL after local fallbacks.
+    pub unguarded_nil: Vec<String>,
+    /// RejectsNil words reached by a maybe-NIL abstract operand.
+    pub rejects_nil_flows: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AbstractSlot {
+    maybe_nil: bool,
+    sources: Vec<String>,
+}
+
+impl AbstractSlot {
+    fn present() -> Self {
+        Self {
+            maybe_nil: false,
+            sources: Vec::new(),
+        }
+    }
+
+    fn maybe_nil(source: String) -> Self {
+        Self {
+            maybe_nil: true,
+            sources: vec![source],
+        }
+    }
+}
+
+fn flow_sensitive_nil(tokens: &[Token]) -> (Vec<String>, Vec<String>) {
+    let mut stack: Vec<AbstractSlot> = Vec::new();
+    let mut unguarded_seen = HashSet::new();
+    let mut reject_seen = HashSet::new();
+    let mut rejects_nil_flows = Vec::new();
+
+    for token in tokens {
+        match token {
+            Token::Number(_) | Token::String(_) => stack.push(AbstractSlot::present()),
+            Token::NilCoalesce => {
+                if let Some(top) = stack.last_mut() {
+                    top.maybe_nil = false;
+                    top.sources.clear();
+                }
+            }
+            Token::Symbol(symbol) => {
+                let normalized = super::normalize_word(symbol);
+                let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
+                if canonical.as_ref() == "VENT" {
+                    if let Some(top) = stack.last_mut() {
+                        top.maybe_nil = false;
+                        top.sources.clear();
+                    }
+                    continue;
+                }
+                let Some(meta) = get_coreword_metadata(&canonical) else {
+                    continue;
+                };
+                let Some((consumes, produces)) = meta.mass.fixed() else {
+                    break;
+                };
+                let mut operands = Vec::new();
+                for _ in 0..consumes {
+                    operands.push(stack.pop().unwrap_or_else(AbstractSlot::present));
+                }
+                operands.reverse();
+
+                let mut input_sources = Vec::new();
+                for operand in &operands {
+                    if operand.maybe_nil {
+                        input_sources.extend(operand.sources.clone());
+                    }
+                }
+                if meta.nil_policy == NilPolicy::RejectsNil && !input_sources.is_empty() {
+                    let sink = canonical.to_string();
+                    if reject_seen.insert(sink.clone()) {
+                        rejects_nil_flows.push(format!("{} -> {}", input_sources.join(", "), sink));
+                    }
+                }
+
+                let output = match meta.nil_policy {
+                    NilPolicy::CreatesNil => AbstractSlot::maybe_nil(canonical.to_string()),
+                    NilPolicy::Passthrough | NilPolicy::PreservesReason => {
+                        if input_sources.is_empty() {
+                            AbstractSlot::present()
+                        } else {
+                            AbstractSlot {
+                                maybe_nil: true,
+                                sources: input_sources,
+                            }
+                        }
+                    }
+                    NilPolicy::RejectsNil | NilPolicy::ConsumesNil => AbstractSlot::present(),
+                };
+                for _ in 0..produces {
+                    stack.push(output.clone());
+                }
+            }
+            Token::VectorStart
+            | Token::VectorEnd
+            | Token::BlockStart
+            | Token::BlockEnd
+            | Token::Pipeline
+            | Token::CondClauseSep
+            | Token::LineBreak => {}
+        }
+    }
+
+    let mut unguarded_nil = Vec::new();
+    for slot in stack {
+        if slot.maybe_nil {
+            for source in slot.sources {
+                if unguarded_seen.insert(source.clone()) {
+                    unguarded_nil.push(source);
+                }
+            }
+        }
+    }
+    (unguarded_nil, rejects_nil_flows)
 }
 
 /// Tokenize, compile and statically check `src` for flow-mass conservation and
@@ -94,6 +211,8 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
         }
     }
 
+    let (unguarded_nil, rejects_nil_flows) = flow_sensitive_nil(&tokens);
+
     Ok(PlanCheck {
         over_consumes: mass.over_consumes_from_empty(),
         min_depth: mass.min_depth,
@@ -102,6 +221,8 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
         may_bubble,
         has_fallback,
         rejects_nil,
+        unguarded_nil,
+        rejects_nil_flows,
     })
 }
 
@@ -157,8 +278,8 @@ impl PlanCheck {
             });
         }
 
-        if !self.may_bubble.is_empty() && !self.has_fallback {
-            let words = self.may_bubble.join(", ");
+        if !self.unguarded_nil.is_empty() {
+            let words = self.unguarded_nil.join(", ");
             findings.push(Finding {
                 severity: Severity::Advisory,
                 message: match lang {
@@ -172,23 +293,23 @@ impl PlanCheck {
                     ),
                 },
             });
+        }
 
-            if !self.rejects_nil.is_empty() {
-                let sinks = self.rejects_nil.join(", ");
-                findings.push(Finding {
-                    severity: Severity::Advisory,
-                    message: match lang {
-                        Lang::Ja => format!(
-                            "そのうえ次の語は NIL を受け取れません: {}。NIL が届く前に解消してください。",
-                            sinks
-                        ),
-                        Lang::En => format!(
-                            "And these words reject a NIL operand: {}. Resolve the NIL before it reaches them.",
-                            sinks
-                        ),
-                    },
-                });
-            }
+        if !self.rejects_nil_flows.is_empty() {
+            let sinks = self.rejects_nil_flows.join(", ");
+            findings.push(Finding {
+                severity: Severity::Advisory,
+                message: match lang {
+                    Lang::Ja => format!(
+                        "次の語は NIL を受け取れません: {}。NIL が届く前に解消してください。",
+                        sinks
+                    ),
+                    Lang::En => format!(
+                        "These words reject a NIL operand: {}. Resolve the NIL before it reaches them.",
+                        sinks
+                    ),
+                },
+            });
         }
 
         if !self.mass_known {

@@ -43,103 +43,31 @@ pub struct PurityInfo {
 // ── Builtin key → PurityInfo ──────────────────────────────────────────────────
 
 /// Return `PurityInfo` for a given `BuiltinExecutorKey`.
+///
+/// Phase 3 keeps this as a compatibility adapter, but the authored metadata now
+/// lives on `BuiltinSpec` so optimizers and the word registry do not maintain
+/// separate builtin purity tables.
 pub fn builtin_purity(key: BuiltinExecutorKey) -> PurityInfo {
-    use BuiltinExecutorKey::*;
-    use EvalCost::*;
-    use Purity::*;
-
-    let pure_trivial = PurityInfo {
-        purity: Pure,
-        cost: Trivial,
-        order_sensitive: false,
-    };
-    let pure_light = PurityInfo {
-        purity: Pure,
-        cost: Light,
-        order_sensitive: false,
-    };
-    let pure_medium = PurityInfo {
-        purity: Pure,
-        cost: Medium,
-        order_sensitive: false,
-    };
-    let pure_med_ord = PurityInfo {
-        purity: Pure,
-        cost: Medium,
+    let spec = crate::builtins::builtin_specs()
+        .iter()
+        .find(|spec| spec.executor_key == Some(key));
+    spec.map(purity_info_from_spec).unwrap_or(PurityInfo {
+        purity: Purity::Unknown,
+        cost: EvalCost::Heavy,
         order_sensitive: true,
+    })
+}
+
+fn purity_info_from_spec(spec: &crate::builtins::BuiltinSpec) -> PurityInfo {
+    let purity = match spec.purity {
+        crate::coreword_registry::WordPurity::Pure => Purity::Pure,
+        crate::coreword_registry::WordPurity::Observable
+        | crate::coreword_registry::WordPurity::Effectful => Purity::Impure,
     };
-    let pure_heavy = PurityInfo {
-        purity: Pure,
-        cost: Heavy,
-        order_sensitive: false,
-    };
-    let imp_heavy = PurityInfo {
-        purity: Impure,
-        cost: Heavy,
-        order_sensitive: true,
-    };
-
-    match key {
-        // ── Pure arithmetic ───────────────────────────────────────────────
-        Add | Sub | Mul | Div | Mod | Floor | Ceil | Round | Quantize | QuantizeHalfAway
-        | QuantizeFloor | QuantizeCeil | QuantizeTrunc => pure_trivial,
-
-        // ── Pure comparison ───────────────────────────────────────────────
-        Eq | Lt | Le | Gt | Gte | Neq | CompareWithin => pure_trivial,
-
-        // ── Pure logic ────────────────────────────────────────────────────
-        And | Or | Not => pure_trivial,
-
-        // ── Pure constants ────────────────────────────────────────────────
-        True | False | Nil | Idle => pure_trivial,
-
-        // ── Pure casts / string ops ───────────────────────────────────────
-        Str | Num | Bool | Chr | Chars | Join | ToCf => pure_light,
-        Trim | TrimLeft | TrimRight | Tokenize | Substitute | StartsWith | EndsWith => pure_light,
-
-        // ── Pure vector ops ───────────────────────────────────────────────
-        Get | Length | Concat | Reverse | Range | Reorder => pure_light,
-        Take | Split | Insert | Replace | Remove | Collect => pure_light,
-
-        // Value-conservation guard: inspects the parts vector and either passes
-        // it through or raises; pure and deterministic (SPEC §13.3 draft).
-        Conserve => pure_light,
-
-        // ── Diagnostic absence accessors (SPEC §4.5.0) ────────────────────
-        // Read-only inspection of a NIL's diagnostic metadata; pure and
-        // deterministic, retaining the inspected value like LENGTH.
-        NilCheck | NilReason | NilOrigin | NilRecoverable | NilDiagnosis => pure_light,
-
-        // ── Pure tensor ops ───────────────────────────────────────────────
-        Shape | Rank | Reshape | Transpose | Fill => pure_light,
-
-        // ── Higher-order dispatchers: the word itself is pure; the
-        //    callback's purity is propagated separately by the
-        //    PushCodeBlock recursion in `analyze_compiled_plan_with_context`.
-        Map | Filter | Any | All | Count => pure_medium,
-
-        // Order matters for fold / scan / unfold (left-to-right accumulation),
-        // but the dispatcher itself remains pure.
-        Fold | Scan | Unfold => pure_med_ord,
-
-        // ── Pure control dispatchers: branch/block selection is itself pure.
-        //    Inner block purity is propagated via PushCodeBlock recursion.
-        Cond | Exec => pure_heavy,
-
-        // Eval parses an arbitrary string at runtime and cannot be analysed
-        // statically, so it stays conservatively impure.
-        Eval => imp_heavy,
-
-        // ── Dictionary mutators: impure ───────────────────────────────────
-        Def | Del | Import | ImportOnly | Unimport | UnimportOnly | Force | Lookup | Precompute => {
-            imp_heavy
-        }
-
-        // ── I/O: impure ───────────────────────────────────────────────────
-        Print => imp_heavy,
-
-        // ── Concurrency: impure ───────────────────────────────────────────
-        Spawn | Await | Status | Kill | Monitor | Supervise => imp_heavy,
+    PurityInfo {
+        purity,
+        cost: spec.eval_cost,
+        order_sensitive: spec.order_sensitive,
     }
 }
 
@@ -209,4 +137,31 @@ pub fn infer_purity(components: &[Purity]) -> Purity {
         return Purity::Unknown;
     }
     Purity::Pure
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_purity_adapter_is_derived_from_builtin_spec() {
+        for spec in crate::builtins::builtin_specs() {
+            let Some(key) = spec.executor_key else {
+                continue;
+            };
+            let info = builtin_purity(key);
+            assert_eq!(info.cost, spec.eval_cost, "{} cost drift", spec.name);
+            assert_eq!(
+                info.order_sensitive, spec.order_sensitive,
+                "{} order sensitivity drift",
+                spec.name
+            );
+            let expected = match spec.purity {
+                crate::coreword_registry::WordPurity::Pure => Purity::Pure,
+                crate::coreword_registry::WordPurity::Observable
+                | crate::coreword_registry::WordPurity::Effectful => Purity::Impure,
+            };
+            assert_eq!(info.purity, expected, "{} purity drift", spec.name);
+        }
+    }
 }

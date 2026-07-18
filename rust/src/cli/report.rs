@@ -94,6 +94,8 @@ fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
         "mayBubble": check.may_bubble,
         "hasFallback": check.has_fallback,
         "rejectsNil": check.rejects_nil,
+        "unguardedNil": check.unguarded_nil,
+        "rejectsNilFlows": check.rejects_nil_flows,
         "findings": findings,
         "clarifications": clarifications_json(&clarify::from_plan_check(check, lang)),
     })
