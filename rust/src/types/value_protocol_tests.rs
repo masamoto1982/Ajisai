@@ -89,7 +89,7 @@ fn plain_nil_is_still_nil_not_unknown() {
 
 /// √2 as an exact irrational (AlgebraicSqrt), the canonical ExactScalar.
 fn sqrt2() -> Value {
-    use crate::types::continued_fraction::ExactReal;
+    use crate::types::exact::ExactReal;
     let er = ExactReal::from_sqrt_rational(frac(2)).expect("√2 is a valid exact real");
     let v = Value::from_exact_real(er);
     assert!(

@@ -1015,7 +1015,7 @@ mod tests {
     // on the calling thread. Drive it with `ExactReal` lanes (the production
     // payload), including a √2-bearing irrational so the Gosper path — not just
     // the rational fast lane — is exercised under fan-out.
-    use crate::types::continued_fraction::ExactReal;
+    use crate::types::exact::ExactReal;
 
     /// Per-lane op mirroring `ExactArithmeticSchema::Add` over exact reals:
     /// `√2·i + (i+1)`, encoded as `Option` exactly like the broadcast's

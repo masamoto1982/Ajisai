@@ -210,7 +210,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     },
     BuiltinLookupDoc {
         word: "COMPARE-WITHIN",
-        behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. The budget names how many continued-\nfraction terms may be examined; two equal lazy values can\nexhaust it, and the result is then UNKNOWN.",
+        behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. Every value the current vocabulary can\nconstruct decides regardless of the budget; the budget bounds\nthe refinement of future general computable reals, whose\nexhaustion yields UNKNOWN.",
         examples: &[BuiltinExampleDoc {
             code: "a b 64 COMPARE-WITHIN",
             result: "Pushes -1, 0, 1, or UNKNOWN.",

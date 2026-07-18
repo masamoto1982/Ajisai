@@ -827,7 +827,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "COMPARE-WITHIN — three-way compare within a budget",
         hover_syntax: "a b 64 COMPARE-WITHIN",
         executor_key: Some(BuiltinExecutorKey::CompareWithin),
-        summary: "Three-way compare two values within an explicit partial-quotient budget.",
+        summary: "Three-way compare two values within an explicit observation budget.",
         role: "Comparison primitive: yield -1, 0, 1, or UNKNOWN within a budget.",
 
         stack_effect: "[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]",

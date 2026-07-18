@@ -1,14 +1,11 @@
 pub mod arena;
-pub mod continued_fraction;
 pub mod display;
+pub mod exact;
 pub mod fraction;
 mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod interval;
-pub mod multiquadratic;
-#[cfg(test)]
-mod multiquadratic_tests;
 pub mod record_shape;
 mod value_operations;
 pub(crate) mod value_protocol;
@@ -19,7 +16,7 @@ use self::fraction::Fraction;
 pub use self::record_shape::RecordShape;
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
-use crate::types::continued_fraction::ExactReal;
+use crate::types::exact::ExactReal;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

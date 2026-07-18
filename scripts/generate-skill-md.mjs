@@ -320,12 +320,11 @@ function verifiedNilSection() {
 }
 
 function verifiedUnknownSection() {
+  // Comparison is decidable for everything the current vocabulary can
+  // construct: even under a tiny explicit budget, an algebraic pair decides.
   const json = expectOk("'MATH' IMPORT\n2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN");
-  if (json.stackDisplay.join(' ') !== 'UNKNOWN') fail('budgeted CF comparison must yield UNKNOWN');
-  const node = json.stack[0];
-  const agreed = node?.semantics?.absence?.diagnosis?.agreedPrefix;
-  if (typeof agreed !== 'number') fail('UNKNOWN value must carry agreedPrefix in semantics.absence.diagnosis');
-  return { agreed };
+  if (json.stackDisplay.join(' ') !== '0/1') fail('algebraic COMPARE-WITHIN must decide 0 regardless of budget');
+  return { decided: json.stackDisplay.join(' ') };
 }
 
 function verifyExamplesFresh() {
@@ -402,19 +401,21 @@ value itself carries \`semantics.absence.reason\` on the stack.
 
 ## 5. UNKNOWN — the third truth value
 
-Comparisons of lazy exact reals are *budgeted*. When the budget is exhausted
-without a decision, the result is the logical \`UNKNOWN\`, not an error and not NIL:
+Every comparison of values the current vocabulary can construct — rationals
+and \`SQRT\`-built algebraic values — is *decidable*, whatever budget is named:
 
 \`\`\`ajisai
 'MATH' IMPORT
-2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN   # √2 vs √8/2 within 3 partial quotients
+2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN   # √2 vs √8/2, budget 3
 \`\`\`
 
-→ stack \`UNKNOWN\` (exit 0). In JSON the value serializes as
-\`{ "type": "truthValue", "value": "unknown" }\` and carries
-\`agreedPrefix: ${unknown.agreed}\` (leading partial quotients that matched) in
-\`semantics.absence.diagnosis\`. Raise the budget or restructure the comparison
-to decide; AND/OR/NOT follow Kleene three-valued logic over UNKNOWN.
+→ stack \`${unknown.decided}\` (exit 0): √2 equals √8/2 exactly, decided with no
+budget consumed. The logical \`UNKNOWN\` — serialized as
+\`{ "type": "truthValue", "value": "unknown" }\` with a
+\`semantics.absence.diagnosis.agreedPrefix\` refinement count — is reserved for
+future general computable reals whose observation can exhaust its budget; it
+is not an error and not NIL, and AND/OR/NOT follow Kleene three-valued logic
+over it.
 
 ## 6. Canonical examples (all verified by the generator)
 

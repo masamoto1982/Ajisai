@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:e2ed14f0490c3f859c22e192176487534469d5d2f6a562ace35f2f18116042f9",
-  "fileCount": 305,
+  "rootIdentity": "sha256:9674a035f55adae5db5bd696f98bee387d3678871a084eb8b38a44447b771458",
+  "fileCount": 313,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -39,8 +39,8 @@
     },
     {
       "path": "SPECIFICATION.html",
-      "sha256": "55bf0d20f00dde0ebf67b28501f08de86cc3b2736d367aca46809736fa9835a9",
-      "bytes": 241000
+      "sha256": "5c5b478c2a3bd715aea4df431fcd7b416bc43f5a94aace2907da15a49c58ef75",
+      "bytes": 237839
     },
     {
       "path": "eslint.config.js",
@@ -59,8 +59,8 @@
     },
     {
       "path": "rust/src/arithmetic_operation_tests.rs",
-      "sha256": "3c5729c5dd73174e38b403b0f4feb8fc8747762dc45d54eabd53f0da2bf1b32d",
-      "bytes": 79019
+      "sha256": "0b3057997a07783bc8b814f7e51655fe8ab3303d30dbd145e90df6cbd74a7100",
+      "bytes": 79048
     },
     {
       "path": "rust/src/bin/ajisai.rs",
@@ -69,8 +69,8 @@
     },
     {
       "path": "rust/src/builtins/builtin_word_definitions.rs",
-      "sha256": "1aa66f9ca6d4eb6b7de3490e139c9e6bc57cfbf8a087951be5575578e99c4257",
-      "bytes": 68312
+      "sha256": "24dbd5726471f45ac818c7027e192fad239f7d94e82cde5c198349508c7ebb90",
+      "bytes": 68307
     },
     {
       "path": "rust/src/builtins/builtin_word_details.rs",
@@ -79,8 +79,8 @@
     },
     {
       "path": "rust/src/builtins/builtin_word_lookup_docs.rs",
-      "sha256": "8fd6d74a9accaa9ed234cef9e3d5dd72c69a894c95febbc2a777a3d28d745784",
-      "bytes": 16019
+      "sha256": "a75efc3cc4315a1926214b1b83c5a4ffe4f9017de50631b7270a04fe0a9b59b5",
+      "bytes": 16066
     },
     {
       "path": "rust/src/builtins/mod.rs",
@@ -264,8 +264,8 @@
     },
     {
       "path": "rust/src/interpreter/arithmetic.rs",
-      "sha256": "3c1f6bd51b60f9c95b33de62c159af72e8c009ba5aa92e378f16fac693b10df0",
-      "bytes": 27018
+      "sha256": "5e4f7b15e102a23d1a62afdc61f726d8ecae1e1c907f9292d2cbec33c68ae991",
+      "bytes": 27005
     },
     {
       "path": "rust/src/interpreter/arithmetic_exact_div_tests.rs",
@@ -359,8 +359,8 @@
     },
     {
       "path": "rust/src/interpreter/comparison.rs",
-      "sha256": "ea92202ecb5d1c146941b699940e151c6200503a5e8f2087c1e4e0111ec28d09",
-      "bytes": 32721
+      "sha256": "8833e325d5d7e1f7d8517b6832333d12969342fbd27ba645e76823cad0431a25",
+      "bytes": 31917
     },
     {
       "path": "rust/src/interpreter/compiled_call.rs",
@@ -659,8 +659,8 @@
     },
     {
       "path": "rust/src/interpreter/interval_ops.rs",
-      "sha256": "e12b596fda80453e37d6c99c5461621d451454c2fdf61819a5a0188130bb9b24",
-      "bytes": 8363
+      "sha256": "0ccfcf91e032263dd000df860880889a6ccaa3ecbc5785d13bf9440263042aef",
+      "bytes": 8350
     },
     {
       "path": "rust/src/interpreter/io.rs",
@@ -679,8 +679,8 @@
     },
     {
       "path": "rust/src/interpreter/logic_kleene.rs",
-      "sha256": "eb22de250437949e1a610ebe0e4d21bbc49f29245ad2e23f534f2328f3e54ce0",
-      "bytes": 13969
+      "sha256": "da2a01d1d5e59b5dd9be536f49dc531915b3b9e17d5b6b5695129b0c583f3e9e",
+      "bytes": 14098
     },
     {
       "path": "rust/src/interpreter/mass_conservation.rs",
@@ -689,8 +689,8 @@
     },
     {
       "path": "rust/src/interpreter/math_ops.rs",
-      "sha256": "889717ce8093e48eff075eec9ab104b68d9df8eb9b9445f4f61ad13063cbe0a4",
-      "bytes": 13191
+      "sha256": "f0d292143fccb88d5cc45c04897a8309071842c872970a0b1efaa6feb5959516",
+      "bytes": 13178
     },
     {
       "path": "rust/src/interpreter/math_ops_tests.rs",
@@ -699,8 +699,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "80ecadc5c9ef4b7ed81fd6fc404678c8930c060b96a1a62cf88854f22643c068",
-      "bytes": 3300
+      "sha256": "03c5bb31c210b954e4e7c7b731c5c3b8c6116b114c459315b14384e07089d7a7",
+      "bytes": 3340
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -744,8 +744,8 @@
     },
     {
       "path": "rust/src/interpreter/modules/semantic_sync.rs",
-      "sha256": "38c323e0a88b39d372daa30506485e83802c11e7680ff648d45351162ef98552",
-      "bytes": 5734
+      "sha256": "9f2c3d062992be5f6e84e9caf89ff26273b2263bfcdb975b7942cb3a8842138e",
+      "bytes": 5884
     },
     {
       "path": "rust/src/interpreter/naming_convention_checker.rs",
@@ -754,8 +754,8 @@
     },
     {
       "path": "rust/src/interpreter/nil_conformance_tests.rs",
-      "sha256": "9eb782ff2663fab2f208ab2aca892eee6a742423ae8aa2c4907d1e6f0677425d",
-      "bytes": 19788
+      "sha256": "228ce503dd6505604536316ab8ab5621af5c4ff267494e65f527439f1c0260e2",
+      "bytes": 20116
     },
     {
       "path": "rust/src/interpreter/nil_diagnostics.rs",
@@ -774,13 +774,13 @@
     },
     {
       "path": "rust/src/interpreter/nil_unknown_firewall_tests.rs",
-      "sha256": "d96c4c4fead7052c175a37c4d5836f307f179883342a8f7d9bc22671250eb186",
-      "bytes": 4704
+      "sha256": "8625ebc457e64f36964f4b37cdbb9274425f2314b047c90d0e1fdec6786bf17e",
+      "bytes": 5485
     },
     {
       "path": "rust/src/interpreter/parallel.rs",
-      "sha256": "eb365d87a3d4a18d2e51773cdf94d9a4e18971c0e841f8e204d1dc9146e02d6a",
-      "bytes": 44497
+      "sha256": "07d8bdb320754f964e58eaa8cfa6c4ab3fe9a407ba399974bdbdb5d81db03eb6",
+      "bytes": 44484
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
@@ -869,13 +869,18 @@
     },
     {
       "path": "rust/src/interpreter/tensor_cmds.rs",
-      "sha256": "5ace1178ebae6691c250ef0c18057e5f43ed1081edb995bdcc52653dfe8e4ceb",
-      "bytes": 25638
+      "sha256": "61fd9ac257cc600a30a77cf90aa83cc5121a5da56715f9ec34a22453e99fec20",
+      "bytes": 25789
     },
     {
       "path": "rust/src/interpreter/tensor_ops.rs",
       "sha256": "def637bfa6cb999c77c00053296ff6c67e1bc97a908d1ff1d59a891735b0401e",
       "bytes": 18314
+    },
+    {
+      "path": "rust/src/interpreter/tier2_isolation_tests.rs",
+      "sha256": "2fa46c51ecaec885ea3e50d959177f884e0ce6bf66ef6490f21d5cf09e568e11",
+      "bytes": 3843
     },
     {
       "path": "rust/src/interpreter/time_calendar.rs",
@@ -1033,14 +1038,59 @@
       "bytes": 21095
     },
     {
-      "path": "rust/src/types/continued_fraction.rs",
-      "sha256": "bd51216038b9deabbf2eb0bee0d70679a435bced879ca6e45d4220ff0375b12d",
-      "bytes": 200228
+      "path": "rust/src/types/display.rs",
+      "sha256": "58d9a9030e52fd0d79f8de63e7b4d92e032871ff1b052eed71416bea44f90ee3",
+      "bytes": 21837
     },
     {
-      "path": "rust/src/types/display.rs",
-      "sha256": "3a438bccdcf034495c8f181df0359b8855f4c89fab550f68a9110150c7246649",
-      "bytes": 21863
+      "path": "rust/src/types/exact/algebraic.rs",
+      "sha256": "19907a437732cfddb60cebd190de0021d7121df25e8a5c177a86e2928cc9d626",
+      "bytes": 13418
+    },
+    {
+      "path": "rust/src/types/exact/algebraic_field.rs",
+      "sha256": "536df68ba85cf749c52a7ae82d043bcf0a1599c62342fdafec42b19f25ee0232",
+      "bytes": 4855
+    },
+    {
+      "path": "rust/src/types/exact/algebraic_floor.rs",
+      "sha256": "124419348ad2eec11fff2fe58500e9b8ff3b331a755f241e0f68936eb3cca17a",
+      "bytes": 5921
+    },
+    {
+      "path": "rust/src/types/exact/algebraic_tests.rs",
+      "sha256": "3ac8a2ac6bfefda8b5515a24df418b799f79d30d98e692a63daa61158e6e53e9",
+      "bytes": 11219
+    },
+    {
+      "path": "rust/src/types/exact/basis.rs",
+      "sha256": "1187812ff1bc8d45d3d7b42dbfb4a0c539ec617fab3ad4d5b289f0abd08fa2d0",
+      "bytes": 7087
+    },
+    {
+      "path": "rust/src/types/exact/computable.rs",
+      "sha256": "ff2927dce639618b641cec16baa9027a8c80ade3c45fc3353426c9c96886eb77",
+      "bytes": 5278
+    },
+    {
+      "path": "rust/src/types/exact/mod.rs",
+      "sha256": "e8392c7fa4a5a15fd0f78f6c921eb25e193a9131b2d0041610b8bdc00046ee3f",
+      "bytes": 780
+    },
+    {
+      "path": "rust/src/types/exact/observation.rs",
+      "sha256": "de67b286e628564632b8767777050ae1779f1502c5688196d6340a37692a2d65",
+      "bytes": 6725
+    },
+    {
+      "path": "rust/src/types/exact/value.rs",
+      "sha256": "11cded03ab905bc52b367c21e5ac2c5b449d19ee81ae99654730959185cb524a",
+      "bytes": 16733
+    },
+    {
+      "path": "rust/src/types/exact/value_approx.rs",
+      "sha256": "486389e9764836ecee1fd56904a91d1dd1f42a1aa57d0065775e078c201f2875",
+      "bytes": 6598
     },
     {
       "path": "rust/src/types/fraction.rs",
@@ -1064,18 +1114,8 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "68efd3e569dca52e722bdfe11b0df6e7e33e55205a02bf7931853501c88768b4",
-      "bytes": 24609
-    },
-    {
-      "path": "rust/src/types/multiquadratic.rs",
-      "sha256": "aa1f82914d05dc785c51d27760ce73adaa90292fde42b6a9431e524f6d68b545",
-      "bytes": 18840
-    },
-    {
-      "path": "rust/src/types/multiquadratic_tests.rs",
-      "sha256": "2d6a80082b694fce6afce3fa3a7ef98bfeb613f1a0866f81da79d2fa70a9fb41",
-      "bytes": 7836
+      "sha256": "fb1f8d0e5bb9121c19cd19bafe49c509c540d9350554c195d4b94de26a700cb3",
+      "bytes": 24520
     },
     {
       "path": "rust/src/types/record_shape.rs",
@@ -1084,8 +1124,8 @@
     },
     {
       "path": "rust/src/types/value_operations.rs",
-      "sha256": "edfb383601197cb3d8c2fea9fe0168745477e1644372dde37843045a8f87469f",
-      "bytes": 53081
+      "sha256": "37cf261c60fc874054421d725b4c9a55895b8811e4121a5ac989368a0cffedcd",
+      "bytes": 53068
     },
     {
       "path": "rust/src/types/value_protocol.rs",
@@ -1094,8 +1134,8 @@
     },
     {
       "path": "rust/src/types/value_protocol_tests.rs",
-      "sha256": "0996b4ac4a5ebbc819f9684382a0393b921268ac1aa04e02fe0345edeb4df9a0",
-      "bytes": 14014
+      "sha256": "8e1ab6135fc80ffdae78937787a8a37e3122b09ef9483c9e814d6b32fd476493",
+      "bytes": 14001
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/mod.rs",
@@ -1174,8 +1214,8 @@
     },
     {
       "path": "scripts/generate-skill-md.mjs",
-      "sha256": "96c8f1ad7030652aaaf101aa889627ba64925de398c9d2d12e797f40c9f57c86",
-      "bytes": 20437
+      "sha256": "374b75cfcbe916993558a5578cef10afec6425660bdd045de600640f6d8e8e37",
+      "bytes": 20494
     },
     {
       "path": "scripts/generate-source-attestation.mjs",

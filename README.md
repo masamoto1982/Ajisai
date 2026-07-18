@@ -4,7 +4,7 @@
 
 # Ajisai
 
-Ajisai is an AI-first, vector-oriented, continued-fraction dataflow language.
+Ajisai is an AI-first, vector-oriented, exact-real dataflow language.
 
 Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in word is expected to have a machine-readable contract.
 
@@ -43,15 +43,15 @@ Spec links: [§4 Value Model](https://masamoto1982.github.io/Ajisai/SPECIFICATIO
 
 ### 1) Exact numbers: water with a traceable flow history
 
-Every numeric value in Ajisai is an **exact real represented internally as a continued fraction**. Integer, fraction, decimal, and scientific-notation literals are just convenient source forms for that same exact representation. Runtime words such as `SQRT` may produce lazy infinite continued fractions for admitted irrational values.
+Every numeric value in Ajisai is an **exact real, defined by observation rather than by any single representation**: a number can always report a rational enclosure of itself and refine it on demand. Integer, fraction, decimal, and scientific-notation literals are just convenient source forms for exact rationals. Runtime words such as `SQRT` produce exact algebraic irrationals, carried in a decidable normal form.
 
-Ajisai therefore avoids the usual hidden detour through approximate floating-point values. Arithmetic operates on the continued-fraction representation directly, and canonical AI-readable display uses a nested continued-fraction form rather than remembering the original source literal.
+Ajisai therefore avoids the usual hidden detour through approximate floating-point values. Arithmetic is exact over every tier, and canonical AI-readable display uses a nested continued-fraction form — derived from the value for display — rather than remembering the original source literal.
 
-Ajisai's numerical-error stance is broader than “no rounding error.” The language design also treats loss of significance, cancellation, truncation error, and overflow as failures to be made impossible, exact, or diagnosable instead of silently accepted. Exact continued-fraction values, arbitrary-precision integer coefficients, lazy observation budgets, and visible `UNKNOWN` / `NIL` outcomes are the mechanisms that keep these error classes from becoming hidden value corruption.
+Ajisai's numerical-error stance is broader than “no rounding error.” The language design also treats loss of significance, cancellation, truncation error, and overflow as failures to be made impossible, exact, or diagnosable instead of silently accepted. Exact tiered values, arbitrary-precision integer state, explicit observation water, and visible `UNKNOWN` / `NIL` outcomes are the mechanisms that keep these error classes from becoming hidden value corruption.
 
-For comparison, Ajisai uses a faster internal observation method: **nearest-integer continued fractions**. This does not change value identity, display, or serialization; it only changes how comparison consumes observation budget.
+Comparison is **decidable for everything the current vocabulary can construct** — rationals and the algebraic closure of `SQRT` under field arithmetic — so no comparison of such values consumes observation budget or returns `UNKNOWN`. The budgeted-observation machinery exists for future general computable reals (π, e, log, …).
 
-Spec links: [§3.2 Numeric literal formats](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#32-numeric-literal-formats), [§4.2 Scalar: exact-real continued-fraction arithmetic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#42-scalar-exact-real-continued-fraction-arithmetic), [§4.2.5 Nearest-integer continued fractions](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#425-nearest-integer-continued-fractions-comparison-expansion), [§4.2.6 Numeric error policy](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#426-numeric-error-policy), [§12.2 Interpretation roles](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#122-interpretation-roles)
+Spec links: [§3.2 Numeric literal formats](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#32-numeric-literal-formats), [§4.2 Scalar: exact-real arithmetic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#42-scalar-exact-real-continued-fraction-arithmetic), [§4.2.6 Numeric error policy](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#426-numeric-error-policy), [§12.2 Interpretation roles](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#122-interpretation-roles)
 
 ### 2) Bubble and Stagnation: failure and undecidability stay visible
 
@@ -59,7 +59,7 @@ Ajisai uses the **Bubble and Stagnation Model** to explain partial computation.
 
 A **Bubble** is `NIL`. It appears when an operation is well-formed but cannot produce a meaningful value: division by zero, a failed `NUM` parse, an invalid `CHR` code point, or an out-of-range `GET` on a valid vector. The bubble carries a reason and diagnostic metadata as it flows downstream.
 
-A **Stagnation** is `UNKNOWN`. It appears when a value is present but the current observation budget cannot decide a truth value. The main example is exact continued-fraction comparison: two values may agree for every observed term, exhaust the comparison budget, and still not settle `TRUE` or `FALSE`. Ajisai reports this as logical `UNKNOWN`, often with comparison diagnosis such as `agreedPrefix`.
+A **Stagnation** is `UNKNOWN`. It appears when a value is present but the current observation cannot decide a truth value within its water. Every value the current vocabulary can construct compares decidably, so today `UNKNOWN` is reserved for future general computable reals, whose refinement can exhaust its budget without separating two values. Ajisai reports that as logical `UNKNOWN`, with comparison diagnosis such as `agreedPrefix`.
 
 The distinction matters:
 
@@ -68,7 +68,7 @@ The distinction matters:
 - Generic NIL passthrough uses operational NIL only, so logical `UNKNOWN` is not silently absorbed as a bubble.
 - Logic words use Strong Kleene three-valued logic: for example, `FALSE AND UNKNOWN` is `FALSE`, while `TRUE OR UNKNOWN` is `TRUE`.
 
-Spec links: [§4.5.0 Diagnostic absence metadata](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#450-diagnostic-absence-metadata), [§4.5.1 NIL passthrough](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#451-nil-passthrough), [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§7.4.1 Decidability and comparison budget](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§7.5 Logic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#75-logic), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule)
+Spec links: [§4.5.0 Diagnostic absence metadata](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#450-diagnostic-absence-metadata), [§4.5.1 NIL passthrough](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#451-nil-passthrough), [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§7.4.1 Decidability and comparison water](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§7.5 Logic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#75-logic), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule)
 
 ### 3) Vectors and tensors: channels can be nested or dense
 
@@ -126,11 +126,12 @@ Ajisai already has, not new subsystems:
   the Core / Module / User trust boundary (`IMPORT` / `UNIMPORT`).
 - **Water levels** control *how much* flow may run. The evaluation step budget
   bounds total work and raises `ExecutionLimitExceeded` when reached. The
-  comparison budget bounds observation depth; when it is reached the result is
+  observation water bounds refinement depth; when a future undecidable
+  observation reaches it the result is
   the logical `UNKNOWN` (stagnation), never a bubble — keeping operational
   absence and logical undecidability distinct.
 
-Spec links: [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§5.2 Two-plane architecture](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#52-two-plane-architecture), [§5.3 Execution step limit](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#53-execution-step-limit), [§7.4.1 Decidability and comparison budget](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§9 Module System](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#9-module-system), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule), [§11.4 Error propagation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#114-error-propagation), [Appendix A Gates and Water Levels](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#appendix-a-gates-and-water-levels-non-normative-index)
+Spec links: [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§5.2 Two-plane architecture](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#52-two-plane-architecture), [§5.3 Execution step limit](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#53-execution-step-limit), [§7.4.1 Decidability and comparison water](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§9 Module System](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#9-module-system), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule), [§11.4 Error propagation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#114-error-propagation), [Appendix A Gates and Water Levels](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#appendix-a-gates-and-water-levels-non-normative-index)
 
 ### Supply-chain integrity: content-addressed source provenance
 
@@ -157,7 +158,7 @@ The **Expected value** column shows the final stack exactly as the language rend
 | `2 3 / 1 3 / +` | `1/1` | Exact rational arithmetic: two thirds plus one third is exactly one. |
 | `[ 1 2 3 ] [ 4 5 6 ] +` | `[ 5/1 7/1 9/1 ]` | Vectorized arithmetic: equal-length vectors combine element-wise. |
 | `1 0 / ^ 99` | `99/1` | Division by zero produces a Bubble (`NIL`); `^` (`VENT`) replaces it with the fallback value. |
-| `'math' IMPORT 2 SQRT 2 LT` | `TRUE` | `SQRT` yields a lazy exact continued fraction for √2 and compares it without rounding. |
+| `'math' IMPORT 2 SQRT 2 LT` | `TRUE` | `SQRT` yields the exact algebraic √2 and compares it without rounding — decidably, with no budget in play. |
 
 More examples are available in [`examples/`](examples/) and in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
 

@@ -339,20 +339,27 @@ mod tests {
     #[tokio::test]
     async fn interpreter_not_and_preserve_agreed_prefix() {
         use crate::interpreter::Interpreter;
-        async fn top(code: &str) -> Value {
+        // Comparison is total over Tier ≤ 1 (SPEC §7.4), so U is produced
+        // through COMPARE-WITHIN against a Tier 2 starvation witness under
+        // an explicit 8-step water budget; the U carries agreedPrefix = 8.
+        async fn top(rest: &str) -> Value {
+            use crate::types::exact::{Computable, ExactReal};
             let mut interp = Interpreter::new();
-            interp.execute(code).await.expect("executes");
+            interp
+                .stack
+                .push(Value::from_exact_real(ExactReal::Computable(
+                    Computable::vanishing(),
+                )));
+            interp
+                .execute(&format!("0 8 COMPARE-WITHIN {rest}"))
+                .await
+                .expect("executes");
             interp.get_stack().last().expect("nonempty").clone()
         }
-        // The bare relations are total over the admitted domain (SPEC
-        // §4.2.7 / §7.4), so U is produced through COMPARE-WITHIN: two
-        // equal composed operands never diverge within the explicit
-        // 8-quotient budget, and the U carries agreedPrefix = 8.
-        const PRODUCE_U: &str = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN";
-        let base = top(PRODUCE_U).await;
+        let base = top("").await;
         let k = agreed_prefix_of(&base).expect("U carries an agreedPrefix");
 
-        let negated = top(&format!("{PRODUCE_U} NOT")).await;
+        let negated = top("NOT").await;
         assert!(negated.is_unknown());
         assert_eq!(
             agreed_prefix_of(&negated),
@@ -360,7 +367,7 @@ mod tests {
             "NOT U must preserve agreedPrefix through op_not"
         );
 
-        let anded = top(&format!("{PRODUCE_U} TRUE AND")).await;
+        let anded = top("TRUE AND").await;
         assert!(anded.is_unknown());
         assert_eq!(
             agreed_prefix_of(&anded),

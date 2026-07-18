@@ -187,24 +187,18 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- The six bare relations are total and exact over the admitted domain D
-     (§4.2.7 / §7.4), so an EQ over SQRT-built values can no longer produce
-     UNKNOWN. The explicit-budget COMPARE-WITHIN (§7.4.2) remains the one
-     current-Coreword window onto the partial-quotient budget, and is
-     therefore the canonical UNKNOWN producer for these spelling and
-     propagation cases: two equal lazily-composed operands never diverge
-     within any budget. -->
-<section class="ajisai-case" id="core-unknown-spelling" data-category="core">
-  <h3>UNKNOWN spells as UNKNOWN (a budget-exhausted COMPARE-WITHIN)</h3>
+<!-- Comparison is total over Tier <= 1 — everything the current vocabulary
+     can construct (rationals, and the algebraic closure of SQRT under field
+     operations) — so no source program can produce the logical UNKNOWN (U)
+     today: even COMPARE-WITHIN decides composed algebraic operands exactly,
+     independent of its budget. U is reserved for Tier 2 observations
+     (general computable reals), which no current word constructs; the U
+     rows of the Kleene tables and the U/NIL firewall are pinned by native
+     unit tests against a type-level Tier 2 value. -->
+<section class="ajisai-case" id="core-compare-within-composed-decides" data-category="core">
+  <h3>COMPARE-WITHIN decides composed algebraic operands exactly, budget-independent (§7.4.2)</h3>
   <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
-
-<section class="ajisai-case" id="core-unknown-propagation" data-category="core">
-  <h3>UNKNOWN propagates through Kleene AND</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
+  <pre class="ajisai-expect-result">0/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -762,8 +756,8 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-cond-unknown-guard-does-not-fire" data-category="core">
-  <h3>A COND guard reducing to UNKNOWN does not fire (Section 7.4.3)</h3>
+<section class="ajisai-case" id="core-cond-zero-guard-does-not-fire" data-category="core">
+  <h3>A COND guard reducing to the falsy 0 does not fire (its COMPARE-WITHIN decides 0 exactly)</h3>
   <pre class="ajisai-source">'math' IMPORT 7 { 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN } { [ 111 ] } { IDLE } { [ 999 ] } COND</pre>
   <pre class="ajisai-expect-result">[ 999/1 ]</pre>
   <div class="ajisai-expect-effects"></div>
@@ -920,9 +914,9 @@
 </section>
 
 <!-- ===================== CORE: K3 TRUTH TABLES (§7.5) ===================== -->
-<!-- The full strong-Kleene tables: 9 AND cells, 9 OR cells, 3 NOT inputs.
-     U is produced by the canonical budget-exhausted COMPARE-WITHIN prefix
-     (two equal lazily-composed operands never diverge within any budget). -->
+<!-- The definite rows of the strong-Kleene tables. The U rows require a
+     Tier 2 operand no current word constructs, so they are pinned by the
+     native logic tests, not by source-level cases. -->
 
 <section class="ajisai-case" id="core-k3-and-tt" data-category="core">
   <h3>K3 AND: T ∧ T = T</h3>
@@ -945,40 +939,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-k3-and-ut" data-category="core">
-  <h3>K3 AND: U ∧ T = U</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-and-tu" data-category="core">
-  <h3>K3 AND: T ∧ U = U</h3>
-  <pre class="ajisai-source">'math' IMPORT TRUE 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN AND</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-and-uf" data-category="core">
-  <h3>K3 AND: U ∧ F = F (F is absorbing even against U)</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN FALSE AND</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-and-fu" data-category="core">
-  <h3>K3 AND: F ∧ U = F (F is absorbing even against U)</h3>
-  <pre class="ajisai-source">'math' IMPORT FALSE 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN AND</pre>
-  <pre class="ajisai-expect-result">FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-and-uu" data-category="core">
-  <h3>K3 AND: U ∧ U = U</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN AND</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <section class="ajisai-case" id="core-k3-or-tt" data-category="core">
   <h3>K3 OR: T ∨ T = T</h3>
@@ -1001,40 +965,10 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-k3-or-ut" data-category="core">
-  <h3>K3 OR: U ∨ T = T (T is absorbing even against U)</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE OR</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-or-tu" data-category="core">
-  <h3>K3 OR: T ∨ U = T (T is absorbing even against U)</h3>
-  <pre class="ajisai-source">'math' IMPORT TRUE 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN OR</pre>
-  <pre class="ajisai-expect-result">TRUE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-or-uf" data-category="core">
-  <h3>K3 OR: U ∨ F = U</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN FALSE OR</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-or-fu" data-category="core">
-  <h3>K3 OR: F ∨ U = U</h3>
-  <pre class="ajisai-source">'math' IMPORT FALSE 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN OR</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-k3-or-uu" data-category="core">
-  <h3>K3 OR: U ∨ U = U</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN OR</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <section class="ajisai-case" id="core-k3-not-false" data-category="core">
   <h3>K3 NOT: ¬F = T</h3>
@@ -1043,12 +977,6 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-k3-not-unknown" data-category="core">
-  <h3>K3 NOT: ¬U = U</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN NOT</pre>
-  <pre class="ajisai-expect-result">UNKNOWN</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <!-- ===================== CORE: NIL IN LOGIC AND NIL×U PRIORITY (§4.5.2, §7.5, §7.12) ===================== -->
 
@@ -1122,26 +1050,8 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-nil-u-and-priority" data-category="core">
-  <h3>NIL ∧ U is NIL: NIL takes priority over U (§4.5.2)</h3>
-  <pre class="ajisai-source">'math' IMPORT NIL 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN AND</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-nil-u-or-priority" data-category="core">
-  <h3>NIL ∨ U is NIL: NIL takes priority over U (§4.5.2)</h3>
-  <pre class="ajisai-source">'math' IMPORT NIL 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN OR</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
-<section class="ajisai-case" id="core-unknown-is-not-nil" data-category="core">
-  <h3>U is not an absence: NIL? of UNKNOWN is FALSE (§4.5.2)</h3>
-  <pre class="ajisai-source">'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN NIL?</pre>
-  <pre class="ajisai-expect-result">UNKNOWN FALSE</pre>
-  <div class="ajisai-expect-effects"></div>
-</section>
 
 <!-- ===================== CORE: NIL PASSTHROUGH (§4.5.1, §7.12) ===================== -->
 
