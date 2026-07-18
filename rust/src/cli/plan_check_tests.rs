@@ -73,3 +73,38 @@ fn english_findings_are_utf8_plain_text() {
         );
     }
 }
+
+#[test]
+fn unrelated_fallback_does_not_suppress_later_nil_advisory() {
+    // A fallback before DIV is not a global proof that DIV's result is handled.
+    let result = check("^ [ 99 ] [ 1 ] [ 0 ] DIV");
+    assert!(result.has_fallback);
+    assert_eq!(result.unguarded_nil, vec!["DIV".to_string()]);
+    let advisory = result
+        .findings(Lang::En)
+        .into_iter()
+        .find(|finding| finding.severity == Severity::Advisory && finding.message.contains("DIV"));
+    assert!(
+        advisory.is_some(),
+        "an unrelated `^` must not suppress a later unguarded NIL source"
+    );
+}
+
+#[test]
+fn nil_flow_to_rejects_nil_word_is_reported() {
+    // CONSERVE rejects NIL operands; the advisory must be attached to the flow,
+    // even when CONSERVE itself consumes the maybe-NIL value.
+    let result = check("[ 1 ] [ 0 ] DIV [ 0 ] CONSERVE");
+    assert_eq!(result.rejects_nil, vec!["CONSERVE".to_string()]);
+    assert_eq!(
+        result.rejects_nil_flows,
+        vec!["DIV -> CONSERVE".to_string()]
+    );
+    let advisory = result.findings(Lang::En).into_iter().find(|finding| {
+        finding.severity == Severity::Advisory && finding.message.contains("DIV -> CONSERVE")
+    });
+    assert!(
+        advisory.is_some(),
+        "flow-sensitive check must report maybe-NIL reaching a RejectsNil word"
+    );
+}

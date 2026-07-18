@@ -7,6 +7,7 @@ mod fraction_arithmetic;
 mod fraction_mcdc_tests;
 pub mod interval;
 pub mod record_shape;
+pub mod semantic_stack;
 mod value_operations;
 pub(crate) mod value_protocol;
 #[cfg(test)]
@@ -14,6 +15,7 @@ mod value_protocol_tests;
 
 use self::fraction::Fraction;
 pub use self::record_shape::RecordShape;
+pub use self::semantic_stack::{SemanticStack, SemanticStackError, StackSlot};
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
