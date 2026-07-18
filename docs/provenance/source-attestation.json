@@ -83,6 +83,11 @@
       "bytes": 16066
     },
     {
+      "path": "rust/src/builtins/builtin_word_types.rs",
+      "sha256": "0baccafa790465b68a72c08724592c377e811f5a039ddd63c49bb10cb23b56c9",
+      "bytes": 1659
+    },
+    {
       "path": "rust/src/builtins/mod.rs",
       "sha256": "f92f60205758738f8cae2f4dc6ecda1cafe51bed8826e856f8af71182fc74dc2",
       "bytes": 2719
