@@ -12,6 +12,7 @@ ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>] [--step-limit <N>
 ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
 ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never executes
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
+ajisai repl [--json]  # interactive session; stack and definitions persist (§16)
 ajisai version [--json]
 ```
 
@@ -583,3 +584,43 @@ pointer identity, Rust `Debug` names, unstable cache keys) are never included.
   failure.
 - `receipt.schemaVersion` versions the receipt object shape independently of the
   envelope `schemaVersion`; additive fields keep it unchanged.
+
+## 16. Interactive REPL (`repl`)
+
+`ajisai repl` runs an interactive session over **one persistent interpreter**:
+user dictionaries, imports, and the stack carry across lines within the session
+(it is the production Core, not the Python reference). It reads one line at a
+time from stdin. The banner, prompts, help, and `:reset` notices go to
+**stderr**; stdout carries only per-line results, so a piped session stays
+pipe-safe (the same guarantee as `run --json`).
+
+Lines beginning with `:` are REPL **meta-commands**, handled by the host and
+kept strictly separate from Ajisai surface syntax (they are not language words):
+
+| Command | Effect |
+|---|---|
+| `:help` / `:h` / `:?` | Print the command list (to stderr). |
+| `:reset` | Clear the stack, dictionaries, and imports. |
+| `:quit` / `:q` / `:exit` | Leave the REPL (EOF / Ctrl-D also leaves). |
+
+Any other line is evaluated as Ajisai. With `--json`, each evaluated line emits
+**one JSON document** to stdout:
+
+```json
+{ "status": "ok | error",
+  "stackDisplay": [ "..." ],
+  "output": [ "..." ],
+  "message": null }
+```
+
+- `stackDisplay` — the full stack after the line, bottom to top, as the same
+  display strings `run --json` uses in `stackDisplay`.
+- `output` — the `PRINT` payloads produced by **this line only**, in order
+  (not cumulative across lines).
+- `message` — the error display string when `status` is `"error"`; `null`
+  otherwise. An error leaves the session usable and evaluation continues.
+
+Without `--json`, each line prints its `output` payloads, then (on error)
+`error: <message>`, then the stack — one value line, or `(empty stack)`.
+Meta-commands produce no stdout. The REPL is a host driver over a pure
+`(session, line) -> response` core; it never adds or changes any language word.

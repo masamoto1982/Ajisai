@@ -38,6 +38,7 @@ mod plan_check_tests;
 mod receipt;
 #[cfg(test)]
 mod receipt_tests;
+mod repl;
 mod report;
 #[cfg(test)]
 mod report_tests;
@@ -67,6 +68,8 @@ Commands:
                                   contract metadata (no execution)
   modifier <phrase...>            Infer the modifier (TOP/STAK, EAT/KEEP, ^) for
                                   an operation-intent phrase (no execution)
+  repl [--json]                   Interactive session; stack and definitions
+                                  persist. :help for commands, :quit to leave
   version [--json]                Print version information
 
 Options:
@@ -144,6 +147,7 @@ pub fn run(args: &[String]) -> i32 {
         ("check", [path]) => cmd_check(path, &opts),
         ("coverage", [path]) => cmd_coverage(path, &opts),
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
+        ("repl", []) => cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
             eprintln!("{}", USAGE);
@@ -166,6 +170,23 @@ struct Opts {
     /// the interpreter default (`DEFAULT_MAX_EXECUTION_STEPS`); only `run`
     /// executes, so only `run` reads it.
     step_limit: Option<usize>,
+}
+
+/// `ajisai repl`: an interactive session over one persistent interpreter
+/// (Phase 8A). Reads lines from stdin and writes results to stdout; the banner,
+/// prompts, and help go to stderr so stdout stays pipe-safe. `--json` emits one
+/// result document per line.
+fn cmd_repl(opts: &Opts) -> i32 {
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let stderr = std::io::stderr();
+    match repl::run_repl(stdin.lock(), stdout.lock(), stderr.lock(), opts) {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("ajisai repl: I/O error: {}", e);
+            2
+        }
+    }
 }
 
 fn cmd_version(json: bool) -> i32 {
