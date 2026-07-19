@@ -5259,6 +5259,64 @@
       "core_tier": "material"
     },
     {
+      "id": "module.math.pi",
+      "kind": "moduleword",
+      "surface": "MATH@PI",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/tier2_vocabulary_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Pushes pi as a Tier 2 computable real: a rigorous, nested, rational enclosure whose order is observed within a water budget.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
+    },
+    {
+      "id": "module.math.enclose",
+      "kind": "moduleword",
+      "surface": "MATH@ENCLOSE",
+      "classification": "Module",
+      "spec_sections": [
+        "SPECIFICATION.html §4.2",
+        "SPECIFICATION.html §9.1"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §3.1",
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/tier2_vocabulary_tests.rs",
+        "rust/tests/observation_laws.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Observes a value's rational enclosure after spending an explicit water budget, returning a sound [lower, upper] interval without exposing the tier.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material"
+    },
+    {
       "id": "surface.hash",
       "kind": "source_directive",
       "surface": "#",

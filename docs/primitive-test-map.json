@@ -6,8 +6,8 @@
   "summary": {
     "primitives": 30,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 24,
-    "distinct_conformance_cases": 59
+    "distinct_law_test_files": 25,
+    "distinct_conformance_cases": 58
   },
   "primitives": [
     {
@@ -83,7 +83,7 @@
       "status": "accepted",
       "derived_word_count": 1,
       "law_test_count": 1,
-      "conformance_case_count": 2,
+      "conformance_case_count": 1,
       "derived_words": [
         "core.and"
       ],
@@ -91,8 +91,7 @@
         "rust/tests/algebraic_laws.rs"
       ],
       "conformance_cases": [
-        "core-kleene-and-definite",
-        "core-unknown-propagation"
+        "core-kleene-and-definite"
       ]
     },
     {
@@ -163,8 +162,8 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 20,
-      "law_test_count": 6,
+      "derived_word_count": 22,
+      "law_test_count": 7,
       "conformance_case_count": 9,
       "derived_words": [
         "core.compare-within",
@@ -181,10 +180,12 @@
         "module.algo.sort",
         "module.algo.unique",
         "module.math.abs",
+        "module.math.enclose",
         "module.math.interval",
         "module.math.is-exact",
         "module.math.max",
         "module.math.min",
+        "module.math.pi",
         "module.math.sign",
         "module.math.sqrt-eps"
       ],
@@ -192,6 +193,7 @@
         "rust/src/arithmetic_operation_tests.rs",
         "rust/src/interpreter/algo_ops_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
+        "rust/src/interpreter/tier2_vocabulary_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/observation_laws.rs",
         "rust/tests/structural_laws.rs"
@@ -213,8 +215,8 @@
       "algebraic_family": "exact-arithmetic",
       "kind": "construction",
       "status": "accepted",
-      "derived_word_count": 57,
-      "law_test_count": 12,
+      "derived_word_count": 59,
+      "law_test_count": 13,
       "conformance_case_count": 3,
       "derived_words": [
         "core.ceil",
@@ -231,10 +233,12 @@
         "core.quantize-half-away",
         "core.quantize-trunc",
         "core.round",
+        "module.math.enclose",
         "module.math.gcd",
         "module.math.interval",
         "module.math.lcm",
         "module.math.lower",
+        "module.math.pi",
         "module.math.pow",
         "module.math.sqrt-eps",
         "module.math.upper",
@@ -282,10 +286,11 @@
         "rust/src/interpreter/audio/audio_unit_tests.rs",
         "rust/src/interpreter/datetime_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
+        "rust/src/interpreter/tier2_vocabulary_tests.rs",
+        "rust/src/types/exact/algebraic_tests.rs",
         "rust/tests/algebraic_laws.rs",
         "rust/tests/desugar_laws.rs",
         "rust/tests/higher_order_laws.rs",
-        "rust/tests/nicf_gosper_feasibility.rs",
         "rust/tests/observation_laws.rs",
         "rust/tests/string_laws.rs"
       ],
@@ -317,8 +322,8 @@
       "law_tests": [
         "rust/src/interpreter/datetime_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
+        "rust/src/types/exact/algebraic_tests.rs",
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/nicf_gosper_feasibility.rs",
         "rust/tests/observation_laws.rs"
       ],
       "conformance_cases": [

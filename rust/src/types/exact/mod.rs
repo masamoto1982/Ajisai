@@ -13,6 +13,7 @@ mod algebraic_tests;
 pub(crate) mod basis;
 pub mod computable;
 pub mod observation;
+pub mod pi;
 pub mod value;
 mod value_approx;
 

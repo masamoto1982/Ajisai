@@ -46,6 +46,7 @@ pub(crate) mod simd_ops;
 pub mod sort;
 pub mod tensor_cmds;
 pub mod tensor_ops;
+pub mod tier2_ops;
 pub mod time_calendar;
 pub mod time_ops;
 pub(crate) mod value_extraction_helpers;
@@ -130,6 +131,8 @@ mod route_equivalence;
 mod shape_ic_tests;
 #[cfg(test)]
 mod tier2_isolation_tests;
+#[cfg(test)]
+mod tier2_vocabulary_tests;
 
 pub use interpreter_core::*;
 
