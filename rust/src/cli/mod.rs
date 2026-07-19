@@ -45,6 +45,7 @@ mod report;
 mod report_tests;
 #[cfg(test)]
 mod step_limit_tests;
+mod test_runner;
 
 use explain::{Explanation, Lang};
 
@@ -74,6 +75,9 @@ Commands:
                                   and indentation only; never changes meaning).
                                   Default prints to stdout; --write edits in
                                   place; --check exits 1 if not already canonical
+  test <file-or-dir> [--json]     Run test files, checking each program against
+                                  its `#@` directive comments (status/stack/
+                                  output/error). Exit 1 if any test fails
   repl [--json]                   Interactive session; stack and definitions
                                   persist. :help for commands, :quit to leave
   version [--json]                Print version information
@@ -160,6 +164,7 @@ pub fn run(args: &[String]) -> i32 {
         ("coverage", [path]) => cmd_coverage(path, &opts),
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
         ("fmt", [path]) => fmt::cmd_fmt(path, &opts),
+        ("test", [path]) => test_runner::cmd_test(path, &opts),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
