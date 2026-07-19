@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:70c473cc45f0418a8bdf5e493385fb5cc6f0770ec146e198f7ea9c96720732c6",
-  "fileCount": 329,
+  "rootIdentity": "sha256:a27680f6c7219c89a461ac7dda2a191dd1d95d49c0dc98a3a9d0028687075424",
+  "fileCount": 330,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -123,14 +123,19 @@
       "bytes": 4603
     },
     {
+      "path": "rust/src/cli/fmt.rs",
+      "sha256": "8868955fd622b5a05e7b9871f9f7b282d3b6a71a01bd91b9ab25782aa23392f0",
+      "bytes": 9491
+    },
+    {
       "path": "rust/src/cli/host.rs",
       "sha256": "6b26cf243af054d5113138a4c1b074c1ed98d2a19291310bbd1789da6722d9c8",
       "bytes": 1514
     },
     {
       "path": "rust/src/cli/mod.rs",
-      "sha256": "6c34d9e2d5fff449ff5dcbd8fb53ea59183cd4f45844c09358ddc2df1f171f0a",
-      "bytes": 32298
+      "sha256": "38390717307a87c2ceca1eb1c774dce293956ebe641e393e433d509fd46b621a",
+      "bytes": 32587
     },
     {
       "path": "rust/src/cli/modifier.rs",
@@ -164,8 +169,8 @@
     },
     {
       "path": "rust/src/cli/repl.rs",
-      "sha256": "49580a10ece582ad0dc131d44a962c316bc0e1f43b7203dcd46e001d375181ef",
-      "bytes": 9494
+      "sha256": "e0b35e5834424cebf1ca2203c9ff33779effcbc73cde65ac51f2f4752f59484b",
+      "bytes": 10053
     },
     {
       "path": "rust/src/cli/report.rs",
@@ -174,8 +179,8 @@
     },
     {
       "path": "rust/src/cli/report_tests.rs",
-      "sha256": "8e55f087b02515e3a281e9cf3a18c0bb126a98f87a56a3a05082d78310c5ee3d",
-      "bytes": 7991
+      "sha256": "86805bead978081f7f0bb5d8cbc30f29131d66eae187b002b0e23ac613976707",
+      "bytes": 8051
     },
     {
       "path": "rust/src/cli/step_limit_tests.rs",
@@ -1364,8 +1369,8 @@
     },
     {
       "path": "src/gui/code-formatter.test.ts",
-      "sha256": "824edc3b7090a494565110428d3e14cdabf58960c717caf3f4d9e8f27ec4971a",
-      "bytes": 4216
+      "sha256": "0a41b02cd63f0c1b4a07d698def4e1288b83eaa36d0565b9d6d839aa9b81da2f",
+      "bytes": 4720
     },
     {
       "path": "src/gui/code-formatter.ts",

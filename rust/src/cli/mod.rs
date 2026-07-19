@@ -28,6 +28,7 @@ mod coverage_tests;
 mod explain;
 #[cfg(test)]
 mod explain_tests;
+mod fmt;
 mod host;
 mod modifier;
 #[cfg(test)]
@@ -68,6 +69,11 @@ Commands:
                                   contract metadata (no execution)
   modifier <phrase...>            Infer the modifier (TOP/STAK, EAT/KEEP, ^) for
                                   an operation-intent phrase (no execution)
+  fmt <file.ajisai> [--write] [--check]
+                                  Rewrite source into canonical form (spacing
+                                  and indentation only; never changes meaning).
+                                  Default prints to stdout; --write edits in
+                                  place; --check exits 1 if not already canonical
   repl [--json]                   Interactive session; stack and definitions
                                   persist. :help for commands, :quit to leave
   version [--json]                Print version information
@@ -103,6 +109,8 @@ pub fn run(args: &[String]) -> i32 {
     let mut want_explain = false;
     let mut contract = false;
     let mut receipt = false;
+    let mut fmt_check = false;
+    let mut fmt_write = false;
     let mut lang = Lang::Ja;
     let mut step_limit: Option<usize> = None;
     let mut positional: Vec<&str> = Vec::new();
@@ -113,6 +121,8 @@ pub fn run(args: &[String]) -> i32 {
             "--explain" => want_explain = true,
             "--contract" => contract = true,
             "--receipt" => receipt = true,
+            "--check" => fmt_check = true,
+            "--write" => fmt_write = true,
             "--lang" => match iter.next().map(String::as_str).and_then(Lang::parse) {
                 Some(parsed) => lang = parsed,
                 None => {
@@ -139,6 +149,8 @@ pub fn run(args: &[String]) -> i32 {
         explain: want_explain,
         contract,
         receipt,
+        fmt_check,
+        fmt_write,
         lang,
         step_limit,
     };
@@ -147,7 +159,8 @@ pub fn run(args: &[String]) -> i32 {
         ("check", [path]) => cmd_check(path, &opts),
         ("coverage", [path]) => cmd_coverage(path, &opts),
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
-        ("repl", []) => cmd_repl(&opts),
+        ("fmt", [path]) => fmt::cmd_fmt(path, &opts),
+        ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
             eprintln!("{}", USAGE);
@@ -165,28 +178,17 @@ struct Opts {
     /// without it is byte-for-byte unchanged. Only `run` executes and records
     /// provenance, so only `run` reads it.
     receipt: bool,
+    /// `fmt --check`: verify formatting without writing. Exit 1 if the file is
+    /// not already in canonical form. Only `fmt` reads it.
+    fmt_check: bool,
+    /// `fmt --write`: format the file in place instead of printing to stdout.
+    /// Only `fmt` reads it.
+    fmt_write: bool,
     lang: Lang,
     /// Execution step budget override (water level, SPEC §5.3). `None` keeps
     /// the interpreter default (`DEFAULT_MAX_EXECUTION_STEPS`); only `run`
     /// executes, so only `run` reads it.
     step_limit: Option<usize>,
-}
-
-/// `ajisai repl`: an interactive session over one persistent interpreter
-/// (Phase 8A). Reads lines from stdin and writes results to stdout; the banner,
-/// prompts, and help go to stderr so stdout stays pipe-safe. `--json` emits one
-/// result document per line.
-fn cmd_repl(opts: &Opts) -> i32 {
-    let stdin = std::io::stdin();
-    let stdout = std::io::stdout();
-    let stderr = std::io::stderr();
-    match repl::run_repl(stdin.lock(), stdout.lock(), stderr.lock(), opts) {
-        Ok(()) => 0,
-        Err(e) => {
-            eprintln!("ajisai repl: I/O error: {}", e);
-            2
-        }
-    }
 }
 
 fn cmd_version(json: bool) -> i32 {

@@ -60,6 +60,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `execution-receipt-phase6-design.md` | Phase 6 の実行 receipt メモ（`ReceiptRecorder` / `--receipt` / protocol 由来 resultIdentity） | `[実装済み]` |
 | `tier2-vocabulary-phase7-design.md` | Phase 7 の Tier 2 限定実用化メモ（`MATH@PI` / `MATH@ENCLOSE` / 有理 π enclosure / UNKNOWN 到達） | `[実装済み]` |
 | `cli-repl-phase8a-design.md` | Phase 8A の対話 REPL メモ（`ajisai repl` / 永続セッション / pipe-safe I/O 分離） | `[実装済み]` |
+| `cli-fmt-phase8a-design.md` | Phase 8A のフォーマッタメモ（`ajisai fmt` / GUI と共有 corpus を正本化 / 意味不変整形） | `[実装済み]` |
 
 ## 実装済み最適化の設計記録
 

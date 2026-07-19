@@ -4,6 +4,18 @@
 
 import { describe, expect, test } from 'vitest';
 import { formatAjisaiSource } from './code-formatter';
+import corpus from '../../tests/formatter-corpus.json';
+
+// The shared corpus (tests/formatter-corpus.json) is the source of truth that
+// pins this GUI formatter and the CLI formatter (rust/src/cli/fmt.rs) to the
+// same behaviour, so the two implementations cannot drift (Phase 8A).
+describe('formatAjisaiSource shared corpus', () => {
+    for (const c of corpus.cases) {
+        test(`corpus: ${c.name}`, () => {
+            expect(formatAjisaiSource(c.input)).toBe(c.expected);
+        });
+    }
+});
 
 describe('formatAjisaiSource', () => {
     test('returns empty string unchanged', () => {
