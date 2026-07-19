@@ -1,10 +1,12 @@
-//! Tier 2 isolation (SPEC §4.2.2, §7.4.1): no word in the current
-//! vocabulary constructs a Tier 2 computable real, so no source program
-//! can reach the `Starved` comparison outcome or the logical `UNKNOWN`.
-//! These tests pin that boundary from both sides: a sweep of numeric
-//! programs — including the historical `UNKNOWN` producers — stays free
-//! of Tier 2 values and U, while the type-level starvation witness still
-//! projects `Starved` onto U through the same comparison router.
+//! Tier ≤ 1 decidability (SPEC §4.2.2, §7.4.1). The Tier 2 vocabulary
+//! (`MATH@PI`, Phase 7) can now reach the `Starved` comparison outcome and the
+//! logical `UNKNOWN`, but the *Tier ≤ 1* words must not: their comparisons stay
+//! decidable regardless of budget. These tests pin that boundary — a sweep of
+//! `SQRT`-based numeric programs stays free of Tier 2 values and U, the one
+//! irrational constructor stays within Tier 1, and the type-level starvation
+//! witness projects `Starved` onto U through the same comparison router.
+//! The positive Tier 2 reach (`MATH@PI` → U) is covered in
+//! `tier2_vocabulary_tests`.
 
 use crate::interpreter::Interpreter;
 use crate::types::exact::{Computable, ExactCmp, ExactReal, Water};
@@ -22,10 +24,10 @@ fn contains_tier2(value: &Value) -> bool {
     }
 }
 
-/// Numeric programs spanning the current vocabulary's exact-real reach:
-/// SQRT construction, field arithmetic (including values the Gosper era
-/// could not decide), rounding, and every comparison word under small
-/// explicit budgets.
+/// Numeric programs spanning the Tier ≤ 1 exact-real vocabulary: SQRT
+/// construction, field arithmetic (including values the Gosper era could not
+/// decide), rounding, and every comparison word under small explicit budgets.
+/// None construct a Tier 2 value, so all stay decidable.
 const VOCABULARY_SWEEP: &[&str] = &[
     "'math' IMPORT 2 SQRT",
     "'math' IMPORT 2 SQRT 3 SQRT ADD 5 SQRT MUL",
@@ -44,7 +46,7 @@ const VOCABULARY_SWEEP: &[&str] = &[
 ];
 
 #[tokio::test]
-async fn vocabulary_cannot_reach_tier2_or_unknown() {
+async fn tier1_vocabulary_stays_decidable() {
     for src in VOCABULARY_SWEEP {
         let mut interp = Interpreter::new();
         interp
@@ -80,9 +82,9 @@ fn sqrt_constructor_stays_within_tier1() {
 
 #[test]
 fn starved_projection_remains_wired_for_tier2() {
-    // The counterpart guarantee: the Starved arm the vocabulary cannot
-    // reach still exists and reports its consumed water, so a future
-    // Tier 2 word plugs into a live UNKNOWN path.
+    // The counterpart guarantee at the type level: the Starved arm reports its
+    // consumed water and a separable Tier 2 value still decides. This is the
+    // router the `MATH@PI` vocabulary reaches through.
     let witness = ExactReal::Computable(Computable::vanishing());
     let zero = ExactReal::from_fraction(Fraction::from(0i64));
     assert_eq!(

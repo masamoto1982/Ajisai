@@ -178,7 +178,7 @@ pub(crate) fn push_comparison_unknown(interp: &mut Interpreter, agreed_prefix: u
 /// representation, this helper is the single point that needs to
 /// surface the new variant, and `compare_scalar_pair` / `pairwise_eq`
 /// will route it through the budgeted CF path automatically.
-fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
+pub(crate) fn extract_exact_real_for_comparison(val: &Value) -> Result<ExactReal> {
     if let ValueData::ExactScalar(er) = &val.data {
         return Ok(er.clone());
     }

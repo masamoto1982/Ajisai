@@ -2409,6 +2409,32 @@ COND</pre>
 
 <!-- ===================== MATH module (core: pure words) ===================== -->
 
+<!-- Tier 2 (§4.2): MATH@PI is the first vocabulary that constructs a general
+     computable real, so a comparison can now reach the logical UNKNOWN, while
+     a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
+     observes a rational enclosure under an explicit water budget. -->
+
+<section class="ajisai-case" id="module-math-pi-vs-pi-unknown" data-category="module">
+  <h3>MATH@PI vs MATH@PI reaches the logical UNKNOWN within a finite budget (§4.2, §7.4.2)</h3>
+  <pre class="ajisai-source">'math' IMPORT MATH@PI MATH@PI 64 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result">UNKNOWN</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="module-math-pi-gt-three" data-category="module">
+  <h3>MATH@PI exceeds 3, decided within budget (§4.2, §7.4.2)</h3>
+  <pre class="ajisai-source">'math' IMPORT MATH@PI 3 64 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="module-math-enclose-pi" data-category="module">
+  <h3>MATH@ENCLOSE returns a deterministic rational enclosure of MATH@PI (§4.2)</h3>
+  <pre class="ajisai-source">'math' IMPORT MATH@PI 8 MATH@ENCLOSE</pre>
+  <pre class="ajisai-expect-result">[201/64, 805/256]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-math-abs" data-category="core">
   <h3>MATH@ABS of a negative rational</h3>
   <pre class="ajisai-source">'math' IMPORT -7 MATH@ABS</pre>

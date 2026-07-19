@@ -306,6 +306,19 @@ impl ExactReal {
         self.cmp_within(other, DEFAULT_COMPARISON_WATER)
     }
 
+    /// Water-explicit rational enclosure of this value after spending `budget`
+    /// refinement steps (the `MATH@ENCLOSE` observation, SPEC §4.2 / §14.3).
+    /// `None` for nil (the empty observation). Tier ≤ 1 values return a point
+    /// (or tight algebraic bounds); a Tier 2 value returns its generator's
+    /// enclosure — the only tier whose width the budget actually governs.
+    /// Representation-neutral: the caller sees rational endpoints, never a tier.
+    pub fn observe_enclosure(&self, budget: u64) -> Option<RatInterval> {
+        if self.is_nil() {
+            return None;
+        }
+        Some(self.enclosure_at(budget))
+    }
+
     /// Enclosure of a non-nil value after `step` refinement steps:
     /// a point for rationals, the doubling algebraic bounds for Tier 1,
     /// the generator's interval for Tier 2. Nested and shrinking in

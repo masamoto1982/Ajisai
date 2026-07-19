@@ -4,8 +4,8 @@ use crate::coreword_registry::{
     WordPurity,
 };
 use crate::interpreter::{
-    algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort, time_ops,
-    HostCapability,
+    algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort, tier2_ops,
+    time_ops, HostCapability,
 };
 use crate::types::{Capabilities, Stability};
 
@@ -1053,6 +1053,32 @@ const MATH_WORDS: &[ModuleWord] = &[
         true,
         false,
         Stability::Stable,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "PI",
+        WordShape::Form,
+        "Push the exact real pi as a refinable rational enclosure.",
+        tier2_ops::op_pi,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "ENCLOSE",
+        WordShape::Form,
+        "Observe a value's rational enclosure within an explicit water budget.",
+        tier2_ops::op_enclose,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
         Capabilities::PURE
     ),
 ];

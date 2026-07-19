@@ -9,10 +9,10 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "corewords": 97,
-    "modulewords": 88,
+    "modulewords": 90,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 215
+    "total": 217
   },
   "entries": [
     {
@@ -3502,6 +3502,44 @@
       "derived_from": [
         "algebra.exact-real.continued-fraction",
         "algebra.bubble.domain"
+      ],
+      "classification": "Module"
+    },
+    {
+      "id": "module.math.pi",
+      "kind": "moduleword",
+      "surface": "MATH@PI",
+      "short_surface": "PI",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@PI",
+      "coverage_entry_id": "module.math.pi",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
+      ],
+      "classification": "Module"
+    },
+    {
+      "id": "module.math.enclose",
+      "kind": "moduleword",
+      "surface": "MATH@ENCLOSE",
+      "short_surface": "ENCLOSE",
+      "module": "MATH",
+      "category": "math",
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "MATH@ENCLOSE",
+      "coverage_entry_id": "module.math.enclose",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-arithmetic",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-real.continued-fraction",
+        "algebra.exact-real.budgeted-order"
       ],
       "classification": "Module"
     },

@@ -347,6 +347,8 @@ program (then the short name works), or can be called fully qualified.
 | `MATH@POW` | math (module) | Integer-exponent exact power: base exp -- base^exp. — needs `'MATH' IMPORT` (or call as `MATH@POW`) |
 | `MATH@GCD` | math (module) | Greatest common divisor of two integers. — needs `'MATH' IMPORT` (or call as `MATH@GCD`) |
 | `MATH@LCM` | math (module) | Least common multiple of two integers. — needs `'MATH' IMPORT` (or call as `MATH@LCM`) |
+| `MATH@PI` | math (module) | Push the exact real pi as a refinable rational enclosure. — needs `'MATH' IMPORT` (or call as `MATH@PI`) |
+| `MATH@ENCLOSE` | math (module) | Observe a value's rational enclosure within an explicit water budget. — needs `'MATH' IMPORT` (or call as `MATH@ENCLOSE`) |
 | `SERIAL@LIST-PORTS` | serial (module) | Ask the host to enumerate available serial ports — needs `'SERIAL' IMPORT` (or call as `SERIAL@LIST-PORTS`) |
 | `SERIAL@OPEN` | serial (module) | Open a serial port by id; leaves the port-id handle on the stack — needs `'SERIAL' IMPORT` (or call as `SERIAL@OPEN`) |
 | `SERIAL@CONFIGURE` | serial (module) | Set the baud rate of an open serial port — needs `'SERIAL' IMPORT` (or call as `SERIAL@CONFIGURE`) |

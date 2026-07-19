@@ -640,6 +640,20 @@ const MODULE_WORD_DOCS: &[ModuleWordDoc] = &[
         role: "Integer number-theory primitive.",
         stack_effect: "[ a ] [ b ] -> [ lcm ]",
     },
+    ModuleWordDoc {
+        module: "MATH",
+        word: "PI",
+        summary: "Push the exact real pi as a refinable rational enclosure.",
+        role: "Tier 2 numeric constant; its order can be observed within a water budget.",
+        stack_effect: "[ ] -> [ pi ]",
+    },
+    ModuleWordDoc {
+        module: "MATH",
+        word: "ENCLOSE",
+        summary: "Observe a value's rational enclosure within an explicit water budget.",
+        role: "Water-explicit observation returning a sound [ lo, hi ] interval.",
+        stack_effect: "[ x ] [ budget ] -> [ interval ]",
+    },
     // ==================================================================
     // SERIAL
     // ==================================================================
