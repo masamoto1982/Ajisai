@@ -35,6 +35,7 @@ pub(crate) mod naming_convention_checker;
 pub mod parallel;
 pub mod quantized_block;
 pub mod random;
+pub mod receipt_recorder;
 mod resolve_cache;
 pub mod semantic_stack_adapter;
 pub mod serial;
@@ -55,6 +56,7 @@ mod word_contract_lattice;
 #[cfg(test)]
 mod word_contract_tests;
 mod word_identity;
+pub(crate) use word_identity::content_digest;
 
 pub mod interpreter_core;
 

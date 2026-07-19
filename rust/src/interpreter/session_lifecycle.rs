@@ -85,6 +85,9 @@ impl Interpreter {
         self.runtime_metrics = RuntimeMetrics::default();
         self.hedged_trace_log.clear();
         self.error_flow_trace_log.clear();
+        // Provenance recording flag persists across a reset; only its data is
+        // cleared (Phase 6).
+        self.receipt_recorder.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
     }
 

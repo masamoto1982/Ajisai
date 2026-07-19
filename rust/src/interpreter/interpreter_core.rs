@@ -512,6 +512,10 @@ pub struct Interpreter {
     /// keyed), so disabling it via `AJISAI_NO_ARTIFACT_REUSE` only changes how
     /// often plans are rebuilt, never a result.
     pub(crate) artifact_reuse_enabled: bool,
+
+    /// Opt-in execution provenance recorder for receipts (Phase 6). Off unless a
+    /// receipt is requested; observational only, never affects results.
+    pub(crate) receipt_recorder: super::receipt_recorder::ReceiptRecorder,
 }
 
 impl Interpreter {
@@ -586,6 +590,7 @@ impl Interpreter {
             fast_kernel_enabled: std::env::var("AJISAI_NO_FAST_KERNEL").is_err(),
             artifact_store: super::artifact_store::ArtifactStore::default(),
             artifact_reuse_enabled: std::env::var("AJISAI_NO_ARTIFACT_REUSE").is_err(),
+            receipt_recorder: super::receipt_recorder::ReceiptRecorder::default(),
         };
         crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
@@ -799,6 +804,9 @@ impl Interpreter {
         word: &str,
         capability: super::HostCapability,
     ) -> Result<()> {
+        // Provenance (Phase 6): a Hosted word required this capability, whether
+        // or not the host grants it. No-op unless receipt recording is enabled.
+        self.receipt_recorder.record_required(capability);
         if self.host_env.has_capability(capability) {
             return Ok(());
         }

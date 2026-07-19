@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex};
 /// declare exactly one. This enum is the vocabulary used to describe those
 /// requirements. Hosted words must query the active `HostEnv` before touching
 /// their boundary and must fail through `missing_capability_error` when absent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum HostCapability {
     Clock,
@@ -33,6 +33,20 @@ pub enum HostCapability {
     JsonExport,
     Config,
     Effect,
+}
+
+impl HostCapability {
+    /// Every modeled capability, in a stable order. Used to enumerate which
+    /// capabilities the active host grants for an execution receipt (Phase 6).
+    pub const ALL: [HostCapability; 7] = [
+        HostCapability::Clock,
+        HostCapability::SecureRandom,
+        HostCapability::Serial,
+        HostCapability::Audio,
+        HostCapability::JsonExport,
+        HostCapability::Config,
+        HostCapability::Effect,
+    ];
 }
 
 impl HostCapability {

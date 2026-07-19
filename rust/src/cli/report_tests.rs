@@ -30,6 +30,7 @@ fn ok_report_envelope_has_contract_fields() {
         runtime_metrics: interp.runtime_metrics(),
         explanation: None,
         plan_check: None,
+        receipt: None,
         lang: super::Lang::Ja,
     };
     let doc = report.to_json();
@@ -84,6 +85,7 @@ fn error_report_carries_diagnosis_with_next_checks() {
             json: true,
             explain: false,
             contract: false,
+            receipt: false,
             lang: super::Lang::Ja,
             step_limit: None,
         },
@@ -197,6 +199,7 @@ fn check_report_uses_default_metrics() {
         runtime_metrics: RuntimeMetrics::default(),
         explanation: None,
         plan_check: None,
+        receipt: None,
         lang: super::Lang::Ja,
     };
     let doc = report.to_json();
