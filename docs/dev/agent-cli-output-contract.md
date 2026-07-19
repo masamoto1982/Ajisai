@@ -14,6 +14,7 @@ ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never 
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
 ajisai fmt <file.ajisai> [--write] [--check]  # rewrite source into canonical form; never executes (§17)
 ajisai repl [--json]  # interactive session; stack and definitions persist (§16)
+ajisai test <file-or-dir> [--json]  # run test files, check `#@` directives (§18)
 ajisai version [--json]
 ```
 
@@ -649,3 +650,57 @@ The canonical file is the formatter's content plus a single trailing newline
 pinned, together with the GUI formatter (`src/gui/code-formatter.ts`), to a
 shared corpus (`tests/formatter-corpus.json`) so the two implementations
 produce identical output and neither drifts.
+
+## 18. Test runner (`test`)
+
+`ajisai test <file-or-dir>` runs Ajisai programs and checks each one's result
+against expectations declared **in the source itself as `#@` directive
+comments**. It adds **no language word** — there is no `ASSERT` in Core. A
+directive line is an ordinary `#` comment (SPEC §3.4) that the interpreter
+ignores; only the host runner reads the `@` marker. This keeps the test harness
+strictly outside language semantics (§15.1): a test file runs identically under
+`ajisai run`, which simply ignores the directives. Each file is executed through
+the same production Core as `run`.
+
+A directory argument is walked recursively for `*.ajisai` files in sorted
+order; a file argument is run whatever its extension.
+
+### Directives
+
+One directive per line, anywhere in the file:
+
+| Directive | Meaning |
+|---|---|
+| `#@ status ok` \| `#@ status error` | Expected outcome. Default is `ok` (the program must run without error). |
+| `#@ stack <display>` | Expected final stack as space-joined display strings (the same rendering as `stackDisplay`). |
+| `#@ output <line>` | Expected `PRINT` payload. Repeatable; the full ordered list of `output` lines must match exactly. |
+| `#@ error <substring>` | The run must fail with a message containing `<substring>`. Implies `status error`. |
+
+An unknown keyword, an empty `#@`, or an unknown `status` value is reported as a
+failure for that file, so a mistyped directive never passes silently. A plain
+`#` comment (no `@`) is never a directive.
+
+### Report and exit codes
+
+Default output is one `PASS <name>` / `FAIL <name>` line per file (failures list
+their reasons), followed by a summary. With `--json`, stdout carries exactly one
+document:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "ok | error",
+  "total": 3,
+  "passed": 2,
+  "failed": 1,
+  "results": [
+    { "name": "tests/add.ajisai", "passed": true, "failures": [] }
+  ]
+}
+```
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Every test passed. |
+| 1 | At least one test failed. |
+| 2 | Usage error: the path does not exist, a directory cannot be read, or it holds no `.ajisai` files. |
