@@ -86,6 +86,8 @@ fn error_report_carries_diagnosis_with_next_checks() {
             explain: false,
             contract: false,
             receipt: false,
+            fmt_check: false,
+            fmt_write: false,
             lang: super::Lang::Ja,
             step_limit: None,
         },

@@ -195,6 +195,21 @@ pub(crate) fn run_repl<R: BufRead, W: Write, E: Write>(
     Ok(())
 }
 
+/// `ajisai repl`: wire the driver to the process's stdin/stdout/stderr. The
+/// banner, prompts, and help go to stderr so stdout stays pipe-safe.
+pub(crate) fn cmd_repl(opts: &Opts) -> i32 {
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let stderr = std::io::stderr();
+    match run_repl(stdin.lock(), stdout.lock(), stderr.lock(), opts) {
+        Ok(()) => 0,
+        Err(e) => {
+            eprintln!("ajisai repl: I/O error: {}", e);
+            2
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,6 +274,8 @@ mod tests {
             explain: false,
             contract: false,
             receipt: false,
+            fmt_check: false,
+            fmt_write: false,
             lang: super::super::Lang::Ja,
             step_limit: None,
         };

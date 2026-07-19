@@ -12,6 +12,7 @@ ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>] [--step-limit <N>
 ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
 ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never executes
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
+ajisai fmt <file.ajisai> [--write] [--check]  # rewrite source into canonical form; never executes (§17)
 ajisai repl [--json]  # interactive session; stack and definitions persist (§16)
 ajisai version [--json]
 ```
@@ -624,3 +625,27 @@ Without `--json`, each line prints its `output` payloads, then (on error)
 `error: <message>`, then the stack — one value line, or `(empty stack)`.
 Meta-commands produce no stdout. The REPL is a host driver over a pure
 `(session, line) -> response` core; it never adds or changes any language word.
+
+## 17. Source formatter (`fmt`)
+
+`ajisai fmt <file>` rewrites Ajisai source into its **canonical written form**
+without ever changing what the code means. It tidies only insignificant
+whitespace — the spacing between tokens and the indentation at the start of
+each line — and never adds or removes line breaks (a line break inside a `{ }`
+block is a statement separator, SPEC §3.5), never touches the inside of a
+string or comment, and never expands sugar (`;`, `>CF`, ...). Given input it
+cannot rewrite safely (an unterminated string, or a newline inside a string) it
+returns the input unchanged. It emits **plain text, not JSON** (so `--json`
+does not apply), and never executes the program.
+
+| Mode | Effect |
+|---|---|
+| (default) | Print the canonical form to stdout. Exit 0. |
+| `--write` | Rewrite the file in place if it is not already canonical. Exit 0. |
+| `--check` | Verify only. Exit 0 if already canonical, 1 otherwise (a message goes to stderr). Exit 2 on a read error. |
+
+The canonical file is the formatter's content plus a single trailing newline
+(an empty file stays empty). The formatter is **not** a syntax canon: it is
+pinned, together with the GUI formatter (`src/gui/code-formatter.ts`), to a
+shared corpus (`tests/formatter-corpus.json`) so the two implementations
+produce identical output and neither drifts.
