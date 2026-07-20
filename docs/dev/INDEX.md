@@ -62,6 +62,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `cli-repl-phase8a-design.md` | Phase 8A の対話 REPL メモ（`ajisai repl` / 永続セッション / pipe-safe I/O 分離） | `[実装済み]` |
 | `cli-fmt-phase8a-design.md` | Phase 8A のフォーマッタメモ（`ajisai fmt` / GUI と共有 corpus を正本化 / 意味不変整形） | `[実装済み]` |
 | `cli-test-phase8a-design.md` | Phase 8A のテストランナーメモ（`ajisai test` / `#@` directive コメント / Core に検証語を足さない host runner） | `[実装済み]` |
+| `cli-project-phase8b-design.md` | Phase 8B の manifest / lockfile メモ（`ajisai.toml` / `ajisai.lock` / `build` / `lock` / capability 拘束 / content identity） | `[実装済み]` |
 
 ## 実装済み最適化の設計記録
 

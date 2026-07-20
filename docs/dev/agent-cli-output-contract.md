@@ -15,6 +15,8 @@ ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for 
 ajisai fmt <file.ajisai> [--write] [--check]  # rewrite source into canonical form; never executes (§17)
 ajisai repl [--json]  # interactive session; stack and definitions persist (§16)
 ajisai test <file-or-dir> [--json]  # run test files, check `#@` directives (§18)
+ajisai build <dir>  # run a project (ajisai.toml); confine to allowed capabilities; verify ajisai.lock (§19)
+ajisai lock <dir> [--check]  # write/verify ajisai.lock: realized identities + required capabilities (§19)
 ajisai version [--json]
 ```
 
@@ -704,3 +706,90 @@ document:
 | 0 | Every test passed. |
 | 1 | At least one test failed. |
 | 2 | Usage error: the path does not exist, a directory cannot be read, or it holds no `.ajisai` files. |
+
+## 19. Projects: `build` and `lock`
+
+A **project** is a directory with an `ajisai.toml` manifest. The manifest
+declares *intent* — the project's name and version, its entry source, the host
+capabilities it is allowed to use, and its local path dependencies. The
+generated `ajisai.lock` records *realized fact* — the content identity of every
+source, the content identity of each public word, the capabilities the run
+actually required, the targeted specification version, and the manifest schema
+version. This manifest/lockfile split (declared intent vs. realized identity) is
+what makes a multi-file project run reproducibly, and it ties package identity
+to *content* rather than to a name and version alone.
+
+Both commands drive the same production Core as `run`; they add no language
+semantics. Capability confinement reuses the runtime's existing capability gate:
+a project host reports a capability as unavailable when the manifest does not
+allow it, so a disallowed Hosted word fails through the ordinary
+missing-capability path (§2.5, `why: environment`).
+
+### Manifest (`ajisai.toml`)
+
+A small, fixed TOML subset (hand-parsed; Core stays dependency-light):
+
+```toml
+[project]
+name = "example"
+version = "0.1.0"
+entry = "src/main.ajisai"
+specification = "1.0"        # optional
+
+[capabilities]
+allow = ["effect", "clock"]  # optional; capability protocol strings (§15)
+
+[dependencies]
+util = { path = "lib/util.ajisai" }   # local path to an Ajisai source file
+```
+
+Capability names are exactly the receipt's capability vocabulary
+(`clock`, `secureRandom`, `serial`, `audio`, `jsonExport`, `config`, `effect`),
+so the allow-list, the runtime gate, and the receipt's `requiredCapabilities`
+all speak the same names. A dependency `path` names an Ajisai *source file*
+relative to the manifest directory; dependency sources run before the entry, in
+declared order, into one shared dictionary (a flat, direct-dependency
+namespace). Transitive/sub-manifest dependencies and remote registries are out
+of scope for this phase.
+
+### `ajisai build <dir>`
+
+Resolves the manifest, runs the composed project (dependencies, then entry)
+confined to the allowed capabilities, and renders the result exactly as `run`
+does (same envelope; `--json`, `--explain`, `--lang` apply). If an `ajisai.lock`
+is present, a successful run is verified against it and refused on drift.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | The project ran successfully (and matched `ajisai.lock` if present). |
+| 1 | A language error, a disallowed capability, or a lockfile mismatch. |
+| 2 | A project setup error (missing/malformed manifest, unknown capability, unreadable source). |
+
+### `ajisai lock <dir> [--check]`
+
+Runs the project and writes `ajisai.lock` — canonical JSON, byte-stable across
+regenerations from unchanged inputs — with the realized identities and required
+capabilities:
+
+```json
+{
+  "lockfileVersion": 1,
+  "manifestSchemaVersion": 1,
+  "project": { "name": "example", "version": "0.1.0" },
+  "specification": "1.0",
+  "capabilities": { "allowed": ["effect"], "required": ["effect"] },
+  "sources": [
+    { "role": "dependency", "name": "util", "path": "lib/util.ajisai", "sourceIdentity": "..." },
+    { "role": "entry", "path": "src/main.ajisai", "sourceIdentity": "..." }
+  ],
+  "publicWords": [ { "name": "EXAMPLE@DOUBLE", "contentIdentity": "..." } ]
+}
+```
+
+With `--check`, the lockfile is verified rather than written.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Wrote `ajisai.lock` (default), or it was already current (`--check`). |
+| 1 | The project failed to run, or (`--check`) the lockfile is stale or missing. |
+| 2 | A project setup error, or the lockfile could not be written. |

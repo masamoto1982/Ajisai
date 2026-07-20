@@ -30,12 +30,19 @@ mod explain;
 mod explain_tests;
 mod fmt;
 mod host;
+mod lockfile;
+mod manifest;
+#[cfg(test)]
+mod manifest_tests;
 mod modifier;
 #[cfg(test)]
 mod modifier_tests;
 mod plan_check;
 #[cfg(test)]
 mod plan_check_tests;
+mod project;
+#[cfg(test)]
+mod project_tests;
 mod receipt;
 #[cfg(test)]
 mod receipt_tests;
@@ -43,6 +50,7 @@ mod repl;
 mod report;
 #[cfg(test)]
 mod report_tests;
+mod run_render;
 #[cfg(test)]
 mod step_limit_tests;
 mod test_runner;
@@ -78,6 +86,14 @@ Commands:
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
+  build <dir>                     Run a project (ajisai.toml): compose its path
+                                  dependencies and entry, confine it to the
+                                  manifest's capability allow-list, and verify
+                                  ajisai.lock if present. Exit 1 on a language
+                                  error or lock drift
+  lock <dir> [--check]            Write ajisai.lock with the project's realized
+                                  source/word identities and required
+                                  capabilities. --check verifies it is current
   repl [--json]                   Interactive session; stack and definitions
                                   persist. :help for commands, :quit to leave
   version [--json]                Print version information
@@ -165,6 +181,8 @@ pub fn run(args: &[String]) -> i32 {
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
         ("fmt", [path]) => fmt::cmd_fmt(path, &opts),
         ("test", [path]) => test_runner::cmd_test(path, &opts),
+        ("build", [path]) => project::cmd_build(path, &opts),
+        ("lock", [path]) => project::cmd_lock(path, &opts),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
@@ -183,8 +201,9 @@ struct Opts {
     /// without it is byte-for-byte unchanged. Only `run` executes and records
     /// provenance, so only `run` reads it.
     receipt: bool,
-    /// `fmt --check`: verify formatting without writing. Exit 1 if the file is
-    /// not already in canonical form. Only `fmt` reads it.
+    /// The shared `--check` flag: verify without writing. `fmt --check` exits 1
+    /// if the file is not canonical; `lock --check` exits 1 if `ajisai.lock` is
+    /// out of date. Read by `fmt` and `lock`.
     fmt_check: bool,
     /// `fmt --write`: format the file in place instead of printing to stdout.
     /// Only `fmt` reads it.
@@ -316,53 +335,9 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
     let result = block_on(interp.execute(&source));
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
-
-    match result {
-        Ok(()) => {
-            let explanation = nil_explanation(&trace, opts);
-            let receipt = opts
-                .receipt
-                .then(|| receipt::build_receipt(&interp, &source, &trace));
-            let report = Report {
-                status: "ok",
-                stack: report::stack_json(&interp),
-                stack_display: stack_display(&interp),
-                output,
-                message: None,
-                diagnosis: None,
-                ai_diagnostic: None,
-                error_flow_trace: trace,
-                runtime_metrics: interp.runtime_metrics(),
-                explanation,
-                plan_check: None,
-                receipt,
-                lang: opts.lang,
-            };
-            emit(&report, opts);
-            0
-        }
-        Err(err) => {
-            let message = err.to_string();
-            let stack_len = interp.get_stack().len();
-            let diagnosis = missing_capability_diagnosis(&interp, &message)
-                .or_else(|| trace.iter().rev().find_map(|event| event.diagnosis.clone()))
-                .unwrap_or_else(|| DebugDiagnosis::from_error(&err, None, stack_len, stack_len));
-            let category = ErrorCategory::from_error(&err);
-            emit(
-                &error_report(
-                    &interp,
-                    &diagnosis,
-                    Some(&category),
-                    message,
-                    output,
-                    trace,
-                    opts,
-                ),
-                opts,
-            );
-            1
-        }
-    }
+    let receipt =
+        (opts.receipt && result.is_ok()).then(|| receipt::build_receipt(&interp, &source, &trace));
+    run_render::render_completed_run(&interp, result, trace, output, receipt, opts)
 }
 
 fn error_report(
