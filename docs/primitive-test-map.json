@@ -391,7 +391,7 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 22,
+      "derived_word_count": 23,
       "law_test_count": 12,
       "conformance_case_count": 13,
       "derived_words": [
@@ -410,6 +410,7 @@
         "module.data.csv-parse",
         "module.data.csv-stringify",
         "module.data.group",
+        "module.data.join",
         "module.data.select",
         "module.data.where",
         "module.json.get",
@@ -877,8 +878,8 @@
       "algebraic_family": "dictionary",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 7,
-      "law_test_count": 3,
+      "derived_word_count": 8,
+      "law_test_count": 4,
       "conformance_case_count": 3,
       "derived_words": [
         "core.import-only",
@@ -886,10 +887,12 @@
         "core.lookup",
         "core.unimport",
         "core.unimport-only",
+        "module.data.join",
         "module.json.get",
         "module.json.has"
       ],
       "law_tests": [
+        "rust/src/interpreter/data_ops/tests.rs",
         "rust/src/json_io_tests.rs",
         "rust/tests/naming_resolution_laws.rs",
         "rust/tests/record_laws.rs"
@@ -905,7 +908,7 @@
       "algebraic_family": "dictionary",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 41,
+      "derived_word_count": 42,
       "law_test_count": 7,
       "conformance_case_count": 0,
       "derived_words": [
@@ -919,6 +922,7 @@
         "module.data.csv-parse",
         "module.data.csv-stringify",
         "module.data.group",
+        "module.data.join",
         "module.data.select",
         "module.data.where",
         "module.json.delete",

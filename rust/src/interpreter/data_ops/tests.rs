@@ -220,3 +220,51 @@ async fn group_of_a_non_table_bubbles_to_nil() {
     let top = interp.get_stack().last().expect("a value on the stack");
     assert!(top.is_absent(), "expected a NIL, got {:?}", top);
 }
+
+// JOIN shares its short name with the core string-join word (like JSON@GET vs
+// core GET), so it is invoked through the qualified `DATA@JOIN`.
+
+#[tokio::test]
+async fn join_enriches_left_rows_and_nil_fills_unmatched() {
+    // Left id=1 matches right; left id=2 has no match, so its added `dept`
+    // cell is NIL (MissingField) and renders as an empty CSV field.
+    let mut interp = Interpreter::new();
+    interp
+        .execute(
+            "'id,name\n1,alice\n2,bob' 'DATA' IMPORT CSV-PARSE \
+             'id,dept\n1,eng' CSV-PARSE 'id' DATA@JOIN CSV-STRINGIFY PRINT",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        interp.collect_output().trim_end(),
+        "id,name,dept\n1,alice,eng\n2,bob,"
+    );
+}
+
+#[tokio::test]
+async fn join_takes_the_first_matching_right_row() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute(
+            "'id,name\n1,alice' 'DATA' IMPORT CSV-PARSE \
+             'id,dept\n1,eng\n1,ops' CSV-PARSE 'id' DATA@JOIN CSV-STRINGIFY PRINT",
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        interp.collect_output().trim_end(),
+        "id,name,dept\n1,alice,eng"
+    );
+}
+
+#[tokio::test]
+async fn join_of_a_non_table_bubbles_to_nil() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("'DATA' IMPORT [ 5 ] [ 6 ] 'k' DATA@JOIN")
+        .await
+        .unwrap();
+    let top = interp.get_stack().last().expect("a value on the stack");
+    assert!(top.is_absent(), "expected a NIL, got {:?}", top);
+}

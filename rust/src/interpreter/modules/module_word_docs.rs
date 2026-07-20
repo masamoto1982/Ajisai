@@ -90,6 +90,13 @@ const MODULE_WORD_DOCS: &[ModuleWordDoc] = &[
         role: "Pure grouping: one group per distinct column value, in first-appearance order; absent-column rows share the NIL-keyed group.",
         stack_effect: "[ table ] [ column ] -> [ groups ]",
     },
+    ModuleWordDoc {
+        module: "DATA",
+        word: "JOIN",
+        summary: "Left-join two tables on a shared key column.",
+        role: "Pure lookup join: enrich each left row with the matching right row; no match fills the added columns with NIL (MissingField) cells.",
+        stack_effect: "[ left ] [ right ] [ key ] -> [ table ]",
+    },
     // ==================================================================
     // MUSIC
     // ==================================================================

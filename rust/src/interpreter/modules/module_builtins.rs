@@ -591,6 +591,18 @@ const DATA_WORDS: &[ModuleWord] = &[
         Stability::Experimental,
         Capabilities::PURE
     ),
+    module_word!(
+        "JOIN",
+        "Left-join two tables on a shared key column",
+        data_ops::op_join,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
 ];
 
 const IO_WORDS: &[ModuleWord] = &[

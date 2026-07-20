@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:c303714719483ef86adaa4205d17bdf56fc7d9ba792e54b8c3b9104c698d6139",
+  "rootIdentity": "sha256:9852e745ee9ec9261a3304d9fa187817ffe03fbf4edbcb6948a89095810ffbe0",
   "fileCount": 341,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -514,18 +514,18 @@
     },
     {
       "path": "rust/src/interpreter/data_ops/mod.rs",
-      "sha256": "dc8fc14b0b89ddd2e5e33dfb953c2d96ae73d1868ebee64b42ff6cc60adcd71e",
-      "bytes": 9839
+      "sha256": "dd287ce56e61f44e9b004d645b7eb65d882392b3a4c65bd2144458e98bdd5cb7",
+      "bytes": 10106
     },
     {
       "path": "rust/src/interpreter/data_ops/query.rs",
-      "sha256": "6b3c4bc55e76b2e221a05c89e386a3455281607ec6b830ffaa0eab68cc5bb2a2",
-      "bytes": 9128
+      "sha256": "55249c3c457f9e10d99e07fac6c1e0ee30b07f985dd145e1a09b7738715cc2a0",
+      "bytes": 12984
     },
     {
       "path": "rust/src/interpreter/data_ops/tests.rs",
-      "sha256": "ddd2619654f1d203617b3f7837922734a3502f8d47e22314c8b71433f5be2e26",
-      "bytes": 6766
+      "sha256": "dc872c783632d1905a1d015e673105cca99896325e119f3e91c95660bc86765c",
+      "bytes": 8280
     },
     {
       "path": "rust/src/interpreter/datetime.rs",
@@ -809,8 +809,8 @@
     },
     {
       "path": "rust/src/interpreter/modules/module_builtins.rs",
-      "sha256": "6afa90ee4e9b0a5626e7c6de77835d01e49c3c708756c39fdf2ff700cc63fcf4",
-      "bytes": 40262
+      "sha256": "8847296d2860441aac0a937dcf9c47e4e3db147b12eefa32a9ce2d5a1517188e",
+      "bytes": 40527
     },
     {
       "path": "rust/src/interpreter/modules/module_import_execution.rs",
@@ -824,8 +824,8 @@
     },
     {
       "path": "rust/src/interpreter/modules/module_word_docs.rs",
-      "sha256": "f2f6aadb260147faaad16be5804f1c2eb2c5209eb7ca0af23d4e09f2e278799d",
-      "bytes": 28573
+      "sha256": "dcfed6f02a67609ce74a8faf934df93f9ebe4b944ee690c71c1c13f93ff612bd",
+      "bytes": 28925
     },
     {
       "path": "rust/src/interpreter/modules/module_word_types.rs",
