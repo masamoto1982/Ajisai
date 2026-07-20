@@ -6,7 +6,7 @@ use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{Interpreter, OperationTargetMode};
-use crate::types::{Interpretation, Token, Value};
+use crate::types::{Token, Value};
 
 pub fn op_count(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -62,10 +62,18 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
                 }
             }
 
-            let mut saved_stack: Vec<Value> = Vec::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-            let saved_hints: Vec<Interpretation> =
-                std::mem::take(&mut interp.semantic_registry.stack_hints);
+            // COUNT executes each predicate in an isolated stack. Capture the
+            // outer state as typed slots so a role cannot be restored against
+            // a different value position.
+            // Operand extraction on the legacy path can leave consumed roles
+            // behind. Normalize before crossing the typed boundary; the empty
+            // execution stack owns no slots at this point.
+            interp.semantic_registry.normalize_to_stack_len(interp.stack.len());
+            let saved_stack = interp
+                .semantic_stack_snapshot()
+                .expect("stack values and semantic roles must remain position-aligned");
+            interp.stack.clear();
+            interp.semantic_registry.clear();
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
             interp.operation_target_mode = OperationTargetMode::StackTop;
@@ -134,8 +142,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-            interp.semantic_registry.stack_hints = saved_hints;
+            interp.replace_semantic_stack(saved_stack);
 
             if let Some(e) = error {
                 interp.stack.push(target_val);

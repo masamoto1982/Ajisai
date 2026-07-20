@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{Interpretation, Token, Value, ValueData};
+use crate::types::{Interpretation, SemanticStack, Token, Value, ValueData};
 
 use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
 
@@ -246,12 +246,18 @@ fn evaluate_guard_isolated(
     guard_plan: Option<&CompiledPlan>,
     value: &Value,
 ) -> Result<bool> {
-    let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
-    let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
+    // Preserve the observable stack as typed slots.  COND isolation is one of
+    // the high-risk legacy paths because it previously saved values and roles
+    // as independently managed vectors.
+    let saved_stack = interp
+        .semantic_stack_snapshot()
+        .expect("stack values and semantic roles must remain position-aligned");
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
+    interp.stack.clear();
+    interp.semantic_registry.clear();
     interp.stack.push(value.clone());
     interp
         .semantic_registry
@@ -272,7 +278,6 @@ fn evaluate_guard_isolated(
     restore_cond_eval_state(
         interp,
         saved_stack,
-        saved_hints,
         saved_target_mode,
         saved_consumption_mode,
         saved_epoch,
@@ -343,14 +348,12 @@ fn evaluate_guard_greedy(
 
 fn restore_cond_eval_state(
     interp: &mut Interpreter,
-    saved_stack: Vec<Value>,
-    saved_hints: Vec<Interpretation>,
+    saved_stack: SemanticStack,
     saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
     saved_epoch: EpochSnapshot,
 ) {
-    interp.stack = saved_stack;
-    interp.semantic_registry.stack_hints = saved_hints;
+    interp.replace_semantic_stack(saved_stack);
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
@@ -441,11 +444,13 @@ fn execute_cond_body(
     value: &Value,
     tail_context: bool,
 ) -> Result<()> {
-    let saved_stack: Vec<Value> = std::mem::take(&mut interp.stack);
-    let saved_hints: Vec<Interpretation> = interp.semantic_registry.stack_hints.clone();
+    let saved_stack = interp
+        .semantic_stack_snapshot()
+        .expect("stack values and semantic roles must remain position-aligned");
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
 
+    interp.stack.clear();
     interp.stack.push(value.clone());
     interp.semantic_registry.stack_hints = vec![Interpretation::Unassigned];
     interp.operation_target_mode = OperationTargetMode::StackTop;
@@ -469,8 +474,7 @@ fn execute_cond_body(
     let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
     let body_result_value: Option<Value> = interp.stack.pop();
 
-    interp.stack = saved_stack;
-    interp.semantic_registry.stack_hints = saved_hints;
+    interp.replace_semantic_stack(saved_stack);
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
 

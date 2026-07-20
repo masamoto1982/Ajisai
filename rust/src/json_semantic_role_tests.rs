@@ -125,6 +125,28 @@ async fn cf_retag_updates_only_target_stack_slot_role() {
     assert_eq!(format_with_hint(&stack[1], hints[1]), "( 2 ( 2 ) )");
 }
 
+/// A module word must not re-derive roles for lower slots it did not consume.
+/// This is the regression that the pre-migration fingerprint path protects and
+/// that the Phase 4 stack-owned-role implementation must preserve without
+/// relying on value or `Arc` identity.
+#[tokio::test]
+async fn module_word_preserves_lower_cf_retag() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute(r#"'JSON' IMPORT 5/2 >CF '{"a":1}' JSON@PARSE"#)
+        .await
+        .unwrap();
+
+    assert_stack_hints_aligned(&interp);
+    let stack = interp.get_stack();
+    let hints = interp.collect_stack_hints();
+    assert_eq!(stack.len(), 2);
+    assert_eq!(hints[0], Interpretation::ContinuedFraction);
+    assert_eq!(format_with_hint(&stack[0], hints[0]), "( 2 ( 2 ) )");
+    assert_ne!(hints[1], Interpretation::ContinuedFraction);
+    assert_eq!(stack[1].semantic_kind().as_protocol_str(), "record");
+}
+
 #[tokio::test]
 async fn cond_keep_preserves_outer_slot_role_alignment() {
     let mut interp = Interpreter::new();

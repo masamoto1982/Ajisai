@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::semantic::AbsenceMetadata;
-use crate::types::Value;
+use crate::types::{SemanticStack};
 
 use super::compiled_plan::execute_compiled_plan;
 use super::execution_plan_set::ExecutionPlanSet;
@@ -31,12 +31,8 @@ fn absence_core_eq(a: &Option<AbsenceMetadata>, b: &Option<AbsenceMetadata>) -> 
 /// (so language-level `EQ` is unaffected). Shadow validation needs the stricter
 /// view: two values that print alike but carry different absence reasons are a
 /// divergence we must catch, so absence is compared here explicitly.
-fn stacks_integrity_agree(fast: &[Value], plain: &[Value]) -> bool {
-    fast.len() == plain.len()
-        && fast
-            .iter()
-            .zip(plain.iter())
-            .all(|(f, p)| f == p && absence_core_eq(&f.absence, &p.absence))
+fn stacks_integrity_agree(fast: &SemanticStack, plain: &SemanticStack) -> bool {
+    fast.len() == plain.len() && fast.iter().zip(plain.iter()).all(|(f, p)| f.role() == p.role() && f.value() == p.value() && absence_core_eq(&f.value().absence, &p.value().absence))
 }
 
 /// Full agreement: same stack (value + hint + absence core) and the same
@@ -44,8 +40,8 @@ fn stacks_integrity_agree(fast: &[Value], plain: &[Value]) -> bool {
 /// channel; the compiled and plain paths must emit an identical effect列 or the
 /// optimization has changed observable behavior.
 fn paths_integrity_agree(
-    fast_stack: &[Value],
-    plain_stack: &[Value],
+    fast_stack: &SemanticStack,
+    plain_stack: &SemanticStack,
     fast_effects: &[HostEffect],
     plain_effects: &[HostEffect],
 ) -> bool {
@@ -93,8 +89,7 @@ impl Interpreter {
             }
         }
 
-        let saved_stack = self.stack.clone();
-        let saved_hints = self.semantic_registry.stack_hints.clone();
+        let saved_stack = self.semantic_stack_snapshot().expect("stack values and semantic roles must remain position-aligned");
         let saved_target = self.operation_target_mode;
         let saved_consumption = self.consumption_mode;
         let saved_output = std::mem::take(&mut self.output_buffer);
@@ -109,14 +104,12 @@ impl Interpreter {
         self.tail_jump_pending = false;
         let fast_result = execute_compiled_plan(self, compiled);
         let fast_jumped = self.tail_jump_pending;
-        let fast_stack = self.stack.clone();
-        let fast_hints = self.semantic_registry.stack_hints.clone();
+        let fast_stack = self.semantic_stack_snapshot().expect("stack values and semantic roles must remain position-aligned");
         let fast_output = std::mem::take(&mut self.output_buffer);
         let fast_io_output = std::mem::take(&mut self.io_output_buffer);
         let fast_host_effects = std::mem::take(&mut self.host_effects);
 
-        self.stack = saved_stack;
-        self.semantic_registry.stack_hints = saved_hints;
+        self.replace_semantic_stack(saved_stack.clone());
         self.operation_target_mode = saved_target;
         self.consumption_mode = saved_consumption;
 
@@ -125,8 +118,7 @@ impl Interpreter {
         let plain_jumped = self.tail_jump_pending;
         // Default to the fast path's decision; commit_plain arms below override.
         self.tail_jump_pending = fast_jumped;
-        let plain_stack = self.stack.clone();
-        let plain_hints = self.semantic_registry.stack_hints.clone();
+        let plain_stack = self.semantic_stack_snapshot().expect("stack values and semantic roles must remain position-aligned");
         let plain_output = std::mem::take(&mut self.output_buffer);
         let plain_io_output = std::mem::take(&mut self.io_output_buffer);
         let plain_host_effects = std::mem::take(&mut self.host_effects);
@@ -157,7 +149,6 @@ impl Interpreter {
                     self.runtime_metrics.shadow_validation_success_count += 1;
                     self.commit_fast(
                         fast_stack,
-                        fast_hints,
                         fast_output,
                         fast_io_output,
                         fast_host_effects,
@@ -178,8 +169,7 @@ impl Interpreter {
                     IntegrityMode::Off | IntegrityMode::Observe => {
                         self.commit_fast(
                             fast_stack,
-                            fast_hints,
-                            fast_output,
+                                fast_output,
                             fast_io_output,
                             fast_host_effects,
                         );
@@ -197,7 +187,6 @@ impl Interpreter {
                         ));
                         self.commit_plain(
                             plain_stack,
-                            plain_hints,
                             plain_output,
                             plain_io_output,
                             plain_host_effects,
@@ -228,7 +217,6 @@ impl Interpreter {
                 self.push_hedged_trace(format!("shadow:fallback word={} -> plain", resolved_name));
                 self.commit_plain(
                     plain_stack,
-                    plain_hints,
                     plain_output,
                     plain_io_output,
                     plain_host_effects,
@@ -259,8 +247,7 @@ impl Interpreter {
                     IntegrityMode::Off | IntegrityMode::Observe => {
                         self.commit_fast(
                             fast_stack,
-                            fast_hints,
-                            fast_output,
+                                fast_output,
                             fast_io_output,
                             fast_host_effects,
                         );
@@ -299,14 +286,12 @@ impl Interpreter {
 
     fn commit_fast(
         &mut self,
-        fast_stack: Vec<Value>,
-        fast_hints: Vec<crate::types::Interpretation>,
+        fast_stack: SemanticStack,
         fast_output: String,
         fast_io_output: String,
         fast_host_effects: Vec<HostEffect>,
     ) {
-        self.stack = fast_stack;
-        self.semantic_registry.stack_hints = fast_hints;
+        self.replace_semantic_stack(fast_stack);
         self.output_buffer.push_str(&fast_output);
         self.io_output_buffer.push_str(&fast_io_output);
         self.host_effects.extend(fast_host_effects);
@@ -314,14 +299,12 @@ impl Interpreter {
 
     fn commit_plain(
         &mut self,
-        plain_stack: Vec<Value>,
-        plain_hints: Vec<crate::types::Interpretation>,
+        plain_stack: SemanticStack,
         plain_output: String,
         plain_io_output: String,
         plain_host_effects: Vec<HostEffect>,
     ) {
-        self.stack = plain_stack;
-        self.semantic_registry.stack_hints = plain_hints;
+        self.replace_semantic_stack(plain_stack);
         self.output_buffer.push_str(&plain_output);
         self.io_output_buffer.push_str(&plain_io_output);
         self.host_effects.extend(plain_host_effects);
@@ -346,7 +329,7 @@ mod integrity_comparison_tests {
     use crate::interpreter::HostEffect;
     use crate::semantic::{AbsenceMetadata, AbsenceOrigin, Recoverability};
     use crate::types::fraction::Fraction;
-    use crate::types::Value;
+    use crate::types::{SemanticStack};
 
     fn scalar(n: i64) -> Value {
         Value::from_fraction(Fraction::from(n))

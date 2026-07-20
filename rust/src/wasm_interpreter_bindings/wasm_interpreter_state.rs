@@ -69,13 +69,16 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_stack(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        let hints = self.interpreter.collect_stack_hints();
-        for (i, value) in self.interpreter.get_stack().iter().enumerate() {
-            let hint = hints
-                .get(i)
-                .copied()
-                .unwrap_or(crate::types::Interpretation::Unassigned);
-            js_array.push(&value_to_js(value, Some(hint)));
+        // Keep the WASM boundary on the Phase 4 `(value, role)` façade rather
+        // than independently indexing the legacy value and role vectors.
+        // This makes an alignment violation fail at the ownership boundary
+        // instead of silently serializing an `Unassigned` fallback role.
+        let stack = self
+            .interpreter
+            .semantic_stack_snapshot()
+            .expect("stack values and semantic roles must remain position-aligned");
+        for slot in stack.iter() {
+            js_array.push(&value_to_js(slot.value(), Some(slot.role())));
         }
         js_array.into()
     }
