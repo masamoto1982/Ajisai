@@ -55,7 +55,8 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割再定義（Lisp 的動機の廃止、テンソル/構造データ基盤への固定） | `[方針記録]` |
 | `implicit-parallelism-roadmap.md` | 暗黙並列の設計原理（Same Result / Never Slower / Zero Syntax）。elastic/hedged 実行エンジンは opt-in cargo feature `elastic-engine` に隔離済み（デフォルトビルドは常に greedy） | `[設計根拠]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察（`_attachments/cf_probe.py` を含む） | `[観察ノート]` |
-| `semantic-role-ownership-phase4-design.md` | Phase 4 の意味役割所有権整理メモ（`Value.hint` / `stack_hints` / `semantic_sync` の段階移行案） | `[提案・未実施]` |
+| `semantic-role-ownership-phase4-design.md` | Phase 4 の意味役割所有権整理メモ（`Value.hint` / `stack_hints` / `semantic_sync` の段階移行案。候補 A/B/C 比較） | `[提案・未実施]` |
+| `semantic-role-ownership-phase4-migration-handoff.md` | Phase 4 残移行（4C–4G）の作業引継書。調査済みの制約・影響範囲・role 同伴 `Stack` 設計・段階手順・検証ゲート | `[提案・未実施]` |
 | `compiled-artifact-reuse-phase5-design.md` | Phase 5 のコンパイル成果物セッション間再利用メモ（`ArtifactStore` / session reset 分離 / content-identity キー） | `[実装済み]` |
 | `execution-receipt-phase6-design.md` | Phase 6 の実行 receipt メモ（`ReceiptRecorder` / `--receipt` / protocol 由来 resultIdentity） | `[実装済み]` |
 | `tier2-vocabulary-phase7-design.md` | Phase 7 の Tier 2 限定実用化メモ（`MATH@PI` / `MATH@ENCLOSE` / 有理 π enclosure / UNKNOWN 到達） | `[実装済み]` |
