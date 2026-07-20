@@ -2,6 +2,10 @@
 
 Status: `[提案・未実施]`。この文書は `docs/dev/` の設計メモであり、Ajisai の意味論を定義しない。正典は `SPECIFICATION.html` のみである。
 
+> **残移行（4C–4G）の具体的な調査結果・設計・段階手順・検証ゲートは
+> `docs/dev/semantic-role-ownership-phase4-migration-handoff.md`（作業引継書）に集約した。**
+> 本メモは候補案 A/B/C の比較と段階計画の根拠を残す。着手時は引継書を先に読むこと。
+
 ## 実施フェーズ
 
 Phase 4: 意味役割の二重管理解消。
