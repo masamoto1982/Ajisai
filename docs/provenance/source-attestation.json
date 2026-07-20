@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:7d596d041ce2235583397779b07965bc312dff6cabc33ef9cab71c9e5e03f4f4",
-  "fileCount": 331,
+  "rootIdentity": "sha256:7c50062d2ed3a743f449502d6731d6b80d8501480b7952d9df105e1272e1729b",
+  "fileCount": 337,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -133,9 +133,24 @@
       "bytes": 1514
     },
     {
+      "path": "rust/src/cli/lockfile.rs",
+      "sha256": "5ba5bdaa607acb75b34a4a8d87bb123ce6275479d74a3ab0914011d696c46906",
+      "bytes": 6087
+    },
+    {
+      "path": "rust/src/cli/manifest.rs",
+      "sha256": "fdeddc5d0428a123f84044651c0bc20c9d5d1d39cf3c84c30fd7f0c08117e9ba",
+      "bytes": 8394
+    },
+    {
+      "path": "rust/src/cli/manifest_tests.rs",
+      "sha256": "1001c9600cca4d2dd5255a7bfcd50dc6137444f631b00b5c3a70ca03195fa6a1",
+      "bytes": 3957
+    },
+    {
       "path": "rust/src/cli/mod.rs",
-      "sha256": "6a7fbf1ea5c93d6f069fe45a5a4aad60738da5b6647c5226b92b3333420dccf4",
-      "bytes": 32899
+      "sha256": "c0d87c33eeaaedfcb77afa84a2b15e604fbce97c488953958b3f0fc57c5b4bf2",
+      "bytes": 32403
     },
     {
       "path": "rust/src/cli/modifier.rs",
@@ -156,6 +171,16 @@
       "path": "rust/src/cli/plan_check_tests.rs",
       "sha256": "aecbb0d68cc73896ee2e3276bf498ea34f04730413de3b6c3b8d534df26a02ed",
       "bytes": 3877
+    },
+    {
+      "path": "rust/src/cli/project.rs",
+      "sha256": "e348bd65c70edb471970dea7045cb922d9a23d6254c997e5eb52b549dd245e14",
+      "bytes": 12061
+    },
+    {
+      "path": "rust/src/cli/project_tests.rs",
+      "sha256": "b5c75f2ebbac2beaa16ab1b81a5bba2c30775d2b2cedc8abebbada0b6946a5bc",
+      "bytes": 6007
     },
     {
       "path": "rust/src/cli/receipt.rs",
@@ -181,6 +206,11 @@
       "path": "rust/src/cli/report_tests.rs",
       "sha256": "86805bead978081f7f0bb5d8cbc30f29131d66eae187b002b0e23ac613976707",
       "bytes": 8051
+    },
+    {
+      "path": "rust/src/cli/run_render.rs",
+      "sha256": "586c9921a16ab2462a7aff9a68a249f8ed01a6f41f1a5e37ac5d374ff9b5bfa8",
+      "bytes": 2663
     },
     {
       "path": "rust/src/cli/step_limit_tests.rs",
