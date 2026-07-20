@@ -10,6 +10,7 @@ pub mod compiled_plan;
 pub mod comptime;
 pub mod control;
 pub mod control_cond;
+pub mod data_ops;
 pub mod datetime;
 pub mod debug_diagnosis;
 pub mod energy_proxy;

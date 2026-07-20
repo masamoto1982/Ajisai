@@ -53,6 +53,23 @@ pub(super) fn assert_every_word_has_doc(specs: &[ModuleSpec]) -> Result<(), Stri
 
 const MODULE_WORD_DOCS: &[ModuleWordDoc] = &[
     // ==================================================================
+    // DATA
+    // ==================================================================
+    ModuleWordDoc {
+        module: "DATA",
+        word: "CSV-PARSE",
+        summary: "Parse CSV text into a vector of Records (the first row is the header).",
+        role: "Pure table reader: text in, one Record per data row. Malformed or ragged CSV projects to a reasoned NIL.",
+        stack_effect: "[ text ] -> [ records ]",
+    },
+    ModuleWordDoc {
+        module: "DATA",
+        word: "CSV-STRINGIFY",
+        summary: "Render a vector of Records as CSV text sharing one column shape.",
+        role: "Pure table writer: the inverse of CSV-PARSE. A non-table or shape-mismatched input projects to a reasoned NIL.",
+        stack_effect: "[ records ] -> [ text ]",
+    },
+    // ==================================================================
     // MUSIC
     // ==================================================================
     ModuleWordDoc {
