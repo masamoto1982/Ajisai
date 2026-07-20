@@ -391,7 +391,7 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 21,
+      "derived_word_count": 22,
       "law_test_count": 12,
       "conformance_case_count": 13,
       "derived_words": [
@@ -409,6 +409,7 @@
         "module.algo.index-of",
         "module.data.csv-parse",
         "module.data.csv-stringify",
+        "module.data.group",
         "module.data.select",
         "module.data.where",
         "module.json.get",
@@ -904,7 +905,7 @@
       "algebraic_family": "dictionary",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 40,
+      "derived_word_count": 41,
       "law_test_count": 7,
       "conformance_case_count": 0,
       "derived_words": [
@@ -917,6 +918,7 @@
         "core.unimport-only",
         "module.data.csv-parse",
         "module.data.csv-stringify",
+        "module.data.group",
         "module.data.select",
         "module.data.where",
         "module.json.delete",

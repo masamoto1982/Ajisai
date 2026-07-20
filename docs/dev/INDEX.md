@@ -64,7 +64,7 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `cli-test-phase8a-design.md` | Phase 8A のテストランナーメモ（`ajisai test` / `#@` directive コメント / Core に検証語を足さない host runner） | `[実装済み]` |
 | `cli-project-phase8b-design.md` | Phase 8B の manifest / lockfile メモ（`ajisai.toml` / `ajisai.lock` / `build` / `lock` / capability 拘束 / content identity） | `[実装済み]` |
 | `cli-new-phase8b-design.md` | `ajisai new` プロジェクト scaffold メモ（8B manifest 形式の雛形生成 / 生成直後に build 可能） | `[実装済み]` |
-| `data-module-phase8c-design.md` | Phase 8C DATA モジュールメモ（unit 1: `CSV-PARSE`/`CSV-STRINGIFY`、unit 2: `SELECT`/`WHERE`。純粋変換 / Core 構文非追加 / 欠損列 = `MissingField`） | `[実装済み]` |
+| `data-module-phase8c-design.md` | Phase 8C DATA モジュールメモ（unit 1: `CSV-PARSE`/`CSV-STRINGIFY`、unit 2: `SELECT`/`WHERE`、unit 3: `GROUP`。純粋変換 / Core 構文非追加 / 欠損列 = `MissingField`） | `[実装済み]` |
 
 ## 実装済み最適化の設計記録
 

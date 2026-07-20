@@ -9,10 +9,10 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "corewords": 97,
-    "modulewords": 94,
+    "modulewords": 95,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 221
+    "total": 222
   },
   "entries": [
     {
@@ -2776,6 +2776,25 @@
       "derived_from": [
         "algebra.dictionary.finite-partial-map",
         "algebra.k3.domain",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
+    },
+    {
+      "id": "module.data.group",
+      "kind": "moduleword",
+      "surface": "DATA@GROUP",
+      "short_surface": "GROUP",
+      "module": "DATA",
+      "category": "data",
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "DATA@GROUP",
+      "coverage_entry_id": "module.data.group",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
         "algebra.bubble.domain"
       ],
       "classification": "Module"

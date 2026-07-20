@@ -4064,6 +4064,28 @@
       "core_tier": "material"
     },
     {
+      "id": "module.data.group",
+      "kind": "moduleword",
+      "surface": "DATA@GROUP",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops/tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Groups table rows by a column into { key, rows } group records in first-appearance order; an absent column keeps its NIL (MissingField) reason on the group key. Experimental DATA module, Phase 8C unit 3.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
+    },
+    {
       "id": "module.json.get",
       "kind": "moduleword",
       "surface": "JSON@GET",

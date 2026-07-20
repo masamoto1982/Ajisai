@@ -579,6 +579,18 @@ const DATA_WORDS: &[ModuleWord] = &[
         Stability::Experimental,
         Capabilities::PURE
     ),
+    module_word!(
+        "GROUP",
+        "Group table rows by the value of a column",
+        data_ops::op_group,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
 ];
 
 const IO_WORDS: &[ModuleWord] = &[
