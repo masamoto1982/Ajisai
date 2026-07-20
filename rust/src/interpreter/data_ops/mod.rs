@@ -16,6 +16,11 @@
 //! - `DATA@GROUP` `[ table ] 'col' GROUP` → a vector of `{ 'key' 'rows' }` group
 //!   records, one per distinct column value in first-appearance order.
 //!
+//! Unit 4 — joining:
+//! - `DATA@JOIN` `[ left ] [ right ] 'key' JOIN` → a left/lookup join enriching
+//!   each left row with the matching right row; no match fills the added
+//!   columns with NIL `MissingField` cells ("join key does not exist").
+//!
 //! All are **pure transforms**: no file I/O (reading a file is left to the
 //! existing IO / Hosted capability), and a malformed input never raises — it
 //! projects to a reasoned Bubble/NIL, the same projection `JSON@PARSE` uses for
@@ -28,7 +33,7 @@
 
 mod query;
 
-pub use query::{op_group, op_select, op_where};
+pub use query::{op_group, op_join, op_select, op_where};
 
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::value_as_string;

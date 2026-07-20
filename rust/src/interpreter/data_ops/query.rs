@@ -82,6 +82,105 @@ pub fn op_group(interp: &mut Interpreter) -> Result<()> {
     Ok(())
 }
 
+/// `DATA@JOIN`: `[ left ] [ right ] 'key' JOIN` → a left (lookup) join. Each
+/// left row is enriched with the columns of the first right row whose key cell
+/// matches (the right table is treated as keyed by a unique `key`). When a left
+/// row has no match — including a left row whose own key column is absent — the
+/// added right columns are filled with NIL cells carrying reason `MissingField`
+/// ("join key does not exist", §15.3; the same reason ALGO@INDEX-OF uses for a
+/// well-formed search miss). The added columns are the first right row's
+/// columns minus the key and minus any name already in the left, so the merged
+/// schema is stable. A non-table input, or a non-Record row, projects to a
+/// reasoned NIL.
+pub fn op_join(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+    let len = interp.stack.len();
+    if len < 3 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    let key_val = extract_stack_value(interp, is_keep, 0)?;
+    let right_val = extract_stack_value(interp, is_keep, usize::from(is_keep))?;
+    let left_val = extract_stack_value(interp, is_keep, if is_keep { 2 } else { 0 })?;
+    let key = value_as_string(&key_val).unwrap_or_default();
+
+    interp
+        .stack
+        .push(join_tables(&left_val, &right_val, &key).unwrap_or_else(encoding_bubble));
+    Ok(())
+}
+
+/// Left/lookup join: enrich each left row with the matching right row's added
+/// columns, or NIL `MissingField` cells when there is no match.
+fn join_tables(left: &Value, right: &Value, key: &str) -> Option<Value> {
+    let ValueData::Vector(left_rows) = &left.data else {
+        return None;
+    };
+    let ValueData::Vector(right_rows) = &right.data else {
+        return None;
+    };
+    if left_rows
+        .iter()
+        .chain(right_rows.iter())
+        .any(|row| !matches!(&row.data, ValueData::Record { .. }))
+    {
+        return None;
+    }
+
+    // The right columns to graft on: the first right row's columns, minus the
+    // key (already carried by the left) and minus any name the left already has.
+    let left_cols: Vec<String> = left_rows.first().map(record_keys).unwrap_or_default();
+    let added_cols: Vec<String> = right_rows
+        .first()
+        .map(record_keys)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|col| col != key && !left_cols.contains(col))
+        .collect();
+
+    let mut out = Vec::with_capacity(left_rows.len());
+    for left_row in left_rows.iter() {
+        let left_key = record_get(left_row, key);
+        let matched = if left_key.is_absent() {
+            None
+        } else {
+            let want = value_as_string(&left_key).unwrap_or_default();
+            right_rows
+                .iter()
+                .find(|r| value_as_string(&record_get(r, key)).unwrap_or_default() == want)
+        };
+
+        let ValueData::Record { pairs, .. } = &left_row.data else {
+            return None;
+        };
+        let mut merged: Vec<Value> = pairs.iter().cloned().collect();
+        for col in &added_cols {
+            let cell = match matched {
+                Some(right_row) => record_get(right_row, col),
+                None => Value::nil_with_reason(NilReason::MissingField),
+            };
+            merged.push(pair_with_value(col, cell));
+        }
+        out.push(build_record(merged));
+    }
+    Some(vector_of(out))
+}
+
+/// A record's column names, in pair order.
+fn record_keys(record: &Value) -> Vec<String> {
+    let ValueData::Record { pairs, .. } = &record.data else {
+        return Vec::new();
+    };
+    pairs
+        .iter()
+        .filter_map(|pair| {
+            let ValueData::Vector(kv) = &pair.data else {
+                return None;
+            };
+            (kv.len() == 2).then(|| value_as_string(&kv[0]).unwrap_or_default())
+        })
+        .collect()
+}
+
 /// Project each Record onto `columns`, filling an absent column with a
 /// reasoned NIL cell so every output row shares the requested shape.
 fn select_columns(table: &Value, columns: &Value) -> Option<Value> {

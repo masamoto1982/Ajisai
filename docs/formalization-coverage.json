@@ -4086,6 +4086,29 @@
       "core_tier": "material"
     },
     {
+      "id": "module.data.join",
+      "kind": "moduleword",
+      "surface": "DATA@JOIN",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops/tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Left/lookup join of two tables on a shared key column; a left row with no matching right row (or an absent key) fills the added columns with NIL (MissingField) cells — the 'join key does not exist' reason, the same reason ALGO@INDEX-OF uses for a search miss. Experimental DATA module, Phase 8C unit 4.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.dictionary.lookup",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
+    },
+    {
       "id": "module.json.get",
       "kind": "moduleword",
       "surface": "JSON@GET",
