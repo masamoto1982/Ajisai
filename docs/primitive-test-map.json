@@ -6,7 +6,7 @@
   "summary": {
     "primitives": 30,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 25,
+    "distinct_law_test_files": 26,
     "distinct_conformance_cases": 58
   },
   "primitives": [
@@ -337,8 +337,8 @@
       "algebraic_family": "exact-scalar",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 27,
-      "law_test_count": 8,
+      "derived_word_count": 29,
+      "law_test_count": 9,
       "conformance_case_count": 0,
       "derived_words": [
         "core.await",
@@ -361,6 +361,8 @@
         "core.trim-left",
         "core.trim-right",
         "module.crypto.hash",
+        "module.data.csv-parse",
+        "module.data.csv-stringify",
         "module.io.input",
         "module.io.output",
         "module.json.export",
@@ -370,6 +372,7 @@
         "module.time.parse-iso"
       ],
       "law_tests": [
+        "rust/src/interpreter/data_ops.rs",
         "rust/src/interpreter/datetime_tests.rs",
         "rust/src/interpreter/hash_tests.rs",
         "rust/src/json_io_tests.rs",
@@ -386,8 +389,8 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 17,
-      "law_test_count": 11,
+      "derived_word_count": 19,
+      "law_test_count": 12,
       "conformance_case_count": 13,
       "derived_words": [
         "core.chr",
@@ -402,6 +405,8 @@
         "core.remove",
         "core.vent",
         "module.algo.index-of",
+        "module.data.csv-parse",
+        "module.data.csv-stringify",
         "module.json.get",
         "module.json.parse",
         "module.math.gcd",
@@ -410,6 +415,7 @@
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/data_ops.rs",
         "rust/src/interpreter/datetime_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/src/interpreter/nil_diagnostics_tests.rs",
@@ -894,8 +900,8 @@
       "algebraic_family": "dictionary",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 36,
-      "law_test_count": 6,
+      "derived_word_count": 38,
+      "law_test_count": 7,
       "conformance_case_count": 0,
       "derived_words": [
         "core.del",
@@ -905,6 +911,8 @@
         "core.structural.record",
         "core.unimport",
         "core.unimport-only",
+        "module.data.csv-parse",
+        "module.data.csv-stringify",
         "module.json.delete",
         "module.json.get",
         "module.json.has",
@@ -938,6 +946,7 @@
       "law_tests": [
         "rust/src/interpreter/audio/audio_integration_tests.rs",
         "rust/src/interpreter/audio/audio_unit_tests.rs",
+        "rust/src/interpreter/data_ops.rs",
         "rust/src/interpreter/interpreter_definition_tests.rs",
         "rust/src/json_io_tests.rs",
         "rust/tests/naming_resolution_laws.rs",

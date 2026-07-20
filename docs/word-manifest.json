@@ -9,10 +9,10 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "corewords": 97,
-    "modulewords": 90,
+    "modulewords": 92,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 217
+    "total": 219
   },
   "entries": [
     {
@@ -2700,6 +2700,46 @@
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
+    },
+    {
+      "id": "module.data.csv-parse",
+      "kind": "moduleword",
+      "surface": "DATA@CSV-PARSE",
+      "short_surface": "CSV-PARSE",
+      "module": "DATA",
+      "category": "data",
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "DATA@CSV-PARSE",
+      "coverage_entry_id": "module.data.csv-parse",
+      "semantic_role": "Derived",
+      "algebraic_family": "dictionary",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
+    },
+    {
+      "id": "module.data.csv-stringify",
+      "kind": "moduleword",
+      "surface": "DATA@CSV-STRINGIFY",
+      "short_surface": "CSV-STRINGIFY",
+      "module": "DATA",
+      "category": "data",
+      "source": "rust/src/interpreter/modules/module_builtins.rs",
+      "canonical": "DATA@CSV-STRINGIFY",
+      "coverage_entry_id": "module.data.csv-stringify",
+      "semantic_role": "Derived",
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material",
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "classification": "Module"
     },
     {
       "id": "module.io.input",

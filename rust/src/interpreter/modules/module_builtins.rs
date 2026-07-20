@@ -4,8 +4,8 @@ use crate::coreword_registry::{
     WordPurity,
 };
 use crate::interpreter::{
-    algo_ops, audio, datetime, hash, interval_ops, json, math_ops, random, serial, sort, tier2_ops,
-    time_ops, HostCapability,
+    algo_ops, audio, data_ops, datetime, hash, interval_ops, json, math_ops, random, serial, sort,
+    tier2_ops, time_ops, HostCapability,
 };
 use crate::types::{Capabilities, Stability};
 
@@ -527,6 +527,33 @@ const JSON_WORDS: &[ModuleWord] = &[
         false,
         Stability::Stable,
         Capabilities::IO
+    ),
+];
+
+const DATA_WORDS: &[ModuleWord] = &[
+    module_word!(
+        "CSV-PARSE",
+        "Parse CSV text into a vector of Records",
+        data_ops::op_csv_parse,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "CSV-STRINGIFY",
+        "Convert a vector of Records into CSV text",
+        data_ops::op_csv_stringify,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
     ),
 ];
 
@@ -1178,6 +1205,10 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
     ModuleSpec {
         name: "JSON",
         words: JSON_WORDS,
+    },
+    ModuleSpec {
+        name: "DATA",
+        words: DATA_WORDS,
     },
     ModuleSpec {
         name: "IO",

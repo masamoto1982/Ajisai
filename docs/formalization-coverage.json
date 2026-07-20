@@ -3973,6 +3973,52 @@
       "core_tier": "material"
     },
     {
+      "id": "module.data.csv-parse",
+      "kind": "moduleword",
+      "surface": "DATA@CSV-PARSE",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Parses CSV text into a vector of Records (first row = header); a ragged row or unterminated quote projects to Bubble/NIL. Experimental DATA module, Phase 8C unit 1.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
+    },
+    {
+      "id": "module.data.csv-stringify",
+      "kind": "moduleword",
+      "surface": "DATA@CSV-STRINGIFY",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Renders a vector of Records sharing one column shape as CSV text; a non-table or shape-mismatched input projects to Bubble/NIL. Experimental DATA module, Phase 8C unit 1.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.exact-scalar.codepoint-sequence",
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "exact-scalar",
+      "core_tier": "material"
+    },
+    {
       "id": "module.json.get",
       "kind": "moduleword",
       "surface": "JSON@GET",
