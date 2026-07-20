@@ -555,6 +555,30 @@ const DATA_WORDS: &[ModuleWord] = &[
         Stability::Experimental,
         Capabilities::PURE
     ),
+    module_word!(
+        "SELECT",
+        "Project a table onto the named columns",
+        data_ops::op_select,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
+    module_word!(
+        "WHERE",
+        "Keep table rows whose column predicate is true",
+        data_ops::op_where,
+        WordPurity::Pure,
+        &[],
+        true,
+        true,
+        false,
+        Stability::Experimental,
+        Capabilities::PURE
+    ),
 ];
 
 const IO_WORDS: &[ModuleWord] = &[

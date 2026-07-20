@@ -1,36 +1,53 @@
-//! `DATA` module — tabular data words (Phase 8C, unit 1).
+//! `DATA` module — tabular data words (Phase 8C).
 //!
 //! Implemented as ordinary Module words over the existing value model (Vector,
-//! Record, RecordShape); no new Core syntax is added (SPEC handoff §15.3). This
-//! first unit provides the CSV ↔ Record-vector conversion:
+//! Record, RecordShape); no new Core syntax is added (SPEC handoff §15.3).
 //!
+//! Unit 1 — CSV ↔ Record-vector conversion:
 //! - `DATA@CSV-PARSE`     text → a vector of Records (first CSV row = header).
 //! - `DATA@CSV-STRINGIFY` a vector of Records → CSV text.
 //!
-//! Both are **pure transforms**: no file I/O (reading a file is left to the
+//! Unit 2 — column and row selection:
+//! - `DATA@SELECT` `[ table ] [ columns ] SELECT` → keep only the named columns.
+//! - `DATA@WHERE`  `[ table ] 'col' { pred } WHERE` → keep the rows whose
+//!   predicate on that column is true.
+//!
+//! All are **pure transforms**: no file I/O (reading a file is left to the
 //! existing IO / Hosted capability), and a malformed input never raises — it
 //! projects to a reasoned Bubble/NIL, the same projection `JSON@PARSE` uses for
 //! unparseable text (SPEC §11.2). A CSV table is rectangular: a row whose field
 //! count differs from the header, or an unterminated quoted field, makes the
 //! whole parse project to NIL rather than silently corrupting the data. Cells
-//! are text; numeric interpretation is a later unit's concern.
+//! are text; numeric interpretation is a later unit's concern. Missing values
+//! keep a distinct reason: an absent column reads as NIL `MissingField`
+//! ("column does not exist", §15.3), never collapsed into a generic absence.
 
 use crate::error::{AjisaiError, NilReason, Result};
+use crate::interpreter::higher_order::{
+    execute_executable_code, extract_executable_code, ExecutableCode,
+};
 use crate::interpreter::value_extraction_helpers::value_as_string;
-use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::record_shape::intern_record_shape;
 use crate::types::{Interpretation, Value, ValueData};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-fn extract_stack_value(interp: &mut Interpreter, keep_mode: bool) -> Result<Value> {
+/// Read an argument `from_top` positions below the stack top. In keep mode the
+/// value is peeked (left in place); in consume mode the caller pops the top
+/// argument first, so each consumed read is `from_top == 0`.
+fn extract_stack_value(
+    interp: &mut Interpreter,
+    keep_mode: bool,
+    from_top: usize,
+) -> Result<Value> {
     if keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)
+        let len = interp.stack.len();
+        if len <= from_top {
+            return Err(AjisaiError::StackUnderflow);
+        }
+        Ok(interp.stack[len - 1 - from_top].clone())
     } else {
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)
     }
@@ -48,7 +65,7 @@ fn encoding_bubble() -> Value {
 /// quote or a ragged row) projects to a reasoned NIL.
 pub fn op_csv_parse(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
-    let val = extract_stack_value(interp, is_keep)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
     let text = value_as_string(&val).unwrap_or_default();
 
     let parsed = parse_csv_rows(&text).and_then(rows_to_record_vector);
@@ -60,7 +77,7 @@ pub fn op_csv_parse(interp: &mut Interpreter) -> Result<()> {
 /// records that do not share one column shape, projects to a reasoned NIL.
 pub fn op_csv_stringify(interp: &mut Interpreter) -> Result<()> {
     let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
-    let val = extract_stack_value(interp, is_keep)?;
+    let val = extract_stack_value(interp, is_keep, 0)?;
 
     match record_vector_to_csv(&val) {
         // An empty table stringifies to empty text, which is NIL in this value
@@ -69,6 +86,164 @@ pub fn op_csv_stringify(interp: &mut Interpreter) -> Result<()> {
         None => interp.stack.push(encoding_bubble()),
     }
     Ok(())
+}
+
+/// `DATA@SELECT`: `[ table ] [ columns ] SELECT` → a table keeping only the
+/// named columns, in the given order. A column absent from a row yields a cell
+/// that is NIL with reason `MissingField` (the "column does not exist" reason
+/// preserved, §15.3), so the result stays rectangular. A non-table input, a
+/// non-vector column list, or a non-Record row projects to a reasoned NIL.
+pub fn op_select(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    let cols_val = extract_stack_value(interp, is_keep, 0)?;
+    let table_val = extract_stack_value(interp, is_keep, usize::from(is_keep))?;
+
+    interp
+        .stack
+        .push(select_columns(&table_val, &cols_val).unwrap_or_else(encoding_bubble));
+    Ok(())
+}
+
+/// `DATA@WHERE`: `[ table ] 'column' { predicate } WHERE` → the rows for which
+/// the predicate, run on that column's cell, is definitely true. A false,
+/// UNKNOWN, or NIL result drops the row (so a missing column — a NIL cell —
+/// drops the row, SQL-like). The result is always a table: no matching row
+/// yields an empty table, not NIL. A non-table input projects to a reasoned NIL.
+pub fn op_where(interp: &mut Interpreter) -> Result<()> {
+    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
+    let len = interp.stack.len();
+    if len < 3 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+    // Arguments from the top: predicate (0), column (1), table (2). Read by
+    // clone so the inputs stay in place until the run succeeds.
+    let code_val = interp.stack[len - 1].clone();
+    let col_val = interp.stack[len - 2].clone();
+    let table_val = interp.stack[len - 3].clone();
+
+    let executable = extract_executable_code(interp, &code_val)?;
+    let column = value_as_string(&col_val).unwrap_or_default();
+
+    let result = filter_rows(interp, &table_val, &column, &executable)?;
+
+    if !is_keep {
+        interp.stack.truncate(len - 3);
+    }
+    interp.stack.push(result);
+    Ok(())
+}
+
+/// Project each Record onto `columns`, filling an absent column with a
+/// reasoned NIL cell so every output row shares the requested shape.
+fn select_columns(table: &Value, columns: &Value) -> Option<Value> {
+    let ValueData::Vector(names) = &columns.data else {
+        return None;
+    };
+    let names: Vec<String> = names
+        .iter()
+        .map(|c| value_as_string(c).unwrap_or_default())
+        .collect();
+
+    let ValueData::Vector(rows) = &table.data else {
+        return None;
+    };
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows.iter() {
+        if !matches!(&row.data, ValueData::Record { .. }) {
+            return None;
+        }
+        let pairs = names
+            .iter()
+            .map(|name| pair_with_value(name, record_get(row, name)))
+            .collect();
+        out.push(build_record(pairs));
+    }
+    Some(vector_of(out))
+}
+
+/// Keep the rows whose predicate, run on `column`'s cell, is definitely true.
+/// Runs each predicate on a scratch stack, restoring the caller's stack and
+/// operation mode; a hard predicate error aborts and is propagated.
+fn filter_rows(
+    interp: &mut Interpreter,
+    table: &Value,
+    column: &str,
+    executable: &ExecutableCode,
+) -> Result<Value> {
+    let ValueData::Vector(rows) = &table.data else {
+        return Ok(encoding_bubble());
+    };
+    let rows: Vec<Value> = rows.iter().cloned().collect();
+
+    let saved_stack = std::mem::take(&mut interp.stack);
+    let saved_target = interp.operation_target_mode;
+    let saved_no_change_check = interp.disable_no_change_check;
+    interp.operation_target_mode = OperationTargetMode::StackTop;
+    interp.disable_no_change_check = true;
+
+    let mut kept = Vec::new();
+    let mut error = None;
+    for row in &rows {
+        interp.stack.clear();
+        interp.stack.push(record_get(row, column));
+        match execute_executable_code(interp, executable) {
+            Ok(()) => {
+                if interp.stack.pop().as_ref().is_some_and(is_definitely_true) {
+                    kept.push(row.clone());
+                }
+            }
+            Err(e) => {
+                error = Some(e);
+                break;
+            }
+        }
+    }
+
+    interp.operation_target_mode = saved_target;
+    interp.disable_no_change_check = saved_no_change_check;
+    interp.stack = saved_stack;
+
+    match error {
+        Some(e) => Err(e),
+        None => Ok(vector_of(kept)),
+    }
+}
+
+/// A predicate result keeps its row only when it is a definite truth: a `true`
+/// Boolean or a non-zero number. `false`, the logical UNKNOWN, and any NIL all
+/// read as "not selected".
+fn is_definitely_true(value: &Value) -> bool {
+    if let Some(b) = value.as_truth() {
+        return b;
+    }
+    value.as_scalar().is_some_and(|f| !f.is_zero())
+}
+
+/// The value stored under `column` in a Record, or a NIL cell carrying reason
+/// `MissingField` when the column is absent (§15.3: "column does not exist").
+fn record_get(record: &Value, column: &str) -> Value {
+    if let ValueData::Record { pairs, .. } = &record.data {
+        for pair in pairs.iter() {
+            if let ValueData::Vector(kv) = &pair.data {
+                if kv.len() == 2 && value_as_string(&kv[0]).unwrap_or_default() == column {
+                    return kv[1].clone();
+                }
+            }
+        }
+    }
+    Value::nil_with_reason(NilReason::MissingField)
+}
+
+/// A `[ key value ]` pair from a string key and an already-built value.
+fn pair_with_value(key: &str, value: Value) -> Value {
+    Value {
+        data: ValueData::Vector(Arc::new(vec![Value::from_string(key), value])),
+        hint: Interpretation::Unassigned,
+        absence: None,
+    }
 }
 
 // --- pure CSV core (RFC 4180), independent of the interpreter ---------------
@@ -259,117 +434,4 @@ fn encode_field(field: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_a_simple_table() {
-        let rows = parse_csv_rows("a,b\n1,2\n3,4").unwrap();
-        assert_eq!(rows, vec![vec!["a", "b"], vec!["1", "2"], vec!["3", "4"]]);
-    }
-
-    #[test]
-    fn trailing_newline_does_not_add_a_row() {
-        let rows = parse_csv_rows("a,b\n1,2\n").unwrap();
-        assert_eq!(rows, vec![vec!["a", "b"], vec!["1", "2"]]);
-    }
-
-    #[test]
-    fn crlf_ends_a_line() {
-        let rows = parse_csv_rows("a,b\r\n1,2\r\n").unwrap();
-        assert_eq!(rows, vec![vec!["a", "b"], vec!["1", "2"]]);
-    }
-
-    #[test]
-    fn quoted_fields_carry_commas_quotes_and_newlines() {
-        let rows = parse_csv_rows("name,note\n\"Doe, John\",\"a \"\"quote\"\"\"\n").unwrap();
-        assert_eq!(
-            rows,
-            vec![
-                vec!["name".to_string(), "note".to_string()],
-                vec!["Doe, John".to_string(), "a \"quote\"".to_string()],
-            ]
-        );
-    }
-
-    #[test]
-    fn empty_text_is_zero_rows() {
-        assert_eq!(parse_csv_rows("").unwrap(), Vec::<Vec<String>>::new());
-    }
-
-    #[test]
-    fn unterminated_quote_is_rejected() {
-        assert!(parse_csv_rows("a,b\n\"oops,1\n").is_none());
-    }
-
-    #[test]
-    fn ragged_row_makes_the_table_none() {
-        let rows = parse_csv_rows("a,b\n1,2,3\n").unwrap();
-        assert!(rows_to_record_vector(rows).is_none());
-    }
-
-    #[test]
-    fn header_only_is_an_empty_table() {
-        let rows = parse_csv_rows("a,b\n").unwrap();
-        let v = rows_to_record_vector(rows).unwrap();
-        assert!(matches!(&v.data, ValueData::Vector(items) if items.is_empty()));
-    }
-
-    #[test]
-    fn round_trips_through_records() {
-        let csv = "a,b\n1,2\n3,4\n";
-        let value = rows_to_record_vector(parse_csv_rows(csv).unwrap()).unwrap();
-        assert_eq!(record_vector_to_csv(&value).as_deref(), Some(csv));
-    }
-
-    #[test]
-    fn round_trips_fields_needing_quotes() {
-        let csv = "name,note\n\"Doe, John\",\"a \"\"quote\"\"\"\n";
-        let value = rows_to_record_vector(parse_csv_rows(csv).unwrap()).unwrap();
-        assert_eq!(record_vector_to_csv(&value).as_deref(), Some(csv));
-    }
-
-    #[test]
-    fn stringify_rejects_a_non_table() {
-        assert!(record_vector_to_csv(&Value::from_int(5)).is_none());
-    }
-
-    #[test]
-    fn empty_vector_stringifies_to_empty_text() {
-        assert_eq!(
-            record_vector_to_csv(&vector_of(Vec::new())).as_deref(),
-            Some("")
-        );
-    }
-
-    #[test]
-    fn encode_field_quotes_only_when_needed() {
-        assert_eq!(encode_field("plain"), "plain");
-        assert_eq!(encode_field("a,b"), "\"a,b\"");
-        assert_eq!(encode_field("a\"b"), "\"a\"\"b\"");
-    }
-
-    // Execution-level tests: the words are reachable through IMPORT and drive
-    // the production interpreter path.
-
-    #[tokio::test]
-    async fn csv_round_trips_through_the_interpreter() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'a,b\n1,2\n3,4' 'DATA' IMPORT CSV-PARSE CSV-STRINGIFY PRINT")
-            .await
-            .unwrap();
-        assert_eq!(interp.collect_output().trim_end(), "a,b\n1,2\n3,4");
-    }
-
-    #[tokio::test]
-    async fn csv_parse_of_ragged_input_bubbles_to_nil() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'a,b\n1,2,3' 'DATA' IMPORT CSV-PARSE")
-            .await
-            .unwrap();
-        let top = interp.get_stack().last().expect("a value on the stack");
-        assert!(top.is_absent(), "expected a NIL, got {:?}", top);
-    }
-}
+mod tests;

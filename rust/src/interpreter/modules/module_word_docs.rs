@@ -69,6 +69,20 @@ const MODULE_WORD_DOCS: &[ModuleWordDoc] = &[
         role: "Pure table writer: the inverse of CSV-PARSE. A non-table or shape-mismatched input projects to a reasoned NIL.",
         stack_effect: "[ records ] -> [ text ]",
     },
+    ModuleWordDoc {
+        module: "DATA",
+        word: "SELECT",
+        summary: "Project a table onto the named columns, in order.",
+        role: "Pure column selection: an absent column yields a NIL (MissingField) cell so the result stays rectangular.",
+        stack_effect: "[ table ] [ columns ] -> [ table ]",
+    },
+    ModuleWordDoc {
+        module: "DATA",
+        word: "WHERE",
+        summary: "Keep the rows whose predicate on a named column is true.",
+        role: "Pure row selection: a false, UNKNOWN, or NIL (missing column) predicate result drops the row; the result is always a table.",
+        stack_effect: "[ table ] [ column ] [ predicate ] -> [ table ]",
+    },
     // ==================================================================
     // MUSIC
     // ==================================================================
