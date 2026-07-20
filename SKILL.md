@@ -308,6 +308,8 @@ program (then the short name works), or can be called fully qualified.
 | `JSON@EXPORT` | json (module) | Export stack top as JSON file download — needs `'JSON' IMPORT` (or call as `JSON@EXPORT`) |
 | `DATA@CSV-PARSE` | data (module) | Parse CSV text into a vector of Records — needs `'DATA' IMPORT` (or call as `DATA@CSV-PARSE`) |
 | `DATA@CSV-STRINGIFY` | data (module) | Convert a vector of Records into CSV text — needs `'DATA' IMPORT` (or call as `DATA@CSV-STRINGIFY`) |
+| `DATA@SELECT` | data (module) | Project a table onto the named columns — needs `'DATA' IMPORT` (or call as `DATA@SELECT`) |
+| `DATA@WHERE` | data (module) | Keep table rows whose column predicate is true — needs `'DATA' IMPORT` (or call as `DATA@WHERE`) |
 | `IO@INPUT` | io (module) | Read text from input buffer — needs `'IO' IMPORT` (or call as `IO@INPUT`) |
 | `IO@OUTPUT` | io (module) | Write value to output buffer — needs `'IO' IMPORT` (or call as `IO@OUTPUT`) |
 | `TIME@NOW` | time (module) | Get current Unix timestamp — needs `'TIME' IMPORT` (or call as `TIME@NOW`) |

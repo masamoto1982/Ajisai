@@ -3980,7 +3980,7 @@
       "spec_sections": [],
       "formalization_sections": [],
       "law_tests": [
-        "rust/src/interpreter/data_ops.rs"
+        "rust/src/interpreter/data_ops/tests.rs"
       ],
       "conformance_cases": [],
       "status": "Sketched",
@@ -4003,7 +4003,7 @@
       "spec_sections": [],
       "formalization_sections": [],
       "law_tests": [
-        "rust/src/interpreter/data_ops.rs"
+        "rust/src/interpreter/data_ops/tests.rs"
       ],
       "conformance_cases": [],
       "status": "Sketched",
@@ -4016,6 +4016,51 @@
         "algebra.bubble.domain"
       ],
       "algebraic_family": "exact-scalar",
+      "core_tier": "material"
+    },
+    {
+      "id": "module.data.select",
+      "kind": "moduleword",
+      "surface": "DATA@SELECT",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops/tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Projects a table (vector of Records) onto named columns; an absent column yields a NIL (MissingField) cell so the result stays rectangular. Experimental DATA module, Phase 8C unit 2.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "material"
+    },
+    {
+      "id": "module.data.where",
+      "kind": "moduleword",
+      "surface": "DATA@WHERE",
+      "classification": "Module",
+      "spec_sections": [],
+      "formalization_sections": [],
+      "law_tests": [
+        "rust/src/interpreter/data_ops/tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Sketched",
+      "notes": "Keeps table rows whose predicate on a named column is definitely true; a false, UNKNOWN, or NIL (missing column) result drops the row. Experimental DATA module, Phase 8C unit 2.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.k3.domain",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "dictionary",
       "core_tier": "material"
     },
     {
