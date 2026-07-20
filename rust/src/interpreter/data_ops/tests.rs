@@ -180,3 +180,43 @@ async fn select_of_a_non_table_bubbles_to_nil() {
     let top = interp.get_stack().last().expect("a value on the stack");
     assert!(top.is_absent(), "expected a NIL, got {:?}", top);
 }
+
+#[tokio::test]
+async fn group_partitions_rows_by_column_in_first_appearance_order() {
+    // GROUP yields one { key, rows } record per distinct column value; SELECT
+    // the keys back out to observe them.
+    let mut interp = Interpreter::new();
+    interp
+        .execute(
+            "'dept,name\neng,alice\nsales,bob\neng,carol' 'DATA' IMPORT \
+             CSV-PARSE 'dept' GROUP [ 'key' ] SELECT CSV-STRINGIFY PRINT",
+        )
+        .await
+        .unwrap();
+    assert_eq!(interp.collect_output().trim_end(), "key\neng\nsales");
+}
+
+#[tokio::test]
+async fn group_produces_one_group_per_distinct_value() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute(
+            "'dept,name\neng,alice\nsales,bob\neng,carol' 'DATA' IMPORT \
+             CSV-PARSE 'dept' GROUP",
+        )
+        .await
+        .unwrap();
+    let top = interp.get_stack().last().expect("a value on the stack");
+    assert_eq!(top.len(), 2, "expected 2 groups, got {:?}", top);
+}
+
+#[tokio::test]
+async fn group_of_a_non_table_bubbles_to_nil() {
+    let mut interp = Interpreter::new();
+    interp
+        .execute("[ 5 ] 'x' 'DATA' IMPORT GROUP")
+        .await
+        .unwrap();
+    let top = interp.get_stack().last().expect("a value on the stack");
+    assert!(top.is_absent(), "expected a NIL, got {:?}", top);
+}

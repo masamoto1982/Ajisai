@@ -12,6 +12,10 @@
 //! - `DATA@WHERE`  `[ table ] 'col' { pred } WHERE` → keep the rows whose
 //!   predicate on that column is true.
 //!
+//! Unit 3 — grouping:
+//! - `DATA@GROUP` `[ table ] 'col' GROUP` → a vector of `{ 'key' 'rows' }` group
+//!   records, one per distinct column value in first-appearance order.
+//!
 //! All are **pure transforms**: no file I/O (reading a file is left to the
 //! existing IO / Hosted capability), and a malformed input never raises — it
 //! projects to a reasoned Bubble/NIL, the same projection `JSON@PARSE` uses for
@@ -22,12 +26,13 @@
 //! keep a distinct reason: an absent column reads as NIL `MissingField`
 //! ("column does not exist", §15.3), never collapsed into a generic absence.
 
+mod query;
+
+pub use query::{op_group, op_select, op_where};
+
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::higher_order::{
-    execute_executable_code, extract_executable_code, ExecutableCode,
-};
 use crate::interpreter::value_extraction_helpers::value_as_string;
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::{AbsenceOrigin, Recoverability};
 use crate::types::record_shape::intern_record_shape;
 use crate::types::{Interpretation, Value, ValueData};
@@ -37,7 +42,7 @@ use std::sync::Arc;
 /// Read an argument `from_top` positions below the stack top. In keep mode the
 /// value is peeked (left in place); in consume mode the caller pops the top
 /// argument first, so each consumed read is `from_top == 0`.
-fn extract_stack_value(
+pub(super) fn extract_stack_value(
     interp: &mut Interpreter,
     keep_mode: bool,
     from_top: usize,
@@ -53,7 +58,7 @@ fn extract_stack_value(
     }
 }
 
-fn encoding_bubble() -> Value {
+pub(super) fn encoding_bubble() -> Value {
     Value::bubble_with_reason(
         NilReason::InvalidEncoding,
         AbsenceOrigin::InvalidEncoding,
@@ -86,164 +91,6 @@ pub fn op_csv_stringify(interp: &mut Interpreter) -> Result<()> {
         None => interp.stack.push(encoding_bubble()),
     }
     Ok(())
-}
-
-/// `DATA@SELECT`: `[ table ] [ columns ] SELECT` → a table keeping only the
-/// named columns, in the given order. A column absent from a row yields a cell
-/// that is NIL with reason `MissingField` (the "column does not exist" reason
-/// preserved, §15.3), so the result stays rectangular. A non-table input, a
-/// non-vector column list, or a non-Record row projects to a reasoned NIL.
-pub fn op_select(interp: &mut Interpreter) -> Result<()> {
-    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
-    if interp.stack.len() < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    let cols_val = extract_stack_value(interp, is_keep, 0)?;
-    let table_val = extract_stack_value(interp, is_keep, usize::from(is_keep))?;
-
-    interp
-        .stack
-        .push(select_columns(&table_val, &cols_val).unwrap_or_else(encoding_bubble));
-    Ok(())
-}
-
-/// `DATA@WHERE`: `[ table ] 'column' { predicate } WHERE` → the rows for which
-/// the predicate, run on that column's cell, is definitely true. A false,
-/// UNKNOWN, or NIL result drops the row (so a missing column — a NIL cell —
-/// drops the row, SQL-like). The result is always a table: no matching row
-/// yields an empty table, not NIL. A non-table input projects to a reasoned NIL.
-pub fn op_where(interp: &mut Interpreter) -> Result<()> {
-    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
-    let len = interp.stack.len();
-    if len < 3 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-    // Arguments from the top: predicate (0), column (1), table (2). Read by
-    // clone so the inputs stay in place until the run succeeds.
-    let code_val = interp.stack[len - 1].clone();
-    let col_val = interp.stack[len - 2].clone();
-    let table_val = interp.stack[len - 3].clone();
-
-    let executable = extract_executable_code(interp, &code_val)?;
-    let column = value_as_string(&col_val).unwrap_or_default();
-
-    let result = filter_rows(interp, &table_val, &column, &executable)?;
-
-    if !is_keep {
-        interp.stack.truncate(len - 3);
-    }
-    interp.stack.push(result);
-    Ok(())
-}
-
-/// Project each Record onto `columns`, filling an absent column with a
-/// reasoned NIL cell so every output row shares the requested shape.
-fn select_columns(table: &Value, columns: &Value) -> Option<Value> {
-    let ValueData::Vector(names) = &columns.data else {
-        return None;
-    };
-    let names: Vec<String> = names
-        .iter()
-        .map(|c| value_as_string(c).unwrap_or_default())
-        .collect();
-
-    let ValueData::Vector(rows) = &table.data else {
-        return None;
-    };
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows.iter() {
-        if !matches!(&row.data, ValueData::Record { .. }) {
-            return None;
-        }
-        let pairs = names
-            .iter()
-            .map(|name| pair_with_value(name, record_get(row, name)))
-            .collect();
-        out.push(build_record(pairs));
-    }
-    Some(vector_of(out))
-}
-
-/// Keep the rows whose predicate, run on `column`'s cell, is definitely true.
-/// Runs each predicate on a scratch stack, restoring the caller's stack and
-/// operation mode; a hard predicate error aborts and is propagated.
-fn filter_rows(
-    interp: &mut Interpreter,
-    table: &Value,
-    column: &str,
-    executable: &ExecutableCode,
-) -> Result<Value> {
-    let ValueData::Vector(rows) = &table.data else {
-        return Ok(encoding_bubble());
-    };
-    let rows: Vec<Value> = rows.iter().cloned().collect();
-
-    let saved_stack = std::mem::take(&mut interp.stack);
-    let saved_target = interp.operation_target_mode;
-    let saved_no_change_check = interp.disable_no_change_check;
-    interp.operation_target_mode = OperationTargetMode::StackTop;
-    interp.disable_no_change_check = true;
-
-    let mut kept = Vec::new();
-    let mut error = None;
-    for row in &rows {
-        interp.stack.clear();
-        interp.stack.push(record_get(row, column));
-        match execute_executable_code(interp, executable) {
-            Ok(()) => {
-                if interp.stack.pop().as_ref().is_some_and(is_definitely_true) {
-                    kept.push(row.clone());
-                }
-            }
-            Err(e) => {
-                error = Some(e);
-                break;
-            }
-        }
-    }
-
-    interp.operation_target_mode = saved_target;
-    interp.disable_no_change_check = saved_no_change_check;
-    interp.stack = saved_stack;
-
-    match error {
-        Some(e) => Err(e),
-        None => Ok(vector_of(kept)),
-    }
-}
-
-/// A predicate result keeps its row only when it is a definite truth: a `true`
-/// Boolean or a non-zero number. `false`, the logical UNKNOWN, and any NIL all
-/// read as "not selected".
-fn is_definitely_true(value: &Value) -> bool {
-    if let Some(b) = value.as_truth() {
-        return b;
-    }
-    value.as_scalar().is_some_and(|f| !f.is_zero())
-}
-
-/// The value stored under `column` in a Record, or a NIL cell carrying reason
-/// `MissingField` when the column is absent (§15.3: "column does not exist").
-fn record_get(record: &Value, column: &str) -> Value {
-    if let ValueData::Record { pairs, .. } = &record.data {
-        for pair in pairs.iter() {
-            if let ValueData::Vector(kv) = &pair.data {
-                if kv.len() == 2 && value_as_string(&kv[0]).unwrap_or_default() == column {
-                    return kv[1].clone();
-                }
-            }
-        }
-    }
-    Value::nil_with_reason(NilReason::MissingField)
-}
-
-/// A `[ key value ]` pair from a string key and an already-built value.
-fn pair_with_value(key: &str, value: Value) -> Value {
-    Value {
-        data: ValueData::Vector(Arc::new(vec![Value::from_string(key), value])),
-        hint: Interpretation::Unassigned,
-        absence: None,
-    }
 }
 
 // --- pure CSV core (RFC 4180), independent of the interpreter ---------------
@@ -388,7 +235,7 @@ fn make_pair(key: &str, value: &str) -> Value {
     }
 }
 
-fn build_record(pairs: Vec<Value>) -> Value {
+pub(super) fn build_record(pairs: Vec<Value>) -> Value {
     let mut index: HashMap<String, usize> = HashMap::new();
     for (i, pair) in pairs.iter().enumerate() {
         if let ValueData::Vector(kv) = &pair.data {
@@ -407,7 +254,7 @@ fn build_record(pairs: Vec<Value>) -> Value {
     }
 }
 
-fn vector_of(items: Vec<Value>) -> Value {
+pub(super) fn vector_of(items: Vec<Value>) -> Value {
     Value {
         data: ValueData::Vector(Arc::new(items)),
         hint: Interpretation::Unassigned,

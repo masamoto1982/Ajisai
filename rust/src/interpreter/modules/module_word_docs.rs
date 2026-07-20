@@ -83,6 +83,13 @@ const MODULE_WORD_DOCS: &[ModuleWordDoc] = &[
         role: "Pure row selection: a false, UNKNOWN, or NIL (missing column) predicate result drops the row; the result is always a table.",
         stack_effect: "[ table ] [ column ] [ predicate ] -> [ table ]",
     },
+    ModuleWordDoc {
+        module: "DATA",
+        word: "GROUP",
+        summary: "Group rows by a column into { key, rows } group records.",
+        role: "Pure grouping: one group per distinct column value, in first-appearance order; absent-column rows share the NIL-keyed group.",
+        stack_effect: "[ table ] [ column ] -> [ groups ]",
+    },
     // ==================================================================
     // MUSIC
     // ==================================================================
