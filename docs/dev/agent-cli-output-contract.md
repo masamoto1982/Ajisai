@@ -17,6 +17,7 @@ ajisai repl [--json]  # interactive session; stack and definitions persist (§16
 ajisai test <file-or-dir> [--json]  # run test files, check `#@` directives (§18)
 ajisai build <dir>  # run a project (ajisai.toml); confine to allowed capabilities; verify ajisai.lock (§19)
 ajisai lock <dir> [--check]  # write/verify ajisai.lock: realized identities + required capabilities (§19)
+ajisai new <dir>  # scaffold a new project: ajisai.toml + a runnable src/main.ajisai (§19)
 ajisai version [--json]
 ```
 
@@ -793,3 +794,17 @@ With `--check`, the lockfile is verified rather than written.
 | 0 | Wrote `ajisai.lock` (default), or it was already current (`--check`). |
 | 1 | The project failed to run, or (`--check`) the lockfile is stale or missing. |
 | 2 | A project setup error, or the lockfile could not be written. |
+
+### `ajisai new <dir>`
+
+Scaffolds a new project at `<dir>`: an `ajisai.toml` (a valid instance of the
+manifest format above, naming the project after the final path component and
+allowing the `effect` capability) and a runnable `src/main.ajisai`. The
+generated project builds and locks immediately — `ajisai build <dir>` succeeds
+straight away. It refuses to overwrite: an existing `<dir>` is a usage error.
+This writes template files only; it never executes.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Scaffolded the project. |
+| 2 | Usage error: an unsafe project name, an existing path, or an I/O failure. |

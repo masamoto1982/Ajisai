@@ -37,6 +37,7 @@ mod manifest_tests;
 mod modifier;
 #[cfg(test)]
 mod modifier_tests;
+mod new_project;
 mod plan_check;
 #[cfg(test)]
 mod plan_check_tests;
@@ -94,6 +95,8 @@ Commands:
   lock <dir> [--check]            Write ajisai.lock with the project's realized
                                   source/word identities and required
                                   capabilities. --check verifies it is current
+  new <dir>                       Scaffold a new project (ajisai.toml + a
+                                  runnable src/main.ajisai) at <dir>
   repl [--json]                   Interactive session; stack and definitions
                                   persist. :help for commands, :quit to leave
   version [--json]                Print version information
@@ -183,6 +186,7 @@ pub fn run(args: &[String]) -> i32 {
         ("test", [path]) => test_runner::cmd_test(path, &opts),
         ("build", [path]) => project::cmd_build(path, &opts),
         ("lock", [path]) => project::cmd_lock(path, &opts),
+        ("new", [path]) => new_project::cmd_new(path),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
