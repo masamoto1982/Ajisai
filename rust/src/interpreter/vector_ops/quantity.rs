@@ -6,6 +6,7 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::Stack;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
@@ -109,7 +110,7 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
             };
 
             if is_keep_mode {
-                let taken: Vec<Value> = interp.stack[start..end].to_vec();
+                let taken: Vec<Value> = interp.stack.as_slice()[start..end].to_vec();
                 interp.stack.extend(taken);
             } else if count < 0 {
                 interp.stack = interp.stack.split_off(start);
@@ -222,9 +223,9 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                     result_stack.push(Value::from_vector(chunk));
                 }
                 if !remaining_stack.is_empty() {
-                    result_stack.push(Value::from_vector(remaining_stack));
+                    result_stack.push(Value::from_vector(remaining_stack.into_values()));
                 }
-                interp.stack = result_stack;
+                interp.stack = Stack::from_values(result_stack);
             }
             Ok(())
         }

@@ -69,7 +69,6 @@ fn run_cond_core(
     let target_value: Value = match interp.consumption_mode {
         ConsumptionMode::Consume => {
             let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let _ = interp.semantic_registry.pop_hint();
             val
         }
         ConsumptionMode::Keep => interp
@@ -150,7 +149,6 @@ fn collect_top_code_blocks(interp: &mut Interpreter) -> Vec<Vec<Token>> {
         .is_some_and(|v| matches!(v.data, ValueData::CodeBlock(_)))
     {
         let value = interp.stack.pop().expect("checked by last()");
-        let _ = interp.semantic_registry.pop_hint();
         if let ValueData::CodeBlock(tokens) = value.data {
             blocks.push(tokens);
         }
@@ -257,11 +255,9 @@ fn evaluate_guard_isolated(
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
     interp.stack.clear();
-    interp.semantic_registry.clear();
-    interp.stack.push(value.clone());
     interp
-        .semantic_registry
-        .push_hint(Interpretation::Unassigned);
+        .stack
+        .push_with_role(value.clone(), Interpretation::Unassigned);
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
@@ -451,8 +447,9 @@ fn execute_cond_body(
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
 
     interp.stack.clear();
-    interp.stack.push(value.clone());
-    interp.semantic_registry.stack_hints = vec![Interpretation::Unassigned];
+    interp
+        .stack
+        .push_with_role(value.clone(), Interpretation::Unassigned);
     interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
@@ -471,8 +468,11 @@ fn execute_cond_body(
         interp.execute_section_core(body_tokens, 0).map(|_| ())
     };
     interp.in_tail_context = false;
-    let body_result_hint: Interpretation = interp.semantic_registry.pop_hint();
-    let body_result_value: Option<Value> = interp.stack.pop();
+    let (body_result_value, body_result_hint): (Option<Value>, Interpretation) =
+        match interp.stack.pop_slot() {
+            Some((value, role)) => (Some(value), role),
+            None => (None, Interpretation::Unassigned),
+        };
 
     interp.replace_semantic_stack(saved_stack);
     interp.operation_target_mode = saved_target_mode;
@@ -481,8 +481,7 @@ fn execute_cond_body(
     execution_result?;
     let result_value: Value =
         body_result_value.ok_or_else(|| AjisaiError::from("COND: body must return a value"))?;
-    interp.stack.push(result_value);
-    interp.semantic_registry.push_hint(body_result_hint);
+    interp.stack.push_with_role(result_value, body_result_hint);
     Ok(())
 }
 

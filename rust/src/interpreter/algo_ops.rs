@@ -76,9 +76,7 @@ pub fn op_contains(interp: &mut Interpreter) -> Result<()> {
     let (vector, target) = pop_vector_and_target(interp, "CONTAINS")?;
     let found = vector.iter().any(|elem| elem == &target);
     interp.stack.push(Value::from_bool(found));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::TruthValue);
+    interp.stack.set_last_role(Interpretation::TruthValue);
     Ok(())
 }
 
@@ -91,9 +89,7 @@ pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
     match vector.iter().position(|elem| elem == &target) {
         Some(index) => {
             push_result(interp, Value::from_int(index as i64));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
         }
         None => {
             push_result(

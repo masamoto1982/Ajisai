@@ -368,9 +368,7 @@ pub fn op_json_has(interp: &mut Interpreter) -> Result<()> {
     });
 
     interp.stack.push(Value::from_bool(found));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::TruthValue);
+    interp.stack.set_last_role(Interpretation::TruthValue);
     Ok(())
 }
 

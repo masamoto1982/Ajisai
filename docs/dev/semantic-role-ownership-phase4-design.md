@@ -1,6 +1,6 @@
 # Phase 4: semantic role ownership design memo
 
-Status: `[提案・未実施]`。この文書は `docs/dev/` の設計メモであり、Ajisai の意味論を定義しない。正典は `SPECIFICATION.html` のみである。
+Status: `[実施済み・候補案 A 採用]`。この文書は `docs/dev/` の設計メモであり、Ajisai の意味論を定義しない。正典は `SPECIFICATION.html` のみである。実施結果は `semantic-role-ownership-phase4-migration-handoff.md` の「完了記録」を参照。
 
 > **残移行（4C–4G）の具体的な調査結果・設計・段階手順・検証ゲートは
 > `docs/dev/semantic-role-ownership-phase4-migration-handoff.md`（作業引継書）に集約した。**

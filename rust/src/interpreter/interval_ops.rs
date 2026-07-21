@@ -55,8 +55,9 @@ pub(crate) fn op_interval(interp: &mut Interpreter) -> Result<()> {
         .ok_or_else(|| AjisaiError::from("INTERVAL: upper bound must be scalar"))?
         .clone();
     let interval = Interval::new(lo, hi)?;
-    interp.stack.push(Value::from_interval(interval));
-    interp.semantic_registry.push_hint(Interpretation::Interval);
+    interp
+        .stack
+        .push_with_role(Value::from_interval(interval), Interpretation::Interval);
     Ok(())
 }
 
@@ -72,8 +73,8 @@ pub(crate) fn op_to_cf(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
     interp
-        .semantic_registry
-        .update_hint_at(len - 1, Interpretation::ContinuedFraction);
+        .stack
+        .set_role_at(len - 1, Interpretation::ContinuedFraction);
     Ok(())
 }
 
@@ -105,9 +106,7 @@ pub(crate) fn op_is_exact(interp: &mut Interpreter) -> Result<()> {
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("IS_EXACT: expected Number or Interval"))?;
     interp.stack.push(Value::from_bool(interval.is_exact()));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::TruthValue);
+    interp.stack.set_last_role(Interpretation::TruthValue);
     Ok(())
 }
 
@@ -132,9 +131,7 @@ where
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("interval accessor: expected Number or Interval"))?;
     interp.stack.push(Value::from_fraction(f(interval)));
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::RawNumber);
+    interp.stack.set_last_role(Interpretation::RawNumber);
     Ok(())
 }
 
@@ -157,17 +154,16 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
         match ExactReal::from_sqrt_rational(f.clone()) {
             Some(er) => {
                 // from_exact_real already collapses Rational variants to Scalar(Fraction)
-                interp.stack.push(Value::from_exact_real(er));
                 interp
-                    .semantic_registry
-                    .push_hint(Interpretation::RawNumber);
+                    .stack
+                    .push_with_role(Value::from_exact_real(er), Interpretation::RawNumber);
             }
             None => {
                 // Negative input → NIL
-                interp
-                    .stack
-                    .push(Value::nil_with_reason(NilReason::DivisionByZero));
-                interp.semantic_registry.push_hint(Interpretation::Nil);
+                interp.stack.push_with_role(
+                    Value::nil_with_reason(NilReason::DivisionByZero),
+                    Interpretation::Nil,
+                );
             }
         }
         return Ok(());
@@ -183,8 +179,9 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
     } else {
         Interpretation::Interval
     };
-    interp.stack.push(interval_to_value(result));
-    interp.semantic_registry.push_hint(out_hint);
+    interp
+        .stack
+        .push_with_role(interval_to_value(result), out_hint);
     Ok(())
 }
 
@@ -205,8 +202,9 @@ pub(crate) fn op_sqrt_eps(interp: &mut Interpreter) -> Result<()> {
     } else {
         Interpretation::Interval
     };
-    interp.stack.push(interval_to_value(result));
-    interp.semantic_registry.push_hint(out_hint);
+    interp
+        .stack
+        .push_with_role(interval_to_value(result), out_hint);
     Ok(())
 }
 

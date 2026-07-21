@@ -381,9 +381,6 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
 }
 
 fn post_call_cleanup(interp: &mut Interpreter, name: &str) {
-    interp
-        .semantic_registry
-        .normalize_to_stack_len(interp.stack.len());
     if !modules::is_mode_preserving_word(name) {
         interp.reset_execution_modes();
     }
@@ -450,22 +447,24 @@ fn execute_compiled_line(
         }
         match op {
             CompiledOp::PushLiteral(v) => {
-                interp.stack.push(v.clone());
+                // The legacy path normalized the new slot's role to `Unassigned`
+                // (it grew the value vector, then padded roles), so a compiled
+                // literal is role-neutral regardless of the value's own hint.
+                // Preserve that exactly.
                 interp
-                    .semantic_registry
-                    .normalize_to_stack_len(interp.stack.len());
+                    .stack
+                    .push_with_role(v.clone(), Interpretation::Unassigned);
             }
             CompiledOp::PushVectorLiteral(v, hint) => {
                 // Match `execute_section_core`'s VectorStart handling exactly:
                 // push the prebuilt vector and its element hint.
-                interp.stack.push(v.clone());
-                interp.semantic_registry.push_hint(*hint);
+                interp.stack.push_with_role(v.clone(), *hint);
             }
             CompiledOp::PushCodeBlock(tokens) => {
-                interp.stack.push(Value::from_code_block(tokens.clone()));
-                interp
-                    .semantic_registry
-                    .normalize_to_stack_len(interp.stack.len());
+                interp.stack.push_with_role(
+                    Value::from_code_block(tokens.clone()),
+                    Interpretation::Unassigned,
+                );
             }
             CompiledOp::SetTargetModeStackTop => {
                 interp.update_operation_target_mode(OperationTargetMode::StackTop)
@@ -479,26 +478,30 @@ fn execute_compiled_line(
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {
                 execute_compiled_call(interp, call)?;
+                // Mirror the interpreted loop: retag the top role from the
+                // word-hint table so the compiled route leaves the same
+                // `(value, role)` observation (SPEC §12).
+                super::execution_loop::apply_word_hint_override(interp, &call.name);
                 // `post_call_cleanup` with the mode-preservation answer
                 // precomputed at compile time (no per-call uppercase scan).
-                interp
-                    .semantic_registry
-                    .normalize_to_stack_len(interp.stack.len());
                 if !call.mode_preserving {
                     interp.reset_execution_modes();
                 }
             }
             CompiledOp::CondDispatch(clauses) => {
                 super::control_cond::op_cond_dispatch(interp, clauses)?;
+                super::execution_loop::apply_word_hint_override(interp, "COND");
                 post_call_cleanup(interp, "COND");
             }
             CompiledOp::CallUserWord(name) => {
                 interp.execute_word_core(name)?;
+                super::execution_loop::apply_word_hint_override(interp, name);
                 post_call_cleanup(interp, name);
             }
             CompiledOp::CallQualifiedWord { namespace, word } => {
                 let full_name = format!("{}@{}", namespace, word);
                 interp.execute_word_core(&full_name)?;
+                super::execution_loop::apply_word_hint_override(interp, &full_name);
                 post_call_cleanup(interp, &full_name);
             }
             CompiledOp::BeginGuardedBlock

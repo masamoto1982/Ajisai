@@ -4,6 +4,7 @@ use crate::interpreter::cast::cast_value_helpers::{
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
@@ -56,7 +57,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
             for elem in elements {
                 if elem.is_nil() {
-                    interp.stack = results;
+                    interp.stack = Stack::from_values(results);
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("CHARS: expected String, got Nil"));
                 }
@@ -64,7 +65,7 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 if is_string_value(&elem) {
                     let s = value_as_string(&elem).unwrap_or_default();
                     if s.is_empty() {
-                        interp.stack = results;
+                        interp.stack = Stack::from_values(results);
                         interp.stack.push(elem);
                         return Err(AjisaiError::from("CHARS: expected non-empty String"));
                     }
@@ -77,23 +78,23 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
                 }
 
                 if is_number_value(&elem) {
-                    interp.stack = results;
+                    interp.stack = Stack::from_values(results);
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("CHARS: expected String, got Number"));
                 }
 
                 if is_boolean_value(&elem) {
-                    interp.stack = results;
+                    interp.stack = Stack::from_values(results);
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
                 }
 
-                interp.stack = results;
+                interp.stack = Stack::from_values(results);
                 interp.stack.push(elem);
                 return Err(AjisaiError::from("CHARS: expected String input"));
             }
 
-            interp.stack = results;
+            interp.stack = Stack::from_values(results);
             Ok(())
         }
     }
@@ -186,14 +187,14 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
 
             for elem in elements {
                 if elem.is_nil() {
-                    interp.stack = results;
+                    interp.stack = Stack::from_values(results);
                     interp.stack.push(elem);
                     return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
                 }
 
                 if let Some(children) = elem.as_vector_view() {
                     if children.is_empty() {
-                        interp.stack = results;
+                        interp.stack = Stack::from_values(results);
                         interp.stack.push(elem);
                         return Err(AjisaiError::from(
                             "JOIN: empty vector has no strings to join",
@@ -220,7 +221,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                                     }
                                 }
                             }
-                            interp.stack = results;
+                            interp.stack = Stack::from_values(results);
                             interp.stack.push(elem);
                             return Err(AjisaiError::from(format!(
                                 "JOIN: invalid character code at index {}",
@@ -235,7 +236,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         } else {
                             "other format"
                         };
-                        interp.stack = results;
+                        interp.stack = Stack::from_values(results);
                         interp.stack.push(elem);
                         return Err(AjisaiError::from(format!(
                             "JOIN: all elements must be strings, found {} at index {}",
@@ -258,7 +259,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 } else {
                     "other format"
                 };
-                interp.stack = results;
+                interp.stack = Stack::from_values(results);
                 interp.stack.push(elem);
                 return Err(AjisaiError::from(format!(
                     "JOIN: requires vector format, got {}",
@@ -266,7 +267,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                 )));
             }
 
-            interp.stack = results;
+            interp.stack = Stack::from_values(results);
             Ok(())
         }
     }

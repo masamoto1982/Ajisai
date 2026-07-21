@@ -180,7 +180,7 @@ fn peek_operands(interp: &Interpreter, count: usize) -> Result<Vec<Value>> {
     if len < count {
         return Err(AjisaiError::StackUnderflow);
     }
-    Ok(interp.stack[len - count..].to_vec())
+    Ok(interp.stack.as_slice()[len - count..].to_vec())
 }
 
 /// Consume the operands (only in `Consume` mode) and push the constructed value.

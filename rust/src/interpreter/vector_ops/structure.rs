@@ -136,9 +136,12 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 
     let values_to_concat: Vec<Value> = if is_keep_mode {
         let stack_len = interp.stack.len();
-        interp.stack[stack_len - abs_count..].to_vec()
+        interp.stack.as_slice()[stack_len - abs_count..].to_vec()
     } else {
-        interp.stack.split_off(interp.stack.len() - abs_count)
+        interp
+            .stack
+            .split_off(interp.stack.len() - abs_count)
+            .into_values()
     };
 
     if is_keep_mode {
@@ -354,7 +357,10 @@ pub fn op_collect(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let collected: Vec<Value> = interp.stack.split_off(interp.stack.len() - count);
+    let collected: Vec<Value> = interp
+        .stack
+        .split_off(interp.stack.len() - count)
+        .into_values();
 
     interp.stack.push(Value::from_vector(collected));
     Ok(())

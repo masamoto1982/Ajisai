@@ -3,6 +3,7 @@ use super::hedged::execute_hedged_map_kernel;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::{Interpretation, Token, Value};
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
@@ -97,7 +98,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             };
 
             let mut results: Vec<Value> = Vec::with_capacity(n_elements);
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -149,10 +150,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         interp.stack.clear();
                         interp.stack.push(elem);
                         match execute_executable_code(interp, &executable) {
-                            Ok(_) => match interp.stack.pop() {
-                                Some(result_val) => {
-                                    let result_hint: Interpretation =
-                                        interp.semantic_registry.pop_hint();
+                            Ok(_) => match interp.stack.pop_slot() {
+                                Some((result_val, result_hint)) => {
                                     let is_string_result = result_hint == Interpretation::Text
                                         || result_val.hint == Interpretation::Text;
                                     if is_vector_value(&result_val)
@@ -216,7 +215,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;

@@ -40,10 +40,7 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     if interp.operation_target_mode == OperationTargetMode::StackTop
-        && matches!(
-            interp.semantic_registry.lookup_last_hint(),
-            Interpretation::Text
-        )
+        && matches!(interp.stack.last_role(), Interpretation::Text)
     {
         return Err(AjisaiError::create_structure_error("numeric index", "text"));
     }

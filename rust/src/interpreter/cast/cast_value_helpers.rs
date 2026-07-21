@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value, ValueData};
+use crate::types::{Interpretation, Stack, Value, ValueData};
 
 pub(crate) fn is_string_value(val: &Value) -> bool {
     is_string_value_with_hint(val, Interpretation::Unassigned)
@@ -93,7 +93,7 @@ pub(crate) fn apply_unary_cast(
 
     match interp.operation_target_mode {
         OperationTargetMode::StackTop => {
-            let hint: Interpretation = interp.semantic_registry.lookup_last_hint();
+            let hint: Interpretation = interp.stack.last_role();
             let value: Value = if is_keep_mode {
                 interp
                     .stack
@@ -106,12 +106,16 @@ pub(crate) fn apply_unary_cast(
 
             match convert(&value, hint) {
                 Ok(result) => {
-                    interp.stack.push(result);
+                    // A unary cast is value-preserving on the semantic plane: the
+                    // slot keeps its prior plane role (e.g. `>CF` retagging).
+                    // Core casts that do change the role (STR/NUM/…) are re-tagged
+                    // afterward by `apply_word_hint_override`.
+                    interp.stack.push_with_role(result, hint);
                     Ok(())
                 }
                 Err(error) => {
                     if !is_keep_mode {
-                        interp.stack.push(value);
+                        interp.stack.push_with_role(value, hint);
                     }
                     Err(error)
                 }
@@ -122,35 +126,34 @@ pub(crate) fn apply_unary_cast(
                 return Err(AjisaiError::StackUnderflow);
             }
 
+            // Roles are captured before any drain so a value-preserving cast can
+            // carry each slot's prior plane role onto its converted value.
+            let hints: Vec<Interpretation> = interp.stack.roles().to_vec();
             if is_keep_mode {
                 let originals: Vec<Value> = interp.stack.to_vec();
-                let hints: Vec<Interpretation> = (0..originals.len())
-                    .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
-                    .collect();
                 let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
                 for (idx, value) in originals.iter().enumerate() {
                     converted.push(convert(value, hints[idx])?);
                 }
-                interp.stack.extend(converted);
+                for (idx, result) in converted.into_iter().enumerate() {
+                    interp.stack.push_with_role(result, hints[idx]);
+                }
                 Ok(())
             } else {
                 let originals: Vec<Value> = interp.stack.drain(..).collect();
-                let hints: Vec<Interpretation> = (0..originals.len())
-                    .map(|idx| interp.semantic_registry.lookup_hint_at(idx))
-                    .collect();
                 let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
 
                 for (idx, value) in originals.iter().enumerate() {
                     match convert(value, hints[idx]) {
                         Ok(result) => converted.push(result),
                         Err(error) => {
-                            interp.stack = originals;
+                            interp.stack = Stack::from_values_and_roles(originals, hints);
                             return Err(error);
                         }
                     }
                 }
 
-                interp.stack = converted;
+                interp.stack = Stack::from_values_and_roles(converted, hints);
                 Ok(())
             }
         }

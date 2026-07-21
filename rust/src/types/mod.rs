@@ -8,6 +8,7 @@ mod fraction_mcdc_tests;
 pub mod interval;
 pub mod record_shape;
 pub mod semantic_stack;
+pub mod stack;
 mod value_operations;
 pub(crate) mod value_protocol;
 #[cfg(test)]
@@ -16,6 +17,7 @@ mod value_protocol_tests;
 use self::fraction::Fraction;
 pub use self::record_shape::RecordShape;
 pub use self::semantic_stack::{SemanticStack, SemanticStackError, StackSlot};
+pub use self::stack::Stack;
 use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
@@ -528,8 +530,11 @@ impl PartialEq for Value {
     }
 }
 
+/// Flow-plane semantic metadata that is keyed by value identity rather than by
+/// stack position. Top-level stack-position roles moved to [`Stack`] in Phase 4
+/// (single authority, SPEC §12); this registry retains only the value-id-keyed
+/// nested extensions, which are out of scope for that migration.
 pub struct SemanticRegistry {
-    pub stack_hints: Vec<Interpretation>,
     pub flow_hints: HashMap<u64, Interpretation>,
     pub flow_extensions: HashMap<u64, Box<dyn ValueExt>>,
 }
@@ -537,7 +542,6 @@ pub struct SemanticRegistry {
 impl std::fmt::Debug for SemanticRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SemanticRegistry")
-            .field("stack_hints_len", &self.stack_hints.len())
             .field("flow_hints_len", &self.flow_hints.len())
             .field("flow_extensions_len", &self.flow_extensions.len())
             .finish()
@@ -547,66 +551,9 @@ impl std::fmt::Debug for SemanticRegistry {
 impl SemanticRegistry {
     pub fn new() -> Self {
         SemanticRegistry {
-            stack_hints: Vec::new(),
             flow_hints: HashMap::new(),
             flow_extensions: HashMap::new(),
         }
-    }
-
-    pub fn push_hint(&mut self, hint: Interpretation) {
-        self.stack_hints.push(hint);
-    }
-
-    pub fn pop_hint(&mut self) -> Interpretation {
-        self.stack_hints.pop().unwrap_or(Interpretation::Unassigned)
-    }
-
-    pub fn lookup_hint_at(&self, index: usize) -> Interpretation {
-        self.stack_hints
-            .get(index)
-            .copied()
-            .unwrap_or(Interpretation::Unassigned)
-    }
-
-    pub fn update_hint_at(&mut self, index: usize, hint: Interpretation) {
-        if index < self.stack_hints.len() {
-            self.stack_hints[index] = hint;
-        }
-    }
-
-    pub fn lookup_last_hint(&self) -> Interpretation {
-        self.stack_hints
-            .last()
-            .copied()
-            .unwrap_or(Interpretation::Unassigned)
-    }
-
-    pub fn truncate(&mut self, len: usize) {
-        self.stack_hints.truncate(len);
-    }
-
-    pub fn clear(&mut self) {
-        self.stack_hints.clear();
-    }
-
-    pub fn len(&self) -> usize {
-        self.stack_hints.len()
-    }
-
-    pub fn normalize_to_stack_len(&mut self, stack_len: usize) {
-        while self.stack_hints.len() < stack_len {
-            self.stack_hints.push(Interpretation::Unassigned);
-        }
-        self.stack_hints.truncate(stack_len);
-    }
-
-    pub fn collect_last_hints(&mut self, count: usize) -> Vec<Interpretation> {
-        let start = self.stack_hints.len().saturating_sub(count);
-        self.stack_hints.drain(start..).collect()
-    }
-
-    pub fn extend_hints(&mut self, hints: impl IntoIterator<Item = Interpretation>) {
-        self.stack_hints.extend(hints);
     }
 }
 
@@ -716,8 +663,6 @@ pub struct WordDefinition {
     pub registration_order: u64,
     pub execution_plans: Option<Arc<crate::interpreter::execution_plan_set::ExecutionPlanSet>>,
 }
-
-pub type Stack = Vec<Value>;
 
 #[cfg(test)]
 mod sparse_tensor_tests {

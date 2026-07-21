@@ -191,7 +191,7 @@ pub fn run(src: &str) -> Vec<Value> {
             .execute(program)
             .await
             .unwrap_or_else(|e| panic!("program failed: {src:?}: {e}"));
-        interp.get_stack().clone()
+        interp.get_stack().to_vec()
     })
 }
 

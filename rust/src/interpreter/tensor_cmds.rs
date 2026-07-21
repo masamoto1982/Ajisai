@@ -28,10 +28,7 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
         .stack
         .push(Value::nil_with_reason(NilReason::Undecidable));
     let stack_len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(stack_len);
-    interp
-        .semantic_registry
-        .update_hint_at(stack_len - 1, Interpretation::Nil);
+    interp.stack.set_role_at(stack_len - 1, Interpretation::Nil);
 }
 
 use super::tensor_ops::{
