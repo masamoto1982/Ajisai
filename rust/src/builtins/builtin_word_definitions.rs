@@ -1841,6 +1841,9 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
 /// Position 1 (`hover_summary`) is the native button-title text;
 /// position 2 (`hover_syntax`) is the inline word-info preview.
 /// See three-layer-documentation-model.md §4.
+///
+/// Consumed only by the wasm bindings (feature = "wasm").
+#[cfg_attr(not(feature = "wasm"), allow(dead_code))]
 pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
     BUILTIN_SPECS
         .iter()

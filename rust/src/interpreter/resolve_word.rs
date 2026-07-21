@@ -42,12 +42,16 @@ impl Interpreter {
         }
     }
 
+    // Consumed only by the wasm bindings (feature = "wasm"); present but unused
+    // in a default build, so the dead-code lint is allowed there only.
+    #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
     pub(crate) fn user_dictionary_names(&self) -> Vec<String> {
         let mut names: Vec<_> = self.user_dictionaries.keys().cloned().collect();
         names.sort();
         names
     }
 
+    #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
     pub(crate) fn user_dictionary_words(
         &self,
         dictionary_name: &str,
