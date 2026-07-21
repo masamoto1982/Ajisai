@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:ef1255a9e8a3079ae7b2944455939a4f82a104b45f66f4167ce2eb18e24507f6",
-  "fileCount": 342,
+  "rootIdentity": "sha256:e5cf38e1fb065e14258ba5a6e8afc3846a12c3e42e6cce68627a61a264b3f4a4",
+  "fileCount": 343,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -34,8 +34,8 @@
     },
     {
       "path": ".github/workflows/test.yml",
-      "sha256": "0bf5fb195c60ddaf5b45fba656487c4943cc77f7ea452952fa3884b41c82d367",
-      "bytes": 11087
+      "sha256": "ba1f0c90a21eaef2591b4a652dc1fc61c03fd3332fc434bd115966a952dedfef",
+      "bytes": 11386
     },
     {
       "path": "SPECIFICATION.html",
@@ -49,8 +49,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "1b53279b4f58377220a04184f9bd70157d69e4aabcf1e2d3ad5a285d4536562f",
-      "bytes": 2764
+      "sha256": "dec0b01db7648147ff8a83f712761c6ddb1d4c9b0434f2160a2d4f2a971c1c83",
+      "bytes": 2835
     },
     {
       "path": "rust/Cargo.toml",
@@ -1324,8 +1324,8 @@
     },
     {
       "path": "scripts/check-file-size-budget.mjs",
-      "sha256": "8253a90d85e468fcc460f279854b9ae9d91460da8f452370aba3cb140640f483",
-      "bytes": 5757
+      "sha256": "6bf5979b935762e62a39617777c3a07196d387821a693eec4d15fd4b5bb936fa",
+      "bytes": 5777
     },
     {
       "path": "scripts/check-formalization-coverage.mjs",
@@ -1336,6 +1336,11 @@
       "path": "scripts/check-semantic-firewall.sh",
       "sha256": "dbd89ed5c04f167e4279ebfbc2219b3f00b305900538c73b3be00be896c1240c",
       "bytes": 3334
+    },
+    {
+      "path": "scripts/check-traceability-paths.mjs",
+      "sha256": "003b4b023a06432ef889fed69ca40cd8fab24300970d0471c4fba24a01626423",
+      "bytes": 2014
     },
     {
       "path": "scripts/compare-perf.sh",
