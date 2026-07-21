@@ -67,6 +67,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install ripgrep
+        # The semantic firewall greps the source with ripgrep. The runner does
+        # not ship it, and without it the firewall would pass without scanning
+        # (the script now hard-fails if rg is absent), so install it explicitly.
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Semantic firewall
         run: npm run check:semantic-firewall
 

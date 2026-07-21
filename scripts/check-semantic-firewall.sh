@@ -3,6 +3,16 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Every check runs through ripgrep. Without it, each `if rg ...; then FAIL`
+# condition is a "command not found" (non-zero), the FAIL branch never runs, and
+# the whole firewall would pass VACUOUSLY without scanning anything. Fail loudly
+# instead so a runner missing ripgrep is a visible error, never a silent pass.
+if ! command -v rg >/dev/null 2>&1; then
+  echo "[semantic-firewall] ERROR: ripgrep (rg) is required but not installed;" >&2
+  echo "[semantic-firewall] without it these checks would pass without scanning." >&2
+  exit 1
+fi
+
 failed=0
 
 check_absent() {
