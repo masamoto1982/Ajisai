@@ -931,7 +931,7 @@ Version: <strong>2026-07-15</strong></p>
 </table>
 </div>
 
-<p><strong><code>VENT</code> (<code>^</code>) is a lazy control directive, not a stack-consuming word (normative).</strong> Like the COND clause separator <code>|</code> (Section 7.7.1), the source form is the <code>^</code> sugar, which the tokenizer emits as a dedicated control token; the fallback it guards is the code that <em>follows</em> <code>^</code> in the source, not a value already resting on the stack. The earlier wording "replace it with the next stack value" is superseded by the following contract, which the implementation realises:</p>
+<p><strong><code>VENT</code> (<code>^</code>) is a lazy control directive, not a stack-consuming word (normative).</strong> The source form is the <code>^</code> sugar or, equivalently, its spelled-out canonical name <code>VENT</code>: the tokenizer emits both as the same dedicated control token, so the two spellings share one token stream and one execution path. The fallback it guards is the code that <em>follows</em> the directive in the source, not a value already resting on the stack. The earlier wording "replace it with the next stack value" is superseded by the following contract, which the implementation realises:</p>
 
 <ol>
 <li>When <code>^</code> is reached it pops the value <code>v</code> on top of the stack.</li>
