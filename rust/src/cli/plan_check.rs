@@ -87,13 +87,9 @@ fn flow_sensitive_nil(tokens: &[Token]) -> (Vec<String>, Vec<String>) {
             Token::Symbol(symbol) => {
                 let normalized = super::normalize_word(symbol);
                 let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
-                if canonical.as_ref() == "VENT" {
-                    if let Some(top) = stack.last_mut() {
-                        top.maybe_nil = false;
-                        top.sources.clear();
-                    }
-                    continue;
-                }
+                // `VENT` (both `^` and the spelled-out name) tokenizes as
+                // `Token::NilCoalesce` and is handled by that arm above; it never
+                // reaches here as a `Symbol`.
                 let Some(meta) = get_coreword_metadata(&canonical) else {
                     continue;
                 };
@@ -173,9 +169,10 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
     let mut seen_reject: HashSet<String> = HashSet::new();
 
     for token in &tokens {
-        // `^` (VENT) is the only current sugar that tokenizes as `NilCoalesce`.
-        // `OR-NIL` / `=>` are historical names/forms and the current tokenizer
-        // does not produce them; a spelled-out `VENT` is handled below.
+        // `VENT` — both the `^` sugar and the spelled-out canonical name —
+        // tokenizes as `NilCoalesce` (SPEC §6.4), so a single match on the token
+        // covers both spellings of the fallback. `OR-NIL` / `=>` are historical
+        // names/forms the current tokenizer does not produce.
         if matches!(token, Token::NilCoalesce) {
             has_fallback = true;
             continue;
@@ -185,11 +182,6 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
         };
         let normalized = super::normalize_word(symbol);
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
-        // A spelled-out `VENT` (rather than the `^` sugar) is also a fallback.
-        if canonical.as_ref() == "VENT" {
-            has_fallback = true;
-            continue;
-        }
         let Some(meta) = get_coreword_metadata(&canonical) else {
             continue;
         };

@@ -177,6 +177,21 @@ def conformance_corpus():
     ]
 
 
+def dedup_sources(corpus):
+    """Remove duplicate program sources while preserving first-seen order.
+
+    The inline corpus and the conformance corpus overlap (e.g. both exercise
+    `MATH` SQRT programs), so `--conformance` would otherwise diff the same
+    source twice. Dedup is by exact source string."""
+    seen = set()
+    unique = []
+    for src in corpus:
+        if src not in seen:
+            seen.add(src)
+            unique.append(src)
+    return unique
+
+
 def run_corpus(corpus):
     diffs = []
     same = 0
@@ -211,6 +226,7 @@ def main():
     corpus = list(INLINE_CORPUS)
     if args.conformance:
         corpus += conformance_corpus()
+    corpus = dedup_sources(corpus)
 
     same, diffs = run_corpus(corpus)
     print(f"== {same} identical, {len(diffs)} divergent of {len(corpus)} ==\n")

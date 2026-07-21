@@ -223,8 +223,10 @@ program (then the short name works), or can be called fully qualified.
 | `NOT` | logic | Logical negation. — e.g. `TRUE NOT` |
 | `IDLE` | control | Pass control through unchanged (no-op). — e.g. `IDLE` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE | 'y' } { IDLE | 'n' } COND` |
-| `FLOW` | modifier | Pipeline visual marker (no-op). — e.g. `xs ~ { ... } MAP` |
-| `VENT` | modifier | Bubble/NIL fallback operator: substitute an alternative if value is NIL. — e.g. `NIL ^ [ 0 ]` |
+| `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `xs ~ { ... } MAP` |
+| `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip \
+             the following source unit; on a NIL top, discard it and evaluate \
+             the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |

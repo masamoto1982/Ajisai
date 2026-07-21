@@ -59,8 +59,13 @@ The canonical source is `SPECIFICATION.html` **only**.
   (run a program: `python3 ajisai.py "1 2 ADD"`).
 - `probe.py`   — runs the production Rust CLI and extracts a compact result.
 - `compare.py` — the differential-test driver (production CLI ⇔ reference).
-- `compare-output.txt` — last recorded comparison run.
-- `FINDINGS.md`, `DIVERGENCE-ANALYSIS.md` — analysis of discovered divergences.
+- `test_ajisai.py` — reference-interpreter regression tests
+  (`python3 -m unittest test_ajisai`).
+- `FINDINGS.md`, `DIVERGENCE-ANALYSIS.md` — historical analysis of divergences
+  discovered during earlier bring-up (dated snapshots, not a live record).
+
+There is no checked-in comparison-result file: the differential is a live gate
+whose authoritative record is the CI job log (and a local `compare.py` run).
 
 ## Differential testing
 
@@ -79,8 +84,10 @@ python3 compare.py --conformance
 
 - The CLI path is resolved from `AJISAI_BIN`, defaulting to the repo-relative
   `rust/target/release/ajisai`.
-- **The driver exits non-zero when any divergence is observed** (0 otherwise),
-  so CI can gate on it.
+- **The driver exits non-zero when any divergence is observed** (0 otherwise).
+  CI runs `compare.py --conformance` in the `reference-differential` job as a
+  **blocking** gate (not advisory): a divergence over the Core conformance
+  corpus fails the build.
 - Observation is normalized to `(status, stack, output)` using the canonical
   Display (§12); comparison is by **value identity**. A divergence is
   **recorded, not fixed**, here — its direction is adjudicated separately per

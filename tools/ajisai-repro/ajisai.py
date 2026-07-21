@@ -80,6 +80,16 @@ class Rational:
     f: Fraction
 
 @dataclass
+class Timestamp(Rational):
+    """Result of TIME@TIMESTAMP (and the production CLI's TIME@NOW): a scalar
+    instant that carries the `@` timestamp display role (SPEC §12; production
+    `Interpretation::Timestamp`, execution_loop.rs). Numerically it is an
+    ordinary rational — `is_scalar`/`as_fraction`/arithmetic treat it as one —
+    so the sigil is a display-only role that does not survive arithmetic,
+    matching the production CLI's per-slot role model."""
+    pass
+
+@dataclass
 class Interval:
     """A sound rational interval [lo, hi] (MATH@INTERVAL / MATH@SQRT-EPS).
     Displayed as `[lo, hi]` with both endpoints in n/d form, mirroring the
@@ -609,13 +619,15 @@ class Interp:
                 pending_mods += ["STAK", "KEEP"]; word = word[2:]
             elif word.startswith(";") and len(word) > 1:
                 pending_mods += ["TOP", "EAT"]; word = word[1:]
-            if word == "^":
-                # VENT (^) is a lazy NIL-coalescing control directive, not a
-                # stack word (Section 6.4). It pops the top; if it is non-NIL it
-                # is kept and the *following* source unit (one token, or one
-                # balanced [ ] / { } group) is skipped unevaluated; if it is NIL
-                # the NIL is discarded and the following unit is evaluated as the
-                # fallback. Modifiers on ^ are ignored.
+            if word == "^" or word.upper() == "VENT":
+                # VENT — its `^` sugar and its spelled-out canonical name alike
+                # (Section 6.4) — is a lazy NIL-coalescing control directive, not
+                # a stack word. It pops the top; if it is non-NIL it is kept and
+                # the *following* source unit (one token, or one balanced [ ] /
+                # { } group) is skipped unevaluated; if it is NIL the NIL is
+                # discarded and the following unit is evaluated as the fallback.
+                # Modifiers on VENT are ignored. (A qualified name like
+                # MATH@VENT upper-cases to "MATH@VENT" and is not matched here.)
                 pending_mods = []
                 self.need(1)
                 top = self.stack.pop()
@@ -761,6 +773,11 @@ class Interp:
 # --------------------------------------------------------------------------
 
 def display(v):
+    if isinstance(v, Timestamp):
+        # §12 timestamp display role: `@n/d`, matching the production CLI
+        # (`format_as_datetime` → `@…`). Checked before the Rational branch
+        # because Timestamp is a Rational subclass.
+        return f"@{v.f.numerator}/{v.f.denominator}"
     if isinstance(v, Rational):
         return f"{v.f.numerator}/{v.f.denominator}"
     if isinstance(v, Sqrt):
@@ -1054,18 +1071,21 @@ DECIDERS = {
 
 def w_compare_within(it, mods):
     """COMPARE-WITHIN (Section 7.4.2): three-way compare under an explicit
-    partial-quotient budget. Unlike the six bare relations — total and exact
-    over the admitted domain D (Section 4.2.7) — this word deliberately keeps
-    budget semantics: it is the one current-Coreword observation window on
-    comparison depth, so equal lazily-composed operands whose CF streams
-    never diverge yield the logical UNKNOWN at any budget."""
+    refinement-water budget. Over the admitted domain D (Section 4.2.7) — every
+    value the current Coreword set can construct — comparison is total and exact
+    and decides on the Tier 1 multiquadratic normal form, so the named budget
+    does NOT affect the result (Sections 7.4.1, 7.4.2): rational and algebraic
+    operands, including equal operands composed through any history (√8 vs
+    √2+√2, √2+1 vs √2+1), decide to -1/0/1 at every budget. The budget governs
+    only the reserved Tier 2 reals (Section 4.2.2), which no current word can
+    construct; the logical UNKNOWN outcome is therefore unreachable through the
+    current vocabulary and is never produced for equal D-operands."""
     keep = "KEEP" in mods
     it.need(3)
     budget_v, b_v, a_v = it.stack[-1], it.stack[-2], it.stack[-3]
     fbud = as_fraction(budget_v)
     if fbud is None or fbud.denominator != 1 or fbud <= 0:
         raise AjisaiError("structureError", "COMPARE-WITHIN needs a positive integer budget")
-    budget = int(fbud)
     if isinstance(a_v, Nil) or isinstance(b_v, Nil):
         if not keep:
             del it.stack[-3:]
@@ -1073,32 +1093,14 @@ def w_compare_within(it, mods):
         return
     if not (is_scalar(a_v) and is_scalar(b_v)):
         raise AjisaiError("structureError", "COMPARE-WITHIN needs numbers")
-    fa, fb = as_fraction(a_v), as_fraction(b_v)
     if not keep:
         del it.stack[-3:]
-    if fa is not None and fb is not None:
-        # Two finite CFs always decide, regardless of budget.
-        it.push(Rational(Fraction(cmp_sign(fa, fb))))
-        return
-    s = cmp_values(a_v, b_v)  # exact sign, used only to orient a divergence
-    if s == 0:
-        # Equal values' CF streams never diverge within any budget.
-        it.push(UNKNOWN)
-        return
-    ta, _ = value_rcf_terms(a_v, budget)
-    tb, _ = value_rcf_terms(b_v, budget)
-    for k in range(budget):
-        in_a, in_b = k < len(ta), k < len(tb)
-        if in_a and in_b:
-            if ta[k] != tb[k]:
-                it.push(Rational(Fraction(s)))
-                return
-        elif in_a != in_b:
-            it.push(Rational(Fraction(s)))
-            return
-        else:
-            break
-    it.push(UNKNOWN)
+    # cmp_values is total and exact over D and returns -1/0/1 (never "U") for
+    # every operand this reference implementation can represent (all Tier <= 1).
+    # A future Tier 2 observation would be the only source of a budget-starved
+    # "U"; deferring to cmp_values keeps that door open without faking Tier 2.
+    s = cmp_values(a_v, b_v)
+    it.push(UNKNOWN if s == "U" else Rational(Fraction(s)))
 
 # logic (K3) ----------------------------------------------------------------
 
@@ -1194,10 +1196,11 @@ def w_nil_diagnosis(it, mods):
     it.need(1)
     it.push(Nil())
 
-# VENT (^) is not a stack word: it is a lazy control directive handled inline in
-# `run_tokens` (Section 6.4). The bare canonical name `VENT` is intentionally not
-# a dictionary entry, matching the implementation (only the `^` surface form is
-# recognized).
+# VENT is not a stack word: it is a lazy control directive handled inline in
+# `run_tokens` (Section 6.4). Both surface forms are recognized there — the `^`
+# sugar and the spelled-out canonical name `VENT` — so neither is a dictionary
+# entry, matching the production tokenizer, which emits both as the same
+# NilCoalesce control token.
 
 # vector words --------------------------------------------------------------
 
@@ -2539,7 +2542,7 @@ def w_time_timestamp(it, mods):
     s = _scalar_field(comps[5], "TIMESTAMP", "second")
     instant = (Fraction(_days_from_civil(y, m, d)) * 86400
                + h * 3600 + mi * 60 + s - ops[-1].f * 3600)
-    it.push(Rational(instant))
+    it.push(Timestamp(instant))
 
 def w_time_date(it, mods):
     ops, keep = it.operands(mods, 1)

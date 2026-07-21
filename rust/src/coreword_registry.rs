@@ -67,6 +67,32 @@ impl MassContract {
     }
 }
 
+/// How a Coreword takes effect, as a machine-readable signal independent of the
+/// human-facing `stack_effect` prose.
+///
+/// Most words are ordinary `RuntimeWord`s dispatched by name and consuming/
+/// producing stack values. The lazy control directives of SPEC §6.4 are not:
+/// the tokenizer emits them as dedicated tokens (`^`/`VENT` -> `NilCoalesce`,
+/// `~`/`FLOW` -> `Pipeline`) and the execution loop interprets the *following
+/// source unit* positionally rather than popping operands. This enum lets
+/// generators and consistency tests assert that classification instead of
+/// parsing the prose.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum ExecutionForm {
+    /// Ordinary word: dispatched by name, operates on stack operands.
+    RuntimeWord,
+    /// No-op control directive: a positional marker with no runtime effect
+    /// (e.g. `FLOW` / `~`).
+    NoOpControlDirective,
+    /// Lazy NIL-coalescing control directive: inspects the stack top and, if it
+    /// is non-NIL, keeps it and skips the following source unit *unevaluated*;
+    /// if it is NIL, discards it and evaluates the following source unit as the
+    /// fallback. The fallback is source that follows the directive, never a
+    /// value already on the stack (e.g. `VENT` / `^`).
+    LazyNextUnitFallback,
+}
+
 /// The canonical mass contract for a Coreword, keyed by its canonical name.
 /// Builtin mass is authored on `BuiltinSpec`; this adapter exists for older
 /// analyzers until Phase 3 finishes moving all metadata consumers to the shared

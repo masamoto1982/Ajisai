@@ -1,4 +1,6 @@
-use crate::coreword_registry::{MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity};
+use crate::coreword_registry::{
+    ExecutionForm, MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity,
+};
 use crate::elastic::purity_table::EvalCost;
 
 use super::builtin_word_types::BuiltinExecutorKey;
@@ -48,6 +50,10 @@ pub struct BuiltinSpec {
     pub partiality: Partiality,
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
+    /// How the word takes effect (SPEC §6.4). Defaults to `RuntimeWord`; the
+    /// lazy/no-op control directives (`VENT`, `FLOW`) set this so the
+    /// classification is machine-checkable rather than inferred from prose.
+    pub execution_form: ExecutionForm,
 }
 
 const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
@@ -70,6 +76,7 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     partiality: Partiality::Total,
     nil_policy: NilPolicy::Passthrough,
     safety_level: SafetyLevel::A,
+    execution_form: ExecutionForm::RuntimeWord,
 };
 
 const BUILTIN_SPECS: &[BuiltinSpec] = &[
@@ -958,32 +965,45 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         ..SPEC_DEFAULT
         },
 
-    // === FLOW (pipeline) / VENT (coalescing) ===
+    // === FLOW (pipeline) / VENT (coalescing) — lazy control directives (§6.4) ===
+    // Both are emitted by the tokenizer as dedicated control tokens (`~`/`FLOW`
+    // -> Pipeline, `^`/`VENT` -> NilCoalesce), not dispatched as stack-consuming
+    // words; `execution_form` records that so the contract is machine-checkable.
     BuiltinSpec {
 
         name: "FLOW",
-        category: "modifier",
+        category: "control-directive",
         hover_summary: "FLOW — pipeline marker",
         hover_syntax: "xs ~ { ... } MAP",
         summary: "Pipeline visual marker (no-op).",
-        role: "Whitespace separator with no runtime effect; helps visually\nanchor pipelines.",
+        role: "No-op control directive: a positional separator with no runtime\neffect; helps visually anchor pipelines. Popped and pushed nothing.",
 
         stack_effect: "no values popped or pushed",
         nil_policy: NilPolicy::PreservesReason,
+        execution_form: ExecutionForm::NoOpControlDirective,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
 
         name: "VENT",
-        category: "modifier",
-        hover_summary: "VENT — coalesce NIL to alternative",
+        category: "control-directive",
+        hover_summary: "VENT — lazy NIL-coalescing fallback",
         hover_syntax: "NIL ^ [ 0 ]",
         summary:
-            "Bubble/NIL fallback operator: substitute an alternative if value is NIL.",
-        role: "Modifier that replaces a Bubble/NIL with a fallback value.",
+            "Lazy NIL-coalescing control directive: keep a non-NIL top and skip \
+             the following source unit; on a NIL top, discard it and evaluate \
+             the following source unit as the fallback.",
+        role: "Control directive that inspects the stack top. If the top is \
+               non-NIL it is kept and the following source unit is skipped \
+               UNEVALUATED. If the top is NIL it is discarded and the following \
+               source unit is evaluated as the fallback. The fallback is the \
+               source that follows the directive, not a value already on the \
+               stack.",
 
-        stack_effect: "[a] [b] -> [a if a != NIL else b]",
+        stack_effect: "top non-NIL: keeps top, skips next source unit unevaluated; \
+                       top NIL: discards top, evaluates next source unit as fallback",
         nil_policy: NilPolicy::PreservesReason,
+        execution_form: ExecutionForm::LazyNextUnitFallback,
         ..SPEC_DEFAULT
         },
 
@@ -1885,6 +1905,13 @@ mod tests {
     #[test]
     fn builtin_specs_stack_effect_grammar() {
         for spec in super::builtin_specs() {
+            // Control directives (SPEC §6.4) act positionally on the source
+            // stream, not as a stack `X -> Y` transformation, so the arrow
+            // grammar does not apply to them; their contract is carried by
+            // `execution_form` and a prose stack-effect note.
+            if spec.execution_form != crate::coreword_registry::ExecutionForm::RuntimeWord {
+                continue;
+            }
             let s = spec.stack_effect;
             let is_literal_no_op =
                 s == "no values popped or pushed" || s == "operands preserved; result pushed";

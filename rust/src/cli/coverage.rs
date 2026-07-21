@@ -22,8 +22,10 @@ pub(crate) const TRANSITION_METRICS_VERSION: u64 = 1;
 
 /// Modifier words are excluded from the denominator (memo §4): they select
 /// *how* a word touches the stream, and the "contract of a word" concept does
-/// not apply to them. The `^` sugar never reaches this module — it tokenizes
-/// as `Token::NilCoalesce`, not as a `Symbol` (spelled-out `VENT` counts).
+/// not apply to them. The control directive `VENT` never reaches this module —
+/// both its sugar `^` and its spelled-out canonical name tokenize as
+/// `Token::NilCoalesce`, not as a `Symbol`, so neither spelling is counted
+/// (likewise `FLOW`/`~` as `Token::Pipeline`).
 const MODIFIER_WORDS: [&str; 4] = ["TOP", "STAK", "EAT", "KEEP"];
 
 /// How a counted word occurrence resolved.

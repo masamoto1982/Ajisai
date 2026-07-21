@@ -730,6 +730,30 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- The spelled-out canonical name `VENT` is the same lazy control directive as
+     its `^` sugar (Section 6.4): same token, same result. -->
+
+<section class="ajisai-case" id="core-vent-spelled-out-keeps-top" data-category="core">
+  <h3>Spelled-out VENT keeps a non-NIL top, identical to the ^ sugar</h3>
+  <pre class="ajisai-source">5 VENT 99</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vent-spelled-out-fallback-unevaluated" data-category="core">
+  <h3>Spelled-out VENT does not evaluate the fallback when the top is non-NIL</h3>
+  <pre class="ajisai-source">5 VENT UNDEFINED-FALLBACK</pre>
+  <pre class="ajisai-expect-result">5/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-vent-spelled-out-nil-fallback" data-category="core">
+  <h3>Spelled-out VENT evaluates the fallback on a NIL top</h3>
+  <pre class="ajisai-source">NIL VENT 99</pre>
+  <pre class="ajisai-expect-result">99/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- COND collects consecutive clause blocks, consumes the subject beneath them,
      runs each guard against a fresh copy of the subject, and returns exactly one
      value from the winning body (Section 7.7.1). -->
@@ -1740,6 +1764,13 @@
 <section class="ajisai-case" id="core-flow-tilde-no-effect" data-category="core">
   <h3>The ~ (FLOW) pipeline separator has no runtime effect</h3>
   <pre class="ajisai-source">1 2 ~ ADD</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-flow-spelled-out-no-effect" data-category="core">
+  <h3>The spelled-out FLOW marker has no runtime effect, identical to ~</h3>
+  <pre class="ajisai-source">1 2 FLOW ADD</pre>
   <pre class="ajisai-expect-result">3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>

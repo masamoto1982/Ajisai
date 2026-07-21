@@ -43,15 +43,16 @@ fn modifiers_are_excluded_from_the_denominator() {
 }
 
 #[test]
-fn nil_coalesce_sugar_is_structural_but_spelled_out_vent_counts() {
-    // `^` tokenizes as NilCoalesce and never enters the count; only DIV does.
+fn nil_coalesce_is_structural_in_both_spellings() {
+    // `^` and the spelled-out `VENT` both tokenize as NilCoalesce (SPEC §6.4),
+    // so neither enters the count; only DIV does. The two spellings are the
+    // same control directive and must be counted identically.
     let sugar = coverage_of("1 0 / ^ 99");
     assert_eq!(sugar.total, 1);
     assert_eq!(sugar.covered, 1);
-    // Spelled-out VENT is an ordinary covered word occurrence.
-    let spelled = coverage_of("1 0 / 99 VENT");
-    assert_eq!(spelled.total, 2);
-    assert_eq!(spelled.covered, 2);
+    let spelled = coverage_of("1 0 / VENT 99");
+    assert_eq!(spelled.total, 1);
+    assert_eq!(spelled.covered, 1);
 }
 
 #[test]

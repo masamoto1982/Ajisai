@@ -1,7 +1,7 @@
 use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
-use crate::coreword_registry::{NilPolicy, Partiality};
+use crate::coreword_registry::{ExecutionForm, NilPolicy, Partiality};
 
 /// Render the LOOKUP body for a built-in word: the four authored base
 /// sections (Category / Summary / Role / Stack Effect), the authored
@@ -33,6 +33,29 @@ pub fn lookup_builtin_detail(name: &str) -> String {
         spec.role,
         spec.stack_effect,
     );
+
+    // Machine-readable execution form (SPEC §6.4): surface the control-directive
+    // classification so LOOKUP states it explicitly rather than leaving it to
+    // the prose. `RuntimeWord`s add nothing here.
+    match spec.execution_form {
+        ExecutionForm::LazyNextUnitFallback => {
+            out.push('\n');
+            out.push_str(
+                "Form:\n  Lazy control directive (SPEC §6.4): inspects the stack top; a\n  \
+                 non-NIL top is kept and the following source unit is skipped\n  \
+                 unevaluated, a NIL top is discarded and the following unit is\n  \
+                 evaluated as the fallback. Not a stack-consuming word.\n",
+            );
+        }
+        ExecutionForm::NoOpControlDirective => {
+            out.push('\n');
+            out.push_str(
+                "Form:\n  No-op control directive (SPEC §6.4): a positional marker with no\n  \
+                 runtime effect.\n",
+            );
+        }
+        ExecutionForm::RuntimeWord => {}
+    }
 
     let doc = lookup_builtin_lookup_doc(spec.name);
 
