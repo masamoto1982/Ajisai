@@ -56,3 +56,6 @@ mod conformance_tests;
 
 #[cfg(test)]
 mod vent_flow_canonical_tests;
+
+#[cfg(test)]
+mod stack_render_tests;
