@@ -619,13 +619,15 @@ class Interp:
                 pending_mods += ["STAK", "KEEP"]; word = word[2:]
             elif word.startswith(";") and len(word) > 1:
                 pending_mods += ["TOP", "EAT"]; word = word[1:]
-            if word == "^":
-                # VENT (^) is a lazy NIL-coalescing control directive, not a
-                # stack word (Section 6.4). It pops the top; if it is non-NIL it
-                # is kept and the *following* source unit (one token, or one
-                # balanced [ ] / { } group) is skipped unevaluated; if it is NIL
-                # the NIL is discarded and the following unit is evaluated as the
-                # fallback. Modifiers on ^ are ignored.
+            if word == "^" or word.upper() == "VENT":
+                # VENT — its `^` sugar and its spelled-out canonical name alike
+                # (Section 6.4) — is a lazy NIL-coalescing control directive, not
+                # a stack word. It pops the top; if it is non-NIL it is kept and
+                # the *following* source unit (one token, or one balanced [ ] /
+                # { } group) is skipped unevaluated; if it is NIL the NIL is
+                # discarded and the following unit is evaluated as the fallback.
+                # Modifiers on VENT are ignored. (A qualified name like
+                # MATH@VENT upper-cases to "MATH@VENT" and is not matched here.)
                 pending_mods = []
                 self.need(1)
                 top = self.stack.pop()
@@ -1194,10 +1196,11 @@ def w_nil_diagnosis(it, mods):
     it.need(1)
     it.push(Nil())
 
-# VENT (^) is not a stack word: it is a lazy control directive handled inline in
-# `run_tokens` (Section 6.4). The bare canonical name `VENT` is intentionally not
-# a dictionary entry, matching the implementation (only the `^` surface form is
-# recognized).
+# VENT is not a stack word: it is a lazy control directive handled inline in
+# `run_tokens` (Section 6.4). Both surface forms are recognized there — the `^`
+# sugar and the spelled-out canonical name `VENT` — so neither is a dictionary
+# entry, matching the production tokenizer, which emits both as the same
+# NilCoalesce control token.
 
 # vector words --------------------------------------------------------------
 

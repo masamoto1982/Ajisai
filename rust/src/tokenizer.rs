@@ -142,6 +142,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
+        if let Some(token) = parse_control_directive_word(&token_str) {
+            tokens.push(token);
+            continue;
+        }
+
         if let Some(expanded) = split_compound_modifier(&token_str) {
             for symbol in expanded {
                 tokens.push(Token::Symbol(symbol.into()));
@@ -400,6 +405,27 @@ fn parse_keyword_from_string(s: &str) -> Option<Token> {
         "," => Some(Token::Symbol(",".into())),
         ",," => Some(Token::Symbol(",,".into())),
         _ => None,
+    }
+}
+
+/// The spelled-out control directives `VENT` and `FLOW` are the canonical names
+/// of the sugars `^` and `~` (SPEC §6.4, core_word_aliases.rs). Emit the *same*
+/// dedicated control token the sugar produces so the canonical name and its
+/// sugar share one token stream and one lazy execution path — the spelled-out
+/// name must not fall through to a stack-consuming builtin or an `UnknownWord`.
+///
+/// Matching is case-folded (`vent` == `VENT`) but only on a bare, whole-word
+/// token: a qualified name such as `MATH@VENT` is a single token containing `@`
+/// and never compares equal, and string literals are lexed earlier, so neither
+/// is misconverted. Because the tokenizer emits the control token directly,
+/// these names are also not shadowable by a user definition.
+fn parse_control_directive_word(s: &str) -> Option<Token> {
+    if s.eq_ignore_ascii_case("VENT") {
+        Some(Token::NilCoalesce)
+    } else if s.eq_ignore_ascii_case("FLOW") {
+        Some(Token::Pipeline)
+    } else {
+        None
     }
 }
 
