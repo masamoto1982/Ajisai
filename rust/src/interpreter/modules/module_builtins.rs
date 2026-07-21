@@ -1290,6 +1290,9 @@ pub(super) const MODULE_SPECS: &[ModuleSpec] = &[
 /// so an inactive word can be surfaced greyed-out and toggled with IMPORT-ONLY.
 pub(crate) struct CatalogWord {
     pub short_name: &'static str,
+    // Read only by the wasm catalog view (feature = "wasm"); populated in all
+    // builds, so the dead-code lint is allowed only when wasm is off.
+    #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
     pub description: &'static str,
 }
 
