@@ -104,7 +104,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    let hint: Interpretation = interp.semantic_registry.lookup_last_hint();
+    let hint: Interpretation = interp.stack.last_role();
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {

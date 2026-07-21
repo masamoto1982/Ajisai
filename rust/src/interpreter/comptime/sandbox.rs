@@ -24,5 +24,5 @@ pub(crate) fn run_precompute_block(
             other => AjisaiError::from(format!("PRECOMPUTE failed: {}", other)),
         })?;
 
-    Ok(sandbox.stack)
+    Ok(sandbox.stack.into_values())
 }

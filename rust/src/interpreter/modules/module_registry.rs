@@ -72,13 +72,13 @@ pub(super) fn execute_module_word(interp: &mut Interpreter, name: &str) -> Optio
     let (module_name, word_name) = upper.split_once('@')?;
     let module = MODULE_SPECS.iter().find(|m| m.name == module_name)?;
     let word = module.words.iter().find(|w| w.short_name == word_name)?;
-    // Path-level semantic-plane repair (SPEC §12.1): see `semantic_sync`.
-    let slots_before = super::semantic_sync::snapshot_stack_slots(&interp.stack);
-    let result = (word.executor)(interp);
-    if result.is_ok() {
-        super::semantic_sync::resync_changed_slots(interp, &slots_before);
-    }
-    Some(result)
+    // Phase 4 (SPEC §12.1): the executor pops operands and pushes freshly built
+    // results directly on `interp.stack`, which owns roles. Popped operands take
+    // their roles with them, pushed results adopt their construction-time role
+    // (`Value.hint`), and slots the executor never touches keep the plane role a
+    // prior position cast (`>CF`) assigned — so no post-hoc role resync is
+    // needed. This replaces the retired fingerprint/Arc-identity path.
+    Some((word.executor)(interp))
 }
 
 pub(super) fn is_mode_preserving_word(name: &str) -> bool {

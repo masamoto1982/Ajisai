@@ -1,6 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::Value;
 use std::cell::RefCell;
 
@@ -129,14 +130,14 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
                 return Ok(());
             }
 
-            let items: Vec<Value> = interp.stack.clone();
+            let items: Vec<Value> = interp.stack.to_vec();
             match try_sort_indices(&items) {
                 SortAttempt::Ordered(perm) => {
                     let sorted_stack: Vec<Value> = reorder_values_by_permutation(&items, &perm);
                     if is_keep_mode {
                         interp.stack.extend(sorted_stack);
                     } else {
-                        interp.stack = sorted_stack;
+                        interp.stack = Stack::from_values(sorted_stack);
                     }
                     Ok(())
                 }

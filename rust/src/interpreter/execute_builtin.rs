@@ -290,18 +290,17 @@ impl Interpreter {
             BuiltinExecutorKey::Or => logic::op_or(self),
             BuiltinExecutorKey::Not => logic::op_not(self),
             BuiltinExecutorKey::True => {
-                self.stack.push(Value::from_bool(true));
-                self.semantic_registry.push_hint(Interpretation::TruthValue);
+                self.stack
+                    .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
                 Ok(())
             }
             BuiltinExecutorKey::False => {
-                self.stack.push(Value::from_bool(false));
-                self.semantic_registry.push_hint(Interpretation::TruthValue);
+                self.stack
+                    .push_with_role(Value::from_bool(false), Interpretation::TruthValue);
                 Ok(())
             }
             BuiltinExecutorKey::Nil => {
-                self.stack.push(Value::nil());
-                self.semantic_registry.push_hint(Interpretation::Nil);
+                self.stack.push_with_role(Value::nil(), Interpretation::Nil);
                 Ok(())
             }
             BuiltinExecutorKey::Idle => Ok(()),

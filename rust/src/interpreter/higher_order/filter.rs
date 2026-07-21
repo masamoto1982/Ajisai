@@ -6,6 +6,7 @@ use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::{Token, Value};
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
@@ -95,7 +96,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             }
 
             let mut results: Vec<Value> = Vec::with_capacity(n_elements);
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -201,7 +202,7 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;

@@ -139,9 +139,7 @@ pub fn op_timestamp(interp: &mut Interpreter) -> Result<()> {
     match result {
         Ok(instant) => {
             push_result(interp, Value::from_fraction(instant));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::Timestamp);
+            interp.stack.set_last_role(Interpretation::Timestamp);
             Ok(())
         }
         Err(e) => {
@@ -298,9 +296,7 @@ pub fn op_diff_days(interp: &mut Interpreter) -> Result<()> {
     match result {
         Ok(days) => {
             push_result(interp, Value::from_int(days));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         Err(e) => {
@@ -334,7 +330,7 @@ pub fn op_format(interp: &mut Interpreter) -> Result<()> {
         };
         Ok(Value::from_string(&text))
     })?;
-    interp.semantic_registry.push_hint(Interpretation::Text);
+    interp.stack.set_last_role(Interpretation::Text);
     Ok(())
 }
 
@@ -460,7 +456,7 @@ fn parse_second(field: &str) -> Option<Fraction> {
 /// invalidEncoding`).
 pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "PARSE")?;
-    let hint = interp.semantic_registry.lookup_last_hint();
+    let hint = interp.stack.last_role();
     let operands = extract_operands(interp, 1)?;
     if !is_string_value_with_hint(&operands[0], hint) {
         restore(interp, operands);

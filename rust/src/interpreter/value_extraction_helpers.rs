@@ -196,7 +196,10 @@ pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result
         }
         ConsumptionMode::Keep => {
             let stack_len = interp.stack.len();
-            let values: Vec<Value> = interp.stack[stack_len - count..].iter().cloned().collect();
+            let values: Vec<Value> = interp.stack.as_slice()[stack_len - count..]
+                .iter()
+                .cloned()
+                .collect();
             Ok(values)
         }
     }

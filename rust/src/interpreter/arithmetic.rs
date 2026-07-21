@@ -336,8 +336,8 @@ fn apply_exact_arithmetic_schema(
     {
         let stack_len = interp.stack.len();
         if stack_len >= 2 {
-            let left_hint = interp.semantic_registry.lookup_hint_at(stack_len - 2);
-            let right_hint = interp.semantic_registry.lookup_hint_at(stack_len - 1);
+            let left_hint = interp.stack.role_at(stack_len - 2);
+            let right_hint = interp.stack.role_at(stack_len - 1);
             if matches!(left_hint, Interpretation::Text)
                 || matches!(right_hint, Interpretation::Text)
             {
@@ -689,7 +689,7 @@ where
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].to_vec()
+                interp.stack.as_slice()[stack_len - count..].to_vec()
             } else {
                 interp
                     .stack

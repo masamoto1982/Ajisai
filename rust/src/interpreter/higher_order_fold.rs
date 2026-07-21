@@ -4,6 +4,7 @@ use super::higher_order::{
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_count_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
@@ -91,7 +92,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             }
 
             let mut accumulator: Value = init_val;
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -177,7 +178,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let mut accumulator: Value = init_val;
@@ -261,7 +262,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             let mut state: Value = init_state.clone();
             let mut results: Vec<Value> = Vec::new();
 
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -348,7 +349,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
             })?;
 
             let mut state: Value = init_state.clone();
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -490,7 +491,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
             let mut accumulator: Value = init_val;
             let mut results: Vec<Value> = Vec::with_capacity(target_val.len());
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let saved_target: OperationTargetMode = interp.operation_target_mode;
@@ -592,7 +593,7 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
             }
 
             let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Vec<Value> = Vec::new();
+            let mut saved_stack: Stack = Stack::new();
             std::mem::swap(&mut interp.stack, &mut saved_stack);
 
             let mut accumulator: Value = init_val;

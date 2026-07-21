@@ -1,7 +1,30 @@
 # Phase 4 残移行 作業引継書（semantic role single authority）
 
-Status: work order（non-canonical）。正典は `SPECIFICATION.html` のみ。この文書は実装作業の指示書であり、
-Ajisai の意味論を定義しない。矛盾する場合は `SPECIFICATION.html` に従う。
+Status: **完了（migration complete）**。work order（non-canonical）。正典は `SPECIFICATION.html` のみ。
+この文書は実装作業の指示書であり、Ajisai の意味論を定義しない。矛盾する場合は `SPECIFICATION.html` に従う。
+
+## 完了記録（Stage 4C–4G 実施済み）
+
+候補案 A を採用。`Stack`（`rust/src/types/stack.rs`）を values + roles を同時所有する struct 化し、
+トップレベル role の唯一の権威とした。`push` が構築時 role（`Value.hint`）を採用し、`pop` が role も同時に落とす
+ため、module word 経路は fingerprint 再同期なしで正しい role を得る（触っていない下位スロットは pop されず role 保存、
+作り直したスロットは push 時 `value.hint` 採用）。
+
+- **§0 未達受け入れ条件はすべて達成:**
+  - [x] `semantic_sync.rs` の fingerprint 比較が削除される。→ ファイルごと削除。
+  - [x] 役割同期のために Arc ポインタ同一性を使わない。→ 全廃。
+- `SemanticRegistry.stack_hints` と旧 role API（`push_hint`/`pop_hint`/`update_hint_at`/`lookup_*`/
+  `normalize_to_stack_len` 等）を削除。`SemanticRegistry` は `flow_hints`/`flow_extensions`（value-id キー、
+  Phase 4 非対象）のみ保持。
+- sub-execution（HOF/COND/COUNT/shadow/child）の stack 退避/復元は `Stack` 一括で role を同伴（別建て
+  `stack_hints` 退避を撤去）。
+- 副産物: compiled path が builtin/module word 実行後に `apply_word_hint_override` を適用していなかった
+  role 欠落（interpreted path とのみ差が出る latent divergence）を、両経路が同一 `(value, role)` を残すよう修正。
+- 検証: `cargo test --all-targets`（1713 tests, 0 failed）、semantic-firewall、provenance、word-manifest、
+  skill、formalization-coverage すべて green。`module_word_preserves_lower_cf_retag`（`>CF` × module word）で
+  下位 CF role 保持を固定。
+
+以下は着手時の指示書原文（履歴として保存）。
 
 前提メモ: `docs/dev/semantic-role-ownership-phase4-design.md`（候補案 A/B/C の比較と 4A–4G の段階計画）。
 本引継書はその設計メモを踏まえ、**残作業（4C–4G）を新セッションで完遂するための具体的な調査結果・設計・

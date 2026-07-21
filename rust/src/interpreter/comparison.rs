@@ -86,10 +86,9 @@ enum ScalarCmp {
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
     interp.stack.push(Value::from_bool(result));
     let stack_len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
-        .semantic_registry
-        .update_hint_at(stack_len - 1, Interpretation::TruthValue);
+        .stack
+        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 /// Push the SPEC §7.4.1 logical `Unknown` (U): a `TruthValue`-role value
@@ -105,10 +104,9 @@ fn push_unknown(interp: &mut Interpreter, agreed_prefix: Option<usize>) {
     };
     interp.stack.push(value);
     let stack_len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
-        .semantic_registry
-        .update_hint_at(stack_len - 1, Interpretation::TruthValue);
+        .stack
+        .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
 /// Compare two scalar values under an ordering kind. Returns `Err(_)`
@@ -436,7 +434,7 @@ fn apply_binary_comparison(
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].to_vec()
+                interp.stack.as_slice()[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
@@ -690,7 +688,7 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].to_vec()
+                interp.stack.as_slice()[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
@@ -714,10 +712,9 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 fn push_sign_result(interp: &mut Interpreter, sign: i64) {
     interp.stack.push(Value::from_int(sign));
     let stack_len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(stack_len);
     interp
-        .semantic_registry
-        .update_hint_at(stack_len - 1, Interpretation::RawNumber);
+        .stack
+        .set_role_at(stack_len - 1, Interpretation::RawNumber);
 }
 
 /// `COMPARE-WITHIN` (SPEC §7.4.2): three-way compare two values within an
@@ -774,8 +771,8 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     // The explicit budget is water for Tier 2 observations; Tier ≤ 1
     // pairs decide via the exact Fraction order or the total algebraic
     // comparison, unaffected by it.
-    let refinement_capable = matches!(a, ExactReal::Computable(_))
-        || matches!(b, ExactReal::Computable(_));
+    let refinement_capable =
+        matches!(a, ExactReal::Computable(_)) || matches!(b, ExactReal::Computable(_));
     let outcome = match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ExactCmp::Decided(af.cmp(bf)),
         _ => a.cmp_within(&b, Water(budget as u64)),
@@ -815,20 +812,18 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
                 steps,
             ));
             let len = interp.stack.len();
-            interp.semantic_registry.normalize_to_stack_len(len);
             interp
-                .semantic_registry
-                .update_hint_at(len - 1, Interpretation::TruthValue);
+                .stack
+                .set_role_at(len - 1, Interpretation::TruthValue);
         }
         ExactCmp::Absent => {
             interp
                 .stack
                 .push(Value::unknown_with_agreed_prefix(Some("COMPARE-WITHIN"), 0));
             let len = interp.stack.len();
-            interp.semantic_registry.normalize_to_stack_len(len);
             interp
-                .semantic_registry
-                .update_hint_at(len - 1, Interpretation::TruthValue);
+                .stack
+                .set_role_at(len - 1, Interpretation::TruthValue);
         }
     }
     Ok(())

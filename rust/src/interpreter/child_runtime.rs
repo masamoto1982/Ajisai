@@ -41,7 +41,6 @@ impl Interpreter {
 
     pub(crate) fn op_spawn(&mut self) -> crate::error::Result<()> {
         let block = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let code_block = block
             .as_code_block()
             .ok_or_else(|| AjisaiError::from("SPAWN requires a code block"))?
@@ -62,13 +61,12 @@ impl Interpreter {
             },
         );
         self.stack.push(Value::from_process_handle(id));
-        self.semantic_registry.push_hint(Interpretation::Unassigned);
+        self.stack.set_last_role(Interpretation::Unassigned);
         Ok(())
     }
 
     pub(crate) fn op_status(&mut self) -> crate::error::Result<()> {
         let handle = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let id = handle
             .as_process_handle()
             .ok_or_else(|| AjisaiError::from("STATUS requires a process handle"))?;
@@ -84,13 +82,12 @@ impl Interpreter {
             ChildState::Timeout => "timeout",
         };
         self.stack.push(Value::from_string(status));
-        self.semantic_registry.push_hint(Interpretation::Text);
+        self.stack.set_last_role(Interpretation::Text);
         Ok(())
     }
 
     pub(crate) fn op_kill(&mut self) -> crate::error::Result<()> {
         let handle = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let id = handle
             .as_process_handle()
             .ok_or_else(|| AjisaiError::from("KILL requires a process handle"))?;
@@ -102,7 +99,7 @@ impl Interpreter {
         child.exit_reason = Some(ExitReason::Killed);
         child.result_snapshot = Some(Self::build_exit_result(ExitReason::Killed, None));
         self.stack.push(Value::from_string("killed"));
-        self.semantic_registry.push_hint(Interpretation::Text);
+        self.stack.set_last_role(Interpretation::Text);
         Ok(())
     }
 
@@ -133,7 +130,7 @@ impl Interpreter {
             Ok(()) => {
                 child.state = ChildState::Completed;
                 child.exit_reason = Some(ExitReason::Normal);
-                let stack = child_interpreter.stack.clone();
+                let stack = child_interpreter.stack.to_vec();
                 child.result_snapshot =
                     Some(Self::build_exit_result(ExitReason::Normal, Some(stack)));
             }
@@ -144,7 +141,7 @@ impl Interpreter {
                     _ => ChildState::Failed,
                 };
                 child.exit_reason = Some(exit_reason.clone());
-                let stack = child_interpreter.stack.clone();
+                let stack = child_interpreter.stack.to_vec();
                 child.result_snapshot = Some(Self::build_exit_result(exit_reason, Some(stack)));
             }
         }
@@ -152,7 +149,6 @@ impl Interpreter {
 
     pub(crate) fn op_await(&mut self) -> crate::error::Result<()> {
         let handle = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let id = handle
             .as_process_handle()
             .ok_or_else(|| AjisaiError::from("AWAIT requires a process handle"))?;
@@ -172,13 +168,12 @@ impl Interpreter {
         }
         self.child_runtimes.insert(id, child);
         self.stack.push(Value::from_vector(result));
-        self.semantic_registry.push_hint(Interpretation::Unassigned);
+        self.stack.set_last_role(Interpretation::Unassigned);
         Ok(())
     }
 
     pub(crate) fn op_monitor(&mut self) -> crate::error::Result<()> {
         let handle = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let id = handle
             .as_process_handle()
             .ok_or_else(|| AjisaiError::from("MONITOR requires a process handle"))?;
@@ -188,15 +183,13 @@ impl Interpreter {
             .ok_or_else(|| AjisaiError::from("Unknown process handle"))?;
         child.monitored = true;
         self.stack.push(Value::from_process_handle(id));
-        self.semantic_registry.push_hint(Interpretation::Unassigned);
+        self.stack.set_last_role(Interpretation::Unassigned);
         Ok(())
     }
 
     pub(crate) fn op_supervise(&mut self) -> crate::error::Result<()> {
         let retry_value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let block = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-        self.semantic_registry.pop_hint();
         let max_restarts = extract_integer_from_value(&retry_value)?.max(0) as usize;
         let code_block = block
             .as_code_block()
@@ -225,7 +218,7 @@ impl Interpreter {
 
             if ok {
                 self.stack.push(Value::from_vector(result));
-                self.semantic_registry.push_hint(Interpretation::Unassigned);
+                self.stack.set_last_role(Interpretation::Unassigned);
                 return Ok(());
             }
             if attempt >= max_restarts {
@@ -233,7 +226,7 @@ impl Interpreter {
                     Value::from_string("failed"),
                     Value::from_vector(vec![]),
                 ]));
-                self.semantic_registry.push_hint(Interpretation::Unassigned);
+                self.stack.set_last_role(Interpretation::Unassigned);
                 return Ok(());
             }
             self.bump_execution_epoch();

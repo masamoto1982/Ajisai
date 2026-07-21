@@ -93,8 +93,9 @@ impl Interpreter {
             }
         }
 
+        // The stack owns roles now, so cloning it snapshots both planes; the
+        // former parallel `stack_hints` save/restore is gone.
         let saved_stack = self.stack.clone();
-        let saved_hints = self.semantic_registry.stack_hints.clone();
         let saved_target = self.operation_target_mode;
         let saved_consumption = self.consumption_mode;
         let saved_output = std::mem::take(&mut self.output_buffer);
@@ -110,13 +111,11 @@ impl Interpreter {
         let fast_result = execute_compiled_plan(self, compiled);
         let fast_jumped = self.tail_jump_pending;
         let fast_stack = self.stack.clone();
-        let fast_hints = self.semantic_registry.stack_hints.clone();
         let fast_output = std::mem::take(&mut self.output_buffer);
         let fast_io_output = std::mem::take(&mut self.io_output_buffer);
         let fast_host_effects = std::mem::take(&mut self.host_effects);
 
         self.stack = saved_stack;
-        self.semantic_registry.stack_hints = saved_hints;
         self.operation_target_mode = saved_target;
         self.consumption_mode = saved_consumption;
 
@@ -126,7 +125,6 @@ impl Interpreter {
         // Default to the fast path's decision; commit_plain arms below override.
         self.tail_jump_pending = fast_jumped;
         let plain_stack = self.stack.clone();
-        let plain_hints = self.semantic_registry.stack_hints.clone();
         let plain_output = std::mem::take(&mut self.output_buffer);
         let plain_io_output = std::mem::take(&mut self.io_output_buffer);
         let plain_host_effects = std::mem::take(&mut self.host_effects);
@@ -143,7 +141,9 @@ impl Interpreter {
                 // equality only). Every other mode performs the enriched
                 // comparison so absence/effect divergences are visible.
                 let agree = if mode == IntegrityMode::Off {
-                    fast_stack == plain_stack
+                    // Historical cheaper check: stack value equality only
+                    // (`*` derefs each `Stack` to its `Vec<Value>`).
+                    *fast_stack == *plain_stack
                 } else {
                     paths_integrity_agree(
                         &fast_stack,
@@ -155,13 +155,7 @@ impl Interpreter {
 
                 if agree {
                     self.runtime_metrics.shadow_validation_success_count += 1;
-                    self.commit_fast(
-                        fast_stack,
-                        fast_hints,
-                        fast_output,
-                        fast_io_output,
-                        fast_host_effects,
-                    );
+                    self.commit_fast(fast_stack, fast_output, fast_io_output, fast_host_effects);
                     return ValidationOutcome {
                         result: Ok(()),
                         used_plain_fallback: false,
@@ -178,7 +172,6 @@ impl Interpreter {
                     IntegrityMode::Off | IntegrityMode::Observe => {
                         self.commit_fast(
                             fast_stack,
-                            fast_hints,
                             fast_output,
                             fast_io_output,
                             fast_host_effects,
@@ -197,7 +190,6 @@ impl Interpreter {
                         ));
                         self.commit_plain(
                             plain_stack,
-                            plain_hints,
                             plain_output,
                             plain_io_output,
                             plain_host_effects,
@@ -228,7 +220,6 @@ impl Interpreter {
                 self.push_hedged_trace(format!("shadow:fallback word={} -> plain", resolved_name));
                 self.commit_plain(
                     plain_stack,
-                    plain_hints,
                     plain_output,
                     plain_io_output,
                     plain_host_effects,
@@ -259,7 +250,6 @@ impl Interpreter {
                     IntegrityMode::Off | IntegrityMode::Observe => {
                         self.commit_fast(
                             fast_stack,
-                            fast_hints,
                             fast_output,
                             fast_io_output,
                             fast_host_effects,
@@ -299,14 +289,13 @@ impl Interpreter {
 
     fn commit_fast(
         &mut self,
-        fast_stack: Vec<Value>,
-        fast_hints: Vec<crate::types::Interpretation>,
+        fast_stack: crate::types::Stack,
         fast_output: String,
         fast_io_output: String,
         fast_host_effects: Vec<HostEffect>,
     ) {
+        // The committed stack carries its own roles; no separate hints plane.
         self.stack = fast_stack;
-        self.semantic_registry.stack_hints = fast_hints;
         self.output_buffer.push_str(&fast_output);
         self.io_output_buffer.push_str(&fast_io_output);
         self.host_effects.extend(fast_host_effects);
@@ -314,14 +303,12 @@ impl Interpreter {
 
     fn commit_plain(
         &mut self,
-        plain_stack: Vec<Value>,
-        plain_hints: Vec<crate::types::Interpretation>,
+        plain_stack: crate::types::Stack,
         plain_output: String,
         plain_io_output: String,
         plain_host_effects: Vec<HostEffect>,
     ) {
         self.stack = plain_stack;
-        self.semantic_registry.stack_hints = plain_hints;
         self.output_buffer.push_str(&plain_output);
         self.io_output_buffer.push_str(&plain_io_output);
         self.host_effects.extend(plain_host_effects);

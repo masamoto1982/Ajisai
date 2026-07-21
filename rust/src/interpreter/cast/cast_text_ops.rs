@@ -4,6 +4,7 @@ use crate::interpreter::cast::cast_value_helpers::{
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::types::Stack;
 use crate::types::Value;
 
 fn type_name_of(val: &Value) -> &'static str {
@@ -72,7 +73,7 @@ fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Resu
             for elem in elements {
                 if elem.is_nil() {
                     let err = AjisaiError::from(format!("{}: expected String, got Nil", word));
-                    interp.stack = results;
+                    interp.stack = Stack::from_values(results);
                     interp.stack.push(elem);
                     return Err(err);
                 }
@@ -82,14 +83,14 @@ fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Resu
                     continue;
                 }
                 let tn = type_name_of(&elem);
-                interp.stack = results;
+                interp.stack = Stack::from_values(results);
                 interp.stack.push(elem);
                 return Err(AjisaiError::from(format!(
                     "{}: expected String, got {}",
                     word, tn
                 )));
             }
-            interp.stack = results;
+            interp.stack = Stack::from_values(results);
             Ok(())
         }
     }

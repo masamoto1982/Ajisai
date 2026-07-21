@@ -393,6 +393,12 @@ pub struct Interpreter {
     pub(crate) module_epoch: u64,
     pub(crate) execution_epoch: u64,
 
+    /// Flow-plane scaffolding (value-id-keyed `flow_hints` / `flow_extensions`).
+    /// Top-level stack-position roles moved onto [`Stack`] in Phase 4, leaving
+    /// this registry with only the flow-plane fields, which have no readers yet
+    /// and are explicitly out of scope for the Phase 4 migration. Retained for
+    /// that future use; `dead_code` is expected until a reader lands.
+    #[allow(dead_code)]
     pub(crate) semantic_registry: SemanticRegistry,
 
     pub(crate) child_runtimes: HashMap<u64, ChildRuntime>,
@@ -525,7 +531,7 @@ impl Interpreter {
 
     pub fn with_host(host_env: Arc<dyn super::HostEnv>) -> Self {
         let mut interpreter = Interpreter {
-            stack: Vec::new(),
+            stack: Stack::new(),
             core_vocabulary: HashMap::new(),
             user_words: HashMap::new(),
             user_dictionaries: HashMap::new(),
@@ -892,20 +898,15 @@ impl Interpreter {
         self.max_execution_steps = steps;
     }
 
-    pub fn update_stack(&mut self, stack: Stack) {
-        self.stack = stack;
-        self.semantic_registry
-            .normalize_to_stack_len(self.stack.len());
+    pub fn update_stack(&mut self, stack: impl Into<Stack>) {
+        self.stack = stack.into();
     }
 
-    pub fn update_stack_with_hints(&mut self, stack: Stack, hints: Vec<Interpretation>) {
-        self.stack = stack;
-        self.semantic_registry.stack_hints = hints;
-        self.semantic_registry
-            .normalize_to_stack_len(self.stack.len());
+    pub fn update_stack_with_hints(&mut self, values: Vec<Value>, hints: Vec<Interpretation>) {
+        self.stack = Stack::from_values_and_roles(values, hints);
     }
 
     pub fn collect_stack_hints(&self) -> &[Interpretation] {
-        &self.semantic_registry.stack_hints
+        self.stack.roles()
     }
 }

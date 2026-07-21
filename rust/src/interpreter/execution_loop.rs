@@ -6,9 +6,13 @@ use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
 use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::SemanticRegistry;
 
-fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
+/// After a core/module word runs, retag the top-of-stack plane role from a small
+/// name-keyed table (SPEC §12). The interpreted loop applies this after every
+/// symbol; the compiled plan mirrors it after each call op so the two routes
+/// leave identical `(value, role)` observations. A no-op for words not in the
+/// table (e.g. user words).
+pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     let hint: Option<Interpretation> = match word {
         "STR" | "CHR" | "JOIN" | "TRIM" | "TRIM-LEFT" | "TRIM-RIGHT" | "SUBSTITUTE" => {
             Some(Interpretation::Text)
@@ -32,10 +36,9 @@ fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         _ => None,
     };
     if let Some(h) = hint {
-        let registry: &mut SemanticRegistry = &mut interp.semantic_registry;
-        let len: usize = registry.len();
+        let len: usize = interp.stack.len();
         if len > 0 {
-            registry.update_hint_at(len - 1, h);
+            interp.stack.set_role_at(len - 1, h);
         }
     }
 }
@@ -304,12 +307,12 @@ impl Interpreter {
             match &execute_tokens[i] {
                 Token::Number(n) => {
                     let frac = Fraction::from_str(n).map_err(AjisaiError::from)?;
-                    self.stack.push(create_number_value(frac));
-                    self.semantic_registry.push_hint(Interpretation::RawNumber);
+                    self.stack
+                        .push_with_role(create_number_value(frac), Interpretation::RawNumber);
                 }
                 Token::String(s) => {
-                    self.stack.push(Value::from_string(s));
-                    self.semantic_registry.push_hint(Interpretation::Text);
+                    self.stack
+                        .push_with_role(Value::from_string(s), Interpretation::Text);
                 }
                 Token::VectorStart => {
                     let (values, consumed, element_hint) =
@@ -319,8 +322,8 @@ impl Interpreter {
                             "Empty vector is not allowed. Use NIL for empty values.",
                         ));
                     }
-                    self.stack.push(Value::from_vector_promoted(values));
-                    self.semantic_registry.push_hint(element_hint);
+                    self.stack
+                        .push_with_role(Value::from_vector_promoted(values), element_hint);
                     i += consumed;
                     continue;
                 }
@@ -350,8 +353,10 @@ impl Interpreter {
                         return Err(AjisaiError::from("Unclosed code block"));
                     }
 
-                    self.stack.push(Value::from_code_block(block_tokens));
-                    self.semantic_registry.push_hint(Interpretation::Unassigned);
+                    self.stack.push_with_role(
+                        Value::from_code_block(block_tokens),
+                        Interpretation::Unassigned,
+                    );
                     i = j;
                     continue;
                 }
@@ -409,8 +414,6 @@ impl Interpreter {
                                         upper.as_ref(),
                                         stack_len_before,
                                     );
-                                    self.semantic_registry
-                                        .normalize_to_stack_len(self.stack.len());
                                     apply_word_hint_override(self, upper.as_ref());
                                 }
                                 Err(err) => {
@@ -445,12 +448,10 @@ impl Interpreter {
                 }
                 Token::Pipeline => {}
                 Token::NilCoalesce => {
-                    let value = self.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                    let hint = self.semantic_registry.pop_hint();
+                    let (value, hint) = self.stack.pop_slot().ok_or(AjisaiError::StackUnderflow)?;
 
                     if !value.is_nil() {
-                        self.stack.push(value);
-                        self.semantic_registry.push_hint(hint);
+                        self.stack.push_with_role(value, hint);
                         i += 1;
                         if i < execute_tokens.len() {
                             match &execute_tokens[i] {

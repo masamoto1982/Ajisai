@@ -27,10 +27,7 @@ pub(crate) fn op_pi(interp: &mut Interpreter) -> Result<()> {
         .stack
         .push(Value::from_exact_real(ExactReal::Computable(pi::pi())));
     let len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(len);
-    interp
-        .semantic_registry
-        .update_hint_at(len - 1, Interpretation::RawNumber);
+    interp.stack.set_role_at(len - 1, Interpretation::RawNumber);
     Ok(())
 }
 
@@ -67,8 +64,6 @@ pub(crate) fn op_enclose(interp: &mut Interpreter) -> Result<()> {
             interp.stack.truncate(len - 2);
         }
         interp.stack.push(nil);
-        let new_len = interp.stack.len();
-        interp.semantic_registry.normalize_to_stack_len(new_len);
         return Ok(());
     }
 
@@ -83,9 +78,8 @@ pub(crate) fn op_enclose(interp: &mut Interpreter) -> Result<()> {
     }
     interp.stack.push(Value::from_interval(interval));
     let new_len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(new_len);
     interp
-        .semantic_registry
-        .update_hint_at(new_len - 1, Interpretation::Interval);
+        .stack
+        .set_role_at(new_len - 1, Interpretation::Interval);
     Ok(())
 }

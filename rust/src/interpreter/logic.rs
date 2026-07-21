@@ -7,6 +7,7 @@ use crate::interpreter::tensor_ops::{
 use crate::interpreter::value_extraction_helpers::extract_count_from_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
+use crate::types::Stack;
 use crate::types::Value;
 
 /// Whether an operand forces the scalar three-valued (K3) path rather
@@ -140,7 +141,7 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
             if is_keep_mode {
                 interp.stack.extend(results);
             } else {
-                interp.stack = results;
+                interp.stack = Stack::from_values(results);
             }
             Ok(())
         }
@@ -207,7 +208,10 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect()
+                interp.stack.as_slice()[stack_len - count..]
+                    .iter()
+                    .cloned()
+                    .collect()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
@@ -281,7 +285,10 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack[stack_len - count..].iter().cloned().collect()
+                interp.stack.as_slice()[stack_len - count..]
+                    .iter()
+                    .cloned()
+                    .collect()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };

@@ -1,4 +1,4 @@
-use super::{Interpretation, Stack, Value};
+use super::{Interpretation, Value};
 
 /// A single observable stack position: data plus its semantic-plane role.
 ///
@@ -57,7 +57,7 @@ impl SemanticStack {
     }
 
     pub fn from_parts(
-        values: Stack,
+        values: Vec<Value>,
         roles: Vec<Interpretation>,
     ) -> Result<Self, SemanticStackError> {
         if values.len() != roles.len() {
@@ -74,7 +74,7 @@ impl SemanticStack {
         Ok(Self { slots })
     }
 
-    pub fn from_values_with_default_roles(values: Stack) -> Self {
+    pub fn from_values_with_default_roles(values: Vec<Value>) -> Self {
         let slots = values
             .into_iter()
             .map(|value| StackSlot::new(value, Interpretation::Unassigned))
@@ -114,7 +114,7 @@ impl SemanticStack {
         self.slots.iter().map(StackSlot::role)
     }
 
-    pub fn into_parts(self) -> (Stack, Vec<Interpretation>) {
+    pub fn into_parts(self) -> (Vec<Value>, Vec<Interpretation>) {
         self.slots.into_iter().map(StackSlot::into_parts).unzip()
     }
 }

@@ -51,10 +51,7 @@ fn require_non_empty(interp: &Interpreter) -> Result<()> {
 /// interpretation so the value renders correctly (Text with quotes, a truth
 /// value, a NIL, a Record). The target below keeps its own hint untouched.
 fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
-    interp.stack.push(value);
-    let len = interp.stack.len();
-    interp.semantic_registry.normalize_to_stack_len(len);
-    interp.semantic_registry.update_hint_at(len - 1, hint);
+    interp.stack.push_with_role(value, hint);
 }
 
 /// A protocol-string Text result, or NIL when the accessor found no value.

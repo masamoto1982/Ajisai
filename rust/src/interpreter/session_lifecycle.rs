@@ -77,7 +77,9 @@ impl Interpreter {
         self.dictionary_dependencies.clear();
         self.next_registration_order = 1;
         self.active_user_dictionary = "EXAMPLE".to_string();
-        self.semantic_registry.clear();
+        // Top-level roles live on the stack now and were cleared with it above
+        // (`self.stack.clear()`); the registry keeps only value-id-keyed flow
+        // state, which session reset leaves untouched, as before.
         self.child_runtimes.clear();
         self.next_child_id = 1;
         self.monitor_notifications.clear();

@@ -62,9 +62,7 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
     match exact_real_of(&operands[0]) {
         Some(er) => {
             push_result(interp, Value::from_exact_real(er.neg()));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         None => {
@@ -95,17 +93,13 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
             // |x| = -x for x < 0; a value that compared is numeric.
             let er = exact_real_of(&operands[0]).expect("comparable operand is numeric");
             push_result(interp, Value::from_exact_real(er.neg()));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         Ok(crate::interpreter::comparison::OrderOutcome::Decided(_)) => {
             // x >= 0: |x| = x, returned unchanged to preserve its exact form.
             push_result(interp, operands[0].clone());
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
@@ -144,9 +138,7 @@ pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
                 std::cmp::Ordering::Greater => 1,
             };
             push_result(interp, Value::from_fraction(Fraction::from(sign)));
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
@@ -187,9 +179,7 @@ where
                 operands[1].clone()
             };
             push_result(interp, chosen);
-            interp
-                .semantic_registry
-                .push_hint(Interpretation::RawNumber);
+            interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
         Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
@@ -291,9 +281,7 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
     let is_bubble = result.is_nil();
     push_result(interp, result);
     if !is_bubble {
-        interp
-            .semantic_registry
-            .push_hint(Interpretation::RawNumber);
+        interp.stack.set_last_role(Interpretation::RawNumber);
     }
     Ok(())
 }
@@ -325,9 +313,7 @@ where
         interp,
         Value::from_fraction(Fraction::new(op(&a, &b), BigInt::from(1))),
     );
-    interp
-        .semantic_registry
-        .push_hint(Interpretation::RawNumber);
+    interp.stack.set_last_role(Interpretation::RawNumber);
     Ok(())
 }
 
