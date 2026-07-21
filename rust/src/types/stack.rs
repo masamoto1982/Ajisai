@@ -70,6 +70,13 @@ impl Stack {
         self.values.pop()
     }
 
+    /// Iterate the stack bottom-to-top as observable `(value, role)` slots —
+    /// the `(data, role)` pairs of SPEC §12. This is the alignment-guaranteed
+    /// source for every stack-rendering surface.
+    pub fn iter_slots(&self) -> impl ExactSizeIterator<Item = (&Value, Interpretation)> + '_ {
+        self.values.iter().zip(self.roles.iter().copied())
+    }
+
     /// Pop the top slot as a `(value, role)` pair for callers that need to carry
     /// the role forward (e.g. re-push it after inspection).
     pub fn pop_slot(&mut self) -> Option<(Value, Interpretation)> {

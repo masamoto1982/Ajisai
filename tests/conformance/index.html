@@ -628,7 +628,7 @@
 <section class="ajisai-case" id="hosted-now-deterministic" data-category="hosted" data-host-now-millis="1700000000123" data-host-capabilities="clock">
   <h3>TIME@NOW reads the injected deterministic host clock</h3>
   <pre class="ajisai-source">'time' IMPORT NOW</pre>
-  <pre class="ajisai-expect-result">1700000000123/1000</pre>
+  <pre class="ajisai-expect-result">@1700000000123/1000</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1429,12 +1429,18 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<!-- >CF changes only the requested display role (§3.9), never the value, and
-     the concrete CF rendering of a re-tagged *rational* currently differs
-     between the two Rust observation surfaces (CLI stackDisplay renders
-     `( 0 ( 3 ) )`, the in-process runner keeps `1/3`). The value-identity
-     below is the portable phenomenon; the display of a re-tagged rational is
-     deliberately left unpinned until the surfaces agree. -->
+<!-- >CF changes only the requested display role (§3.9), never the value. Both
+     Rust observation surfaces now render each stack slot from its `(value,
+     role)` pair through one shared function (SPEC §12), so the CF rendering of
+     a re-tagged rational is pinned here and is identical on the CLI and the
+     in-process runner. -->
+
+<section class="ajisai-case" id="core-tocf-rational-display" data-category="core">
+  <h3>&gt;CF renders a re-tagged rational as its canonical continued fraction</h3>
+  <pre class="ajisai-source">1/3 &gt;CF</pre>
+  <pre class="ajisai-expect-result">( 0 ( 3 ) )</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <section class="ajisai-case" id="core-tocf-preserves-value-rational" data-category="core">
   <h3>&gt;CF re-tags a rational for continued-fraction display without changing the value</h3>
@@ -2825,7 +2831,7 @@ COND</pre>
 <section class="ajisai-case" id="core-time-timestamp" data-category="core">
   <h3>TIME@TIMESTAMP resolves a civil datetime to an exact instant</h3>
   <pre class="ajisai-source">'time' IMPORT [ 2023 11 14 22 13 20 ] 0 TIME@TIMESTAMP</pre>
-  <pre class="ajisai-expect-result">1700000000/1</pre>
+  <pre class="ajisai-expect-result">@1700000000/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -3069,7 +3075,7 @@ COND</pre>
 <section class="ajisai-case" id="core-time-parse-iso-timestamp-roundtrip" data-category="core">
   <h3>PARSE-ISO then TIMESTAMP round-trips to the exact instant</h3>
   <pre class="ajisai-source">'time' IMPORT '2023-11-14T22:13:20' TIME@PARSE-ISO 0 TIME@TIMESTAMP</pre>
-  <pre class="ajisai-expect-result">1700000000/1</pre>
+  <pre class="ajisai-expect-result">@1700000000/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
