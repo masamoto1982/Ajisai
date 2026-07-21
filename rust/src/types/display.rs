@@ -1,8 +1,23 @@
 use super::exact::ExactReal;
 use super::fraction::Fraction;
-use super::{DenseTensor, Interpretation, Value, ValueData};
+use super::{DenseTensor, Interpretation, Stack, Value, ValueData};
 use num_bigint::BigInt;
 use std::fmt;
+
+/// Render every stack slot as its observable `(value, role)` string (SPEC §12).
+///
+/// This is the single stack rendering shared by all observation surfaces — the
+/// CLI stack display, the REPL, the in-process conformance runner, and the JSON
+/// report — so that a position role such as `>CF` or a timestamp can never
+/// render one way on one surface and another way on another. It renders each
+/// slot with the *slot's* role rather than the value's construction-time hint,
+/// which is what makes it differ from `Value`'s own `Display`.
+pub fn render_stack(stack: &Stack) -> Vec<String> {
+    stack
+        .iter_slots()
+        .map(|(value, role)| format_with_hint(value, role))
+        .collect()
+}
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

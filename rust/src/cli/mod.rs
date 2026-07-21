@@ -63,7 +63,6 @@ use crate::interpreter::debug_diagnosis::{
     CauseClass, DebugCheck, DebugDiagnosis, ErrorLocus, ErrorLocusKind, ErrorPhase,
 };
 use crate::interpreter::{HostEffect, Interpreter, RuntimeMetrics};
-use crate::types::display::format_with_hint;
 use crate::types::Token;
 use report::Report;
 use std::sync::Arc;
@@ -416,13 +415,10 @@ fn print_payloads(interp: &Interpreter) -> Vec<String> {
 }
 
 fn stack_display(interp: &Interpreter) -> Vec<String> {
-    let stack = interp
-        .semantic_stack_snapshot()
-        .expect("stack values and semantic roles must remain position-aligned");
-    stack
-        .iter()
-        .map(|slot| format_with_hint(slot.value(), slot.role()))
-        .collect()
+    // One shared `(value, role)` rendering (SPEC §12) for every observation
+    // surface; the `Stack` owns aligned values and roles, so no snapshot/
+    // realignment step is needed here.
+    crate::types::display::render_stack(interp.get_stack())
 }
 
 /// When a Hosted word failed because this terminal host does not provide its

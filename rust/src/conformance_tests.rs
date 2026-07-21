@@ -385,13 +385,11 @@ async fn run_case(case: &Case) -> std::result::Result<(), String> {
     } else {
         execution.map_err(|e| format!("execution failed: {e}"))?;
 
-        // Final result = the whole stack, each value rendered via Display.
-        let actual_result = interp
-            .get_stack()
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
+        // Final result = the whole stack, each slot rendered as its observable
+        // `(value, role)` string via the shared surface (SPEC §12), so a
+        // position role such as `>CF` or a timestamp is observed here exactly as
+        // the CLI observes it — not via role-blind `Value::to_string()`.
+        let actual_result = crate::types::display::render_stack(interp.get_stack()).join(" ");
         let expected_norm = normalize_ws(&case.expect_result);
         let actual_norm = normalize_ws(&actual_result);
         if expected_norm != actual_norm {
