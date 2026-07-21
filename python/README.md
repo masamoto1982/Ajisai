@@ -1,5 +1,21 @@
 # Ajisai — Python port (spec-only reproduction)
 
+> **Non-canonical, earlier spec revision — not a conformance target.**
+> This port was derived from an **earlier revision** of `SPECIFICATION.html`
+> and is a historical spec-reproduction experiment. It is **not** run in CI and
+> its semantics are **not** authoritative. Some behaviours have since been
+> superseded by the current specification, notably:
+> - **VENT** is now a *lazy* control directive (§6.4) — `3 0 DIV VENT 99` yields
+>   `99/1`; the eager `<a> <b> VENT` coalescing form this port implements is
+>   obsolete.
+> - **COMPARE-WITHIN** decides equal Tier ≤ 1 algebraic operands exactly and
+>   budget-independently (§7.4.1/§7.4.2) — it does not return `UNKNOWN` for them.
+>
+> The maintained, current-spec reference implementation and differential oracle
+> is [`tools/ajisai-repro/`](../tools/ajisai-repro/) (checked in CI). Treat this
+> directory as a frozen artifact of the earlier "port to refine the spec"
+> experiment; see [`SPEC_GAPS.md`](SPEC_GAPS.md) for its findings.
+
 A from-scratch Python implementation of Ajisai, written **only** from
 `SPECIFICATION.html` (the canonical authority, Section 2.1) without consulting
 the Rust/WASM/TypeScript implementation or any prior port.
