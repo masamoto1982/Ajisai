@@ -141,12 +141,11 @@ fn explanation_json(explanation: &Explanation) -> Json {
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
-    let stack = interp
-        .semantic_stack_snapshot()
-        .expect("stack values and semantic roles must remain position-aligned");
-    let nodes: Vec<Json> = stack
-        .iter()
-        .map(|slot| protocol_node_json(&value_to_protocol(slot.value(), Some(slot.role()))))
+    // The `Stack` owns aligned `(value, role)` slots, so iterate them directly.
+    let nodes: Vec<Json> = interp
+        .get_stack()
+        .iter_slots()
+        .map(|(value, role)| protocol_node_json(&value_to_protocol(value, Some(role))))
         .collect();
     Json::Array(nodes)
 }

@@ -38,7 +38,6 @@ pub mod quantized_block;
 pub mod random;
 pub mod receipt_recorder;
 mod resolve_cache;
-pub mod semantic_stack_adapter;
 pub mod serial;
 mod session_lifecycle;
 mod shadow_validation;

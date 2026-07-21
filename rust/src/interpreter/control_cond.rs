@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::{Interpretation, SemanticStack, Token, Value, ValueData};
+use crate::types::{Interpretation, Stack, Token, Value, ValueData};
 
 use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
 
@@ -246,10 +246,10 @@ fn evaluate_guard_isolated(
 ) -> Result<bool> {
     // Preserve the observable stack as typed slots.  COND isolation is one of
     // the high-risk legacy paths because it previously saved values and roles
-    // as independently managed vectors.
-    let saved_stack = interp
-        .semantic_stack_snapshot()
-        .expect("stack values and semantic roles must remain position-aligned");
+    // as independently managed vectors. The `Stack` now owns values and roles
+    // together, so cloning it captures the aligned `(value, role)` slots
+    // directly — no snapshot type and no alignment assertion needed.
+    let saved_stack = interp.stack.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
@@ -344,12 +344,12 @@ fn evaluate_guard_greedy(
 
 fn restore_cond_eval_state(
     interp: &mut Interpreter,
-    saved_stack: SemanticStack,
+    saved_stack: Stack,
     saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
     saved_epoch: EpochSnapshot,
 ) {
-    interp.replace_semantic_stack(saved_stack);
+    interp.stack = saved_stack;
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
@@ -440,9 +440,7 @@ fn execute_cond_body(
     value: &Value,
     tail_context: bool,
 ) -> Result<()> {
-    let saved_stack = interp
-        .semantic_stack_snapshot()
-        .expect("stack values and semantic roles must remain position-aligned");
+    let saved_stack = interp.stack.clone();
     let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
 
@@ -474,7 +472,7 @@ fn execute_cond_body(
             None => (None, Interpretation::Unassigned),
         };
 
-    interp.replace_semantic_stack(saved_stack);
+    interp.stack = saved_stack;
     interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
 
