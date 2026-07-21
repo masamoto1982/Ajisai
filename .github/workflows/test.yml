@@ -77,6 +77,12 @@ jobs:
         # may not grow by >=10%. See scripts/check-file-size-budget.mjs.
         run: npm run check:file-size
 
+      - name: Traceability matrix path integrity
+        # The quality traceability matrix references source and test files by
+        # path; a renamed or removed file must not leave a dangling reference.
+        # See scripts/check-traceability-paths.mjs.
+        run: npm run check:traceability
+
       - name: Verify source provenance attestation
         # Injection tripwire: the committed content-addressed attestation over the
         # trust-critical source surface must match the working tree, and the root

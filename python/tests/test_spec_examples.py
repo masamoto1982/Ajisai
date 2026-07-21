@@ -1,5 +1,21 @@
 """Tests asserting the concrete examples written in SPECIFICATION.html.
 
+    NON-CANONICAL / EARLIER SPEC REVISION.  This Python port (see
+    ../README.md) was derived from an EARLIER revision of SPECIFICATION.html
+    and is a historical spec-reproduction experiment, not a maintained
+    conformance target and NOT run in CI. Two expectations below reflect
+    semantics that the current specification has since superseded and are kept
+    only to match this port's frozen implementation; they are marked inline as
+    [SUPERSEDED]:
+      * VENT is now a *lazy* control directive (§6.4): `3 0 DIV VENT 99`
+        yields `99/1`; the eager `<a> <b> VENT` coalescing form recorded here
+        is obsolete.
+      * COMPARE-WITHIN decides equal Tier <= 1 algebraic operands exactly,
+        budget-independently (§7.4.1/§7.4.2); it does NOT return UNKNOWN for
+        them.
+    The maintained, current-spec reference implementation and differential
+    oracle is `tools/ajisai-repro/` (checked in CI).
+
 Each test cites the spec section it verifies. Run with: python -m pytest python/tests
 or simply: python python/tests/test_spec_examples.py
 """
@@ -45,6 +61,8 @@ CASES = [
     # Section 7.3 — arithmetic, DIV/MOD asymmetry
     ("3 4 ADD", "7/1"),
     ("3 0 DIV", "NIL"),
+    # [SUPERSEDED] earlier-revision eager VENT. Current lazy VENT (§6.4) would
+    # need `3 0 DIV VENT 99` to yield `99/1`.
     ("3 0 DIV 99 VENT", "99/1"),
     # Section 7.3 — ROUND ties away from zero
     ("0.5 ROUND", "1/1"),
@@ -95,7 +113,11 @@ def run_all():
         print(("PASS" if ok else "FAIL"), repr(src), "OUT->", repr(got),
               "" if ok else f"(expected {expected!r})")
         failures += not ok
-    # UNKNOWN cases (Section 7.4.2): equal irrationals undecided within budget
+    # [SUPERSEDED] earlier-revision COMPARE-WITHIN. The current spec
+    # (§7.4.1/§7.4.2) decides equal Tier <= 1 algebraic operands exactly and
+    # budget-independently (result 0), never UNKNOWN; UNKNOWN is reserved for
+    # the not-yet-constructable Tier 2 reals. This assertion matches this
+    # frozen port's earlier semantics only.
     i = run("'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT 3 COMPARE-WITHIN")
     from ajisai.values import Unknown
     ok = len(i.stack) == 1 and isinstance(i.stack[0], Unknown)

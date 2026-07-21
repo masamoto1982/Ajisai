@@ -35,11 +35,9 @@ const BASELINE_COMMENT = [
   'count and must not grow by 10% or more; files not listed here must stay at or',
   'under 500 lines. Regenerate with: node scripts/check-file-size-budget.mjs --update',
   '',
-  'Intentional non-split: rust/src/types/continued_fraction.rs (the largest',
-  'offender) is deliberately NOT split in this change. It is slated for a large',
-  'follow-up rewrite, and splitting it now would only create churn that the',
-  'rewrite would have to unwind. The §14.1 revision keeps existing over-budget',
-  'files as a recorded baseline rather than requiring an immediate split.',
+  'A baselined path that no longer exists is a hard error: delete the entry in',
+  'the same change that removes the file (re-baseline with --update), so the',
+  'baseline never references source that is gone.',
 ];
 
 // Count lines the same way `wc -l` does (number of newline characters), so the
@@ -131,11 +129,15 @@ function check() {
     }
   }
 
-  // Stale baseline entries (a file was removed or split away) are informational,
-  // not fatal: shrinking the over-budget surface is exactly the intended motion.
+  // A baselined path that no longer exists is a violation: the baseline must not
+  // reference source that has been removed or renamed. The fix is to drop the
+  // stale entry in the same change that removes the file (re-baseline with
+  // --update), which is why an intentional deletion + baseline update passes.
   for (const path of Object.keys(baseline)) {
     if (!sizes.has(path)) {
-      console.log(`[file-size-budget] note: baselined file no longer present: ${path} (drop it with --update)`);
+      violations.push(
+        `${path}: baselined file no longer present; drop the stale entry (re-baseline with --update in the change that removed it)`,
+      );
     }
   }
 
