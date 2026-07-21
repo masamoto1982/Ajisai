@@ -61,7 +61,12 @@ pub(super) fn observe(
         outcome,
         stack_debug: format!("{stack:?}"),
         rendered: stack.iter().map(|v| format!("{v}")).collect(),
-        hints: stack.iter().map(|v| format!("{:?}", v.hint)).collect(),
+        // Observe the top-level role from the `Stack` (the slot role), not each
+        // value's construction-time `hint`: SPEC §12 observes `(data, role)` on
+        // the slot, and a position cast (`>CF`, timestamp) moves the slot role
+        // away from the value's own hint. Two routes must agree on what is
+        // observable, so the equivalence fingerprint compares slot roles.
+        hints: stack.roles().iter().map(|r| format!("{r:?}")).collect(),
         nil_reasons: stack
             .iter()
             .map(|v| v.nil_reason().map(|r| r.as_protocol_str().to_string()))

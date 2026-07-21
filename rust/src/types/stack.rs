@@ -287,4 +287,46 @@ mod tests {
         assert!(stack.is_empty());
         assert!(stack.roles().is_empty());
     }
+
+    #[test]
+    fn insert_remove_truncate_reverse_keep_values_and_roles_aligned() {
+        let mut stack = Stack::from_values(vec![Value::from_int(1), Value::from_int(3)]);
+        // A cast on slot 0, then an insert in the middle: roles must move with
+        // their values, so the cast still names the original value.
+        stack.set_role_at(0, Interpretation::ContinuedFraction);
+        let inserted = Value::from_int(2);
+        let inserted_role = inserted.hint;
+        stack.insert(1, inserted);
+        assert_eq!(stack.roles().len(), stack.len());
+        // The cast slot's role stays with its value; the new slot adopts the
+        // inserted value's construction role.
+        assert_eq!(stack.role_at(0), Interpretation::ContinuedFraction);
+        assert_eq!(stack.role_at(1), inserted_role);
+
+        stack.remove(1);
+        assert_eq!(stack.roles().len(), stack.len());
+        assert_eq!(stack.role_at(0), Interpretation::ContinuedFraction);
+
+        stack.reverse();
+        assert_eq!(stack.roles().len(), stack.len());
+        // The cast slot is now on top after reversal.
+        assert_eq!(stack.last_role(), Interpretation::ContinuedFraction);
+
+        stack.truncate(1);
+        assert_eq!(stack.roles().len(), stack.len());
+
+        stack.clear();
+        assert!(stack.roles().is_empty());
+    }
+
+    #[test]
+    fn pop_slot_then_re_push_round_trips_the_role() {
+        let mut stack = Stack::new();
+        stack.push_with_role(Value::from_int(7), Interpretation::ContinuedFraction);
+        let (value, role) = stack.pop_slot().unwrap();
+        assert_eq!(role, Interpretation::ContinuedFraction);
+        stack.push_with_role(value, role);
+        assert_eq!(stack.last_role(), Interpretation::ContinuedFraction);
+        assert_eq!(stack.roles().len(), stack.len());
+    }
 }

@@ -67,9 +67,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
             // outer state as typed slots so a role cannot be restored against
             // a different value position. The stack owns roles in lockstep with
             // values, so the snapshot is always position-aligned by construction.
-            let saved_stack = interp
-                .semantic_stack_snapshot()
-                .expect("stack values and semantic roles must remain position-aligned");
+            let saved_stack = interp.stack.clone();
             interp.stack.clear();
             let saved_target = interp.operation_target_mode;
             let saved_no_change_check = interp.disable_no_change_check;
@@ -139,7 +137,7 @@ pub fn op_count(interp: &mut Interpreter) -> Result<()> {
 
             interp.operation_target_mode = saved_target;
             interp.disable_no_change_check = saved_no_change_check;
-            interp.replace_semantic_stack(saved_stack);
+            interp.stack = saved_stack;
 
             if let Some(e) = error {
                 interp.stack.push(target_val);
