@@ -53,3 +53,6 @@ mod json_semantic_role_tests;
 
 #[cfg(test)]
 mod conformance_tests;
+
+#[cfg(test)]
+mod vent_flow_canonical_tests;
