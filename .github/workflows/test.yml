@@ -228,14 +228,6 @@ jobs:
   reference-differential:
     name: Reference Interpreter Differential
     runs-on: ubuntu-latest
-    env:
-      # Staged rollout (same convention as Quality Gate):
-      # the production CLI is diffed against the Python Core reference
-      # interpreter (tools/ajisai-repro). Divergences are surfaced as candidate
-      # class-A spec holes / class-B bugs; they are recorded, not auto-fixed.
-      # Advisory by default; set repository variable AJISAI_STRICT_QUALITY=true
-      # to make a divergence block.
-      AJISAI_STRICT_QUALITY: ${{ vars.AJISAI_STRICT_QUALITY || 'false' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -248,26 +240,33 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Setup Node
+        # The conformance corpus is extracted by scripts/generate-conformance-
+        # manifest.mjs (Node built-ins only, no npm install). Without Node,
+        # `compare.py --conformance` would silently run the inline corpus only,
+        # so Node must be present for the gate to cover the conformance cases.
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Build production CLI
         working-directory: rust
         run: cargo build --bin ajisai --release
 
-      - name: Differential test (production CLI vs Core reference interpreter)
-        # Python standard library only; no extra dependencies are installed.
-        # compare.py resolves the CLI via AJISAI_BIN, defaulting to the
-        # repo-relative rust/target/release/ajisai, and exits non-zero on any
-        # divergence.
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
-        run: python3 tools/ajisai-repro/compare.py
+      - name: Reference interpreter regression tests
+        working-directory: tools/ajisai-repro
+        run: python3 -m unittest test_ajisai -v
 
-      - name: Differential mode summary
-        run: |
-          if [ "${AJISAI_STRICT_QUALITY}" = "true" ]; then
-            echo "Differential mode: STRICT (a divergence blocks)."
-          else
-            echo "Differential mode: ADVISORY (divergences are reported, not blocking)."
-            echo "Set repo variable AJISAI_STRICT_QUALITY=true to enforce strict blocking mode."
-          fi
+      - name: Differential test (production CLI vs Core reference interpreter)
+        # Blocking, unconditionally: the Python reference interpreter is a
+        # verification artifact at conformance-suite rank (SPECIFICATION.html
+        # §2.4/§2.5), so a divergence over the Core conformance corpus is a
+        # defect to fix, not an advisory. Python standard library only; no extra
+        # dependencies are installed. compare.py resolves the CLI via AJISAI_BIN,
+        # defaulting to rust/target/release/ajisai, and exits non-zero on any
+        # divergence. `--conformance` also diffs every Core case of
+        # tests/conformance (deduplicated against the inline corpus).
+        run: python3 tools/ajisai-repro/compare.py --conformance
 
   wasm-boundary-tests:
     name: WASM Boundary Tests
