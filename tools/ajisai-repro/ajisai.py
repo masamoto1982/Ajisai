@@ -90,6 +90,15 @@ class Timestamp(Rational):
     pass
 
 @dataclass
+class ContinuedFractionDisplay(Rational):
+    """Result of `>CF` applied to a rational (SPEC §3.9/§12): the same rational
+    value carrying the continued-fraction display role. Sqrt/Alg already render
+    as continued fractions, so only a plain rational needs this marker.
+    Numerically an ordinary rational; the role is display-only and does not
+    survive arithmetic, matching the production per-slot role model."""
+    pass
+
+@dataclass
 class Interval:
     """A sound rational interval [lo, hi] (MATH@INTERVAL / MATH@SQRT-EPS).
     Displayed as `[lo, hi]` with both endpoints in n/d form, mirroring the
@@ -778,6 +787,11 @@ def display(v):
         # (`format_as_datetime` → `@…`). Checked before the Rational branch
         # because Timestamp is a Rational subclass.
         return f"@{v.f.numerator}/{v.f.denominator}"
+    if isinstance(v, ContinuedFractionDisplay):
+        # §3.9/§12 continued-fraction display role for a re-tagged rational.
+        # Checked before the Rational branch (it is a Rational subclass).
+        return build_nested(rcf_terms_rational(v.f.numerator, v.f.denominator),
+                            truncated=False)
     if isinstance(v, Rational):
         return f"{v.f.numerator}/{v.f.denominator}"
     if isinstance(v, Sqrt):
@@ -1676,10 +1690,15 @@ def w_ends_with(it, mods):
     it.push(TRUE if s.endswith(affix) else FALSE)
 
 def w_tocf(it, mods):
-    # >CF changes only the requested display role (Section 3.9), never the
-    # value; this reference keeps the value unchanged.
+    # >CF changes only the requested display role (Section 3.9/§12), never the
+    # value. A plain rational adopts the continued-fraction display role; Sqrt/
+    # Alg already render as continued fractions and are left unchanged. The role
+    # is display-only and does not survive arithmetic (production per-slot role
+    # model).
     it.need(1)
-    pass
+    v = it.stack[-1]
+    if type(v) is Rational:
+        it.stack[-1] = ContinuedFractionDisplay(v.f)
 
 # QUANTIZE family and CONSERVE (Sections 7.13, 13.3) -------------------------
 
