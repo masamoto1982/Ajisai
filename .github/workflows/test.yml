@@ -16,7 +16,7 @@ jobs:
       AJISAI_STRICT_QUALITY: ${{ vars.AJISAI_STRICT_QUALITY || 'false' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -53,14 +53,14 @@ jobs:
 
       - name: Upload perf regression report artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: perf-report-jsonl
           path: rust/target/perf-report.jsonl
           retention-days: 90
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -145,13 +145,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -182,7 +182,7 @@ jobs:
           cargo check --features wasm --target wasm32-unknown-unknown
 
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack
           key: ${{ runner.os }}-wasm-pack-0.13.1
@@ -221,10 +221,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -242,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -257,7 +257,7 @@ jobs:
         # manifest.mjs (Node built-ins only, no npm install). Without Node,
         # `compare.py --conformance` would silently run the inline corpus only,
         # so Node must be present for the gate to cover the conformance cases.
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -285,7 +285,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Rust (with wasm target)
         uses: dtolnay/rust-toolchain@stable
@@ -293,12 +293,12 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack
           key: ${{ runner.os }}-wasm-pack-0.13.1
