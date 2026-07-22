@@ -34,7 +34,10 @@ fn format_token_to_source(token: &Token) -> String {
 
 fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
     match &val.data {
-        // PR-1: U serializes to source as `NIL`, as the old NIL-backed U did.
+        // CS4 PR-2 (deferred): source reconstruction has no U literal — Ajisai
+        // source cannot spell U — so a runtime U in a serialized body falls
+        // back to `NIL`, matching NIL. Unreachable via the current vocabulary
+        // (no word constructs U yet); revisited if/when a U literal exists.
         ValueData::Nil | ValueData::Unknown(_) => Ok("NIL".to_string()),
         ValueData::Boolean(b) => Ok(if *b { "TRUE" } else { "FALSE" }.to_string()),
         ValueData::Scalar(_) => format_scalar_to_source(val),

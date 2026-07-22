@@ -119,10 +119,14 @@ impl ValueArena {
 pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
     fn alloc_recursive(value: &Value, arena: &mut ValueArena) -> NodeId {
         match &value.data {
-            // PR-1: U is stored as a nil node carrying its `TruthValue` hint,
-            // exactly as the old NIL-backed U was, so arena round-tripping is
-            // behavior-identical. (The arena has no dedicated U node; a
-            // richer representation is future work.)
+            // CS4 PR-2 (deferred): the arena/JSON boundary has no dedicated U
+            // node, so U is stored as a nil node carrying its `TruthValue`
+            // hint. This is a *serialization-format* gap, not a runtime one:
+            // adding an `unknown` node changes the persisted JSON contract and
+            // belongs with a spec/conformance update. U cannot reach this path
+            // via the current vocabulary (Tier ≤ 1 comparison is total, so no
+            // word constructs U yet), so the gap is latent. Tracked for a
+            // dedicated follow-up.
             ValueData::Nil | ValueData::Unknown(_) => arena.alloc_nil(value.hint),
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),

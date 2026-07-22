@@ -253,10 +253,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 /// the recursively flattened element count.
 fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_)
-        | ValueData::ExactScalar(_)
-        | ValueData::Nil
-        | ValueData::Unknown(_) => Some(Vec::new()),
+        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             if items.is_empty() {
@@ -273,7 +270,11 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
             shape.extend(first);
             Some(shape)
         }
+        // CS4 PR-2: U is not a numeric dense-tensor lane (unlike NIL, which is
+        // a nil lane), so — like a Boolean — it has no rectangular shape and a
+        // vector containing U is broadcast structurally, never densified.
         ValueData::Boolean(_)
+        | ValueData::Unknown(_)
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)
         | ValueData::SupervisorHandle(_) => None,
