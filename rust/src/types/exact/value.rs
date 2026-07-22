@@ -263,7 +263,7 @@ impl ExactReal {
                         x.hi.mul(&y.lo),
                         x.hi.mul(&y.hi),
                     ];
-                    products.sort_by(|p, q| p.cmp(q));
+                    products.sort();
                     let [lo, .., hi] = products;
                     RatInterval::new(lo, hi)
                 }))

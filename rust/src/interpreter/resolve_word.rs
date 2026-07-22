@@ -2,7 +2,7 @@ use crate::types::WordDefinition;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
-use super::{DictionaryDependencyInfo, Interpreter};
+use super::Interpreter;
 
 /// Outcome of resolving a bare name against the user dictionaries (the final
 /// fallback stage of `resolve_short_name`). Section 8.6 makes user words
@@ -388,12 +388,12 @@ impl Interpreter {
             for to in tos {
                 self.dictionary_dependencies
                     .entry(from.clone())
-                    .or_insert_with(DictionaryDependencyInfo::default)
+                    .or_default()
                     .depends_on
                     .insert(to.clone());
                 self.dictionary_dependencies
                     .entry(to)
-                    .or_insert_with(DictionaryDependencyInfo::default)
+                    .or_default()
                     .depended_by
                     .insert(from.clone());
             }

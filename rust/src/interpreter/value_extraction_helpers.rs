@@ -141,7 +141,7 @@ pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
         .iter()
         .filter_map(|f| {
             f.to_i64().and_then(|n| {
-                if n >= 0 && n <= 0x10FFFF {
+                if (0..=0x10FFFF).contains(&n) {
                     char::from_u32(n as u32)
                 } else {
                     None
@@ -196,10 +196,7 @@ pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result
         }
         ConsumptionMode::Keep => {
             let stack_len = interp.stack.len();
-            let values: Vec<Value> = interp.stack.as_slice()[stack_len - count..]
-                .iter()
-                .cloned()
-                .collect();
+            let values: Vec<Value> = interp.stack.as_slice()[stack_len - count..].to_vec();
             Ok(values)
         }
     }

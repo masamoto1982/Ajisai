@@ -213,7 +213,7 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
                         if is_number_value(v) {
                             if let Some(f) = v.as_scalar() {
                                 if let Some(code) = f.to_i64() {
-                                    if code >= 0 && code <= 0x10FFFF {
+                                    if (0..=0x10FFFF).contains(&code) {
                                         if let Some(c) = char::from_u32(code as u32) {
                                             result_str.push(c);
                                             continue;

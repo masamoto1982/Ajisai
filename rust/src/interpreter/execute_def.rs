@@ -176,7 +176,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     }
 
     let new_def = WordDefinition {
-        lines: lines.into(),
+        lines,
         is_builtin: false,
         tier: Tier::Contrib,
         stability: Stability::Stable,

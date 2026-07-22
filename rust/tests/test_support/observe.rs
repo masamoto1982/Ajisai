@@ -12,6 +12,11 @@
 //! effect trace and error category alongside the data-plane axes, keeping
 //! surface/canonical equivalence checks structured rather than string-fragment
 //! based.
+//!
+//! Shared test scaffolding: each law binary observes a different subset of the
+//! axes, so any single binary sees the rest as dead code. Allow it module-wide
+//! rather than annotating every accessor.
+#![allow(dead_code)]
 
 use ajisai_core::interpreter::Interpreter;
 use ajisai_core::types::display::format_with_hint;

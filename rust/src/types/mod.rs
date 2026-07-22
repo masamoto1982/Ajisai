@@ -573,6 +573,12 @@ impl std::fmt::Debug for SemanticRegistry {
     }
 }
 
+impl Default for SemanticRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SemanticRegistry {
     pub fn new() -> Self {
         SemanticRegistry {

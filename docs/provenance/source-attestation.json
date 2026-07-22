@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:605473bc3407b844891338ea6e4bc17bb61350c9a2e5a7ba53fd41167a646840",
+  "rootIdentity": "sha256:89eedca9300e9842784bbfc8f99da9bae374888e8c4cc5c72528002b491311bf",
   "fileCount": 345,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -229,8 +229,8 @@
     },
     {
       "path": "rust/src/conformance_tests.rs",
-      "sha256": "7c62364f5f9dd7045e29c36665071ae78f54dd11eee05dcb5ab3de4b41089c22",
-      "bytes": 16666
+      "sha256": "565759cf737aa7dbcb22aa810cc24fd8b87eed1a5885b3d1a877e2d3f74a76a1",
+      "bytes": 16675
     },
     {
       "path": "rust/src/core_word_aliases.rs",
@@ -239,8 +239,8 @@
     },
     {
       "path": "rust/src/coreword_registry.rs",
-      "sha256": "c147020d8dd8c466d23fc71c9425c8710070ddf47c203231f35d8ca05c29de58",
-      "bytes": 49446
+      "sha256": "9fa47c6e18ec1b0b56a25c9f85d863be9f9c88906425469f45d2a9a3fa8e360c",
+      "bytes": 49389
     },
     {
       "path": "rust/src/dimension_limit_tests.rs",
@@ -254,8 +254,8 @@
     },
     {
       "path": "rust/src/elastic/elastic_engine_tests.rs",
-      "sha256": "b65df99594355a681c7648b89756dce49eb3a70f966b9e93be6fa56657b8772e",
-      "bytes": 29049
+      "sha256": "b85dcc61f12b4378aeed15cdbe8bc15920a29028c2a47c4a26948836742b86b1",
+      "bytes": 29048
     },
     {
       "path": "rust/src/elastic/evaluation_unit.rs",
@@ -264,8 +264,8 @@
     },
     {
       "path": "rust/src/elastic/execution_mode.rs",
-      "sha256": "164f6271780ccb408daa1e0469c051287c5023cf68ec656f81a718bb031e8737",
-      "bytes": 2898
+      "sha256": "2671981f7635982ed1122f0a6e8cb09f374c09882506afab9c2c9e9a78c6e2f2",
+      "bytes": 3069
     },
     {
       "path": "rust/src/elastic/fallback_bridge.rs",
@@ -299,13 +299,13 @@
     },
     {
       "path": "rust/src/elastic/purity_table.rs",
-      "sha256": "e67cc42fda08d012aca1264e38f95c34c8ac90d82969211b322de26748070700",
-      "bytes": 6324
+      "sha256": "487bde3c256af6a233fe179c68652732b67cb7f17b2cebdbadbb3ac543d08a17",
+      "bytes": 6291
     },
     {
       "path": "rust/src/elastic/tracer.rs",
-      "sha256": "5091cef18e03dde23fa483e9fc1b3c7962009c2551085114f2b8f8934cc53c41",
-      "bytes": 4283
+      "sha256": "7153e51b491d74905217a33127c7df07cc21572bdc2337f83d6a15f550f8c25b",
+      "bytes": 4126
     },
     {
       "path": "rust/src/error.rs",
@@ -374,8 +374,8 @@
     },
     {
       "path": "rust/src/interpreter/audio/execute_audio_commands.rs",
-      "sha256": "5e389ed23299767719830b7e0c4944ce63174c2f9badcd413b035653e2ef4c65",
-      "bytes": 18446
+      "sha256": "3c56955f8c0f3744b5d671cf7bfb06e13b10b6d6d46fcc00b71bf58760a176c5",
+      "bytes": 18447
     },
     {
       "path": "rust/src/interpreter/audio/mod.rs",
@@ -389,13 +389,13 @@
     },
     {
       "path": "rust/src/interpreter/audio/music_values.rs",
-      "sha256": "ed074c4544f8c47db1ab27abe8a48e8797ec11a1e60a5951ad8b64e778cebe4f",
-      "bytes": 11817
+      "sha256": "736fd051674ef47a50d524ab2795d12639420cc129fd36af773a9cf9a4356e8d",
+      "bytes": 11779
     },
     {
       "path": "rust/src/interpreter/cast/cast_chars_join.rs",
-      "sha256": "6b2ec6a4f6e9c9f9a474df3947273c4491723ae366e7eb60efabfc78373f399f",
-      "bytes": 13503
+      "sha256": "78a15b9857350cb658157aa02b681ba70dfde5219d629255fa6f8ab3a722cf92",
+      "bytes": 13504
     },
     {
       "path": "rust/src/interpreter/cast/cast_conversion_tests.rs",
@@ -404,18 +404,18 @@
     },
     {
       "path": "rust/src/interpreter/cast/cast_conversions.rs",
-      "sha256": "c9ed81578e9dbc413a7b8198b3013c05a25e1998f7303cf637b3266f91c5375b",
-      "bytes": 5970
+      "sha256": "dcf9d7e87608334e64aa3bf92630fa136b9c9dfa423798483b4a07c7dd3dc703",
+      "bytes": 5971
     },
     {
       "path": "rust/src/interpreter/cast/cast_text_ops.rs",
-      "sha256": "4bded2ea1d95366a8515bd1b46e38ac520733df99556ebd7aceff837a567b22a",
-      "bytes": 12851
+      "sha256": "442de8ed11f9eda7716e9f4868d6989c6db38c17d0acd345cd8a44b8d41afd32",
+      "bytes": 12843
     },
     {
       "path": "rust/src/interpreter/cast/cast_value_helpers.rs",
-      "sha256": "4a09606d3d735c183fc664f356c9746c82db84566081a053063b76e423b68833",
-      "bytes": 8939
+      "sha256": "a70a1b7ba57f797b2df1ec5cd76ea8c230b93f4c8536dbe8b10f009fd07b4821",
+      "bytes": 8932
     },
     {
       "path": "rust/src/interpreter/cast/mod.rs",
@@ -549,8 +549,8 @@
     },
     {
       "path": "rust/src/interpreter/dictionary_operation_tests.rs",
-      "sha256": "41cc6b3e2fbd0086519fca5ce8687200aa404aa451a8aab12ba6bd7268dee282",
-      "bytes": 28625
+      "sha256": "188171e74a02e79a7ed6a967204fc7aea51429d637a1fb55406e3c4aa7a4d179",
+      "bytes": 28609
     },
     {
       "path": "rust/src/interpreter/dictionary_resolution_tests.rs",
@@ -559,7 +559,7 @@
     },
     {
       "path": "rust/src/interpreter/dictionary_tier_tests.rs",
-      "sha256": "66f605fe80f6c9d6afb76882c9dd30ba56a113303d516e77285ddfff5c93150e",
+      "sha256": "aa071b132607507b57da234fe3473703ac7b968c66d444f26aedeea22c321fbd",
       "bytes": 3443
     },
     {
@@ -604,8 +604,8 @@
     },
     {
       "path": "rust/src/interpreter/execute_def.rs",
-      "sha256": "97ea2bbcd41449913f281d90c2e9ae440648095a7dbaae980baa71627156be87",
-      "bytes": 9712
+      "sha256": "10ac9c64206d268600b8e50593a11998ffea58bd2218335fd4f2f8631d95d36e",
+      "bytes": 9698
     },
     {
       "path": "rust/src/interpreter/execute_del.rs",
@@ -639,8 +639,8 @@
     },
     {
       "path": "rust/src/interpreter/hash.rs",
-      "sha256": "e7ab01969de3e5932af34c83a273debd7259986708e3f84122e0db9caa127571",
-      "bytes": 6418
+      "sha256": "1de06d5e8b590752aea02c93e118cba0920c7196c28325366f59a266fef7180c",
+      "bytes": 6415
     },
     {
       "path": "rust/src/interpreter/hash_tests.rs",
@@ -729,8 +729,8 @@
     },
     {
       "path": "rust/src/interpreter/interpreter_core.rs",
-      "sha256": "688c7f2351c0d34c558432b9532122528ad6aae231184fb9462c85f293f4745d",
-      "bytes": 44176
+      "sha256": "2250870cbec262b3e170cbeb2ba488c40f9bdd73b21971466fe8dae4d2d279ef",
+      "bytes": 44263
     },
     {
       "path": "rust/src/interpreter/interpreter_definition_tests.rs",
@@ -764,8 +764,8 @@
     },
     {
       "path": "rust/src/interpreter/logic.rs",
-      "sha256": "1e6872d480d325fe918f89f696bafb8b5dbd5cc30ac23b214f050e75bfe236f9",
-      "bytes": 10759
+      "sha256": "0d8c79ef362a0dc6eda5e9b0ace8fc99973a4fc1d0437f0eb4e13ea926e1789e",
+      "bytes": 10599
     },
     {
       "path": "rust/src/interpreter/logic_kleene.rs",
@@ -789,8 +789,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "c524e346814303eda836853646fd903d421c56b8dcdd9866827770590b1b44b0",
-      "bytes": 3882
+      "sha256": "456ddf408ed5dc15a7a71d8ba1e83da5c82426eae018f4f055eed448ccd2837c",
+      "bytes": 4177
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -859,8 +859,8 @@
     },
     {
       "path": "rust/src/interpreter/nil_unknown_firewall_tests.rs",
-      "sha256": "a12ba744a3c7353586cca451fe36f723b415f2d17b9031aa9380e3508fb905dc",
-      "bytes": 9919
+      "sha256": "56225be01d6eba6dee32203f66bd90a496a65efa37183314de404711aaa2479f",
+      "bytes": 9912
     },
     {
       "path": "rust/src/interpreter/parallel.rs",
@@ -874,8 +874,8 @@
     },
     {
       "path": "rust/src/interpreter/quantized_block.rs",
-      "sha256": "0fd83e96898306b809867dde8e209f33c7cf77a470ae294ffb3dd94946d98de7",
-      "bytes": 23003
+      "sha256": "4a4fc0882ba30795e40f8b7f63343694f32ef0d6e6e6b04081f9eaaa035c881b",
+      "bytes": 22963
     },
     {
       "path": "rust/src/interpreter/quantized_block_tests.rs",
@@ -899,8 +899,8 @@
     },
     {
       "path": "rust/src/interpreter/resolve_word.rs",
-      "sha256": "fa6d55ab87a0a1f0d32eff2baf1b85c69659bb941227ad58d42a99a56153bc81",
-      "bytes": 20087
+      "sha256": "737272babb040fe615d719645709985ff18a62300e6ad60c8786ddee8819b2b4",
+      "bytes": 19985
     },
     {
       "path": "rust/src/interpreter/route_equivalence.rs",
@@ -954,8 +954,8 @@
     },
     {
       "path": "rust/src/interpreter/simd_ops.rs",
-      "sha256": "eea6afb2b35cdd7967af27e44adc2e093d4166373a45f1afae1325047645c72a",
-      "bytes": 20275
+      "sha256": "c39eea0316eb83786e6d508fb86cac63534e9edc478687d32493352b42fa4236",
+      "bytes": 19739
     },
     {
       "path": "rust/src/interpreter/sort.rs",
@@ -1004,8 +1004,8 @@
     },
     {
       "path": "rust/src/interpreter/value_extraction_helpers.rs",
-      "sha256": "2203f8622db94f02ad0c80476231a9f65e9ef88a45c97396877f43542e0296ce",
-      "bytes": 10178
+      "sha256": "ad2a8bbf7109963e7ed23b9b6ed1f22bc0721b8c0466ea1d98b20ed53587c84a",
+      "bytes": 10114
     },
     {
       "path": "rust/src/interpreter/vector_exec.rs",
@@ -1084,8 +1084,8 @@
     },
     {
       "path": "rust/src/lib.rs",
-      "sha256": "7a6b10dab968018bf88c5603e5f3fa30d671697928fd80aa2cbfc2d7f6b440a8",
-      "bytes": 1229
+      "sha256": "9f3cc20dd9253afce667626e7cceb7292c1366632d58097ac350f0b3c56954e2",
+      "bytes": 1614
     },
     {
       "path": "rust/src/materialization_limit_tests.rs",
@@ -1154,8 +1154,8 @@
     },
     {
       "path": "rust/src/tokenizer.rs",
-      "sha256": "16a974241a2d932e6e7a4b3d401e003598922a906ecdac6b058bb2c23cc39be0",
-      "bytes": 16940
+      "sha256": "ea9ff4e0ac17552fe336695c33a55eb13cb84d743255260c60a6343568457ada",
+      "bytes": 16924
     },
     {
       "path": "rust/src/tokenizer_mcdc_tests.rs",
@@ -1179,13 +1179,13 @@
     },
     {
       "path": "rust/src/types/display.rs",
-      "sha256": "ea044b780e8e3110bd8f367dfd2957c87576d1359d1ebfa96ad4b0e96d36959b",
-      "bytes": 23289
+      "sha256": "925a3731c06d7054b5bde6b9c94aa6e8015eb8caaa15ae68f4726de151147608",
+      "bytes": 23301
     },
     {
       "path": "rust/src/types/exact/algebraic.rs",
-      "sha256": "b178209890508e0238e68f595f6770b7b9cfa9bcd20522826c996e92fa8245c1",
-      "bytes": 13938
+      "sha256": "c82eaaf266c6a387c3792d8f3a0cf2fa7112d98827b491afda389771d1ca632f",
+      "bytes": 14138
     },
     {
       "path": "rust/src/types/exact/algebraic_field.rs",
@@ -1194,8 +1194,8 @@
     },
     {
       "path": "rust/src/types/exact/algebraic_floor.rs",
-      "sha256": "124419348ad2eec11fff2fe58500e9b8ff3b331a755f241e0f68936eb3cca17a",
-      "bytes": 5921
+      "sha256": "a6a803c146df190d8a4b0e98a67709100a93a24413bdd575a3e01bd26dedd9d6",
+      "bytes": 5894
     },
     {
       "path": "rust/src/types/exact/algebraic_tests.rs",
@@ -1209,8 +1209,8 @@
     },
     {
       "path": "rust/src/types/exact/computable.rs",
-      "sha256": "ff2927dce639618b641cec16baa9027a8c80ade3c45fc3353426c9c96886eb77",
-      "bytes": 5278
+      "sha256": "2a990b6f9a1c90b8542c5f8530ecc76b9b162129cbcda40a65a2427229179df9",
+      "bytes": 5252
     },
     {
       "path": "rust/src/types/exact/mod.rs",
@@ -1229,8 +1229,8 @@
     },
     {
       "path": "rust/src/types/exact/value.rs",
-      "sha256": "c6c899e27218fe93f8da3395af51eb8b23091536268ba586f80bc019075ca70f",
-      "bytes": 18387
+      "sha256": "62456034f61cddd552f980d188d8b0ba467d8d6e8e69055393868fe42ac1a6f9",
+      "bytes": 18369
     },
     {
       "path": "rust/src/types/exact/value_approx.rs",
@@ -1239,8 +1239,8 @@
     },
     {
       "path": "rust/src/types/fraction.rs",
-      "sha256": "39b43f70687ab192c0174fd6df24efda07636aa2ddce433760864917020368de",
-      "bytes": 21389
+      "sha256": "074a37f740261e5b9746c131de5674f9cb4ba38c875855b7347c3ba9df3632d4",
+      "bytes": 21633
     },
     {
       "path": "rust/src/types/fraction_arithmetic.rs",
@@ -1259,8 +1259,8 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "db042fac80c28edcee4b3490e45216c028b6983c75e0b9d13635f0c737318781",
-      "bytes": 24832
+      "sha256": "4d7d28abcb582a8a625f038dbf7eedc7d40f69972ce69bea537af8c98714414d",
+      "bytes": 24924
     },
     {
       "path": "rust/src/types/record_shape.rs",
@@ -1274,8 +1274,8 @@
     },
     {
       "path": "rust/src/types/value_operations.rs",
-      "sha256": "16f55b2da2a68fc1a923a98114e769ea9d831ff4286dbc0f6cf50e8a6336c07e",
-      "bytes": 55808
+      "sha256": "dc72cfea96b90a91d4df2942d9270e09e4f911dc3b100cdeb8f96188797dc81a",
+      "bytes": 55803
     },
     {
       "path": "rust/src/types/value_protocol.rs",

@@ -110,7 +110,6 @@ impl Observation for ComputableObservation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::Zero;
 
     #[test]
     fn vanishing_encloses_zero_at_every_step_and_narrows() {

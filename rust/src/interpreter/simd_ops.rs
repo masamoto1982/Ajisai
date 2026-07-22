@@ -332,16 +332,6 @@ mod wasm_impl {
             .map(|(x, y)| x * y)
             .collect::<Vec<i64>>()
     }
-
-    #[inline]
-    pub fn simd_scalar_add(vec: &[i64], scalar: i64) -> Vec<i64> {
-        vec.iter().map(|x| x + scalar).collect::<Vec<i64>>()
-    }
-
-    #[inline]
-    pub fn simd_scalar_mul(vec: &[i64], scalar: i64) -> Vec<i64> {
-        vec.iter().map(|x| x * scalar).collect::<Vec<i64>>()
-    }
 }
 
 // Wrapping (non-overflow-checked) SIMD lane kernels. The production integer
@@ -362,16 +352,6 @@ pub fn lane_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
 #[cfg(test)]
 pub fn lane_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
     wasm_impl::simd_mul(a, b)
-}
-
-#[cfg(test)]
-pub fn lane_scalar_add(a: &[i64], scalar: i64) -> Vec<i64> {
-    wasm_impl::simd_scalar_add(a, scalar)
-}
-
-#[cfg(test)]
-pub fn lane_scalar_mul(a: &[i64], scalar: i64) -> Vec<i64> {
-    wasm_impl::simd_scalar_mul(a, scalar)
 }
 
 /// Returns `(result, parallel_used)`; `parallel_used` is `true` only when the

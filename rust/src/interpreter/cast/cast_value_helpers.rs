@@ -232,7 +232,7 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
             ValueData::Vector(children)
             | ValueData::Record {
                 pairs: children, ..
-            } => children.iter().flat_map(|c| collect_fractions(c)).collect(),
+            } => children.iter().flat_map(collect_fractions).collect(),
             ValueData::Tensor { data, .. } => {
                 data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }

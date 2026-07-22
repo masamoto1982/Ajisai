@@ -255,7 +255,7 @@ fn parse_capability_list(raw: &str) -> Vec<HostCapability> {
 fn parse_hex_bytes(raw: &str) -> Vec<u8> {
     let hex: String = raw.chars().filter(|c| !c.is_ascii_whitespace()).collect();
     assert!(
-        hex.len() % 2 == 0,
+        hex.len().is_multiple_of(2),
         "data-host-random-hex must have an even number of hex digits"
     );
     (0..hex.len())

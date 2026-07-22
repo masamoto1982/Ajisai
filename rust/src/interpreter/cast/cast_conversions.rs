@@ -143,7 +143,7 @@ fn convert_codepoint_to_char(val: &Value, hint: Interpretation) -> Result<Value>
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             if let Some(code) = f.to_i64() {
-                if code >= 0 && code <= 0x10FFFF {
+                if (0..=0x10FFFF).contains(&code) {
                     if let Some(c) = char::from_u32(code as u32) {
                         return Ok(Value::from_string(&c.to_string()));
                     }

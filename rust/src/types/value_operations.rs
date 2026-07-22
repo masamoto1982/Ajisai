@@ -201,7 +201,7 @@ impl Value {
         Some(
             self.absence
                 .clone()
-                .unwrap_or_else(|| AbsenceMetadata::with_reasonless_unknown()),
+                .unwrap_or_else(AbsenceMetadata::with_reasonless_unknown),
         )
     }
 

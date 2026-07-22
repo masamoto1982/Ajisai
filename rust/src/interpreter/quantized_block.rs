@@ -160,8 +160,8 @@ fn builtin_arity(name: &str) -> Option<(i32, i32)> {
 /// - `Purity::Pure`    → not side-effecting
 /// - `Purity::Impure`  → side-effecting
 /// - `Purity::Unknown` → conservatively treated as side-effecting
-///                       (higher-order / control-flow words whose behavior
-///                       depends on runtime arguments)
+///   (higher-order / control-flow words whose behavior depends on runtime
+///   arguments)
 /// - Unrecognized name (user-defined or non-spec) → false
 ///   (handled separately via the `CallUserWord` / fallback paths in
 ///   `analyze_compiled_plan_with_context`)

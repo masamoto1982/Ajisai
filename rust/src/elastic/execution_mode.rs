@@ -24,6 +24,9 @@ impl ElasticMode {
     /// Parse from the CLI / WASM string representation.
     ///
     /// Unknown strings produce a stderr warning and fall back to `Greedy`.
+    // Infallible, warning-and-fallback parse — not `FromStr`, which would force
+    // a `Result` the callers do not want.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         let normalized = s.trim().to_ascii_lowercase();
         match normalized.as_str() {
