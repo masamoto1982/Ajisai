@@ -536,6 +536,7 @@ impl Interpreter {
         // BigInt-backed value.
         self.runtime_limits.check_source_bytes(code.len())?;
         self.execution_step_count = 0;
+        self.numeric_work_used = 0;
         let tokens: Vec<Token> = crate::tokenizer::tokenize(code)?;
         self.check_source_numeric_literals(&tokens)?;
         let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;

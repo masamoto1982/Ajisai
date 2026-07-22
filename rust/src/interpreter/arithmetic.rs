@@ -132,25 +132,53 @@ fn push_exact_real_schema_result(
     schema: ExactArithmeticSchema,
     a: &Value,
     b: &Value,
-) -> bool {
+) -> Result<bool> {
     let has_exact = matches!(&a.data, ValueData::ExactScalar(_))
         || matches!(&b.data, ValueData::ExactScalar(_));
     if !has_exact {
-        return false;
+        return Ok(false);
     }
     let Some(a_exact) = extract_exact_real_from_value(a) else {
-        return false;
+        return Ok(false);
     };
     let Some(b_exact) = extract_exact_real_from_value(b) else {
-        return false;
+        return Ok(false);
     };
-    consume_stacktop_binary(interp);
-    if let Some(result) = schema.exact_real(&a_exact, &b_exact) {
-        interp.stack.push(Value::from_exact_real(result));
-    } else {
-        interp.stack.push(division_by_zero_bubble());
+
+    // CS5: charge the internal work of this exact operation *before* running
+    // it, so a runaway algebraic computation (e.g. repeatedly multiplying
+    // distinct √p to explode the term count) fails at `max_numeric_work`
+    // instead of grinding for minutes. The estimate upper-bounds the term-pair
+    // work each schema performs. Charged with the operands still on the stack,
+    // so the error leaves the stack intact.
+    let ta = a_exact.algebraic_term_count() as u64;
+    let tb = b_exact.algebraic_term_count() as u64;
+    let work = match schema {
+        ExactArithmeticSchema::Mul => ta.saturating_mul(tb),
+        // Division inverts `b` (conjugation recursion, ~term² inner products)
+        // and multiplies; bound by both.
+        ExactArithmeticSchema::Div => ta.saturating_mul(tb).saturating_add(tb.saturating_mul(tb)),
+        ExactArithmeticSchema::Add | ExactArithmeticSchema::Sub => ta.saturating_add(tb),
+    };
+    interp.charge_numeric_work(work)?;
+
+    let result = schema.exact_real(&a_exact, &b_exact);
+    // Bound accumulation: reject a result whose term count or coefficient
+    // bit-length crosses the ceiling, before it is consumed and pushed (so a
+    // limit failure leaves the operands on the stack, not a corrupted partial
+    // state).
+    if let Some(ref r) = result {
+        interp
+            .runtime_limits
+            .check_algebraic_size(r.algebraic_term_count(), r.max_coefficient_bits())?;
     }
-    true
+
+    consume_stacktop_binary(interp);
+    match result {
+        Some(r) => interp.stack.push(Value::from_exact_real(r)),
+        None => interp.stack.push(division_by_zero_bubble()),
+    }
+    Ok(true)
 }
 
 fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
@@ -320,7 +348,7 @@ fn apply_exact_arithmetic_schema(
                 return Ok(());
             }
         }
-        if push_exact_real_schema_result(interp, schema, &a, &b) {
+        if push_exact_real_schema_result(interp, schema, &a, &b)? {
             return Ok(());
         }
         // Vectors/structures carrying irrational `ExactScalar` lanes cannot use

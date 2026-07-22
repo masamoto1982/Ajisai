@@ -124,6 +124,18 @@ impl Algebraic {
         self.terms.len()
     }
 
+    /// The largest coefficient bit-length across the normal form: the max over
+    /// every term of `max(numerator bits, denominator bits)`. A cheap size
+    /// probe (CS5) used to bound BigInt blow-up — an algebraic value whose
+    /// coefficients cross `max_bigint_bits` is a resource-limit failure.
+    pub fn max_coefficient_bits(&self) -> u64 {
+        self.terms
+            .values()
+            .map(|c| c.numerator().bits().max(c.denominator().bits()))
+            .max()
+            .unwrap_or(0)
+    }
+
     /// Structural identity of the stored normal form — same basis, same
     /// term map. Cheaper than semantic equality (`==`, which rebases) and
     /// used where a conservative "unchanged?" check suffices; a false
