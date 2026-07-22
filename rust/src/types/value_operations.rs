@@ -409,10 +409,13 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
             ValueData::Record { .. } => SemanticKind::Record,
-            // PR-1: U routes identically to the old NIL-backed U here
-            // (coarse `semanticKind`); PR-2 audits whether U should report a
-            // distinct kind.
-            ValueData::Nil | ValueData::Unknown(_) => SemanticKind::Absence,
+            // CS4 PR-2: U is a truth value, not an operational absence. Like a
+            // definite Boolean it reports `number` on the coarse `semanticKind`
+            // axis (for protocol stability — its distinctness lives in the
+            // `truthValue` axis and value identity, SPEC §2.3), never
+            // `absence`.
+            ValueData::Unknown(_) => SemanticKind::Number,
+            ValueData::Nil => SemanticKind::Absence,
             ValueData::CodeBlock(_) => SemanticKind::Code,
             ValueData::ProcessHandle(_) => SemanticKind::Process,
             ValueData::SupervisorHandle(_) => SemanticKind::Supervisor,
@@ -427,7 +430,10 @@ impl Value {
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
             ValueData::Record { .. } => ValueShape::Record,
-            ValueData::Nil | ValueData::Unknown(_) => ValueShape::Absence,
+            // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
+            // an absence.
+            ValueData::Unknown(_) => ValueShape::Scalar,
+            ValueData::Nil => ValueShape::Absence,
             ValueData::CodeBlock(_) => ValueShape::CodeBlock,
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => ValueShape::Handle,
         }
@@ -454,10 +460,17 @@ impl Value {
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
             }
-            // PR-1: U keeps the old NIL-backed capability set (plus the
-            // `truthValued` capability added below via `is_truth_value`), so
-            // the observable capability list for U is unchanged.
-            ValueData::Nil | ValueData::Unknown(_) => {
+            // CS4 PR-2: U carries a diagnosis (its `agreedPrefix`) and is
+            // AI-explainable, but it is emphatically **not** a NIL-passthrough
+            // value — advertising `NilPassthrough` would contradict the very
+            // firewall that keeps U from being absorbed as an operational NIL
+            // (SPEC §2.3 / §7.5). It gains `truthValued` below via
+            // `is_truth_value`.
+            ValueData::Unknown(_) => {
+                capabilities.push(Capability::Diagnosable);
+                capabilities.push(Capability::AiExplainable);
+            }
+            ValueData::Nil => {
                 capabilities.push(Capability::NilPassthrough);
                 capabilities.push(Capability::Diagnosable);
                 capabilities.push(Capability::AiExplainable);
@@ -595,6 +608,11 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match &self.data {
             ValueData::Boolean(b) => *b,
+            // CS4 PR-2 (reviewed): `is_truthy` is a total two-valued
+            // coercion. U is neither definitely true nor false, so it
+            // conservatively collapses to `false` — the same result as NIL,
+            // hence the shared arm. Control words that must honour the third
+            // value branch on `is_unknown()` first (e.g. COND), never here.
             ValueData::Nil | ValueData::Unknown(_) => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
@@ -615,7 +633,11 @@ impl Value {
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {
-            ValueData::Nil | ValueData::Unknown(_) => 0,
+            ValueData::Nil => 0,
+            // CS4 PR-2: U is a single scalar truth value, so it has length 1
+            // like a Boolean (not 0 like an absence). It is not indexable —
+            // `get_child`/`child` return `None`, exactly as for a Boolean.
+            ValueData::Unknown(_) => 1,
             ValueData::Boolean(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
@@ -734,9 +756,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Arc::make_mut(v).push(child);
             }
-            // PR-1: U seeds a fresh vector exactly as the old NIL-backed U did
-            // when a child is pushed into it (behavior-preserving).
-            ValueData::Nil | ValueData::Unknown(_) => {
+            ValueData::Nil => {
                 self.data = ValueData::Vector(Arc::new(vec![child]));
             }
             ValueData::Scalar(f) => {
@@ -747,7 +767,11 @@ impl Value {
                 // Cannot push_child into an ExactScalar — silently ignore
                 // (ExactScalar is always a scalar leaf, never mutated into a vector).
             }
+            // CS4 PR-2: pushing into U is a no-op, like a Boolean — U is a
+            // scalar truth value, not an empty container to be seeded into a
+            // vector (that NIL affordance does not apply to a definite datum).
             ValueData::Boolean(_)
+            | ValueData::Unknown(_)
             | ValueData::Tensor { .. }
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -927,7 +951,7 @@ impl Value {
 
     pub fn collect_fractions_flat_into(&self, buf: &mut Vec<Fraction>) {
         match &self.data {
-            ValueData::Nil | ValueData::Unknown(_) => buf.push(Fraction::nil()),
+            ValueData::Nil => buf.push(Fraction::nil()),
             ValueData::Scalar(f) => buf.push(f.clone()),
             ValueData::ExactScalar(er) => {
                 // Use best rational approximation for ExactScalar in flat collection
@@ -944,7 +968,12 @@ impl Value {
             ValueData::Tensor { data, .. } => {
                 buf.extend(data.iter());
             }
+            // CS4 PR-2: U is a truth value, not numeric content — it flattens
+            // to no fraction lane, like a Boolean (NIL flattens to a nil
+            // lane). Kept in lock-step with `count_fractions` below so buffer
+            // sizing stays exact.
             ValueData::Boolean(_)
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => {}
@@ -953,13 +982,16 @@ impl Value {
 
     pub fn count_fractions(&self) -> usize {
         match &self.data {
-            ValueData::Nil | ValueData::Unknown(_) => 1,
+            ValueData::Nil => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().map(|c| c.count_fractions()).sum()
             }
             ValueData::Tensor { data, .. } => data.len(),
+            // CS4 PR-2: U contributes no fraction lane (see
+            // `collect_fractions_flat_into`), matching a Boolean.
             ValueData::Boolean(_)
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => 0,
@@ -968,6 +1000,7 @@ impl Value {
 
     pub fn shape(&self) -> Vec<usize> {
         match &self.data {
+            // U and NIL are both rank-0 (empty shape), like a Boolean/Scalar.
             ValueData::Nil | ValueData::Unknown(_) => vec![],
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => vec![],
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
@@ -1039,11 +1072,10 @@ impl Value {
 
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
-            // PR-1: U keeps the old NIL-backed default-hint mapping. U's own
-            // `TruthValue` role is set at construction and is not re-derived
-            // here, so this is behavior-preserving.
-            ValueData::Nil | ValueData::Unknown(_) => Interpretation::Nil,
-            ValueData::Boolean(_) => Interpretation::TruthValue,
+            ValueData::Nil => Interpretation::Nil,
+            // CS4 PR-2: U's role is `TruthValue`, like a Boolean — its default
+            // rendering role must not fall back to `Nil`.
+            ValueData::Unknown(_) | ValueData::Boolean(_) => Interpretation::TruthValue,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
                 Interpretation::Unassigned

@@ -229,13 +229,13 @@ fn format_as_interval(value: &Value) -> String {
 
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
-        // Top-level U is caught by the `is_unknown()` guards in
-        // `format_with_hint` / `format_for_output` and renders `UNKNOWN`.
-        // This data-only recursion is only reached for a U *nested* inside a
-        // non-truth collection, where U rendered as `NIL` before the variant
-        // split; PR-1 preserves that exact output (differential stays
-        // 0-divergent). PR-2 may revisit nested-U display.
-        ValueData::Nil | ValueData::Unknown(_) => "NIL".to_string(),
+        ValueData::Nil => "NIL".to_string(),
+        // CS4 PR-2: U renders as `UNKNOWN` everywhere, including when nested
+        // inside a non-truth collection — the same label the top-level
+        // `is_unknown()` guards produce, and consistent with a Boolean
+        // rendering `TRUE`/`FALSE` at any depth (SPEC §12.2). U is never shown
+        // as `NIL`.
+        ValueData::Unknown(_) => "UNKNOWN".to_string(),
         // A definite boolean renders uniformly as TRUE/FALSE in every role
         // (SPEC §12.2), so the three-valued axis is observable consistently
         // whether the boolean came from a literal, a comparison, or a logic

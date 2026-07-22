@@ -216,7 +216,10 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
 
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
-            ValueData::Nil | ValueData::Unknown(_) => vec!["NIL".to_string()],
+            ValueData::Nil => vec!["NIL".to_string()],
+            // CS4 PR-2: casting U to a string yields `UNKNOWN` (matching its
+            // display and the Boolean `TRUE`/`FALSE` precedent), never `NIL`.
+            ValueData::Unknown(_) => vec!["UNKNOWN".to_string()],
             ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::ExactScalar(er) => {

@@ -164,6 +164,73 @@ fn unknown_agreed_prefix_diagnosis_survives_on_its_own_carrier() {
     );
 }
 
+/// CS4 PR-2: U is classified as a scalar **truth value**, not an operational
+/// absence, on the observation axes — distinct from NIL at every point the
+/// audit split them.
+#[test]
+fn unknown_is_classified_as_a_truth_value_not_an_absence() {
+    use crate::semantic::{Capability, SemanticKind, ValueShape};
+    use crate::types::Interpretation;
+
+    let u = Value::unknown();
+    let nil = Value::nil();
+
+    // Coarse kind / shape: U reports like a Boolean (number / scalar), NIL
+    // reports absence.
+    assert_eq!(u.semantic_kind(), SemanticKind::Number);
+    assert_eq!(u.shape_kind(), ValueShape::Scalar);
+    assert_eq!(nil.semantic_kind(), SemanticKind::Absence);
+    assert_eq!(nil.shape_kind(), ValueShape::Absence);
+
+    // Capabilities: U is truth-valued, diagnosable and AI-explainable, but
+    // must NOT advertise NIL-passthrough (that would contradict the firewall).
+    assert!(u.has_capability(Capability::TruthValued));
+    assert!(u.has_capability(Capability::Diagnosable));
+    assert!(u.has_capability(Capability::AiExplainable));
+    assert!(
+        !u.has_capability(Capability::NilPassthrough),
+        "U must not advertise NilPassthrough"
+    );
+    assert!(nil.has_capability(Capability::NilPassthrough));
+
+    // A single scalar truth value: length 1 (like a Boolean), rank 0, not
+    // indexable; NIL is empty.
+    assert_eq!(u.len(), 1);
+    assert!(!u.is_empty());
+    assert!(u.child(0).is_none(), "U is not indexable");
+    assert_eq!(u.shape(), Vec::<usize>::new());
+    assert_eq!(nil.len(), 0);
+
+    // Default role is TruthValue, never Nil.
+    assert_eq!(u.resolve_default_hint(), Interpretation::TruthValue);
+
+    // U is not numeric content: it contributes no fraction lane (like a
+    // Boolean), whereas NIL contributes a nil lane.
+    assert_eq!(u.count_fractions(), 0);
+    assert!(u.collect_fractions_flat().is_empty());
+    assert_eq!(nil.count_fractions(), 1);
+}
+
+/// CS4 PR-2: U always renders as `UNKNOWN`, even nested inside a non-truth
+/// collection, and never as `NIL`.
+#[test]
+fn unknown_renders_as_unknown_even_when_nested() {
+    let nested = Value::from_children(vec![
+        Value::from_int(1),
+        Value::unknown(),
+        Value::from_int(3),
+    ]);
+    let rendered = format!("{nested}");
+    assert!(
+        rendered.contains("UNKNOWN"),
+        "nested U must render as UNKNOWN, got {rendered}"
+    );
+    assert!(
+        !rendered.contains("NIL"),
+        "nested U must never render as NIL, got {rendered}"
+    );
+}
+
 /// The K3 logic path (`logic_kleene`) is unaffected: `U U AND` is U.
 /// (Ajisai has no `DUP`; two independently-produced U operands stand in for
 /// the task's `U DUP AND`, exercising the same `Unknown AND Unknown` cell.)
