@@ -15,6 +15,7 @@ interface TableData {
 interface InterpreterState {
     key: string;
     stack: unknown;
+    stackSnapshot?: unknown;
     userWords: unknown;
     importedModules?: unknown;
     importState?: unknown;
@@ -155,6 +156,7 @@ class WebPersistence implements Persistence {
             }
             return {
                 stack: result.stack as InterpreterStateSnapshot['stack'],
+                stackSnapshot: result.stackSnapshot as InterpreterStateSnapshot['stackSnapshot'],
                 userWords: result.userWords as InterpreterStateSnapshot['userWords'],
                 importedModules: result.importedModules as InterpreterStateSnapshot['importedModules'],
                 importState: result.importState as InterpreterStateSnapshot['importState'],

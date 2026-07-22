@@ -175,6 +175,24 @@ impl ExactReal {
         }
     }
 
+    /// The multiquadratic normal-form terms `(monomial, coefficient)` of a
+    /// Tier 1 value, or `None` for Tier 0/2. Used by the lossless state
+    /// persistence codec (`crate::types::value_persist`) to capture the
+    /// exact algebraic value; the reader reconstructs it by replaying
+    /// `∑ cₘ·√m`, which the canonical normal form makes exact.
+    #[cfg(any(test, feature = "wasm"))]
+    pub(crate) fn algebraic_terms(&self) -> Option<Vec<(BigInt, Fraction)>> {
+        match self {
+            Self::Algebraic(a) => Some(
+                a.terms()
+                    .iter()
+                    .map(|(m, c)| (m.clone(), c.clone()))
+                    .collect(),
+            ),
+            Self::Rational(_) | Self::Computable(_) => None,
+        }
+    }
+
     /// Size probe (CS5): the largest coefficient bit-length in this value, used
     /// to bound BigInt blow-up against `max_bigint_bits`.
     pub fn max_coefficient_bits(&self) -> u64 {

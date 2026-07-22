@@ -7,6 +7,11 @@ import { Result, ok, err } from './functional-result-helpers';
 
 export interface InterpreterState {
     readonly stack: Value[];
+    // Lossless stack snapshot (opaque string) preferred over `stack` on restore.
+    // `stack` is retained for display and for downgrading to a wasm bundle that
+    // predates the lossless persistence API. See SPEC §2.3 and
+    // docs/dev/external-evaluation-response-strategy.md (P0).
+    readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
     // Detailed per-module import state. Preferred over `importedModules` on
@@ -73,8 +78,15 @@ const collectCurrentState = (interpreter: AjisaiInterpreter): InterpreterState =
 
     const selections = readActiveSelections();
 
+    // Capture the lossless snapshot when the wasm bundle exposes it; keep the
+    // observation-format `stack` for display and legacy restore.
+    const stackSnapshot = typeof interpreter.snapshot_stack === 'function'
+        ? interpreter.snapshot_stack()
+        : undefined;
+
     return {
         stack: interpreter.collect_stack(),
+        stackSnapshot,
         userWords,
         importedModules: interpreter.collect_imported_modules(),
         importState: interpreter.collect_import_state(),
@@ -302,7 +314,14 @@ export const createPersistence = (callbacks: PersistenceCallbacks = {}): Persist
             const state = await getPlatform().persistence.loadInterpreterState();
 
             if (state) {
-                if (state.stack) {
+                // Prefer the lossless snapshot so exact values (CodeBlock,
+                // ExactScalar) survive reload; fall back to the observation-format
+                // stack for snapshots saved before the lossless API, or a wasm
+                // bundle that predates `restore_stack_snapshot` (SPEC §2.3).
+                if (state.stackSnapshot
+                    && typeof window.ajisaiInterpreter.restore_stack_snapshot === 'function') {
+                    window.ajisaiInterpreter.restore_stack_snapshot(state.stackSnapshot);
+                } else if (state.stack) {
                     window.ajisaiInterpreter.restore_stack(state.stack);
                 }
                 // Prefer the detailed import state (preserves partial imports);

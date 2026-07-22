@@ -2,6 +2,10 @@ import type { UserWord, Value, ImportStateEntry } from '../wasm-interpreter-type
 
 export interface InterpreterStateSnapshot {
     readonly stack: Value[];
+    // Lossless stack snapshot (opaque string), preferred over `stack` on
+    // restore; see SPEC §2.3 and InterpreterState in
+    // gui/interpreter-state-persistence.ts.
+    readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
     readonly importState?: ImportStateEntry[];
@@ -25,6 +29,7 @@ export interface ExportData {
     interpreterState: {
         readonly key: string;
         readonly stack: unknown;
+        readonly stackSnapshot?: unknown;
         readonly userWords: unknown;
         readonly importedModules?: unknown;
         readonly importState?: unknown;

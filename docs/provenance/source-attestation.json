@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:286ea22939f7d7f1794027d2288c57cde204fe441e16e4b57490ae7be3fc3a70",
+  "rootIdentity": "sha256:a47e60c48a31dc87d6e9496e746a7c0dac9c2946caf8fb58e31e0837746e77f8",
   "fileCount": 345,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1229,8 +1229,8 @@
     },
     {
       "path": "rust/src/types/exact/value.rs",
-      "sha256": "62456034f61cddd552f980d188d8b0ba467d8d6e8e69055393868fe42ac1a6f9",
-      "bytes": 18369
+      "sha256": "f63e808d4baacb4b984e7a2561a6086b039a2bdfbc1188f3c023fd44c71f832d",
+      "bytes": 19149
     },
     {
       "path": "rust/src/types/exact/value_approx.rs",
@@ -1259,8 +1259,8 @@
     },
     {
       "path": "rust/src/types/mod.rs",
-      "sha256": "4d7d28abcb582a8a625f038dbf7eedc7d40f69972ce69bea537af8c98714414d",
-      "bytes": 24924
+      "sha256": "7747bb3126c0e6dd7d9ed2ea89fd83c6b88e9805093ac4168066dbfd3b859ac6",
+      "bytes": 25342
     },
     {
       "path": "rust/src/types/record_shape.rs",
@@ -1304,8 +1304,8 @@
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/wasm_interpreter_state.rs",
-      "sha256": "321ea5bb9ff7f5f3e49d96ce6fc6654af785a68ac45489856f104f48f51553ff",
-      "bytes": 23871
+      "sha256": "e29941839070c2ec9b298eb3abad8b361af16accffe59eda74df6ce1dd26b2c4",
+      "bytes": 25089
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/wasm_runtime_metrics.rs",
@@ -1534,8 +1534,8 @@
     },
     {
       "path": "src/gui/interpreter-state-persistence.ts",
-      "sha256": "ab2e50d8b62a83afd7d0c6cb4275a99fe2e0378e824bafe787ea049162ed991a",
-      "bytes": 20757
+      "sha256": "28933ba412d6d46746fa9976cbe6b0ebdc581e33a97c1fb181c57967f2e0306b",
+      "bytes": 21941
     },
     {
       "path": "src/gui/interpreter/interpreter-client.ts",
@@ -1619,8 +1619,8 @@
     },
     {
       "path": "src/platform/platform-adapter.ts",
-      "sha256": "bcef0ac6b04709ebb7e94f68199b51f089d46ec34e08aa7b68d6f28af70cb3b6",
-      "bytes": 4702
+      "sha256": "fa8db09e6062d3bed8204057be6e492b62c3db9ed11826bd2cc7d04c2c0099a2",
+      "bytes": 4955
     },
     {
       "path": "src/platform/register-cross-origin-isolation.ts",
@@ -1644,8 +1644,8 @@
     },
     {
       "path": "src/platform/tauri/tauri-persistence.ts",
-      "sha256": "b756af1742c8a8a40dab28cf32e893e91a76aa269986414b3f124dafbbdc459c",
-      "bytes": 6249
+      "sha256": "68db753572288c4b7bf2cb39cea4f8bdd8e30a7d336534139a7804a0a66b467e",
+      "bytes": 6390
     },
     {
       "path": "src/platform/tauri/tauri-platform-adapter.ts",
@@ -1664,8 +1664,8 @@
     },
     {
       "path": "src/platform/web/web-persistence.ts",
-      "sha256": "1def1304b40a89472f42e16ae8614adca61fe4946e12c2358f7074c0c46c2d42",
-      "bytes": 8158
+      "sha256": "428f9df2e908a0e4b72a03c7d7095ee1a85821d5c54eb28593c5adc9733907b4",
+      "bytes": 8285
     },
     {
       "path": "src/platform/web/web-platform-adapter.ts",
@@ -1714,8 +1714,8 @@
     },
     {
       "path": "src/wasm-interpreter-types.ts",
-      "sha256": "90cf5f142f57b51c027a97ba0e2633134a9976d03b2e2040992fc0ac77a4d821",
-      "bytes": 8962
+      "sha256": "cf5c03e6a6c19afd1a86b230edcf50a8aa28fedcd54408516ee7600208fe0c83",
+      "bytes": 9478
     },
     {
       "path": "src/wasm-module-loader.ts",

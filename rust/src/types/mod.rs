@@ -9,6 +9,14 @@ pub mod interval;
 pub mod record_shape;
 pub mod stack;
 mod value_operations;
+// The lossless persistence codec is consumed only by the wasm boundary
+// (`snapshot_stack` / `restore_stack_snapshot`) and by its own native property
+// tests. Gating it on `any(test, feature = "wasm")` keeps a plain native build
+// free of dead code while still running the round-trip tests under `cargo test`.
+#[cfg(any(test, feature = "wasm"))]
+pub(crate) mod value_persist;
+#[cfg(test)]
+mod value_persist_tests;
 pub(crate) mod value_protocol;
 #[cfg(test)]
 mod value_protocol_tests;
