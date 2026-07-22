@@ -63,52 +63,46 @@ impl Value {
 
     /// Construct the logical truth value `Unknown` (U), SPEC §7.5 / §7.4.1.
     ///
-    /// U is represented as a NIL node carrying `NilReason::LogicallyUnknown`
-    /// and the `Interpretation::TruthValue` role. This reuses the existing
-    /// NIL plumbing (passthrough, diagnosis, arena) while remaining a
-    /// *logical* value rather than an operational absence. Never branch on
-    /// the underlying `ValueData::Nil` to detect U — use [`is_unknown`].
+    /// U is its own [`ValueData::Unknown`] variant carrying the
+    /// `Interpretation::TruthValue` role — **not** a NIL node. It is a
+    /// logical value, distinct at the type level from operational absence, so
+    /// no NIL call site can absorb it. Detect it with [`is_unknown`], never by
+    /// matching the storage representation.
     #[inline]
     pub fn unknown() -> Self {
         Self {
-            data: ValueData::Nil,
+            data: ValueData::Unknown(None),
             hint: Interpretation::TruthValue,
-            absence: Some(AbsenceMetadata::with_reason(
-                NilReason::LogicallyUnknown,
-                AbsenceOrigin::ComparisonBudget,
-                Recoverability::Unknown,
-            )),
+            absence: None,
         }
     }
 
     /// The logical truth value `Unknown` (U) carrying the CF-comparison
     /// agreed-prefix diagnosis (SPEC §4.5.0 / §7.4.1). Identical to
-    /// [`unknown`] except that the absence metadata records a
+    /// [`unknown`] except that U's own diagnostic carrier records a
     /// `DebugDiagnosis` whose `agreed_prefix` is surfaced as
     /// `diagnosis.agreedPrefix`. `word` names the comparison Coreword that
     /// produced U (e.g. `"COMPARE-WITHIN"`, `"LT"`).
     pub fn unknown_with_agreed_prefix(word: Option<&str>, agreed_prefix: usize) -> Self {
         Self {
-            data: ValueData::Nil,
+            data: ValueData::Unknown(Some(Box::new(DebugDiagnosis::comparison_unknown(
+                word,
+                agreed_prefix,
+            )))),
             hint: Interpretation::TruthValue,
-            absence: Some(AbsenceMetadata::from_diagnosis(
-                NilReason::LogicallyUnknown,
-                AbsenceOrigin::ComparisonBudget,
-                Recoverability::Unknown,
-                DebugDiagnosis::comparison_unknown(word, agreed_prefix),
-            )),
+            absence: None,
         }
     }
 
     /// Whether this value is the logical truth value `Unknown` (U).
     ///
     /// This is the single canonical predicate for U. It keys off the
-    /// `LogicallyUnknown` reason, which is attached exclusively to U, so it
-    /// is robust regardless of how the `TruthValue` hint propagates. All
-    /// call sites must use this instead of matching `ValueData::Nil`.
+    /// dedicated [`ValueData::Unknown`] variant, so the U/NIL distinction is
+    /// a type invariant. All call sites must use this instead of matching the
+    /// storage representation.
     #[inline]
     pub fn is_unknown(&self) -> bool {
-        matches!(self.nil_reason(), Some(NilReason::LogicallyUnknown))
+        matches!(self.data, ValueData::Unknown(_))
     }
 
     /// Whether this value carries the `TruthValue` interpretation role
@@ -221,6 +215,13 @@ impl Value {
 
     #[inline]
     pub fn nil_diagnosis(&self) -> Option<&DebugDiagnosis> {
+        // The logical Unknown (U) carries its comparison diagnosis on its own
+        // variant, not in NIL's absence metadata. Surface it here so the
+        // `agreedPrefix` accessors keep working for U without U ever holding
+        // an operational NIL reason.
+        if let ValueData::Unknown(diagnosis) = &self.data {
+            return diagnosis.as_deref();
+        }
         self.absence
             .as_ref()
             .and_then(|absence| absence.diagnosis.as_ref())
@@ -368,42 +369,31 @@ impl Value {
         }
     }
 
-    /// Storage-level NIL test: `true` for any `ValueData::Nil` node,
-    /// **including the logical Unknown (U)**, which is represented as a NIL
-    /// node (SPEC §7.5). This is a low-level storage predicate, not an
-    /// operational-absence test. If you need operational NIL only (U
-    /// excluded), use [`is_operational_nil`]. Kept with storage semantics to
-    /// avoid churning its ~164 call sites; see SPEC §7.5 / §2.3 firewall.
+    /// NIL test: `true` only for the operational absence node
+    /// ([`ValueData::Nil`], the Bubble). The logical Unknown (U) is a
+    /// separate [`ValueData::Unknown`] variant and is **not** NIL
+    /// (`unknown().is_nil() == false`), so the U/NIL firewall (SPEC §7.5 /
+    /// §2.3) is now guaranteed by the type rather than by a predicate
+    /// convention.
     #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// As [`is_nil`]: storage-level NIL test, **U included**. For
-    /// operational absence excluding the logical Unknown, use
-    /// [`is_operational_nil`].
+    /// As [`is_nil`]: operational-absence test. The logical Unknown (U) is
+    /// not absent.
     #[inline]
     pub fn is_absent(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
 
-    /// Low-level: whether the storage representation is a NIL node (U
-    /// included). Internal-detection only; equivalent to [`is_nil`] but
-    /// named to make the storage intent explicit at call sites that must
-    /// not be confused with operational absence.
-    #[inline]
-    pub fn is_nil_storage(&self) -> bool {
-        matches!(self.data, ValueData::Nil)
-    }
-
-    /// Operational NIL only: a NIL storage node that is **not** the logical
-    /// truth value Unknown (U). This is the firewall (SPEC §7.5 / §2.3)
-    /// between operational absence and the K3 logical Unknown: generic NIL
-    /// passthrough helpers use this so U is never silently absorbed as a
-    /// reasoned operational NIL.
+    /// Operational NIL only: an operational absence node that is, by
+    /// construction, never the logical truth value Unknown (U). Retained as
+    /// the intent-revealing name at the firewall boundary (SPEC §7.5 / §2.3);
+    /// now identical to [`is_nil`] because U has its own variant.
     #[inline]
     pub fn is_operational_nil(&self) -> bool {
-        self.is_nil_storage() && !self.is_unknown()
+        matches!(self.data, ValueData::Nil)
     }
 
     #[inline]
@@ -419,7 +409,10 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
             ValueData::Record { .. } => SemanticKind::Record,
-            ValueData::Nil => SemanticKind::Absence,
+            // PR-1: U routes identically to the old NIL-backed U here
+            // (coarse `semanticKind`); PR-2 audits whether U should report a
+            // distinct kind.
+            ValueData::Nil | ValueData::Unknown(_) => SemanticKind::Absence,
             ValueData::CodeBlock(_) => SemanticKind::Code,
             ValueData::ProcessHandle(_) => SemanticKind::Process,
             ValueData::SupervisorHandle(_) => SemanticKind::Supervisor,
@@ -434,7 +427,7 @@ impl Value {
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
             ValueData::Record { .. } => ValueShape::Record,
-            ValueData::Nil => ValueShape::Absence,
+            ValueData::Nil | ValueData::Unknown(_) => ValueShape::Absence,
             ValueData::CodeBlock(_) => ValueShape::CodeBlock,
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => ValueShape::Handle,
         }
@@ -461,7 +454,10 @@ impl Value {
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
             }
-            ValueData::Nil => {
+            // PR-1: U keeps the old NIL-backed capability set (plus the
+            // `truthValued` capability added below via `is_truth_value`), so
+            // the observable capability list for U is unchanged.
+            ValueData::Nil | ValueData::Unknown(_) => {
                 capabilities.push(Capability::NilPassthrough);
                 capabilities.push(Capability::Diagnosable);
                 capabilities.push(Capability::AiExplainable);
@@ -546,6 +542,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -579,7 +576,10 @@ impl Value {
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
             ValueData::Boolean(_) => true,
-            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
+            ValueData::Scalar(_)
+            | ValueData::ExactScalar(_)
+            | ValueData::Nil
+            | ValueData::Unknown(_) => true,
             ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
                 Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
@@ -595,7 +595,7 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         match &self.data {
             ValueData::Boolean(b) => *b,
-            ValueData::Nil => false,
+            ValueData::Nil | ValueData::Unknown(_) => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
             // irrationals; Gosper nodes conservatively report truthy.
@@ -615,7 +615,7 @@ impl Value {
     #[inline]
     pub fn len(&self) -> usize {
         match &self.data {
-            ValueData::Nil => 0,
+            ValueData::Nil | ValueData::Unknown(_) => 0,
             ValueData::Boolean(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
@@ -645,6 +645,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -668,6 +669,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -687,6 +689,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -704,7 +707,7 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
-            ValueData::Nil => None,
+            ValueData::Nil | ValueData::Unknown(_) => None,
             ValueData::Boolean(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
@@ -731,7 +734,9 @@ impl Value {
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 Arc::make_mut(v).push(child);
             }
-            ValueData::Nil => {
+            // PR-1: U seeds a fresh vector exactly as the old NIL-backed U did
+            // when a child is pushed into it (behavior-preserving).
+            ValueData::Nil | ValueData::Unknown(_) => {
                 self.data = ValueData::Vector(Arc::new(vec![child]));
             }
             ValueData::Scalar(f) => {
@@ -761,6 +766,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -778,6 +784,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => return,
@@ -798,6 +805,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => return None,
@@ -820,6 +828,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => return None,
@@ -841,6 +850,7 @@ impl Value {
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -857,6 +867,7 @@ impl Value {
             | ValueData::Tensor { .. }
             | ValueData::Record { .. }
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -882,6 +893,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -900,6 +912,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
+            | ValueData::Unknown(_)
             | ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => None,
@@ -914,7 +927,7 @@ impl Value {
 
     pub fn collect_fractions_flat_into(&self, buf: &mut Vec<Fraction>) {
         match &self.data {
-            ValueData::Nil => buf.push(Fraction::nil()),
+            ValueData::Nil | ValueData::Unknown(_) => buf.push(Fraction::nil()),
             ValueData::Scalar(f) => buf.push(f.clone()),
             ValueData::ExactScalar(er) => {
                 // Use best rational approximation for ExactScalar in flat collection
@@ -940,7 +953,7 @@ impl Value {
 
     pub fn count_fractions(&self) -> usize {
         match &self.data {
-            ValueData::Nil => 1,
+            ValueData::Nil | ValueData::Unknown(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 v.iter().map(|c| c.count_fractions()).sum()
@@ -955,7 +968,7 @@ impl Value {
 
     pub fn shape(&self) -> Vec<usize> {
         match &self.data {
-            ValueData::Nil => vec![],
+            ValueData::Nil | ValueData::Unknown(_) => vec![],
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => vec![],
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
                 if v.is_empty() {
@@ -1026,7 +1039,10 @@ impl Value {
 
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
-            ValueData::Nil => Interpretation::Nil,
+            // PR-1: U keeps the old NIL-backed default-hint mapping. U's own
+            // `TruthValue` role is set at construction and is not re-derived
+            // here, so this is behavior-preserving.
+            ValueData::Nil | ValueData::Unknown(_) => Interpretation::Nil,
             ValueData::Boolean(_) => Interpretation::TruthValue,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
@@ -1188,6 +1204,7 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
         ValueData::Vector(children) => try_collect_dense(children),
         ValueData::Boolean(_)
         | ValueData::Nil
+        | ValueData::Unknown(_)
         | ValueData::Record { .. }
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)

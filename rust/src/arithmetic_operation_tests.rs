@@ -1161,11 +1161,11 @@ mod compare_within_tests {
         assert!(v.is_unknown(), "a starved Tier 2 comparison must be U");
         assert_eq!(v.truth_value(), Some("unknown"));
 
-        // The Unknown result carries the machine-readable agreedPrefix.
-        let absence = v.absence_metadata().expect("U carries absence metadata");
-        let diagnosis = absence
-            .diagnosis
-            .as_ref()
+        // The Unknown result carries the machine-readable agreedPrefix on its
+        // own diagnostic carrier (CS4: U is `ValueData::Unknown`, not a NIL
+        // node), surfaced through `nil_diagnosis()`.
+        let diagnosis = v
+            .nil_diagnosis()
             .expect("COMPARE-WITHIN U carries a diagnosis");
         let prefix = diagnosis
             .agreed_prefix
@@ -1681,8 +1681,7 @@ mod u_propagation_tests {
             "MIN of an undecidable pair must be U, got {v}"
         );
         assert_eq!(v.truth_value(), Some("unknown"));
-        let absence = v.absence_metadata().expect("U carries absence");
-        let diag = absence.diagnosis.as_ref().expect("U carries a diagnosis");
+        let diag = v.nil_diagnosis().expect("U carries a diagnosis");
         assert!(
             diag.agreed_prefix.is_some(),
             "MIN U must carry agreedPrefix"
@@ -1736,8 +1735,7 @@ mod u_propagation_tests {
             v.is_unknown(),
             "SORT with an undecidable pair must be U, got {v}"
         );
-        let absence = v.absence_metadata().expect("U carries absence");
-        let diag = absence.diagnosis.as_ref().expect("U carries a diagnosis");
+        let diag = v.nil_diagnosis().expect("U carries a diagnosis");
         assert!(
             diag.agreed_prefix.is_some(),
             "SORT U must carry agreedPrefix"

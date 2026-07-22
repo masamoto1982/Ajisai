@@ -47,7 +47,7 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil => Err(AjisaiError::from(
+            ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::from(
                 "Tensor conversion requires non-NIL value",
             )),
             ValueData::Scalar(f) => Ok(Self {
@@ -253,7 +253,10 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 /// the recursively flattened element count.
 fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Scalar(_)
+        | ValueData::ExactScalar(_)
+        | ValueData::Nil
+        | ValueData::Unknown(_) => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             if items.is_empty() {

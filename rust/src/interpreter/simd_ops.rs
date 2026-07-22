@@ -53,6 +53,7 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
         | ValueData::ExactScalar(_)
         | ValueData::Record { .. }
         | ValueData::Nil
+        | ValueData::Unknown(_)
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)
         | ValueData::SupervisorHandle(_) => None,
@@ -131,6 +132,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::Tensor { .. }
         | ValueData::Record { .. }
         | ValueData::Nil
+        | ValueData::Unknown(_)
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)
         | ValueData::SupervisorHandle(_) => None,

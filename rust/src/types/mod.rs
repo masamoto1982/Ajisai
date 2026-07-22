@@ -17,6 +17,7 @@ use self::fraction::Fraction;
 pub use self::record_shape::RecordShape;
 pub use self::stack::Stack;
 use crate::error::NilReason;
+use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use std::any::Any;
@@ -388,6 +389,21 @@ pub enum ValueData {
         shape: Arc<RecordShape>,
     },
     Nil,
+    /// The logical truth value `Unknown` (U), the third value of Ajisai's
+    /// K3 logic (SPEC §7.5 / §7.4.1). U is **not** an operational absence:
+    /// it is a truth-valued datum distinct at the type level from
+    /// [`ValueData::Nil`] (the Bubble). Keeping it a separate variant makes
+    /// the U/NIL split a type invariant rather than a predicate convention,
+    /// so no NIL call site can silently absorb U.
+    ///
+    /// The optional payload carries the CF-comparison agreed-prefix
+    /// diagnosis (SPEC §4.5.0): the `DebugDiagnosis` whose `agreed_prefix`
+    /// is surfaced as `diagnosis.agreedPrefix` when U is the starved result
+    /// of a Tier-2 comparison. `None` for a bare U with no comparison
+    /// provenance. This is U's own diagnostic carrier — it deliberately does
+    /// **not** reuse NIL's `AbsenceMetadata`, so U never reports an
+    /// operational NIL reason/origin/recoverability.
+    Unknown(Option<Box<DebugDiagnosis>>),
     CodeBlock(Vec<Token>),
     ProcessHandle(u64),
     SupervisorHandle(u64),
@@ -425,6 +441,11 @@ impl PartialEq for ValueData {
                 },
             ) => ap == bp && (Arc::ptr_eq(ai, bi) || ai == bi),
             (ValueData::Nil, ValueData::Nil) => true,
+            // U equals U by logical identity: the agreed-prefix diagnosis is
+            // provenance metadata (like NIL's reason), not part of the value's
+            // identity, so it is ignored here exactly as NIL ignores its
+            // absence metadata in equality.
+            (ValueData::Unknown(_), ValueData::Unknown(_)) => true,
             (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
             (ValueData::ProcessHandle(a), ValueData::ProcessHandle(b)) => a == b,
             (ValueData::SupervisorHandle(a), ValueData::SupervisorHandle(b)) => a == b,
@@ -471,7 +492,10 @@ fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
 /// ragged sub-structures.
 fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
-        ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Scalar(_)
+        | ValueData::ExactScalar(_)
+        | ValueData::Nil
+        | ValueData::Unknown(_) => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
             nested_vector_shape(items)

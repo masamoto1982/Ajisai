@@ -12,9 +12,10 @@
 //!     on the stack and pushes its result above it, mirroring the LENGTH/GET
 //!     inspection-word precedent of SPEC §7.1.1. A diagnosis is an observation.
 //!   * **Operational NIL only.** They key off [`Value::is_operational_nil`], so
-//!     the logical Unknown (U) — which shares NIL storage but is a truth value,
-//!     not an operational absence — is never reported as absent and its internal
-//!     `LogicallyUnknown` reason is never leaked (SPEC §2.3 / §7.5 firewall).
+//!     the logical Unknown (U) — a distinct `ValueData::Unknown` variant, a
+//!     truth value rather than an operational absence — is never reported as
+//!     absent and never leaks a NIL reason (SPEC §2.3 / §7.5 firewall, now a
+//!     type invariant).
 //!
 //! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` and
 //! the other four yield a reasonless NIL — the "well-formed but cannot produce a
