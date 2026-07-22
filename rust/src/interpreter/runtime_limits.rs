@@ -29,10 +29,16 @@ use crate::error::{AjisaiError, Result};
 pub const DEFAULT_MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
 
 /// Default cap on the byte length of a single source program handed to
-/// `execute`. A megabyte of Ajisai source is already far past any hand-written
-/// program; the ceiling turns a pathological multi-megabyte paste into a
-/// diagnosable error before tokenization allocates per-character buffers.
-pub const DEFAULT_MAX_SOURCE_BYTES: usize = 1_000_000;
+/// `execute`, checked before tokenization allocates per-character buffers.
+///
+/// The default is deliberately generous (64 MiB): machine-generated programs
+/// are legitimately several megabytes (the perf-benchmark's largest chain is
+/// ~1.77 MB), so the *default* only rejects genuinely pathological input while
+/// keeping the char-buffer allocation bounded. Memory-constrained hosts — the
+/// WASM playground in particular — should inject a tighter `max_source_bytes`
+/// via `Interpreter::set_runtime_limits`; that is exactly why the limit is a
+/// per-interpreter injectable field rather than a global.
+pub const DEFAULT_MAX_SOURCE_BYTES: usize = 64 * 1024 * 1024;
 
 /// Default cap on the digit count of a single numeric literal in source. A
 /// 4096-digit integer is astronomically large for any legitimate program,
