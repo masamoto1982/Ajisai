@@ -90,3 +90,4 @@ Status: non-canonical (SPECIFICATION.html §2.2). この索引を含め、`docs/
 | `human-surface-blackbox-instruction-review.md` | Human/Machine Surface 二層化・`debug_diagnosis` 配置是正の指示書レビュー（未実施） | `[提案・未実施]` |
 | `semantic-metadata-refactor-checklist.md` | 意味論的混在排除チェックリスト（一部実施済み、`Capabilities::PURE` 排除等が残） | `[提案・未実施]` |
 | `user-surface-information-hiding.md` | ユーザー表面への情報隠蔽の対費用効果調査と実施範囲（経路依存エラー恒等性違反の実測記録を含む） | `[提案・未実施]` |
+| `external-evaluation-response-strategy.md` | 外部評価（ChatGPT）の妥当性検証と開発方針（P0 永続化/観測プロトコル分離・往復同値テスト、P1 表層単純化、P2 静的シグネチャ接続） | `[提案・未実施]` |
