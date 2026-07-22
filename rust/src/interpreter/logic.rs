@@ -208,10 +208,7 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..]
-                    .iter()
-                    .cloned()
-                    .collect()
+                interp.stack.as_slice()[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };
@@ -285,10 +282,7 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
 
             let items: Vec<Value> = if is_keep_mode {
                 let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..]
-                    .iter()
-                    .cloned()
-                    .collect()
+                interp.stack.as_slice()[stack_len - count..].to_vec()
             } else {
                 interp.stack.drain(interp.stack.len() - count..).collect()
             };

@@ -535,6 +535,12 @@ pub struct Interpreter {
     pub(crate) receipt_recorder: super::receipt_recorder::ReceiptRecorder,
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         Self::with_host(super::default_host_env())

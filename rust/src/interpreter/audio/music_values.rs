@@ -4,8 +4,8 @@
 //! can reason about pitch and rhythm instead of guessing from raw numbers:
 //!
 //!   * `music.pitch`    - a frequency. Either a direct/just-intonation Hz value
-//!                        (held as an exact rational) or an equal-division step
-//!                        kept symbolically until the `MUSIC@PLAY` boundary.
+//!     (held as an exact rational) or an equal-division step kept symbolically
+//!     until the `MUSIC@PLAY` boundary.
 //!   * `music.duration` - a duration in seconds (exact rational).
 //!   * `music.note`     - a pitch paired with a duration.
 //!   * `music.rest`     - a silent duration.

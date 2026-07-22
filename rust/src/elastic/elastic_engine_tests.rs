@@ -8,7 +8,6 @@
 /// - M4  cache_manager: store → fetch round-trip, pure gate, hit rate, prefix invalidation
 /// - M5  fallback_bridge: should_fallback rules; execution_mode: from_str / as_str / is_elastic
 /// - Semantics: greedy and elastic-safe produce identical stack output for a set of programs
-
 #[cfg(test)]
 mod tests {
     // ────────────────────────────────────────────────────────────────────────

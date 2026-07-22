@@ -9,6 +9,11 @@
 //! Programs are deliberately small (cheap to run thousands of times) while
 //! still covering the boundary values the roadmap §4 calls out: zero, sign,
 //! NIL, irrationals, the logical Unknown, and empty/short vectors.
+//!
+//! Shared test scaffolding: each integration-test binary uses a different
+//! subset of these generators, so any single binary sees the rest as dead
+//! code. Allow it module-wide rather than annotating every helper.
+#![allow(dead_code)]
 
 use proptest::prelude::*;
 

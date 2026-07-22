@@ -18,6 +18,7 @@
 //!     left unchanged per task Step 3), which raises an explicit error
 //!     "Cannot broadcast NIL values". U is NOT collapsed into a reasonless
 //!     operational NIL.
+//!
 //! Either an explicit error or preserved-U is acceptable per the acceptance
 //! criteria; the firewall guarantee is that U is never silently turned into a
 //! reasonless operational NIL. Since CS4, U is a distinct `ValueData::Unknown`
@@ -90,7 +91,7 @@ async fn u_into_arithmetic_does_not_silently_collapse_to_reasonless_nil() {
                  error; got {top:?}"
             );
             assert!(
-                !(top.is_nil() && !top.is_unknown()),
+                !top.is_operational_nil(),
                 "U must never collapse to a reasonless operational NIL; got {top:?}"
             );
         }

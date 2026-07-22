@@ -124,85 +124,6 @@ fn render_cf_nested(terms: &[BigInt], truncated: bool) -> String {
     s
 }
 
-#[cfg(test)]
-mod tests {
-    use super::render_cf_nested;
-    use num_bigint::BigInt;
-
-    fn bi(n: i64) -> BigInt {
-        BigInt::from(n)
-    }
-
-    #[test]
-    fn render_cf_nested_exact_forms() {
-        assert_eq!(render_cf_nested(&[bi(1)], false), "( 1 )");
-        assert_eq!(render_cf_nested(&[bi(1), bi(2)], false), "( 1 ( 2 ) )");
-        assert_eq!(
-            render_cf_nested(&[bi(1), bi(2), bi(2)], false),
-            "( 1 ( 2 ( 2 ) ) )"
-        );
-        assert_eq!(
-            render_cf_nested(&[bi(1), bi(2), bi(2)], true),
-            "( 1 ( 2 ( 2 ...) ) )"
-        );
-        assert_eq!(render_cf_nested(&[], false), "( )");
-    }
-
-    #[test]
-    fn irrational_renders_as_nested_cf_not_approximation() {
-        use super::format_exact_real;
-        use crate::types::exact::ExactReal;
-        use crate::types::fraction::Fraction;
-        use num_bigint::BigInt;
-
-        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical nested
-        // CF form (SPEC §4.2.3), never `sqrt(...)` or a `~`-approximation.
-        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
-            .expect("√2 is a valid algebraic sqrt");
-        let s = format_exact_real(&sqrt2);
-        assert!(
-            s.starts_with("( 1 ( 2 ( 2 "),
-            "expected nested CF, got {s:?}"
-        );
-        assert!(
-            s.contains("...)"),
-            "lazy CF must carry the `...)` truncation marker, got {s:?}"
-        );
-        assert!(
-            !s.contains("sqrt"),
-            "must not use sqrt() display, got {s:?}"
-        );
-        assert!(
-            !s.contains('~'),
-            "must not use ~approximation display, got {s:?}"
-        );
-        let opens = s.matches('(').count();
-        let closes = s.matches(')').count();
-        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
-
-        // A perfect square collapses to the exact rational form.
-        let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
-            .expect("√4 is a valid sqrt");
-        assert_eq!(format_exact_real(&sqrt4), "2/1");
-    }
-
-    #[test]
-    fn render_cf_nested_balanced_parens() {
-        for terms in [
-            vec![bi(1)],
-            vec![bi(1), bi(2)],
-            vec![bi(2), bi(2), bi(2), bi(2)],
-        ] {
-            for truncated in [false, true] {
-                let s = render_cf_nested(&terms, truncated);
-                let opens = s.matches('(').count();
-                let closes = s.matches(')').count();
-                assert_eq!(opens, closes, "unbalanced parens in {s:?}");
-            }
-        }
-    }
-}
-
 fn format_as_interval(value: &Value) -> String {
     match &value.data {
         ValueData::Vector(v) if v.len() == 2 => {
@@ -434,7 +355,7 @@ fn format_text_content(data: &ValueData) -> String {
         ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Scalar(f) => {
             if let Some(n) = f.to_i64() {
-                if n >= 0 && n <= 0x10FFFF {
+                if (0..=0x10FFFF).contains(&n) {
                     if let Some(c) = char::from_u32(n as u32) {
                         return c.to_string();
                     }
@@ -447,7 +368,7 @@ fn format_text_content(data: &ValueData) -> String {
             .filter_map(|child| {
                 if let ValueData::Scalar(f) = &child.data {
                     f.to_i64().and_then(|n| {
-                        if n >= 0 && n <= 0x10FFFF {
+                        if (0..=0x10FFFF).contains(&n) {
                             char::from_u32(n as u32)
                         } else {
                             None
@@ -462,7 +383,7 @@ fn format_text_content(data: &ValueData) -> String {
             .iter()
             .filter_map(|f| {
                 f.to_i64().and_then(|n| {
-                    if n >= 0 && n <= 0x10FFFF {
+                    if (0..=0x10FFFF).contains(&n) {
                         char::from_u32(n as u32)
                     } else {
                         None
@@ -589,5 +510,84 @@ fn format_as_datetime(data: &ValueData) -> String {
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
         ValueData::ProcessHandle(id) => format!("<process:{}>", id),
         ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_cf_nested;
+    use num_bigint::BigInt;
+
+    fn bi(n: i64) -> BigInt {
+        BigInt::from(n)
+    }
+
+    #[test]
+    fn render_cf_nested_exact_forms() {
+        assert_eq!(render_cf_nested(&[bi(1)], false), "( 1 )");
+        assert_eq!(render_cf_nested(&[bi(1), bi(2)], false), "( 1 ( 2 ) )");
+        assert_eq!(
+            render_cf_nested(&[bi(1), bi(2), bi(2)], false),
+            "( 1 ( 2 ( 2 ) ) )"
+        );
+        assert_eq!(
+            render_cf_nested(&[bi(1), bi(2), bi(2)], true),
+            "( 1 ( 2 ( 2 ...) ) )"
+        );
+        assert_eq!(render_cf_nested(&[], false), "( )");
+    }
+
+    #[test]
+    fn irrational_renders_as_nested_cf_not_approximation() {
+        use super::format_exact_real;
+        use crate::types::exact::ExactReal;
+        use crate::types::fraction::Fraction;
+        use num_bigint::BigInt;
+
+        // √2 = [1; 2, 2, 2, …]. Default display must be the canonical nested
+        // CF form (SPEC §4.2.3), never `sqrt(...)` or a `~`-approximation.
+        let sqrt2 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(2), BigInt::from(1)))
+            .expect("√2 is a valid algebraic sqrt");
+        let s = format_exact_real(&sqrt2);
+        assert!(
+            s.starts_with("( 1 ( 2 ( 2 "),
+            "expected nested CF, got {s:?}"
+        );
+        assert!(
+            s.contains("...)"),
+            "lazy CF must carry the `...)` truncation marker, got {s:?}"
+        );
+        assert!(
+            !s.contains("sqrt"),
+            "must not use sqrt() display, got {s:?}"
+        );
+        assert!(
+            !s.contains('~'),
+            "must not use ~approximation display, got {s:?}"
+        );
+        let opens = s.matches('(').count();
+        let closes = s.matches(')').count();
+        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+
+        // A perfect square collapses to the exact rational form.
+        let sqrt4 = ExactReal::from_sqrt_rational(Fraction::new(BigInt::from(4), BigInt::from(1)))
+            .expect("√4 is a valid sqrt");
+        assert_eq!(format_exact_real(&sqrt4), "2/1");
+    }
+
+    #[test]
+    fn render_cf_nested_balanced_parens() {
+        for terms in [
+            vec![bi(1)],
+            vec![bi(1), bi(2)],
+            vec![bi(2), bi(2), bi(2), bi(2)],
+        ] {
+            for truncated in [false, true] {
+                let s = render_cf_nested(&terms, truncated);
+                let opens = s.matches('(').count();
+                let closes = s.matches(')').count();
+                assert_eq!(opens, closes, "unbalanced parens in {s:?}");
+            }
+        }
     }
 }

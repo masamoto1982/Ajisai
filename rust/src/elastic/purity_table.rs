@@ -4,7 +4,7 @@
 /// - `Pure`   — deterministic, no observable side effects; safe to cache and reorder.
 /// - `Impure` — has observable side effects (I/O, time, randomness, dictionary mutation).
 /// - `Unknown` — purity depends on runtime arguments (e.g. higher-order words whose
-///              callback may be impure) or is otherwise unanalysable statically.
+///   callback may be impure) or is otherwise unanalysable statically.
 ///
 /// For user-defined words, use `infer_purity` to propagate conservatively from
 /// component words.
@@ -130,10 +130,10 @@ pub fn purity_by_name(name: &str) -> Option<PurityInfo> {
 /// 2. Any `Unknown` component → result is `Unknown`.
 /// 3. All `Pure` → result is `Pure`.
 pub fn infer_purity(components: &[Purity]) -> Purity {
-    if components.iter().any(|&p| p == Purity::Impure) {
+    if components.contains(&Purity::Impure) {
         return Purity::Impure;
     }
-    if components.iter().any(|&p| p == Purity::Unknown) {
+    if components.contains(&Purity::Unknown) {
         return Purity::Unknown;
     }
     Purity::Pure

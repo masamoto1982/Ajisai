@@ -177,7 +177,7 @@ pub fn op_hash(interp: &mut Interpreter) -> Result<()> {
         parse_hash_args(interp)?
     };
 
-    if output_bits < 32 || output_bits > 1024 {
+    if !(32..=1024).contains(&output_bits) {
         return Err(AjisaiError::from(
             "HASH: output bits must be between 32 and 1024",
         ));

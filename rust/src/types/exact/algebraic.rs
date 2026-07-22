@@ -283,6 +283,9 @@ impl Algebraic {
     }
 
     /// Exact, total three-way comparison with another algebraic value.
+    // Not `Ord::cmp`: comparison is a semantic operation on the normal form,
+    // deliberately an inherent method, not the derived structural ordering.
+    #[allow(clippy::should_implement_trait)]
     pub fn cmp(&self, other: &Algebraic) -> Ordering {
         match self.sub(other) {
             AlgebraicResult::Rational(f) => rational_sign(&f),

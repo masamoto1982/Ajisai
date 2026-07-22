@@ -14,6 +14,7 @@
 //!   - `LT` `GT`— identity tier (budgeted comparison producing a TruthValue, §7.4)
 //!   - `COND` `IDLE` — flow tier (state-transformer composition/identity, §7.7)
 //!   - `NIL` and numeric literals — identity / sugar
+//!
 //! No `material`-tier word (no arithmetic, no vector word, no module word)
 //! appears in the definition, so a green run witnesses that `MATH@SIGN`'s
 //! observable contract is reconstructible from the Minimal Core alone.

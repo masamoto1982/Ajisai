@@ -113,7 +113,7 @@ pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let src_val = interp
         .stack
         .pop()
-        .ok_or_else(|| AjisaiError::StackUnderflow);
+        .ok_or(AjisaiError::StackUnderflow);
     let src_val = match src_val {
         Ok(v) => v,
         Err(e) => {

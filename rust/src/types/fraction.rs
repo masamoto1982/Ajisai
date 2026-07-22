@@ -351,6 +351,10 @@ impl Fraction {
         }
     }
 
+    // Inherent `from_str` (not `std::str::FromStr`): the `String` error type
+    // and the parse call sites predate the trait, and switching would churn
+    // every caller for no behavioral gain.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> std::result::Result<Self, String> {
         if s.is_empty() {
             return Err("Empty string".to_string());

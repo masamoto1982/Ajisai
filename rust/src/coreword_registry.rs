@@ -394,7 +394,7 @@ pub fn get_module_listed_words(module_name: &str) -> Vec<CorewordMetadata> {
             word.canonical_module()
                 .map(|m| m == needle)
                 .unwrap_or(false)
-                || word.listed_in_modules.iter().any(|m| *m == needle)
+                || word.listed_in_modules.contains(&needle)
         })
         .cloned()
         .collect()
@@ -407,7 +407,7 @@ pub fn get_category_listed_words(category: &str) -> Vec<CorewordMetadata> {
     let needle = category.to_uppercase();
     get_builtin_word_registry()
         .iter()
-        .filter(|word| word.listed_in_categories.iter().any(|c| *c == needle))
+        .filter(|word| word.listed_in_categories.contains(&needle))
         .cloned()
         .collect()
 }
@@ -460,8 +460,8 @@ pub fn is_listing_only_for_module(word_name: &str, module_name: &str) -> bool {
     {
         return false;
     }
-    meta.listed_in_modules.iter().any(|m| *m == module_upper)
-        || meta.listed_in_categories.iter().any(|c| *c == module_upper)
+    meta.listed_in_modules.contains(&module_upper)
+        || meta.listed_in_categories.contains(&module_upper)
 }
 
 pub fn is_safe_preview_word(name: &str) -> bool {
@@ -1072,7 +1072,7 @@ mod tests {
     #[test]
     fn aq_ver_listing_a_no_two_entries_share_name_and_home() {
         let registry = get_builtin_word_registry();
-        let dupes = collect_duplicate_entries(&registry);
+        let dupes = collect_duplicate_entries(registry);
         assert!(
             dupes.is_empty(),
             "(name, canonical_home) pair must be unique (duplicates: {:?})",
@@ -1088,7 +1088,7 @@ mod tests {
     #[test]
     fn aq_ver_listing_b_namespace_overlap_disambiguates_to_core() {
         let registry = get_builtin_word_registry();
-        let overlapping = collect_namespace_overlapping_names(&registry);
+        let overlapping = collect_namespace_overlapping_names(registry);
         for name in overlapping {
             let resolved = get_coreword_metadata(&name)
                 .unwrap_or_else(|| panic!("{} must resolve via bare lookup", name));
@@ -1142,7 +1142,7 @@ mod tests {
                 .expect("canonical module word must report canonical_module")
                 .to_string();
             assert!(
-                word.listed_in_modules.iter().any(|m| *m == canonical),
+                word.listed_in_modules.contains(&canonical),
                 "{} canonical module {} must appear in listed_in_modules ({:?})",
                 word.name,
                 canonical,

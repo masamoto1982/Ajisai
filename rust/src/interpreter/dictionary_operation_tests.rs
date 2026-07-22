@@ -571,7 +571,7 @@ mod tests {
         restore_example_words(&mut interp, &example_words);
         let _ = interp.collect_output();
 
-        let _ = interp.execute("C4").await.unwrap();
+        interp.execute("C4").await.unwrap();
         assert_eq!(interp.stack.len(), 1);
         if let Some(val) = interp.stack.last() {
             assert!(
@@ -581,7 +581,7 @@ mod tests {
             assert_eq!(val.as_scalar().unwrap().to_i64().unwrap(), 264);
         }
 
-        let _ = interp.execute("D4").await.unwrap();
+        interp.execute("D4").await.unwrap();
         assert_eq!(interp.stack.len(), 2);
         if let Some(val) = interp.stack.last() {
             assert!(

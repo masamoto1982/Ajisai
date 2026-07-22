@@ -514,7 +514,7 @@ pub fn op_adsr(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(params);
         return Err(AjisaiError::from("ADSR times must be non-negative"));
     }
-    if sustain < 0.0 || sustain > 1.0 {
+    if !(0.0..=1.0).contains(&sustain) {
         interp.stack.push(target);
         interp.stack.push(params);
         return Err(AjisaiError::from(

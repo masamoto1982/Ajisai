@@ -96,8 +96,7 @@ impl Algebraic {
         let mut k_prev1 = BigInt::from(0);
         let mut best: Option<(BigInt, BigInt)> = None;
         let mut state: Option<Algebraic> = Some(self.clone());
-        loop {
-            let Some(x) = state else { break };
+        while let Some(x) = state {
             let a = x.floor_int();
             let h = &a * &h_prev1 + &h_prev2;
             let k = &a * &k_prev1 + &k_prev2;

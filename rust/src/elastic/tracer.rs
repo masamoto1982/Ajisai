@@ -25,19 +25,12 @@ use std::sync::Mutex;
 
 static TRACE_ENABLED: AtomicBool = AtomicBool::new(false);
 
+#[derive(Default)]
 struct TraceData {
     call_counts: HashMap<String, u64>,
     total_nanos: HashMap<String, u64>,
 }
 
-impl Default for TraceData {
-    fn default() -> Self {
-        TraceData {
-            call_counts: HashMap::new(),
-            total_nanos: HashMap::new(),
-        }
-    }
-}
 
 // lazy_static is already a dependency of ajisai-core.
 lazy_static::lazy_static! {

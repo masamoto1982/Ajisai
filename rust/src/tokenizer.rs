@@ -7,11 +7,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
     while i < chars.len() {
         if chars[i].is_whitespace() {
-            if chars[i] == '\n' {
-                if tokens.last() != Some(&Token::LineBreak) {
+            if chars[i] == '\n'
+                && tokens.last() != Some(&Token::LineBreak) {
                     tokens.push(Token::LineBreak);
                 }
-            }
             i += 1;
             continue;
         }

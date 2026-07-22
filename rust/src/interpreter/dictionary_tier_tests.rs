@@ -24,7 +24,7 @@ mod tests {
         assert_eq!(def.stability, Stability::Stable);
         assert_eq!(def.capabilities, Capabilities::MUTATES_DICT);
 
-        assert!(interp.core_vocabulary.get("FRAME").is_none());
+        assert!(!interp.core_vocabulary.contains_key("FRAME"));
 
         assert!(!interp.core_vocabulary.contains_key("'"));
     }

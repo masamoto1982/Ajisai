@@ -1,3 +1,10 @@
+// Test files follow the convention `mod <file_name> { … }` inside
+// `<file_name>.rs` (e.g. `mod runtime_limits_tests` in
+// `runtime_limits_tests.rs`), which clippy flags as `module_inception`. The
+// nesting is a deliberate test-organization convention, not an accident, and
+// there are no production inception cases, so allow it crate-wide.
+#![allow(clippy::module_inception)]
+
 mod builtins;
 pub mod core_word_aliases;
 pub mod coreword_registry;
