@@ -4,9 +4,7 @@ use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{
     extract_bigint_from_value, extract_integer_from_value, normalize_index,
 };
-use crate::interpreter::{
-    ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
-};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
@@ -214,11 +212,15 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     let span = (end as i128 - start as i128).unsigned_abs();
     let stride = (step as i128).unsigned_abs();
     let element_count = span / stride + 1;
-    if element_count > MAX_MATERIALIZED_ELEMENTS as u128 {
+    // CS5: the cap is the injectable per-interpreter ceiling (folded into
+    // `RuntimeLimits`), so tests can fire this guard with a tiny limit and
+    // child runtimes inherit it — same behavior and message as before.
+    let max_materialized = interp.runtime_limits.max_materialized_elements;
+    if element_count > max_materialized as u128 {
         interp.stack.push(args_val);
         return Err(AjisaiError::from(format!(
             "RANGE would generate {} elements, exceeding the limit of {}",
-            element_count, MAX_MATERIALIZED_ELEMENTS
+            element_count, max_materialized
         )));
     }
 

@@ -38,6 +38,7 @@ pub mod quantized_block;
 pub mod random;
 pub mod receipt_recorder;
 mod resolve_cache;
+pub mod runtime_limits;
 pub mod serial;
 mod session_lifecycle;
 mod shadow_validation;
@@ -135,6 +136,7 @@ mod tier2_isolation_tests;
 mod tier2_vocabulary_tests;
 
 pub use interpreter_core::*;
+pub use runtime_limits::RuntimeLimits;
 
 pub use host::{
     default_host_env, DefaultHostEnv, DeterministicHostEnv, HostCapability, HostEffect, HostEnv,

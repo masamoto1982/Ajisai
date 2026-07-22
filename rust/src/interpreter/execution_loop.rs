@@ -529,10 +529,31 @@ impl Interpreter {
     }
 
     pub async fn execute(&mut self, code: &str) -> Result<()> {
+        // CS5: bound the input before it is expanded into values. Source bytes
+        // are checked before tokenization allocates per-character buffers; each
+        // numeric literal's digit count is checked after tokenization but
+        // before `Fraction::from_str` parses it into a (potentially enormous)
+        // BigInt-backed value.
+        self.runtime_limits.check_source_bytes(code.len())?;
         self.execution_step_count = 0;
         let tokens: Vec<Token> = crate::tokenizer::tokenize(code)?;
+        self.check_source_numeric_literals(&tokens)?;
         let lines: Vec<ExecutionLine> = self.split_tokens_to_lines(&tokens)?;
         self.execute_guard_structure(&lines)?;
+        Ok(())
+    }
+
+    /// Enforce the numeric-literal digit ceiling on every `Token::Number`
+    /// produced from source, before any of them is parsed into a value. Digit
+    /// characters are counted directly (sign, radix point, and `/` excluded),
+    /// so the bound tracks the magnitude of the BigInt that would be built.
+    fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
+        for token in tokens {
+            if let Token::Number(literal) = token {
+                let digits = literal.chars().filter(|c| c.is_ascii_digit()).count();
+                self.runtime_limits.check_numeric_literal_digits(digits)?;
+            }
+        }
         Ok(())
     }
 }
