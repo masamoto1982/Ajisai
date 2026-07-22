@@ -54,15 +54,12 @@ fn comparison_budget_undecidable_protocol_strings() {
 }
 
 #[test]
-fn logically_unknown_protocol_strings() {
-    // SPEC §7.5 / §2.3: the logical Unknown (U) carries the
-    // `logicallyUnknown` reason internally and the `truthValued`
-    // capability; it is observed through the `truthValue` axis as
-    // `unknown`.
-    assert_eq!(
-        NilReason::LogicallyUnknown.as_protocol_str(),
-        "logicallyUnknown"
-    );
+fn unknown_advertises_truth_valued_capability() {
+    // SPEC §7.5 / §2.3: the logical Unknown (U) is observed through the
+    // `truthValue` axis as `unknown` and advertises the `truthValued`
+    // capability. Since CS4, U is its own `ValueData::Unknown` variant, not a
+    // NIL node carrying a `logicallyUnknown` reason (that reason was retired in
+    // PR-3), so no NIL-reason protocol string represents U.
     assert_eq!(Capability::TruthValued.as_protocol_str(), "truthValued");
 }
 

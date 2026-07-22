@@ -19,8 +19,10 @@
 //!     "Cannot broadcast NIL values". U is NOT collapsed into a reasonless
 //!     operational NIL.
 //! Either an explicit error or preserved-U is acceptable per the acceptance
-//! criteria; the firewall guarantee is that `NilReason::LogicallyUnknown`
-//! is never silently turned into a reasonless operational NIL.
+//! criteria; the firewall guarantee is that U is never silently turned into a
+//! reasonless operational NIL. Since CS4, U is a distinct `ValueData::Unknown`
+//! variant (not a NIL node carrying a reason), so the guarantee is a type
+//! invariant rather than a reason-check.
 
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
@@ -70,8 +72,7 @@ async fn run_ok(code: &str) -> Vec<Value> {
 /// Passing U to an arithmetic word must not silently collapse it into a
 /// reasonless operational NIL. The firewall holds if EITHER an explicit
 /// error is raised OR `is_unknown()` is preserved; what must never happen is
-/// a successful result that is an operational NIL with the
-/// `LogicallyUnknown` reason erased.
+/// a successful result that is an operational NIL with U's identity erased.
 #[tokio::test]
 async fn u_into_arithmetic_does_not_silently_collapse_to_reasonless_nil() {
     let res = run_with(vec![u_value().await], "1 +").await;
