@@ -378,6 +378,11 @@ pub struct Interpreter {
     /// (materialization, source/literal size, and — via the work meter —
     /// algebraic/BigInt blow-up). Child runtimes inherit a copy.
     pub(crate) runtime_limits: super::runtime_limits::RuntimeLimits,
+    /// Cumulative internal numeric work charged this `execute` (CS5 work meter).
+    /// Charged before each expensive exact-arithmetic operation so a runaway
+    /// algebraic computation fails at `runtime_limits.max_numeric_work` rather
+    /// than running for minutes. Reset per top-level `execute`.
+    pub(crate) numeric_work_used: u64,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 
@@ -559,6 +564,7 @@ impl Interpreter {
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             runtime_limits: super::runtime_limits::RuntimeLimits::default(),
+            numeric_work_used: 0,
             input_buffer: String::new(),
             io_output_buffer: String::new(),
             serial_inbox: HashMap::new(),
@@ -916,6 +922,21 @@ impl Interpreter {
     /// afterwards inherit the new limits.
     pub fn set_runtime_limits(&mut self, limits: super::runtime_limits::RuntimeLimits) {
         self.runtime_limits = limits;
+    }
+
+    /// Charge `units` of internal numeric work to the CS5 work meter and fail
+    /// (diagnosably, before the expensive computation runs) if the cumulative
+    /// total crosses `runtime_limits.max_numeric_work`. Saturating so the
+    /// counter itself can never overflow. Reused as `ExecutionLimitExceeded`
+    /// (an existing resource-limit category), never a new category.
+    pub(crate) fn charge_numeric_work(&mut self, units: u64) -> Result<()> {
+        self.numeric_work_used = self.numeric_work_used.saturating_add(units);
+        if self.numeric_work_used > self.runtime_limits.max_numeric_work {
+            return Err(crate::error::AjisaiError::ExecutionLimitExceeded {
+                limit: usize::try_from(self.runtime_limits.max_numeric_work).unwrap_or(usize::MAX),
+            });
+        }
+        Ok(())
     }
 
     pub fn update_stack(&mut self, stack: impl Into<Stack>) {

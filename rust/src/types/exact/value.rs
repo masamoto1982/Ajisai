@@ -163,6 +163,28 @@ impl ExactReal {
         }
     }
 
+    /// Size probe (CS5): the number of algebraic terms this value carries — a
+    /// Tier 1 `Algebraic`'s normal-form term count, or `1` for a Tier 0
+    /// rational / Tier 2 computable (neither can explode multiplicatively).
+    /// Used to bound the term-pair work of an exact multiply *before* running
+    /// it, and to reject a value whose term count crosses `max_algebraic_terms`.
+    pub fn algebraic_term_count(&self) -> usize {
+        match self {
+            Self::Rational(_) | Self::Computable(_) => 1,
+            Self::Algebraic(a) => a.term_count(),
+        }
+    }
+
+    /// Size probe (CS5): the largest coefficient bit-length in this value, used
+    /// to bound BigInt blow-up against `max_bigint_bits`.
+    pub fn max_coefficient_bits(&self) -> u64 {
+        match self {
+            Self::Rational(f) => f.numerator().bits().max(f.denominator().bits()),
+            Self::Algebraic(a) => a.max_coefficient_bits(),
+            Self::Computable(_) => 0,
+        }
+    }
+
     /// Reciprocal `1/x`. `Rational(nil)` for nil; `None` for an exactly
     /// zero operand — decided algebraically, with no budget, because an
     /// `Algebraic` is never zero. A Tier 2 operand also returns `None`:

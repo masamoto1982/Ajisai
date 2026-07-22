@@ -153,6 +153,67 @@ mod runtime_limits_tests {
         );
     }
 
+    // ── algebraic term-count ceiling (exact-arithmetic result size) ────────
+
+    #[tokio::test]
+    async fn algebraic_term_explosion_is_rejected_at_a_low_injected_limit() {
+        // (√2+√3)·(√5+√7) = √10+√14+√15+√21 — a 4-term algebraic value. At an
+        // injected 3-term ceiling the multiply's result is rejected; the
+        // 2-term intermediate sums pass, so the guard fires on the explosion,
+        // not on ordinary exact work.
+        let mut interp = with_limits(RuntimeLimits {
+            max_algebraic_terms: 3,
+            ..RuntimeLimits::default()
+        });
+        let err = interp
+            .execute("'math' IMPORT 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+            .await
+            .expect_err("a 4-term product past a 3-term ceiling must error");
+        assert!(
+            matches!(
+                err,
+                crate::error::AjisaiError::ExecutionLimitExceeded { .. }
+            ),
+            "algebraic-size failure is an execution-limit error, got: {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn same_algebraic_product_succeeds_under_default_limits() {
+        let mut interp = Interpreter::new();
+        assert!(
+            interp
+                .execute("'math' IMPORT 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+                .await
+                .is_ok(),
+            "a 4-term algebraic product is ordinary work under default limits"
+        );
+    }
+
+    // ── numeric-work meter (per-operation internal cost, cumulative) ────────
+
+    #[tokio::test]
+    async fn runaway_numeric_work_is_charged_and_rejected_before_computing() {
+        // An injected budget of 1 work unit is spent by the first algebraic
+        // operation, so the computation fails deterministically at the meter
+        // rather than grinding — without building anything huge.
+        let mut interp = with_limits(RuntimeLimits {
+            max_numeric_work: 1,
+            ..RuntimeLimits::default()
+        });
+        let err = interp
+            .execute("'math' IMPORT 2 SQRT 3 SQRT +")
+            .await
+            .expect_err("exact work past the meter must error");
+        assert!(
+            matches!(
+                err,
+                crate::error::AjisaiError::ExecutionLimitExceeded { .. }
+            ),
+            "numeric-work failure is an execution-limit error, got: {err:?}"
+        );
+    }
+
     // ── ordinary work is untouched under default limits ────────────────────
 
     #[tokio::test]
@@ -161,5 +222,16 @@ mod runtime_limits_tests {
         assert!(interp.execute("[ 0 5 ] RANGE").await.is_ok());
         let mut interp2 = Interpreter::new();
         assert!(interp2.execute("123456789 2 *").await.is_ok());
+        // Ordinary exact arithmetic (√2·√2 = 2, √2+√3) is untouched.
+        let mut interp3 = Interpreter::new();
+        assert!(interp3
+            .execute("'math' IMPORT 2 SQRT 2 SQRT *")
+            .await
+            .is_ok());
+        let mut interp4 = Interpreter::new();
+        assert!(interp4
+            .execute("'math' IMPORT 2 SQRT 3 SQRT +")
+            .await
+            .is_ok());
     }
 }

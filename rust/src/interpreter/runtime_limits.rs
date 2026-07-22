@@ -127,6 +127,28 @@ impl RuntimeLimits {
         }
         Ok(())
     }
+
+    /// Reject an exact (Tier 1 algebraic) arithmetic result whose size crosses
+    /// the internal-computation ceilings: `term_count` past
+    /// `max_algebraic_terms` (multiplicative term explosion, e.g. repeatedly
+    /// multiplying distinct `√p`), or `coeff_bits` past `max_bigint_bits`
+    /// (BigInt blow-up). Bounds *accumulation* so operands feeding the next
+    /// operation stay sane; the per-operation work is bounded separately by the
+    /// work meter's pre-charge. Maps to `ExecutionLimitExceeded` — an existing
+    /// resource-limit category, per the CS5 plan — never a new category.
+    pub fn check_algebraic_size(&self, term_count: usize, coeff_bits: u64) -> Result<()> {
+        if term_count > self.max_algebraic_terms {
+            return Err(AjisaiError::ExecutionLimitExceeded {
+                limit: self.max_algebraic_terms,
+            });
+        }
+        if coeff_bits > self.max_bigint_bits {
+            return Err(AjisaiError::ExecutionLimitExceeded {
+                limit: usize::try_from(self.max_bigint_bits).unwrap_or(usize::MAX),
+            });
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
