@@ -36,20 +36,21 @@ pub const MAX_USER_WORD_DEPTH: usize = 256;
 /// hand-written nesting in the corpus.
 pub const MAX_VECTOR_NESTING_DEPTH: usize = 256;
 
-/// Cap on the number of elements a single generative built-in (`RANGE`,
-/// `FILL`, ...) is allowed to materialize in one call. Such words loop
+/// Default cap on the number of elements a single generative built-in
+/// (`RANGE`, `FILL`, ...) may materialize in one call. Such words loop
 /// internally to build a vector/tensor, so they each count as a *single*
 /// execution step and therefore bypass `DEFAULT_MAX_EXECUTION_STEPS`. Without
 /// this guard an input like `[ 0 9999999999999 ] RANGE` or
 /// `[ 1000000 1000000 7 ] FILL` drives an unbounded allocation that aborts the
-/// process with an OOM (an unrecoverable trap inside the WASM playground)
-/// instead of a diagnosable `AjisaiError`. The ceiling sits three orders of
-/// magnitude above any realistic generated size (benchmarks top out in the
-/// hundreds) while keeping worst-case materialization recoverable: each
-/// generated `Value` costs a few hundred bytes, so one million elements bounds
-/// a single call to a few hundred MiB rather than the multi-gigabyte abort that
-/// unbounded counts produce.
-pub const MAX_MATERIALIZED_ELEMENTS: usize = 1_000_000;
+/// process with an OOM instead of a diagnosable `AjisaiError`.
+///
+/// CS5: this is now the *default* for [`RuntimeLimits::max_materialized_elements`]
+/// (the injectable per-interpreter limit the RANGE/FILL guards actually read);
+/// the constant remains as the shared default and for the parallelization
+/// space-waterline heuristic. Single source of truth lives in
+/// [`super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS`].
+pub const MAX_MATERIALIZED_ELEMENTS: usize =
+    super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OperationTargetMode {
@@ -372,6 +373,11 @@ pub struct Interpreter {
     pub(crate) call_depth: usize,
     pub(crate) execution_step_count: usize,
     pub(crate) max_execution_steps: usize,
+    /// Unified internal-computation-cost ceilings (CS5). The step budget above
+    /// prices word count; these price the per-word work it cannot see
+    /// (materialization, source/literal size, and — via the work meter —
+    /// algebraic/BigInt blow-up). Child runtimes inherit a copy.
+    pub(crate) runtime_limits: super::runtime_limits::RuntimeLimits,
     pub(crate) input_buffer: String,
     pub(crate) io_output_buffer: String,
 
@@ -552,6 +558,7 @@ impl Interpreter {
             call_depth: 0,
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
+            runtime_limits: super::runtime_limits::RuntimeLimits::default(),
             input_buffer: String::new(),
             io_output_buffer: String::new(),
             serial_inbox: HashMap::new(),
@@ -896,6 +903,19 @@ impl Interpreter {
     /// `DEFAULT_MAX_EXECUTION_STEPS` to observe O(1)-native-stack iteration.
     pub fn set_max_execution_steps(&mut self, steps: usize) {
         self.max_execution_steps = steps;
+    }
+
+    /// The unified internal-computation-cost ceilings (CS5) in force.
+    pub fn runtime_limits(&self) -> &super::runtime_limits::RuntimeLimits {
+        &self.runtime_limits
+    }
+
+    /// Override the internal-computation-cost ceilings. Used by tests to inject
+    /// small limits that fire a guard without allocating anything huge, and by
+    /// hosts that need a tighter or looser envelope. Child runtimes spawned
+    /// afterwards inherit the new limits.
+    pub fn set_runtime_limits(&mut self, limits: super::runtime_limits::RuntimeLimits) {
+        self.runtime_limits = limits;
     }
 
     pub fn update_stack(&mut self, stack: impl Into<Stack>) {

@@ -2,9 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
-use crate::interpreter::{
-    ConsumptionMode, Interpreter, OperationTargetMode, MAX_MATERIALIZED_ELEMENTS,
-};
+use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::{Fraction, RoundingMode};
 use crate::types::{Interpretation, Value, ValueData};
@@ -720,13 +718,17 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     // would otherwise panic on a usize overflow (e.g. three ~1e8 dimensions) or
     // drive an OOM abort for a merely large product — neither is recoverable in
     // the WASM playground.
+    // CS5: cap sourced from the injectable per-interpreter `RuntimeLimits`
+    // (folded), so tests can fire this guard with a tiny limit; same behavior
+    // and message as before.
+    let max_materialized = interp.runtime_limits.max_materialized_elements;
     let total_size = match checked_shape_product(&shape) {
-        Some(size) if size <= MAX_MATERIALIZED_ELEMENTS => size,
+        Some(size) if size <= max_materialized => size,
         _ => {
             interp.stack.push(args_val);
             return Err(AjisaiError::from(format!(
                 "FILL shape {:?} would generate too many elements (limit {})",
-                shape, MAX_MATERIALIZED_ELEMENTS
+                shape, max_materialized
             )));
         }
     };

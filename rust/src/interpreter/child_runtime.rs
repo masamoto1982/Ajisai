@@ -121,6 +121,9 @@ impl Interpreter {
         child_interpreter.active_user_dictionary =
             child.dictionary_snapshot.active_user_dictionary.clone();
         child_interpreter.max_execution_steps = self.max_execution_steps;
+        // CS5: child runtimes inherit the parent's internal-cost ceilings, so a
+        // spawned computation cannot escape the resource envelope.
+        child_interpreter.runtime_limits = self.runtime_limits;
 
         let lines = vec![crate::types::ExecutionLine {
             body_tokens: child.code_block.clone().into(),

@@ -40,6 +40,9 @@ mod dimension_limit_tests;
 mod materialization_limit_tests;
 
 #[cfg(test)]
+mod runtime_limits_tests;
+
+#[cfg(test)]
 mod extreme_index_tests;
 
 #[cfg(test)]
