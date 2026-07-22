@@ -148,14 +148,17 @@ async fn nil_reason_is_nil_for_present_value() {
     assert!(!interp.get_stack()[0].is_nil(), "the 5 is retained below");
 }
 
-/// The U firewall for the reason accessor: U carries the internal
-/// `LogicallyUnknown` reason, which must never leak through `NIL-REASON`.
+/// The U firewall for the reason accessor: `NIL-REASON` applied to the logical
+/// Unknown (U) must yield NIL, never a reason. Since CS4, U is a distinct
+/// `ValueData::Unknown` value carrying no NIL reason (the `logicallyUnknown`
+/// reason was retired in PR-3), so `NIL-REASON` — which keys off operational
+/// NIL only — reports nothing for U.
 #[tokio::test]
-async fn nil_reason_does_not_leak_logically_unknown() {
+async fn nil_reason_does_not_leak_for_unknown() {
     let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL-REASON").await;
     assert!(
         top_is_nil(&interp),
-        "NIL-REASON on U must be NIL, never 'logicallyUnknown'"
+        "NIL-REASON on U must be NIL, never a reason string"
     );
 }
 
