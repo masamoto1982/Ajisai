@@ -39,7 +39,7 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
         }
         ValueData::Scalar(_) => return false,
         ValueData::ExactScalar(_) => return false,
-        ValueData::Nil => return false,
+        ValueData::Nil | ValueData::Unknown(_) => return false,
         ValueData::Record { .. } => return false,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
@@ -55,7 +55,7 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::ExactScalar(_) => return false,
         ValueData::Vector(_) => return false,
         ValueData::Tensor { .. } => return false,
-        ValueData::Nil => return false,
+        ValueData::Nil | ValueData::Unknown(_) => return false,
         ValueData::Record { .. } => return false,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
@@ -216,7 +216,7 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
 
     fn collect_fractions(val: &Value) -> Vec<String> {
         match &val.data {
-            ValueData::Nil => vec!["NIL".to_string()],
+            ValueData::Nil | ValueData::Unknown(_) => vec!["NIL".to_string()],
             ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::ExactScalar(er) => {

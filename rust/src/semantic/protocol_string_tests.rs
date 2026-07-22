@@ -73,11 +73,18 @@ fn unknown_value_exposes_truth_value_axis_and_capability() {
     assert!(u.is_unknown());
     assert_eq!(u.truth_value(), Some("unknown"));
     assert!(u.has_capability(Capability::TruthValued));
-    // The internal NIL representation carries the LogicallyUnknown reason,
-    // but consumers must read the truthValue axis, not this reason.
-    let absence = u.absence_metadata().expect("U carries absence metadata");
-    assert_eq!(absence.reason, Some(NilReason::LogicallyUnknown));
-    assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
+    // CS4: U is its own `ValueData::Unknown` variant, not a NIL node, so it
+    // carries no NIL absence metadata and reports no NIL reason. The U/NIL
+    // firewall (SPEC §2.3 / §7.5) is now a type invariant: consumers read the
+    // `truthValue` axis, and the NIL diagnostic accessors never see a
+    // `logicallyUnknown` reason on U.
+    assert!(
+        u.absence_metadata().is_none(),
+        "U must not carry NIL absence metadata"
+    );
+    assert_eq!(u.nil_reason(), None, "U must not report a NIL reason");
+    assert!(!u.is_nil(), "U is not NIL");
+    assert!(!u.is_operational_nil(), "U is not an operational NIL");
 }
 
 #[test]

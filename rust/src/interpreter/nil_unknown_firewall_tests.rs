@@ -117,6 +117,53 @@ async fn operational_nil_passthrough_preserves_reason() {
     );
 }
 
+/// CS4 predicate contract: the logical Unknown (U) is a distinct
+/// `ValueData::Unknown` variant, so the U/NIL split is a type invariant, not
+/// a predicate convention. A freshly constructed U must satisfy the split
+/// exactly, and a genuine operational NIL must remain outside it.
+#[test]
+fn unknown_variant_satisfies_type_level_firewall() {
+    let u = Value::unknown();
+    assert!(u.is_unknown(), "unknown() must be U");
+    assert!(!u.is_nil(), "U is not NIL (type-level split)");
+    assert!(!u.is_absent(), "U is not an operational absence");
+    assert!(!u.is_operational_nil(), "U is not an operational NIL");
+    assert_eq!(u.nil_reason(), None, "U carries no NIL reason");
+    assert!(
+        u.absence_metadata().is_none(),
+        "U carries no NIL absence metadata"
+    );
+
+    let nil = Value::nil();
+    assert!(!nil.is_unknown(), "NIL is not U");
+    assert!(nil.is_nil(), "NIL is NIL");
+    assert!(nil.is_operational_nil(), "NIL is an operational NIL");
+}
+
+/// CS4: U's CF-comparison `agreedPrefix` diagnosis survives the variant split,
+/// surfaced through `nil_diagnosis()` (U's own carrier, not NIL metadata),
+/// while a bare U carries no diagnosis.
+#[test]
+fn unknown_agreed_prefix_diagnosis_survives_on_its_own_carrier() {
+    let diagnosed = Value::unknown_with_agreed_prefix(Some("COMPARE-WITHIN"), 5);
+    assert!(diagnosed.is_unknown());
+    assert_eq!(
+        diagnosed.nil_diagnosis().and_then(|d| d.agreed_prefix),
+        Some(5),
+        "agreedPrefix must survive on U's own diagnostic carrier"
+    );
+    assert!(
+        diagnosed.absence_metadata().is_none(),
+        "the diagnosis must not be carried as NIL absence metadata"
+    );
+
+    let bare = Value::unknown();
+    assert!(
+        bare.nil_diagnosis().is_none(),
+        "a bare U carries no diagnosis"
+    );
+}
+
 /// The K3 logic path (`logic_kleene`) is unaffected: `U U AND` is U.
 /// (Ajisai has no `DUP`; two independently-produced U operands stand in for
 /// the task's `U DUP AND`, exercising the same `Unknown AND Unknown` cell.)

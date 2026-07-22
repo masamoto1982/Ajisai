@@ -18,7 +18,7 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
-            ValueData::Nil => vec![],
+            ValueData::Nil | ValueData::Unknown(_) => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
@@ -70,7 +70,7 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             }
             Ok(f.numerator())
         }
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
+        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "NIL",
         )),

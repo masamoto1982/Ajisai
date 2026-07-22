@@ -34,7 +34,8 @@ fn format_token_to_source(token: &Token) -> String {
 
 fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
     match &val.data {
-        ValueData::Nil => Ok("NIL".to_string()),
+        // PR-1: U serializes to source as `NIL`, as the old NIL-backed U did.
+        ValueData::Nil | ValueData::Unknown(_) => Ok("NIL".to_string()),
         ValueData::Boolean(b) => Ok(if *b { "TRUE" } else { "FALSE" }.to_string()),
         ValueData::Scalar(_) => format_scalar_to_source(val),
         ValueData::CodeBlock(tokens) => {

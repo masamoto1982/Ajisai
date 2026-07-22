@@ -181,6 +181,10 @@ pub(crate) fn value_to_protocol(
     }
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
+        // U is handled by the `is_unknown()` early return above, so this arm
+        // is unreachable; it deliberately reports `truthValue`, never `nil`,
+        // to uphold the firewall (SPEC §2.3) even if that guard ever moves.
+        ValueData::Unknown(_) => ("truthValue", ProtocolValue::Text("unknown".to_string())),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large

@@ -229,7 +229,13 @@ fn format_as_interval(value: &Value) -> String {
 
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
-        ValueData::Nil => "NIL".to_string(),
+        // Top-level U is caught by the `is_unknown()` guards in
+        // `format_with_hint` / `format_for_output` and renders `UNKNOWN`.
+        // This data-only recursion is only reached for a U *nested* inside a
+        // non-truth collection, where U rendered as `NIL` before the variant
+        // split; PR-1 preserves that exact output (differential stays
+        // 0-divergent). PR-2 may revisit nested-U display.
+        ValueData::Nil | ValueData::Unknown(_) => "NIL".to_string(),
         // A definite boolean renders uniformly as TRUE/FALSE in every role
         // (SPEC §12.2), so the three-valued axis is observable consistently
         // whether the boolean came from a literal, a comparison, or a logic
@@ -423,7 +429,7 @@ fn format_as_string(data: &ValueData) -> String {
 /// `format_for_output` (which emits it bare for `PRINT`).
 fn format_text_content(data: &ValueData) -> String {
     match data {
-        ValueData::Nil => String::new(),
+        ValueData::Nil | ValueData::Unknown(_) => String::new(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Scalar(f) => {
@@ -478,7 +484,9 @@ fn boolean_element_label(child: &Value) -> &'static str {
         return "UNKNOWN";
     }
     match &child.data {
-        ValueData::Nil => "NIL",
+        // U is handled by the `is_unknown()` guard above, so this arm is
+        // unreachable; grouped with NIL only for exhaustiveness.
+        ValueData::Nil | ValueData::Unknown(_) => "NIL",
         ValueData::Boolean(b) => {
             if *b {
                 "TRUE"
@@ -522,7 +530,9 @@ fn format_as_boolean(value: &Value) -> String {
         return "UNKNOWN".to_string();
     }
     match &value.data {
-        ValueData::Nil => "NIL".to_string(),
+        // U is handled by the `is_unknown()` guard above; grouped with NIL
+        // only for exhaustiveness.
+        ValueData::Nil | ValueData::Unknown(_) => "NIL".to_string(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -569,7 +579,7 @@ fn format_as_boolean(value: &Value) -> String {
 
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
-        ValueData::Nil => format_value_recursive(data, 0),
+        ValueData::Nil | ValueData::Unknown(_) => format_value_recursive(data, 0),
         ValueData::Boolean(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),

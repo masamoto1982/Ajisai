@@ -216,7 +216,7 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                 AjisaiError::create_structure_error("scalar value", "non-scalar value")
             })
         }
-        ValueData::Nil => Err(AjisaiError::create_structure_error(
+        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),
