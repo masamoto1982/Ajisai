@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:3c0d6584a2b173c1613ebfc92254fac93e7ca32fd1beb6d1174147ae4dcd59ed",
+  "rootIdentity": "sha256:fc09ddb5efe35e390bc2e0cd63e42ac121b659caad403a6c7ceb6e9e8dc9016e",
   "fileCount": 353,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -559,8 +559,8 @@
     },
     {
       "path": "rust/src/interpreter/datetime.rs",
-      "sha256": "859675dea223f1a455b84fdae7e72d47044bdd078047fa8710363f84a13ea114",
-      "bytes": 3444
+      "sha256": "4541fa4262889d253b6a97b28c8039f3079ffeea477397ca8da01af6e8555d50",
+      "bytes": 3780
     },
     {
       "path": "rust/src/interpreter/datetime_tests.rs",
@@ -894,8 +894,8 @@
     },
     {
       "path": "rust/src/interpreter/parallel.rs",
-      "sha256": "07d8bdb320754f964e58eaa8cfa6c4ab3fe9a407ba399974bdbdb5d81db03eb6",
-      "bytes": 44484
+      "sha256": "4ad605d58c0cb8f43cf04eccb016feda1ee3e93aeaba216fb2b34ac8e3481235",
+      "bytes": 46671
     },
     {
       "path": "rust/src/interpreter/perf_regression_tests.rs",
@@ -1114,8 +1114,8 @@
     },
     {
       "path": "rust/src/lib.rs",
-      "sha256": "9f3cc20dd9253afce667626e7cceb7292c1366632d58097ac350f0b3c56954e2",
-      "bytes": 1614
+      "sha256": "dc1fce1ca82d6aa2cbf387879ebf74bccba919f05e451d19d61487a485485954",
+      "bytes": 2430
     },
     {
       "path": "rust/src/materialization_limit_tests.rs",
@@ -1334,8 +1334,8 @@
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/mod.rs",
-      "sha256": "f2372dfa5cb9746093cd40b0ab06e5e7006c755e141b0c42dc3a5b8410f3848d",
-      "bytes": 1352
+      "sha256": "af3e3cb45ff15bc665dda26dc6db046556f71b1bc1d0eb6de129ce6ace0f1b5b",
+      "bytes": 1688
     },
     {
       "path": "rust/src/wasm_interpreter_bindings/wasm_interpreter_execution.rs",
