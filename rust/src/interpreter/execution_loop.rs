@@ -258,42 +258,15 @@ impl Interpreter {
                             has_other = true;
                         }
                         _ => {
-                            let resolved = if let Some(def) = self.resolve_word(upper.as_ref()) {
-                                !def.is_builtin
-                            } else {
-                                false
-                            };
-
-                            if resolved {
-                                let stack_backup = std::mem::take(&mut self.stack);
-                                let output_backup = std::mem::take(&mut self.output_buffer);
-                                let host_effects_backup = std::mem::take(&mut self.host_effects);
-                                match self.execute_word_core(upper.as_ref()) {
-                                    Ok(()) => {
-                                        let results =
-                                            std::mem::replace(&mut self.stack, stack_backup);
-                                        self.output_buffer = output_backup;
-                                        self.host_effects = host_effects_backup;
-                                        if results.is_empty() {
-                                            values.push(Value::from_string(s));
-                                            has_other = true;
-                                        } else {
-                                            values.extend(results);
-                                            has_other = true;
-                                        }
-                                    }
-                                    Err(_) => {
-                                        self.stack = stack_backup;
-                                        self.output_buffer = output_backup;
-                                        self.host_effects = host_effects_backup;
-                                        values.push(Value::from_string(s));
-                                        has_other = true;
-                                    }
-                                }
-                            } else {
-                                values.push(Value::from_string(s));
-                                has_other = true;
-                            }
+                            // Data-ization (SPEC §4.3, P1): a bare symbol inside a
+                            // vector literal is *data* — the symbol text as a Text
+                            // value — never executed as code. Only the literal
+                            // keywords TRUE / FALSE / NIL (handled above) denote
+                            // values. This makes `[ FOO ]` mean the same thing
+                            // regardless of dictionary state, instead of executing
+                            // FOO when it happens to be a defined user word.
+                            values.push(Value::from_string(s));
+                            has_other = true;
                         }
                     }
                     i += 1;

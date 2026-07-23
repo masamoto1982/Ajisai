@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:d3de4e3eee7d7ea1a9bbe0d527ec05d0eb2b3cb077565d70447dafe578c9011f",
+  "rootIdentity": "sha256:d04e829507a2db27679649b64af206c3955592689747ff1ba5bfd06765eb7f31",
   "fileCount": 348,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -39,8 +39,8 @@
     },
     {
       "path": "SPECIFICATION.html",
-      "sha256": "e5f4a3e4da6ebafd8ea29becc45401fd0cd133c2e447cfb6f64f0630713cb085",
-      "bytes": 241121
+      "sha256": "b6ac43bdde8fd5b069539330e9c38520c882c9951ccc24c8e56ba15231236598",
+      "bytes": 242491
     },
     {
       "path": "eslint.config.js",
@@ -449,8 +449,8 @@
     },
     {
       "path": "rust/src/interpreter/compiled_plan.rs",
-      "sha256": "024d9d1413acbb7f9e3daeaf0164ff95e45ca094b5c112d66d8605395bb31566",
-      "bytes": 21390
+      "sha256": "dc598c0c79026d2e60c02cbb04a97b5c637b1acf0f550a248b2b82d83d362061",
+      "bytes": 21686
     },
     {
       "path": "rust/src/interpreter/compiled_plan_tests.rs",
@@ -624,8 +624,8 @@
     },
     {
       "path": "rust/src/interpreter/execution_loop.rs",
-      "sha256": "78e2c425aa3a9764ca43e982b4f19f53340719554336d9a17d5e1772e3d6fc84",
-      "bytes": 25598
+      "sha256": "64399a2cd49305d2682a112432eea51282fe34d849313274fafca6dbf5147240",
+      "bytes": 24155
     },
     {
       "path": "rust/src/interpreter/execution_plan_set.rs",
@@ -1019,8 +1019,8 @@
     },
     {
       "path": "rust/src/interpreter/vector_literal_tests.rs",
-      "sha256": "d5a9f33890c1f9cc539aac53ce752b3a7f1a886544009f64d911081078ebbde3",
-      "bytes": 4344
+      "sha256": "421a645317bab5cece3b9bb9e85d6f5a36fd88ad03001e42d41c944f4f6162da",
+      "bytes": 5633
     },
     {
       "path": "rust/src/interpreter/vector_ops/mod.rs",
