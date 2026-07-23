@@ -23,6 +23,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::NoData => AbsenceOrigin::HostEnvironment,
         NilReason::PortDisconnected => AbsenceOrigin::HostEnvironment,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
+        NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
     }
 }
 

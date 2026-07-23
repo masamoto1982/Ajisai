@@ -299,8 +299,12 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Vector primitive: Generate a numeric sequence from a [start, end] pair.",
 
         stack_effect: "[ start end ] -> [ seq ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        // Projecting/CreatesNil for the space-budget miss: a well-formed but
+        // over-budget range projects onto Bubble/NIL (SPEC §7.14, §11.2),
+        // matching the DIV/GET/NUM/CHR family. Malformed ranges (zero step,
+        // infinite direction) remain ordinary errors.
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -1370,8 +1374,11 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         role: "Tensor primitive: Fill a target shape with a constant value.",
 
         stack_effect: "[ shape... value ] -> [ filled ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        // Projecting/CreatesNil for the space-budget miss: a well-formed but
+        // over-budget (or product-overflowing) shape projects onto Bubble/NIL
+        // (SPEC §7.14, §11.2). A malformed shape remains an ordinary error.
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },

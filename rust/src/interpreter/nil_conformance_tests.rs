@@ -316,6 +316,7 @@ const PROJECTING_WORDS: &[&str] = &[
     "CEIL",
     "CHR",
     "DIV",
+    "FILL",
     "FLOOR",
     "GET",
     "INDEX-OF",
@@ -328,6 +329,7 @@ const PROJECTING_WORDS: &[&str] = &[
     "QUANTIZE-FLOOR",
     "QUANTIZE-HALF-AWAY",
     "QUANTIZE-TRUNC",
+    "RANGE",
     "READ",
     "ROUND",
 ];
@@ -397,6 +399,22 @@ async fn bubble_creation_well_formed_domain_miss() {
     assert_eq!(
         reason_of(stack.last().unwrap()),
         Some(NilReason::InvalidEncoding)
+    );
+
+    // well-formed but over the space water level: RANGE and FILL project the
+    // materialization miss onto a Bubble/NIL (Phase 3), recoverable with VENT.
+    let stack = run_ok("[ 0 9999999999999 ] RANGE").await;
+    assert!(is_nil(stack.last().unwrap()));
+    assert_eq!(
+        reason_of(stack.last().unwrap()),
+        Some(NilReason::SpaceExhausted)
+    );
+
+    let stack = run_ok("[ 1000000 1000000 7 ] FILL").await;
+    assert!(is_nil(stack.last().unwrap()));
+    assert_eq!(
+        reason_of(stack.last().unwrap()),
+        Some(NilReason::SpaceExhausted)
     );
 }
 

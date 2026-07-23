@@ -102,7 +102,8 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::ExecutionFailure
         | NilReason::Undecidable
         | NilReason::NoData
-        | NilReason::PortDisconnected => Some(ErrorCategory::Custom),
+        | NilReason::PortDisconnected
+        | NilReason::SpaceExhausted => Some(ErrorCategory::Custom),
     }
 }
 

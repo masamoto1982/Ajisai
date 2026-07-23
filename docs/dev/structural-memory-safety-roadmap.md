@@ -103,13 +103,21 @@ unrecoverable. Ajisai already makes partial failure a first-class value (the
 (`rust/src/interpreter/runtime_limits.rs`,
 `rust/src/materialization_limit_tests.rs`).
 
-**Plan.** Route a crossed materialization *water level* to a diagnosable `NIL`
-(reason `space-exhausted`, with the overflowing shape in `AbsenceMetadata`)
-instead of an `AjisaiError` abort, recoverable at a pipeline's end by a single
-`^` (`VENT`). Making exhaustion a value in the flow is pure Ajisai idiom and is
-strictly past Rust's abort-on-OOM. Starts as a branch in `RuntimeLimits` from
-the error path onto the `NilReason` path, consistent with the
-physical-resilience stance of never silently committing an unverifiable result.
+**Done.** The materialization water level (`max_materialized_elements`) now
+routes the *budget miss* of the well-formed generative words `RANGE` and `FILL`
+onto a diagnosable `NIL` (`NilReason::SpaceExhausted`, `AbsenceOrigin::SpaceBudget`)
+instead of a channel error, recoverable at a pipeline's end by a single `^`
+(`VENT`). The two words become `Projecting`/`CreatesNil` (matching the
+DIV/GET/NUM/CHR family); malformed requests (an infinite `RANGE`, a
+non-conforming `RESHAPE`) stay ordinary errors. Making exhaustion a value in the
+flow is pure Ajisai idiom and is strictly past Rust's abort-on-OOM. Spec: the
+new "Materialization (expansion) budget" row in the Water Levels table, and the
+`RANGE`/`FILL` classification in §7.14.
+
+**Next (3.2).** Extend the projection to any other generative/expansion path
+that can exceed the water level (e.g. tensor broadcast, repeated `CONCAT`), and
+carry the overflowing shape/count in the `AbsenceMetadata` diagnosis so a tool
+can report *what* overflowed, not only that something did.
 
 ## Phase 4 — Drive implementation `unsafe` toward zero (the "Rust-level" floor)
 
