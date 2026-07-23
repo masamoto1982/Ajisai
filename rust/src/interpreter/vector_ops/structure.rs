@@ -1,6 +1,6 @@
 use super::extract_vector_elements;
 use super::targeting::{with_stacktop_vector_target_no_arg, with_stacktop_vector_target_with_arg};
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     extract_bigint_from_value, extract_integer_from_value, normalize_index,
 };
@@ -217,11 +217,17 @@ pub fn op_range(interp: &mut Interpreter) -> Result<()> {
     // child runtimes inherit it — same behavior and message as before.
     let max_materialized = interp.runtime_limits.max_materialized_elements;
     if element_count > max_materialized as u128 {
-        interp.stack.push(args_val);
-        return Err(AjisaiError::from(format!(
-            "RANGE would generate {} elements, exceeding the limit of {}",
-            element_count, max_materialized
-        )));
+        // Phase 3 (structural-memory-safety roadmap): a well-formed, finite
+        // range whose materialized length exceeds the space water level is a
+        // well-formed operation that cannot produce a value within budget. The
+        // Bubble Rule projects it onto a diagnosable NIL (reason
+        // `spaceExhausted`) so a pipeline can recover it with `^` (VENT),
+        // instead of a channel error that halts evaluation. The malformed cases
+        // above (zero step, infinite direction) remain ordinary errors.
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+        return Ok(());
     }
 
     let mut range_vec = Vec::with_capacity(element_count as usize);

@@ -31,6 +31,13 @@ pub enum NilReason {
     /// A host-mediated port was reported disconnected with no remaining
     /// buffered data. Projected to NIL with `absence.origin = hostEnvironment`.
     PortDisconnected,
+    /// A well-formed generative operation (`RANGE`, `FILL`) whose materialized
+    /// result would exceed the space water level (`max_materialized_elements`).
+    /// The Bubble Rule projects this to NIL with `absence.origin = spaceBudget`
+    /// (SPEC §11.2) rather than aborting the process, so a pipeline can
+    /// recover it with `^` (VENT). Malformed inputs (an infinite `RANGE`, a
+    /// non-conforming `RESHAPE`) remain ordinary errors.
+    SpaceExhausted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,6 +110,7 @@ impl NilReason {
             NilReason::Undecidable => "undecidable",
             NilReason::NoData => "noData",
             NilReason::PortDisconnected => "portDisconnected",
+            NilReason::SpaceExhausted => "spaceExhausted",
         }
     }
 }

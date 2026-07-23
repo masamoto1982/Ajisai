@@ -100,48 +100,70 @@ mod runtime_limits_tests {
     }
 
     // ── materialization ceiling (folded RANGE / FILL guards) ───────────────
+    //
+    // Phase 3 (structural-memory-safety roadmap): the materialization ceiling is
+    // a *space water level*, so a well-formed but over-budget generative call
+    // projects onto a diagnosable Bubble/NIL (reason `SpaceExhausted`) instead
+    // of a channel error — deterministically and synchronously, without
+    // allocating anything huge. The other ceilings below stay ordinary errors.
+
+    fn top_nil_reason(interp: &Interpreter) -> Option<crate::error::NilReason> {
+        interp
+            .get_stack()
+            .last()
+            .and_then(|v| v.absence.as_ref())
+            .and_then(|a| a.reason.clone())
+    }
 
     #[tokio::test]
-    async fn range_fires_materialization_guard_at_a_low_injected_limit() {
+    async fn range_bubbles_at_a_low_injected_materialization_limit() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
         });
-        let err = interp
+        interp
             .execute("[ 0 100 ] RANGE")
             .await
-            .expect_err("RANGE over the injected element cap must error");
-        assert!(
-            err.to_string().contains("exceeding the limit"),
-            "diagnosable materialization error, got: {err}"
+            .expect("RANGE over the injected element cap must bubble, not error");
+        assert_eq!(
+            top_nil_reason(&interp),
+            Some(crate::error::NilReason::SpaceExhausted),
+            "RANGE over the injected cap must leave a SpaceExhausted NIL"
         );
     }
 
     #[tokio::test]
-    async fn fill_fires_materialization_guard_at_a_low_injected_limit() {
+    async fn fill_bubbles_at_a_low_injected_materialization_limit() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
         });
-        let err = interp
+        interp
             .execute("[ 100 100 ] FILL")
             .await
-            .expect_err("FILL over the injected element cap must error");
-        assert!(
-            err.to_string().contains("too many elements"),
-            "diagnosable materialization error, got: {err}"
+            .expect("FILL over the injected element cap must bubble, not error");
+        assert_eq!(
+            top_nil_reason(&interp),
+            Some(crate::error::NilReason::SpaceExhausted),
+            "FILL over the injected cap must leave a SpaceExhausted NIL"
         );
     }
 
-    // ── recovery: a limit failure must not corrupt the interpreter ─────────
+    // ── recovery: a space bubble must not corrupt the interpreter ──────────
 
     #[tokio::test]
-    async fn interpreter_stays_usable_after_a_materialization_limit_failure() {
+    async fn interpreter_stays_usable_after_a_materialization_space_bubble() {
         let mut interp = with_limits(RuntimeLimits {
             max_materialized_elements: 10,
             ..RuntimeLimits::default()
         });
-        assert!(interp.execute("[ 0 100 ] RANGE").await.is_err());
+        assert_eq!(
+            {
+                interp.execute("[ 0 100 ] RANGE").await.ok();
+                top_nil_reason(&interp)
+            },
+            Some(crate::error::NilReason::SpaceExhausted),
+        );
         // A subsequent ordinary program must run cleanly on the same
         // interpreter — no poisoned partial stack.
         interp.set_runtime_limits(RuntimeLimits::default());
@@ -149,7 +171,7 @@ mod runtime_limits_tests {
         assert_eq!(
             interp.get_stack().last().and_then(|v| v.as_i64()),
             Some(5),
-            "2 3 + must evaluate to 5 after recovering from a limit failure"
+            "2 3 + must evaluate to 5 after a materialization space bubble"
         );
     }
 

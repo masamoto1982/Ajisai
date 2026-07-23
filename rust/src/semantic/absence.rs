@@ -21,6 +21,11 @@ pub enum AbsenceOrigin {
     /// budget without resolving the order of the two operands per
     /// SPEC §7.4.1. Used together with `NilReason::Undecidable`.
     ComparisonBudget,
+    /// A well-formed generative operation exceeded the space water level
+    /// (`max_materialized_elements`) and was projected to a Bubble/NIL under the
+    /// Bubble Rule (SPEC §11.2). Used together with
+    /// `NilReason::SpaceExhausted`.
+    SpaceBudget,
     HostEnvironment,
     Unknown,
 }

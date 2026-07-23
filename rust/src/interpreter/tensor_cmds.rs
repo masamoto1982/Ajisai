@@ -725,11 +725,20 @@ pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
     let total_size = match checked_shape_product(&shape) {
         Some(size) if size <= max_materialized => size,
         _ => {
-            interp.stack.push(args_val);
-            return Err(AjisaiError::from(format!(
-                "FILL shape {:?} would generate too many elements (limit {})",
-                shape, max_materialized
-            )));
+            // Phase 3 (structural-memory-safety roadmap): a well-formed shape
+            // whose element product exceeds the space water level (or overflows
+            // `usize`) is a well-formed operation that cannot materialize within
+            // budget. The Bubble Rule projects it onto a diagnosable NIL (reason
+            // `spaceExhausted`), recoverable with `^` (VENT), instead of a
+            // channel error. Under KEEP the operands are retained as on the
+            // success path.
+            if interp.consumption_mode == ConsumptionMode::Keep {
+                interp.stack.push(args_val);
+            }
+            interp
+                .stack
+                .push(Value::nil_with_reason(NilReason::SpaceExhausted));
+            return Ok(());
         }
     };
     let data: Vec<Fraction> = (0..total_size).map(|_| fill_value.clone()).collect();
