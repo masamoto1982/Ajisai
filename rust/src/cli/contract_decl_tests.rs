@@ -1,6 +1,7 @@
 //! Tests for opt-in `#:contract` declaration checking (`cli/contract_decl.rs`).
 
-use super::contract_decl::{check_contract_decls, parse_contract_directives, Linearity};
+use super::contract_decl::{check_contract_decls, parse_contract_directives};
+use super::contract_linearity::Linearity;
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::word_contract::ContractPurity;

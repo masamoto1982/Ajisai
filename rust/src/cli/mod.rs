@@ -26,6 +26,7 @@ mod clarify_tests;
 mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
+mod contract_linearity;
 mod contract_report;
 #[cfg(test)]
 mod contract_report_tests;

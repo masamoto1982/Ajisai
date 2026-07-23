@@ -24,6 +24,7 @@
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
+use super::contract_linearity::{linearity_from_word, Linearity};
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::modules;
@@ -32,34 +33,6 @@ use crate::interpreter::word_contract::{
 };
 use crate::interpreter::Interpreter;
 use crate::types::Token;
-
-/// Declared linearity of the resource a word produces or consumes (Phase 1 of
-/// the structural-memory-safety roadmap; see
-/// `docs/dev/structural-memory-safety-roadmap.md`). This axis only constrains
-/// *resource* values — today the runtime handles (`ProcessHandle` /
-/// `SupervisorHandle`, produced by `SPAWN`/`SUPERVISE`, discharged by
-/// `KILL`/`AWAIT`/…). Ordinary immutable values are unaffected.
-///
-/// `linear`   — must be consumed exactly once (no leak, no reuse).
-/// `affine`   — may be consumed at most once (leak allowed, reuse is not).
-/// `droppable` — explicitly unconstrained; the escape hatch that opts a
-///              handle back out of the discipline.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Linearity {
-    Linear,
-    Affine,
-    Droppable,
-}
-
-impl Linearity {
-    pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            Linearity::Linear => "linear",
-            Linearity::Affine => "affine",
-            Linearity::Droppable => "droppable",
-        }
-    }
-}
 
 /// A parsed `#:contract` declaration. Fields left unstated are `None` and are
 /// not checked.
@@ -101,15 +74,6 @@ impl ContractDeclCheck {
                 "message": f.message,
             })).collect::<Vec<_>>(),
         })
-    }
-}
-
-fn linearity_from_word(word: &str) -> Option<Linearity> {
-    match word {
-        "linear" => Some(Linearity::Linear),
-        "affine" => Some(Linearity::Affine),
-        "droppable" => Some(Linearity::Droppable),
-        _ => None,
     }
 }
 
