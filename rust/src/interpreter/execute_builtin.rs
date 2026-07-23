@@ -306,6 +306,7 @@ impl Interpreter {
             BuiltinExecutorKey::Idle => Ok(()),
             BuiltinExecutorKey::Exec => control::op_exec(self),
             BuiltinExecutorKey::Eval => control::op_eval(self),
+            BuiltinExecutorKey::OrElse => control::op_or_else(self),
             BuiltinExecutorKey::Cond => control_cond::op_cond(self),
             BuiltinExecutorKey::Def => execute_def::op_def(self),
             BuiltinExecutorKey::Del => execute_del::op_del(self),

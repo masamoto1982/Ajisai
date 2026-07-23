@@ -1590,6 +1590,24 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
         },
+    BuiltinSpec {
+
+        name: "OR-ELSE",
+        category: "control",
+        hover_summary: "OR-ELSE — value-based NIL fallback with a block",
+        hover_syntax: "1 0 / { 0 } OR-ELSE",
+        executor_key: Some(BuiltinExecutorKey::OrElse),
+        eval_cost: EvalCost::Light,
+        order_sensitive: true,
+        summary: "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
+        role: "Control primitive: value-based counterpart to VENT (^). The fallback is an explicit { ... } block, so it is invariant under whitespace and grouping; the block runs only on a genuine NIL (U passes through).",
+
+        stack_effect: "[ candidate ] [ { fallback } ] -> [ candidate | fallback-result... ]",
+        partiality: Partiality::Partial,
+        nil_policy: NilPolicy::ConsumesNil,
+        safety_level: SafetyLevel::B,
+        ..SPEC_DEFAULT
+        },
 
     // === Module ops ===
     BuiltinSpec {

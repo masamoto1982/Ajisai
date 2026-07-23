@@ -87,6 +87,8 @@ mod control_cond_tests;
 #[cfg(test)]
 mod control_exec_eval_tests;
 #[cfg(test)]
+mod control_or_else_tests;
+#[cfg(test)]
 mod datetime_tests;
 #[cfg(test)]
 mod dependents_index_tests;

@@ -31,6 +31,7 @@ pub enum BuiltinExecutorKey {
     Idle,
     Exec,
     Eval,
+    OrElse,
     Cond,
     Conserve,
     Def,

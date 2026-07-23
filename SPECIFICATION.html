@@ -948,6 +948,17 @@ Version: <strong>2026-07-15</strong></p>
 
 <p>Only NIL triggers the fallback. The logical third value <code>unknown</code> (U, Section 7.4.1) is not NIL and is not vented by <code>^</code>; it flows on into the three-valued logic of Section 7.5 unchanged.</p>
 
+<p><strong><code>OR-ELSE</code> is the value-based, block-taking form of the same NIL-coalescing handler (normative).</strong> Where <code>VENT</code> (<code>^</code>) is a lazy control directive whose fallback is <em>the source that follows it</em>, <code>OR-ELSE</code> is an ordinary stack-consuming word whose fallback is <em>a <code>{ }</code> block resting on the stack</em>. It consumes two operands &mdash; a candidate below a code-block <code>{ … }</code> on top &mdash; and realises this contract:</p>
+
+<ol>
+<li><strong>Not-NIL candidate &mdash; keep and discard the block.</strong> If the candidate is not NIL, it is kept (with its stack-position role) and the fallback block is discarded <strong>without being run</strong>: an erroring or effectful block produces no error and no effect. Example: <code>7 { 0 } OR-ELSE</code> &rarr; <code>7/1</code>.</li>
+<li><strong>NIL candidate &mdash; discard and run the block.</strong> If the candidate is NIL, it is discarded and the fallback block is executed in the current context; whatever it leaves on the stack takes the place of the vented NIL. Example: <code>1 0 / { 42 } OR-ELSE</code> &rarr; <code>42/1</code> (the division-by-zero Bubble is vented to the fallback).</li>
+</ol>
+
+<p>Because the fallback is delimited by the block braces rather than by counting the next source unit, <code>OR-ELSE</code> is <strong>invariant under whitespace, grouping, and refactoring</strong> &mdash; it does not have <code>^</code>'s "only one source unit is skipped" trap. The whole block is the fallback unit: <code>1 { 2 3 ADD } OR-ELSE</code> keeps <code>1/1</code> and never runs the block, and <code>1 0 / { 2 3 ADD } OR-ELSE</code> &rarr; <code>5/1</code>. As with <code>^</code>, only NIL triggers the fallback: the logical <code>unknown</code> (U) is not NIL, so it is kept and the block is left unrun.</p>
+
+<p><code>OR-ELSE</code> and <code>VENT</code> (<code>^</code>) share the Bubble/NIL handler role (Sections 4.5, 11.2) and are both part of the Ajisai Minimal Core <code>identity</code> tier (Section 2.6); their observable NIL/U contract is therefore stable across versions. They differ only in surface mechanics: <code>VENT</code> guards following source and skips it lexically, while <code>OR-ELSE</code> takes an explicit block value. Both spellings are supported; <code>OR-ELSE</code> is the recommended form where robustness to grouping matters, and <code>VENT</code> remains the terse inline form. This is an additive surface (Section 2.2): existing <code>^</code> and <code>VENT</code> programs are unaffected.</p>
+
 <h2 id="7-built-in-words">7. Built-in Words</h2>
 
 <p>Ajisai vocabulary follows the rule: <strong>Core is permanent, Module is detachable, User is editable.</strong></p>
@@ -1403,6 +1414,7 @@ Version: <strong>2026-07-15</strong></p>
 <tr><td><code>CONSERVE</code></td><td>—</td><td>Value-conservation guard: assert a vector of scalar parts sums exactly to a total, passing the parts through or raising (Section 13.3)</td></tr>
 <tr><td><code>EXEC</code></td><td>—</td><td>Execute a code block</td></tr>
 <tr><td><code>EVAL</code></td><td>—</td><td>Parse and execute a string as Ajisai code</td></tr>
+<tr><td><code>OR-ELSE</code></td><td>—</td><td>Value-based NIL-coalescing handler: keep the candidate when non-NIL (U passes through), else run the <code>{ }</code> fallback block. The block-taking, grouping-invariant counterpart to <code>VENT</code> (<code>^</code>) (Section 6.4)</td></tr>
 <tr><td><code>PRECOMPUTE</code></td><td>—</td><td>Definition-time staging marker: evaluate a code block when a word is defined and splice the resulting values into the definition</td></tr>
 </tbody>
 </table>

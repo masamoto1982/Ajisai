@@ -6,7 +6,7 @@
   "summary": {
     "primitives": 30,
     "primitives_without_tests": 0,
-    "distinct_law_test_files": 26,
+    "distinct_law_test_files": 27,
     "distinct_conformance_cases": 58
   },
   "primitives": [
@@ -391,8 +391,8 @@
       "algebraic_family": "bubble",
       "kind": "domain",
       "status": "accepted",
-      "derived_word_count": 23,
-      "law_test_count": 12,
+      "derived_word_count": 24,
+      "law_test_count": 13,
       "conformance_case_count": 13,
       "derived_words": [
         "core.chr",
@@ -404,6 +404,7 @@
         "core.nil-reason",
         "core.nil-recoverable",
         "core.num",
+        "core.or-else",
         "core.remove",
         "core.vent",
         "module.algo.index-of",
@@ -421,6 +422,7 @@
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
+        "rust/src/interpreter/control_or_else_tests.rs",
         "rust/src/interpreter/data_ops/tests.rs",
         "rust/src/interpreter/datetime_tests.rs",
         "rust/src/interpreter/math_ops_tests.rs",
@@ -502,13 +504,15 @@
       "algebraic_family": "bubble",
       "kind": "operation",
       "status": "accepted",
-      "derived_word_count": 1,
-      "law_test_count": 1,
+      "derived_word_count": 2,
+      "law_test_count": 2,
       "conformance_case_count": 1,
       "derived_words": [
+        "core.or-else",
         "core.vent"
       ],
       "law_tests": [
+        "rust/src/interpreter/control_or_else_tests.rs",
         "rust/tests/algebraic_laws.rs"
       ],
       "conformance_cases": [
