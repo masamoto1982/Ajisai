@@ -27,7 +27,12 @@ pub(crate) fn default_now_millis() -> i64 {
     }
 }
 
+// `#[wasm_bindgen] extern "C"` expands to generated glue containing `unsafe`,
+// so this one host-clock boundary re-permits `unsafe_code` over the crate-root
+// `#![deny(unsafe_code)]` (structural-memory-safety roadmap Phase 4). No
+// hand-written `unsafe` lives here; the allow only covers macro-generated code.
 #[cfg(feature = "wasm")]
+#[allow(unsafe_code)]
 fn wasm_now_millis() -> i64 {
     use wasm_bindgen::prelude::*;
     #[wasm_bindgen]

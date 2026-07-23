@@ -126,16 +126,31 @@ substantive `unsafe` is the work-stealing parallel path (`SendPtr`/`SendMutPtr`,
 `from_raw_parts_mut`; `rust/src/interpreter/parallel.rs`). Its soundness rests on
 a disjoint-index-range invariant and join-before-read.
 
-**Plan (either/both).**
-- Replace with a safe scoped abstraction where the ~270µs `std::thread::scope`
-  overhead (noted in `parallel.rs:11`) is acceptable, then raise
-  `#![forbid(unsafe_code)]`.
-- Where replacement is too costly, make the existing shadow-validation /
-  `IntegrityMode` (`rust/src/interpreter/shadow_validation.rs`,
-  `docs/dev/physical-resilience-design.md`) the *documented, always-on net* for
-  the `unsafe` path: fast (parallel) and reference (sequential) results must
-  agree on `data + hint + absence-core + host effects`, or the sequential result
-  wins.
+**Done (4.1) — the enforceable floor.** The crate root now carries
+`#![deny(unsafe_code)]` (`rust/src/lib.rs`), so **no new `unsafe` can appear in
+any module** — the compiler rejects it. `parallel.rs` was the *only* file in the
+crate with hand-written `unsafe`; it is now the single audited island, with a
+module-local `#![allow(unsafe_code)]` and a strengthened safety narrative. The
+`wasm`-gated glue (`wasm_interpreter_bindings`, the one `#[wasm_bindgen] extern`
+in `datetime.rs`) re-permits it locally too, because `wasm-bindgen` expands to
+generated `unsafe`; none of it is hand-written. `deny` (not `forbid`) is
+deliberate — it is the strongest level a module-local `allow` can still override
+for the one island. A soundness pin was added for the `fill_parallel` clamp edge
+(`n` below the worker count), and the island's runtime net — the
+shadow-validation differential check — is now documented in the module.
+
+**Why not literal zero.** Full elimination needs either a scoped-pool dependency
+(the module is deliberately zero-dependency) or accepting the ~270µs
+`std::thread::scope` per-call cost that would erase the parallel win the pool
+exists to capture. The enforceable-floor posture gives Rust-level safety
+everywhere except one file that is both compiler-pinned and differentially
+validated at runtime.
+
+**Next (4.2).** If literal zero is wanted: either take a small scoped-thread-pool
+dependency, or move the *compute-bound* path (whose 32K floor and heavy per-lane
+work absorb an `Arc`-input + owned-output-concatenate design without regressing
+Never-Slower) to a fully safe kernel, leaving only the bandwidth-bound path — or
+none — behind the island.
 
 Phase 4 can proceed in parallel with 1–3.
 

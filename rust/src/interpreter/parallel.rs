@@ -29,6 +29,25 @@
 //! On `wasm32` there is no native threading available to Core yet (browser
 //! thread-pools are Phase 5), so every entry point degrades to the sequential
 //! SIMD lane unchanged.
+//!
+//! ## The one audited `unsafe` island (structural-memory-safety roadmap Phase 4)
+//! The crate is `#![deny(unsafe_code)]` at the root; this module is its single
+//! audited exception, re-permitting `unsafe` locally below. Elimination is not
+//! free: the persistent pool exists precisely to avoid the ~270µs per-call cost
+//! of `std::thread::scope` (measured, above), and the pool's `'static` worker
+//! threads cannot name the caller-local lifetimes the per-call task borrows —
+//! so the dispatch erases them through a raw pointer and re-establishes safety
+//! by *joining every job before returning* (the pointee always outlives every
+//! dereference). A fully safe rewrite would require either a scoped-pool
+//! dependency (the module is deliberately zero-dependency) or accepting the
+//! scope overhead that would erase the parallel win. The `unsafe` is therefore
+//! kept, but pinned to this one file, minimized, and covered by two independent
+//! nets: the differential proptests below (parallel == sequential, bit-exact,
+//! swept across the chunk boundaries) and, at runtime, the shadow-validation
+//! integrity check (`super::shadow_validation`,
+//! `docs/dev/physical-resilience-design.md`), which re-runs the reference lane
+//! and refuses a parallel result that disagrees.
+#![allow(unsafe_code)]
 
 use crate::types::fraction::Fraction;
 
@@ -801,6 +820,22 @@ mod tests {
         let b: Vec<i64> = (0..n as i64).collect();
         let (_r, parallel) = elementwise_binary("NOW", &a, &b, |x, y| x + y, simd_ops::lane_add);
         assert!(!parallel, "non-pure word must stay sequential");
+    }
+
+    #[test]
+    fn tiny_input_below_worker_count_stays_sound() {
+        // Soundness pin for the `fill_parallel` clamp: when `n` is smaller than
+        // the worker count and not a multiple of it, the ceil-based chunk plan
+        // can push a trailing chunk's start past `n`. The clamp turns that into
+        // an empty region; without it `end - start` would underflow `usize` and
+        // the worker would write wildly out of bounds. Drive the exact edge (a
+        // handful of elements) and confirm bit-exact equality with sequential.
+        for n in 1usize..=9 {
+            let a: Vec<i64> = (0..n as i64).collect();
+            let b: Vec<i64> = (0..n as i64).map(|x| x * 2).collect();
+            let par = run_parallel_binary(&a, &b, |x, y| x + y);
+            assert_eq!(par, seq_binary(&a, &b, |x, y| x + y), "mismatch at n={n}");
+        }
     }
 
     #[test]
