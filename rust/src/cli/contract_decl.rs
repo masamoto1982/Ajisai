@@ -15,12 +15,16 @@
 //! #:contract NORMALIZE ( 1 -- 1 ) may-nil
 //! ```
 //!
-//! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]`, where
-//! `purity` is one of `pure` / `observable` / `effectful` and `nil` is
-//! `nil-free` / `may-nil`. Each part is optional; the fields left out are not
-//! checked. Because inference is deliberately conservative (SPEC §7.14), an
-//! unprovable declaration is reported as a `note`, never a false `error`.
+//! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
+//! [linearity]`, where `purity` is one of `pure` / `observable` / `effectful`,
+//! `nil` is `nil-free` / `may-nil`, and `linearity` is
+//! `linear` / `affine` / `droppable` (the resource-ownership axis; see
+//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1). Each part is
+//! optional; the fields left out are not checked. Because inference is
+//! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
+//! as a `note`, never a false `error`.
 
+use super::contract_linearity::{linearity_from_word, Linearity};
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::modules;
@@ -39,6 +43,8 @@ pub(crate) struct ContractDecl {
     pub purity: Option<ContractPurity>,
     /// `Some(true)` = declared `nil-free`; `Some(false)` = declared `may-nil`.
     pub nil_free: Option<bool>,
+    /// Declared resource linearity, or `None` when the directive omits it.
+    pub linearity: Option<Linearity>,
     /// The original directive text, for diagnostics.
     pub raw: String,
 }
@@ -121,6 +127,7 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             arity: None,
             purity: None,
             nil_free: None,
+            linearity: None,
             raw: raw.clone(),
         };
         let mut malformed: Option<String> = None;
@@ -157,9 +164,11 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
                 other => {
                     if let Some(p) = purity_from_word(other) {
                         decl.purity = Some(p);
+                    } else if let Some(l) = linearity_from_word(other) {
+                        decl.linearity = Some(l);
                     } else {
                         malformed = Some(format!(
-                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, or `nil-free`/`may-nil`)"
+                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, or `linear`/`affine`/`droppable`)"
                         ));
                         break;
                     }
@@ -447,6 +456,30 @@ fn check_one(
                 },
             });
         }
+    }
+
+    if let Some(linearity) = decl.linearity {
+        // Phase 1, increment 1: the linearity axis is parsed and recorded, but
+        // the inference that discharges a handle obligation across a word body
+        // is not wired yet (increment 2). Until then, acknowledge the
+        // declaration as a note so it is surfaced and audited, never asserted as
+        // proven. This keeps the "unprovable declaration is a note, never a
+        // false error" invariant of this module.
+        findings.push(DeclFinding {
+            severity: Severity::Note,
+            message: match lang {
+                Lang::Ja => format!(
+                    "`#:contract {}`: 線形性 `{}` を記録しました(未検証: ハンドル線形性の推論は未実装)。",
+                    decl.name,
+                    linearity.as_str()
+                ),
+                Lang::En => format!(
+                    "`#:contract {}`: recorded linearity `{}` (unverified: handle-linearity inference is not implemented yet).",
+                    decl.name,
+                    linearity.as_str()
+                ),
+            },
+        });
     }
 }
 
