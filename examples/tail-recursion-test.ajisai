@@ -2,16 +2,19 @@
 
 # 1) Direct recursion should hit runtime execution guard (implementation policy)
 # 実行時は ExecutionLimitExceeded 相当のエラーを期待
-# { [ LOOP ] } 'LOOP' DEF
+# A bare self-reference recurses; a vector literal does not (SPEC §4.3
+# data-ization: `[ LOOP ]` is the data "LOOP", not a call).
+# { LOOP } 'LOOP' DEF
 # LOOP
 
-# 2) Non-recursive custom word chain remains valid
+# 2) Non-recursive custom word chain remains valid.
+# Call STEP-A directly — a bare symbol inside `[ ... ]` is data, not a call.
 { [ 1 ] [ 2 ] + } 'STEP-A' DEF
-{ [ STEP-A ] [ 3 ] + } 'STEP-B' DEF
+{ STEP-A [ 3 ] + } 'STEP-B' DEF
 STEP-B PRINT
 # 期待: [ 6 ]
 
 # 3) Recursive design is explicit opt-in and testable
 # 下記は意図的にコメントアウトした失敗ケース（手動検証用）
-# { [ NXT ] } 'NXT' DEF
+# { NXT } 'NXT' DEF
 # NXT

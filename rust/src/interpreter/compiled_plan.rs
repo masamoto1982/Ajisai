@@ -199,9 +199,14 @@ fn try_collect_literal_vector(
                         values.push(Value::nil());
                         has_other = true;
                     }
-                    // Any other symbol may resolve to a user word that
-                    // `collect_vector` would execute; not a literal.
-                    _ => return None,
+                    // Data-ization (SPEC §4.3): a bare symbol inside a vector
+                    // literal is the symbol text as data, never executed. This
+                    // mirrors `collect_vector`, so a symbol-bearing vector is a
+                    // literal and lowers here identically to the interpreter path.
+                    _ => {
+                        values.push(Value::from_string(s));
+                        has_other = true;
+                    }
                 }
                 i += 1;
             }

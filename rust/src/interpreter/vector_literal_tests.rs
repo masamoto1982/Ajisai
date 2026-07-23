@@ -79,15 +79,44 @@ fn boolean_vector_keeps_truth_value_rendering() {
 }
 
 #[test]
-fn non_literal_vector_still_works() {
-    // A vector containing a user word is not a literal: it must fall back to the
-    // interpreter (which executes the word during collection) and still produce
-    // the same result with lowering on or off.
+fn symbol_in_vector_is_data_not_executed() {
+    // Data-ization (SPEC §4.3): a bare symbol inside a vector literal is the
+    // symbol text as data, even when it names a defined user word. `[ TEN 2 3 ]`
+    // is therefore a fully literal vector — TEN is the string "TEN", never the
+    // word's result — and lowers identically on the compiled and interpreted
+    // paths. This is the regression guard for the retired word-execution behavior.
     let src = "{ [ 10 ] } 'TEN' DEF\n{ [ TEN 2 3 ] } 'W' DEF\nW";
     let rendered = assert_on_equals_off(src);
     assert!(
-        rendered.contains("10") && rendered.contains("2") && rendered.contains('3'),
-        "expected the word-produced element, got: {rendered}"
+        rendered.contains("TEN"),
+        "the symbol must appear as data, got: {rendered}"
+    );
+    assert!(
+        !rendered.contains("10"),
+        "the user word must NOT be executed inside the vector, got: {rendered}"
+    );
+}
+
+#[test]
+fn vector_literal_is_independent_of_dictionary_state() {
+    // The core of data-ization (SPEC §4.3): the *same* source vector produces
+    // the *same* value whether or not the symbol names a defined word. Before,
+    // `[ FOO 1 ]` executed FOO when defined and was data otherwise — a
+    // dictionary-state-dependent meaning. Now both are the data `[ "FOO" 1 ]`.
+    let mut with_word = Interpreter::new();
+    block_on(with_word.execute("{ [ 99 ] } 'FOO' DEF\n[ FOO 1 ]")).unwrap();
+
+    let mut without_word = Interpreter::new();
+    block_on(without_word.execute("[ FOO 1 ]")).unwrap();
+
+    assert_eq!(
+        format!("{}", with_word.get_stack().last().unwrap()),
+        format!("{}", without_word.get_stack().last().unwrap()),
+        "a vector literal must not depend on whether the symbol is a defined word"
+    );
+    assert!(
+        !format!("{}", with_word.get_stack().last().unwrap()).contains("99"),
+        "the defined word must not be executed inside the vector"
     );
 }
 
