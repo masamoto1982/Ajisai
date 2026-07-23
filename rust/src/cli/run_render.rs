@@ -42,6 +42,7 @@ pub(crate) fn render_completed_run(
                 runtime_metrics: interp.runtime_metrics(),
                 explanation,
                 plan_check: None,
+                contract_decls: None,
                 receipt,
                 lang: opts.lang,
             };

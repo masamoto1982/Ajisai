@@ -30,6 +30,7 @@ fn ok_report_envelope_has_contract_fields() {
         runtime_metrics: interp.runtime_metrics(),
         explanation: None,
         plan_check: None,
+        contract_decls: None,
         receipt: None,
         lang: super::Lang::Ja,
     };
@@ -201,6 +202,7 @@ fn check_report_uses_default_metrics() {
         runtime_metrics: RuntimeMetrics::default(),
         explanation: None,
         plan_check: None,
+        contract_decls: None,
         receipt: None,
         lang: super::Lang::Ja,
     };
