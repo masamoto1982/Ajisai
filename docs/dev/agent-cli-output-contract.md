@@ -91,6 +91,7 @@ does not prove it will.
 | `runtimeMetrics` | object | VTU observation counters (§7). All zeros for `check`. |
 | `explanation` | object \| null | Plain-language projection of the diagnosis (§10). Present only with `--explain`; `null` otherwise. |
 | `planCheck` | object \| null | Light contract / flow-mass check (§11). Present only with `check --contract`; `null` otherwise. |
+| `contractDecls` | object \| null | Opt-in `#:contract` word declarations checked against the inferred contract (§11.1). Present only with `check --contract`; `null` otherwise. |
 | `receipt` | object \| null | Execution receipt (§15). Present only with `run --receipt` on a successful run; `null` otherwise. |
 
 `version --json` emits only `{ "schemaVersion", "status", "version" }`.
@@ -410,6 +411,43 @@ contract; it does not search for or rewrite a plan. Present only with
 - `findings` are the plain-language `planCheck` surface (L0), most severe
   first; `severity` is `error` (malformed plan), `advisory`, or `note`. Empty
   means the plan is clean over the known prefix.
+
+## 11.1. `contractDecls` (`check --contract`)
+
+Opt-in per-word contract declarations checked against the **inferred** contract
+(`rust/src/interpreter/word_contract.rs`), the "connect an opt-in declaration to
+a pre-execution check" step of `docs/dev/external-evaluation-response-strategy.md`
+(P2). A declaration is a `#:contract` directive comment; like the `#@` test
+directives it is **tooling only** and adds no language semantics (canonical
+source: `SPECIFICATION.html`). The check registers the file's word definitions
+and imports **without executing any word body** or top-level code, infers each
+declared word's contract, and reports a declaration the inference contradicts.
+Present only with `check --contract`; `null` otherwise.
+
+Directive grammar (each part optional):
+
+```text
+#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [pure|observable|effectful] [nil-free|may-nil]
+```
+
+```json
+{
+  "violated": false,
+  "findings": [ { "severity": "error | note", "message": "..." } ]
+}
+```
+
+- `violated` is `true` when any finding is an `error`; it contributes to the
+  `check` exit code (1) exactly like a malformed `planCheck`.
+- A declaration the inference **contradicts** is an `error`: a wrong arity, a
+  purity the word exceeds (declared `pure`, inferred `effectful`), a
+  `nil-free` word that can create NIL, or a name that is not defined.
+- Because inference is deliberately **conservative** (SPEC §7.14), a declaration
+  it cannot *disprove* — e.g. on a recursive word whose contract is inferred
+  dynamically — is a `note`, never a false `error`. `may-nil` documents intent
+  and never fails.
+- Only arity, purity, and NIL-freedom are checked today; richer element types
+  (`Scalar`/`Vector<n>`) are future work and are not yet part of the surface.
 
 ## 12. `modifier` (the `modifier` command)
 

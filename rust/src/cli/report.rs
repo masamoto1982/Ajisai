@@ -46,6 +46,11 @@ pub(crate) struct Report {
     /// Light contract / flow-mass check (`check --contract`). `None` unless the
     /// user opted in; additive field, see the CLI output contract.
     pub plan_check: Option<PlanCheck>,
+    /// Opt-in per-word contract declarations checked against inference
+    /// (`check --contract`, P2). `None` unless the user opted in; additive
+    /// field. Prebuilt JSON so `report` stays decoupled from the declaration
+    /// types.
+    pub contract_decls: Option<Json>,
     /// Execution receipt (`run --receipt`, Phase 6). `None` unless the user
     /// opted in; additive field. Prebuilt JSON so `report` stays decoupled from
     /// the receipt assembly.
@@ -73,6 +78,7 @@ impl Report {
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
             "explanation": self.explanation.as_ref().map(explanation_json),
             "planCheck": self.plan_check.as_ref().map(|check| plan_check_json(check, self.lang)),
+            "contractDecls": self.contract_decls,
             "receipt": self.receipt,
         })
     }

@@ -22,6 +22,9 @@
 mod clarify;
 #[cfg(test)]
 mod clarify_tests;
+mod contract_decl;
+#[cfg(test)]
+mod contract_decl_tests;
 mod coverage;
 #[cfg(test)]
 mod coverage_tests;
@@ -105,7 +108,10 @@ Options:
   --explain                       Add a plain-language explanation of any
                                   diagnosis (headline, next step, details)
   --contract                      With `check`: add a light, execution-free
-                                  flow-mass and NIL-flow contract check
+                                  flow-mass and NIL-flow contract check, plus
+                                  any `#:contract` word declarations checked
+                                  against the inferred contract (exit 1 on a
+                                  contradiction)
   --receipt                       With `run --json`: attach an execution receipt
                                   (source/result identity, executed words,
                                   capabilities, effects, water, integrity)
@@ -368,6 +374,7 @@ fn error_report(
         runtime_metrics: interp.runtime_metrics(),
         explanation,
         plan_check: None,
+        contract_decls: None,
         // A receipt certifies a completed result; error runs carry none.
         receipt: None,
         lang: opts.lang,
@@ -586,10 +593,21 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
     } else {
         None
     };
+    // Opt-in per-word contract declarations (`#:contract`), checked against the
+    // inferred contract without executing any word body (P2).
+    let contract_decls = if opts.contract {
+        Some(contract_decl::check_contract_decls(&source, opts.lang))
+    } else {
+        None
+    };
     let contract_failed = plan_check
         .as_ref()
         .map(|check| check.over_consumes)
-        .unwrap_or(false);
+        .unwrap_or(false)
+        || contract_decls
+            .as_ref()
+            .map(|check| check.violated)
+            .unwrap_or(false);
 
     if opts.json {
         let report = Report {
@@ -604,6 +622,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             runtime_metrics: RuntimeMetrics::default(),
             explanation: None,
             plan_check,
+            contract_decls: contract_decls.as_ref().map(|c| c.to_json()),
             receipt: None,
             lang: opts.lang,
         };
@@ -616,6 +635,11 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
                 eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
             }
             print_clarifications(&clarify::from_plan_check(check, opts.lang));
+        }
+        if let Some(check) = &contract_decls {
+            for finding in &check.findings {
+                eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
+            }
         }
     }
     if contract_failed {
