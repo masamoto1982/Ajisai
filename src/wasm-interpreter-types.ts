@@ -193,6 +193,15 @@ export interface ExecuteResult {
     inputHelper?: string;
 
     stack?: Value[];
+    // Lossless stack snapshot (opaque string from `snapshot_stack`) attached by
+    // the execution worker. Preferred over the observation-format `stack` when
+    // syncing the post-run stack back into the main-thread interpreter, so exact
+    // values (CodeBlock, ExactScalar) survive the round-trip instead of being
+    // flattened to nil / a rational approximation. `stack` is retained for
+    // display and as the downgrade path for a wasm bundle that predates the
+    // lossless API. See SPEC §2.3 and
+    // docs/dev/external-evaluation-response-strategy.md (P0).
+    stackSnapshot?: string;
     userWords?: UserWord[];
     importedModules?: string[];
     hedgedTrace?: string[];

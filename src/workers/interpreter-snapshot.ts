@@ -8,6 +8,14 @@ export interface SerialInboxEntry {
 
 export interface InterpreterSnapshot {
     readonly stack: Value[];
+    // Lossless stack snapshot (opaque string from `snapshot_stack`) preferred
+    // over the observation-format `stack` on restore. Reusing the lossy
+    // observation format for the worker round-trip silently changed exact
+    // values on every execution — a CodeBlock came back as nil, √2 as its
+    // rational approximation. `stack` is retained for the downgrade path
+    // (a wasm bundle predating `restore_stack_snapshot`). See SPEC §2.3 and
+    // docs/dev/external-evaluation-response-strategy.md (P0).
+    readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     readonly importedModules: string[];
     readonly executionMode: ExecutionMode;
@@ -23,6 +31,7 @@ export interface InterpreterSnapshot {
 
 export const createInterpreterSnapshot = (snapshot: {
     readonly stack: Value[];
+    readonly stackSnapshot?: string;
     readonly userWords: UserWord[];
     readonly importedModules?: string[];
     readonly executionMode?: ExecutionMode;
@@ -30,6 +39,7 @@ export const createInterpreterSnapshot = (snapshot: {
     readonly stepLimit?: number;
 }): InterpreterSnapshot => ({
     stack: snapshot.stack,
+    stackSnapshot: snapshot.stackSnapshot,
     userWords: snapshot.userWords,
     importedModules: snapshot.importedModules ?? [],
     executionMode: snapshot.executionMode ?? "greedy",
@@ -56,7 +66,13 @@ export const applyInterpreterSnapshot = (
     if (snapshot.importedModules?.length) {
         interpreter.restore_imported_modules(snapshot.importedModules);
     }
-    if (snapshot.stack) {
+    // Prefer the lossless snapshot so exact values (CodeBlock, ExactScalar)
+    // survive the worker round-trip; fall back to the observation-format stack
+    // for a wasm bundle that predates `restore_stack_snapshot` (SPEC §2.3).
+    if (typeof snapshot.stackSnapshot === 'string'
+        && typeof interpreter.restore_stack_snapshot === 'function') {
+        interpreter.restore_stack_snapshot(snapshot.stackSnapshot);
+    } else if (snapshot.stack) {
         interpreter.restore_stack(snapshot.stack);
     }
     if (snapshot.userWords) {

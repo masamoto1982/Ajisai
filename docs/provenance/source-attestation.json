@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:ebf26caddb85829ada59a69f4c3e2f6dc1afaa5fd85ab2473324cafc1670b6d4",
+  "rootIdentity": "sha256:fea050cbabea841b7253794a5bd873c9db56fafa626eb6fc14b192e4373a1db2",
   "fileCount": 347,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1534,8 +1534,8 @@
     },
     {
       "path": "src/gui/interpreter-execution-utils.ts",
-      "sha256": "f13ac2f9cc236471fe2ea2d93bd870e02b510c68873ac132eb870cb41737e3a8",
-      "bytes": 2340
+      "sha256": "4670cc0ab7979d47beef0fdb2268c7835f144661fdccbfe60db427f50f8e65c1",
+      "bytes": 2923
     },
     {
       "path": "src/gui/interpreter-state-persistence.test.ts",
@@ -1724,8 +1724,8 @@
     },
     {
       "path": "src/wasm-interpreter-types.ts",
-      "sha256": "cf5c03e6a6c19afd1a86b230edcf50a8aa28fedcd54408516ee7600208fe0c83",
-      "bytes": 9478
+      "sha256": "6c717ab447d5de9943019bf61860a8d1f6d44dfd086260f258b464bcd168ddb7",
+      "bytes": 10084
     },
     {
       "path": "src/wasm-module-loader.ts",
@@ -1739,18 +1739,18 @@
     },
     {
       "path": "src/workers/interpreter-execution-worker.ts",
-      "sha256": "22ea721c75f0e59c45d70f7701da7555d4e1137d7f288ce8641a452670b7665b",
-      "bytes": 3866
+      "sha256": "d22d31a3e802fd09b871f532525f22fcc1044a251b22209fa43021f92d6d4dda",
+      "bytes": 4565
     },
     {
       "path": "src/workers/interpreter-snapshot.test.ts",
-      "sha256": "41ffa1239818e727add45416c08f71929450eec10a406a3258bc391e2a2a4beb",
-      "bytes": 4160
+      "sha256": "e4bcd30d2d7d3e9519e8ce04c3f14250a4d311cadf5a13a91e50d4e6f1e4b055",
+      "bytes": 6484
     },
     {
       "path": "src/workers/interpreter-snapshot.ts",
-      "sha256": "af2357133959ab9a45feb7bf357e8dc9ff96bee5c069b5fd64da1968da47fe0d",
-      "bytes": 3844
+      "sha256": "2c279c6a2482d53a2b658500ceb0799284167e81cd9977792497ca0f620793ee",
+      "bytes": 4914
     },
     {
       "path": "tsconfig.json",
