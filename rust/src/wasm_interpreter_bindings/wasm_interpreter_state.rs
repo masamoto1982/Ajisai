@@ -420,6 +420,28 @@ impl AjisaiInterpreter {
         Ok(())
     }
 
+    /// Lossless stack snapshot for session persistence (SPEC §2.3). Unlike
+    /// `collect_stack`, which serializes the *observation* wire format (a
+    /// CodeBlock shows as `nil`, an ExactScalar as a marked rational
+    /// approximation), this captures the exact value so `restore_stack_snapshot`
+    /// returns identical values. The two surfaces are deliberately distinct:
+    /// observation is lossy-but-honest, persistence is lossless. The payload is
+    /// an opaque JSON string produced by `crate::types::value_persist`.
+    #[wasm_bindgen]
+    pub fn snapshot_stack(&self) -> Result<String, String> {
+        crate::types::value_persist::encode_stack(self.interpreter.get_stack().iter_slots())
+    }
+
+    /// Restore a stack from a `snapshot_stack` payload, reinstating exact
+    /// values (CodeBlock, ExactScalar, …) and their stack-position roles.
+    #[wasm_bindgen]
+    pub fn restore_stack_snapshot(&mut self, snapshot_json: &str) -> Result<(), String> {
+        let slots = crate::types::value_persist::decode_stack(snapshot_json)?;
+        let (stack, hints): (Vec<_>, Vec<_>) = slots.into_iter().unzip();
+        self.interpreter.update_stack_with_hints(stack, hints);
+        Ok(())
+    }
+
     #[wasm_bindgen]
     pub fn update_input_buffer(&mut self, text: String) {
         self.interpreter.input_buffer = text;

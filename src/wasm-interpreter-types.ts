@@ -45,6 +45,14 @@ export interface AjisaiInterpreter {
     collect_input_helper_words_info(): Array<[string, string]>;
     lookup_word_definition(name: string): string | null;
     restore_stack(stack_js: Value[]): void;
+    // Lossless stack persistence (SPEC §2.3). `snapshot_stack` captures exact
+    // values (CodeBlock, ExactScalar, …) that the observation format used by
+    // `collect_stack` cannot round-trip, and `restore_stack_snapshot` reinstates
+    // them. The payload is an opaque string. Optional so the GUI degrades to the
+    // legacy `collect_stack`/`restore_stack` path against a wasm bundle that
+    // predates the API.
+    snapshot_stack?(): string;
+    restore_stack_snapshot?(snapshot_json: string): void;
     restore_user_words(words: UserWord[]): void;
     remove_word(name: string): void;
     push_json_string(json: string): { status: string; message?: string };
