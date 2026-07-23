@@ -2044,6 +2044,33 @@
       "core_tier": "identity"
     },
     {
+      "id": "core.or-else",
+      "kind": "coreword",
+      "surface": "OR-ELSE",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §6.4",
+        "SPECIFICATION.html §7.12"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9"
+      ],
+      "law_tests": [
+        "rust/src/interpreter/control_or_else_tests.rs"
+      ],
+      "conformance_cases": [],
+      "status": "Formalized",
+      "notes": "Value-based, block-taking NIL-coalescing handler; the explicit counterpart to VENT (^). Consumes a candidate and a { ... } fallback block: keeps the candidate when non-NIL (U passes through), otherwise runs the block. Unlike VENT it is a stack-consuming word, so its fallback is a whole block and is invariant under lexical grouping.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.bubble.handler",
+        "algebra.bubble.domain"
+      ],
+      "algebraic_family": "bubble",
+      "core_tier": "identity"
+    },
+    {
       "id": "core.idle",
       "kind": "coreword",
       "surface": "IDLE",

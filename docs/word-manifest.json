@@ -8,11 +8,11 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 97,
+    "corewords": 98,
     "modulewords": 96,
     "aliases": 20,
     "surface_forms": 10,
-    "total": 223
+    "total": 224
   },
   "entries": [
     {
@@ -1495,6 +1495,23 @@
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence",
         "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
+    },
+    {
+      "id": "core.or-else",
+      "kind": "coreword",
+      "surface": "OR-ELSE",
+      "category": "control",
+      "source": "rust/src/builtins/builtin_word_definitions.rs",
+      "canonical": "OR-ELSE",
+      "coverage_entry_id": "core.or-else",
+      "semantic_role": "Derived",
+      "algebraic_family": "bubble",
+      "core_tier": "identity",
+      "derived_from": [
+        "algebra.bubble.handler",
+        "algebra.bubble.domain"
       ],
       "classification": "Core"
     },
