@@ -63,17 +63,24 @@ model exactly, and because contracts are machine- and AI-readable, an agent can
 read the handle discipline *before* running the program.
 
 **Increment plan.**
-1. Grammar: extend `#:contract` with an optional linearity term
+1. **Done (1.1).** Grammar: extend `#:contract` with an optional linearity term
    (`linear` / `affine` / `droppable`) parsed into `ContractDecl`
-   (`rust/src/cli/contract_decl.rs`). Additive: unstated = unchecked, matching
-   the existing `purity`/`nil` fields. *(first code increment — this PR)*
-2. Inference: mark handle-producing words as producing a linear obligation and
-   handle-consuming words (`KILL`, `AWAIT`, …) as discharging it; flag `KEEP` on
-   a linear slot and an undischarged obligation at end of a word body.
-3. Check: `ajisai check` reports a linearity violation as an `error` (a
-   declaration inference contradicts), a possible-leak as a `note`.
-4. Spec: document the linearity axis under §7.14 (contract metadata) and cross-
-   reference §6.2 (EAT/KEEP) and the runtime/handle words.
+   (`rust/src/cli/contract_decl.rs`, `contract_linearity.rs`). Additive:
+   unstated = unchecked, matching the existing `purity`/`nil` fields.
+2. **Done (1.2).** First enforcing check: because a consumption modifier is its
+   own token binding the following word, a `KEEP` applied to a handle-discharging
+   word (`KILL`/`AWAIT`) is detectable directly on a word's body tokens and
+   retains the handle past its one permitted consumption. `ajisai check` reports
+   it as an `error` under `linear`/`affine`; `KEEP` on an observer
+   (`STATUS`/`MONITOR`) and `EAT` on a discharger are correctly clean;
+   `droppable` opts out. Sound and flow-insensitive — no false positives.
+3. **Next (1.3).** Deeper flow-sensitive tracking: a handle produced and then
+   dropped (consumed by a non-discharging word) or discharged across a call
+   boundary; an undischarged obligation at end of a `linear` word body.
+4. **Done (spec).** Handle linearity is stated normatively in §4.7 (handles are
+   linear resources) and the opt-in contract discipline is documented in §7.14,
+   cross-referencing §6.2 (EAT/KEEP). No new registry field is claimed — the
+   resource role is a classification over the existing handle words.
 
 ## Phase 2 — Space as a contract (static footprint bounds) — beyond Rust
 
