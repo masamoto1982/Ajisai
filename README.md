@@ -4,9 +4,11 @@
 
 # Ajisai
 
-Ajisai is an AI-first, vector-oriented, exact-real dataflow language.
+Ajisai is an AI-first, vector-oriented dataflow language for **auditable, exact vector computation with machine-readable contracts** — built so that both people and agents can check a computation *before* it runs.
 
-Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in word is expected to have a machine-readable contract.
+Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in word is expected to have a machine-readable contract that a user word's declaration can be checked against ahead of execution (`ajisai check --contract`).
+
+**Numeric scope (implemented today vs. planned).** Ajisai is *exact by default*: exact rationals and the algebraic closure of `SQRT` under field arithmetic — a **multiquadratic** normal form (\(\sum_d c_d\sqrt d\)), compared and decided with no rounding and no budget. This sits on a **tiered architecture that is extensible toward general exact reals**, but general computable reals (π, e, log, …) are *reserved for future words* and are not claimed today. "Exact-by-default numeric with an extensible exact-real architecture" is the precise description; earlier framing as a flat "exact-real language" over-stated the current domain.
 
 The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.” Ajisai uses water as its main metaphor: values flow through channels, operations shape those channels, and exceptional situations remain visible instead of disappearing into hidden runtime state.
 
@@ -43,7 +45,7 @@ Spec links: [§4 Value Model](https://masamoto1982.github.io/Ajisai/SPECIFICATIO
 
 ### 1) Exact numbers: water with a traceable flow history
 
-Every numeric value in Ajisai is an **exact real, defined by observation rather than by any single representation**: a number can always report a rational enclosure of itself and refine it on demand. Integer, fraction, decimal, and scientific-notation literals are just convenient source forms for exact rationals. Runtime words such as `SQRT` produce exact algebraic irrationals, carried in a decidable normal form.
+Every numeric value in Ajisai is **exact and defined by observation rather than by any single representation**: a number can always report a rational enclosure of itself and refine it on demand. Integer, fraction, decimal, and scientific-notation literals are just convenient source forms for exact rationals. Runtime words such as `SQRT` produce exact algebraic irrationals, carried in a decidable multiquadratic normal form. This is the **implemented** domain — exact rationals plus the algebraic (`SQRT`) closure; the general-computable-real tier (π, e, log, …) is an extensible-architecture reservation, not a current capability.
 
 Ajisai therefore avoids the usual hidden detour through approximate floating-point values. Arithmetic is exact over every tier, and canonical AI-readable display uses a nested continued-fraction form — derived from the value for display — rather than remembering the original source literal.
 

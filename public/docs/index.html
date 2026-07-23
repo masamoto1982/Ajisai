@@ -456,7 +456,7 @@
             <article class="ref-article">
                 <section id="intro" class="ref-page">
                     <h2>Introduction</h2>
-                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is an <strong>exact real</strong> — internally a continued fraction — so arithmetic never rounds.</p>
+                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is <strong>exact</strong> — exact rationals and the algebraic <code>SQRT</code> closure (a multiquadratic normal form), compared with no rounding — so arithmetic never rounds. Its continued-fraction form is a canonical display <em>derived from</em> the value, not its internal storage.</p>
                     <p>This reference introduces each feature with short, verified examples. Every example has an <strong>"Open in Playground"</strong> button; pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
                     <p><strong>The Reference is for using Ajisai.</strong> If you are implementing or porting the language, the single design authority is the <a href="../SPECIFICATION.html">Specification</a>; this page is derived from it for learners and day-to-day users.</p>
                     <h3>How to read the examples</h3>
@@ -530,7 +530,7 @@
 
                 <section id="numbers" class="ref-page">
                     <h2>Exact Numbers</h2>
-                    <p>Every numeric value is an exact real, stored as a continued fraction. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact representation — <code>0.5</code> <em>is</em> one half, not a binary approximation.</p>
+                    <p>Every numeric value is exact; its continued-fraction form is a canonical display <em>derived</em> from the value, not its internal storage. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact value — <code>0.5</code> <em>is</em> one half, not a binary approximation. The implemented domain is exact rationals and the algebraic <code>SQRT</code> closure; general computable reals (π, e, log, …) are reserved for future words.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -754,7 +754,7 @@
                                 <tr><td><code>ADD</code></td><td><code>+</code></td><td class="notes">Addition</td></tr>
                                 <tr><td><code>SUB</code></td><td><code>-</code></td><td class="notes">Subtraction</td></tr>
                                 <tr><td><code>MUL</code></td><td><code>*</code></td><td class="notes">Multiplication</td></tr>
-                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">Exact-real division</td></tr>
+                                <tr><td><code>DIV</code></td><td><code>/</code></td><td class="notes">Exact division</td></tr>
                                 <tr><td><code>MOD</code></td><td><code>%</code></td><td class="notes">Remainder</td></tr>
                             </tbody>
                         </table>
