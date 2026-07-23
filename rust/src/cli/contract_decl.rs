@@ -280,6 +280,33 @@ fn restore_imports(interp: &mut Interpreter, tokens: &[Token]) {
     }
 }
 
+/// Build an interpreter from `source` by registering its top-level word
+/// definitions and imports **without executing any word body or top-level
+/// code**, returning it alongside the user words it defined, in source order.
+/// Shared by the `#:contract` checker and the `contract` reporter so both see
+/// the identical execution-free environment the inference runs against.
+pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<String>) {
+    let mut interp = Interpreter::new();
+    let mut names = Vec::new();
+    if let Ok(tokens) = crate::tokenizer::tokenize(source) {
+        restore_imports(&mut interp, &tokens);
+        for (name, body) in collect_top_level_defs(&tokens) {
+            // A malformed body is not this pass's concern (the structural check
+            // ran earlier); skip a definition that will not register.
+            if crate::interpreter::execute_def::op_def_inner(&mut interp, &name, &body).is_ok() {
+                let upper = name.to_uppercase();
+                if !names.contains(&upper) {
+                    names.push(upper);
+                }
+            }
+        }
+        // Registration writes naming warnings into the output buffer; discard
+        // them so they never leak into a caller's findings.
+        interp.output_buffer.clear();
+    }
+    (interp, names)
+}
+
 /// Build a check interpreter from `source` by registering its top-level word
 /// definitions (and imports) without executing any word body or top-level code,
 /// then check every `#:contract` declaration against the inferred contract.
@@ -300,18 +327,7 @@ pub(crate) fn check_contract_decls(source: &str, lang: Lang) -> ContractDeclChec
         };
     }
 
-    let mut interp = Interpreter::new();
-    if let Ok(tokens) = crate::tokenizer::tokenize(source) {
-        restore_imports(&mut interp, &tokens);
-        for (name, body) in collect_top_level_defs(&tokens) {
-            // A malformed body is not this check's concern (the structural
-            // check already ran); skip a definition that will not register.
-            let _ = crate::interpreter::execute_def::op_def_inner(&mut interp, &name, &body);
-        }
-        // Registration writes naming warnings into the output buffer; discard
-        // them so they never leak into the check's findings.
-        interp.output_buffer.clear();
-    }
+    let (mut interp, _names) = build_definitions_interpreter(source);
 
     for decl in &decls {
         check_one(&mut interp, decl, lang, &mut findings);

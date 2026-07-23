@@ -7,6 +7,7 @@
 //! ```text
 //! ajisai run <file.ajisai> [--json]
 //! ajisai check <file.ajisai> [--json]     # tokenize + parse + resolve, no execution
+//! ajisai contract <file.ajisai> [--json]  # report inferred word contracts, no execution
 //! ajisai coverage <file.ajisai> [--json]  # contract coverage ratio, no execution
 //! ajisai version [--json]
 //! ```
@@ -25,6 +26,9 @@ mod clarify_tests;
 mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
+mod contract_report;
+#[cfg(test)]
+mod contract_report_tests;
 mod coverage;
 #[cfg(test)]
 mod coverage_tests;
@@ -76,6 +80,9 @@ Commands:
   run <file.ajisai> [--json] [--receipt] [--step-limit <N>]
                                   Execute a program file
   check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
+  contract <file.ajisai> [--json] Report each user word's inferred contract
+                                  (arity, purity, NIL, determinism) plus a
+                                  paste-ready `#:contract` line (no execution)
   coverage <file.ajisai> [--json] Contract coverage ratio: the fraction of word
                                   occurrences resolving to complete SPEC 7.14
                                   contract metadata (no execution)
@@ -185,6 +192,7 @@ pub fn run(args: &[String]) -> i32 {
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
+        ("contract", [path]) => cmd_contract(path, &opts),
         ("coverage", [path]) => cmd_coverage(path, &opts),
         ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
         ("fmt", [path]) => fmt::cmd_fmt(path, &opts),
@@ -647,6 +655,39 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
     } else {
         0
     }
+}
+
+/// `ajisai contract <file>`: report each user word's inferred contract
+/// (`interpreter::word_contract`), the reporting companion to `check --contract`
+/// (P2). Registers definitions and imports without executing any word body or
+/// top-level code. Observational — a well-formed file always exits 0.
+fn cmd_contract(path: &str, opts: &Opts) -> i32 {
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(e) => {
+            eprintln!("ajisai: cannot read {}: {}", path, e);
+            return 2;
+        }
+    };
+    let reports = contract_report::report_contracts(&source);
+    if opts.json {
+        println!("{}", pretty(&contract_report::reports_json(&reports)));
+    } else {
+        if reports.is_empty() {
+            println!("{}: no user words defined", path);
+        }
+        for r in &reports {
+            println!(
+                "{} : {} {} {} {} [{}]",
+                r.name, r.arity, r.purity, r.nil, r.determinism, r.confidence
+            );
+            if !r.effects.is_empty() {
+                println!("    effects: {}", r.effects.join(", "));
+            }
+            println!("    {}", r.suggested);
+        }
+    }
+    0
 }
 
 /// `ajisai coverage <file>`: mechanical contract-coverage aggregation
