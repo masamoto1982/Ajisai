@@ -235,9 +235,9 @@ Version: <strong>2026-07-15</strong></p>
 
 <h2 id="1-language-identity">1. Language Identity</h2>
 
-<p>Ajisai is an <strong>AI-first, vector-oriented, exact-real dataflow language</strong>.</p>
+<p>Ajisai is an <strong>AI-first, vector-oriented dataflow language</strong> with <strong>exact-by-default numerics</strong> and <strong>machine-readable, pre-execution-checkable contracts</strong>.</p>
 
-<p>Every numeric value is an <strong>exact real</strong>, defined by <strong>observation</strong> rather than by any particular representation: a number can always report a rational enclosure of itself and refine that enclosure on demand (Section 4.2). Rationals and the algebraic closure of <code>SQRT</code> under field arithmetic are fully decidable; general computable reals are reserved for future words. All arithmetic is exact, with no intermediate rounding, and the canonical display of a number is the nested continued-fraction form of Section 4.2.3 — a sequence <em>derived from</em> the value, not an internal representation. Surface numeric literals (Section 3.2) are convenience forms for the same values.</p>
+<p>Every numeric value is <strong>exact</strong>, defined by <strong>observation</strong> rather than by any particular representation: a number can always report a rational enclosure of itself and refine that enclosure on demand (Section 4.2). The <strong>implemented</strong> numeric domain is exact rationals and the algebraic closure of <code>SQRT</code> under field arithmetic — a multiquadratic normal form (Section 4.2.2) that is fully decidable with no budget; general computable reals (π, e, log, …) are reserved for future words on the same tiered, extensible architecture, not claimed today. "Exact-real" is therefore the <em>architecture</em>, and "exact rational &amp; multiquadratic" the current <em>domain</em>; the two are kept distinct throughout this document. All arithmetic is exact, with no intermediate rounding, and the canonical display of a number is the nested continued-fraction form of Section 4.2.3 — a sequence <em>derived from</em> the value, not an internal representation. Surface numeric literals (Section 3.2) are convenience forms for the same values.</p>
 
 <p>Runtime stack:</p>
 
