@@ -30,6 +30,7 @@ mod contract_linearity;
 mod contract_report;
 #[cfg(test)]
 mod contract_report_tests;
+mod contract_space;
 mod coverage;
 #[cfg(test)]
 mod coverage_tests;
