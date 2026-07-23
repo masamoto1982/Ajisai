@@ -10,6 +10,7 @@ output, which AI agents and verification scripts consume.
 ```
 ajisai run <file.ajisai> [--json] [--explain] [--lang <ja|en>] [--step-limit <N>]
 ajisai check <file.ajisai> [--json] [--explain] [--contract] [--lang <ja|en>]  # tokenize + parse + resolve (+ optional contract check); never executes
+ajisai contract <file.ajisai> [--json]  # report each user word's inferred contract (§11.2); never executes
 ajisai coverage <file.ajisai> [--json]  # contract coverage ratio (§14); never executes
 ajisai modifier <phrase...> [--json] [--lang <ja|en>]  # infer the modifier for an intent phrase; never executes
 ajisai fmt <file.ajisai> [--write] [--check]  # rewrite source into canonical form; never executes (§17)
@@ -448,6 +449,46 @@ Directive grammar (each part optional):
   and never fails.
 - Only arity, purity, and NIL-freedom are checked today; richer element types
   (`Scalar`/`Vector<n>`) are future work and are not yet part of the surface.
+
+## 11.2. `contract` (the `contract` command)
+
+`ajisai contract <file>` reports each user word's **inferred** contract — the
+reporting companion to the `#:contract` checker (§11.1). It registers the file's
+definitions and imports **without executing any word body or top-level code**,
+then infers and renders each word's contract in source-definition order. It is
+observational: a well-formed file always exits 0.
+
+With `--json` the top-level document is an array (not the standard envelope),
+one object per user word:
+
+```json
+[
+  {
+    "name": "INC",
+    "arity": "( 1 -- 1 )",
+    "purity": "pure",
+    "determinism": "deterministic",
+    "nil": "nil-propagating",
+    "order": "order-independent",
+    "effects": [],
+    "confidence": "complete",
+    "suggested": "#:contract INC ( 1 -- 1 ) pure nil-free"
+  }
+]
+```
+
+- `arity` is `"( c -- p )"` for a fixed flow or `"dynamic"`.
+- `purity` ∈ `pure` / `observable` / `effectful`; `determinism` ∈
+  `deterministic` / `non-deterministic`; `order` ∈ `order-independent` /
+  `order-sensitive`.
+- `nil` is the inferred NIL behavior (`nil-free`, `nil-propagating`,
+  `may-create-nil`, `rejects-nil`, `consumes-nil`); `effects` lists inferred
+  effect tags.
+- `confidence` is `complete` or `conservative` (a recursive or otherwise
+  unprovable word is `conservative`, and its `arity` is usually `dynamic`).
+- `suggested` is a paste-ready `#:contract` line codifying the checkable subset
+  (arity + purity + nil-free/may-nil), so `contract` → paste → `check --contract`
+  round-trips.
 
 ## 12. `modifier` (the `modifier` command)
 
