@@ -1,6 +1,6 @@
 //! Tests for opt-in `#:contract` declaration checking (`cli/contract_decl.rs`).
 
-use super::contract_decl::{check_contract_decls, parse_contract_directives};
+use super::contract_decl::{check_contract_decls, parse_contract_directives, Linearity};
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::word_contract::ContractPurity;
@@ -38,6 +38,51 @@ fn parses_partial_declarations_and_zero_counts() {
     assert_eq!(decls[0].arity, Some((0, 2)));
     assert_eq!(decls[0].nil_free, Some(false));
     assert_eq!(decls[0].purity, None);
+}
+
+#[test]
+fn parses_linearity_terms() {
+    for (term, expected) in [
+        ("linear", Linearity::Linear),
+        ("affine", Linearity::Affine),
+        ("droppable", Linearity::Droppable),
+    ] {
+        let src = format!("#:contract H ( 0 -- 1 ) effectful {term}\n");
+        let (decls, errs) = parse_contract_directives(&src);
+        assert!(errs.is_empty(), "unexpected errors for `{term}`: {errs:?}");
+        assert_eq!(decls.len(), 1);
+        assert_eq!(decls[0].linearity, Some(expected), "term `{term}`");
+        // The other axes still parse alongside linearity.
+        assert_eq!(decls[0].arity, Some((0, 1)));
+    }
+}
+
+#[test]
+fn linearity_is_optional_and_defaults_to_none() {
+    let (decls, errs) = parse_contract_directives("#:contract W ( 1 -- 1 ) pure\n");
+    assert!(errs.is_empty());
+    assert_eq!(decls[0].linearity, None);
+}
+
+#[test]
+fn declared_linearity_surfaces_as_a_note_never_an_error() {
+    // Increment 1 records the axis without inference, so a declared linearity
+    // must never produce an `error` finding (which would break `check`'s exit
+    // code) — only an informational note.
+    let src = "#:contract MAKE ( 0 -- 1 ) affine\n{ [ 42 ] } 'MAKE' DEF\n";
+    let check = check_contract_decls(src, Lang::En);
+    assert!(
+        !check.violated,
+        "a recorded linearity must not violate the contract check"
+    );
+    assert!(
+        check
+            .findings
+            .iter()
+            .any(|f| f.severity == Severity::Note && f.message.contains("affine")),
+        "the declared linearity should be surfaced as a note: {:?}",
+        check.findings.iter().map(|f| &f.message).collect::<Vec<_>>()
+    );
 }
 
 #[test]
