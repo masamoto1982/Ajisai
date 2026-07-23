@@ -24,7 +24,7 @@
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
-use super::contract_linearity::{linearity_from_word, Linearity};
+use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::modules;
@@ -459,27 +459,7 @@ fn check_one(
     }
 
     if let Some(linearity) = decl.linearity {
-        // Phase 1, increment 1: the linearity axis is parsed and recorded, but
-        // the inference that discharges a handle obligation across a word body
-        // is not wired yet (increment 2). Until then, acknowledge the
-        // declaration as a note so it is surfaced and audited, never asserted as
-        // proven. This keeps the "unprovable declaration is a note, never a
-        // false error" invariant of this module.
-        findings.push(DeclFinding {
-            severity: Severity::Note,
-            message: match lang {
-                Lang::Ja => format!(
-                    "`#:contract {}`: 線形性 `{}` を記録しました(未検証: ハンドル線形性の推論は未実装)。",
-                    decl.name,
-                    linearity.as_str()
-                ),
-                Lang::En => format!(
-                    "`#:contract {}`: recorded linearity `{}` (unverified: handle-linearity inference is not implemented yet).",
-                    decl.name,
-                    linearity.as_str()
-                ),
-            },
-        });
+        check_linearity(interp, decl, linearity, lang, findings);
     }
 }
 

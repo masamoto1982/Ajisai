@@ -87,6 +87,44 @@ fn declared_linearity_surfaces_as_a_note_never_an_error() {
 }
 
 #[test]
+fn keep_on_a_handle_discharger_violates_linear() {
+    // KEEP on KILL retains the handle after its one permitted consumption.
+    let errs = errors("#:contract LEAKY linear\n{ KEEP KILL } 'LEAKY' DEF\n");
+    assert_eq!(errs.len(), 1, "expected one linearity error, got: {errs:?}");
+    assert!(errs[0].contains("KEEP") && errs[0].contains("linear"));
+}
+
+#[test]
+fn keep_on_a_handle_discharger_violates_affine_too() {
+    let errs = errors("#:contract LEAKY affine\n{ KEEP AWAIT } 'LEAKY' DEF\n");
+    assert_eq!(errs.len(), 1, "expected one linearity error, got: {errs:?}");
+}
+
+#[test]
+fn keep_on_an_observer_is_not_a_violation() {
+    // STATUS/MONITOR read a handle without consuming it, so KEEP is the correct
+    // idiom and must never be flagged.
+    assert!(is_clean("#:contract PEEK linear\n{ KEEP STATUS } 'PEEK' DEF\n"));
+}
+
+#[test]
+fn eat_on_a_discharger_is_not_a_violation() {
+    // The proper consume: EAT on KILL discharges the handle exactly once.
+    assert!(is_clean("#:contract CLEAN linear\n{ EAT KILL } 'CLEAN' DEF\n"));
+}
+
+#[test]
+fn droppable_opts_out_of_the_discipline() {
+    // Even a KEEP-on-discharge body is only a note under `droppable`.
+    let check = check_contract_decls("#:contract LOOSE droppable\n{ KEEP KILL } 'LOOSE' DEF\n", Lang::En);
+    assert!(!check.violated, "droppable must not raise an error");
+    assert!(check
+        .findings
+        .iter()
+        .any(|f| f.severity == Severity::Note && f.message.contains("droppable")));
+}
+
+#[test]
 fn reports_malformed_directives() {
     assert!(!parse_contract_directives("#:contract\n").1.is_empty());
     assert!(
