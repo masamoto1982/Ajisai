@@ -67,6 +67,35 @@ fn duplicate_capabilities_are_deduplicated() {
 }
 
 #[test]
+fn an_unknown_capability_is_rejected_at_parse_time() {
+    // Structural-constraint ledger item 13: a typo'd capability must be caught
+    // at the parse boundary, not silently carried into the manifest — the
+    // parser's stated principle. `efect` is a typo for `effect`.
+    let src = "[project]\nname=\"x\"\nversion=\"1\"\nentry=\"m.ajisai\"\n[capabilities]\nallow = [\"efect\"]\n";
+    let err = parse_manifest(src).expect_err("an unknown capability must be rejected");
+    assert!(
+        err.contains("unknown capability") && err.contains("efect"),
+        "diagnostic should name the unknown capability, got: {err}"
+    );
+}
+
+#[test]
+fn every_real_capability_is_accepted_in_allow() {
+    // The allow vocabulary is exactly HostCapability, so every modeled
+    // capability's protocol string must parse. This locks the manifest surface
+    // to the capability set: adding a capability keeps manifests able to declare
+    // it, and no non-capability string can be declared.
+    for cap in crate::interpreter::HostCapability::ALL {
+        let name = cap.as_protocol_str();
+        let src = format!(
+            "[project]\nname=\"x\"\nversion=\"1\"\nentry=\"m.ajisai\"\n[capabilities]\nallow = [\"{name}\"]\n"
+        );
+        let m = parse_manifest(&src).unwrap_or_else(|e| panic!("`{name}` must be accepted: {e}"));
+        assert_eq!(m.allow, vec![name.to_string()]);
+    }
+}
+
+#[test]
 fn hash_inside_a_string_is_not_a_comment() {
     let src = "[project]\nname = \"a#b\"\nversion = \"1\"\nentry = \"m.ajisai\"\n";
     let m = parse_manifest(src).expect("valid");

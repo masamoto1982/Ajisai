@@ -60,15 +60,6 @@ impl HostEnv for ProjectHostEnv {
     }
 }
 
-/// Map a manifest capability string to a modeled host capability. The manifest
-/// vocabulary is exactly `HostCapability::as_protocol_str`, so the allow-list,
-/// the runtime gate, and the receipt all speak the same names.
-fn capability_from_protocol(name: &str) -> Option<HostCapability> {
-    HostCapability::ALL
-        .into_iter()
-        .find(|cap| cap.as_protocol_str() == name)
-}
-
 /// One resolved source file that composes the project.
 struct LoadedSource {
     /// Dependency name, or `None` for the entry.
@@ -111,7 +102,9 @@ fn load_project(path_arg: &str) -> Result<LoadedProject, String> {
 
     let mut allowed = BTreeSet::new();
     for name in &manifest.allow {
-        match capability_from_protocol(name) {
+        // `parse_manifest` already rejects an unknown capability, so this maps a
+        // validated name; the `None` arm is a defensive invariant guard.
+        match HostCapability::from_protocol_str(name) {
             Some(cap) => {
                 allowed.insert(cap);
             }

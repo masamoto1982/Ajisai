@@ -45,7 +45,7 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 11 | **`stack_effect` prose arity matches the machine `mass`** | consistency test parsing prose | **C→S (this increment)** | landed 5.4; parser abstains on anything outside its machine-checkable subset, so no false mismatch; 25 fixed-mass words compared, all agree |
 | 12 | **Authored LOOKUP examples run** | example-runner test | **S** | landed 5.5; caught 3 authored examples drifted to the pre-fix COND/COMPARE-WITHIN/DEL forms |
 | 12b | **Authored example results match execution** | render-comparison test | **C→S (this increment)** | landed 5.6; 25 `Pushes <value>.` results verified against actual output, 0 mismatches; free-prose results abstain. See below |
-| 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
+| 13 | **Manifest capability allow-list is validated at parse time** | `parse_manifest` capability check | **C→S (this increment)** | landed 5.7; a typo'd capability is now rejected at the parse boundary (was only caught later at load), fulfilling the parser's own strictness principle; see below |
 
 ## What landed in this increment (item 9)
 
@@ -162,6 +162,26 @@ mismatch. Of the 32 authored examples, 25 have a machine-comparable result and
 all 25 match today; 7 abstain. A `compared >= 20` guard prevents the extraction
 from silently going vacuous. This closes the loop: an authored example now can't
 claim a result its code doesn't actually produce.
+
+## What landed in 5.7 (item 13)
+
+Auditing the manifest/lockfile subsystem found it already well-structured — a
+strict hand-written parser (unknown section/key/value = error) and a reverse
+capability mapping *derived* from `HostCapability::ALL` (so forward/reverse can't
+drift). One gap remained: the parser's stated principle — "a typo never silently
+changes what a project is allowed to do" — was *incompletely* enforced. A
+mistyped capability (`allow = ["efect"]`) passed `parse_manifest` and was only
+rejected later, at project *load* (`project.rs`). So the same invariant lived at
+a looser boundary than the parser claimed.
+
+This increment moves the check to the parse boundary: `parse_manifest` now
+rejects an unknown capability with a diagnostic, so a parsed `Manifest` can never
+carry one. The reverse mapping is promoted to a canonical
+`HostCapability::from_protocol_str` (derived from `ALL`, still drift-proof) and
+reused by both the parser and the loader, removing the duplicate helper. Two
+tests pin it: an unknown capability is rejected at parse, and every real
+capability's protocol string is accepted — locking the manifest's allow
+vocabulary to exactly the modeled capability set.
 
 ## Sequencing
 
