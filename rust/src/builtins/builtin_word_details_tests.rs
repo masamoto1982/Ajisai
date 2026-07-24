@@ -112,3 +112,95 @@ async fn every_concrete_hover_syntax_runs() {
         );
     }
 }
+
+/// Parse the `(consumes, produces)` arity from a `stack_effect` prose string,
+/// or `None` when the prose is not in the machine-checkable subset (so the
+/// caller abstains rather than risk a false mismatch). The DSL is `LHS -> RHS`,
+/// where each side is a sequence of items: a bracketed group `[ … ]` / `{ … }`
+/// counts as one stack slot, an empty group `[]` counts as zero, and a variadic
+/// (`...`), annotated (`(…)`), or multi-arrow prose form abstains.
+fn parse_stack_effect_arity(stack_effect: &str) -> Option<(u16, u16)> {
+    if stack_effect == "no values popped or pushed" {
+        return Some((0, 0));
+    }
+    let sides: Vec<&str> = stack_effect.split(" -> ").collect();
+    if sides.len() != 2 {
+        return None; // no single arrow: prose or a control-directive description
+    }
+    for side in &sides {
+        if side.contains("...") || side.contains('(') {
+            return None; // variadic or annotated: not a fixed arity
+        }
+    }
+    Some((count_stack_items(sides[0])?, count_stack_items(sides[1])?))
+}
+
+/// Count top-level stack items in one side of a `stack_effect`. A new item
+/// begins at each token seen at bracket depth 0; an empty group contributes
+/// nothing. Unbalanced brackets abstain (`None`).
+fn count_stack_items(side: &str) -> Option<u16> {
+    let mut depth = 0i32;
+    let mut count = 0u16;
+    for token in side.split_whitespace() {
+        if token == "[]" || token == "{}" {
+            continue; // an empty group produces/consumes nothing
+        }
+        if depth == 0 {
+            count += 1;
+        }
+        for ch in token.chars() {
+            match ch {
+                '[' | '{' => depth += 1,
+                ']' | '}' => depth -= 1,
+                _ => {}
+            }
+        }
+        if depth < 0 {
+            return None;
+        }
+    }
+    (depth == 0).then_some(count)
+}
+
+#[test]
+fn fixed_stack_effect_prose_matches_the_machine_mass() {
+    // Structural-constraint ledger item 11 (convention -> structure): the
+    // human-facing `stack_effect` prose and the machine `mass` contract (SPEC
+    // §13.1) are two descriptions of one word's arity that could drift. For
+    // every word with a `Fixed` mass, the arity parsed from the prose must equal
+    // the mass. The parser abstains (skips) on any prose outside its
+    // machine-checkable subset, so this never raises a false mismatch; it only
+    // fires when the two descriptions provably disagree.
+    let mut compared = 0u32;
+    for spec in builtin_specs() {
+        let Some((mass_consumes, mass_produces)) =
+            crate::coreword_registry::mass_contract(spec.name).fixed()
+        else {
+            continue; // Dynamic mass: no fixed arity to check against
+        };
+        let Some((prose_consumes, prose_produces)) = parse_stack_effect_arity(spec.stack_effect)
+        else {
+            continue; // prose outside the machine-checkable subset: abstain
+        };
+        compared += 1;
+        assert_eq!(
+            (prose_consumes, prose_produces),
+            (u16::from(mass_consumes), u16::from(mass_produces)),
+            "{}: stack_effect `{}` reads as arity ({}, {}) but mass is ({}, {})",
+            spec.name,
+            spec.stack_effect,
+            prose_consumes,
+            prose_produces,
+            mass_consumes,
+            mass_produces
+        );
+    }
+    // Guard against the check silently going vacuous (e.g. if the parser starts
+    // abstaining on everything): a healthy share of the fixed-mass words must
+    // actually be compared. There are ~25 today; require a conservative floor.
+    assert!(
+        compared >= 20,
+        "stack_effect/mass cross-check only compared {compared} words; \
+         the prose parser may have regressed into abstaining"
+    );
+}
