@@ -181,6 +181,19 @@ guarantee. Sequencing: Phase 5 begins only after 1–4 land, because it depends 
 the linearity axis (Phase 1) and the space/water-level machinery (Phases 2–3)
 being available as the "structure" it moves constraints into.
 
+**Started (5.1).** The constraint ledger — the instruction's central artifact —
+is written up in `docs/dev/structural-constraint-ledger.md`: an inventory of
+Ajisai's invariants marked *structural* (compiler/test/registry-enforced) vs
+*convention-guarded* (prose/authoring only), with the convention ones scored for
+conversion. The first conversion (ledger item 9) landed with it: a consistency
+test requiring every non-empty `hover_syntax` example to tokenize, converting
+"the doc example is well-formed" from authoring review into a build-time
+guarantee. It immediately caught two real malformed examples (`COND`'s inline
+`|` clauses, `TRANSPOSE`'s display-only `( )` form), now fixed. Remaining ledger
+items (symbol resolution, stack-effect-arity, example-runner, manifest shape)
+are sequenced cheapest-sound-first in the ledger, each held to the "never a
+false failure" discipline.
+
 ## Sequencing summary
 
 1. Phase 1 (handle linearity) — start here; smallest surface, closes the only

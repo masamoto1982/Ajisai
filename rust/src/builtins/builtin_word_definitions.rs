@@ -955,7 +955,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "COND",
         category: "control",
         hover_summary: "COND — evaluate guard/body clauses",
-        hover_syntax: "1 { TRUE | 'y' } { IDLE | 'n' } COND",
+        hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
         executor_key: Some(BuiltinExecutorKey::Cond),
         eval_cost: EvalCost::Heavy,
         summary:
@@ -1350,7 +1350,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "TRANSPOSE",
         category: "tensor",
         hover_summary: "TRANSPOSE — transpose vector axes",
-        hover_syntax: "[ ( 1 2 ) ( 3 4 ) ] TRANSPOSE",
+        hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE",
         executor_key: Some(BuiltinExecutorKey::Transpose),
         eval_cost: EvalCost::Light,
         summary: "Transpose the axes of a tensor.",

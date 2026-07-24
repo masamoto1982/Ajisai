@@ -269,6 +269,27 @@ mod tests {
     }
 
     #[test]
+    fn every_hover_syntax_is_a_well_formed_snippet() {
+        // Structural-constraint ledger item 9 (convention -> structure; see
+        // `docs/dev/structural-constraint-ledger.md`): a `hover_syntax` is a
+        // runnable example, so requiring it to tokenize makes well-formedness a
+        // build-time guarantee instead of an authoring habit. Only tokenization
+        // is sound to require of all of them — some are deliberate fragments
+        // (`. +`) — so symbol resolution and full execution are ledger item 10.
+        for spec in builtin_specs() {
+            if spec.hover_syntax.is_empty() {
+                continue;
+            }
+            assert!(
+                crate::tokenizer::tokenize(spec.hover_syntax).is_ok(),
+                "{}: hover_syntax `{}` does not tokenize (malformed doc example)",
+                spec.name,
+                spec.hover_syntax
+            );
+        }
+    }
+
+    #[test]
     fn every_authored_doc_entry_names_a_real_builtin() {
         for doc in builtin_lookup_docs() {
             assert!(

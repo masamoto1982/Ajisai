@@ -1,0 +1,79 @@
+# Structural Constraint Ledger (design note, non-canonical)
+
+> Canonical semantics live in `SPECIFICATION.html`. This note is Phase 5 of the
+> structural-memory-safety roadmap (`structural-memory-safety-roadmap.md`): it
+> applies the uploaded instruction *"maximize constraints enforceable by
+> structure"* to Ajisai. It is a planning/ledger document; each conversion it
+> lists lands with its own tests when implemented.
+
+## The method (from the instruction)
+
+The instruction's thesis: **stop guarding an invariant by convention (a comment,
+a doc, a review habit) and move it into structure a machine rejects before the
+program runs.** A constraint belongs in *structure* when it is (1) local, (2)
+auto-rejectable at a single boundary, (3) declaratively expressible, (4) stable
+across judges, and (5) always on the path. What cannot be closed that way —
+behavioral compatibility of a replacement (LSP), time/history-dependent rules,
+distributed integrity — stays *executable specification* (tests, contracts, the
+diagnosable NIL/UNKNOWN/error model), not a false structural guarantee.
+
+Ajisai already embodies this at its core: `#:contract` + `ajisai check`, the
+Coreword contract registry (§7.14), and a growing set of consistency tests are
+all "reject before run" structure. Phase 5 is therefore not a new paradigm — it
+is a **systematic sweep**: inventory Ajisai's invariants, mark each as already
+structural or still convention-guarded, and convert the high-scoring
+convention-guarded ones, adapting each to the Ajisai boundary that can reject it.
+
+## The ledger
+
+Status: **S** = already structural (compiler/test/registry enforces it);
+**C** = convention-guarded (prose/authoring/review only), a conversion candidate.
+
+| # | Invariant | Ajisai boundary | Status | Notes |
+|---|-----------|-----------------|--------|-------|
+| 1 | Every Coreword declares partiality / nil_policy / mass | registry consistency test | **S** | `coreword_registry` asserts each is a valid value |
+| 2 | `stability` agrees with `safety_level` | consistency test | **S** | asserted per `BuiltinSpec` doc comment |
+| 3 | Control-directive execution form (`VENT`/`FLOW`) is machine-classified, not prose-parsed | `ExecutionForm` enum + tests | **S** | the codebase's stated pattern: "assert the classification instead of parsing the prose" |
+| 4 | Comparison words share one stack-effect prose | `comparison_words_have_uniform_stack_effect` | **S** | per-family text pin |
+| 5 | Every authored LOOKUP doc names a real builtin | `every_authored_doc_entry_names_a_real_builtin` | **S** | doc→registry reference check |
+| 6 | Opt-in `#:contract` arity/purity/nil/linearity/space checked before run | `ajisai check` | **S** | Phases 1–2 of this roadmap |
+| 7 | Runtime cost ceilings fire diagnosably (steps, materialization water level) | `RuntimeLimits`, Phase 3 | **S** | over-budget materialization bubbles |
+| 8 | Implementation is `unsafe`-free outside one audited island | `#![deny(unsafe_code)]`, Phase 4 | **S** | compiler-enforced |
+| 9 | **Each `hover_syntax` example is a well-formed snippet** | tokenizer consistency test | **C→S (this increment)** | was authoring-only; see below |
+| 10 | Each `hover_syntax` symbol resolves to a real word; the snippet runs without a channel error | consistency test + resolver | **C** | ledger item 5.2 — needs a complete symbol resolver (modifiers, casts, `@`-module words, sugar) and a fragment/complete split, so it stays sound |
+| 11 | `stack_effect` prose arity matches the machine `mass` | consistency test parsing prose | **C** | prose parsing is fragile; scope carefully to avoid false mismatches |
+| 12 | Reference / SPEC runnable examples stay runnable | example-runner harness | **C/partial** | Reference examples are "verified"; audit coverage and extend to inline examples |
+| 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
+
+## What landed in this increment (item 9)
+
+A `hover_syntax` is a runnable example shown to users and AI, but its
+well-formedness was guarded only by authoring review. The tokenizer already
+rejects unbalanced brackets, unclosed string literals, the display-only `( )`
+nested-vector form, and inline `|` COND clauses (which must be one per line), so
+a single consistency test — *every non-empty `hover_syntax` tokenizes* — turns
+"the example is well-formed" from convention into a build-time guarantee.
+
+Writing the test immediately paid for itself: it caught **two real malformed doc
+examples** that review had missed and that would not have run if a user pasted
+them into the Playground:
+
+- `COND`: `1 { TRUE | 'y' } { IDLE | 'n' } COND` used inline `|` clauses →
+  fixed to the block-pair form `1 { TRUE } { 'y' } { IDLE } { 'n' } COND`
+  (verified to run and yield `'y'`).
+- `TRANSPOSE`: `[ ( 1 2 ) ( 3 4 ) ] TRANSPOSE` used the display-only `( )` form →
+  fixed to input syntax `[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE` (verified to run and
+  yield `[ [ 1 3 ] [ 2 4 ] ]`).
+
+Only tokenization is *sound to require of all* snippets, because some are
+deliberate fragments (`. +`, `,, +`) that show modifier syntax and would
+under-flow if executed. The stronger checks (symbol resolution, full execution
+of the complete snippets) are ledger item 10 / 5.2.
+
+## Sequencing
+
+Convert in ledger order of score (locality × single-boundary auto-reject),
+cheapest-sound-first: item 9 (done) → item 10 (symbol resolution) → item 11
+(stack-effect arity, carefully) → item 12/13 (example runner, manifest shape).
+Each stays within the "never a false failure" discipline the rest of the
+`#:contract` tooling already follows.
