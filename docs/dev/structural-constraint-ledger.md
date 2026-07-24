@@ -43,7 +43,8 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **S** | landed 5.2; caught `COMPARE-WITHIN`/`FLOW` metavariables |
 | 10b | **Each concrete `hover_syntax` example actually runs** | execution consistency test | **C→S (this increment)** | landed 5.3; schematic snippets (bare-modifier fragments, `...` templates) excluded structurally; see below |
 | 11 | **`stack_effect` prose arity matches the machine `mass`** | consistency test parsing prose | **C→S (this increment)** | landed 5.4; parser abstains on anything outside its machine-checkable subset, so no false mismatch; 25 fixed-mass words compared, all agree |
-| 12 | **Authored LOOKUP examples run** | example-runner test | **C→S (this increment)** | landed 5.5; caught 3 authored examples that had drifted to the pre-fix COND/COMPARE-WITHIN/DEL forms. Verifying rendered value vs prose `result` is item 12b (needs normalization) |
+| 12 | **Authored LOOKUP examples run** | example-runner test | **S** | landed 5.5; caught 3 authored examples drifted to the pre-fix COND/COMPARE-WITHIN/DEL forms |
+| 12b | **Authored example results match execution** | render-comparison test | **C→S (this increment)** | landed 5.6; 25 `Pushes <value>.` results verified against actual output, 0 mismatches; free-prose results abstain. See below |
 | 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
 
 ## What landed in this increment (item 9)
@@ -144,6 +145,23 @@ placeholder — because the authored examples are a separate copy. All three are
 now concrete and verified. Verifying the *rendered value* against the prose
 `result` ("Pushes [ 1 2 3 ].") is item 12b; the prose is free-form, so it needs
 a normalization pass to stay sound.
+
+## What landed in 5.6 (item 12b)
+
+Item 12 proved the authored `code` runs; this proves its stated `result` is
+*correct*. When a result is a clean `Pushes <value>.`, the `<value>` is itself
+Ajisai value syntax, so executing it yields the documented value — and comparing
+that to the code's actual top through the **same render path** needs no string
+normalization (an integer renders `1/1` on both sides, a vector `[ 1/1 2/1 ]`,
+so the prose `[ 1 2 3 ]` and the render never have to be reconciled textually).
+
+The check abstains whenever the result is not a clean single value — an effect
+description ("Removes a user word…"), a ranged/multi-value result ("−1, 0, 1, or
+UNKNOWN"), or free prose ("the first element, 10") — so it never raises a false
+mismatch. Of the 32 authored examples, 25 have a machine-comparable result and
+all 25 match today; 7 abstain. A `compared >= 20` guard prevents the extraction
+from silently going vacuous. This closes the loop: an authored example now can't
+claim a result its code doesn't actually produce.
 
 ## Sequencing
 

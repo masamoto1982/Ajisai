@@ -233,3 +233,65 @@ async fn every_authored_example_runs() {
         }
     }
 }
+
+/// Execute `code` on a fresh interpreter and return the render of its top stack
+/// value, or `None` if it raised or left an empty stack.
+async fn execute_top_render(code: &str) -> Option<String> {
+    let mut interp = Interpreter::new();
+    interp.execute(code).await.ok()?;
+    crate::types::display::render_stack(interp.get_stack())
+        .last()
+        .cloned()
+}
+
+/// Execute `code` and return its top render *only if it produced exactly one
+/// value* — used to interpret a documented `Pushes <value>.` as a single value.
+async fn execute_single_value_render(code: &str) -> Option<String> {
+    let mut interp = Interpreter::new();
+    interp.execute(code).await.ok()?;
+    let stack = crate::types::display::render_stack(interp.get_stack());
+    (stack.len() == 1).then(|| stack[0].clone())
+}
+
+#[tokio::test]
+async fn authored_example_results_match_execution() {
+    // Structural-constraint ledger item 12b (convention -> structure): item 12
+    // proved the authored `code` runs; this proves its stated `result` is
+    // correct. When the result is a clean `Pushes <value>.`, the `<value>` is
+    // itself Ajisai value syntax, so executing it yields the documented value —
+    // and comparing it to the code's actual top through the *same* render path
+    // needs no string normalization (an integer renders as `1/1` on both sides).
+    // The check abstains whenever the result prose is not a clean single value
+    // (an effect description, a ranged or multi-value result, or free prose like
+    // "the first element, 10"), so it never raises a false mismatch.
+    let mut compared = 0u32;
+    for doc in super::builtin_word_lookup_docs::builtin_lookup_docs() {
+        for example in doc.examples {
+            let Some(value_src) = example
+                .result
+                .strip_prefix("Pushes ")
+                .and_then(|rest| rest.strip_suffix('.'))
+            else {
+                continue; // not a "Pushes <value>." result
+            };
+            let Some(expected) = execute_single_value_render(value_src).await else {
+                continue; // the documented result is not a single concrete value
+            };
+            let Some(actual) = execute_top_render(example.code).await else {
+                continue; // the example itself does not leave a value (item 12's job)
+            };
+            compared += 1;
+            assert_eq!(
+                expected, actual,
+                "{}: `{}` is documented to push `{}` (which renders as `{}`) \
+                 but actually pushes `{}`",
+                doc.word, example.code, value_src, expected, actual
+            );
+        }
+    }
+    assert!(
+        compared >= 20,
+        "authored-result value check only compared {compared} examples; \
+         the `Pushes <value>.` extraction may have regressed"
+    );
+}
