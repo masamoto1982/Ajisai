@@ -16,15 +16,19 @@
 //! ```
 //!
 //! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
-//! [linearity]`, where `purity` is one of `pure` / `observable` / `effectful`,
-//! `nil` is `nil-free` / `may-nil`, and `linearity` is
+//! [linearity] [space]`, where `purity` is one of `pure` / `observable` /
+//! `effectful`, `nil` is `nil-free` / `may-nil`, `linearity` is
 //! `linear` / `affine` / `droppable` (the resource-ownership axis; see
-//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1). Each part is
+//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1), and `space` is
+//! `space:const` / `space:linear` / `space:superlinear` / `space:unbounded`
+//! (the static-footprint axis; see `docs/dev/space-contract-design.md` Phase 2).
+//! Each part is
 //! optional; the fields left out are not checked. Because inference is
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
 use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
+use super::contract_space::{check_space, space_from_word, SpaceClass};
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::modules;
@@ -45,6 +49,8 @@ pub(crate) struct ContractDecl {
     pub nil_free: Option<bool>,
     /// Declared resource linearity, or `None` when the directive omits it.
     pub linearity: Option<Linearity>,
+    /// Declared static-footprint class, or `None` when the directive omits it.
+    pub space: Option<SpaceClass>,
     /// The original directive text, for diagnostics.
     pub raw: String,
 }
@@ -128,6 +134,7 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             purity: None,
             nil_free: None,
             linearity: None,
+            space: None,
             raw: raw.clone(),
         };
         let mut malformed: Option<String> = None;
@@ -166,9 +173,11 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
                         decl.purity = Some(p);
                     } else if let Some(l) = linearity_from_word(other) {
                         decl.linearity = Some(l);
+                    } else if let Some(s) = space_from_word(other) {
+                        decl.space = Some(s);
                     } else {
                         malformed = Some(format!(
-                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, or `linear`/`affine`/`droppable`)"
+                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, `linear`/`affine`/`droppable`, or `space:const`/`space:linear`/`space:superlinear`/`space:unbounded`)"
                         ));
                         break;
                     }
@@ -460,6 +469,10 @@ fn check_one(
 
     if let Some(linearity) = decl.linearity {
         check_linearity(interp, decl, linearity, lang, findings);
+    }
+
+    if let Some(space) = decl.space {
+        check_space(decl, space, lang, findings);
     }
 }
 

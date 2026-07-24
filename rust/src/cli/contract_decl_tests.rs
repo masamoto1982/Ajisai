@@ -2,6 +2,7 @@
 
 use super::contract_decl::{check_contract_decls, parse_contract_directives};
 use super::contract_linearity::Linearity;
+use super::contract_space::SpaceClass;
 use super::explain::Lang;
 use super::plan_check::Severity;
 use crate::interpreter::word_contract::ContractPurity;
@@ -122,6 +123,65 @@ fn droppable_opts_out_of_the_discipline() {
         .findings
         .iter()
         .any(|f| f.severity == Severity::Note && f.message.contains("droppable")));
+}
+
+#[test]
+fn parses_space_class_terms() {
+    for (term, expected) in [
+        ("space:const", SpaceClass::Const),
+        ("space:linear", SpaceClass::Linear),
+        ("space:superlinear", SpaceClass::Superlinear),
+        ("space:unbounded", SpaceClass::Unbounded),
+    ] {
+        let src = format!("#:contract W ( 1 -- 1 ) pure {term}\n");
+        let (decls, errs) = parse_contract_directives(&src);
+        assert!(errs.is_empty(), "unexpected errors for `{term}`: {errs:?}");
+        assert_eq!(decls.len(), 1);
+        assert_eq!(decls[0].space, Some(expected), "term `{term}`");
+        // The other axes still parse alongside the space class.
+        assert_eq!(decls[0].arity, Some((1, 1)));
+        assert_eq!(decls[0].purity, Some(ContractPurity::Pure));
+    }
+}
+
+#[test]
+fn space_class_coexists_with_linearity_without_collision() {
+    // `space:linear` must not be confused with the bare `linear` linearity term.
+    let (decls, errs) = parse_contract_directives("#:contract W linear space:linear\n");
+    assert!(errs.is_empty(), "unexpected errors: {errs:?}");
+    assert_eq!(decls[0].linearity, Some(Linearity::Linear));
+    assert_eq!(decls[0].space, Some(SpaceClass::Linear));
+}
+
+#[test]
+fn space_is_optional_and_defaults_to_none() {
+    let (decls, errs) = parse_contract_directives("#:contract W ( 1 -- 1 ) pure\n");
+    assert!(errs.is_empty());
+    assert_eq!(decls[0].space, None);
+}
+
+#[test]
+fn declared_space_surfaces_as_a_note_never_an_error() {
+    // Increment 2.1 records the axis without inference, so a declared space
+    // class must never produce an `error` finding — only an informational note.
+    let src = "#:contract MAKE ( 0 -- 1 ) space:unbounded\n{ [ 42 ] } 'MAKE' DEF\n";
+    let check = check_contract_decls(src, Lang::En);
+    assert!(
+        !check.violated,
+        "a recorded space class must not violate the contract check"
+    );
+    assert!(
+        check
+            .findings
+            .iter()
+            .any(|f| f.severity == Severity::Note && f.message.contains("space:unbounded")),
+        "the declared space class should be surfaced as a note: {:?}",
+        check
+            .findings
+            .iter()
+            .map(|f| &f.message)
+            .collect::<Vec<_>>()
+    );
 }
 
 #[test]
