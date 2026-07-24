@@ -211,7 +211,7 @@ program (then the short name works), or can be called fully qualified.
 | `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
 | `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
 | `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
-| `COMPARE-WITHIN` | comparison | Three-way compare two values within an explicit observation budget. — e.g. `a b 64 COMPARE-WITHIN` |
+| `COMPARE-WITHIN` | comparison | Three-way compare two values within an explicit observation budget. — e.g. `1/3 1/2 64 COMPARE-WITHIN` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
 | `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 <=` |
@@ -223,7 +223,7 @@ program (then the short name works), or can be called fully qualified.
 | `NOT` | logic | Logical negation. — e.g. `TRUE NOT` |
 | `IDLE` | control | Pass control through unchanged (no-op). — e.g. `IDLE` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
-| `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `xs ~ { ... } MAP` |
+| `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `[ 1 2 3 ] ~ { [ 2 ] * } MAP` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip \
              the following source unit; on a NIL top, discard it and evaluate \
              the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |

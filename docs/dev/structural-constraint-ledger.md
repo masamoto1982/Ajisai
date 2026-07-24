@@ -39,8 +39,8 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 6 | Opt-in `#:contract` arity/purity/nil/linearity/space checked before run | `ajisai check` | **S** | Phases 1–2 of this roadmap |
 | 7 | Runtime cost ceilings fire diagnosably (steps, materialization water level) | `RuntimeLimits`, Phase 3 | **S** | over-budget materialization bubbles |
 | 8 | Implementation is `unsafe`-free outside one audited island | `#![deny(unsafe_code)]`, Phase 4 | **S** | compiler-enforced |
-| 9 | **Each `hover_syntax` example is a well-formed snippet** | tokenizer consistency test | **C→S (this increment)** | was authoring-only; see below |
-| 10 | Each `hover_syntax` symbol resolves to a real word; the snippet runs without a channel error | consistency test + resolver | **C** | ledger item 5.2 — needs a complete symbol resolver (modifiers, casts, `@`-module words, sugar) and a fragment/complete split, so it stays sound |
+| 9 | **Each `hover_syntax` example is a well-formed snippet** | tokenizer consistency test | **S** | landed 5.1; caught the `COND`/`TRANSPOSE` bugs |
+| 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **C→S (this increment)** | landed 5.2; see below. Full *execution* of the non-fragment snippets remains item 10b (needs a fragment/complete split to stay sound) |
 | 11 | `stack_effect` prose arity matches the machine `mass` | consistency test parsing prose | **C** | prose parsing is fragile; scope carefully to avoid false mismatches |
 | 12 | Reference / SPEC runnable examples stay runnable | example-runner harness | **C/partial** | Reference examples are "verified"; audit coverage and extend to inline examples |
 | 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
@@ -67,8 +67,28 @@ them into the Playground:
 
 Only tokenization is *sound to require of all* snippets, because some are
 deliberate fragments (`. +`, `,, +`) that show modifier syntax and would
-under-flow if executed. The stronger checks (symbol resolution, full execution
-of the complete snippets) are ledger item 10 / 5.2.
+under-flow if executed.
+
+## What landed in 5.2 (item 10)
+
+A second consistency test requires every `Symbol` a `hover_syntax` names to
+resolve, after alias canonicalization, to a Coreword-registry entry — covering
+operators (`+`), modifiers (`. ,,`), casts (`>CF`), and `@`-module words
+(`MATH@SQRT`), which all canonicalize to registry entries. It catches a doc
+example that references a removed or misspelled word, and it forces every example
+to be a *concrete* runnable snippet rather than a schematic one.
+
+Writing it exposed two more non-runnable examples that used metavariable
+placeholders — `COMPARE-WITHIN`'s `a b 64 COMPARE-WITHIN` and `FLOW`'s
+`xs ~ { ... } MAP`. Both are now concrete and verified to run:
+`1/3 1/2 64 COMPARE-WITHIN` → `-1/1`, and `[ 1 2 3 ] ~ { [ 2 ] * } MAP` →
+`[ 2 4 6 ]`. Every `hover_syntax` in the registry now both tokenizes and names
+only real words.
+
+Full *execution* of the non-fragment snippets (item 10b) still needs a
+sound fragment/complete split (a `. +` fragment would under-flow), so it is
+deferred; the resolution check already forces concreteness, which is most of
+the value.
 
 ## Sequencing
 
