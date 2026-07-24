@@ -42,7 +42,7 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 9 | **Each `hover_syntax` example is a well-formed snippet** | tokenizer consistency test | **S** | landed 5.1; caught the `COND`/`TRANSPOSE` bugs |
 | 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **S** | landed 5.2; caught `COMPARE-WITHIN`/`FLOW` metavariables |
 | 10b | **Each concrete `hover_syntax` example actually runs** | execution consistency test | **C→S (this increment)** | landed 5.3; schematic snippets (bare-modifier fragments, `...` templates) excluded structurally; see below |
-| 11 | `stack_effect` prose arity matches the machine `mass` | consistency test parsing prose | **C** | prose parsing is fragile; scope carefully to avoid false mismatches |
+| 11 | **`stack_effect` prose arity matches the machine `mass`** | consistency test parsing prose | **C→S (this increment)** | landed 5.4; parser abstains on anything outside its machine-checkable subset, so no false mismatch; 25 fixed-mass words compared, all agree |
 | 12 | Reference / SPEC runnable examples stay runnable | example-runner harness | **C/partial** | Reference examples are "verified"; audit coverage and extend to inline examples |
 | 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
 
@@ -112,6 +112,22 @@ words (item 10), and runs (item 10b). Fully de-schematising the remaining
 templates (`FORC`, `UNFOLD`, `PRECOMPUTE`) into runnable examples is a possible
 follow-up, but each needs care (protected-entry force, a convergent generator, a
 definition-time context), so they stay honestly marked schematic for now.
+
+## What landed in 5.4 (item 11)
+
+The human-facing `stack_effect` prose (`[ start end ] -> [ seq ]`) and the
+machine `mass` contract (SPEC §13.1, `Fixed { consumes, produces }`) are two
+descriptions of one word's arity that could drift. A consistency test now parses
+the arity out of the prose and requires it to equal the `mass` for every
+`Fixed`-mass word. The prose DSL is regular enough to parse — `LHS -> RHS`, each
+side a sequence of `[ … ]` / `{ … }` groups — and the parser **abstains** on
+anything outside that subset (variadic `...`, annotations `(…)`, control-
+directive prose, multi-arrow), so it never raises a false mismatch: it fires
+only when the two descriptions provably disagree. Of the 98 built-ins, 73 have a
+`Dynamic` mass (no fixed arity to check) and 25 are `Fixed`; all 25 parse and all
+agree today, so the check locks the invariant against future drift. A coverage
+guard (`compared >= 20`) keeps the check from silently going vacuous if the
+parser ever regresses into abstaining.
 
 ## Sequencing
 
