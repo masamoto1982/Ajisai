@@ -222,7 +222,7 @@ program (then the short name works), or can be called fully qualified.
 | `OR` | logic | Logical OR with three-valued (Kleene) NIL handling. — e.g. `TRUE FALSE OR` |
 | `NOT` | logic | Logical negation. — e.g. `TRUE NOT` |
 | `IDLE` | control | Pass control through unchanged (no-op). — e.g. `IDLE` |
-| `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE | 'y' } { IDLE | 'n' } COND` |
+| `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `xs ~ { ... } MAP` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip \
              the following source unit; on a NIL top, discard it and evaluate \
@@ -244,7 +244,7 @@ program (then the short name works), or can be called fully qualified.
 | `SHAPE` | tensor | Return a vector describing the dimensions of a value. — e.g. `[ 1 2 3 ] SHAPE` |
 | `RANK` | tensor | Return the number of dimensions of a value. — e.g. `[ [ 1 2 ] ] RANK` |
 | `RESHAPE` | tensor | Reshape a vector to a target shape with the same total length. — e.g. `[ 1 2 3 4 ] [ 2 2 ] RESHAPE` |
-| `TRANSPOSE` | tensor | Transpose the axes of a tensor. — e.g. `[ ( 1 2 ) ( 3 4 ) ] TRANSPOSE` |
+| `TRANSPOSE` | tensor | Transpose the axes of a tensor. — e.g. `[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE` |
 | `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
 | `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
