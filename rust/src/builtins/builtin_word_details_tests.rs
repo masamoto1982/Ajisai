@@ -204,3 +204,32 @@ fn fixed_stack_effect_prose_matches_the_machine_mass() {
          the prose parser may have regressed into abstaining"
     );
 }
+
+#[tokio::test]
+async fn every_authored_example_runs() {
+    // Structural-constraint ledger item 12 (convention -> structure): the
+    // authored LOOKUP examples carry a runnable `code` and an expected `result`,
+    // but the `code` was previously only rendered into docs, never executed — so
+    // it could drift or break unseen (indeed it had drifted: three examples
+    // carried the pre-fix COND/COMPARE-WITHIN/DEL forms). This runs every
+    // authored example on a fresh interpreter and requires it to execute without
+    // a channel error, extending the item-10b guarantee to the authored corpus.
+    // (Verifying the rendered value against the prose `result` is item 12b; the
+    // prose is free-form, so it needs a normalization pass to stay sound.)
+    for doc in super::builtin_word_lookup_docs::builtin_lookup_docs() {
+        for example in doc.examples {
+            if is_schematic(example.code) {
+                continue;
+            }
+            let mut interp = Interpreter::new();
+            let result = interp.execute(example.code).await;
+            assert!(
+                result.is_ok(),
+                "{}: authored example `{}` does not run: {}",
+                doc.word,
+                example.code,
+                result.unwrap_err()
+            );
+        }
+    }
+}
