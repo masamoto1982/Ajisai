@@ -43,7 +43,7 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **S** | landed 5.2; caught `COMPARE-WITHIN`/`FLOW` metavariables |
 | 10b | **Each concrete `hover_syntax` example actually runs** | execution consistency test | **C→S (this increment)** | landed 5.3; schematic snippets (bare-modifier fragments, `...` templates) excluded structurally; see below |
 | 11 | **`stack_effect` prose arity matches the machine `mass`** | consistency test parsing prose | **C→S (this increment)** | landed 5.4; parser abstains on anything outside its machine-checkable subset, so no false mismatch; 25 fixed-mass words compared, all agree |
-| 12 | Reference / SPEC runnable examples stay runnable | example-runner harness | **C/partial** | Reference examples are "verified"; audit coverage and extend to inline examples |
+| 12 | **Authored LOOKUP examples run** | example-runner test | **C→S (this increment)** | landed 5.5; caught 3 authored examples that had drifted to the pre-fix COND/COMPARE-WITHIN/DEL forms. Verifying rendered value vs prose `result` is item 12b (needs normalization) |
 | 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
 
 ## What landed in this increment (item 9)
@@ -128,6 +128,22 @@ only when the two descriptions provably disagree. Of the 98 built-ins, 73 have a
 agree today, so the check locks the invariant against future drift. A coverage
 guard (`compared >= 20`) keeps the check from silently going vacuous if the
 parser ever regresses into abstaining.
+
+## What landed in 5.5 (item 12)
+
+The authored LOOKUP examples (`builtin_word_lookup_docs.rs`) carry a runnable
+`code` and an expected `result`, but the `code` was only ever *rendered* into
+docs, never executed — so it could drift or break unseen. A test now runs every
+authored example on a fresh interpreter and requires it to execute without a
+channel error, extending the item-10b guarantee to the authored corpus.
+
+It confirmed the drift risk is real: three authored examples still carried the
+*pre-fix* forms that items 9/10/10b corrected in `hover_syntax` — `COND`'s inline
+`|` clauses, `COMPARE-WITHIN`'s `a b` metavariables, and `DEL`'s `'WORD'`
+placeholder — because the authored examples are a separate copy. All three are
+now concrete and verified. Verifying the *rendered value* against the prose
+`result` ("Pushes [ 1 2 3 ].") is item 12b; the prose is free-form, so it needs
+a normalization pass to stay sound.
 
 ## Sequencing
 

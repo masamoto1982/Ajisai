@@ -212,7 +212,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "COMPARE-WITHIN",
         behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. Every value the current vocabulary can\nconstruct decides regardless of the budget; the budget bounds\nthe refinement of future general computable reals, whose\nexhaustion yields UNKNOWN.",
         examples: &[BuiltinExampleDoc {
-            code: "a b 64 COMPARE-WITHIN",
+            code: "1/3 1/2 64 COMPARE-WITHIN",
             result: "Pushes -1, 0, 1, or UNKNOWN.",
         }],
         failure_note: "UNKNOWN is a value, not an error: it reports that the\nrequested depth was reached before the order was decided.",
@@ -274,7 +274,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "COND",
         behavior: "Reads guard/body clause pairs in order. The first guard\nthat holds selects its body; IDLE marks the else clause.\nIn a tail position the selected body continues the loop\nwithout growing the stack.",
         examples: &[BuiltinExampleDoc {
-            code: "1 { TRUE | 'y' } { IDLE | 'n' } COND",
+            code: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
             result: "Pushes 'y'.",
         }],
         failure_note: "When every guard fails and no else clause exists, COND\nraises an error.",
@@ -325,8 +325,8 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "DEL",
         behavior: "Pops the name and deletes that user word from the\ndictionary.",
         examples: &[BuiltinExampleDoc {
-            code: "'WORD' DEL",
-            result: "Removes WORD from the dictionary.",
+            code: "{ [ 1 ] } 'W' DEF 'W' DEL",
+            result: "Defines a word, then removes it from the dictionary.",
         }],
         failure_note: "Deleting a built-in word is refused. Deleting a word other\nwords depend on requires FORC.",
         related: &["DEF", "FORC", "LOOKUP"],
