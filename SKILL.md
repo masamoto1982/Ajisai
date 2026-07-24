@@ -193,7 +193,7 @@ program (then the short name works), or can be called fully qualified.
 | `NIL-ORIGIN` | absence | Read the origin of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-ORIGIN` |
 | `NIL-RECOVERABLE?` | absence | Read the recoverability of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-RECOVERABLE?` |
 | `NIL-DIAGNOSIS` | absence | Read the three-layer debug diagnosis of an operational NIL as a Record. — e.g. `1 0 / NIL-DIAGNOSIS` |
-| `>CF` | conversion | Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2). — e.g. `2 MATH@SQRT >CF` |
+| `>CF` | conversion | Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2). — e.g. `1/3 >CF` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
@@ -238,7 +238,7 @@ program (then the short name works), or can be called fully qualified.
 | `PRINT` | io | Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack. — e.g. `42 PRINT` |
 | `PRECOMPUTE` | Control / Staging | Definition-time staging marker (not a macro). — e.g. `{ ... } PRECOMPUTE` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
-| `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `'WORD' DEL` |
+| `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
 | `FORC` | control | Force destructive dictionary operations to apply. — e.g. `! 'WORD' DEL` |
 | `SHAPE` | tensor | Return a vector describing the dimensions of a value. — e.g. `[ 1 2 3 ] SHAPE` |
