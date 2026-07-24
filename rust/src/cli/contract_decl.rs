@@ -472,7 +472,7 @@ fn check_one(
     }
 
     if let Some(space) = decl.space {
-        check_space(decl, space, lang, findings);
+        check_space(decl, space, &contract, lang, findings);
     }
 }
 

@@ -40,6 +40,7 @@ enforced `unsafe` floor — plus a systematic convention→structure sweep.
 | 5.5 | Authored LOOKUP examples **run** (item 12) — found & fixed 3 drifted authored examples | #1341 |
 | 5.6 | Authored example **results match execution** (item 12b) | #1342 |
 | 5.7 | Manifest capability allow-list **validated at parse** (item 13) | #1343 |
+| 2.2 | Space inference **enforced**: provenance-aware slot simulation gives every word a sound growth-class bound with an exactness witness; `ajisai check` rejects a declaration the inference provably exceeds, notes an unprovable one; spec §7.14 "Space growth" paragraph | (this PR) |
 
 Net: 4 language/runtime/impl phases + the full ledger sweep. The Phase 5 sweep
 alone caught **7 real defects** (5 broken doc examples across two separate
@@ -50,18 +51,19 @@ Most Phase 5 checks live in `rust/src/builtins/builtin_word_details_tests.rs`
 
 ## What REMAINS (recommended order)
 
-### Phase 2.2 — space inference/enforcement (the big one, deferred for a reason)
-Wire inference so the `space:*` axis (2.1) becomes enforced. **This was
-deliberately not rushed:** sound enforcement needs real dataflow. The trap:
-`RANGE`/`FILL` materialize a length set by a numeric *value*, so
-`[ 0 10 ] RANGE` is `const` (input-independent) while `X RANGE` is `unbounded` —
-and `[ 0 10 ] DUP RANGE` is still `const`. Deciding "unbounded" soundly (the only
-direction that can *error*) requires tracking whether a materializer's argument
-is input-derived. A naive "RANGE ⇒ unbounded" rule produces **false errors**,
-which violates the project's core invariant. Plan: a `WordContract` space
-dimension widened over the body, with confidence dropping to `Conservative`
-(→ note, not error) on higher-order/recursive/unresolved bodies. Start from
-`space-contract-design.md` §"Increment plan" 2.2.
+### Phase 2.3 — precise value-parametric `f(shape)` (deepening)
+Phase 2.2 landed the coarse growth-class enforcement (see the DONE table). The
+inference (`rust/src/interpreter/word_space.rs`) tracks slot provenance
+(literal / input / unknown) and carries an exactness witness, so
+`[ 0 10 ] RANGE` proves `const`, a bare `RANGE` proves `unbounded`, and anything
+it cannot model (higher-order, recursion, unresolved, lazy `^`/COND paths)
+degrades soundly to a note. The remaining refinement is to turn `unbounded` into
+a value-parametric bound where the constraining numeric value is statically
+known — the precise `f(shape)` of `space-contract-design.md` §"Increment plan"
+2.3. Two calibration notes for whoever picks this up: `RANGE`/`FILL` are
+`Dynamic`-mass, so the sim carries a small `space_arity_override` to inspect
+their operand at all; and the coarse builtin `tight` flags in `builtin_space`
+are the audited surface that licenses an `error`, so widen them only with a probe.
 
 ### Ledger finishing touches (small, optional)
 - **`FORC`/`UNFOLD`/`PRECOMPUTE` concretization** — these three `hover_syntax`

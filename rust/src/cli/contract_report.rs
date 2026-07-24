@@ -15,6 +15,7 @@ use crate::interpreter::word_contract::{
     ContractConfidence, ContractDeterminism, ContractFlow, ContractPurity, NilBehavior,
     OrderSensitivity,
 };
+use crate::interpreter::word_space::SpaceClass;
 
 /// One user word's inferred contract, rendered into stable labels.
 pub(crate) struct WordReport {
@@ -25,6 +26,8 @@ pub(crate) struct WordReport {
     pub determinism: &'static str,
     pub nil: &'static str,
     pub order: &'static str,
+    /// The inferred space-growth class (`space:const` … `space:unbounded`).
+    pub space: &'static str,
     pub effects: Vec<String>,
     pub confidence: &'static str,
     /// A `#:contract` directive line that codifies the checkable subset of this
@@ -47,6 +50,15 @@ fn nil_label(n: NilBehavior) -> &'static str {
         NilBehavior::MayCreate => "may-create-nil",
         NilBehavior::RejectsNil => "rejects-nil",
         NilBehavior::ConsumesNil => "consumes-nil",
+    }
+}
+
+fn space_label(class: SpaceClass) -> &'static str {
+    match class {
+        SpaceClass::Const => "space:const",
+        SpaceClass::Linear => "space:linear",
+        SpaceClass::Superlinear => "space:superlinear",
+        SpaceClass::Unbounded => "space:unbounded",
     }
 }
 
@@ -78,6 +90,12 @@ fn suggested_directive(
     if let Some(nil) = nil {
         parts.push(nil.to_string());
     }
+    // Only codify the space class when the inference *proves* the bound is
+    // attained; an unproven upper bound would only ever check as a note, so
+    // suggesting it would invite a declaration weaker than the checker verifies.
+    if contract.space_exact {
+        parts.push(space_label(contract.space).to_string());
+    }
     parts.join(" ")
 }
 
@@ -103,6 +121,7 @@ pub(crate) fn report_contracts(source: &str) -> Vec<WordReport> {
                 OrderSensitivity::OrderIndependent => "order-independent",
                 OrderSensitivity::OrderSensitive => "order-sensitive",
             },
+            space: space_label(contract.space),
             effects: contract.effects.clone(),
             confidence: match contract.confidence {
                 ContractConfidence::Complete => "complete",
@@ -127,6 +146,7 @@ pub(crate) fn reports_json(reports: &[WordReport]) -> serde_json::Value {
                     "determinism": r.determinism,
                     "nil": r.nil,
                     "order": r.order,
+                    "space": r.space,
                     "effects": r.effects,
                     "confidence": r.confidence,
                     "suggested": r.suggested,

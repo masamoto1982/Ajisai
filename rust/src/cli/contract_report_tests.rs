@@ -15,7 +15,21 @@ fn reports_a_pure_arithmetic_word() {
     assert_eq!(r.arity, "( 1 -- 1 )");
     assert_eq!(r.purity, "pure");
     assert_eq!(r.determinism, "deterministic");
+    assert_eq!(r.space, "space:linear");
     assert_eq!(r.confidence, "complete");
+}
+
+#[test]
+fn reports_the_inferred_space_class_and_suggests_it_when_proven() {
+    // A literal-driven RANGE is provably const, so the report both names the
+    // class and codifies it in the suggested directive.
+    let r = report_for("{ [ 0 10 ] RANGE } 'SEQ' DEF\n", "SEQ");
+    assert_eq!(r.space, "space:const");
+    assert!(
+        r.suggested.contains("space:const"),
+        "a proven space class should be suggested: {}",
+        r.suggested
+    );
 }
 
 #[test]
