@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:b14e87144db827f892f7f22a946b4a4ab688339face05b2d021ff2b53baf4a36",
-  "fileCount": 355,
+  "rootIdentity": "sha256:1152b6f1ec1cf1897432c4fe0d8198c772cfb67e7975b876eef4ab6cfc86a6f2",
+  "fileCount": 357,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -39,8 +39,8 @@
     },
     {
       "path": "SPECIFICATION.html",
-      "sha256": "e1c081696614a135f4e97feeec36a0a7f5360759e15eec8315ca6a21201a14b3",
-      "bytes": 246630
+      "sha256": "31cb49410c0d6dd37448d56c8c3b34741c2f4d020000dbcda3fda9473cd0d652",
+      "bytes": 248142
     },
     {
       "path": "eslint.config.js",
@@ -109,13 +109,13 @@
     },
     {
       "path": "rust/src/cli/contract_decl.rs",
-      "sha256": "bc6a198d6cae82b62510d3d66d2da8cdfc0b135ecc4898e8ca6e0e5c0c4100ce",
-      "bytes": 19001
+      "sha256": "c8213a2e072eaa52884c91784e9928ed450b78bc1b4fd105043826da0be60b7b",
+      "bytes": 19012
     },
     {
       "path": "rust/src/cli/contract_decl_tests.rs",
-      "sha256": "1bc8db288867e27665ec02b3ee7f5032434c6ee77f028d569fa984298067e545",
-      "bytes": 10247
+      "sha256": "bbce7dd41e0ec420387b364bccb019042f3bda4572a2e7565ae2c80193b779f1",
+      "bytes": 12542
     },
     {
       "path": "rust/src/cli/contract_linearity.rs",
@@ -124,18 +124,18 @@
     },
     {
       "path": "rust/src/cli/contract_report.rs",
-      "sha256": "91c9bf9f16d30eafdfd9d7a5372162b825d89aae372a23ffad54348014e6f4ec",
-      "bytes": 5361
+      "sha256": "44b26637519230e0719a6afa434d3c85e10ad8178084fc071bf3993b812b0483",
+      "bytes": 6212
     },
     {
       "path": "rust/src/cli/contract_report_tests.rs",
-      "sha256": "cc874c8debc27eb2db7935d56a547930a2810d800893b151719cebc8254e6cc6",
-      "bytes": 2714
+      "sha256": "76ededbbf3044db8eae3e62b7491d392295b8e13f0749ab5d270eea41765d0dd",
+      "bytes": 3215
     },
     {
       "path": "rust/src/cli/contract_space.rs",
-      "sha256": "2a904c28dd2e2a81ae7e1d71621c0066ac20e4d732df5af95f3dcff2d6a05849",
-      "bytes": 3230
+      "sha256": "845a235dfa346b3c487005cec78e962d5cad50fcf8814519118aaad48d53707e",
+      "bytes": 6624
     },
     {
       "path": "rust/src/cli/coverage.rs",
@@ -184,8 +184,8 @@
     },
     {
       "path": "rust/src/cli/mod.rs",
-      "sha256": "690284bfe033c3c10943a51b14cf9bccdc57f5710ef41b03cd0f09d86382e64f",
-      "bytes": 35245
+      "sha256": "80dd6720ea135d33236ffd4189c93b5c5ba69d71e534dde78646b41c94db2cc2",
+      "bytes": 35257
     },
     {
       "path": "rust/src/cli/modifier.rs",
@@ -829,8 +829,8 @@
     },
     {
       "path": "rust/src/interpreter/mod.rs",
-      "sha256": "0694a69009504048eae0562edb874616a836193319377addff2abb49e1defb28",
-      "bytes": 4217
+      "sha256": "3475cf79c339f29d4b978a1adeaff208326db3e3104c70ee39c1511207da0986",
+      "bytes": 4272
     },
     {
       "path": "rust/src/interpreter/module_catalog_tests.rs",
@@ -1094,8 +1094,8 @@
     },
     {
       "path": "rust/src/interpreter/word_contract.rs",
-      "sha256": "411282d4ed5408ff1f6183dc49a33718d06c1402e4ad638e72d2c6f9e3c5b15d",
-      "bytes": 15771
+      "sha256": "2bb1493deeb2e209b6dc19c0272ba5df0cb1609445e5856a8719eeeb9569e281",
+      "bytes": 16990
     },
     {
       "path": "rust/src/interpreter/word_contract_lattice.rs",
@@ -1111,6 +1111,16 @@
       "path": "rust/src/interpreter/word_identity.rs",
       "sha256": "cabaf1ba0ecfb8f4b38e122657dad5e750df27cdbcb9aa8cd4422eabbc3ac512",
       "bytes": 18136
+    },
+    {
+      "path": "rust/src/interpreter/word_space.rs",
+      "sha256": "b39494aecd7d6012596ca33b5b261e7a28101dd754ba9635e757193d750cc98d",
+      "bytes": 18902
+    },
+    {
+      "path": "rust/src/interpreter/word_space_tests.rs",
+      "sha256": "b4bbcb9aabd44027dae75e962c25860c030435d9f239f6b221e1f4bd48420b40",
+      "bytes": 4277
     },
     {
       "path": "rust/src/json_io_tests.rs",

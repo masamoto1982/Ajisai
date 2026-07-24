@@ -95,6 +95,20 @@ inferable, declarable, and checkable — the same shape the `nil-free`/`may-nil`
 check already has, but over allocation. Surface: `ajisai check --space`; contract
 term carries a footprint bound `f(shape)`.
 
+**Done (2.1 + 2.2).** The `#:contract` grammar carries a coarse growth class
+(`space:const`/`linear`/`superlinear`/`unbounded`; `contract_space.rs`), and
+`ajisai check` now *enforces* it against inference. A provenance-aware slot
+simulation (`rust/src/interpreter/word_space.rs`), folded into the existing
+execution-free contract walk, distinguishes an input-independent materialization
+(`[ 0 10 ] RANGE` → `const`) from a value-driven one (bare `RANGE`/`FILL` →
+`unbounded`) — the exact trap Phase 2 had to clear — and carries an exactness
+witness so a declaration the inference *provably* exceeds is an `error` while an
+unprovable bound (higher-order, recursion, unresolved) is a `note`, never a false
+error. Spec: the "Space growth (opt-in contract discipline)" paragraph in §7.14,
+cross-referencing the Water Levels table (Phase 3) as the runtime companion. See
+`space-contract-design.md` for the cost model. **Next (2.3):** a precise
+value-parametric `f(shape)` where the constraining value is statically known.
+
 ## Phase 3 — Exhaustion as a bubble, not a crash — beyond Rust
 
 **Problem Rust leaves open.** Rust aborts the process on OOM by default —

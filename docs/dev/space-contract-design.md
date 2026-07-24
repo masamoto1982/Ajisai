@@ -79,13 +79,22 @@ matching every other `#:contract` axis.
    `contract_linearity.rs`). Additive, non-breaking. Inference is not wired yet,
    so a declared class is surfaced as a `note`, never a false `error` —
    preserving the module invariant.
-2. **Next (2.2).** Inference: assign each built-in a space class (from the
-   registry; `RANGE`/`FILL` = `unbounded`, structure/movement words = `const` or
-   `linear`), then infer a user word's class by widening over its body's
-   dependency classes (monotone join, like the existing contract lattice).
-   `ajisai check` reports a declaration the inference *exceeds* as an `error`
-   (declared `const` but inference shows `unbounded`), an unprovable one as a
-   `note`.
+2. **Done (2.2).** Inference (`rust/src/interpreter/word_space.rs`): each
+   built-in carries a space class keyed on its `BuiltinExecutorKey`
+   (`RANGE`/`FILL` = `unbounded`, structure/movement words = `const`/`linear`),
+   and a user word's class is derived by a **provenance-aware slot simulation**
+   folded into the existing execution-free contract walk
+   (`word_contract.rs`). The simulation tracks whether each simulated stack slot
+   is a compile-time literal, a moved word input, or unknown, so it distinguishes
+   `[ 0 10 ] RANGE` (literal operand → `const`) from a bare `RANGE` (input
+   operand → `unbounded`) — the distinction §"Why a coarse class" flagged as the
+   crux. The bound carries an **exactness witness**: `ajisai check` reports a
+   declaration the inference provably *attains above* as an `error`, and an
+   *unproven* upper bound (higher-order body, recursion, an unresolved
+   dependency) as a `note`, never a false error. Any construct the simulation
+   cannot model (a lazy `^` fallback, a COND clause split, a dynamic-arity word)
+   soundly degrades to the conservative top without a witness. `ajisai contract`
+   now reports the inferred class and suggests it when proven.
 3. **Later (2.3).** `ajisai check --space` summary surface; then, incrementally,
    refine `unbounded` into a value-parametric bound where the constraining value
    is statically known, moving toward a precise `f(shape)`.
@@ -99,8 +108,10 @@ is always the safe side" rule the parallel gate already follows.
 
 ## Relationship to the spec
 
-Increment 2.1 is tooling only (no spec change). When inference lands (2.2), the
-space class joins the `#:contract` axes documented at SPEC §7.14, cross-
-referencing the Water Levels table (Phase 3) as the runtime companion — the same
-split Phase 1 used between the normative property (§4.7) and the opt-in checked
-declaration (§7.14).
+Increment 2.1 was tooling only (no spec change). With inference landed (2.2), the
+space class joins the `#:contract` axes documented at SPEC §7.14 (the "Space
+growth (opt-in contract discipline)" paragraph), cross-referencing the Water
+Levels table (Phase 3) as the runtime companion. Unlike Phase 1's split between a
+normative property (§4.7) and its opt-in check (§7.14), the space contract has no
+separate normative surface: it is purely an opt-in, checked declaration over the
+existing materialization semantics, so it lives wholly in §7.14 as tooling.

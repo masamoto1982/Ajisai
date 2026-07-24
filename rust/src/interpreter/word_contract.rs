@@ -17,10 +17,11 @@ use super::word_contract_lattice::{
     widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity, widen_unknown,
     widen_water,
 };
+use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
 
-pub const WORD_CONTRACT_SCHEMA_VERSION: u32 = 1;
-pub const WORD_CONTRACT_CORE_SCHEMA_VERSION: u32 = 1;
+pub const WORD_CONTRACT_SCHEMA_VERSION: u32 = 2;
+pub const WORD_CONTRACT_CORE_SCHEMA_VERSION: u32 = 2;
 
 type WordContractCache = HashMap<WordContractCacheKey, Arc<WordContract>>;
 const WORD_CONTRACT_CACHE_STATE_KEY: &str = "__ajisai_word_contract_cache";
@@ -36,6 +37,10 @@ pub struct WordContract {
     pub nil_behavior: NilBehavior,
     pub unknown_behavior: UnknownBehavior,
     pub water_sensitivity: WaterSensitivity,
+    /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
+    pub space: SpaceClass,
+    /// True when the bound is provably attained, licensing a declaration error.
+    pub space_exact: bool,
     pub confidence: ContractConfidence,
     pub cache_key: WordContractCacheKey,
 }
@@ -112,6 +117,8 @@ impl WordContract {
             nil_behavior: NilBehavior::MayCreate,
             unknown_behavior: UnknownBehavior::MayCreate,
             water_sensitivity: WaterSensitivity::WaterSensitive,
+            space: SpaceClass::Unbounded,
+            space_exact: false,
             confidence: ContractConfidence::Conservative,
             cache_key: key,
         }
@@ -137,6 +144,8 @@ impl WordContract {
             nil_behavior: NilBehavior::NeverCreates,
             unknown_behavior: UnknownBehavior::NeverCreates,
             water_sensitivity: WaterSensitivity::NotWaterSensitive,
+            space: SpaceClass::Const,
+            space_exact: true,
             confidence: ContractConfidence::Complete,
             cache_key: key,
         }
@@ -266,6 +275,7 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         NilPolicy::RejectsNil => NilBehavior::RejectsNil,
         NilPolicy::ConsumesNil => NilBehavior::ConsumesNil,
     };
+    let (space, space_exact) = super::word_space::builtin_space_for(name);
     let unknown_behavior = if name.eq_ignore_ascii_case("COMPARE-WITHIN") {
         UnknownBehavior::MayCreate
     } else {
@@ -290,6 +300,8 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         nil_behavior,
         unknown_behavior,
         water_sensitivity,
+        space,
+        space_exact,
         confidence: ContractConfidence::Complete,
         cache_key: key,
     }
@@ -354,18 +366,23 @@ impl Interpreter {
         let mut flow = FlowAccumulator::default();
         let seed = WordContract::identity(resolved_name);
         let mut acc = AccumulatedContract::from_contract(&seed);
+        let mut sim = SpaceSim::new();
         let mut complete = true;
 
         'lines: for line in def.lines.iter() {
             for token in line.body_tokens.iter() {
                 match token {
-                    Token::Number(_) | Token::String(_) => flow.push_literal(),
+                    Token::Number(_) | Token::String(_) => {
+                        flow.push_literal();
+                        sim.feed_literal();
+                    }
                     Token::Symbol(symbol) => {
                         let canonical =
                             crate::core_word_aliases::canonicalize_core_word_name(symbol);
                         let Some((dep_name, dep_def)) = self.resolve_word_entry(&canonical) else {
                             complete = false;
                             flow.dynamic = true;
+                            sim.feed_unresolved();
                             continue;
                         };
                         let dep_contract = if dep_def.is_builtin {
@@ -381,11 +398,17 @@ impl Interpreter {
                                 None => {
                                     complete = false;
                                     flow.dynamic = true;
+                                    sim.abandon_line();
                                     continue 'lines;
                                 }
                             }
                         };
                         flow.apply(&dep_contract.flow);
+                        sim.feed_word(&if dep_def.is_builtin {
+                            DepSpace::of_builtin(&dep_name, &dep_contract)
+                        } else {
+                            DepSpace::of_user_word(&dep_contract)
+                        });
                         acc.widen_with(&dep_contract);
                     }
                     Token::VectorStart
@@ -395,13 +418,17 @@ impl Interpreter {
                     | Token::Pipeline
                     | Token::NilCoalesce
                     | Token::CondClauseSep
-                    | Token::LineBreak => {}
+                    | Token::LineBreak => sim.feed_structural(token),
                 }
             }
         }
 
         visiting.remove(resolved_name);
         acc.flow = flow.finish();
+        let SpaceBound {
+            class: space,
+            exact: space_exact,
+        } = sim.finish();
         if !complete {
             acc.confidence = ContractConfidence::Conservative;
         }
@@ -415,6 +442,8 @@ impl Interpreter {
             nil_behavior: acc.nil_behavior,
             unknown_behavior: acc.unknown_behavior,
             water_sensitivity: acc.water_sensitivity,
+            space,
+            space_exact,
             confidence: acc.confidence,
             cache_key: key,
         });

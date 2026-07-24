@@ -161,14 +161,15 @@ fn space_is_optional_and_defaults_to_none() {
 }
 
 #[test]
-fn declared_space_surfaces_as_a_note_never_an_error() {
-    // Increment 2.1 records the axis without inference, so a declared space
-    // class must never produce an `error` finding — only an informational note.
+fn a_looser_space_declaration_is_verified_never_an_error() {
+    // Declaring a looser class than the inferred bound (here `space:unbounded`
+    // over a const word) over-approximates the truth, so it holds: a verified
+    // note, never an error.
     let src = "#:contract MAKE ( 0 -- 1 ) space:unbounded\n{ [ 42 ] } 'MAKE' DEF\n";
     let check = check_contract_decls(src, Lang::En);
     assert!(
         !check.violated,
-        "a recorded space class must not violate the contract check"
+        "a looser space class must not violate the contract check"
     );
     assert!(
         check
@@ -181,6 +182,63 @@ fn declared_space_surfaces_as_a_note_never_an_error() {
             .iter()
             .map(|f| &f.message)
             .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn declared_const_over_a_literal_range_is_verified() {
+    // `[ 0 10 ] RANGE` materializes a compile-time-fixed length: a `space:const`
+    // declaration is proved to hold.
+    let src = "#:contract SEQ space:const\n{ [ 0 10 ] RANGE } 'SEQ' DEF\n";
+    assert!(is_clean(src), "a literal-driven RANGE is provably const");
+}
+
+#[test]
+fn declared_const_over_an_input_driven_range_is_an_error() {
+    // A bare `RANGE` materializes a value-driven length: declaring `space:const`
+    // is a provable violation (the inference has an exact unbounded witness).
+    let src = "#:contract SEQ space:const\n{ RANGE } 'SEQ' DEF\n";
+    let errs = errors(src);
+    assert!(
+        errs.iter().any(|m| m.contains("space:const")
+            && m.contains("space:unbounded")
+            && m.contains("violation")),
+        "expected a space-contract violation error, got: {errs:?}"
+    );
+}
+
+#[test]
+fn declared_const_over_an_elementwise_linear_word_is_an_error() {
+    // `[ 1 ] ADD` broadcasts against an input vector: worst-case linear, and
+    // provably so. Declaring `space:const` is a violation.
+    let src = "#:contract INC space:const\n{ [ 1 ] ADD } 'INC' DEF\n";
+    let errs = errors(src);
+    assert!(
+        errs.iter().any(|m| m.contains("space:const") && m.contains("violation")),
+        "expected a space-contract violation error, got: {errs:?}"
+    );
+}
+
+#[test]
+fn an_unprovable_tighter_declaration_is_a_note_not_an_error() {
+    // A higher-order word's inferred bound is an *unproven* upper bound
+    // (`Unbounded`, inexact): a tighter `space:linear` declaration might still
+    // hold, so the checker abstains with a note rather than a false error.
+    let src = "#:contract M space:linear\n{ [ 1 ] MAP } 'M' DEF\n";
+    let check = check_contract_decls(src, Lang::En);
+    assert!(
+        !check.violated,
+        "an unprovable space bound must never raise a false error"
+    );
+    assert!(
+        check
+            .findings
+            .iter()
+            .any(|f| f.severity == Severity::Note
+                && f.message.contains("cannot verify")
+                && f.message.contains("space:linear")),
+        "expected a cannot-verify note: {:?}",
+        check.findings.iter().map(|f| &f.message).collect::<Vec<_>>()
     );
 }
 

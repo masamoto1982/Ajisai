@@ -680,8 +680,8 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
         }
         for r in &reports {
             println!(
-                "{} : {} {} {} {} [{}]",
-                r.name, r.arity, r.purity, r.nil, r.determinism, r.confidence
+                "{} : {} {} {} {} {} [{}]",
+                r.name, r.arity, r.purity, r.nil, r.determinism, r.space, r.confidence
             );
             if !r.effects.is_empty() {
                 println!("    effects: {}", r.effects.join(", "));
