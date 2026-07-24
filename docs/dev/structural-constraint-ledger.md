@@ -40,7 +40,8 @@ Status: **S** = already structural (compiler/test/registry enforces it);
 | 7 | Runtime cost ceilings fire diagnosably (steps, materialization water level) | `RuntimeLimits`, Phase 3 | **S** | over-budget materialization bubbles |
 | 8 | Implementation is `unsafe`-free outside one audited island | `#![deny(unsafe_code)]`, Phase 4 | **S** | compiler-enforced |
 | 9 | **Each `hover_syntax` example is a well-formed snippet** | tokenizer consistency test | **S** | landed 5.1; caught the `COND`/`TRANSPOSE` bugs |
-| 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **C→S (this increment)** | landed 5.2; see below. Full *execution* of the non-fragment snippets remains item 10b (needs a fragment/complete split to stay sound) |
+| 10 | **Each `hover_syntax` symbol resolves to a real word** | registry-resolution consistency test | **S** | landed 5.2; caught `COMPARE-WITHIN`/`FLOW` metavariables |
+| 10b | **Each concrete `hover_syntax` example actually runs** | execution consistency test | **C→S (this increment)** | landed 5.3; schematic snippets (bare-modifier fragments, `...` templates) excluded structurally; see below |
 | 11 | `stack_effect` prose arity matches the machine `mass` | consistency test parsing prose | **C** | prose parsing is fragile; scope carefully to avoid false mismatches |
 | 12 | Reference / SPEC runnable examples stay runnable | example-runner harness | **C/partial** | Reference examples are "verified"; audit coverage and extend to inline examples |
 | 13 | Manifest / lockfile shape is well-formed and consistent | `cli/manifest.rs`, `lockfile.rs` checks | **partial** | deploy/config-shape class of the instruction; audit for gaps |
@@ -85,10 +86,32 @@ placeholders — `COMPARE-WITHIN`'s `a b 64 COMPARE-WITHIN` and `FLOW`'s
 `[ 2 4 6 ]`. Every `hover_syntax` in the registry now both tokenizes and names
 only real words.
 
-Full *execution* of the non-fragment snippets (item 10b) still needs a
-sound fragment/complete split (a `. +` fragment would under-flow), so it is
-deferred; the resolution check already forces concreteness, which is most of
-the value.
+## What landed in 5.3 (item 10b)
+
+A third consistency test executes every *concrete* `hover_syntax` on a fresh
+interpreter and requires it to run without a raised error (a Bubble/NIL result
+is fine — that is a value, not a failure). "Concrete" excludes the structurally
+*schematic* snippets, identified by two unambiguous markers: a snippet that
+starts with a bare modifier (`. , .. ,, !` — the modifier words `TOP`/`EAT`/
+`STAK`/`KEEP`/`FORC` demo their own syntax operand-lessly) or that contains the
+ellipsis `...` ("your code here", e.g. `UNFOLD`, `PRECOMPUTE` — the latter is
+definition-time-only). Both markers are structural, so the exclusion needs no
+maintained word-list and stays free of false failures.
+
+A whole-corpus probe confirmed the split: exactly nine snippets failed to run,
+all in the excluded categories except two that *should* run and were fixed to
+concrete, self-contained, verified forms:
+
+- `>CF`: `2 MATH@SQRT >CF` used an unimported module word → `1/3 >CF`
+  (→ `( 0 ( 3 ) )`).
+- `DEL`: `'WORD' DEL` deleted a non-existent placeholder word →
+  `{ [ 1 ] } 'W' DEF 'W' DEL` (defines then deletes; ends with an empty stack).
+
+Every concrete example in the registry now tokenizes (item 9), names only real
+words (item 10), and runs (item 10b). Fully de-schematising the remaining
+templates (`FORC`, `UNFOLD`, `PRECOMPUTE`) into runnable examples is a possible
+follow-up, but each needs care (protected-entry force, a convergent generator, a
+definition-time context), so they stay honestly marked schematic for now.
 
 ## Sequencing
 
