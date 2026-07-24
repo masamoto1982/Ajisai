@@ -1,5 +1,7 @@
 mod builtin_word_definitions;
 mod builtin_word_details;
+#[cfg(test)]
+mod builtin_word_details_tests;
 mod builtin_word_lookup_docs;
 mod builtin_word_types;
 

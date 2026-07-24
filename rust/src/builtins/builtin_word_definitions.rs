@@ -777,7 +777,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "COMPARE-WITHIN",
         category: "comparison",
         hover_summary: "COMPARE-WITHIN — three-way compare within a budget",
-        hover_syntax: "a b 64 COMPARE-WITHIN",
+        hover_syntax: "1/3 1/2 64 COMPARE-WITHIN",
         executor_key: Some(BuiltinExecutorKey::CompareWithin),
         summary: "Three-way compare two values within an explicit observation budget.",
         role: "Comparison primitive: yield -1, 0, 1, or UNKNOWN within a budget.",
@@ -978,7 +978,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         name: "FLOW",
         category: "control-directive",
         hover_summary: "FLOW — pipeline marker",
-        hover_syntax: "xs ~ { ... } MAP",
+        hover_syntax: "[ 1 2 3 ] ~ { [ 2 ] * } MAP",
         summary: "Pipeline visual marker (no-op).",
         role: "No-op control directive: a positional separator with no runtime\neffect; helps visually anchor pipelines. Popped and pushed nothing.",
 
