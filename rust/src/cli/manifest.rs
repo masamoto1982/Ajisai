@@ -121,6 +121,18 @@ pub(crate) fn parse_manifest(text: &str) -> Result<Manifest, String> {
             Some(Section::Capabilities) => match key {
                 "allow" => {
                     for cap in parse_string_array(value).map_err(|e| format!("{}: {}", at(), e))? {
+                        // Validate at the parse boundary so a typo'd capability
+                        // is rejected here rather than silently carried into the
+                        // manifest — fulfilling this parser's stated principle
+                        // that a typo never changes what a project is allowed to
+                        // do. The vocabulary is exactly `HostCapability`.
+                        if crate::interpreter::HostCapability::from_protocol_str(&cap).is_none() {
+                            return Err(format!(
+                                "{}: unknown capability `{}` in [capabilities] allow",
+                                at(),
+                                cap
+                            ));
+                        }
                         if !allow.contains(&cap) {
                             allow.push(cap);
                         }

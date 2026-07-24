@@ -61,6 +61,15 @@ impl HostCapability {
             HostCapability::Effect => "effect",
         }
     }
+
+    /// The capability whose protocol string is `name`, or `None` if `name` is
+    /// not a modeled capability. The inverse of [`Self::as_protocol_str`],
+    /// derived from [`Self::ALL`] so the two can never drift.
+    pub fn from_protocol_str(name: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|cap| cap.as_protocol_str() == name)
+    }
 }
 
 /// A structured, observable side effect produced by a Hosted-profile word.
