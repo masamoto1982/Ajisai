@@ -38,7 +38,7 @@ pub use query::{op_group, op_join, op_select, op_where};
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::record_shape::intern_record_shape;
 use crate::types::{Interpretation, Value, ValueData};
 use std::collections::HashMap;
@@ -64,11 +64,7 @@ pub(super) fn extract_stack_value(
 }
 
 pub(super) fn encoding_bubble() -> Value {
-    Value::bubble_with_reason(
-        NilReason::InvalidEncoding,
-        AbsenceOrigin::InvalidEncoding,
-        Recoverability::Recoverable,
-    )
+    Value::bubble_with_reason(NilReason::InvalidEncoding, Recoverability::Recoverable)
 }
 
 /// `DATA@CSV-PARSE`: text → a vector of Records. Malformed CSV (an unterminated

@@ -20,7 +20,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_operands, push_result, value_as_string,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
 
@@ -467,7 +467,6 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
         Some(civil) => interp.stack.push(datetime_value(&civil)),
         None => interp.stack.push(Value::bubble_with_reason(
             NilReason::InvalidEncoding,
-            AbsenceOrigin::InvalidEncoding,
             Recoverability::Recoverable,
         )),
     }

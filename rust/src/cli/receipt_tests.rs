@@ -105,7 +105,8 @@ fn absence_event_preserves_reason_origin_recoverability() {
     let events = receipt["absenceEvents"].as_array().unwrap();
     let event = events.last().expect("division by zero yields a NIL event");
     assert_eq!(event["reason"], "divisionByZero");
-    assert_eq!(event["origin"], "executionFailure");
+    // Origin follows the reason, never the construction path that produced it.
+    assert_eq!(event["origin"], "divisionByZero");
     assert_eq!(event["recoverability"], "recoverable");
 }
 

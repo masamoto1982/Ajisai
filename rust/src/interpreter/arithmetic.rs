@@ -6,7 +6,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_count_from_value, extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Interpretation, SparseTensor, Value, ValueData};
@@ -54,11 +54,7 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
 }
 
 fn division_by_zero_bubble() -> Value {
-    Value::bubble_with_reason(
-        NilReason::DivisionByZero,
-        AbsenceOrigin::ExecutionFailure,
-        Recoverability::Recoverable,
-    )
+    Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
 }
 
 fn push_interval_schema_result(

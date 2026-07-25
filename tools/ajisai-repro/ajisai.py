@@ -847,7 +847,7 @@ def _arith_scalar_pair(name, fn, a, b):
     try:
         return Rational(fn(fa, fb))
     except ZeroDivisionError:
-        return Nil(reason="divisionByZero", origin="nilPropagation")
+        return Nil(reason="divisionByZero", origin="divisionByZero")
 
 
 def _arith_broadcast(name, fn, a, b):
@@ -920,14 +920,14 @@ def w_div(it, mods):
             try:
                 it.push(alg_binop("DIV", a, b))
             except ZeroDivisionError:
-                it.push(Nil(reason="divisionByZero", origin="executionFailure"))
+                it.push(Nil(reason="divisionByZero", origin="divisionByZero"))
             return
         raise AjisaiError("structureError", "DIV needs numbers")
     if fb == 0:
-        # A direct division failure originates in the operation itself, not in a
-        # propagated NIL (origin = executionFailure, matching the production
-        # runtime observed through NIL-ORIGIN; SPEC §4.5.0 / §11.2).
-        it.push(Nil(reason="divisionByZero", origin="executionFailure")); return
+        # A direct division failure carries an origin derived from its reason
+        # (the production runtime derives origins in absence_origin_for_reason;
+        # SPEC §4.5.0 / §11.2).
+        it.push(Nil(reason="divisionByZero", origin="divisionByZero")); return
     it.push(Rational(fa / fb))
 
 def w_mod(it, mods):
@@ -2254,7 +2254,7 @@ def w_sqrt(it, mods):
     v = ops[-1]
     fa = as_fraction(v)
     if fa is None: raise AjisaiError("structureError", "SQRT")
-    if fa < 0: it.push(Nil(reason="domain", origin="nilPropagation")); return
+    if fa < 0: it.push(Nil(reason="domainMiss", origin="domainMiss")); return
     # perfect square stays rational
     p, q = fa.numerator, fa.denominator
     r = _math.isqrt(p*q)
@@ -2333,7 +2333,7 @@ def w_math_pow(it, mods):
         raise AjisaiError("custom", "POW: exponent must be an integer")
     e = int(fb)
     if e < 0 and fa == 0:
-        it.push(Nil(reason="divisionByZero", origin="executionFailure")); return
+        it.push(Nil(reason="divisionByZero", origin="divisionByZero")); return
     it.push(Rational(fa ** e))
 
 def _gcd_lcm_word(name, fn):
@@ -2469,7 +2469,7 @@ def w_algo_index_of(it, mods):
     for i, x in enumerate(v.items):
         if _algo_eq(x, needle):
             it.push(Rational(Fraction(i))); return
-    it.push(Nil(reason="missingField", origin="executionFailure"))
+    it.push(Nil(reason="missingField", origin="missingField"))
 
 # TIME words (exact, timezone-free civil calendar; §9.1) ---------------------
 # days_from_civil / civil_from_days follow the standard proleptic-Gregorian

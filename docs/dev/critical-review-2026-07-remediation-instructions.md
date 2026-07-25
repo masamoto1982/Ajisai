@@ -652,6 +652,36 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
   「The identity is a cryptographic hash」は実装が追いついた側であり、
   正典の文言は正しいままである。
 
+### R0-2 — 完了（2026-07-25）
+
+- `NilReason::DomainMiss` / `AbsenceOrigin::DomainMiss`（protocol 文字列は
+  ともに `"domainMiss"`）を新設し、負数 `SQRT` を差し替えた。実測:
+  `NIL-REASON` → `'domainMiss'`、`NIL-ORIGIN` → `'domainMiss'`、
+  `NIL-RECOVERABLE?` → `'recoverable'`。
+- **recoverability の裁定**: `Recoverable` を採用。定義域外れは入力を変えれば
+  解消する事象であり、実行が失敗したわけではない。指示書の推奨通り。
+- **§4.4 の裁定: 欠陥と判定し、同フェーズ内で修正した**。原因は
+  `bubble_with_reason` が origin を呼び出し側の引数として受けていたことで、
+  reason と origin の対応に導出（`absence_origin_for_reason`）と手書きの
+  2 系統が存在していた。`DIV` は `divisionByZero` / `executionFailure`、
+  `INDEX-OF` は `missingField` / `executionFailure` と、手書き側が
+  `absence.rs` の文書化された対応と食い違っていた。修正として
+  `bubble_with_reason` から origin 引数を**削除**し、全構築経路が
+  `absence_origin_for_reason` を通るようにした。以後 reason と origin は
+  構造的に乖離できない。`1 0 DIV NIL-ORIGIN` は `'divisionByZero'` になる
+  （従来の `'executionFailure'` は上記欠陥の産物であり、期待していた
+  conformance ケース `core-nil-origin-computed` も更新した）。
+- **回帰なし**: `1 0 DIV NIL-REASON` は `'divisionByZero'` のまま。
+- Python 参照実装（`tools/ajisai-repro/ajisai.py`）の `SQRT` / `DIV` /
+  `POW` / `INDEX-OF` を同一規則に同期し、
+  `compare.py --conformance` で 437 ケース差分ゼロを確認。
+- conformance corpus に domain miss の 3 軸を検証する 3 ケースを追加。
+  `#[test]` は `nil_diagnostics_tests.rs`（3 軸の直接検証、DIV 回帰、
+  経路横断の reason/origin 一致）と `protocol_string_tests.rs`
+  （protocol 文字列の網羅・重複検査）に追加。
+- `npm run word:manifest:check` / `npm run check:skill` 通過
+  （生成物への影響なし）。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |

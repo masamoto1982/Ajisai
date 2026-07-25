@@ -38,6 +38,16 @@ pub enum NilReason {
     /// recover it with `^` (VENT). Malformed inputs (an infinite `RANGE`, a
     /// non-conforming `RESHAPE`) remain ordinary errors.
     SpaceExhausted,
+    /// A well-formed operation applied to an input outside its domain — the
+    /// canonical case being `SQRT` of a negative rational, which
+    /// `SPECIFICATION.html` §5 calls a "well-formed domain miss". The Bubble
+    /// Rule projects it to NIL with `absence.origin = domainMiss` (SPEC §11.2).
+    ///
+    /// Deliberately named for the classification, not for the operation: a
+    /// domain miss is recoverable by supplying a different input, which is what
+    /// distinguishes it from an execution failure and what makes the same
+    /// variant right for future domain misses in other words.
+    DomainMiss,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +121,7 @@ impl NilReason {
             NilReason::NoData => "noData",
             NilReason::PortDisconnected => "portDisconnected",
             NilReason::SpaceExhausted => "spaceExhausted",
+            NilReason::DomainMiss => "domainMiss",
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::interpreter::cast::cast_value_helpers::{
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::{Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
 
@@ -41,7 +41,6 @@ fn convert_value_to_number(val: &Value, hint: Interpretation) -> Result<Value> {
             Err(_) => {
                 return Ok(Value::bubble_with_reason(
                     NilReason::InvalidEncoding,
-                    AbsenceOrigin::InvalidEncoding,
                     Recoverability::Recoverable,
                 ));
             }
@@ -150,7 +149,6 @@ fn convert_codepoint_to_char(val: &Value, hint: Interpretation) -> Result<Value>
                 }
                 return Ok(Value::bubble_with_reason(
                     NilReason::InvalidEncoding,
-                    AbsenceOrigin::InvalidEncoding,
                     Recoverability::Recoverable,
                 ));
             } else {

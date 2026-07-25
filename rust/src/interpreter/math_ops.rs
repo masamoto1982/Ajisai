@@ -8,7 +8,7 @@ use crate::interpreter::value_extraction_helpers::{
     push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
@@ -269,11 +269,7 @@ pub(crate) fn op_pow(interp: &mut Interpreter) -> Result<()> {
     } else if exp_i64 > 0 {
         Value::from_fraction(pow_fraction(&base, exp_i64 as u64))
     } else if base.is_zero() {
-        Value::bubble_with_reason(
-            NilReason::DivisionByZero,
-            AbsenceOrigin::ExecutionFailure,
-            Recoverability::Recoverable,
-        )
+        Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
     } else {
         let positive = pow_fraction(&base, exp_i64.unsigned_abs());
         Value::from_fraction(Fraction::new(positive.denominator(), positive.numerator()))

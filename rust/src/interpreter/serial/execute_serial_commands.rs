@@ -8,7 +8,7 @@
 use super::super::Interpreter;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, value_as_string};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Value, ValueData};
 use serde_json::json;
@@ -165,13 +165,11 @@ pub fn op_read(interp: &mut Interpreter) -> Result<()> {
     } else if interp.serial_disconnected.contains(&id) {
         interp.stack.push(Value::bubble_with_reason(
             NilReason::PortDisconnected,
-            AbsenceOrigin::HostEnvironment,
             Recoverability::Fatal,
         ));
     } else {
         interp.stack.push(Value::bubble_with_reason(
             NilReason::NoData,
-            AbsenceOrigin::HostEnvironment,
             Recoverability::Retryable,
         ));
     }
