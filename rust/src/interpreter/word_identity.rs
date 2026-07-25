@@ -7,16 +7,20 @@
 //! strongly connected component of the dependency graph) is hashed as a unit
 //! with its members referenced by position within the component.
 //!
-//! The digest below is a deterministic 256-bit-class polynomial hash built on
-//! the same big-integer primitives `hash.rs` already uses. Its exact byte
-//! encoding is an implementation contract (Section 2.1/2.3) and may be replaced
-//! by a standard cryptographic hash without changing identity semantics
-//! elsewhere.
+//! The digest below is BLAKE3, a standard cryptographic hash, which is what
+//! `SPECIFICATION.html` §8.6 requires of an identity: distinct content must not
+//! be able to share an identity, by accident or by construction. It replaced a
+//! deterministic polynomial hash that was collision-resistant against neither.
+//! That mattered beyond an attacker model, because a shared `body_content_key`
+//! makes the content store hand one word's body to another (`execute_def.rs`).
+//!
+//! The crate is built with `pure` plus `no_sse2` / `no_sse41` / `no_avx2` /
+//! `no_avx512` (see `Cargo.toml`), so only `portable.rs` — zero `unsafe` — is
+//! compiled. Its exact byte encoding, including the `#` prefix and the
+//! lowercase 64-hex body, is an implementation contract (Section 2.1/2.3).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-
-use num_bigint::BigInt;
 
 use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::types::fraction::Fraction;
@@ -24,31 +28,19 @@ use crate::types::{Token, WordDefinition};
 
 use super::Interpreter;
 
-lazy_static::lazy_static! {
-    // Two distinct ~127-bit moduli; concatenating the two residues yields a
-    // 256-bit-class digest (32 hex chars each).
-    static ref ID_PRIME_A: BigInt =
-        BigInt::parse_bytes(b"170141183460469231731687303715884105727", 10).unwrap();
-    static ref ID_PRIME_B: BigInt =
-        BigInt::parse_bytes(b"170141183460469231731687303715884105619", 10).unwrap();
-    static ref ID_BASE: BigInt = BigInt::from(257u32);
-}
-
-fn poly_hash(bytes: &[u8], modulus: &BigInt) -> BigInt {
-    let mut acc = BigInt::from(1u32);
-    for &b in bytes {
-        acc = (&acc * &*ID_BASE + BigInt::from(b as u32 + 1)) % modulus;
-    }
-    acc
-}
+/// Protocol name of the hash function behind [`content_digest`], recorded in
+/// generated artifacts (lockfile, receipt) so a future migration is legible
+/// from the artifact itself and not only from a schema-version bump. Gated to
+/// the same targets as the `content_digest` re-export, its only consumers
+/// being the host-only `cli` module.
+#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
+pub(crate) const IDENTITY_ALGORITHM: &str = "blake3";
 
 /// Deterministic content digest. Returns a `#`-prefixed 64-hex-char string.
 /// Reused for execution-receipt source and result identity (Phase 6) so those
 /// identities share the same content-hash family as word identities (§8.6).
 pub(crate) fn content_digest(bytes: &[u8]) -> String {
-    let a = poly_hash(bytes, &ID_PRIME_A);
-    let b = poly_hash(bytes, &ID_PRIME_B);
-    format!("#{:0>32}{:0>32}", a.to_str_radix(16), b.to_str_radix(16))
+    format!("#{}", blake3::hash(bytes).to_hex())
 }
 
 /// Canonical content key for a word body, independent of references' identities

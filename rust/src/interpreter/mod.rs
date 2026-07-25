@@ -58,6 +58,8 @@ mod word_contract_lattice;
 #[cfg(test)]
 mod word_contract_tests;
 mod word_identity;
+#[cfg(test)]
+mod word_identity_tests;
 pub mod word_space;
 #[cfg(test)]
 mod word_space_tests;
@@ -65,7 +67,7 @@ mod word_space_tests;
 // identity); `content_digest` itself is used internally by `word_identity`, so
 // gate just this re-export to the same target as `cli` to stay wasm-clean.
 #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-pub(crate) use word_identity::content_digest;
+pub(crate) use word_identity::{content_digest, IDENTITY_ALGORITHM};
 
 pub mod interpreter_core;
 

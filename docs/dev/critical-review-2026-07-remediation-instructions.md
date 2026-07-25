@@ -1,6 +1,7 @@
 # 批判的レビュー（2026-07）への妥当性評価と改修指示書
 
-Status: `[提案・未実施]`。この文書は `docs/dev/` の設計メモであり、Ajisai の
+Status: `[実施中]`。着手済みフェーズの進捗は §10 に記録する。
+この文書は `docs/dev/` の設計メモであり、Ajisai の
 意味論・互換性方針を定義しない。正典は `SPECIFICATION.html` のみである。記述が
 `SPECIFICATION.html` と食い違う場合は正典に従う。
 
@@ -268,8 +269,14 @@ crate 境界を越えるため `#![deny(unsafe_code)]` のリントには掛か�
    `content_digest` の入力は語の本体とソースファイルであり性能上のホットパスでは
    ないため、SIMD を落とす代償は許容できる。ダイジェスト値は feature 構成に
    依存しないので、後から SIMD を有効化しても identity は変わらない。
-   **`no_*` を付けるか（監査面積最小）、`pure` のみとするか（性能優先）は
-   着手時に裁定し、理由を本文書に追記する**。
+   **裁定（着手時、2026-07-25）: `no_*` を付ける監査面積最小構成を採る。**
+   理由は 3 点。(a) 本改修の主題は信頼基盤の縮小であり、S-1 / R1-3 で
+   `unsafe` の監査面積を問題にしている以上、identity のために新たに約 150 箇所の
+   `unsafe` を持ち込むのは同一文書内で矛盾する。(b) `content_digest` の入力は
+   語の本体とソースファイルであり、ホットパスではない。実測でも全テストの
+   実行時間に有意な差は出ていない。(c) BLAKE3 のダイジェスト値は backend に
+   依存しないため、将来性能が問題になれば `no_*` を外すだけで identity を
+   一切変えずに SIMD を有効化できる。すなわちこの裁定は可逆である。
    本評価では両構成でビルドと公式テストベクタ通過を確認済み。
 2. `content_digest` を BLAKE3 に差し替える。出力形式は `#` + 64 hex を維持
    （BLAKE3 の既定出力も 32 バイト = 64 hex なので外形は不変）。
@@ -617,7 +624,35 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
 
 ---
 
-## 9. 改訂履歴
+## 9. 実施記録
+
+各フェーズの着手時に、裁定した事項と実測結果をここに追記する。
+指示（§6）は変更しない。実際に何をどう決めたかを残すのがこの節の役割である。
+
+### R0-1 — 完了（2026-07-25）
+
+- **feature 構成**: `pure` + `no_sse2` / `no_sse41` / `no_avx2` / `no_avx512`。
+  理由は §6 R0-1 手順 1 の裁定欄に記載。`portable.rs` のみが実行経路となり、
+  blake3 由来の `unsafe` は 0 になる。
+- **公式テストベクタ**: `rust/src/interpreter/word_identity_tests.rs` に 4 件。
+  空入力・`"abc"`・1024 バイト・1025 バイト。後ろ 2 つはチャンク境界
+  （1024 バイト）を跨ぐ長さで、単一チャンクからチャンク木への切り替えを
+  踏ませるために選んだ。短い入力だけでは木の合成誤りを検出できない。
+  期待値は独立実装（PyPI `blake3`）で生成し、`"abc"` は本文書 §6 の記載値と
+  一致することを確認した。
+- **スキーマ**: `LOCKFILE_VERSION` 1 → 2、`RECEIPT_SCHEMA_VERSION` 1 → 2。
+  両者に `identityAlgorithm` フィールドを追加した。旧 lockfile は
+  `lockfile::identity_migration_error` が検出し、`ajisai build` / `ajisai lock
+  --check` の双方で「identity アルゴリズムが変わったので再生成せよ」という
+  明示メッセージになる。通常の drift 経路には落ちない。
+- **実測**: `cargo test` 1,836 件通過（新規 11 件を含む）。
+  `cargo check --features wasm --target wasm32-unknown-unknown` 通過。
+  `npm run provenance:check` 通過。`npm run check:file-size` 通過。
+- **`SPECIFICATION.html:1778` は変更不要**であることを確認した。
+  「The identity is a cryptographic hash」は実装が追いついた側であり、
+  正典の文言は正しいままである。
+
+## 10. 改訂履歴
 
 | 日付 | 内容 |
 | --- | --- |
