@@ -1119,4 +1119,55 @@ mod tests {
             prop_assert_eq!(par, seq_exact_map(len));
         }
     }
+
+    /// Miri anchor: every policy-free kernel entry point, at sizes small enough
+    /// for interpretation but large enough to fan out across all workers.
+    ///
+    /// The differential tests above prove the *results* right; this test exists
+    /// so that `cargo miri test` can prove the *unsafe dispatch itself* free of
+    /// UB — the raw-pointer lifetime erasure, the disjoint `MaybeUninit`
+    /// regions, `set_len`, and the drop of a discarded partially-poisoned
+    /// buffer — on every kernel shape in one interpretable-time run. CI's
+    /// unsafe-verification job filters on this test's name; keep it cheap
+    /// (small `n`, no proptest) so Miri stays fast enough to run on every push.
+    #[test]
+    fn miri_exercises_every_kernel_entry_point() {
+        let n = 33; // multi-chunk for any small worker count, not a multiple
+        let a: Vec<i64> = (0..n as i64).collect();
+        let b: Vec<i64> = (0..n as i64).map(|x| x * 3 - 5).collect();
+
+        let par = run_parallel_binary(&a, &b, |x, y| x + y);
+        assert_eq!(par, seq_binary(&a, &b, |x, y| x + y));
+
+        let par = run_parallel_scalar(&a, 7, |x, s| x * s);
+        assert_eq!(par, seq_scalar(&a, 7, |x, s| x * s));
+
+        let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
+        assert_eq!(par, seq_binary_checked(&a, &b, |x, y| x.checked_add(y)));
+
+        // Overflow decline: the poisoned buffer is fully written then dropped.
+        let mut poisoned = a.clone();
+        poisoned[n / 2] = i64::MAX;
+        assert!(run_parallel_binary_checked(&poisoned, &b, |x, y| x.checked_add(y)).is_none());
+
+        let par = run_parallel_scalar_checked(&a, 9, |x, s| x.checked_mul(s));
+        let seq: Option<Vec<i64>> = a.iter().map(|&x| x.checked_mul(9)).collect();
+        assert_eq!(par, seq);
+
+        let par = parallel_try_elementwise(n, rational_op).unwrap();
+        assert_eq!(par, seq_fraction_map(n, rational_op).unwrap());
+
+        // Lane-error decline: the placeholder-filled buffer is dropped whole.
+        let poison = n / 2;
+        let failing = |i: usize| -> crate::error::Result<Fraction> {
+            if i == poison {
+                Err(crate::error::AjisaiError::from("miri lane boom"))
+            } else {
+                Ok(Fraction::from(i as i64))
+            }
+        };
+        assert!(parallel_try_elementwise(n, failing).is_err());
+
+        assert_eq!(parallel_map(n, exact_lane), seq_exact_map(n));
+    }
 }

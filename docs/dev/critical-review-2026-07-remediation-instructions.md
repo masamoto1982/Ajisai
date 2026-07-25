@@ -715,6 +715,31 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
   `Reference Interpreter Differential` / `WASM Boundary Tests`。
   設定完了後、この項に設定日を追記すること。
 
+### R1-3 — 完了（2026-07-25、sanitizer 経路を採用）
+
+- **手順 1 の再計測**: 本環境（4 コア）で `std::thread::scope` の
+  spawn+join は 1 呼び出し約 190µs。10 万要素の逐次 add（約 131µs）より
+  高く、`parallel.rs:33-49` の記録（約 270µs）と同オーダーで、
+  「scoped thread では並列化の利得が消える」という判断は現在も有効。
+  依存ゼロ方針の下では safe rewrite は不成立と裁定し、選択肢 2
+  （UB そのものを対象とする検証の CI 追加）を採った。
+- **Miri を採用**（TSan / loom は不採用: TSan は `-Zbuild-std` を要し
+  CI コストが大きく、loom は対象コードの大規模書き換えを要する。Miri は
+  raw pointer の lifetime erasure・`MaybeUninit` の disjoint 書き込み・
+  破棄バッファの drop という当該 unsafe island の UB 候補すべてを解釈実行で
+  検証できる）。
+- 全カーネル入口（binary / scalar / checked 2 種 / rational / generic map、
+  overflow 辞退・lane error 辞退経路を含む）を小サイズで踏む専用テスト
+  `miri_exercises_every_kernel_entry_point` を追加。
+- CI に `Unsafe Parallel Verification (Miri)` job を新設（指示書の通り
+  まず advisory。安定後に `continue-on-error` を外して blocking 化する）。
+  `MIRIFLAGS=-Zmiri-ignore-leaks -Zmiri-disable-isolation`
+  （常駐プールのワーカーは意図的にプロセス終了まで生存する／isolation 下では
+  `available_parallelism` が失敗して 1 worker に縮退し fan-out 経路を
+  踏めない）。step 末尾の `grep "test result: ok. N passed"` により
+  「0 件実行の green」を構造的に排除。
+- ローカル実測: 対象 3 テストが Miri で通過（各 20–40 秒）。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |
