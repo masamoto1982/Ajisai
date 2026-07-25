@@ -805,8 +805,7 @@ mod tests {
         // (Never Slower): the parallel flag stays false.
         let a: Vec<i64> = (0..16).collect();
         let b: Vec<i64> = (0..16).map(|x| x * 2).collect();
-        let (result, parallel) =
-            elementwise_binary("+", &a, &b, |x, y| x + y, simd_ops::lane_add);
+        let (result, parallel) = elementwise_binary("+", &a, &b, |x, y| x + y, simd_ops::lane_add);
         assert!(!parallel, "tiny input must stay sequential (Never Slower)");
         assert_eq!(result, seq_binary(&a, &b, |x, y| x + y));
     }
@@ -848,9 +847,18 @@ mod tests {
         let b: Vec<i64> = (0..n as i64).map(|x| x - 3).collect();
 
         for (op, lane) in [
-            ((|x, y| x + y) as fn(i64, i64) -> i64, simd_ops::lane_add as fn(&[i64], &[i64]) -> Vec<i64>),
-            ((|x, y| x - y) as fn(i64, i64) -> i64, simd_ops::lane_sub as fn(&[i64], &[i64]) -> Vec<i64>),
-            ((|x, y| x * y) as fn(i64, i64) -> i64, simd_ops::lane_mul as fn(&[i64], &[i64]) -> Vec<i64>),
+            (
+                (|x, y| x + y) as fn(i64, i64) -> i64,
+                simd_ops::lane_add as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
+            (
+                (|x, y| x - y) as fn(i64, i64) -> i64,
+                simd_ops::lane_sub as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
+            (
+                (|x, y| x * y) as fn(i64, i64) -> i64,
+                simd_ops::lane_mul as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
         ] {
             let par = run_parallel_binary(&a, &b, op);
             assert_eq!(par, seq_binary(&a, &b, op), "binary mismatch");
@@ -916,7 +924,10 @@ mod tests {
         let b: Vec<i64> = vec![1; n];
         a[n / 2] = i64::MAX; // one poisoned lane mid-buffer
         let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
-        assert!(par.is_none(), "any overflowing lane must decline the kernel");
+        assert!(
+            par.is_none(),
+            "any overflowing lane must decline the kernel"
+        );
     }
 
     proptest! {
@@ -998,7 +1009,10 @@ mod tests {
             parallel_try_elementwise(n, f).is_err(),
             "a poisoned lane must decline the parallel kernel"
         );
-        assert!(seq_fraction_map(n, f).is_err(), "sequential must also error");
+        assert!(
+            seq_fraction_map(n, f).is_err(),
+            "sequential must also error"
+        );
     }
 
     #[test]
@@ -1023,7 +1037,11 @@ mod tests {
         // and Fraction lanes share `fill_parallel`, so cover both.
         for n in 0usize..=64 {
             let frac = parallel_try_elementwise(n, rational_op).unwrap();
-            assert_eq!(frac, seq_fraction_map(n, rational_op).unwrap(), "fraction n={n}");
+            assert_eq!(
+                frac,
+                seq_fraction_map(n, rational_op).unwrap(),
+                "fraction n={n}"
+            );
 
             let a: Vec<i64> = (0..n as i64).collect();
             let b: Vec<i64> = (0..n as i64).map(|x| x + 1).collect();
@@ -1100,5 +1118,56 @@ mod tests {
             let par = parallel_map(len, exact_lane);
             prop_assert_eq!(par, seq_exact_map(len));
         }
+    }
+
+    /// Miri anchor: every policy-free kernel entry point, at sizes small enough
+    /// for interpretation but large enough to fan out across all workers.
+    ///
+    /// The differential tests above prove the *results* right; this test exists
+    /// so that `cargo miri test` can prove the *unsafe dispatch itself* free of
+    /// UB — the raw-pointer lifetime erasure, the disjoint `MaybeUninit`
+    /// regions, `set_len`, and the drop of a discarded partially-poisoned
+    /// buffer — on every kernel shape in one interpretable-time run. CI's
+    /// unsafe-verification job filters on this test's name; keep it cheap
+    /// (small `n`, no proptest) so Miri stays fast enough to run on every push.
+    #[test]
+    fn miri_exercises_every_kernel_entry_point() {
+        let n = 33; // multi-chunk for any small worker count, not a multiple
+        let a: Vec<i64> = (0..n as i64).collect();
+        let b: Vec<i64> = (0..n as i64).map(|x| x * 3 - 5).collect();
+
+        let par = run_parallel_binary(&a, &b, |x, y| x + y);
+        assert_eq!(par, seq_binary(&a, &b, |x, y| x + y));
+
+        let par = run_parallel_scalar(&a, 7, |x, s| x * s);
+        assert_eq!(par, seq_scalar(&a, 7, |x, s| x * s));
+
+        let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
+        assert_eq!(par, seq_binary_checked(&a, &b, |x, y| x.checked_add(y)));
+
+        // Overflow decline: the poisoned buffer is fully written then dropped.
+        let mut poisoned = a.clone();
+        poisoned[n / 2] = i64::MAX;
+        assert!(run_parallel_binary_checked(&poisoned, &b, |x, y| x.checked_add(y)).is_none());
+
+        let par = run_parallel_scalar_checked(&a, 9, |x, s| x.checked_mul(s));
+        let seq: Option<Vec<i64>> = a.iter().map(|&x| x.checked_mul(9)).collect();
+        assert_eq!(par, seq);
+
+        let par = parallel_try_elementwise(n, rational_op).unwrap();
+        assert_eq!(par, seq_fraction_map(n, rational_op).unwrap());
+
+        // Lane-error decline: the placeholder-filled buffer is dropped whole.
+        let poison = n / 2;
+        let failing = |i: usize| -> crate::error::Result<Fraction> {
+            if i == poison {
+                Err(crate::error::AjisaiError::from("miri lane boom"))
+            } else {
+                Ok(Fraction::from(i as i64))
+            }
+        };
+        assert!(parallel_try_elementwise(n, failing).is_err());
+
+        assert_eq!(parallel_map(n, exact_lane), seq_exact_map(n));
     }
 }

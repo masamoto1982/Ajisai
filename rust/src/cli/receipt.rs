@@ -17,13 +17,18 @@
 
 use serde_json::{json, Value as Json};
 
-use crate::interpreter::content_digest;
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::Interpreter;
+use crate::interpreter::{content_digest, IDENTITY_ALGORITHM};
 
 /// Version of the `receipt` object shape. Bump only on a breaking change to the
 /// receipt fields; additive fields keep the same version.
-pub(crate) const RECEIPT_SCHEMA_VERSION: u64 = 1;
+///
+/// 2 — `sourceIdentity` and `resultIdentity` are BLAKE3 digests, and
+/// `identityAlgorithm` names the function that produced them. Version 1 carried
+/// polynomial-hash digests of the same shape, so a version-1 receipt's
+/// identities never match a current run's despite describing the same program.
+pub(crate) const RECEIPT_SCHEMA_VERSION: u64 = 2;
 
 /// Build the `receipt` JSON object for a completed run. `source` is the program
 /// text (for source identity); `trace` is the drained error-flow trace (for
@@ -32,6 +37,7 @@ pub(crate) fn build_receipt(interp: &Interpreter, source: &str, trace: &[ErrorFl
     let metrics = interp.runtime_metrics();
     json!({
         "schemaVersion": RECEIPT_SCHEMA_VERSION,
+        "identityAlgorithm": IDENTITY_ALGORITHM,
         "sourceIdentity": content_digest(source.as_bytes()),
         "implementation": {
             "name": "ajisai-core",

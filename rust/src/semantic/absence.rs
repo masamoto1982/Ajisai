@@ -7,6 +7,12 @@ pub enum AbsenceOrigin {
     /// Division by zero (or by a value indistinguishable from zero within the
     /// comparison budget) produced a Bubble/NIL under the Bubble Rule
     /// (SPEC §11.2). Used together with `NilReason::DivisionByZero`.
+    ///
+    /// Every construction path reaches this through
+    /// `absence_origin_for_reason`, which is the sole derivation of an origin
+    /// from a reason: `DIV` and `POW` by way of `Value::bubble_with_reason`,
+    /// `nil_with_reason` for the rest. Call sites cannot name an origin
+    /// directly, so a reason and its origin cannot drift apart.
     DivisionByZero,
     NilPropagation,
     EmptySequence,
@@ -26,6 +32,11 @@ pub enum AbsenceOrigin {
     /// Bubble Rule (SPEC §11.2). Used together with
     /// `NilReason::SpaceExhausted`.
     SpaceBudget,
+    /// A well-formed operation was applied outside its domain — `SQRT` of a
+    /// negative rational, the "well-formed domain miss" of SPEC §5 — and was
+    /// projected to a Bubble/NIL under the Bubble Rule (SPEC §11.2). Used
+    /// together with `NilReason::DomainMiss`.
+    DomainMiss,
     HostEnvironment,
     Unknown,
 }

@@ -54,6 +54,49 @@ fn comparison_budget_undecidable_protocol_strings() {
 }
 
 #[test]
+fn domain_miss_protocol_strings() {
+    // SPEC §5 names the classification: "SQRT of a negative rational is a
+    // well-formed domain miss". Reason and origin share the spelling because
+    // the origin is derived from the reason.
+    assert_eq!(NilReason::DomainMiss.as_protocol_str(), "domainMiss");
+    assert_eq!(AbsenceOrigin::DomainMiss.as_protocol_str(), "domainMiss");
+}
+
+/// Every `NilReason` maps to a distinct, lowerCamelCase protocol string. A new
+/// variant that forgot its arm, or reused another's spelling, fails here rather
+/// than in whichever serializer happened to hit it first.
+#[test]
+fn every_nil_reason_has_a_distinct_lower_camel_protocol_string() {
+    let all = [
+        NilReason::DivisionByZero,
+        NilReason::EmptySequence,
+        NilReason::MissingField,
+        NilReason::InvalidEncoding,
+        NilReason::InvalidLens,
+        NilReason::StackUnderflow,
+        NilReason::IndexOutOfBounds,
+        NilReason::UnknownWord,
+        NilReason::ExecutionFailure,
+        NilReason::Undecidable,
+        NilReason::NoData,
+        NilReason::PortDisconnected,
+        NilReason::SpaceExhausted,
+        NilReason::DomainMiss,
+    ];
+    let mut seen: Vec<&str> = Vec::new();
+    for reason in &all {
+        let s = reason.as_protocol_str();
+        assert!(
+            s.starts_with(|c: char| c.is_ascii_lowercase())
+                && s.chars().all(|c| c.is_alphanumeric()),
+            "{s} is not a lowerCamelCase protocol string"
+        );
+        assert!(!seen.contains(&s), "{s} is used by two reasons");
+        seen.push(s);
+    }
+}
+
+#[test]
 fn unknown_advertises_truth_valued_capability() {
     // SPEC §7.5 / §2.3: the logical Unknown (U) is observed through the
     // `truthValue` axis as `unknown` and advertises the `truthValued`

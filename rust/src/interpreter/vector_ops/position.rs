@@ -3,7 +3,7 @@ use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
 fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, i64)> {
@@ -77,7 +77,6 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
                     .unwrap_or_else(|| {
                         Value::bubble_with_reason(
                             NilReason::IndexOutOfBounds,
-                            AbsenceOrigin::IndexOutOfBounds,
                             Recoverability::Recoverable,
                         )
                     })

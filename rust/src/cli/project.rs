@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use crate::interpreter::{HostCapability, HostEnv, Interpreter};
 
-use super::lockfile::{LockData, SourceEntry};
+use super::lockfile::{self, LockData, SourceEntry};
 use super::manifest::{parse_manifest, Manifest, MANIFEST_SCHEMA_VERSION};
 use super::run_render::render_completed_run;
 use super::{block_on, print_payloads, Opts};
@@ -252,6 +252,9 @@ pub(crate) fn cmd_build(path_arg: &str, opts: &Opts) -> i32 {
 fn lock_drift(loaded: &LoadedProject, interp: &Interpreter) -> Option<String> {
     let lock_path = loaded.root.join(LOCK_FILE);
     let existing = std::fs::read_to_string(&lock_path).ok()?;
+    if let Some(reason) = lockfile::identity_migration_error(&existing) {
+        return Some(format!("{}: {}", lock_path.display(), reason));
+    }
     let fresh = build_lock_data(loaded, interp).render();
     if existing == fresh {
         None
@@ -288,6 +291,17 @@ pub(crate) fn cmd_lock(path_arg: &str, opts: &Opts) -> i32 {
     if opts.fmt_check {
         match std::fs::read_to_string(&lock_path) {
             Ok(existing) if existing == text => 0,
+            Ok(existing) if lockfile::identity_migration_error(&existing).is_some() => {
+                // Say that the identity algorithm moved. Reporting this as
+                // ordinary drift would point at the sources, which are fine.
+                eprintln!(
+                    "ajisai lock: {}: {}",
+                    lock_path.display(),
+                    lockfile::identity_migration_error(&existing)
+                        .expect("guarded by the match arm")
+                );
+                1
+            }
             Ok(_) => {
                 eprintln!(
                     "ajisai lock: {} is out of date; run `ajisai lock` to update it",

@@ -1,6 +1,7 @@
 # 批判的レビュー（2026-07）への妥当性評価と改修指示書
 
-Status: `[提案・未実施]`。この文書は `docs/dev/` の設計メモであり、Ajisai の
+Status: `[実施中]`。着手済みフェーズの進捗は §10 に記録する。
+この文書は `docs/dev/` の設計メモであり、Ajisai の
 意味論・互換性方針を定義しない。正典は `SPECIFICATION.html` のみである。記述が
 `SPECIFICATION.html` と食い違う場合は正典に従う。
 
@@ -268,8 +269,14 @@ crate 境界を越えるため `#![deny(unsafe_code)]` のリントには掛か�
    `content_digest` の入力は語の本体とソースファイルであり性能上のホットパスでは
    ないため、SIMD を落とす代償は許容できる。ダイジェスト値は feature 構成に
    依存しないので、後から SIMD を有効化しても identity は変わらない。
-   **`no_*` を付けるか（監査面積最小）、`pure` のみとするか（性能優先）は
-   着手時に裁定し、理由を本文書に追記する**。
+   **裁定（着手時、2026-07-25）: `no_*` を付ける監査面積最小構成を採る。**
+   理由は 3 点。(a) 本改修の主題は信頼基盤の縮小であり、S-1 / R1-3 で
+   `unsafe` の監査面積を問題にしている以上、identity のために新たに約 150 箇所の
+   `unsafe` を持ち込むのは同一文書内で矛盾する。(b) `content_digest` の入力は
+   語の本体とソースファイルであり、ホットパスではない。実測でも全テストの
+   実行時間に有意な差は出ていない。(c) BLAKE3 のダイジェスト値は backend に
+   依存しないため、将来性能が問題になれば `no_*` を外すだけで identity を
+   一切変えずに SIMD を有効化できる。すなわちこの裁定は可逆である。
    本評価では両構成でビルドと公式テストベクタ通過を確認済み。
 2. `content_digest` を BLAKE3 に差し替える。出力形式は `#` + 64 hex を維持
    （BLAKE3 の既定出力も 32 バイト = 64 hex なので外形は不変）。
@@ -617,7 +624,168 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
 
 ---
 
-## 9. 改訂履歴
+## 9. 実施記録
+
+各フェーズの着手時に、裁定した事項と実測結果をここに追記する。
+指示（§6）は変更しない。実際に何をどう決めたかを残すのがこの節の役割である。
+
+### R0-1 — 完了（2026-07-25）
+
+- **feature 構成**: `pure` + `no_sse2` / `no_sse41` / `no_avx2` / `no_avx512`。
+  理由は §6 R0-1 手順 1 の裁定欄に記載。`portable.rs` のみが実行経路となり、
+  blake3 由来の `unsafe` は 0 になる。
+- **公式テストベクタ**: `rust/src/interpreter/word_identity_tests.rs` に 4 件。
+  空入力・`"abc"`・1024 バイト・1025 バイト。後ろ 2 つはチャンク境界
+  （1024 バイト）を跨ぐ長さで、単一チャンクからチャンク木への切り替えを
+  踏ませるために選んだ。短い入力だけでは木の合成誤りを検出できない。
+  期待値は独立実装（PyPI `blake3`）で生成し、`"abc"` は本文書 §6 の記載値と
+  一致することを確認した。
+- **スキーマ**: `LOCKFILE_VERSION` 1 → 2、`RECEIPT_SCHEMA_VERSION` 1 → 2。
+  両者に `identityAlgorithm` フィールドを追加した。旧 lockfile は
+  `lockfile::identity_migration_error` が検出し、`ajisai build` / `ajisai lock
+  --check` の双方で「identity アルゴリズムが変わったので再生成せよ」という
+  明示メッセージになる。通常の drift 経路には落ちない。
+- **実測**: `cargo test` 1,836 件通過（新規 11 件を含む）。
+  `cargo check --features wasm --target wasm32-unknown-unknown` 通過。
+  `npm run provenance:check` 通過。`npm run check:file-size` 通過。
+- **`SPECIFICATION.html:1778` は変更不要**であることを確認した。
+  「The identity is a cryptographic hash」は実装が追いついた側であり、
+  正典の文言は正しいままである。
+
+### R0-2 — 完了（2026-07-25）
+
+- `NilReason::DomainMiss` / `AbsenceOrigin::DomainMiss`（protocol 文字列は
+  ともに `"domainMiss"`）を新設し、負数 `SQRT` を差し替えた。実測:
+  `NIL-REASON` → `'domainMiss'`、`NIL-ORIGIN` → `'domainMiss'`、
+  `NIL-RECOVERABLE?` → `'recoverable'`。
+- **recoverability の裁定**: `Recoverable` を採用。定義域外れは入力を変えれば
+  解消する事象であり、実行が失敗したわけではない。指示書の推奨通り。
+- **§4.4 の裁定: 欠陥と判定し、同フェーズ内で修正した**。原因は
+  `bubble_with_reason` が origin を呼び出し側の引数として受けていたことで、
+  reason と origin の対応に導出（`absence_origin_for_reason`）と手書きの
+  2 系統が存在していた。`DIV` は `divisionByZero` / `executionFailure`、
+  `INDEX-OF` は `missingField` / `executionFailure` と、手書き側が
+  `absence.rs` の文書化された対応と食い違っていた。修正として
+  `bubble_with_reason` から origin 引数を**削除**し、全構築経路が
+  `absence_origin_for_reason` を通るようにした。以後 reason と origin は
+  構造的に乖離できない。`1 0 DIV NIL-ORIGIN` は `'divisionByZero'` になる
+  （従来の `'executionFailure'` は上記欠陥の産物であり、期待していた
+  conformance ケース `core-nil-origin-computed` も更新した）。
+- **回帰なし**: `1 0 DIV NIL-REASON` は `'divisionByZero'` のまま。
+- Python 参照実装（`tools/ajisai-repro/ajisai.py`）の `SQRT` / `DIV` /
+  `POW` / `INDEX-OF` を同一規則に同期し、
+  `compare.py --conformance` で 437 ケース差分ゼロを確認。
+- conformance corpus に domain miss の 3 軸を検証する 3 ケースを追加。
+  `#[test]` は `nil_diagnostics_tests.rs`（3 軸の直接検証、DIV 回帰、
+  経路横断の reason/origin 一致）と `protocol_string_tests.rs`
+  （protocol 文字列の網羅・重複検査）に追加。
+- `npm run word:manifest:check` / `npm run check:skill` 通過
+  （生成物への影響なし）。
+
+### R1-1 — 完了（2026-07-25）
+
+- `.gitignore` から lockfile 3 行を削除し、`rust/Cargo.lock`（既存）、
+  `src-tauri/Cargo.lock`（`cargo generate-lockfile` で生成）、
+  `package-lock.json`（`npm install --package-lock-only` で生成）をコミット。
+- CI の `npm install` を `npm ci` に置換（`test.yml` の Quality Gate /
+  TypeScript Check、`build.yml` の 3 箇所）。`npm ci` がコミット済み lock で
+  通ることをローカルで確認（196 packages）。
+- provenance 追跡対象に lockfile 3 件を追加。設計文書
+  `source-provenance-attestation-design.md` は追跡対象に `rust/Cargo.lock` を
+  含むと既に記述していたが、gitignore されていたためスクリプト側に
+  入っていなかった。今回の変更で文書とスクリプトが一致した（358 → 361 files）。
+- `test.yml` の `actions/cache` key `hashFiles('**/Cargo.lock')` は
+  lockfile がコミットされたことで初めて安定した値を持つ。
+
+### R1-2 — コード側完了（2026-07-25）・リポジトリ設定は運用作業として残存
+
+- 事前準備として `cargo fmt` 違反 14 ファイルを解消（style コミット 2 件に
+  分離）。`cargo clippy --all-targets -- -D warnings` は違反ゼロを確認。
+- `test.yml` から `AJISAI_STRICT_QUALITY` 変数・`continue-on-error` 4 箇所・
+  "Quality gate mode summary" step を削除。fmt / clippy / coverage /
+  cargo-llvm-cov install はすべて blocking になった。
+- **裁定**: perf 比較（`compare-perf.sh`）は `advisory` を固定で維持する。
+  共有 CI runner の wall-clock 比較はノイズが大きく、マージ阻止条件に
+  すると flake でブロックされる。決定的なゲート（fmt / clippy / test /
+  coverage）とは性質が異なるため、レポート artifact のレビューで代替する。
+- "Detect stale committed wasm bundle" は指示書の通り advisory を維持。
+- **required checks（要リポジトリ設定、コードからは設定不可）**:
+  `main` の branch protection で以下を required に指定すること —
+  `Quality Gate` / `Rust Tests` / `TypeScript Check` /
+  `Reference Interpreter Differential` / `WASM Boundary Tests`。
+  設定完了後、この項に設定日を追記すること。
+
+### R1-3 — 完了（2026-07-25、sanitizer 経路を採用）
+
+- **手順 1 の再計測**: 本環境（4 コア）で `std::thread::scope` の
+  spawn+join は 1 呼び出し約 190µs。10 万要素の逐次 add（約 131µs）より
+  高く、`parallel.rs:33-49` の記録（約 270µs）と同オーダーで、
+  「scoped thread では並列化の利得が消える」という判断は現在も有効。
+  依存ゼロ方針の下では safe rewrite は不成立と裁定し、選択肢 2
+  （UB そのものを対象とする検証の CI 追加）を採った。
+- **Miri を採用**（TSan / loom は不採用: TSan は `-Zbuild-std` を要し
+  CI コストが大きく、loom は対象コードの大規模書き換えを要する。Miri は
+  raw pointer の lifetime erasure・`MaybeUninit` の disjoint 書き込み・
+  破棄バッファの drop という当該 unsafe island の UB 候補すべてを解釈実行で
+  検証できる）。
+- 全カーネル入口（binary / scalar / checked 2 種 / rational / generic map、
+  overflow 辞退・lane error 辞退経路を含む）を小サイズで踏む専用テスト
+  `miri_exercises_every_kernel_entry_point` を追加。
+- CI に `Unsafe Parallel Verification (Miri)` job を新設（指示書の通り
+  まず advisory。安定後に `continue-on-error` を外して blocking 化する）。
+  `MIRIFLAGS=-Zmiri-ignore-leaks -Zmiri-disable-isolation`
+  （常駐プールのワーカーは意図的にプロセス終了まで生存する／isolation 下では
+  `available_parallelism` が失敗して 1 worker に縮退し fan-out 経路を
+  踏めない）。step 末尾の `grep "test result: ok. N passed"` により
+  「0 件実行の green」を構造的に排除。
+- ローカル実測: 対象 3 テストが Miri で通過（各 20–40 秒）。
+
+### R1-4 — CODEOWNERS 作成済み（2026-07-25）・代替運用を採用
+
+- `.github/CODEOWNERS` を新設。対象: `SPECIFICATION.html`、数値正規形・
+  比較系（`fraction*.rs` / `types/exact/` / `interval.rs`）、
+  `word_identity.rs`、`parallel.rs`、シリアライズ形式
+  （`value_protocol.rs` / `value_persist.rs`）、capability 境界（`host.rs`）、
+  最適化経路（`elastic/` / `compiled_plan.rs` / `shadow_validation.rs`）。
+- 本リポジトリは現在単独著者であり、独立レビュアーは確保できていない。
+  よって指示書の代替運用を正式に採用する:
+  **上記パスに触れる PR では、同一 PR 内での自己承認を行わず、
+  PR 作成からマージまで最低 24 時間の cooling period を置く**。
+  独立レビュアーが確保できた時点で CODEOWNERS の割り当てを更新し、
+  branch protection の "Require review from Code Owners" を有効化すること
+  （これもコードからは設定できないリポジトリ設定である）。
+
+### R2 — 完了（2026-07-25）
+
+- **R2-1**: `README.md:11,54`・`SPECIFICATION.html:240`・
+  `tests/conformance/index.html` の "algebraic closure" を
+  「非負有理数の平方根で ℚ 上に生成される多重二次体」系の正確な表現に置換。
+  `SPECIFICATION.html:240` には「algebraic closure では*ない*こと」と
+  §4.2.7（SQRT は D 上で閉じない）への相互参照を明記。残る出現は
+  この否定説明と本文書のみ（受け入れ条件の許容範囲）。
+  `npm run check:semantic-firewall` 通過。
+- **R2-2**: `word_space.rs` の match 分岐と 1:1 対応する
+  「解析可能な範囲」「note に退避する範囲」の表を
+  `docs/dev/space-contract-design.md` に追加（退避 9 分類:
+  高階実行 / 動的制御 / 子ランタイム語 / module 語 / 非リテラル vector 要素 /
+  `^`・COND 区切り / 未解決 symbol / 推論不能依存で放棄した行 /
+  Dynamic mass で arity override なし）。`README.md:9` の
+  「ahead of execution で検査」を保守的・部分的検証である旨の限定付きに、
+  `SPECIFICATION.html` の handle linearity「verified ahead of execution」と
+  §7.14 space 契約の「ahead-of-time proof」を「解析可能な断片の範囲で
+  検査」に改めた。保守的 fallback 自体は変更していない。
+- **R2-3**: README の水メタファー表・Stagnation 段落・Kleene 例を
+  「完全に仕様化されているが現行語彙からは到達不能な将来意味論」と
+  明示する形に改訂（`UNKNOWN` が構築不能であることは
+  `ajisai run` で `Unknown word: UNKNOWN` になることを実測確認）。
+  `SPECIFICATION.html` は §684 / §1148 / §2181 が既に現在/将来を
+  明確に分離済みのため変更不要と判定。SKILL.md の §5 も既に
+  「future general computable reals」と明記済み（`check:skill` 通過）。
+- **§8 由来の訂正**: `docs/dev/trusted-core-size-assessment.md` の
+  「懸念は実務的に解消された」を撤回し、「言語同一性の核は 47 語だが、
+  メモリ安全・値正しさの監査面積は 76,277 行のまま」と訂正。
+
+## 10. 改訂履歴
 
 | 日付 | 内容 |
 | --- | --- |

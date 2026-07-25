@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
 fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
@@ -94,11 +94,7 @@ pub fn op_index_of(interp: &mut Interpreter) -> Result<()> {
         None => {
             push_result(
                 interp,
-                Value::bubble_with_reason(
-                    NilReason::MissingField,
-                    AbsenceOrigin::ExecutionFailure,
-                    Recoverability::Recoverable,
-                ),
+                Value::bubble_with_reason(NilReason::MissingField, Recoverability::Recoverable),
             );
         }
     }

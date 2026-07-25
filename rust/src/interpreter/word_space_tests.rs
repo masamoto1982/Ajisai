@@ -19,7 +19,10 @@ async fn literal_operand_range_is_const_and_exact() {
     // compile-time-literal pair, so its footprint is input-independent.
     let (class, exact) = space_of("{ [ 0 10 ] RANGE } 'A' DEF", "A").await;
     assert_eq!(class, SpaceClass::Const);
-    assert!(exact, "a literal-driven RANGE has a provably const footprint");
+    assert!(
+        exact,
+        "a literal-driven RANGE has a provably const footprint"
+    );
 }
 
 #[tokio::test]

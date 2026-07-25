@@ -21,6 +21,16 @@ num-integer = "0.1"
 serde_json = "1.0"
 lazy_static = "1.4"
 smallvec = "1"
+# Word / source / result identity (§8.6). The audit-surface-minimal feature set
+# is deliberate: `pure` drops the C and assembly build paths, and the four
+# `no_*` flags drop the Rust SIMD intrinsics modules, leaving `portable.rs`
+# (zero `unsafe`) as the only compiled backend. `content_digest` hashes word
+# bodies and source files, never a hot loop, so losing SIMD costs nothing that
+# matters here. BLAKE3 digests do not depend on the backend, so enabling SIMD
+# later would not change a single identity.
+blake3 = { version = "1", default-features = false, features = [
+  "pure", "no_sse2", "no_sse41", "no_avx2", "no_avx512",
+] }
 # chrono was previously declared but is unused: NOW reads the host clock
 # directly (js Date.now / std SystemTime, see interpreter/datetime.rs) and all
 # civil <-> instant conversion is host-independent exact-rational arithmetic in

@@ -1,5 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::interval::{
@@ -159,9 +160,12 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
                     .push_with_role(Value::from_exact_real(er), Interpretation::RawNumber);
             }
             None => {
-                // Negative input → NIL
+                // A negative radicand is a well-formed domain miss (SPEC §5):
+                // the multiquadratic field D is not closed under SQRT, so the
+                // Bubble Rule projects it to NIL. Recoverable, because a
+                // different input resolves it — nothing failed to execute.
                 interp.stack.push_with_role(
-                    Value::nil_with_reason(NilReason::DivisionByZero),
+                    Value::bubble_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
                     Interpretation::Nil,
                 );
             }

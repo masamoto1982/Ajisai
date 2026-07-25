@@ -51,16 +51,31 @@ A deterministic attestation over the trust-critical source files:
   the pin. This drift guard is the tripwire; it runs in CI next to the existing
   `word:manifest:check` and `check:skill` guards.
 
-### Why SHA-256 and not the §8.6 polynomial digest
+### Why SHA-256 here and BLAKE3 for §8.6 identity
 
-The §8.6 word-identity digest (`rust/src/interpreter/word_identity.rs`) is a
-double-modulus polynomial hash chosen for cheap, deterministic *identity*. With
-public primes and base it is **not collision-resistant against an adversary**,
-who could craft two source bodies with the same digest. Provenance is a security
-property facing a deliberate attacker, so it uses SHA-256 via Node's built-in
-`node:crypto` (no new dependency). `word_identity.rs` already notes its digest
-"may be replaced by a standard cryptographic hash without changing identity
-semantics" — this mechanism is the security-grade sibling, not a replacement.
+Both mechanisms are security-grade; they differ in *where they run*, not in how
+much they can be trusted.
+
+Provenance is a Node-side build-time check. Attesting the tracked surface means
+walking the git index and hashing files before any Rust is compiled, so the
+generator cannot call into `ajisai-core` even in principle. Node ships SHA-256
+in `node:crypto`, which keeps `scripts/generate-source-attestation.mjs` at zero
+dependencies — the right property for a tool whose whole job is to be small
+enough to audit by reading.
+
+The §8.6 word-identity digest (`rust/src/interpreter/word_identity.rs`) runs
+inside the interpreter, on every definition, on every target including WASM. It
+uses BLAKE3 from the `blake3` crate.
+
+Earlier revisions of this section justified the split differently: §8.6 then
+used a double-modulus polynomial hash that was not collision-resistant, so the
+argument was that provenance needed something stronger. That argument no longer
+holds and has been retired — §8.6 moved to BLAKE3 precisely because a
+non-collision-resistant identity was a correctness defect, not merely a
+security one (see `docs/dev/critical-review-2026-07-remediation-instructions.md`
+§4.3). Two different cryptographic hash families remain fine here: each is sound
+on its own, and unifying them would buy nothing while costing the provenance
+generator its zero-dependency property.
 
 ## Tracked surface
 

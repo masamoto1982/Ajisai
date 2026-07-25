@@ -82,7 +82,7 @@ async fn nil_produced_event_carries_structured_absence_protocol_metadata() {
 
     assert_eq!(event.kind.as_protocol_str(), "nilProduced");
     assert_eq!(reason.as_protocol_str(), "divisionByZero");
-    assert_eq!(absence.origin.as_protocol_str(), "executionFailure");
+    assert_eq!(absence.origin.as_protocol_str(), "divisionByZero");
     assert_eq!(absence.recoverability.as_protocol_str(), "recoverable");
     assert!(absence.diagnosis.is_none());
 }

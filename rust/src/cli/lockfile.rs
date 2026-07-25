@@ -15,10 +15,15 @@
 use serde_json::json;
 
 use super::pretty;
-use crate::interpreter::content_digest;
+use crate::interpreter::{content_digest, IDENTITY_ALGORITHM};
 
 /// Version of the lockfile document shape. Bumped only on a breaking change.
-pub(crate) const LOCKFILE_VERSION: u64 = 1;
+///
+/// 2 — every identity in the file is a BLAKE3 digest. Version 1 recorded
+/// polynomial-hash digests of the same shape, so the two are indistinguishable
+/// by inspection; that is why a version-1 file is rejected outright rather than
+/// compared (see [`identity_migration_error`]).
+pub(crate) const LOCKFILE_VERSION: u64 = 2;
 
 /// One source file that composes the project.
 pub(crate) struct SourceEntry {
@@ -83,6 +88,7 @@ impl LockData {
             .collect();
         json!({
             "lockfileVersion": LOCKFILE_VERSION,
+            "identityAlgorithm": IDENTITY_ALGORITHM,
             "manifestSchemaVersion": self.manifest_schema_version,
             "project": {
                 "name": self.project_name,
@@ -103,6 +109,33 @@ impl LockData {
     pub fn render(&self) -> String {
         format!("{}\n", pretty(&self.to_json()))
     }
+}
+
+/// Why an existing lockfile cannot be compared against a freshly realized one,
+/// when the reason is that it predates the current identity algorithm.
+///
+/// A version-1 lockfile holds polynomial-hash digests in the same `#` + 64-hex
+/// shape as a BLAKE3 digest, so a plain text comparison would report it as
+/// ordinary drift and send the reader looking for a source change that never
+/// happened. Returning `Some` here lets the caller say what actually changed.
+/// `None` means the file is current (or unreadable as JSON, in which case the
+/// normal drift path reports it).
+pub(crate) fn identity_migration_error(existing: &str) -> Option<String> {
+    let doc: serde_json::Value = serde_json::from_str(existing).ok()?;
+    let version = doc.get("lockfileVersion")?.as_u64()?;
+    if version >= LOCKFILE_VERSION {
+        return None;
+    }
+    let recorded = doc
+        .get("identityAlgorithm")
+        .and_then(|v| v.as_str())
+        .unwrap_or("a non-cryptographic polynomial hash");
+    Some(format!(
+        "this lockfile is version {version} and its identities were computed with \
+         {recorded}; identities are now {IDENTITY_ALGORITHM} (lockfile version \
+         {LOCKFILE_VERSION}). The recorded digests cannot be compared against \
+         current ones — regenerate the file with `ajisai lock`"
+    ))
 }
 
 #[cfg(test)]
@@ -152,6 +185,37 @@ mod tests {
         ] {
             assert!(text.contains(needle), "missing {needle} in:\n{text}");
         }
+    }
+
+    #[test]
+    fn render_names_the_identity_algorithm() {
+        let text = sample().render();
+        assert!(text.contains("\"identityAlgorithm\": \"blake3\""), "{text}");
+        assert!(text.contains("\"lockfileVersion\": 2"), "{text}");
+    }
+
+    #[test]
+    fn a_current_lockfile_needs_no_migration() {
+        assert_eq!(identity_migration_error(&sample().render()), None);
+    }
+
+    #[test]
+    fn a_version_1_lockfile_reports_the_identity_migration() {
+        // Shape-identical to a current file: same `#` + 64-hex identities, so
+        // only the version distinguishes it.
+        let old = r#"{"lockfileVersion": 1, "sources": []}"#;
+        let message = identity_migration_error(old).expect("version 1 must be rejected");
+        assert!(message.contains("blake3"), "{message}");
+        assert!(message.contains("regenerate"), "{message}");
+        assert!(message.contains("ajisai lock"), "{message}");
+    }
+
+    #[test]
+    fn a_non_lockfile_falls_through_to_the_ordinary_drift_path() {
+        // No JSON, and JSON without the version field, are both reported by the
+        // caller's normal comparison rather than as a migration.
+        assert_eq!(identity_migration_error("not json at all"), None);
+        assert_eq!(identity_migration_error("{}"), None);
     }
 
     #[test]

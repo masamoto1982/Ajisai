@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::semantic::{AbsenceOrigin, Recoverability};
+use crate::semantic::Recoverability;
 use crate::types::arena::{
     arena_node_to_json, arena_to_value, json_to_arena_node, value_to_arena, ValueArena,
 };
@@ -46,11 +46,7 @@ pub fn op_parse(interp: &mut Interpreter) -> Result<()> {
             Some(arena_to_value(&arena, root))
         });
     interp.stack.push(parsed.unwrap_or_else(|| {
-        Value::bubble_with_reason(
-            NilReason::InvalidEncoding,
-            AbsenceOrigin::InvalidEncoding,
-            Recoverability::Recoverable,
-        )
+        Value::bubble_with_reason(NilReason::InvalidEncoding, Recoverability::Recoverable)
     }));
     Ok(())
 }

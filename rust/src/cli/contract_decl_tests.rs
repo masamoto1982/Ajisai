@@ -83,7 +83,11 @@ fn declared_linearity_surfaces_as_a_note_never_an_error() {
             .iter()
             .any(|f| f.severity == Severity::Note && f.message.contains("affine")),
         "the declared linearity should be surfaced as a note: {:?}",
-        check.findings.iter().map(|f| &f.message).collect::<Vec<_>>()
+        check
+            .findings
+            .iter()
+            .map(|f| &f.message)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -105,19 +109,26 @@ fn keep_on_a_handle_discharger_violates_affine_too() {
 fn keep_on_an_observer_is_not_a_violation() {
     // STATUS/MONITOR read a handle without consuming it, so KEEP is the correct
     // idiom and must never be flagged.
-    assert!(is_clean("#:contract PEEK linear\n{ KEEP STATUS } 'PEEK' DEF\n"));
+    assert!(is_clean(
+        "#:contract PEEK linear\n{ KEEP STATUS } 'PEEK' DEF\n"
+    ));
 }
 
 #[test]
 fn eat_on_a_discharger_is_not_a_violation() {
     // The proper consume: EAT on KILL discharges the handle exactly once.
-    assert!(is_clean("#:contract CLEAN linear\n{ EAT KILL } 'CLEAN' DEF\n"));
+    assert!(is_clean(
+        "#:contract CLEAN linear\n{ EAT KILL } 'CLEAN' DEF\n"
+    ));
 }
 
 #[test]
 fn droppable_opts_out_of_the_discipline() {
     // Even a KEEP-on-discharge body is only a note under `droppable`.
-    let check = check_contract_decls("#:contract LOOSE droppable\n{ KEEP KILL } 'LOOSE' DEF\n", Lang::En);
+    let check = check_contract_decls(
+        "#:contract LOOSE droppable\n{ KEEP KILL } 'LOOSE' DEF\n",
+        Lang::En,
+    );
     assert!(!check.violated, "droppable must not raise an error");
     assert!(check
         .findings
@@ -214,7 +225,8 @@ fn declared_const_over_an_elementwise_linear_word_is_an_error() {
     let src = "#:contract INC space:const\n{ [ 1 ] ADD } 'INC' DEF\n";
     let errs = errors(src);
     assert!(
-        errs.iter().any(|m| m.contains("space:const") && m.contains("violation")),
+        errs.iter()
+            .any(|m| m.contains("space:const") && m.contains("violation")),
         "expected a space-contract violation error, got: {errs:?}"
     );
 }
@@ -231,14 +243,15 @@ fn an_unprovable_tighter_declaration_is_a_note_not_an_error() {
         "an unprovable space bound must never raise a false error"
     );
     assert!(
+        check.findings.iter().any(|f| f.severity == Severity::Note
+            && f.message.contains("cannot verify")
+            && f.message.contains("space:linear")),
+        "expected a cannot-verify note: {:?}",
         check
             .findings
             .iter()
-            .any(|f| f.severity == Severity::Note
-                && f.message.contains("cannot verify")
-                && f.message.contains("space:linear")),
-        "expected a cannot-verify note: {:?}",
-        check.findings.iter().map(|f| &f.message).collect::<Vec<_>>()
+            .map(|f| &f.message)
+            .collect::<Vec<_>>()
     );
 }
 

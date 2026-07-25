@@ -85,6 +85,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::ExecutionFailure => "executionFailure",
             AbsenceOrigin::ComparisonBudget => "comparisonBudget",
             AbsenceOrigin::SpaceBudget => "spaceBudget",
+            AbsenceOrigin::DomainMiss => "domainMiss",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::Unknown => "unknown",
         }

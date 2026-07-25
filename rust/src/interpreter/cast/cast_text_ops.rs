@@ -110,10 +110,7 @@ pub fn op_trim_right(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_tokenize(interp: &mut Interpreter) -> Result<()> {
     let sep_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let src_val = interp
-        .stack
-        .pop()
-        .ok_or(AjisaiError::StackUnderflow);
+    let src_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow);
     let src_val = match src_val {
         Ok(v) => v,
         Err(e) => {

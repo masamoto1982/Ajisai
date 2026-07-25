@@ -9,6 +9,14 @@ use crate::semantic::{
 };
 use std::sync::Arc;
 
+/// The single derivation of an absence origin from a NIL reason.
+///
+/// Nothing else may compute one. Call sites used to pass an origin alongside a
+/// reason, which gave the pairing two sources and let them disagree: `DIV` by
+/// zero reported `reason = divisionByZero` with `origin = executionFailure`,
+/// contradicting `AbsenceOrigin::DivisionByZero`'s own documentation, and
+/// `INDEX-OF` did the same to `missingField`. Deriving here means a new reason
+/// gets its origin by adding one arm, and gets it everywhere at once.
 fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
     match reason {
         NilReason::EmptySequence => AbsenceOrigin::EmptySequence,
@@ -24,6 +32,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::PortDisconnected => AbsenceOrigin::HostEnvironment,
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
+        NilReason::DomainMiss => AbsenceOrigin::DomainMiss,
     }
 }
 
@@ -180,12 +189,14 @@ impl Value {
     /// Create a reasoned NIL for the Bubble Rule: well-formed operations that
     /// cannot produce a value return Bubble/NIL directly with an explicit
     /// reason.
+    ///
+    /// The origin follows from the reason via [`absence_origin_for_reason`] and
+    /// is deliberately not a parameter. Recoverability is, because it genuinely
+    /// varies for one reason — a disconnected port is `Fatal` while an empty
+    /// read buffer is `Retryable` — and cannot be read off the reason alone.
     #[inline]
-    pub fn bubble_with_reason(
-        reason: NilReason,
-        origin: AbsenceOrigin,
-        recoverability: Recoverability,
-    ) -> Self {
+    pub fn bubble_with_reason(reason: NilReason, recoverability: Recoverability) -> Self {
+        let origin = absence_origin_for_reason(&reason);
         Self::nil_with_absence(AbsenceMetadata::with_reason(reason, origin, recoverability))
     }
 

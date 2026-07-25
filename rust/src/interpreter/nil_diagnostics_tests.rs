@@ -165,9 +165,34 @@ async fn nil_reason_does_not_leak_for_unknown() {
 // ── NIL-ORIGIN ──────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn nil_origin_reports_execution_failure_for_division() {
+async fn nil_origin_reports_division_by_zero_for_division() {
+    // The origin is derived from the reason, so it agrees with NIL-REASON
+    // rather than reporting the generic `executionFailure` that the old
+    // hand-written argument at the `DIV` call site produced.
     let interp = run("1 0 / NIL-ORIGIN").await;
-    assert_eq!(top_text(&interp).as_deref(), Some("executionFailure"));
+    assert_eq!(top_text(&interp).as_deref(), Some("divisionByZero"));
+}
+
+/// Every NIL that carries a reason reports an origin derived from it. This is
+/// the regression guard for the two-derivations defect: `DIV`, `POW` by a
+/// negative exponent of zero, and `INDEX-OF` each used to name an origin at the
+/// call site and each named the wrong one.
+#[tokio::test]
+async fn nil_origin_agrees_with_nil_reason_across_construction_paths() {
+    for source in [
+        "1 0 /",
+        "'MATH' IMPORT\n0 -1 POW",
+        "'MATH' IMPORT\n-1 SQRT",
+        "'ALGO' IMPORT\n[ 1 2 ] 9 INDEX-OF",
+    ] {
+        let reason = run(&format!("{source} NIL-REASON")).await;
+        let origin = run(&format!("{source} NIL-ORIGIN")).await;
+        assert_eq!(
+            top_text(&reason).as_deref(),
+            top_text(&origin).as_deref(),
+            "reason and origin disagree for `{source}`"
+        );
+    }
 }
 
 #[tokio::test]
@@ -208,6 +233,47 @@ async fn nil_recoverable_reports_unknown_for_literal_nil() {
 async fn nil_recoverable_is_nil_for_present_value() {
     let interp = run("5 NIL-RECOVERABLE?").await;
     assert!(top_is_nil(&interp));
+}
+
+// ── Domain miss (SPEC §5: "SQRT of a negative rational is a well-formed
+//    domain miss") ────────────────────────────────────────────────────────────
+
+/// All three diagnostic axes at once, because the defect this replaces polluted
+/// all three: `SQRT` of a negative reported `divisionByZero` as its reason,
+/// inherited that as its origin, and left recoverability at `unknown` — three
+/// wrong answers about an event whose classification the specification names.
+#[tokio::test]
+async fn negative_sqrt_reports_a_domain_miss_on_every_axis() {
+    let reason = run("'MATH' IMPORT\n-1 SQRT NIL-REASON").await;
+    assert_eq!(top_text(&reason).as_deref(), Some("domainMiss"));
+
+    let origin = run("'MATH' IMPORT\n-1 SQRT NIL-ORIGIN").await;
+    assert_eq!(top_text(&origin).as_deref(), Some("domainMiss"));
+
+    let recoverable = run("'MATH' IMPORT\n-1 SQRT NIL-RECOVERABLE?").await;
+    assert_eq!(
+        top_text(&recoverable).as_deref(),
+        Some("recoverable"),
+        "a domain miss is resolved by a different input, so it is not `unknown`"
+    );
+}
+
+/// Division by zero keeps its own reason. The domain-miss variant is a new
+/// classification, not a rename of an existing one.
+#[tokio::test]
+async fn division_by_zero_is_untouched_by_the_domain_miss_split() {
+    let interp = run("1 0 DIV NIL-REASON").await;
+    assert_eq!(top_text(&interp).as_deref(), Some("divisionByZero"));
+}
+
+/// A non-negative radicand still produces a value, so no diagnostic axis fires.
+#[tokio::test]
+async fn a_non_negative_radicand_is_not_a_domain_miss() {
+    let interp = run("'MATH' IMPORT\n4 SQRT NIL?").await;
+    assert!(
+        !top_is_true(&interp),
+        "SQRT inside its domain must not produce a NIL"
+    );
 }
 
 // ── NIL-DIAGNOSIS ───────────────────────────────────────────────────────────

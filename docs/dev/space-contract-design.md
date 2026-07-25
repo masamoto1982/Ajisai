@@ -106,6 +106,55 @@ the checker never certifies a bound it cannot prove and never emits a false
 `error`. This mirrors the arity/purity/nil/linearity axes and the "conservative
 is always the safe side" rule the parallel gate already follows.
 
+## What the inference analyzes, and what it deliberately gives up on
+
+The contract machinery is a **conservative partial verification over a limited
+syntactic fragment**, not a general pre-execution verifier — describe it that
+way everywhere it is described. The table below is the authoritative statement
+of that split; each row corresponds 1:1 to a branch in
+`rust/src/interpreter/word_space.rs` (R2-2 of
+`critical-review-2026-07-remediation-instructions.md`).
+
+### Analyzable — the simulation tracks these precisely
+
+| Construct | Result | Code |
+| --- | --- | --- |
+| Number / string literal at line level | `lit` slot, `Const` | `feed_literal` |
+| Vector literal of literals | one `lit` slot, `Const` | `feed_structural` (`VectorEnd`, clean) |
+| Block literal `{ … }` as a value | one inert slot, `Const` (the *body* is charged at the higher-order call site instead) | `feed_structural` (`BlockEnd`) |
+| Resolved builtin with fixed flow and authored class | authored `(class, tight)` applied to traced operand sizes | `feed_word` / `builtin_space` |
+| Resolved user word with an inferred class | its inferred `(class, exact)` joined | `feed_word` (non-operand-driven arm) |
+| `RANGE` / `FILL` fed compile-time literals | collapses to `Const`, exact | `feed_word` (`Unbounded`, `all_lit`) |
+| `RANGE` / `FILL` fed an input-derived operand | `Unbounded`, exact — the one case licensed to *error* against a tighter declaration | `feed_word` (`Unbounded`, `!all_lit`) |
+
+### Escapes to the conservative top — surfaced as a *note*, never an error
+
+Each of these joins `SpaceBound::CONSERVATIVE` (`Unbounded, exact = false`):
+the checker reports "cannot verify", and can no longer reject any declaration
+for the word.
+
+| Construct | Why it is outside the model | Code |
+| --- | --- | --- |
+| Higher-order execution (`MAP` `FILTER` `FOLD` `UNFOLD` `ANY` `ALL` `COUNT` `SCAN`) | caller-supplied body runs a data-dependent number of times | `builtin_space` |
+| Dynamic control (`EXEC` `EVAL` `OR-ELSE` `COND` `PRECOMPUTE`) | executed code is a runtime value | `builtin_space` |
+| Child-runtime words (`SPAWN` `AWAIT` `STATUS` `KILL` `MONITOR` `SUPERVISE`) | an `AWAIT` result is another program's output | `builtin_space` |
+| Module words (no builtin spec) | no authored classification | `builtin_space_for` (`None` arm) |
+| Non-literal vector element | element size unknown at simulation time | `feed_structural` (`vector_dirty`) |
+| `^` (VENT) or a COND clause separator at line level | stack heights diverge along a path a linear walk cannot follow | `feed_structural` (`NilCoalesce` / `CondClauseSep`) |
+| Unresolved symbol | unknown flow *and* unknown growth | `feed_unresolved` |
+| A dependency whose contract could not be inferred | the rest of the line's heights are untrustworthy | `abandon_line` |
+| Any word with `Dynamic` mass and no space-arity override | operand provenance untraceable past it | `feed_word` (`arity = None` arm) |
+
+Two structural consequences follow, and both are intended. First, the checker's
+`error` verdicts are trustworthy precisely *because* everything unprovable
+degrades to a note — there are no false errors, at the price of many honest
+"cannot verify" outcomes. Second, any body that touches higher-order execution,
+dynamic control, or child runtimes is entirely outside the provable fragment;
+for such words the contract surface documents intent but verifies nothing. The
+external-claims rule (R2-2): outward-facing text must say "checked within the
+conservatively analyzable fragment", never "verified before execution"
+unqualified.
+
 ## Relationship to the spec
 
 Increment 2.1 was tooling only (no spec change). With inference landed (2.2), the

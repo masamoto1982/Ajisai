@@ -10,10 +10,10 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    env:
-      # Staged rollout:
-      # set repository variable AJISAI_STRICT_QUALITY=true to make advisory checks blocking.
-      AJISAI_STRICT_QUALITY: ${{ vars.AJISAI_STRICT_QUALITY || 'false' }}
+    # Every step here is blocking (R1-2). The staged rollout behind the
+    # AJISAI_STRICT_QUALITY repository variable served its purpose and was
+    # removed: an advisory-by-default gate produces green checkmarks that do
+    # not certify anything.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -22,16 +22,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-llvm-cov
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
         run: cargo install cargo-llvm-cov --locked
 
-      - name: Rust format check (staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
+      - name: Rust format check
         working-directory: rust
         run: cargo fmt --check
 
-      - name: Rust clippy (deny warnings, staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
+      - name: Rust clippy (deny warnings)
         working-directory: rust
         run: cargo clippy --all-targets -- -D warnings
 
@@ -39,17 +36,27 @@ jobs:
         working-directory: rust
         run: cargo test --all-targets --verbose
 
-      - name: Rust branch coverage (staged)
-        continue-on-error: ${{ env.AJISAI_STRICT_QUALITY != 'true' }}
+      - name: Rust branch coverage
+        # --branch expands to `-Z coverage-options=branch`, which only a
+        # nightly rustc accepts, so this step selects nightly explicitly while
+        # the rest of the job stays on stable. Under the old advisory gate the
+        # step had been failing silently on stable since it was written; the
+        # blocking gate surfaced that on its first run.
         working-directory: rust
-        run: cargo llvm-cov --branch --workspace --no-report
+        run: |
+          rustup toolchain install nightly --component llvm-tools-preview
+          cargo +nightly llvm-cov --branch --workspace --no-report
 
       - name: Generate perf regression JSONL
         working-directory: rust
         run: cargo test perf_regression -- --nocapture
 
       - name: Compare perf report against baseline
-        run: scripts/compare-perf.sh bench-baselines/main.jsonl rust/target/perf-report.jsonl ${{ env.AJISAI_STRICT_QUALITY == 'true' && 'strict' || 'advisory' }}
+        # Deliberately advisory: wall-clock comparisons on shared CI runners
+        # are too noisy to gate merges on. Determinism gates (fmt, clippy,
+        # tests, coverage) are blocking above; performance is reviewed from
+        # the uploaded report artifact instead.
+        run: scripts/compare-perf.sh bench-baselines/main.jsonl rust/target/perf-report.jsonl advisory
 
       - name: Upload perf regression report artifact
         if: always()
@@ -65,7 +72,9 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        # npm ci: reproducible install from the committed package-lock.json
+        # (R1-1); fails rather than silently re-resolving on lock drift.
+        run: npm ci
 
       - name: Install ripgrep
         # The semantic firewall greps the source with ripgrep. The runner does
@@ -130,15 +139,6 @@ jobs:
 
       - name: TypeScript MC/DC tests (Vitest)
         run: npm test
-
-      - name: Quality gate mode summary
-        run: |
-          if [ "${AJISAI_STRICT_QUALITY}" = "true" ]; then
-            echo "Quality gate mode: STRICT (blocking)."
-          else
-            echo "Quality gate mode: STAGED (advisory for fmt/clippy/coverage/install)."
-            echo "Set repo variable AJISAI_STRICT_QUALITY=true to enforce strict blocking mode."
-          fi
 
   rust-test:
     name: Rust Tests
@@ -229,7 +229,9 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        # npm ci: reproducible install from the committed package-lock.json
+        # (R1-1); fails rather than silently re-resolving on lock drift.
+        run: npm ci
 
       - name: Run TypeScript type check
         run: npm run check
@@ -312,3 +314,44 @@ jobs:
       - name: Run WASM boundary tests
         working-directory: rust/wasm-tests
         run: wasm-pack test --node
+
+  miri-parallel:
+    name: Unsafe Parallel Verification (Miri)
+    runs-on: ubuntu-latest
+    # Advisory during introduction (R1-3): shadow validation only checks that
+    # the parallel result AGREES with the sequential one, which cannot refute
+    # undefined behavior in the unsafe pool dispatch itself. Miri interprets
+    # the raw-pointer lifetime erasure, the disjoint MaybeUninit writes, and
+    # the discarded-buffer drops, and fails on actual UB. Promote to blocking
+    # (drop this continue-on-error) once the job has run stably for a while.
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup nightly Rust with Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - name: Run Miri over the parallel unsafe island
+        working-directory: rust
+        env:
+          # ignore-leaks: the worker pool is a process-lifetime singleton, so
+          # its parked threads are deliberately alive at exit. disable-isolation:
+          # available_parallelism must read the real CPU count — under isolation
+          # it errors, the pool degrades to one worker, and the fan-out paths
+          # under test would silently never run.
+          MIRIFLAGS: -Zmiri-ignore-leaks -Zmiri-disable-isolation
+        # The filters name small-n tests (the Miri anchor plus the chunk edge
+        # cases); the interpreted run still crosses every unsafe dispatch path.
+        # `--test-threads 1` keeps the interleaving deterministic. The step
+        # fails if the tests are filtered out to zero (the summary is checked),
+        # so "green because nothing ran" cannot happen.
+        run: |
+          cargo miri test --lib -- --test-threads 1 \
+            interpreter::parallel::tests::miri_exercises_every_kernel_entry_point \
+            interpreter::parallel::tests::tiny_input_below_worker_count_stays_sound \
+            interpreter::parallel::tests::parallel_fraction_handles_chunk_overshoot_sizes \
+            | tee miri-summary.txt
+          grep -E "test result: ok\. [1-9][0-9]* passed" miri-summary.txt

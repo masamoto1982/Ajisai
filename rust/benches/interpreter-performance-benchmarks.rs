@@ -580,10 +580,7 @@ impl TrieNode {
         let mut node = self;
         for c in key.chars() {
             let idx = Self::char_to_index(c)?;
-            match &node.children[idx] {
-                Some(child) => node = child,
-                None => return None,
-            }
+            node = node.children[idx].as_deref()?;
         }
         node.value
     }

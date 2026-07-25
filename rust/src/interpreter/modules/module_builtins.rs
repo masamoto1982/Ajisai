@@ -1533,7 +1533,9 @@ mod tests {
                     q
                 );
                 assert!(
-                    !doc.stack_effect.chars().any(|c| c.is_control() && c != '\n'),
+                    !doc.stack_effect
+                        .chars()
+                        .any(|c| c.is_control() && c != '\n'),
                     "{} stack_effect must be UTF-8 plain text without control characters",
                     q
                 );

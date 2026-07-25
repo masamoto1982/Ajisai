@@ -1795,9 +1795,7 @@ mod u_propagation_tests {
         // U guard does not fire and there is no else clause ⇒ CondExhausted.
         let mut interp = Interpreter::new();
         interp.stack.push(tier2_value());
-        let result = interp
-            .execute("{ [ 0 ] = | 'fired-on-U' }\nCOND")
-            .await;
+        let result = interp.execute("{ [ 0 ] = | 'fired-on-U' }\nCOND").await;
         assert!(
             result.is_err(),
             "a U-only COND with no else clause must raise CondExhausted"
