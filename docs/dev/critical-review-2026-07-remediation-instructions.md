@@ -697,6 +697,24 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
 - `test.yml` の `actions/cache` key `hashFiles('**/Cargo.lock')` は
   lockfile がコミットされたことで初めて安定した値を持つ。
 
+### R1-2 — コード側完了（2026-07-25）・リポジトリ設定は運用作業として残存
+
+- 事前準備として `cargo fmt` 違反 14 ファイルを解消（style コミット 2 件に
+  分離）。`cargo clippy --all-targets -- -D warnings` は違反ゼロを確認。
+- `test.yml` から `AJISAI_STRICT_QUALITY` 変数・`continue-on-error` 4 箇所・
+  "Quality gate mode summary" step を削除。fmt / clippy / coverage /
+  cargo-llvm-cov install はすべて blocking になった。
+- **裁定**: perf 比較（`compare-perf.sh`）は `advisory` を固定で維持する。
+  共有 CI runner の wall-clock 比較はノイズが大きく、マージ阻止条件に
+  すると flake でブロックされる。決定的なゲート（fmt / clippy / test /
+  coverage）とは性質が異なるため、レポート artifact のレビューで代替する。
+- "Detect stale committed wasm bundle" は指示書の通り advisory を維持。
+- **required checks（要リポジトリ設定、コードからは設定不可）**:
+  `main` の branch protection で以下を required に指定すること —
+  `Quality Gate` / `Rust Tests` / `TypeScript Check` /
+  `Reference Interpreter Differential` / `WASM Boundary Tests`。
+  設定完了後、この項に設定日を追記すること。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |
