@@ -740,6 +740,21 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
   「0 件実行の green」を構造的に排除。
 - ローカル実測: 対象 3 テストが Miri で通過（各 20–40 秒）。
 
+### R1-4 — CODEOWNERS 作成済み（2026-07-25）・代替運用を採用
+
+- `.github/CODEOWNERS` を新設。対象: `SPECIFICATION.html`、数値正規形・
+  比較系（`fraction*.rs` / `types/exact/` / `interval.rs`）、
+  `word_identity.rs`、`parallel.rs`、シリアライズ形式
+  （`value_protocol.rs` / `value_persist.rs`）、capability 境界（`host.rs`）、
+  最適化経路（`elastic/` / `compiled_plan.rs` / `shadow_validation.rs`）。
+- 本リポジトリは現在単独著者であり、独立レビュアーは確保できていない。
+  よって指示書の代替運用を正式に採用する:
+  **上記パスに触れる PR では、同一 PR 内での自己承認を行わず、
+  PR 作成からマージまで最低 24 時間の cooling period を置く**。
+  独立レビュアーが確保できた時点で CODEOWNERS の割り当てを更新し、
+  branch protection の "Require review from Code Owners" を有効化すること
+  （これもコードからは設定できないリポジトリ設定である）。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |
