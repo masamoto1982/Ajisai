@@ -755,6 +755,36 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
   branch protection の "Require review from Code Owners" を有効化すること
   （これもコードからは設定できないリポジトリ設定である）。
 
+### R2 — 完了（2026-07-25）
+
+- **R2-1**: `README.md:11,54`・`SPECIFICATION.html:240`・
+  `tests/conformance/index.html` の "algebraic closure" を
+  「非負有理数の平方根で ℚ 上に生成される多重二次体」系の正確な表現に置換。
+  `SPECIFICATION.html:240` には「algebraic closure では*ない*こと」と
+  §4.2.7（SQRT は D 上で閉じない）への相互参照を明記。残る出現は
+  この否定説明と本文書のみ（受け入れ条件の許容範囲）。
+  `npm run check:semantic-firewall` 通過。
+- **R2-2**: `word_space.rs` の match 分岐と 1:1 対応する
+  「解析可能な範囲」「note に退避する範囲」の表を
+  `docs/dev/space-contract-design.md` に追加（退避 9 分類:
+  高階実行 / 動的制御 / 子ランタイム語 / module 語 / 非リテラル vector 要素 /
+  `^`・COND 区切り / 未解決 symbol / 推論不能依存で放棄した行 /
+  Dynamic mass で arity override なし）。`README.md:9` の
+  「ahead of execution で検査」を保守的・部分的検証である旨の限定付きに、
+  `SPECIFICATION.html` の handle linearity「verified ahead of execution」と
+  §7.14 space 契約の「ahead-of-time proof」を「解析可能な断片の範囲で
+  検査」に改めた。保守的 fallback 自体は変更していない。
+- **R2-3**: README の水メタファー表・Stagnation 段落・Kleene 例を
+  「完全に仕様化されているが現行語彙からは到達不能な将来意味論」と
+  明示する形に改訂（`UNKNOWN` が構築不能であることは
+  `ajisai run` で `Unknown word: UNKNOWN` になることを実測確認）。
+  `SPECIFICATION.html` は §684 / §1148 / §2181 が既に現在/将来を
+  明確に分離済みのため変更不要と判定。SKILL.md の §5 も既に
+  「future general computable reals」と明記済み（`check:skill` 通過）。
+- **§8 由来の訂正**: `docs/dev/trusted-core-size-assessment.md` の
+  「懸念は実務的に解消された」を撤回し、「言語同一性の核は 47 語だが、
+  メモリ安全・値正しさの監査面積は 76,277 行のまま」と訂正。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |
