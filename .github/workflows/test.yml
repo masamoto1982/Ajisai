@@ -37,8 +37,15 @@ jobs:
         run: cargo test --all-targets --verbose
 
       - name: Rust branch coverage
+        # --branch expands to `-Z coverage-options=branch`, which only a
+        # nightly rustc accepts, so this step selects nightly explicitly while
+        # the rest of the job stays on stable. Under the old advisory gate the
+        # step had been failing silently on stable since it was written; the
+        # blocking gate surfaced that on its first run.
         working-directory: rust
-        run: cargo llvm-cov --branch --workspace --no-report
+        run: |
+          rustup toolchain install nightly --component llvm-tools-preview
+          cargo +nightly llvm-cov --branch --workspace --no-report
 
       - name: Generate perf regression JSONL
         working-directory: rust
