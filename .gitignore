@@ -1,15 +1,12 @@
 # Rust/WASM関連
 rust/target/
-rust/Cargo.lock
 
 # Tauri
 src-tauri/target/
-src-tauri/Cargo.lock
 src-tauri/gen/
 
 # Node.js
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 

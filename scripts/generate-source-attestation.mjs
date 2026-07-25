@@ -35,8 +35,11 @@ const TRACKED_DIR_PREFIXES = ['rust/src/', 'src/', 'src-tauri/src/', 'scripts/']
 const TRACKED_FILES = new Set([
   'SPECIFICATION.html',
   'package.json',
+  'package-lock.json',
   'rust/Cargo.toml',
+  'rust/Cargo.lock',
   'src-tauri/Cargo.toml',
+  'src-tauri/Cargo.lock',
   'src-tauri/tauri.conf.json',
   'vite.config.ts',
   'tsconfig.json',

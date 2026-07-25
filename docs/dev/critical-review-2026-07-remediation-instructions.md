@@ -682,6 +682,21 @@ R0–R2 が完了するまで、以下を凍結する。レビューの「当面
 - `npm run word:manifest:check` / `npm run check:skill` 通過
   （生成物への影響なし）。
 
+### R1-1 — 完了（2026-07-25）
+
+- `.gitignore` から lockfile 3 行を削除し、`rust/Cargo.lock`（既存）、
+  `src-tauri/Cargo.lock`（`cargo generate-lockfile` で生成）、
+  `package-lock.json`（`npm install --package-lock-only` で生成）をコミット。
+- CI の `npm install` を `npm ci` に置換（`test.yml` の Quality Gate /
+  TypeScript Check、`build.yml` の 3 箇所）。`npm ci` がコミット済み lock で
+  通ることをローカルで確認（196 packages）。
+- provenance 追跡対象に lockfile 3 件を追加。設計文書
+  `source-provenance-attestation-design.md` は追跡対象に `rust/Cargo.lock` を
+  含むと既に記述していたが、gitignore されていたためスクリプト側に
+  入っていなかった。今回の変更で文書とスクリプトが一致した（358 → 361 files）。
+- `test.yml` の `actions/cache` key `hashFiles('**/Cargo.lock')` は
+  lockfile がコミットされたことで初めて安定した値を持つ。
+
 ## 10. 改訂履歴
 
 | 日付 | 内容 |

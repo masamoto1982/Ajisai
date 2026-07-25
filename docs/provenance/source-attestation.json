@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:99e9586018eba9f4d228dd70f1f41e91a6371feb91019f8a67e0001d81d98dbc",
-  "fileCount": 358,
+  "rootIdentity": "sha256:3504f158138ffc926a95765e2556249ca8161e839005a7d7f2d2876f7bdca5f1",
+  "fileCount": 361,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -16,8 +16,11 @@
     ".github/workflows/test.yml",
     "SPECIFICATION.html",
     "eslint.config.js",
+    "package-lock.json",
     "package.json",
+    "rust/Cargo.lock",
     "rust/Cargo.toml",
+    "src-tauri/Cargo.lock",
     "src-tauri/Cargo.toml",
     "src-tauri/tauri.conf.json",
     "tsconfig.json",
@@ -29,13 +32,13 @@
   "files": [
     {
       "path": ".github/workflows/build.yml",
-      "sha256": "ed59c142e6ca51fd45bb7bc4d5fd8fca1ee1a14f66c67080f0067beb59f920ca",
-      "bytes": 2391
+      "sha256": "0ae93185f16caa9838809daeb5264ef38851e163a2126e267645e4b7c3d5ba39",
+      "bytes": 2535
     },
     {
       "path": ".github/workflows/test.yml",
-      "sha256": "61de82f79ab6cc89604aca14768ff4fbc6f0eb23408c00408ec80feb97dad712",
-      "bytes": 11724
+      "sha256": "4527800cd5efd7f36b1af70fcc5c534381587f8c0987364dec46a8a6947dc6d8",
+      "bytes": 12012
     },
     {
       "path": "SPECIFICATION.html",
@@ -48,9 +51,19 @@
       "bytes": 958
     },
     {
+      "path": "package-lock.json",
+      "sha256": "267b190e878cabc3e8d0cf46eb19414db42023e1059a4f249cf150c8b8a10a95",
+      "bytes": 156416
+    },
+    {
       "path": "package.json",
       "sha256": "dec0b01db7648147ff8a83f712761c6ddb1d4c9b0434f2160a2d4f2a971c1c83",
       "bytes": 2835
+    },
+    {
+      "path": "rust/Cargo.lock",
+      "sha256": "936875867efb670d402b437c2b7177de5fd17b02c072291b16b73fd637a93329",
+      "bytes": 26144
     },
     {
       "path": "rust/Cargo.toml",
@@ -1444,8 +1457,8 @@
     },
     {
       "path": "scripts/generate-source-attestation.mjs",
-      "sha256": "511fb8352d14397b30b9b3dd48de33ee2e537da0c9f839ec0886d003fd3b3867",
-      "bytes": 6752
+      "sha256": "920bfd91464ab977abbb212b1405723a49d892409d98d5e87e6e4e3f1fc230b4",
+      "bytes": 6822
     },
     {
       "path": "scripts/generate-word-manifest.mjs",
@@ -1471,6 +1484,11 @@
       "path": "scripts/vendor-katex-banner.mjs",
       "sha256": "d38d7e6e1dd411567d461af485438396d515289b132265a8f7cdf6eeb002ba0a",
       "bytes": 1509
+    },
+    {
+      "path": "src-tauri/Cargo.lock",
+      "sha256": "289bfd9b3c1398b1f4cdaf40efc612761c3c5fe716e016fd621bd15c7c0e19b8",
+      "bytes": 114215
     },
     {
       "path": "src-tauri/Cargo.toml",
