@@ -229,19 +229,31 @@ fn floor_ceil_round_are_exact() {
 fn derived_cf_matches_known_expansions() {
     // √2 = [1; 2, 2, 2, …].
     let cf = sqrt_irr(2, 1).cf_prefix(8);
-    let expected: Vec<BigInt> = [1, 2, 2, 2, 2, 2, 2, 2].iter().map(|n| BigInt::from(*n)).collect();
+    let expected: Vec<BigInt> = [1, 2, 2, 2, 2, 2, 2, 2]
+        .iter()
+        .map(|n| BigInt::from(*n))
+        .collect();
     assert_eq!(cf, expected);
     // √3 = [1; 1, 2, 1, 2, …].
     let cf = sqrt_irr(3, 1).cf_prefix(7);
-    let expected: Vec<BigInt> = [1, 1, 2, 1, 2, 1, 2].iter().map(|n| BigInt::from(*n)).collect();
+    let expected: Vec<BigInt> = [1, 1, 2, 1, 2, 1, 2]
+        .iter()
+        .map(|n| BigInt::from(*n))
+        .collect();
     assert_eq!(cf, expected);
     // −√2 = [−2; 1, 1, 2, 2, 2, …] (floor convention).
     let cf = sqrt_irr(2, 1).neg().cf_prefix(6);
-    let expected: Vec<BigInt> = [-2, 1, 1, 2, 2, 2].iter().map(|n| BigInt::from(*n)).collect();
+    let expected: Vec<BigInt> = [-2, 1, 1, 2, 2, 2]
+        .iter()
+        .map(|n| BigInt::from(*n))
+        .collect();
     assert_eq!(cf, expected);
     // √(1/2) = [0; 1, 2, 2, 2, …].
     let cf = sqrt_irr(1, 2).cf_prefix(6);
-    let expected: Vec<BigInt> = [0, 1, 2, 2, 2, 2].iter().map(|n| BigInt::from(*n)).collect();
+    let expected: Vec<BigInt> = [0, 1, 2, 2, 2, 2]
+        .iter()
+        .map(|n| BigInt::from(*n))
+        .collect();
     assert_eq!(cf, expected);
 }
 
@@ -269,7 +281,10 @@ fn observation_adapter_narrows_monotonically() {
     let sqrt2 = sqrt_irr(2, 1);
     let mut obs = sqrt2.observe();
     let first = obs.current_interval().expect("Tier 1 always encloses");
-    assert!(first.lo.lt(&first.hi), "irrational enclosure is not a point");
+    assert!(
+        first.lo.lt(&first.hi),
+        "irrational enclosure is not a point"
+    );
     assert_eq!(obs.refine(Water(24)), crate::types::exact::Refine::Narrower);
     let second = obs.current_interval().expect("still enclosed");
     assert!(second.is_within(&first), "refinement is monotone");

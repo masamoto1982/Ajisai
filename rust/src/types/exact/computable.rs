@@ -32,7 +32,9 @@ pub struct Computable {
 
 impl std::fmt::Debug for Computable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Computable").field("tag", &self.tag).finish()
+        f.debug_struct("Computable")
+            .field("tag", &self.tag)
+            .finish()
     }
 }
 
