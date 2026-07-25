@@ -440,11 +440,10 @@ fn split_compound_modifier(s: &str) -> Option<Vec<String>> {
         } else if let Some(rest) = remaining.strip_prefix('.') {
             parts.push(".".to_string());
             rest
-        } else if let Some(rest) = remaining.strip_prefix(',') {
+        } else {
+            let rest = remaining.strip_prefix(',')?;
             parts.push(",".to_string());
             rest
-        } else {
-            return None;
         };
         remaining = matched;
     }

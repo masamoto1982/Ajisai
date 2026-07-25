@@ -117,9 +117,9 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                         // element is reusable. Build the per-element key only
                         // when the kernel qualified above and the element has a
                         // canonical identity.
-                        let memo_elem_key = memo_kernel_key.as_ref().and_then(|kk| {
-                            super::memo::element_value_key(&elem).map(|ek| (kk, ek))
-                        });
+                        let memo_elem_key = memo_kernel_key
+                            .as_ref()
+                            .zip(super::memo::element_value_key(&elem));
                         if let Some((kk, ek)) = &memo_elem_key {
                             if let Some(cached) = interp.hof_memo_fetch(kk, ek) {
                                 results.push(cached);

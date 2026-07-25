@@ -92,7 +92,7 @@ pub fn report() {
     eprintln!("\n=== Elastic Tracer Report ===");
 
     let mut entries: Vec<(&String, u64)> = data.call_counts.iter().map(|(k, &v)| (k, v)).collect();
-    entries.sort_by(|a, b| b.1.cmp(&a.1));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.1));
 
     for (word, count) in entries.iter().take(20) {
         let total_ns = data.total_nanos.get(*word).copied().unwrap_or(0);

@@ -194,10 +194,8 @@ pub(crate) fn check_plan(interp: &Interpreter, src: &str) -> Result<PlanCheck, S
                     may_bubble.push(canonical.into_owned());
                 }
             }
-            NilPolicy::RejectsNil => {
-                if seen_reject.insert(canonical.to_string()) {
-                    rejects_nil.push(canonical.into_owned());
-                }
+            NilPolicy::RejectsNil if seen_reject.insert(canonical.to_string()) => {
+                rejects_nil.push(canonical.into_owned());
             }
             _ => {}
         }
