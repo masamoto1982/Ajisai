@@ -118,7 +118,10 @@ fn differential_vector_add_end_to_end() {
 
     let code = format!("{} {} +", vector_literal(&lhs), vector_literal(&rhs));
     let (quantized, plain) = run_with_both_paths(&code);
-    assert_eq!(quantized, plain, "quantized vs plain diverged on vector add");
+    assert_eq!(
+        quantized, plain,
+        "quantized vs plain diverged on vector add"
+    );
 
     let top = plain.last().expect("result on stack");
     let got = extract_integer_vector(top).expect("integer vector result");

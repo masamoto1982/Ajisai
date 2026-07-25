@@ -184,12 +184,7 @@ impl Algebraic {
         let terms = self
             .terms
             .iter()
-            .map(|(m, c)| {
-                (
-                    m.clone(),
-                    Fraction::new(-c.numerator(), c.denominator()),
-                )
-            })
+            .map(|(m, c)| (m.clone(), Fraction::new(-c.numerator(), c.denominator())))
             .collect();
         Algebraic {
             basis: self.basis.clone(),

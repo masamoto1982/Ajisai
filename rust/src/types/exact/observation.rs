@@ -44,7 +44,10 @@ pub struct RatInterval {
 impl RatInterval {
     /// The point interval `[f, f]`. `f` must be non-nil.
     pub fn point(f: Fraction) -> Self {
-        RatInterval { lo: f.clone(), hi: f }
+        RatInterval {
+            lo: f.clone(),
+            hi: f,
+        }
     }
 
     /// `[lo, hi]`, normalizing a reversed pair so the invariant

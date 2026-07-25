@@ -805,8 +805,7 @@ mod tests {
         // (Never Slower): the parallel flag stays false.
         let a: Vec<i64> = (0..16).collect();
         let b: Vec<i64> = (0..16).map(|x| x * 2).collect();
-        let (result, parallel) =
-            elementwise_binary("+", &a, &b, |x, y| x + y, simd_ops::lane_add);
+        let (result, parallel) = elementwise_binary("+", &a, &b, |x, y| x + y, simd_ops::lane_add);
         assert!(!parallel, "tiny input must stay sequential (Never Slower)");
         assert_eq!(result, seq_binary(&a, &b, |x, y| x + y));
     }
@@ -848,9 +847,18 @@ mod tests {
         let b: Vec<i64> = (0..n as i64).map(|x| x - 3).collect();
 
         for (op, lane) in [
-            ((|x, y| x + y) as fn(i64, i64) -> i64, simd_ops::lane_add as fn(&[i64], &[i64]) -> Vec<i64>),
-            ((|x, y| x - y) as fn(i64, i64) -> i64, simd_ops::lane_sub as fn(&[i64], &[i64]) -> Vec<i64>),
-            ((|x, y| x * y) as fn(i64, i64) -> i64, simd_ops::lane_mul as fn(&[i64], &[i64]) -> Vec<i64>),
+            (
+                (|x, y| x + y) as fn(i64, i64) -> i64,
+                simd_ops::lane_add as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
+            (
+                (|x, y| x - y) as fn(i64, i64) -> i64,
+                simd_ops::lane_sub as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
+            (
+                (|x, y| x * y) as fn(i64, i64) -> i64,
+                simd_ops::lane_mul as fn(&[i64], &[i64]) -> Vec<i64>,
+            ),
         ] {
             let par = run_parallel_binary(&a, &b, op);
             assert_eq!(par, seq_binary(&a, &b, op), "binary mismatch");
@@ -916,7 +924,10 @@ mod tests {
         let b: Vec<i64> = vec![1; n];
         a[n / 2] = i64::MAX; // one poisoned lane mid-buffer
         let par = run_parallel_binary_checked(&a, &b, |x, y| x.checked_add(y));
-        assert!(par.is_none(), "any overflowing lane must decline the kernel");
+        assert!(
+            par.is_none(),
+            "any overflowing lane must decline the kernel"
+        );
     }
 
     proptest! {
@@ -998,7 +1009,10 @@ mod tests {
             parallel_try_elementwise(n, f).is_err(),
             "a poisoned lane must decline the parallel kernel"
         );
-        assert!(seq_fraction_map(n, f).is_err(), "sequential must also error");
+        assert!(
+            seq_fraction_map(n, f).is_err(),
+            "sequential must also error"
+        );
     }
 
     #[test]
@@ -1023,7 +1037,11 @@ mod tests {
         // and Fraction lanes share `fill_parallel`, so cover both.
         for n in 0usize..=64 {
             let frac = parallel_try_elementwise(n, rational_op).unwrap();
-            assert_eq!(frac, seq_fraction_map(n, rational_op).unwrap(), "fraction n={n}");
+            assert_eq!(
+                frac,
+                seq_fraction_map(n, rational_op).unwrap(),
+                "fraction n={n}"
+            );
 
             let a: Vec<i64> = (0..n as i64).collect();
             let b: Vec<i64> = (0..n as i64).map(|x| x + 1).collect();

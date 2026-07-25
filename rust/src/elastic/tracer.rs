@@ -31,7 +31,6 @@ struct TraceData {
     total_nanos: HashMap<String, u64>,
 }
 
-
 // lazy_static is already a dependency of ajisai-core.
 lazy_static::lazy_static! {
     static ref TRACE_DATA: Mutex<TraceData> = Mutex::new(TraceData::default());

@@ -149,9 +149,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     // Section 8.6: resolve this word's references through its own dictionary
     // first, so the dependency it records is its own dictionary's word rather
     // than a same-named word in another (e.g. earlier-loaded) dictionary.
-    let prev_owning = interp
-        .owning_dictionary_context
-        .replace(dict_name.clone());
+    let prev_owning = interp.owning_dictionary_context.replace(dict_name.clone());
     let mut new_dependencies = HashSet::new();
     for line in lines.iter() {
         for token in line.body_tokens.iter() {
