@@ -2496,6 +2496,21 @@ COND</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="module-math-enclose-rational-point" data-category="module">
+  <h3>MATH@ENCLOSE observes a Tier 0 rational as a point interval (§4.2)</h3>
+  <pre class="ajisai-source">'math' IMPORT 7 8 MATH@ENCLOSE</pre>
+  <pre class="ajisai-expect-result">7/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-compare-within-water-over-maximum" data-category="core">
+  <h3>COMPARE-WITHIN rejects water above the cross-target maximum (§7.4.2)</h3>
+  <pre class="ajisai-source">1 1 1000001 COMPARE-WITHIN</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Expected observation budget at most 1000000, found observation budget exceeds maximum</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-math-abs" data-category="core">
   <h3>MATH@ABS of a negative rational</h3>
   <pre class="ajisai-source">'math' IMPORT -7 MATH@ABS</pre>

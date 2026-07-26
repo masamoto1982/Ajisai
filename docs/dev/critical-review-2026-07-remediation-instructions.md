@@ -1,5 +1,8 @@
 # 批判的レビュー（2026-07）への妥当性評価と改修指示書
 
+> **Status: Partially superseded (2026-07-26).** Statements in this historical remediation plan that Tier 2 or logical `UNKNOWN` are unreachable no longer describe the current language. `MATH@PI`, `MATH@ENCLOSE`, and Tier 2 `COMPARE-WITHIN` are adopted current features; the remaining structural recommendations still apply.
+
+
 Status: `[実施中]`。着手済みフェーズの進捗は §10 に記録する。
 この文書は `docs/dev/` の設計メモであり、Ajisai の
 意味論・互換性方針を定義しない。正典は `SPECIFICATION.html` のみである。記述が

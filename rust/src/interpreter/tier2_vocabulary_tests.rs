@@ -120,3 +120,24 @@ async fn enclose_on_rational_is_a_point() {
     let hi = items[1].as_scalar().unwrap();
     assert_eq!(lo, hi, "a rational encloses to a point");
 }
+
+#[tokio::test]
+async fn observation_water_boundaries_are_target_independent() {
+    // Tier 0 comparisons do not spend water, so the configured maximum can be
+    // validated without performing a million refinement steps.
+    let (_i, stack) = run("1 1 1000000 COMPARE-WITHIN").await;
+    assert_eq!(stack[0].as_scalar().unwrap().numerator(), 0.into());
+
+    for excessive in [1_000_001_u64, u32::MAX as u64, u32::MAX as u64 + 1] {
+        let mut interp = Interpreter::new();
+        let source = format!("1 1 {excessive} COMPARE-WITHIN");
+        let error = interp
+            .execute(&source)
+            .await
+            .expect_err("water above the semantic maximum must error");
+        assert!(
+            error.to_string().contains("exceeds maximum"),
+            "unexpected error for {excessive}: {error}"
+        );
+    }
+}

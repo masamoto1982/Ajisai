@@ -1133,27 +1133,27 @@ const MATH_WORDS: &[ModuleWord] = &[
     module_word!(
         "PI",
         WordShape::Form,
-        "Push the exact real pi as a refinable rational enclosure.",
+        "Push exact Tier 2 pi, observed through rigorous rational enclosures.",
         tier2_ops::op_pi,
         WordPurity::Pure,
         &[],
         true,
         true,
         false,
-        Stability::Experimental,
+        Stability::Stable,
         Capabilities::PURE
     ),
     module_word!(
         "ENCLOSE",
         WordShape::Form,
-        "Observe a value's rational enclosure within an explicit water budget.",
+        "Observe exact rational bounds using 1..1000000 water; NIL passes through.",
         tier2_ops::op_enclose,
         WordPurity::Pure,
         &[],
         true,
         true,
         false,
-        Stability::Experimental,
+        Stability::Stable,
         Capabilities::PURE
     ),
 ];

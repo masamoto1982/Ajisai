@@ -9,10 +9,8 @@
 //! Unknown when the budget is exhausted (see `comparison::op_compare_within`).
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::comparison::extract_exact_real_for_comparison;
-use crate::interpreter::value_extraction_helpers::{
-    extract_integer_from_value, nil_passthrough_value,
-};
+use crate::interpreter::comparison::{extract_exact_real_for_comparison, observation_water};
+use crate::interpreter::value_extraction_helpers::nil_passthrough_value;
 use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
 use crate::types::exact::{pi, ExactReal};
 use crate::types::interval::Interval;
@@ -51,8 +49,8 @@ pub(crate) fn op_enclose(interp: &mut Interpreter) -> Result<()> {
 
     // Read the budget without mutating the stack so an error leaves operands
     // intact (mirrors COMPARE-WITHIN).
-    let budget_i = extract_integer_from_value(&budget_val)?;
-    if budget_i <= 0 {
+    let budget = observation_water(&budget_val)?;
+    if budget == 0 {
         return Err(AjisaiError::create_structure_error(
             "positive integer budget",
             "non-positive budget",
@@ -68,7 +66,7 @@ pub(crate) fn op_enclose(interp: &mut Interpreter) -> Result<()> {
     }
 
     let er = extract_exact_real_for_comparison(&x_val)?;
-    let iv = er.observe_enclosure(budget_i as u64).ok_or_else(|| {
+    let iv = er.observe_enclosure(budget).ok_or_else(|| {
         AjisaiError::create_structure_error("observable value", "empty observation")
     })?;
     let interval = Interval::new(iv.lo, iv.hi)?;

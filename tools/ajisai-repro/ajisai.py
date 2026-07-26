@@ -1085,21 +1085,23 @@ DECIDERS = {
 
 def w_compare_within(it, mods):
     """COMPARE-WITHIN (Section 7.4.2): three-way compare under an explicit
-    refinement-water budget. Over the admitted domain D (Section 4.2.7) — every
-    value the current Coreword set can construct — comparison is total and exact
+    refinement-water budget. Over the admitted Tier 0–1 domain D (Section 4.2.7)
+    comparison is total and exact
     and decides on the Tier 1 multiquadratic normal form, so the named budget
     does NOT affect the result (Sections 7.4.1, 7.4.2): rational and algebraic
     operands, including equal operands composed through any history (√8 vs
     √2+√2, √2+1 vs √2+1), decide to -1/0/1 at every budget. The budget governs
-    only the reserved Tier 2 reals (Section 4.2.2), which no current word can
-    construct; the logical UNKNOWN outcome is therefore unreachable through the
-    current vocabulary and is never produced for equal D-operands."""
+    Tier 2 reals (Section 4.2.2). This independent reference does not yet model
+    module-provided Tier 2 values; that unsupported coverage is reported by the
+    differential driver rather than silently claimed."""
     keep = "KEEP" in mods
     it.need(3)
     budget_v, b_v, a_v = it.stack[-1], it.stack[-2], it.stack[-3]
     fbud = as_fraction(budget_v)
     if fbud is None or fbud.denominator != 1 or fbud <= 0:
         raise AjisaiError("structureError", "COMPARE-WITHIN needs a positive integer budget")
+    if fbud > 1_000_000:
+        raise AjisaiError("structureError", "COMPARE-WITHIN budget exceeds maximum")
     if isinstance(a_v, Nil) or isinstance(b_v, Nil):
         if not keep:
             del it.stack[-3:]

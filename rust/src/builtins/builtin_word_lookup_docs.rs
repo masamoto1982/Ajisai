@@ -210,7 +210,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
     },
     BuiltinLookupDoc {
         word: "COMPARE-WITHIN",
-        behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. Every value the current vocabulary can\nconstruct decides regardless of the budget; the budget bounds\nthe refinement of future general computable reals, whose\nexhaustion yields UNKNOWN.",
+        behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. Tier 0–1 values decide regardless of the\nbudget. For Tier 2 computable reals such as MATH@PI, the\nbudget bounds rational-enclosure refinement and exhaustion\nyields logical UNKNOWN.",
         examples: &[BuiltinExampleDoc {
             code: "1/3 1/2 64 COMPARE-WITHIN",
             result: "Pushes -1, 0, 1, or UNKNOWN.",

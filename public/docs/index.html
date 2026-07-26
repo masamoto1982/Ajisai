@@ -530,7 +530,7 @@
 
                 <section id="numbers" class="ref-page">
                     <h2>Exact Numbers</h2>
-                    <p>Every numeric value is exact; its continued-fraction form is a canonical display <em>derived</em> from the value, not its internal storage. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact value — <code>0.5</code> <em>is</em> one half, not a binary approximation. The implemented domain is exact rationals and the algebraic <code>SQRT</code> closure; general computable reals (π, e, log, …) are reserved for future words.</p>
+                    <p>Every numeric value is exact; its continued-fraction form is a canonical display <em>derived</em> from the value, not its internal storage. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact value — <code>0.5</code> <em>is</em> one half, not a binary approximation. Tier 0–1 is exact rationals and the decidable algebraic <code>SQRT</code> closure. Tier 2 currently provides exact π through rigorous rational enclosures; e, log, and other computable-real functions remain future extensions.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -921,7 +921,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</code></td>
+                                    <td><code>'math' IMPORT MATH@PI MATH@PI 8 COMPARE-WITHIN</code></td>
                                     <td><code>UNKNOWN</code></td>
                                     <td class="notes">Two equal lazy values never diverge, so a small explicit budget runs out and returns the third truth value. <code>COMPARE-WITHIN</code> is the one word today that can produce <code>UNKNOWN</code>.</td>
                                 </tr>
@@ -1003,7 +1003,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</code></td>
+                                    <td><code>'math' IMPORT MATH@PI MATH@PI 8 COMPARE-WITHIN TRUE AND</code></td>
                                     <td><code>UNKNOWN</code></td>
                                     <td class="notes">A budget-exhausted <code>COMPARE-WITHIN</code> yields unknown, which flows through the Kleene tables: true AND unknown is unknown.</td>
                                 </tr>
@@ -2050,7 +2050,7 @@ COND</code></td>
                     <p class="ref-note">To keep a numeric vector on the fast (dense) path, build it from uniform small rationals with an even shape. A single irrational or oversized element, or a ragged row, makes the whole vector nested.</p>
 
                     <h3>When a comparison costs extra</h3>
-                    <p>Every comparison you can write today <strong>decides exactly</strong> — the six relations never return <code>UNKNOWN</code> for any value the current words can build. What changes is how much work deciding takes. Comparing two small rationals is a single integer comparison. Comparing exact irrationals (a square root, or a sum like \(\sqrt2 + \sqrt3\)) is still exact and total, but it is settled through algebraic normal-form work rather than one cheap step, so it costs more.</p>
+                    <p>Tier 0–1 comparisons <strong>decide exactly</strong> and use no observation water. Tier 2, currently constructed by <code>MATH@PI</code>, is observed through rational enclosures and may return logical <code>UNKNOWN</code> when finite water cannot separate two values. What changes is both the cost and whether the requested observation decides. Comparing two small rationals is a single integer comparison. Comparing exact irrationals (a square root, or a sum like \(\sqrt2 + \sqrt3\)) is still exact and total, but it is settled through algebraic normal-form work rather than one cheap step, so it costs more.</p>
                     <div class="ref-table-wrap">
                     <table class="ref-table">
                         <thead>
@@ -2059,7 +2059,7 @@ COND</code></td>
                         <tbody>
                             <tr><td>Small rationals</td><td class="notes">Cheapest — a direct comparison. Always decides.</td></tr>
                             <tr><td>Exact irrationals (square roots and their sums, differences, products, quotients)</td><td class="notes">Decides exactly and totally, at algebraic-normal-form cost. Never <code>UNKNOWN</code>.</td></tr>
-                            <tr><td>Via <code>COMPARE-WITHIN</code> with a small depth</td><td class="notes">You name the partial-quotient depth; two equal lazy values can exhaust it and return <code>UNKNOWN</code>. This is the one window onto the budget.</td></tr>
+                            <tr><td>Tier 2 via <code>COMPARE-WITHIN</code> with finite water</td><td class="notes">You name enclosure-refinement water; two equal computable-real values exhaust it and return <code>UNKNOWN</code>. Increasing water refines the bounds but need not prove equality.</td></tr>
                         </tbody>
                     </table>
                     </div>
@@ -2074,6 +2074,16 @@ COND</code></td>
                                     <td><code>5 3 10 COMPARE-WITHIN</code></td>
                                     <td><code>1/1</code></td>
                                     <td class="notes">Three-way compare within an explicit budget: the sign of \(a - b\).</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'math' IMPORT MATH@PI</code></td>
+                                    <td><code>π (Tier 2 scalar)</code></td>
+                                    <td class="notes">Constructs exact computable-real π, not a floating-point decimal.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>'math' IMPORT MATH@PI 8 MATH@ENCLOSE</code></td>
+                                    <td><code>[201/64, 805/256]</code></td>
+                                    <td class="notes">Eight water units produce rigorous rational endpoints; larger valid budgets never widen the enclosure.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2090,9 +2100,9 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</code></td>
+                                    <td><code>'math' IMPORT MATH@PI MATH@PI 8 COMPARE-WITHIN</code></td>
                                     <td><code>UNKNOWN</code></td>
-                                    <td class="notes">Two equal lazy values never diverge, so a small explicit budget runs out — the only way to see <code>UNKNOWN</code> from today's words.</td>
+                                    <td class="notes">Two observations of exact π cannot have their equality proved by finite enclosure refinement, so the explicit budget produces logical <code>UNKNOWN</code>, not <code>NIL</code>.</td>
                                 </tr>
                             </tbody>
                         </table>
