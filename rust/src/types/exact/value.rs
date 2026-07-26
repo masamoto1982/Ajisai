@@ -5,7 +5,7 @@
 //! is a cost class, never an observable property (SPEC §4.8): values
 //! demote to the cheapest tier that holds them exactly, so an
 //! `Algebraic` payload is always irrational. A Tier 2 variant (general
-//! computable reals) slots in here when a word that needs it exists.
+//! computable reals), currently constructed by `MATH@PI`.
 //!
 //! This type keeps the method surface of the retired continued-fraction
 //! `ExactReal` so call sites migrate by import swap: arithmetic and
@@ -43,8 +43,8 @@ pub enum ExactReal {
     /// Invariant: never rational (rational results demote eagerly).
     Algebraic(Algebraic),
     /// Tier 2: a general computable real — a lazily refined shrinking
-    /// enclosure. No current vocabulary word constructs this variant;
-    /// it is the wired receptacle for future words (π, e, log, …).
+    /// enclosure. `MATH@PI` constructs this variant; further constants and
+    /// functions (e, log, …) remain possible extensions.
     Computable(Computable),
 }
 

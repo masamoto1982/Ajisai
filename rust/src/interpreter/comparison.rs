@@ -745,15 +745,13 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     // or non-positive budget is malformed use and raises an error rather
     // than producing U. Read it without mutating the stack so the error
     // path leaves operands intact.
-    let budget_i = extract_integer_from_value(&budget_val)?;
-    if budget_i <= 0 {
+    let budget = observation_water(&budget_val)?;
+    if budget == 0 {
         return Err(AjisaiError::create_structure_error(
             "positive integer budget",
             "non-positive budget",
         ));
     }
-    let budget = budget_i as usize;
-
     // NIL passthrough for the a/b operands (SPEC §7.12 / §7.4.2).
     if let Some(nil) = nil_passthrough_value(&[a_val.clone(), b_val.clone()]) {
         if !is_keep_mode {
@@ -775,7 +773,7 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
         matches!(a, ExactReal::Computable(_)) || matches!(b, ExactReal::Computable(_));
     let outcome = match (a.as_rational(), b.as_rational()) {
         (Some(af), Some(bf)) => ExactCmp::Decided(af.cmp(bf)),
-        _ => a.cmp_within(&b, Water(budget as u64)),
+        _ => a.cmp_within(&b, Water(budget)),
     };
 
     // Cost-model observability (SPEC §7.4.2): COMPARE-WITHIN is the one
@@ -827,4 +825,25 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Cross-target ceiling for user-supplied observation water. Keeping this
+/// semantic limit independent of `usize` makes native and wasm32 validation
+/// identical and prevents expensive accidental refinement requests.
+pub(crate) const MAX_OBSERVATION_WATER: u64 = 1_000_000;
+
+pub(crate) fn observation_water(value: &Value) -> Result<u64> {
+    let budget = extract_integer_from_value(value)?;
+    if budget <= 0 {
+        return Ok(0);
+    }
+    let budget = u64::try_from(budget)
+        .map_err(|_| AjisaiError::from("Observation budget does not fit u64"))?;
+    if budget > MAX_OBSERVATION_WATER {
+        return Err(AjisaiError::create_structure_error(
+            "observation budget at most 1000000",
+            "observation budget exceeds maximum",
+        ));
+    }
+    Ok(budget)
 }

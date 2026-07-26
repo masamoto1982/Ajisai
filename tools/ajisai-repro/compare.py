@@ -151,9 +151,10 @@ def conformance_corpus():
 
     The manifest is produced by the canonical generator
     (scripts/generate-conformance-manifest.mjs); only `core` cases are taken,
-    since the reference interpreter is Core-only (Hosted cases require host
-    capabilities). Returns [] if Node or the generator is unavailable, so the
-    inline corpus still runs."""
+    since the reference interpreter is Core-only. Pure module cases are
+    explicitly reported as unsupported rather than being silently conflated
+    with Hosted cases, which require host capabilities. Returns [] if Node or
+    the generator is unavailable, so the inline corpus still runs."""
     gen = os.path.join(REPO_ROOT, "scripts", "generate-conformance-manifest.mjs")
     if not os.path.exists(gen):
         print(f"warning: conformance generator not found at {gen}", file=sys.stderr)
@@ -170,9 +171,18 @@ def conformance_corpus():
         print(f"warning: conformance generator failed:\n{r.stderr}", file=sys.stderr)
         return []
     manifest = json.loads(r.stdout)
+    cases = manifest.get("cases", [])
+    unsupported_modules = [c for c in cases if c.get("category") == "module"]
+    if unsupported_modules:
+        ids = ", ".join(c.get("id", "<unnamed>") for c in unsupported_modules)
+        print(
+            "warning: Python reference does not yet support pure module "
+            f"conformance cases ({len(unsupported_modules)} skipped): {ids}",
+            file=sys.stderr,
+        )
     return [
         c["source"]
-        for c in manifest.get("cases", [])
+        for c in cases
         if c.get("category") == "core" and c.get("source")
     ]
 
