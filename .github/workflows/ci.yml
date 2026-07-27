@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Release build
+        run: cargo build --workspace --release
+
+      # Ajisai Core must build and pass its own tests with no package present.
+      # A dependency edge from Core to a package would fail here.
+      - name: Core alone
+        run: cargo test -p ajisai-core
+
+      # The dependency edge only ever runs package -> Core. If this fails, the
+      # package boundary has been inverted.
+      - name: Core has no package dependency
+        run: |
+          if cargo tree -p ajisai-core --prefix none --no-dedupe \
+               | grep -qE '^ajisai-(music|audit)'; then
+            echo "ajisai-core depends on a package"
+            exit 1
+          fi
+          echo "ajisai-core depends on no package"
+
+      - name: Vocabulary manifest is generatable
+        run: cargo run -q -p ajisai-core --bin ajisai -- words > /dev/null
