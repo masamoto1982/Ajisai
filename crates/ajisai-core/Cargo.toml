@@ -1,0 +1,20 @@
+[package]
+name = "ajisai-core"
+description = "Ajisai Core: the canonical language semantics and vocabulary."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Ajisai Core has exactly three dependencies, all of them exact integer
+# arithmetic. There is no serialization framework, no hashing, no async
+# runtime, no backend abstraction. Anything that is not the language lives in
+# a separate package (see `crates/ajisai-music`, `crates/ajisai-audit`).
+[dependencies]
+num-bigint = "0.4"
+num-integer = "0.1"
+num-traits = "0.2"
+
+[[bin]]
+name = "ajisai"
+path = "src/bin/ajisai.rs"

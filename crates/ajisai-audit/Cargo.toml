@@ -1,0 +1,10 @@
+[package]
+name = "ajisai-audit"
+description = "Content addressing and execution receipts for Ajisai, as an external package."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ajisai-core = { path = "../ajisai-core" }

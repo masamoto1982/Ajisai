@@ -1,28 +1,32 @@
 ## Summary
 
-<!-- Describe the change and intent. -->
+<!-- What changed, and why. -->
 
-## Quality Classification
+## Kind of change
 
-- Highest impacted level: <!-- QL-A / QL-B / QL-C / QL-D -->
+- [ ] Language change — `SPECIFICATION.md` is updated in the same PR
+- [ ] Implementation change with no language change
+- [ ] Package (`ajisai-music`, `ajisai-audit`)
+- [ ] Documentation
 
-## Traceability
+## If this changes the language
 
-- Requirement(s): <!-- e.g., AQ-REQ-00X -->
-- Verification evidence: <!-- tests, CI jobs, checklists -->
+- [ ] `SPECIFICATION.md` states the execution rule, stack effect, type rule, and error rule
+- [ ] `docs/migration.md` records the observable change
+- [ ] A test fixes the new behaviour
 
-## Quality Checklist
+## If this adds a field, variant, or classification
 
-- [ ] Relevant requirements/objectives are identified.
-- [ ] Traceability links were added/updated.
-- [ ] `cargo fmt --check` (in `rust/`)
-- [ ] `cargo clippy --all-targets -- -D warnings` (in `rust/`)
-- [ ] `cargo test --all-targets --verbose` (in `rust/`)
-- [ ] `npm run check`, if applicable
-- [ ] `cargo llvm-cov --branch --workspace`, if applicable
-- [ ] MC/DC-like checklist reviewed for modified boolean logic
-- [ ] Release checklist impact considered
+- [ ] Something reads it, and behaves differently because of what it says
+- [ ] `docs/semantic-ontology.md` names its producers and consumers
+
+## Verification
+
+- [ ] `cargo fmt --all --check`
+- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
+- [ ] `cargo test --workspace`
+- [ ] `cargo build --workspace --release`
 
 ## Notes
 
-This repository uses a DO-178B-inspired internal process and does not claim formal DO-178B certification.
+<!-- Anything a reviewer should know. -->

@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ajisai-core",
+    "crates/ajisai-music",
+    "crates/ajisai-audit",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/masamoto1982/ajisai"
+
+[profile.release]
+lto = true
+codegen-units = 1
