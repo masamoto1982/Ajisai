@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:beec1409fa25d59771ac6fb3f5c86d193eac6b1262c38adf6d66a1bd61ef3e97",
-  "fileCount": 370,
+  "rootIdentity": "sha256:dfc37d977bdad76d6dcca9291924e5e4331dbc8ead3472bf0bd08aaf1fee5943",
+  "fileCount": 373,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
@@ -52,8 +52,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "34869d7a261a1a31232a16656bb0b2240ee6c9fcc69a904f54efe022c4e8a31e",
-      "bytes": 2986
+      "sha256": "be6845cdeff34ce3fed100990f4d3a269566e8ea9d4bf9ff93225b99297eae91",
+      "bytes": 3057
     },
     {
       "path": "rust/Cargo.lock",
@@ -1421,6 +1421,11 @@
       "bytes": 3875
     },
     {
+      "path": "scripts/check-semantic-kernel.mjs",
+      "sha256": "52c1523010b9228cb57df0acd81d43d514de391bbf3f180d8fa896855fe4ddb4",
+      "bytes": 2066
+    },
+    {
       "path": "scripts/check-traceability-paths.mjs",
       "sha256": "003b4b023a06432ef889fed69ca40cd8fab24300970d0471c4fba24a01626423",
       "bytes": 2014
@@ -1487,8 +1492,8 @@
     },
     {
       "path": "spec/README.md",
-      "sha256": "fb7c914879e176b489fea848aa4249286a2814371d8c756b23d75df44a136804",
-      "bytes": 1224
+      "sha256": "67999be7c80c35f06c1a41b90a9b15c91604d1d935b710451cae1a11a23d6808",
+      "bytes": 1728
     },
     {
       "path": "spec/freeze/gui-production-files.json",
@@ -1512,13 +1517,23 @@
     },
     {
       "path": "spec/language-semantics.md",
-      "sha256": "5a96d3fb63161aeadbd26cacc459d066cc86db92501e627038e04daa1b98dbfb",
-      "bytes": 232440
+      "sha256": "40994a296d913f0908a817315928c6bf3decbd90c162e3ad76886b2ed47b54fc",
+      "bytes": 20660
     },
     {
       "path": "spec/legacy-clause-map.json",
-      "sha256": "b07df6d3c5d1f49c698a32d895da4b6078223756a76875ab44b1841896da3ac1",
-      "bytes": 2313
+      "sha256": "fa8658e6d399d79a7aeb5d015114855138c11af3692e61101a61ab074dcad2cf",
+      "bytes": 29151
+    },
+    {
+      "path": "spec/legacy/integrated-specification-2026-07-15.html",
+      "sha256": "d3335ffa758eb2da2563b5f63e9d29e4eb3f05006a03b42ac786ed1bb45905ac",
+      "bytes": 250500
+    },
+    {
+      "path": "spec/semantic-families.json",
+      "sha256": "36414207c494aa632416bda2eb597d60c0dbab190476ef41bcd7874cc801f5e7",
+      "bytes": 2190
     },
     {
       "path": "spec/specification.template.html",
