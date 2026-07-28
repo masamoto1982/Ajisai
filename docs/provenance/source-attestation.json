@@ -2,19 +2,19 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:dd7af77fcadb268fcdb39760e86dd3f858e3cdc904770c082e935913c052732a",
-  "fileCount": 362,
+  "rootIdentity": "sha256:beec1409fa25d59771ac6fb3f5c86d193eac6b1262c38adf6d66a1bd61ef3e97",
+  "fileCount": 370,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
     "rust/src/",
     "src/",
     "src-tauri/src/",
-    "scripts/"
+    "scripts/",
+    "spec/"
   ],
   "trackedFiles": [
     ".github/workflows/build.yml",
     ".github/workflows/test.yml",
-    "SPECIFICATION.html",
     "eslint.config.js",
     "package-lock.json",
     "package.json",
@@ -41,11 +41,6 @@
       "bytes": 14187
     },
     {
-      "path": "SPECIFICATION.html",
-      "sha256": "0b2eaaba9ed356b9015120a44cb39b9d1aa1c3d891a6bf5edbf6540abceef31f",
-      "bytes": 248617
-    },
-    {
       "path": "eslint.config.js",
       "sha256": "be4f30bb85026556597ab37e7206a5546bce55718c170d520999dc427d5ec4b0",
       "bytes": 958
@@ -57,8 +52,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "dec0b01db7648147ff8a83f712761c6ddb1d4c9b0434f2160a2d4f2a971c1c83",
-      "bytes": 2835
+      "sha256": "34869d7a261a1a31232a16656bb0b2240ee6c9fcc69a904f54efe022c4e8a31e",
+      "bytes": 2986
     },
     {
       "path": "rust/Cargo.lock",
@@ -1457,8 +1452,13 @@
     },
     {
       "path": "scripts/generate-source-attestation.mjs",
-      "sha256": "920bfd91464ab977abbb212b1405723a49d892409d98d5e87e6e4e3f1fc230b4",
-      "bytes": 6822
+      "sha256": "51fc497eb186168e5afc0daf10dfddf088741143fc20d970220d1d08bfa115fa",
+      "bytes": 6807
+    },
+    {
+      "path": "scripts/generate-specification.mjs",
+      "sha256": "4edf8d6d54000b036356aca9551e82ba7d55ee30fa4429a3d1c32f158b7abe58",
+      "bytes": 1349
     },
     {
       "path": "scripts/generate-word-manifest.mjs",
@@ -1484,6 +1484,46 @@
       "path": "scripts/vendor-katex-banner.mjs",
       "sha256": "d38d7e6e1dd411567d461af485438396d515289b132265a8f7cdf6eeb002ba0a",
       "bytes": 1509
+    },
+    {
+      "path": "spec/README.md",
+      "sha256": "fb7c914879e176b489fea848aa4249286a2814371d8c756b23d75df44a136804",
+      "bytes": 1224
+    },
+    {
+      "path": "spec/freeze/gui-production-files.json",
+      "sha256": "03be6244191f92e90b1276123d1aac9a7616faf48a98d3ce59ebd8dc28ceb1cd",
+      "bytes": 438
+    },
+    {
+      "path": "spec/freeze/host-protocol-v1.golden.json",
+      "sha256": "f66f253fb2b372b9e4e1b44ce321d1cc540d0f0a818c797147ab724460c48b1c",
+      "bytes": 997
+    },
+    {
+      "path": "spec/gui-semantics.md",
+      "sha256": "be9a0657a3e2184b17aea5e1f971335de81b5c6a9ba602fd1102564880c595e0",
+      "bytes": 5538
+    },
+    {
+      "path": "spec/host-protocol-v1.schema.json",
+      "sha256": "2dd51f26c0e9d6992fa354bcafac40abe2e8ea4a663b08737e223b5981962624",
+      "bytes": 6358
+    },
+    {
+      "path": "spec/language-semantics.md",
+      "sha256": "5a96d3fb63161aeadbd26cacc459d066cc86db92501e627038e04daa1b98dbfb",
+      "bytes": 232440
+    },
+    {
+      "path": "spec/legacy-clause-map.json",
+      "sha256": "b07df6d3c5d1f49c698a32d895da4b6078223756a76875ab44b1841896da3ac1",
+      "bytes": 2313
+    },
+    {
+      "path": "spec/specification.template.html",
+      "sha256": "f7b0f9602d6c5035ad7fef1ccd12d1da70f9b6fe6057a3138df5de7527f03ef2",
+      "bytes": 6858
     },
     {
       "path": "src-tauri/Cargo.lock",
