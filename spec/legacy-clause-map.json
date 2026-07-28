@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Trace old integrated section numbers to the Phase 1 authority source without changing their meaning.",
+  "mappings": [
+    { "legacy": "1", "clause": "LANG.IDENTITY", "source": "spec/language-semantics.md", "anchor": "1-language-identity" },
+    { "legacy": "2", "clause": "LANG.AUTHORITY", "source": "spec/language-semantics.md", "anchor": "2-specification-authority" },
+    { "legacy": "3", "clause": "LANG.SOURCE", "source": "spec/language-semantics.md", "anchor": "3-syntax" },
+    { "legacy": "4", "clause": "LANG.VALUES", "source": "spec/language-semantics.md", "anchor": "4-value-model" },
+    { "legacy": "5", "clause": "LANG.STACK", "source": "spec/language-semantics.md", "anchor": "5-stack" },
+    { "legacy": "6", "clause": "LANG.MODIFIERS", "source": "spec/language-semantics.md", "anchor": "6-modifiers" },
+    { "legacy": "7", "clause": "LANG.WORDS", "source": "spec/language-semantics.md", "anchor": "7-built-in-words" },
+    { "legacy": "8", "clause": "LANG.DICTIONARY.USER", "source": "spec/language-semantics.md", "anchor": "8-user-words" },
+    { "legacy": "9", "clause": "LANG.MODULES", "source": "spec/language-semantics.md", "anchor": "9-module-system" },
+    { "legacy": "10", "clause": "LANG.CHILD", "source": "spec/language-semantics.md", "anchor": "10-child-runtime" },
+    { "legacy": "11", "clause": "LANG.FAILURE", "source": "spec/language-semantics.md", "anchor": "11-error-model" },
+    { "legacy": "12", "clause": "LANG.OBSERVATION", "source": "spec/language-semantics.md", "anchor": "12-semantic-plane" },
+    { "legacy": "13", "clause": "LANG.INVARIANTS", "source": "spec/language-semantics.md", "anchor": "13-fractional-dataflow-internal-invariants" },
+    { "legacy": "14", "clause": "DEV.IMPLEMENTATION", "source": "docs/dev/specification-implementation-rules.html", "anchor": "14-ai-first-implementation-rules" },
+    { "legacy": "15", "clause": "QUALITY.TESTS", "source": "docs/quality/specification-test-discipline.html", "anchor": "15-test-discipline" },
+    { "legacy": "16", "clause": "LANG.CONFORMANCE", "source": "spec/language-semantics.md", "anchor": "16-conformance-checklist" },
+    { "legacy": "Presentation Profile", "clause": "GUI.PRESENTATION", "source": "spec/gui-semantics.md", "anchor": "presentation-profile" }
+  ]
+}
