@@ -27,3 +27,10 @@ as the audit snapshot under `legacy/`; `legacy-clause-map.json` maps every one
 of its headings to an active kernel clause. Run `npm run semantic-kernel:check`
 to enforce the 500-line ceiling, family references, complete legacy mapping,
 and the frozen 224-surface inventory.
+
+Phase 3 migrates Word metadata one semantic family at a time. `words.schema.json`
+defines the canonical differential contract and `words.json` contains only the
+families already migrated; `migration.completeInventory` remains false until
+all families have moved. `npm run word-schema:check` prevents a partial rollout
+from changing names, aliases, descriptions, executor keys, clause links, or the
+224-surface generated manifest. Runtime executors remain unchanged.

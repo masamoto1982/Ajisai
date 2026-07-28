@@ -31,6 +31,7 @@
     "specification:generate": "node scripts/generate-specification.mjs",
     "specification:check": "node scripts/generate-specification.mjs --check",
     "semantic-kernel:check": "node scripts/check-semantic-kernel.mjs",
+    "word-schema:check": "node scripts/check-word-schema-migration.mjs",
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",

@@ -4,6 +4,7 @@
   "description": "Shared laws selected by canonical Word contracts. Families classify behavior; they do not add Words.",
   "families": [
     { "id": "stackModifier", "clauses": ["LANG.MODIFIERS.AXES", "LANG.MODIFIERS.APPLICATION"], "axes": ["target", "consumption"] },
+    { "id": "nilObservation", "clauses": ["LANG.VALUES.NIL", "LANG.FAILURE.RECOVERY"], "nilPolicy": "inspectWithoutConflatingUnknown" },
     { "id": "nilRecovery", "clauses": ["LANG.FAILURE.RECOVERY"], "nilPolicy": "inspectOrRecover" },
     { "id": "kleeneTruth", "clauses": ["LANG.VALUES.TRUTH"], "nilPolicy": "contractSpecific" },
     { "id": "comparison", "clauses": ["LANG.VALUES.TRUTH", "LANG.MACHINE.LIMITS"], "budgetOutcome": "unknown" },
