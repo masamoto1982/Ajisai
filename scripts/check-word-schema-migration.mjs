@@ -6,6 +6,7 @@ const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'))
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
 const rust = readFileSync('rust/src/builtins/builtin_word_definitions.rs', 'utf8');
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
+const compiledPlanSource = readFileSync('rust/src/interpreter/compiled_plan.rs', 'utf8');
 const language = readFileSync('spec/language-semantics.md', 'utf8');
 
 const errors = [];
@@ -33,10 +34,16 @@ for (const word of words.entries) {
     continue;
   }
   const block = rust.slice(start, rust.indexOf('..SPEC_DEFAULT', start));
-  const executorMarker = word.name === 'VENT'
-    ? `execution_form: ExecutionForm::${word.executorKey}`
-    : `executor_key: Some(BuiltinExecutorKey::${word.executorKey})`;
-  if (!block.includes(executorMarker)) fail(`${word.name} executorKey drift`);
+  const compiledModifiers = new Set(['TOP', 'STAK', 'EAT', 'KEEP']);
+  const directive = new Set(['VENT', 'FLOW']);
+  if (compiledModifiers.has(word.name)) {
+    if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);
+  } else {
+    const executorMarker = directive.has(word.name)
+      ? `execution_form: ExecutionForm::${word.executorKey}`
+      : `executor_key: Some(BuiltinExecutorKey::${word.executorKey})`;
+    if (!block.includes(executorMarker)) fail(`${word.name} executorKey drift`);
+  }
   const normalizedBlock = block.replace(/\\\s*\n\s*/g, '').replace(/\s+/g, ' ');
   if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);
   if (!block.includes(`hover_syntax: "${word.documentation.syntax}"`)) fail(`${word.name} syntax drift`);
@@ -49,7 +56,7 @@ for (const word of words.entries) {
   }
 }
 
-const expected = new Set(['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT']);
+const expected = new Set(['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE']);
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
 
@@ -57,5 +64,5 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log(`[word-schema] ${names.size} NIL/truth/comparison contracts match the 224-surface manifest and current executors.`);
+  console.log(`[word-schema] ${names.size} migrated contracts match the 224-surface manifest and current executors.`);
 }

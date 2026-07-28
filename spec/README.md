@@ -34,3 +34,8 @@ families already migrated; `migration.completeInventory` remains false until
 all families have moved. `npm run word-schema:check` prevents a partial rollout
 from changing names, aliases, descriptions, executor keys, clause links, or the
 224-surface generated manifest. Runtime executors remain unchanged.
+
+The second Phase 3 slice adds the orthogonal TOP/STAK and EAT/KEEP modifiers,
+control directives, condition dispatch, code execution, conservation guards,
+and lazy fallback. Child-runtime control Words remain deferred to the hosted
+effect slice so their lifecycle and capability metadata move together.
