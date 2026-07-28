@@ -1,0 +1,46 @@
+# Ajisai specification sources
+
+This directory implements the one-way authority structure described by the
+semantics-compaction plan. `language-semantics.md` and `gui-semantics.md` are
+the normative sources. They retain raw HTML blocks during the physical split
+so the generated integrated specification preserves the existing typography,
+anchors, tables, and mathematical channels without a lossy Markdown migration.
+
+`host-protocol-v1.schema.json` is the machine-readable compatibility boundary.
+Within V1, consumers may receive new optional fields, but existing fields,
+meanings, and tuple shapes cannot be removed, renamed, reordered, or changed.
+A breaking protocol must coexist under a new major version.
+
+The `freeze/` fixtures pin representative protocol payloads and the production
+GUI surface. Contract tests deliberately inspect the existing sources rather
+than duplicating GUI behavior in a replacement implementation.
+
+`SPECIFICATION.html` is a distribution artifact assembled from the two
+semantic sources, the implementation and quality fragments, and
+`specification.template.html`. Run `npm run specification:generate` after an
+authoritative source change and `npm run specification:check` in quality gates.
+
+Phase 2 compacts the Language Semantics into the common laws in its ten
+chapters. `semantic-families.json` is the shared-law vocabulary used by later
+Word-schema migrations. The previous integrated wording remains available only
+as the audit snapshot under `legacy/`; `legacy-clause-map.json` maps every one
+of its headings to an active kernel clause. Run `npm run semantic-kernel:check`
+to enforce the 500-line ceiling, family references, complete legacy mapping,
+and the frozen 224-surface inventory.
+
+Phase 3 migrates Word metadata one semantic family at a time. `words.schema.json`
+defines the canonical differential contract and `words.json` contains only the
+families already migrated; `migration.completeInventory` remains false until
+all families have moved. `npm run word-schema:check` prevents a partial rollout
+from changing names, aliases, descriptions, executor keys, clause links, or the
+224-surface generated manifest. Runtime executors remain unchanged.
+
+The second Phase 3 slice adds the orthogonal TOP/STAK and EAT/KEEP modifiers,
+control directives, condition dispatch, code execution, conservation guards,
+and lazy fallback. Child-runtime control Words remain deferred to the hosted
+effect slice so their lifecycle and capability metadata move together.
+
+The third Phase 3 slice migrates dictionary definition, deletion, observation,
+and full or selective module import state. Internal dictionary effects are
+recorded separately from `hostedEffect`, keeping deterministic resolution and
+host capability mediation as distinct semantic axes.
