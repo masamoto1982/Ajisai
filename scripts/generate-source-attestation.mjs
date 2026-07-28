@@ -31,9 +31,8 @@ const pinPath = resolve(repoRoot, 'docs/provenance/source-root.txt');
 // steps that drop gitignored files (e.g. cargo creating rust/Cargo.lock, or
 // node_modules) cannot perturb the root. A backdoor that adds a new source file
 // must `git add` it for the build to use it, which also enrolls it here.
-const TRACKED_DIR_PREFIXES = ['rust/src/', 'src/', 'src-tauri/src/', 'scripts/'];
+const TRACKED_DIR_PREFIXES = ['rust/src/', 'src/', 'src-tauri/src/', 'scripts/', 'spec/'];
 const TRACKED_FILES = new Set([
-  'SPECIFICATION.html',
   'package.json',
   'package-lock.json',
   'rust/Cargo.toml',
