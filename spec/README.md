@@ -39,3 +39,8 @@ The second Phase 3 slice adds the orthogonal TOP/STAK and EAT/KEEP modifiers,
 control directives, condition dispatch, code execution, conservation guards,
 and lazy fallback. Child-runtime control Words remain deferred to the hosted
 effect slice so their lifecycle and capability metadata move together.
+
+The third Phase 3 slice migrates dictionary definition, deletion, observation,
+and full or selective module import state. Internal dictionary effects are
+recorded separately from `hostedEffect`, keeping deterministic resolution and
+host capability mediation as distinct semantic axes.

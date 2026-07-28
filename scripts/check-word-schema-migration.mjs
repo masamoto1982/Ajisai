@@ -47,6 +47,10 @@ for (const word of words.entries) {
   const normalizedBlock = block.replace(/\\\s*\n\s*/g, '').replace(/\s+/g, ' ');
   if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);
   if (!block.includes(`hover_syntax: "${word.documentation.syntax}"`)) fail(`${word.name} syntax drift`);
+  for (const effect of word.effects) {
+    const rustEffect = effect.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+    if (!block.includes(`"${rustEffect}"`)) fail(`${word.name} effect drift: ${effect}`);
+  }
   for (const alias of word.aliases) {
     const aliasPattern = `alias: "${alias}",`;
     const canonicalPattern = `canonical: Some("${word.name}"),`;
@@ -56,7 +60,7 @@ for (const word of words.entries) {
   }
 }
 
-const expected = new Set(['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE']);
+const expected = new Set(['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE', 'DEF', 'DEL', 'LOOKUP', 'IMPORT', 'IMPORT-ONLY', 'UNIMPORT', 'UNIMPORT-ONLY']);
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
 

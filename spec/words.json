@@ -7,10 +7,12 @@
       "truth",
       "comparison",
       "modifiers",
-      "control"
+      "control",
+      "dictionary",
+      "module"
     ],
     "completeInventory": false,
-    "entryCount": 32
+    "entryCount": 39
   },
   "entries": [
     {
@@ -42,7 +44,8 @@
         "lookup": "Push the boolean TRUE onto the stack.",
         "syntax": "TRUE"
       },
-      "executorKey": "True"
+      "executorKey": "True",
+      "effects": []
     },
     {
       "name": "FALSE",
@@ -73,7 +76,8 @@
         "lookup": "Push the boolean FALSE onto the stack.",
         "syntax": "FALSE"
       },
-      "executorKey": "False"
+      "executorKey": "False",
+      "effects": []
     },
     {
       "name": "NIL",
@@ -105,7 +109,8 @@
         "lookup": "Push the NIL value onto the stack.",
         "syntax": "NIL"
       },
-      "executorKey": "Nil"
+      "executorKey": "Nil",
+      "effects": []
     },
     {
       "name": "NIL?",
@@ -137,7 +142,8 @@
         "lookup": "Test whether the top value is an operational NIL (absent).",
         "syntax": "1 0 / NIL?"
       },
-      "executorKey": "NilCheck"
+      "executorKey": "NilCheck",
+      "effects": []
     },
     {
       "name": "NIL-REASON",
@@ -169,7 +175,8 @@
         "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-REASON"
       },
-      "executorKey": "NilReason"
+      "executorKey": "NilReason",
+      "effects": []
     },
     {
       "name": "NIL-ORIGIN",
@@ -201,7 +208,8 @@
         "lookup": "Read the origin of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-ORIGIN"
       },
-      "executorKey": "NilOrigin"
+      "executorKey": "NilOrigin",
+      "effects": []
     },
     {
       "name": "NIL-RECOVERABLE?",
@@ -233,7 +241,8 @@
         "lookup": "Read the recoverability of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-RECOVERABLE?"
       },
-      "executorKey": "NilRecoverable"
+      "executorKey": "NilRecoverable",
+      "effects": []
     },
     {
       "name": "NIL-DIAGNOSIS",
@@ -265,7 +274,8 @@
         "lookup": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
         "syntax": "1 0 / NIL-DIAGNOSIS"
       },
-      "executorKey": "NilDiagnosis"
+      "executorKey": "NilDiagnosis",
+      "effects": []
     },
     {
       "name": "BOOL",
@@ -298,7 +308,8 @@
         "lookup": "Convert a value to a boolean by truthiness.",
         "syntax": "1 BOOL"
       },
-      "executorKey": "Bool"
+      "executorKey": "Bool",
+      "effects": []
     },
     {
       "name": "COMPARE-WITHIN",
@@ -334,7 +345,8 @@
         "lookup": "Three-way compare two values within an explicit observation budget.",
         "syntax": "1/3 1/2 64 COMPARE-WITHIN"
       },
-      "executorKey": "CompareWithin"
+      "executorKey": "CompareWithin",
+      "effects": []
     },
     {
       "name": "EQ",
@@ -371,7 +383,8 @@
         "lookup": "Test equality of two values.",
         "syntax": "1 1 ="
       },
-      "executorKey": "Eq"
+      "executorKey": "Eq",
+      "effects": []
     },
     {
       "name": "LT",
@@ -408,7 +421,8 @@
         "lookup": "Test less-than comparison.",
         "syntax": "1 2 <"
       },
-      "executorKey": "Lt"
+      "executorKey": "Lt",
+      "effects": []
     },
     {
       "name": "LTE",
@@ -445,7 +459,8 @@
         "lookup": "Test less-than-or-equal comparison.",
         "syntax": "1 1 <="
       },
-      "executorKey": "Le"
+      "executorKey": "Le",
+      "effects": []
     },
     {
       "name": "GT",
@@ -482,7 +497,8 @@
         "lookup": "Test greater-than comparison.",
         "syntax": "2 1 >"
       },
-      "executorKey": "Gt"
+      "executorKey": "Gt",
+      "effects": []
     },
     {
       "name": "GTE",
@@ -519,7 +535,8 @@
         "lookup": "Test greater-than-or-equal comparison.",
         "syntax": "1 1 >="
       },
-      "executorKey": "Gte"
+      "executorKey": "Gte",
+      "effects": []
     },
     {
       "name": "NEQ",
@@ -556,7 +573,8 @@
         "lookup": "Test inequality of two values.",
         "syntax": "1 2 <>"
       },
-      "executorKey": "Neq"
+      "executorKey": "Neq",
+      "effects": []
     },
     {
       "name": "AND",
@@ -591,7 +609,8 @@
         "lookup": "Logical AND with three-valued (Kleene) NIL handling.",
         "syntax": "TRUE TRUE &"
       },
-      "executorKey": "And"
+      "executorKey": "And",
+      "effects": []
     },
     {
       "name": "OR",
@@ -624,7 +643,8 @@
         "lookup": "Logical OR with three-valued (Kleene) NIL handling.",
         "syntax": "TRUE FALSE OR"
       },
-      "executorKey": "Or"
+      "executorKey": "Or",
+      "effects": []
     },
     {
       "name": "NOT",
@@ -657,7 +677,8 @@
         "lookup": "Logical negation.",
         "syntax": "TRUE NOT"
       },
-      "executorKey": "Not"
+      "executorKey": "Not",
+      "effects": []
     },
     {
       "name": "VENT",
@@ -693,7 +714,8 @@
         "lookup": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
         "syntax": "NIL ^ [ 0 ]"
       },
-      "executorKey": "LazyNextUnitFallback"
+      "executorKey": "LazyNextUnitFallback",
+      "effects": []
     },
     {
       "name": "TOP",
@@ -727,7 +749,8 @@
         "lookup": "Set the operation target mode to the top of the stack.",
         "syntax": ". +"
       },
-      "executorKey": "SetTargetModeStackTop"
+      "executorKey": "SetTargetModeStackTop",
+      "effects": []
     },
     {
       "name": "STAK",
@@ -761,7 +784,8 @@
         "lookup": "Set the operation target mode to the whole stack.",
         "syntax": ".. +"
       },
-      "executorKey": "SetTargetModeStack"
+      "executorKey": "SetTargetModeStack",
+      "effects": []
     },
     {
       "name": "EAT",
@@ -795,7 +819,8 @@
         "lookup": "Set the consumption mode to consume operands.",
         "syntax": ", +"
       },
-      "executorKey": "SetConsumptionConsume"
+      "executorKey": "SetConsumptionConsume",
+      "effects": []
     },
     {
       "name": "KEEP",
@@ -829,7 +854,8 @@
         "lookup": "Set the consumption mode to keep operands.",
         "syntax": ",, +"
       },
-      "executorKey": "SetConsumptionKeep"
+      "executorKey": "SetConsumptionKeep",
+      "effects": []
     },
     {
       "name": "IDLE",
@@ -861,7 +887,8 @@
         "lookup": "Pass control through unchanged (no-op).",
         "syntax": "IDLE"
       },
-      "executorKey": "Idle"
+      "executorKey": "Idle",
+      "effects": []
     },
     {
       "name": "COND",
@@ -896,7 +923,8 @@
         "lookup": "Evaluate guard/body clauses in order, executing the first match.",
         "syntax": "1 { TRUE } { 'y' } { IDLE } { 'n' } COND"
       },
-      "executorKey": "Cond"
+      "executorKey": "Cond",
+      "effects": []
     },
     {
       "name": "FLOW",
@@ -930,7 +958,8 @@
         "lookup": "Pipeline visual marker (no-op).",
         "syntax": "[ 1 2 3 ] ~ { [ 2 ] * } MAP"
       },
-      "executorKey": "NoOpControlDirective"
+      "executorKey": "NoOpControlDirective",
+      "effects": []
     },
     {
       "name": "FORC",
@@ -952,7 +981,7 @@
       "purity": "effectful",
       "determinism": "stateRelative",
       "capability": "none",
-      "hostedEffect": "interpreterModeWrite",
+      "hostedEffect": "none",
       "interpretationRole": "unassigned",
       "clauses": [
         "LANG.MACHINE.TRANSFORMERS",
@@ -964,7 +993,10 @@
         "lookup": "Force destructive dictionary operations to apply.",
         "syntax": "! 'WORD' DEL"
       },
-      "executorKey": "Force"
+      "executorKey": "Force",
+      "effects": [
+        "interpreterModeWrite"
+      ]
     },
     {
       "name": "EXEC",
@@ -999,7 +1031,8 @@
         "lookup": "Execute a vector as Ajisai code.",
         "syntax": "[ 1 2 + ] EXEC"
       },
-      "executorKey": "Exec"
+      "executorKey": "Exec",
+      "effects": []
     },
     {
       "name": "CONSERVE",
@@ -1034,7 +1067,8 @@
         "lookup": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
         "syntax": "100 [ 3333/100 6667/100 ] CONSERVE"
       },
-      "executorKey": "Conserve"
+      "executorKey": "Conserve",
+      "effects": []
     },
     {
       "name": "EVAL",
@@ -1058,7 +1092,7 @@
       "purity": "effectful",
       "determinism": "stateRelative",
       "capability": "none",
-      "hostedEffect": "codeExecution",
+      "hostedEffect": "none",
       "interpretationRole": "unassigned",
       "clauses": [
         "LANG.MACHINE.TRANSFORMERS",
@@ -1070,7 +1104,10 @@
         "lookup": "Parse a string as Ajisai source code and execute it.",
         "syntax": "'1 2 +' EVAL"
       },
-      "executorKey": "Eval"
+      "executorKey": "Eval",
+      "effects": [
+        "codeExecution"
+      ]
     },
     {
       "name": "OR-ELSE",
@@ -1104,7 +1141,282 @@
         "lookup": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
         "syntax": "1 0 / { 0 } OR-ELSE"
       },
-      "executorKey": "OrElse"
+      "executorKey": "OrElse",
+      "effects": []
+    },
+    {
+      "name": "DEF",
+      "aliases": [],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "protectedWord",
+        "definitionConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Define a user word from a body and a name.",
+        "hover": "Define a user word from a body and a name.",
+        "lookup": "Define a user word from a body and a name.",
+        "syntax": "{ 2 * } 'DOUBLE' DEF"
+      },
+      "executorKey": "Def",
+      "effects": [
+        "dictionaryWrite"
+      ]
+    },
+    {
+      "name": "DEL",
+      "aliases": [],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "wordNotFound",
+        "protectedWord"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Delete a user word from the dictionary.",
+        "hover": "Delete a user word from the dictionary.",
+        "lookup": "Delete a user word from the dictionary.",
+        "syntax": "{ [ 1 ] } 'W' DEF 'W' DEL"
+      },
+      "executorKey": "Del",
+      "effects": [
+        "dictionaryDelete"
+      ]
+    },
+    {
+      "name": "LOOKUP",
+      "aliases": [
+        "?"
+      ],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "wordNotFound"
+      ],
+      "purity": "observational",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Display the documentation for a named word.",
+        "hover": "Display the documentation for a named word.",
+        "lookup": "Display the documentation for a named word.",
+        "syntax": "'ADD' ?"
+      },
+      "executorKey": "Lookup",
+      "effects": [
+        "dictionaryRead"
+      ]
+    },
+    {
+      "name": "IMPORT",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Load all public words of a module into the dictionary.",
+        "hover": "Load all public words of a module into the dictionary.",
+        "lookup": "Load all public words of a module into the dictionary.",
+        "syntax": "'IO' IMPORT"
+      },
+      "executorKey": "Import",
+      "effects": [
+        "dictionaryImport"
+      ]
+    },
+    {
+      "name": "IMPORT-ONLY",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Load only the listed public words of a module.",
+        "hover": "Load only the listed public words of a module.",
+        "lookup": "Load only the listed public words of a module.",
+        "syntax": "'json' [ 'parse' ] IMPORT-ONLY"
+      },
+      "executorKey": "ImportOnly",
+      "effects": [
+        "dictionaryImportOnly"
+      ]
+    },
+    {
+      "name": "UNIMPORT",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "hover": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "lookup": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "syntax": "'IO' UNIMPORT"
+      },
+      "executorKey": "Unimport",
+      "effects": [
+        "dictionaryUnimport"
+      ]
+    },
+    {
+      "name": "UNIMPORT-ONLY",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Hide only the listed imported module words.",
+        "hover": "Hide only the listed imported module words.",
+        "lookup": "Hide only the listed imported module words.",
+        "syntax": "'json' [ 'parse' ] UNIMPORT-ONLY"
+      },
+      "executorKey": "UnimportOnly",
+      "effects": [
+        "dictionaryUnimportOnly"
+      ]
     }
   ]
 }
