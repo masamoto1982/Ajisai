@@ -4,6 +4,7 @@ members = [
     "crates/ajisai-core",
     "crates/ajisai-music",
     "crates/ajisai-audit",
+    "crates/ajisai-wasm",
 ]
 
 [workspace.package]

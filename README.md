@@ -84,6 +84,12 @@ JSON, generated from the live registry.
 
 ## Try it
 
+**In a browser: [ajisai.tech](https://ajisai.tech)** — the playground, with the
+flow, the dictionary, and a stack that shows you which values the armed modes
+would take as operands before you run.
+
+Or on the command line:
+
 ```sh
 cargo run -p ajisai-core --bin ajisai -- eval '1 2 3 4 STAK ADD'
 cargo run -p ajisai-core --bin ajisai -- repl
@@ -128,9 +134,17 @@ SPECIFICATION.md        the language — canonical
 crates/ajisai-core/     the language: library and CLI
 crates/ajisai-music/    exact just intonation, as an external package
 crates/ajisai-audit/    content addressing and receipts, as an external package
+crates/ajisai-wasm/     a raw-ABI WebAssembly binding, for browser hosts
+playground/             the web playground — a host, not the language
 docs/                   the Semantic Plane, the ontology, contracts, migration,
                         implementation notes, and the playground specification
 ```
+
+The playground is deliberately outside the language. `docs/playground-ui.md`
+specifies it, `SPECIFICATION.md` never refers to it, and a headless
+implementation that provides none of it is fully conforming. It is built from
+five files and one WebAssembly module — no bundler, no framework, and no
+runtime dependency.
 
 Ajisai Core has three dependencies, all of them exact integer arithmetic. It has
 one execution path, no feature flag that changes what a program means, and no
@@ -147,6 +161,14 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
 cargo build --workspace --release
+```
+
+The playground:
+
+```sh
+cargo build -p ajisai-wasm --target wasm32-unknown-unknown --release
+cp target/wasm32-unknown-unknown/release/ajisai_wasm.wasm playground/ajisai.wasm
+cd playground && npm install && npm test
 ```
 
 ## Coming from an earlier Ajisai

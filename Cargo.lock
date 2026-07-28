@@ -26,6 +26,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ajisai-wasm"
+version = "1.0.0"
+dependencies = [
+ "ajisai-core",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

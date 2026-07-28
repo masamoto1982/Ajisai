@@ -1,0 +1,17 @@
+[package]
+name = "ajisai-wasm"
+description = "A raw-ABI WebAssembly binding for Ajisai Core, for browser hosts."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# No wasm-bindgen, no wasm-pack, no npm. The whole interface is strings in and
+# JSON out, which a hand-written C ABI over linear memory covers in a hundred
+# lines — and that keeps `cargo build --target wasm32-unknown-unknown` the only
+# build step there is.
+[dependencies]
+ajisai-core = { path = "../ajisai-core" }

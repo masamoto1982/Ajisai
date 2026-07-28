@@ -1,0 +1,56 @@
+name: Playground
+
+# Builds the WebAssembly module and publishes the playground to GitHub Pages.
+# The module is a build artifact and is not committed, so this workflow is the
+# only place it is produced for deployment.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build the WebAssembly module
+        run: cargo build -p ajisai-wasm --target wasm32-unknown-unknown --release
+
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          cp playground/index.html playground/app.css playground/app.js \
+             playground/presentation.js playground/worker.js site/
+          cp target/wasm32-unknown-unknown/release/ajisai_wasm.wasm site/ajisai.wasm
+          cp CNAME site/CNAME
+          # GitHub Pages runs Jekyll unless told not to.
+          touch site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ajisai — playground</title>
+    <meta
+      name="description"
+      content="A playground for Ajisai, a concatenative language in which exact values and vectors flow left to right."
+    />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body data-active-area="stack" data-layout="desktop">
+    <a class="skip-link" href="#editor">Skip to the editor</a>
+
+    <header class="chrome">
+      <h1 class="brand"><span class="brand-mark" aria-hidden="true">≋</span> Ajisai</h1>
+      <p class="tagline">exact values, flowing left to right</p>
+      <div class="chrome-actions">
+        <label class="selector" data-desktop>
+          <span class="selector-label">Left</span>
+          <select id="left-select">
+            <option value="input">Input</option>
+            <option value="output">Output</option>
+          </select>
+        </label>
+        <label class="selector" data-desktop>
+          <span class="selector-label">Right</span>
+          <select id="right-select">
+            <option value="stack">Stack</option>
+            <option value="dictionary">Dictionary</option>
+          </select>
+        </label>
+        <label class="selector" data-mobile>
+          <span class="selector-label">Panel</span>
+          <select id="mobile-select">
+            <option value="input">Input</option>
+            <option value="output">Output</option>
+            <option value="stack">Stack</option>
+            <option value="dictionary">Dictionary</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="panel" id="input-area" aria-label="Input">
+        <div class="panel-head">
+          <h2>Input</h2>
+          <div class="panel-tools">
+            <button type="button" id="run" class="primary" title="Shift+Enter">Run</button>
+            <button type="button" id="step" title="Ctrl+Enter">Step</button>
+            <button type="button" id="lint" title="Report obvious contract inconsistencies">
+              Lint
+            </button>
+            <button type="button" id="format" title="Shift+Alt+F">Format</button>
+            <button type="button" id="reset" title="Ctrl+Alt+Enter">Reset</button>
+          </div>
+        </div>
+        <div class="editor-wrap">
+          <textarea
+            id="editor"
+            spellcheck="false"
+            autocapitalize="off"
+            autocomplete="off"
+            autocorrect="off"
+            aria-describedby="editor-help"
+          ></textarea>
+          <ul id="suggestions" class="suggestions" hidden></ul>
+        </div>
+        <p id="editor-help" class="visually-hidden">
+          Shift plus Enter runs the program. Control plus Enter runs one step. Escape aborts.
+        </p>
+        <div class="palette" id="palette" aria-label="Input assist"></div>
+      </section>
+
+      <section class="panel" id="output-area" aria-label="Output">
+        <div class="panel-head">
+          <h2>Output</h2>
+          <div class="panel-tools">
+            <button type="button" id="copy-output">Copy</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul id="output" class="diagnostics"></ul>
+        </div>
+      </section>
+
+      <section class="panel" id="stack-area" aria-label="Stack">
+        <div class="panel-head">
+          <h2>Stack</h2>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+        <div class="panel-body">
+          <ol id="stack" class="stack" reversed></ol>
+        </div>
+      </section>
+
+      <section class="panel" id="dictionary-area" aria-label="Dictionary">
+        <div class="panel-head">
+          <h2>Dictionary</h2>
+          <div class="panel-tools">
+            <select id="sheet-select" aria-label="Dictionary sheet">
+              <option value="core">Ajisai Core</option>
+              <option value="user">Your words</option>
+            </select>
+            <button type="button" id="export-words" title="Copy your definitions as source">
+              Export
+            </button>
+          </div>
+        </div>
+        <div class="search">
+          <input
+            type="search"
+            id="search"
+            placeholder="Filter words"
+            aria-label="Filter words"
+            autocomplete="off"
+          />
+        </div>
+        <div class="panel-body">
+          <ul id="dictionary" class="dictionary"></ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="chrome">
+      <p id="status" class="status" role="status" aria-live="polite">Loading…</p>
+      <p class="links">
+        <a href="https://github.com/masamoto1982/Ajisai">Source</a>
+        <a href="https://github.com/masamoto1982/Ajisai/blob/main/SPECIFICATION.md">
+          Specification
+        </a>
+      </p>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

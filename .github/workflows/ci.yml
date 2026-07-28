@@ -35,16 +35,46 @@ jobs:
       - name: Core alone
         run: cargo test -p ajisai-core
 
-      # The dependency edge only ever runs package -> Core. If this fails, the
-      # package boundary has been inverted.
-      - name: Core has no package dependency
+      # The dependency edge only ever runs package -> Core, and the playground's
+      # WebAssembly binding is a host like any other. If this fails, a boundary
+      # has been inverted.
+      - name: Core has no package or host dependency
         run: |
           if cargo tree -p ajisai-core --prefix none --no-dedupe \
-               | grep -qE '^ajisai-(music|audit)'; then
-            echo "ajisai-core depends on a package"
+               | grep -qE '^ajisai-(music|audit|wasm)'; then
+            echo "ajisai-core depends on a package or a host"
             exit 1
           fi
-          echo "ajisai-core depends on no package"
+          echo "ajisai-core depends on no package and no host"
 
       - name: Vocabulary manifest is generatable
         run: cargo run -q -p ajisai-core --bin ajisai -- words > /dev/null
+
+  playground:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build the WebAssembly module
+        run: |
+          cargo build -p ajisai-wasm --target wasm32-unknown-unknown --release
+          cp target/wasm32-unknown-unknown/release/ajisai_wasm.wasm playground/ajisai.wasm
+
+      - name: Install the browser
+        working-directory: playground
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      # The presentation rules, the WebAssembly boundary, and the real
+      # interface driven in a real browser.
+      - name: Test
+        working-directory: playground
+        run: npm test
