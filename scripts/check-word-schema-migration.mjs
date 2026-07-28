@@ -60,7 +60,11 @@ for (const word of words.entries) {
   }
 }
 
-const expected = new Set(['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE', 'DEF', 'DEL', 'LOOKUP', 'IMPORT', 'IMPORT-ONLY', 'UNIMPORT', 'UNIMPORT-ONLY']);
+const priorSlice = ['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE', 'DEF', 'DEL', 'LOOKUP', 'IMPORT', 'IMPORT-ONLY', 'UNIMPORT', 'UNIMPORT-ONLY'];
+const collectionSlice = manifest.entries
+  .filter((entry) => entry.kind === 'coreword' && ['vector', 'tensor', 'higher-order'].includes(entry.category))
+  .map((entry) => entry.canonical);
+const expected = new Set([...priorSlice, ...collectionSlice]);
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
 

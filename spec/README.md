@@ -44,3 +44,8 @@ The third Phase 3 slice migrates dictionary definition, deletion, observation,
 and full or selective module import state. Internal dictionary effects are
 recorded separately from `hostedEffect`, keeping deterministic resolution and
 host capability mediation as distinct semantic axes.
+
+The fourth Phase 3 slice migrates every Core vector, tensor, and higher-order
+Word. Shape validation, reasoned materialization failure, element/block
+evaluation order, and the UNKNOWN/NIL/ERROR boundaries are recorded through
+the collectionShape, generativeCollection, and higherOrder families.
