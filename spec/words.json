@@ -11,10 +11,11 @@
       "dictionary",
       "module",
       "collection",
-      "higher-order"
+      "higher-order",
+      "exact-arithmetic"
     ],
     "completeInventory": false,
-    "entryCount": 64
+    "entryCount": 77
   },
   "entries": [
     {
@@ -2307,6 +2308,503 @@
         "syntax": "[ 1 2 3 ] [ 0 ] { + } SCAN"
       },
       "executorKey": "Scan"
+    },
+    {
+      "name": "ADD",
+      "aliases": [
+        "+"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Add two numeric values, element-wise with broadcasting.",
+        "hover": "Add two numeric values, element-wise with broadcasting.",
+        "lookup": "Add two numeric values, element-wise with broadcasting.",
+        "syntax": "1 2 +"
+      },
+      "executorKey": "Add"
+    },
+    {
+      "name": "SUB",
+      "aliases": [
+        "-"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Subtract two numeric values, element-wise with broadcasting.",
+        "hover": "Subtract two numeric values, element-wise with broadcasting.",
+        "lookup": "Subtract two numeric values, element-wise with broadcasting.",
+        "syntax": "5 3 -"
+      },
+      "executorKey": "Sub"
+    },
+    {
+      "name": "MUL",
+      "aliases": [
+        "*"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Multiply two numeric values, element-wise with broadcasting.",
+        "hover": "Multiply two numeric values, element-wise with broadcasting.",
+        "lookup": "Multiply two numeric values, element-wise with broadcasting.",
+        "syntax": "2 4 *"
+      },
+      "executorKey": "Mul"
+    },
+    {
+      "name": "DIV",
+      "aliases": [
+        "/"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "divisorEqualsZero",
+        "reason": "divisionByZero"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Divide two numeric values exactly (fractional result).",
+        "hover": "Divide two numeric values exactly (fractional result).",
+        "lookup": "Divide two numeric values exactly (fractional result).",
+        "syntax": "10 2 /"
+      },
+      "executorKey": "Div"
+    },
+    {
+      "name": "MOD",
+      "aliases": [
+        "%"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch",
+        "divisorEqualsZero"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Modulo (remainder) of two numeric values.",
+        "hover": "Modulo (remainder) of two numeric values.",
+        "lookup": "Modulo (remainder) of two numeric values.",
+        "syntax": "7 3 %"
+      },
+      "executorKey": "Mod"
+    },
+    {
+      "name": "FLOOR",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round toward negative infinity.",
+        "hover": "Round toward negative infinity.",
+        "lookup": "Round toward negative infinity.",
+        "syntax": "[ 7/3 ] FLOOR"
+      },
+      "executorKey": "Floor"
+    },
+    {
+      "name": "CEIL",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round toward positive infinity.",
+        "hover": "Round toward positive infinity.",
+        "lookup": "Round toward positive infinity.",
+        "syntax": "[ 7/3 ] CEIL"
+      },
+      "executorKey": "Ceil"
+    },
+    {
+      "name": "ROUND",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round to nearest integer (half-up).",
+        "hover": "Round to nearest integer (half-up).",
+        "lookup": "Round to nearest integer (half-up).",
+        "syntax": "[ 5/2 ] ROUND"
+      },
+      "executorKey": "Round"
+    },
+    {
+      "name": "QUANTIZE",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "hover": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "lookup": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "syntax": "100/3 1/100 QUANTIZE"
+      },
+      "executorKey": "Quantize"
+    },
+    {
+      "name": "QUANTIZE-HALF-AWAY",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "syntax": "5/2 1 QUANTIZE-HALF-AWAY"
+      },
+      "executorKey": "QuantizeHalfAway"
+    },
+    {
+      "name": "QUANTIZE-FLOOR",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-FLOOR"
+      },
+      "executorKey": "QuantizeFloor"
+    },
+    {
+      "name": "QUANTIZE-CEIL",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-CEIL"
+      },
+      "executorKey": "QuantizeCeil"
+    },
+    {
+      "name": "QUANTIZE-TRUNC",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-TRUNC"
+      },
+      "executorKey": "QuantizeTrunc"
     }
   ]
 }

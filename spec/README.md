@@ -49,3 +49,8 @@ The fourth Phase 3 slice migrates every Core vector, tensor, and higher-order
 Word. Shape validation, reasoned materialization failure, element/block
 evaluation order, and the UNKNOWN/NIL/ERROR boundaries are recorded through
 the collectionShape, generativeCollection, and higherOrder families.
+
+The fifth Phase 3 slice migrates every Core arithmetic Word without changing
+the exact-real engine. Lifted binary/unary arithmetic and quantization retain
+exact residuals, broadcast errors, NIL passthrough, reasoned undecidability,
+and the deliberate MOD-by-zero ERROR versus DIV-by-zero NIL distinction.
