@@ -10,7 +10,7 @@
 //! twenty lines saved.
 
 use crate::alias;
-use crate::contract::{Arity, Effect, Word};
+use crate::contract::{Arity, StakSupport, Word};
 use crate::interpreter::Interpreter;
 
 /// The whole vocabulary as JSON.
@@ -50,7 +50,8 @@ fn word_json(word: &Word) -> String {
             "      \"may_produce_nil\": {},\n",
             "      \"rejects_unknown\": {},\n",
             "      \"may_produce_unknown\": {},\n",
-            "      \"effect\": {},\n",
+            "      \"stak\": {},\n",
+            "      \"role_required\": {},\n",
             "      \"summary\": {}\n",
             "    }}"
         ),
@@ -80,10 +81,18 @@ fn word_json(word: &Word) -> String {
         contract.nil_policy.may_produce,
         contract.unknown_policy.rejects,
         contract.unknown_policy.may_produce,
-        quote(match contract.effect {
-            Effect::Pure => "pure",
-            Effect::Dictionary => "dictionary",
+        quote(match contract.stak {
+            StakSupport::MapEach => "map-each",
+            StakSupport::FoldLeft => "fold-left",
+            StakSupport::Unsupported => "unsupported",
         }),
+        match contract.role_required {
+            None => "null".to_string(),
+            Some((position, role)) => format!(
+                "{{ \"operand\": {position}, \"role\": {} }}",
+                quote(role.name())
+            ),
+        },
         quote(contract.summary),
     )
 }

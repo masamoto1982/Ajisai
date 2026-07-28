@@ -42,21 +42,34 @@ be a name in an enum rather than a part of the language — and this rebuild was
 largely an exercise in removing those.
 
 Adding a role is a language change and belongs in `SPECIFICATION.md`. A package
-cannot add one (§13).
+cannot add one (§13) — which is a real limit on what a package can be, and
+`SPECIFICATION.md` §13 states it rather than leaving it to be discovered.
 
 ## What roles affect, stated honestly
 
-Roles affect **rendering**, the **role words**, and nothing else.
+Roles affect **rendering**, the **role words**, and **two role-sensitive
+words**: `DEF` and `DEL`, which require a name to be read as `TEXT`.
 
-The temptation in the other direction is real: it would be convenient for
-`>INTERVAL` to make comparison interval-aware, or for `TEXT` to make `CONCAT`
-behave differently. Ajisai does not do that, and the specification says so
-plainly rather than claiming a purity the implementation quietly breaks.
+That third item is the one worth defending, because the tidier position — "a
+role never touches computation" — was what an earlier draft claimed while the
+implementation did something else. `DEF` declared a `Text` input and then
+accepted any vector of codepoints, so `{ 2 MUL } [ 68 79 85 66 76 69 ] DEF`
+defined `DOUBLE`. Four different things said four different things: the
+specification said roles change nothing, the contract said the name is text,
+the implementation ignored the role, and a comment claimed the Semantic Plane
+was load bearing there.
 
-The one place this shows is equality. `"A" [ 65 ] EQ` is `TRUE`. That may read
-as surprising, and it is deliberate: if equality consulted the role, then a
-reading — a display concern — would be deciding a computation, and the boundary
-this whole plane depends on would be gone.
+The honest resolutions were two, and the tidier one is the weaker one. If a
+bare vector of numbers can be a name, then the reading a program asserts about
+its own data counts for nothing at exactly the point a language most needs a
+name to be a name — and the plane is decoration after all. So `DEF` requires
+the role, the specification says which words are role-sensitive, and the set is
+enumerable from the contracts rather than discoverable by reading source.
+
+What roles still never do is change a **result**. A role decides whether an
+operand is admissible; nothing computes a different value because of one.
+Equality is the clearest case: `"A" [ 65 ] EQ` is `TRUE`, deliberately, because
+if equality consulted the role then a reading would be deciding a computation.
 
 ## One well-formedness rule
 

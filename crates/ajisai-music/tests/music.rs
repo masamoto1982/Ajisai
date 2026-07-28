@@ -159,3 +159,31 @@ fn absence_is_refused_rather_than_propagated() {
     let mut interpreter = ajisai();
     assert!(interpreter.execute("440 3 0 MUSIC:JUST").is_err());
 }
+
+/// A package can check values even though it cannot make a shape unforgeable.
+/// The second half of that sentence is the boundary; the first half is what
+/// this package does with the room it has.
+#[test]
+fn values_are_checked_even_though_the_shape_is_not_owned() {
+    for source in [
+        "[ -100 -3 ] MUSIC:PITCH",   // negative frequency and duration
+        "[ 440 -1 ] MUSIC:BEATS",    // negative duration
+        "-440 3 2 MUSIC:JUST",       // negative base frequency
+        "440 -3 2 MUSIC:JUST",       // interval must be positive
+        "440 0 2 MUSIC:JUST",        // ...strictly
+        "[ 440 1 ] 0 MUSIC:SECONDS", // tempo must be positive
+        "[ 440 ] MUSIC:PITCH",       // a note has two elements
+        "[ 440 1 2 ] MUSIC:PITCH",
+    ] {
+        let mut interpreter = ajisai();
+        assert!(
+            interpreter.execute(source).is_err(),
+            "`{source}` should be refused"
+        );
+    }
+    // What a package cannot do: make a note unforgeable. Any two-element
+    // vector of well-formed numbers is a note, and `SPECIFICATION.md` §13 says
+    // so rather than pretending otherwise.
+    let mut interpreter = ajisai();
+    assert_eq!(line(&mut interpreter, "[ 440 1 ] MUSIC:PITCH"), "440");
+}

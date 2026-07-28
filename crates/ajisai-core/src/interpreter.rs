@@ -22,7 +22,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::contract::{Arity, Body, Word};
+use crate::contract::{Arity, Body, StakSupport, Word};
 use crate::error::{Error, Result};
 use crate::k3::Truth;
 use crate::mode::{Mode, Retention, Selection};
@@ -188,6 +188,19 @@ impl Interpreter {
         }
     }
 
+    /// Invoke a word, atomically with respect to the flow.
+    ///
+    /// `SPECIFICATION.md` §5.7 promises that a word that fails leaves the flow
+    /// exactly as it found it. Words dispatched through the operand layer get
+    /// that from the shape of [`Interpreter::apply_op`], which runs the word
+    /// before it touches the stack. Every other word — one that needs the
+    /// interpreter, and every user definition — draws its own operands and can
+    /// fail after doing so, so this is where they are wrapped: the flow is
+    /// saved, and restored if the word fails.
+    ///
+    /// The dictionary is deliberately *not* rolled back; §5.7 is a promise
+    /// about the flow. A quote that defines a word and then fails leaves the
+    /// definition behind, and the specification says so.
     fn invoke(&mut self, name: &str) -> Result<()> {
         let mode = std::mem::replace(&mut self.mode, Mode::DEFAULT);
 
@@ -201,31 +214,92 @@ impl Interpreter {
                     mode,
                 });
             }
-            return self.eval_body(&body);
+            return self.atomically(|interpreter| interpreter.eval_body(&body));
         }
 
         let Some(word) = self.registry.get(name) else {
             return Err(Error::UnknownWord(name.to_string()));
         };
+        let arity = word.contract.arity;
+        let stak = word.contract.stak;
         match word.body {
-            Body::Op(op) => {
-                let arity = word.contract.arity;
-                self.apply_op(name, op, arity, mode)
-            }
-            Body::Full(run) => {
-                if !mode.is_default() {
-                    return Err(Error::ModeUnsupported {
-                        word: name.to_string(),
-                        mode,
-                    });
-                }
-                run(self)
-            }
+            Body::Op(op) => self.apply_op(name, op, arity, stak, mode),
+            Body::Full(run) => self.apply_full(name, run, arity, mode),
             // Unreachable: `eval_sequence` intercepts every directive by name
             // before a word is ever invoked. Reported rather than panicked so
             // the interpreter stays total.
             Body::Directive => Err(Error::MalformedToken(name.to_string())),
         }
+    }
+
+    /// Run `action`, restoring the flow if it fails.
+    fn atomically(&mut self, action: impl FnOnce(&mut Interpreter) -> Result<()>) -> Result<()> {
+        let saved = self.stack.clone();
+        let result = action(self);
+        if result.is_err() {
+            self.stack = saved;
+        }
+        result
+    }
+
+    /// Invoke a word that draws its own operands.
+    ///
+    /// `STAK` is not available here: the common layer cannot re-drive a word
+    /// that reaches into the interpreter. `KEEP` is, whenever the word declares
+    /// a fixed stack effect — the operands are remembered, the word runs, and
+    /// they are laid back underneath whatever it produced. Refusing `KEEP` here
+    /// would be an implementation detail leaking into the language.
+    fn apply_full(
+        &mut self,
+        name: &str,
+        run: crate::contract::FullFn,
+        arity: Arity,
+        mode: Mode,
+    ) -> Result<()> {
+        if mode.selection == Selection::Stak {
+            return Err(Error::ModeUnsupported {
+                word: name.to_string(),
+                mode,
+            });
+        }
+        let Some((inn, out)) = arity.fixed() else {
+            if !mode.is_default() {
+                return Err(Error::ModeUnsupported {
+                    word: name.to_string(),
+                    mode,
+                });
+            }
+            return self.atomically(run);
+        };
+        let depth = self.stack.len();
+        if depth < inn {
+            return Err(Error::StackUnderflow {
+                word: name.to_string(),
+                needed: inn,
+                found: depth,
+            });
+        }
+        let base = depth - inn;
+        let operands = if mode.retention == Retention::Keep {
+            self.stack[base..].to_vec()
+        } else {
+            Vec::new()
+        };
+        self.atomically(run)?;
+        // The word declared a fixed effect; hold it to it, so that splicing the
+        // kept operands back in cannot land in the wrong place.
+        let expected = base + out;
+        if self.stack.len() != expected {
+            return Err(Error::ContractViolated {
+                word: name.to_string(),
+                expected,
+                found: self.stack.len(),
+            });
+        }
+        for (offset, operand) in operands.into_iter().enumerate() {
+            self.stack.insert(base + offset, operand);
+        }
+        Ok(())
     }
 
     // --------------------------------------------------------- operand layer
@@ -242,9 +316,10 @@ impl Interpreter {
         name: &str,
         op: crate::contract::OpFn,
         arity: Arity,
+        stak: StakSupport,
         mode: Mode,
     ) -> Result<()> {
-        let Some((inn, out)) = arity.fixed() else {
+        let Some((inn, _out)) = arity.fixed() else {
             return Err(Error::ModeUnsupported {
                 word: name.to_string(),
                 mode,
@@ -268,9 +343,11 @@ impl Interpreter {
                 self.stack.extend(results);
                 Ok(())
             }
-            Selection::Stak => match (inn, out) {
-                // One-in words are applied to every cell of the standing flow.
-                (1, _) => {
+            // What `STAK` means for a word is declared by the word, not
+            // inferred from how many operands it takes.
+            Selection::Stak => match stak {
+                StakSupport::MapEach => {
+                    debug_assert_eq!(inn, 1, "MapEach requires one input");
                     let mut results = Vec::with_capacity(self.stack.len());
                     for cell in self.stack.iter() {
                         results.extend(op(name, std::slice::from_ref(cell))?);
@@ -281,8 +358,8 @@ impl Interpreter {
                     self.stack.extend(results);
                     Ok(())
                 }
-                // Two-in one-out words are folded left across the whole flow.
-                (2, 1) => {
+                StakSupport::FoldLeft => {
+                    debug_assert_eq!(inn, 2, "FoldLeft requires two inputs");
                     if self.stack.is_empty() {
                         return Err(Error::StackUnderflow {
                             word: name.to_string(),
@@ -306,9 +383,7 @@ impl Interpreter {
                     self.stack.push(accumulator);
                     Ok(())
                 }
-                // Everything else has no defensible reading across a whole
-                // flow, and inventing one would be worse than refusing.
-                _ => Err(Error::ModeUnsupported {
+                StakSupport::Unsupported => Err(Error::ModeUnsupported {
                     word: name.to_string(),
                     mode,
                 }),
@@ -350,35 +425,32 @@ impl Interpreter {
                 mode,
             });
         }
-        let gate = self.stack.pop().ok_or_else(|| Error::StackUnderflow {
-            word: "VENT".to_string(),
-            needed: 1,
-            found: 0,
-        })?;
-        let truth = match Truth::read("VENT", &gate) {
-            Ok(truth) => truth,
-            Err(error) => {
-                // The gate was not a truth value: put it back so the failing
-                // word leaves the flow as it found it.
-                self.stack.push(gate);
-                return Err(error);
+        // Atomic like any other word: if the gate is not a truth value, or the
+        // released unit fails, the flow is left exactly as it was found —
+        // gate included.
+        self.atomically(|interpreter| {
+            let gate = interpreter
+                .stack
+                .pop()
+                .ok_or_else(|| Error::StackUnderflow {
+                    word: "VENT".to_string(),
+                    needed: 1,
+                    found: 0,
+                })?;
+            let truth = Truth::read("VENT", &gate)?;
+            match truth {
+                Truth::True => match unit {
+                    [Node::Quote(body)] => interpreter.eval_body(body)?,
+                    other => interpreter.eval_body(other)?,
+                },
+                Truth::False => {}
+                Truth::Unknown => interpreter.stack.push(Value::unknown()),
             }
-        };
-        let outcome = match truth {
-            Truth::True => match unit {
-                [Node::Quote(body)] => self.eval_body(body),
-                other => self.eval_body(other),
-            },
-            Truth::False => Ok(()),
-            Truth::Unknown => {
-                self.stack.push(Value::unknown());
-                Ok(())
+            if mode.retention == Retention::Keep {
+                interpreter.stack.push(gate);
             }
-        };
-        if mode.retention == Retention::Keep {
-            self.stack.push(gate);
-        }
-        outcome
+            Ok(())
+        })
     }
 
     // ------------------------------------------------- helpers for full words
@@ -442,18 +514,117 @@ impl Interpreter {
     /// This is the whole extension surface. A package adds words; it cannot
     /// add a value shape, a role, a mode, an error variant, or an execution
     /// path, and Ajisai Core does not know any package exists.
+    ///
+    /// Registration is all or nothing. Every word is checked first — against
+    /// Ajisai Core, against the packages already registered, against the other
+    /// words in this package, against the user's definitions, and against its
+    /// own contract — and only then is any of it committed. A package that is
+    /// rejected leaves the vocabulary exactly as it was, rather than half of
+    /// its words installed and the rest missing.
     pub fn register_package(&mut self, package: crate::extension::Package) -> Result<()> {
+        let mut incoming: BTreeMap<&'static str, Word> = BTreeMap::new();
         for word in package.words {
-            if self.registry.contains_key(word.contract.name) {
-                return Err(Error::DuplicateWord {
-                    package: package.name.to_string(),
-                    word: word.contract.name.to_string(),
-                });
+            let name = word.contract.name;
+            let duplicate = || Error::DuplicateWord {
+                package: package.name.to_string(),
+                word: name.to_string(),
+            };
+            if self.registry.contains_key(name) || incoming.contains_key(name) {
+                return Err(duplicate());
             }
-            self.registry.insert(word.contract.name, word);
+            // A user definition already answers to this name, and the
+            // dictionary is consulted first, so registering would install a
+            // word nothing could reach.
+            if self.dictionary.contains_key(name) {
+                return Err(duplicate());
+            }
+            check_contract(package.name, &word)?;
+            incoming.insert(name, word);
         }
+        self.registry.extend(incoming);
         Ok(())
     }
+}
+
+/// Check that a package word's contract describes its implementation.
+///
+/// Ajisai Core holds itself to these in a test; a package is held to them here,
+/// at registration, because there is no test of ours to run against it. Every
+/// one of them is a rule the evaluator or the lint later relies on.
+fn check_contract(package: &str, word: &Word) -> Result<()> {
+    let contract = &word.contract;
+    let reject = |reason: String| {
+        Err(Error::MalformedContract {
+            package: package.to_string(),
+            word: contract.name.to_string(),
+            reason,
+        })
+    };
+    if contract.name.is_empty()
+        || contract.name.chars().any(char::is_whitespace)
+        || contract.name != crate::alias::canonical(contract.name)
+    {
+        return reject("the name is not a canonical word name".to_string());
+    }
+    if is_directive(contract.name) {
+        return reject("the name is a flow directive".to_string());
+    }
+    if contract.summary.is_empty() {
+        return reject("no summary".to_string());
+    }
+    match crate::contract::notation_arity(contract.stack_effect) {
+        None => {
+            return reject(format!(
+                "stack effect {:?} is malformed",
+                contract.stack_effect
+            ))
+        }
+        Some(parsed) => {
+            if let Some(declared) = contract.arity.fixed() {
+                if parsed != declared {
+                    return reject(format!(
+                        "stack effect {:?} disagrees with the declared arity",
+                        contract.stack_effect
+                    ));
+                }
+            }
+        }
+    }
+    if let Some((inn, out)) = contract.arity.fixed() {
+        if contract.input_types.len() != inn || contract.output_types.len() != out {
+            return reject("the type lists do not match the arity".to_string());
+        }
+    }
+    if let Some((position, _)) = contract.role_required {
+        if position >= contract.input_types.len() {
+            return reject("role_required names an operand the word does not take".to_string());
+        }
+    }
+    match contract.stak {
+        StakSupport::Unsupported => {}
+        _ if !matches!(word.body, Body::Op(_)) => {
+            return reject(
+                "only an operand-to-result word can be driven across a whole flow".to_string(),
+            );
+        }
+        StakSupport::MapEach => {
+            if contract.arity.fixed().map(|(inn, _)| inn) != Some(1) {
+                return reject("MapEach needs exactly one input".to_string());
+            }
+        }
+        StakSupport::FoldLeft => {
+            let closed = contract.arity.fixed() == Some((2, 1))
+                && contract.input_types.first() == contract.output_types.first();
+            if !closed {
+                return reject(
+                    "FoldLeft needs a closed operation: two in, one out, and an output type \
+                     identical to the first input type"
+                        .to_string(),
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 fn selection_word(name: &str) -> Option<Selection> {

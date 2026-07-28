@@ -74,8 +74,19 @@ data and compare equal (§6.4).
 
 ### 2.4 Words
 
-Any other token is a word. Word names are case-insensitive and canonically
-uppercase: `add`, `Add`, and `ADD` are one word.
+Any other token is a word.
+
+**Normative — normalization.** Word names fold case in **ASCII only**: `add`,
+`Add`, and `ADD` are one word, and `倍` is itself. No other normalization is
+applied, and source is required to be in Unicode Normalization Form C; two
+names that differ only in decomposition are two names.
+
+Full Unicode case conversion is deliberately not used. It is defined against a
+particular Unicode version, is locale-sensitive in places, and can change a
+string's length — so it would make word identity depend on which Unicode table
+an implementation was built with, and two conforming implementations could
+disagree about whether two names are the same word. ASCII case mapping has been
+fixed forever.
 
 ### 2.5 Symbol aliases
 
@@ -249,11 +260,18 @@ computation silently.
 
 ### 5.7 Word-level atomicity
 
-**Normative:** a word validates its operands before it changes the flow. A word
-that fails leaves the flow exactly as it found it.
+**Normative:** a word that fails leaves the flow exactly as it found it. This
+holds for every word, whatever it needs to do internally — a word that draws
+its own operands before it can check them still leaves nothing half-consumed
+behind, and a released `VENT` whose unit fails returns the gate as well.
 
 This is a per-word guarantee, not a per-program one: when a program fails, the
 flow holds whatever the words that completed left there.
+
+**Normative — what it covers.** The guarantee is about the flow, and about the
+flow only. The dictionary is not rolled back: a quote that defines a word and
+then fails leaves the definition behind. Saying so is better than a promise
+that would require snapshotting the whole dictionary at every step.
 
 ---
 
@@ -287,13 +305,25 @@ where it is stored rather than as a rule that has to be maintained.
 
 1. **Rendering.** `[ 104 105 ]` and `"hi"` render differently.
 2. **The role words** `ROLE`, `>TEXT`, `>INTERVAL`, `>RAW` (§11.8).
-3. **Nothing else.**
+3. **The role-sensitive words**, which are `DEF` and `DEL` and no others
+   (§11.9). A name must be read as `TEXT`.
 
 It does not affect arithmetic, comparison, logic, indexing, length, or any other
-computation. There is no condition under which a role changes a Data Plane
-result. This is a statement about the language, made because the alternative —
-claiming purity the implementation does not have — is worse than either
-alternative honestly stated.
+computation over the Data Plane. **No word computes a different value because
+of a role**; the role-sensitive words consult a role to decide whether the
+operand is admissible at all, and then compute from the Data Plane as usual.
+
+A word is role-sensitive only if this specification says it is, and each such
+word declares which operand and which role in its contract, so the set is
+enumerable rather than a matter of reading implementations.
+
+**Why there is a role-sensitive word at all.** `[ 68 79 85 ]` is a vector of
+three numbers that happens to spell `DOU`. If it could be a word's name, then
+the reading a program asserts about its own data would count for nothing at
+precisely the point a language most needs a name to be a name — and the
+Semantic Plane would be decoration. One word's worth of reach, stated and
+enumerable, is the honest position: not "roles never touch computation" when
+they do, and not "roles are pervasive" when they are not.
 
 ### 6.4 Equality
 
@@ -432,36 +462,59 @@ statement about the next *word*, and `KEEP [ 1 2 ] LENGTH` means what it reads.
 Modes compose rather than override: `STAK KEEP ADD` arms both axes for the one
 `ADD`, and `KEEP STAK ADD` is the same program.
 
-### 8.3 What `STAK` means for each shape
+### 8.3 What `STAK` means for each word
 
-`STAK` applies to a word with a fixed stack effect of `inn` in and `out` out:
+**Normative: what `STAK` means for a word is declared by the word, and is not
+derived from how many operands the word takes.** Each word declares one of:
 
-| `inn` | `out` | Reading |
+| Declaration | Reading | Requires |
 |---|---|---|
-| 1 | any | the word is applied to **every cell** of the flow, in order; the results are concatenated |
-| 2 | 1 | the word is **folded left** across the whole flow |
-| anything else | | **error**: `ModeUnsupported` |
+| **map-each** | the word is applied to **every cell** of the flow, in order; the results are concatenated | exactly one input |
+| **fold-left** | the word is **folded left** across the whole flow | a **closed** operation: two in, one out, and an output type identical to the first input type |
+| **unsupported** | `ModeUnsupported` | — |
 
-`1 2 3 STAK ADD` is `6`. `1 -2 3 STAK NEG` is `-1 2 -3`. `1 2 STAK SWAP` is an
-error, because there is no defensible reading of a two-in two-out word across a
-whole flow and inventing one would be worse than refusing.
+`1 2 3 STAK ADD` is `6`. `1 -2 3 STAK NEG` is `-1 2 -3`.
+`TRUE FALSE UNKNOWN STAK AND` is `FALSE`. `[ 1 ] [ 2 ] [ 3 ] STAK CONCAT` is
+`[ 1 2 3 ]`. `1 2 STAK SWAP`, `1 1 1 STAK EQ`, and `[ 1 2 ] 0 3 STAK NTH` are
+all errors.
 
-A `STAK` fold over a flow of one value yields that value. A `STAK` fold over an
-empty flow is an error.
+**Why closure is required.** A fold feeds each result back in as the next
+step's first operand, so the operation has to accept its own output. Arity
+alone does not establish that. `EQ` takes two values and leaves one, and
+folding it computes `EQ(EQ(1, 1), 1)` — which is `EQ(TRUE, 1)`, and answers
+`FALSE` about three equal values. Deriving a meaning from a count of operands
+is the mistake this language removed when it deleted Flow Mass Conservation
+(`docs/migration.md`), and it must not be reintroduced under another name.
 
-### 8.4 Words that do not accept modes
+A fold over a flow of one value yields that value, which is type-correct
+precisely because the operation is closed. A fold over an empty flow is an
+error.
 
-**Normative:** a word whose stack effect is not statically known — the words
-with dynamic effects (§11) and every user definition — rejects any non-default
-mode with `ModeUnsupported`. There is no operand region for the mode to select,
-and silently ignoring the mode would be worse than refusing it.
+### 8.4 Which words accept which modes
+
+**Normative.**
+
+* **`KEEP` applies to every word that declares a fixed stack effect.** The
+  operands are remembered, the word runs, and they are laid back underneath
+  whatever it produced. How the word is implemented does not enter into it.
+* **`STAK` applies where the word declares a reading** (§8.3).
+* **A word whose stack effect is not statically known rejects any non-default
+  mode** with `ModeUnsupported`. In Ajisai Core that is `EXEC`, whose effect
+  depends on the quote it is handed, and every user definition. There is no
+  operand region for the mode to select, and silently ignoring the mode would
+  be worse than refusing it.
+
+A word's stack effect is a fact about the language. How an implementation
+dispatches it is not, and must not decide which modes the word accepts.
 
 ### 8.5 Boundaries and errors
 
 * **Quote boundary:** §5.6. The surrounding mode is saved, the body starts at
   the default, and the surrounding mode is restored on the way out.
 * **Dangling mode:** a mode armed with no word to consume it before the end of
-  a body is an error, reported where it was written.
+  a body is an error, raised at the end of the body in which it was armed.
+  Ajisai does not carry source positions, so a diagnostic names the mode, not
+  the line; an implementation that tracks positions may say more.
 * **After an error:** the mode returns to `TOP EAT`. Nothing is inherited across
   a failure.
 
@@ -567,8 +620,9 @@ undecided predicate, and the two budgets (nesting depth and vector size).
 
 ## 11. The vocabulary
 
-Every word carries a machine-readable contract: name, stack effect, arity, input
-and output types, its stance towards `NIL` and towards `UNKNOWN`, its effect,
+Every word carries a machine-readable contract: name, stack effect, arity,
+input and output types, its stance towards `NIL` and towards `UNKNOWN`, what
+`STAK` means for it (§8.3), which operand it reads a role from if any (§6.3),
 and a summary. See `docs/contracts.md`.
 
 ### 11.1 Constants
@@ -633,11 +687,11 @@ Accept any value; always settle; never produce `UNKNOWN`.
 | `DUP` | `( a -- a a )` | the role travels with the value |
 | `DROP` | `( a -- )` | |
 | `SWAP` | `( a b -- b a )` | |
-| `DEPTH` | `( -- count )` | dynamic effect (§8.4) |
-| `MAP` | `( vector quote -- vector )` | dynamic effect |
-| `FILTER` | `( vector quote -- vector )` | dynamic effect |
-| `FOLD` | `( vector seed quote -- value )` | dynamic effect |
-| `EXEC` | `( quote -- … )` | dynamic effect |
+| `DEPTH` | `( -- count )` | |
+| `MAP` | `( vector quote -- vector )` | |
+| `FILTER` | `( vector quote -- vector )` | |
+| `FOLD` | `( vector seed quote -- value )` | |
+| `EXEC` | `( quote -- … )` | the one dynamic effect in Ajisai Core (§8.4) |
 
 `MAP`, `FILTER`, and `FOLD` run the quote in a basin seeded with the operands,
 so a quote cannot reach past its own operands into the surrounding flow. `EXEC`
@@ -690,7 +744,11 @@ error: the rule did not hold.
 
 `{ 2 MUL } "DOUBLE" DEF` binds a quote to a name. There is no defining syntax
 and no parser special case: a definition is two ordinary values and one ordinary
-word, and the name is text, which is a vector carrying a role.
+word.
+
+**Normative — these are the role-sensitive words** (§6.3). The name operand
+must carry the `TEXT` role. A bare vector of codepoints is refused, however it
+would spell: write `"DOUBLE"`, or say `>TEXT` and mean it.
 
 **Normative:** no word owned by Ajisai Core or by a registered package may be
 redefined, under its canonical name or under an alias.
@@ -729,11 +787,25 @@ an implementation.
 
 * A package may add words. It may not add a value shape, a role, a mode, an
   error condition, or an execution path.
-* A package may not take a name Ajisai Core or another registered package owns;
-  registration fails rather than shadowing.
+* A package may not take a name Ajisai Core, another registered package, or an
+  existing user definition already answers to; registration fails rather than
+  shadowing.
+* **Registration is all or nothing.** Every word is checked first — for name
+  collisions, for a canonical name, and for a contract that describes it — and
+  only then is any of it committed. A rejected package leaves the vocabulary
+  exactly as it was.
 * Ajisai Core contains no knowledge that any package exists: no feature flag, no
   stub, no marker, no reserved namespace.
 * An implementation that registers no package is complete.
+
+**Normative — what a package is.** A package is a **vocabulary library over
+Ajisai's existing values**, not a way to introduce a domain type. A package
+that wants a "note" gets a two-element vector, and any two-element vector will
+satisfy a word that expects one; the package can check the values but cannot
+make the shape unforgeable, and cannot give it a reading of its own. This is a
+deliberate limit — it is what keeps the extension surface to "words, and
+nothing else" — and a package should say in its own documentation which value
+conventions it expects.
 
 Package words are ordinary words. The modes (§8), `VENT` (§9), the contract lint,
 and the manifest all apply to them without the package opting in.

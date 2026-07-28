@@ -36,16 +36,20 @@ backend abstraction.
 
 ## The operand layer
 
-`Interpreter::apply_op` is where `TOP`/`STAK` and `EAT`/`KEEP` are implemented —
-once, for every word with a fixed stack effect. It selects operands, calls the
-word, and commits the result.
+`Interpreter::apply_op` is where `TOP`/`STAK` and `EAT`/`KEEP` are implemented
+for operand-to-result words — once, not per word. It selects operands, calls
+the word, and commits the result. `Interpreter::apply_full` does the same for
+words that reach into the interpreter: `KEEP` still works there, because the
+operands can be remembered and laid back underneath what the word produced.
 
-Words are written as `fn(&str, &[Value]) -> Result<Vec<Value>>`: operands in,
-results out, no interpreter and no mode. That signature is what makes the single
-implementation possible. A word that genuinely needs the interpreter — the ones
-with dynamic stack effects, and the dictionary words — is written as
-`fn(&mut Interpreter) -> Result<()>` and rejects any armed mode, because there is
-no operand region for the layer to select.
+Most words are written as `fn(&str, &[Value]) -> Result<Vec<Value>>`: operands
+in, results out, no interpreter and no mode. That signature is what makes the
+single implementation possible, and it is what lets `STAK` re-drive a word.
+
+A word that needs the interpreter — to run a quote, to read the flow's depth,
+or to reach the dictionary — is written as `fn(&mut Interpreter) -> Result<()>`.
+It still declares a real stack effect, and `KEEP` still applies to it; only
+`STAK` does not, because the common layer cannot call it repeatedly.
 
 Because the word runs before the stack is touched, word-level atomicity
 (`SPECIFICATION.md` §5.7) falls out of the shape of the function rather than out
@@ -97,6 +101,13 @@ cargo fmt --all --check
   Doing it anywhere later means every downstream layer has to know about both
   spellings.
 - Store the role on the value. Every other arrangement needs synchronisation.
+- Keep the unchecked role constructors private. A public one is a way for a
+  caller to build a value whose role its shape does not admit, and the
+  specification states that as an invariant.
 - Implement the modes in one operand layer. Per-word branches will diverge.
 - Make the abstract flow in your lint go opaque early and often. A lint that
-  guesses gets switched off.
+  guesses gets switched off — and make each slot a *set* of possibilities, or
+  it will report `UNKNOWN 1 ADD`.
+- Declare what `STAK` means per word. Deriving it from arity is the same
+  mistake as Flow Mass Conservation wearing a different hat.
+- Keep a word's stack effect separate from how you dispatch it.

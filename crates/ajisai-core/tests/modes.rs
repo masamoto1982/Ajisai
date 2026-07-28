@@ -122,16 +122,23 @@ fn quote_boundaries_scope_the_mode() {
 
 /// A word whose stack effect is not statically known has no operand region for
 /// the mode layer to select, so it refuses the mode instead of ignoring it.
+///
+/// This is about the *stack effect*, not about how the word is implemented.
+/// `MAP` needs the interpreter to run a quote and still takes exactly two
+/// values and leaves one, so `KEEP MAP` works; `EXEC` and every user
+/// definition leave whatever their body leaves, so they do not.
 #[test]
-fn dynamic_words_and_user_words_refuse_modes() {
+fn genuinely_dynamic_words_refuse_modes() {
     assert!(matches!(
-        failure("[ 1 ] { 1 ADD } KEEP MAP"),
+        failure("1 { 1 ADD } KEEP EXEC"),
         Error::ModeUnsupported { .. }
     ));
     assert!(matches!(
         failure("{ 1 ADD } \"BUMP\" DEF 1 KEEP BUMP"),
         Error::ModeUnsupported { .. }
     ));
+    // ...and a fixed effect is enough, whatever the dispatch.
+    assert_eq!(line("[ 1 ] { 1 ADD } KEEP MAP"), "[ 1 ] { 1 ADD } [ 2 ]");
 }
 
 /// After an error the next fragment starts at the default mode; nothing is
@@ -154,4 +161,72 @@ fn modes_carry_roles_with_values() {
     assert_eq!(line("[ 1 3 ] >INTERVAL DUP"), "1..3 1..3");
     assert_eq!(line("\"hi\" 1 SWAP"), "1 \"hi\"");
     assert_eq!(line("[ 1 3 ] >INTERVAL KEEP ROLE"), "1..3 \"INTERVAL\"");
+}
+
+/// What `STAK` means for a word is declared by the word, not derived from how
+/// many operands it takes.
+///
+/// The derived rule — "two in, one out, therefore foldable" — was the same
+/// mistake as Flow Mass Conservation: a count of operands is not a meaning.
+/// It made these three programs answer nonsense.
+#[test]
+fn stak_refuses_words_that_have_no_fold() {
+    // `1 1 1 STAK EQ` computed EQ(EQ(1, 1), 1) — EQ(TRUE, 1) — and answered
+    // FALSE about three equal values.
+    for source in [
+        "1 1 1 STAK EQ",
+        "1 2 3 STAK LT",
+        "1 2 3 STAK GE",
+        "[ 1 2 ] 0 3 STAK NTH",
+        "[ 1 ] 2 3 STAK APPEND",
+        "1 2 3 STAK RANGE",
+    ] {
+        assert!(
+            matches!(failure(source), Error::ModeUnsupported { .. }),
+            "`{source}` should be refused, not folded"
+        );
+    }
+    // A flow of one used to return without running the word at all, so
+    // `7 STAK EQ` left a number where the contract promises a truth value.
+    assert!(matches!(
+        failure("7 STAK EQ"),
+        Error::ModeUnsupported { .. }
+    ));
+}
+
+/// The words that do fold are closed: the result of one step is a legitimate
+/// operand for the next, whatever the types involved.
+#[test]
+fn stak_folds_only_closed_operations() {
+    assert_eq!(line("1 2 3 4 STAK ADD"), "10");
+    assert_eq!(line("2 3 4 STAK MUL"), "24");
+    assert_eq!(line("5 2 9 STAK MAX"), "9");
+    assert_eq!(line("TRUE FALSE UNKNOWN STAK AND"), "FALSE");
+    assert_eq!(line("FALSE UNKNOWN STAK OR"), "UNKNOWN");
+    assert_eq!(line("[ 1 ] [ 2 ] [ 3 ] STAK CONCAT"), "[ 1 2 3 ]");
+    // A flow of one folds to itself, and that is type-correct precisely
+    // because the operation is closed.
+    assert_eq!(line("7 STAK ADD"), "7");
+}
+
+/// `KEEP` works for any word that declares a fixed stack effect, whatever the
+/// implementation needs to do internally. Refusing it for the higher-order
+/// words was an implementation detail leaking into the language.
+#[test]
+fn keep_reaches_words_that_draw_their_own_operands() {
+    assert_eq!(
+        line("[ 1 2 ] { 2 MUL } KEEP MAP"),
+        "[ 1 2 ] { 2 MUL } [ 2 4 ]"
+    );
+    assert_eq!(
+        line("[ 1 2 3 ] { 1 GT } KEEP FILTER"),
+        "[ 1 2 3 ] { 1 GT } [ 2 3 ]"
+    );
+    assert_eq!(line("1 2 KEEP DEPTH"), "1 2 2");
+    // `EXEC` alone is genuinely dynamic — what it leaves depends on the quote
+    // — so there is no operand region to keep.
+    assert!(matches!(
+        failure("1 { 1 ADD } KEEP EXEC"),
+        Error::ModeUnsupported { .. }
+    ));
 }

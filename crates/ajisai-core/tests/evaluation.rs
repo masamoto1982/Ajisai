@@ -198,3 +198,80 @@ fn the_flow_persists_across_fragments() {
     interpreter.execute("10 MUL").unwrap();
     assert_eq!(ajisai_core::render_stack(&interpreter), vec!["30"]);
 }
+
+/// `SPECIFICATION.md` §5.7 promises the flow is untouched by a word that
+/// fails. Every one of these words draws its own operands and can fail after
+/// doing so, which is exactly where the promise used to break.
+#[test]
+fn every_failing_word_leaves_the_flow_untouched() {
+    let cases = [
+        // A higher-order word that took its quote before checking its vector.
+        ("1 { } MAP", vec!["1", "{ }"]),
+        ("1 { } FILTER", vec!["1", "{ }"]),
+        ("1 2 { } FOLD", vec!["1", "2", "{ }"]),
+        // A quote that fails partway through, having already pushed.
+        ("9 { 1 0 DIV } EXEC", vec!["9", "{ 1 0 DIV }"]),
+        ("9 { 1 2 NOSUCHWORD } EXEC", vec!["9", "{ 1 2 NOSUCHWORD }"]),
+        // The dictionary words, which took both operands before checking.
+        ("{ 1 } \"ADD\" DEF", vec!["{ 1 }", "\"ADD\""]),
+        ("5 \"NOPE\" DEL", vec!["5", "\"NOPE\""]),
+        ("5 [ 88 ] DEF", vec!["5", "[ 88 ]"]),
+        // A released vent whose unit fails — the gate comes back too.
+        ("TRUE VENT { 1 0 DIV }", vec!["TRUE"]),
+        ("7 TRUE VENT { NOSUCHWORD }", vec!["7", "TRUE"]),
+        // A user definition that fails partway through its body.
+        ("{ 1 0 DIV } \"BOOM\" DEF 9 BOOM", vec!["9"]),
+    ];
+    for (source, expected) in cases {
+        let mut interpreter = Interpreter::new();
+        assert!(
+            interpreter.execute(source).is_err(),
+            "`{source}` should fail"
+        );
+        assert_eq!(
+            ajisai_core::render_stack(&interpreter),
+            expected,
+            "`{source}` disturbed the flow"
+        );
+    }
+}
+
+/// The promise is about the flow. A quote that defines a word and then fails
+/// leaves the definition behind, and the specification says so rather than
+/// pretending otherwise.
+#[test]
+fn the_dictionary_is_not_rolled_back() {
+    let mut interpreter = Interpreter::new();
+    assert!(interpreter
+        .execute("{ { 1 } \"GHOST\" DEF 1 0 DIV } EXEC")
+        .is_err());
+    interpreter.execute("GHOST").expect("GHOST survived");
+}
+
+/// A name must be read as text. `[ 68 79 85 ]` is a vector of three numbers
+/// that happens to spell `DOU`, and treating it as a name would mean the
+/// reading a program asserts about its own data counts for nothing.
+#[test]
+fn a_name_must_carry_the_text_role() {
+    assert!(matches!(
+        failure("{ 2 MUL } [ 68 79 85 66 76 69 ] DEF"),
+        Error::TypeMismatch { .. }
+    ));
+    assert!(matches!(
+        failure("{ 1 } \"X\" DEF [ 88 ] DEL"),
+        Error::TypeMismatch { .. }
+    ));
+    // Saying so explicitly is enough — it is the same vector either way.
+    assert_eq!(line("{ 2 MUL } [ 68 79 ] >TEXT DEF 21 DO"), "42");
+    assert_eq!(line("{ 2 MUL } \"DOUBLE\" DEF 21 DOUBLE"), "42");
+}
+
+/// Case folding is ASCII-only and nothing else is normalized, so word identity
+/// does not depend on which Unicode table an implementation was built with.
+#[test]
+fn word_names_fold_case_in_ascii_only() {
+    assert_eq!(line("{ 1 ADD } \"bump\" DEF 1 BUMP"), "2");
+    assert_eq!(line("{ 1 ADD } \"Bump\" DEF 1 bUmP"), "2");
+    // A non-ASCII name is itself, and is usable.
+    assert_eq!(line("{ 2 MUL } \"倍\" DEF 21 倍"), "42");
+}
