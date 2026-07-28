@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ajisai-lang.org/spec/words.schema.json",
+  "title": "Ajisai canonical Word contracts",
+  "type": "object",
+  "required": ["schemaVersion", "migration", "entries"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "migration": {
+      "type": "object",
+      "required": ["phase", "families", "completeInventory", "entryCount"],
+      "properties": {
+        "phase": { "type": "integer", "minimum": 3 },
+        "families": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "completeInventory": { "type": "boolean" },
+        "entryCount": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "entries": { "type": "array", "items": { "$ref": "#/$defs/word" }, "minItems": 1 }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "arity": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "enum": ["control", "variable"] }] },
+    "projection": {
+      "type": "object", "required": ["when", "reason"],
+      "properties": { "when": { "type": "string", "minLength": 1 }, "reason": { "type": ["string", "null"] } },
+      "additionalProperties": false
+    },
+    "documentation": {
+      "type": "object", "required": ["summary", "hover", "lookup", "syntax"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 }, "hover": { "type": "string", "minLength": 1 },
+        "lookup": { "type": "string", "minLength": 1 }, "syntax": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "word": {
+      "type": "object",
+      "required": ["name", "aliases", "family", "stack", "consumption", "nilPolicy", "projection", "errorWhen", "purity", "determinism", "capability", "effects", "hostedEffect", "interpretationRole", "clauses", "documentation", "executorKey"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9@?-]*$" },
+        "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder"] },
+        "stack": { "type": "object", "required": ["inputs", "outputs"], "properties": { "inputs": { "$ref": "#/$defs/arity" }, "outputs": { "$ref": "#/$defs/arity" } }, "additionalProperties": false },
+        "consumption": { "enum": ["none", "eat", "retain", "conditional"] },
+        "nilPolicy": { "enum": ["preserveReason", "consumeNil", "rejectNil", "passthrough", "truthUnknownNotNil", "inspectNil", "createsNil"] },
+        "projection": { "$ref": "#/$defs/projection" },
+        "errorWhen": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "purity": { "enum": ["pure", "conditional", "observational", "effectful"] },
+        "determinism": { "enum": ["deterministic", "stateRelative", "hostRelative"] },
+        "capability": { "type": "string", "minLength": 1 },
+        "effects": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "hostedEffect": { "type": "string", "minLength": 1 },
+        "interpretationRole": { "type": "string", "minLength": 1 },
+        "clauses": { "type": "array", "items": { "type": "string", "pattern": "^LANG\\." }, "minItems": 1, "uniqueItems": true },
+        "documentation": { "$ref": "#/$defs/documentation" },
+        "executorKey": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
