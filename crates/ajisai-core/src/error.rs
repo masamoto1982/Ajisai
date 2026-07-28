@@ -67,8 +67,23 @@ pub enum Error {
     DepthLimitExceeded { limit: usize },
     /// A single operation was asked to build a vector larger than the budget.
     SizeLimitExceeded { limit: usize },
-    /// A package tried to register a word Ajisai Core or another package owns.
+    /// A package tried to register a word Ajisai Core or another package owns,
+    /// or one a user definition already answers to.
     DuplicateWord { package: String, word: String },
+    /// A package supplied a word whose contract does not describe its
+    /// implementation. Caught at registration, before the word can run.
+    MalformedContract {
+        package: String,
+        word: String,
+        reason: String,
+    },
+    /// A word left the flow at a depth its declared stack effect does not
+    /// allow. This is a defect in the word, not in the program that called it.
+    ContractViolated {
+        word: String,
+        expected: usize,
+        found: usize,
+    },
 }
 
 impl fmt::Display for Error {
@@ -118,6 +133,19 @@ impl fmt::Display for Error {
             Error::DuplicateWord { package, word } => {
                 write!(f, "package {package}: {word} is already registered")
             }
+            Error::MalformedContract {
+                package,
+                word,
+                reason,
+            } => write!(f, "package {package}: {word}: {reason}"),
+            Error::ContractViolated {
+                word,
+                expected,
+                found,
+            } => write!(
+                f,
+                "{word}: left the flow at depth {found}, but its stack effect says {expected}"
+            ),
         }
     }
 }

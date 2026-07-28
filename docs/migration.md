@@ -11,16 +11,20 @@ a program, and how to move.
 
 | | before | 1.0 |
 |---|---|---|
-| Rust source | 288 files, 81,650 lines | 22 files, ~4,800 lines |
+| Rust source (all crates, incl. tests) | 288 files, 81,650 lines | 40 files, 7,230 lines |
+| — of which Ajisai Core `src/` | — | 25 files, 4,644 lines |
 | Vocabulary | 224 entries (98 core, 96 module, 20 aliases, 10 surface forms) | 54 words + 12 aliases |
 | Exploratory words | 26 | 0 — the classification no longer exists |
 | Value shapes | 12, including process and supervisor handles | 6 |
 | Execution paths | greedy, elastic/hedged, compiled plan, SIMD, shadow validation | 1 |
 | Crate dependencies (Core) | 11 | 3, all exact integer arithmetic |
 | Cargo features affecting semantics | `elastic-engine`, quantization, tracing | none |
-| Contract fields | 13, including water sensitivity, confidence, space class | 9, all read |
+| Contract fields | 13, including water sensitivity, confidence, space class | 10, all read |
 | Semantic role storage | value hint + stack roles | the value, alone |
-| Docs | 104 files | 7 |
+| Docs | 104 files | 6 |
+
+Counts are from `find crates -name '*.rs'` at the 1.0 tag, so they include the
+conformance tests.
 
 ## Removed words
 
@@ -86,8 +90,13 @@ is not a conformance condition.
 
 **Content addressing is no longer part of word identity.** Two words with the
 same name and body are the same word whether or not anyone has hashed them.
-Digests, receipts, and attestations live in `crates/ajisai-audit` and are
-ordinary data.
+
+`crates/ajisai-audit` provides **digests, receipts, and verification** — and
+those three only. **Lockfiles and source attestation were deleted, not moved**,
+and this document promises nothing about their return: they were built around
+content-addressed word identity, which the language no longer has, so porting
+them would have meant reinventing what they were for. If a use for either shows
+up, it will be designed against the language as it now is.
 
 **The old Python implementation** (`python/`) is gone: it was self-declared
 non-canonical, derived from a superseded specification, and not run in CI. The
@@ -126,8 +135,25 @@ That ordering is what makes the two-branch idiom work; see `SPECIFICATION.md`
 
 **A vector literal is a basin.** `[ 1 2 ADD ]` is `[ 3 ]`, not a parse error.
 
-**A definition is `{ body } "NAME" DEF`.** The name is text. There is no
-defining syntax.
+**A definition is `{ body } "NAME" DEF`.** There is no defining syntax.
+
+**A name must be read as `TEXT`.** `{ 2 MUL } [ 68 79 85 66 76 69 ] DEF` is an
+error, even though that vector spells `DOUBLE`. `DEF` and `DEL` are the two
+words in the language that read the Semantic Plane (`SPECIFICATION.md` §6.3);
+write `"DOUBLE"`, or say `>TEXT` and mean it.
+
+**`STAK` is refused where it has no meaning.** `1 1 1 STAK EQ` used to compute
+`EQ(EQ(1, 1), 1)` and answer `FALSE` about three equal values; `7 STAK EQ` used
+to return `7` without running `EQ` at all. `STAK` now folds only **closed**
+operations — `ADD`, `SUB`, `MUL`, `DIV`, `MIN`, `MAX`, `AND`, `OR`, `CONCAT` —
+and maps only one-input words. Everything else is `ModeUnsupported`.
+
+**`KEEP` reaches the higher-order words.** `[ 1 2 ] { 2 MUL } KEEP MAP` leaves
+`[ 1 2 ] { 2 MUL } [ 2 4 ]`. It used to be a mode error, for implementation
+reasons that had leaked into the language.
+
+**Word names fold case in ASCII only.** `add` and `ADD` are one word; a
+non-ASCII name is itself, and source must be NFC (`SPECIFICATION.md` §2.4).
 
 **A dangling mode is an error.** `1 2 ADD KEEP` fails rather than silently
 discarding the mode.

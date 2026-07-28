@@ -14,6 +14,7 @@ use std::fmt;
 
 use crate::error::Result;
 use crate::interpreter::Interpreter;
+use crate::role::Role;
 use crate::value::Value;
 
 /// How many values a word draws and leaves.
@@ -101,16 +102,28 @@ impl Policy {
     };
 }
 
-/// Whether running the word can change anything outside the flow.
+/// Whether, and how, `STAK` reads the word across a whole flow.
+///
+/// This is declared per word, and it is not derived from the word's arity.
+/// Deriving it was a mistake of exactly the kind this language removed when it
+/// deleted Flow Mass Conservation: a count of operands is not a meaning, and
+/// "two in, one out" does not entail that folding the word across a flow says
+/// anything. `1 1 1 STAK EQ` under the derived rule computed
+/// `EQ(EQ(1, 1), 1)` — `EQ(TRUE, 1)` — and answered `FALSE` about three equal
+/// values.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Effect {
-    /// Reads and writes only the flow. A `VENT` that blocks a pure unit is
-    /// observationally identical to never having written it.
-    Pure,
-    /// Changes the dictionary. `VENT` blocking such a unit is still safe —
-    /// the unit is never run — but the lint reports it, because a blocked
-    /// definition is usually a mistake.
-    Dictionary,
+pub enum StakSupport {
+    /// The word is applied to every cell of the flow, in order, and the
+    /// results are concatenated. Requires one input.
+    MapEach,
+    /// The word is folded left across the whole flow. Requires a **closed**
+    /// operation: two inputs, one output, and an output type identical to the
+    /// first input type, so that each result is a legitimate operand for the
+    /// next step. `words::mod` holds this as a test rather than a convention.
+    FoldLeft,
+    /// The word has no defensible reading across a whole flow. Refusing is
+    /// better than inventing one.
+    Unsupported,
 }
 
 /// A word's machine-readable contract.
@@ -119,12 +132,18 @@ pub struct WordContract {
     pub name: &'static str,
     /// The canonical stack-effect notation, e.g. `( a b -- c )`.
     pub stack_effect: &'static str,
+    /// The true stack effect — how many values the word draws and leaves.
+    /// This says nothing about how the word is dispatched; see [`Body`].
     pub arity: Arity,
     pub input_types: &'static [TypeSpec],
     pub output_types: &'static [TypeSpec],
     pub nil_policy: Policy,
     pub unknown_policy: Policy,
-    pub effect: Effect,
+    pub stak: StakSupport,
+    /// The role an input must carry, where the word reads the Semantic Plane.
+    /// `None` for every word that does not — which is all of them but the
+    /// dictionary words. See `SPECIFICATION.md` §6.3.
+    pub role_required: Option<(usize, Role)>,
     pub summary: &'static str,
 }
 
@@ -139,14 +158,21 @@ pub type OpFn = fn(&str, &[Value]) -> Result<Vec<Value>>;
 /// A word that needs the interpreter itself.
 pub type FullFn = fn(&mut Interpreter) -> Result<()>;
 
-/// How a word runs.
+/// How a word is dispatched.
+///
+/// This is an implementation fact, not a stack effect. `MAP` has a perfectly
+/// definite effect of `( vector quote -- vector )` and is dispatched as
+/// [`Body::Full`] only because it needs the interpreter to run a quote; the two
+/// were conflated in an earlier draft, which made the lint go blind at every
+/// higher-order word for no reason.
 #[derive(Clone, Copy)]
 pub enum Body {
-    /// Pure operand-to-result. Modes apply through the common operand layer.
+    /// Pure operand-to-result. `STAK` is available to these words, because the
+    /// common layer can call them repeatedly.
     Op(OpFn),
-    /// Needs the interpreter — dynamic arity, the dictionary, or a quote.
-    /// These words reject any armed mode, because there is no operand region
-    /// for the common layer to select.
+    /// Needs the interpreter — to run a quote, to read the flow's depth, or to
+    /// reach the dictionary. `KEEP` still applies when the arity is fixed;
+    /// `STAK` does not, because the common layer cannot re-drive the word.
     Full(FullFn),
     /// Handled directly by the evaluator: the mode words and `VENT`. They are
     /// listed in the registry so that documentation, completion, and the lint

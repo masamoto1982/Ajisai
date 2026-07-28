@@ -39,7 +39,14 @@ pub struct Value {
 }
 
 impl Value {
-    pub fn new(data: ValueData, role: Role) -> Self {
+    /// Build a value with a role, without checking that the shape admits it.
+    ///
+    /// Crate-private on purpose. `SPECIFICATION.md` §6.5 states as an invariant
+    /// that a value's role is always admitted by its shape, and an unchecked
+    /// public constructor would let a caller outside this crate build a
+    /// counterexample. Use [`Value::read_as`] instead, which is the same check
+    /// `>TEXT` and `>INTERVAL` perform.
+    pub(crate) fn new(data: ValueData, role: Role) -> Self {
         Self { data, role }
     }
 
@@ -53,9 +60,25 @@ impl Value {
         self.role
     }
 
-    pub fn with_role(mut self, role: Role) -> Self {
+    /// Set the role without checking. Every internal caller either knows the
+    /// shape by construction or has already been through
+    /// [`role::retain`](crate::role::retain).
+    pub(crate) fn with_role(mut self, role: Role) -> Self {
         self.role = role;
         self
+    }
+
+    /// Read the value as `role`, checked.
+    ///
+    /// This is the public way to put a role on a value, and it is the same
+    /// check `>TEXT` and `>INTERVAL` perform: a reading the shape contradicts
+    /// is refused rather than stored.
+    pub fn read_as(self, role: Role) -> crate::error::Result<Value> {
+        crate::role::admits(role, &self).map_err(|reason| crate::error::Error::BadRole {
+            role: role.name().to_string(),
+            reason,
+        })?;
+        Ok(self.with_role(role))
     }
 
     pub fn boolean(value: bool) -> Self {

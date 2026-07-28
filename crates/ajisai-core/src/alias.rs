@@ -35,16 +35,28 @@ pub const ALIASES: &[(&str, &str)] = &[
 
 /// Normalize a source token to its canonical word name.
 ///
-/// Words are case-insensitive and canonically uppercase; aliases match the
-/// whole token exactly, so `-` is `SUB` while `-3` is a literal and `>TEXT` is
-/// its own word rather than `GT` followed by `TEXT`.
+/// Aliases match the whole token exactly, so `-` is `SUB` while `-3` is a
+/// literal and `>TEXT` is its own word rather than `GT` followed by `TEXT`.
+///
+/// **Case folding is ASCII-only, and no other normalization is applied.**
+/// `add`, `Add`, and `ADD` are one word; `やる` is itself. This is deliberate.
+/// Full Unicode case conversion is defined against a particular Unicode
+/// version, is locale-sensitive in places, and can change a string's length —
+/// so it would make word identity depend on which Unicode table an
+/// implementation was built with, and would silently differ across
+/// implementations of the same specification. ASCII case mapping has been
+/// fixed forever.
+///
+/// Source is required to be in Normalization Form C (`SPECIFICATION.md` §2.4);
+/// Ajisai does not normalize it, so two names that differ only in
+/// decomposition are two names.
 pub fn canonical(token: &str) -> String {
     for (symbol, word) in ALIASES {
         if token == *symbol {
             return (*word).to_string();
         }
     }
-    token.to_uppercase()
+    token.to_ascii_uppercase()
 }
 
 /// The aliases that point at `word`, in table order.

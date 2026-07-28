@@ -22,8 +22,10 @@ propagation through `REST`, `REVERSE`, `APPEND`, `CONCAT`, `MAP`, `FILTER`.
 `1..3` rather than `[ 1 3 ]`; the word `ROLE`; `role::admits`, which decides
 whether an assertion succeeds and whether a propagated role survives.
 
-**Effect.** Rendering, and the role words. Never a Data Plane result
-(`SPECIFICATION.md` §6.3).
+**Effect.** Rendering; the role words; and admissibility in the two
+role-sensitive words, `DEF` and `DEL` (`SPECIFICATION.md` §6.3). Never a Data
+Plane *result* — a role decides whether an operand is acceptable, never what is
+computed from it.
 
 **Invariants.** A value's role is always admitted by its shape. There is exactly
 one storage location. Equality ignores it.
@@ -107,17 +109,49 @@ act on the difference. Two booleans is what the readers actually use.
 
 ---
 
-## `WordContract.effect`
+## `WordContract.stak`
 
-**Definition.** `Pure` or `Dictionary`.
+**Definition.** What `STAK` means for this word: map across every cell of the
+flow, fold left across the whole flow, or nothing.
 
-**Produced by.** The registry. Only `DEF` and `DEL` are `Dictionary`.
+**Produced by.** The registry, per word.
 
-**Read by.** The specification's argument that a blocked vent is
-observationally identical to a unit that was never written — which holds only
-because everything else is pure; a test asserts the set is exactly `{DEF, DEL}`.
+**Read by.** The operand layer, which does exactly what the declaration says;
+the package-registration check, which refuses a declaration the word cannot
+support; the manifest.
 
-**Effect.** Documentation and that invariant.
+**Effect.** Execution, directly.
+
+**Invariants.** `MapEach` requires one input. `FoldLeft` requires a **closed**
+operation — two in, one out, and an output type identical to the first input
+type — so that each result is a legitimate operand for the next step. Only an
+operand-to-result word can carry either. All three are held by tests, and by
+the registration check for package words.
+
+**Why this is a field and not a rule.** It used to be derived from arity: two
+in and one out meant foldable. That is the same error as Flow Mass
+Conservation — deriving a meaning from a count of operands — and it made
+`1 1 1 STAK EQ` compute `EQ(EQ(1, 1), 1)` and answer `FALSE` about three equal
+values.
+
+---
+
+## `WordContract.role_required`
+
+**Definition.** Which operand a word reads a role from, and which role. `None`
+for every word that does not read one.
+
+**Produced by.** The registry. Only `DEF` and `DEL` declare it.
+
+**Read by.** The words themselves, to refuse an inadmissible name; the lint,
+which distinguishes text from a bare vector for exactly this reason; the
+manifest; a test that asserts the set of role-sensitive words is `{DEF, DEL}`.
+
+**Effect.** Execution — a name that is not read as text is refused — and
+diagnostics.
+
+**Invariants.** The named operand exists, and its declared type is the matching
+`TypeSpec`.
 
 ---
 
@@ -144,3 +178,13 @@ suitability, a content-addressed identity, a provenance chain, a safety level, a
 recoverability class, or a conserved quantity.
 
 Nothing read any of them.
+
+**`WordContract.effect` was one of them, and it is gone.** It claimed `Pure` or
+`Dictionary`, and only `DEF` and `DEL` were `Dictionary` — but `EXEC`, `MAP`,
+`FILTER`, and `FOLD` all run a quote, and `{ { 1 } "X" DEF } EXEC` changes the
+dictionary while `EXEC` declared itself pure. Making it accurate would have
+meant effect polymorphism through quotes, for a field nothing acted on. The
+specification's one use of it was an argument that a blocked vent is safe
+because the unit is pure; the real reason is better, and is now stated
+directly: **a blocked unit is not evaluated at all**, so its effects never
+arise whatever they would have been.
