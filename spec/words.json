@@ -12,10 +12,12 @@
       "module",
       "collection",
       "higher-order",
-      "exact-arithmetic"
+      "exact-arithmetic",
+      "hosted-effects",
+      "child-runtime"
     ],
     "completeInventory": false,
-    "entryCount": 77
+    "entryCount": 84
   },
   "entries": [
     {
@@ -2805,6 +2807,264 @@
         "syntax": "100/3 1/100 QUANTIZE-TRUNC"
       },
       "executorKey": "QuantizeTrunc"
+    },
+    {
+      "name": "PRINT",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "retain",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "console",
+      "effects": [
+        "consoleWrite"
+      ],
+      "hostedEffect": "consoleWrite",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "hover": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "lookup": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "syntax": "42 PRINT"
+      },
+      "executorKey": "Print"
+    },
+    {
+      "name": "SPAWN",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonCodeBlock"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "processHandle",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Spawn an isolated child runtime from a code block.",
+        "hover": "Spawn an isolated child runtime from a code block.",
+        "lookup": "Spawn an isolated child runtime from a code block.",
+        "syntax": "{ 1 2 + } SPAWN"
+      },
+      "executorKey": "Spawn"
+    },
+    {
+      "name": "AWAIT",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Wait for a child runtime to finish and return its exit tuple.",
+        "hover": "Wait for a child runtime to finish and return its exit tuple.",
+        "lookup": "Wait for a child runtime to finish and return its exit tuple.",
+        "syntax": "{ 1 2 + } SPAWN AWAIT"
+      },
+      "executorKey": "Await"
+    },
+    {
+      "name": "STATUS",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Read the current status of a child runtime.",
+        "hover": "Read the current status of a child runtime.",
+        "lookup": "Read the current status of a child runtime.",
+        "syntax": "{ 1 2 + } SPAWN STATUS"
+      },
+      "executorKey": "Status"
+    },
+    {
+      "name": "KILL",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Forcibly terminate a child runtime.",
+        "hover": "Forcibly terminate a child runtime.",
+        "lookup": "Forcibly terminate a child runtime.",
+        "syntax": "{ 1 2 + } SPAWN KILL"
+      },
+      "executorKey": "Kill"
+    },
+    {
+      "name": "MONITOR",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "processHandle",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Register a monitor on a child handle.",
+        "hover": "Register a monitor on a child handle.",
+        "lookup": "Register a monitor on a child handle.",
+        "syntax": "{ 1 2 + } SPAWN MONITOR"
+      },
+      "executorKey": "Monitor"
+    },
+    {
+      "name": "SUPERVISE",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "restartPolicyExhausted",
+        "reason": "childFailed"
+      },
+      "errorWhen": [
+        "nonCodeBlock",
+        "invalidRetryPolicy"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Run a code block under a one-for-one restart policy.",
+        "hover": "Run a code block under a one-for-one restart policy.",
+        "lookup": "Run a code block under a one-for-one restart policy.",
+        "syntax": "{ 1 2 + } [ 3 ] SUPERVISE"
+      },
+      "executorKey": "Supervise"
     }
   ]
 }

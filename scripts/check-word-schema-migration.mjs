@@ -67,7 +67,8 @@ const collectionSlice = manifest.entries
 const arithmeticSlice = manifest.entries
   .filter((entry) => entry.kind === 'coreword' && entry.category === 'arithmetic')
   .map((entry) => entry.canonical);
-const expected = new Set([...priorSlice, ...collectionSlice, ...arithmeticSlice]);
+const hostedChildSlice = ['PRINT', 'SPAWN', 'AWAIT', 'STATUS', 'KILL', 'MONITOR', 'SUPERVISE'];
+const expected = new Set([...priorSlice, ...collectionSlice, ...arithmeticSlice, ...hostedChildSlice]);
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
 

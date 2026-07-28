@@ -54,3 +54,8 @@ The fifth Phase 3 slice migrates every Core arithmetic Word without changing
 the exact-real engine. Lifted binary/unary arithmetic and quantization retain
 exact residuals, broadcast errors, NIL passthrough, reasoned undecidability,
 and the deliberate MOD-by-zero ERROR versus DIV-by-zero NIL distinction.
+
+The sixth Phase 3 slice begins hosted effects with Core PRINT and migrates the
+complete child-runtime lifecycle as one unit. Capability, ordered semantic
+effect, hosted-effect request, handle role, lifecycle ERROR boundary, and
+supervision exhaustion remain separate fields rather than display inference.
