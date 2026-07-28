@@ -1,0 +1,697 @@
+{
+  "schemaVersion": 1,
+  "migration": {
+    "phase": 3,
+    "families": [
+      "NIL",
+      "truth",
+      "comparison"
+    ],
+    "completeInventory": false,
+    "entryCount": 20
+  },
+  "entries": [
+    {
+      "name": "TRUE",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Push the boolean TRUE onto the stack.",
+        "hover": "Push the boolean TRUE onto the stack.",
+        "lookup": "Push the boolean TRUE onto the stack.",
+        "syntax": "TRUE"
+      },
+      "executorKey": "True"
+    },
+    {
+      "name": "FALSE",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Push the boolean FALSE onto the stack.",
+        "hover": "Push the boolean FALSE onto the stack.",
+        "lookup": "Push the boolean FALSE onto the stack.",
+        "syntax": "FALSE"
+      },
+      "executorKey": "False"
+    },
+    {
+      "name": "NIL",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "nil",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Push the NIL value onto the stack.",
+        "hover": "Push the NIL value onto the stack.",
+        "lookup": "Push the NIL value onto the stack.",
+        "syntax": "NIL"
+      },
+      "executorKey": "Nil"
+    },
+    {
+      "name": "NIL?",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Test whether the top value is an operational NIL (absent).",
+        "hover": "Test whether the top value is an operational NIL (absent).",
+        "lookup": "Test whether the top value is an operational NIL (absent).",
+        "syntax": "1 0 / NIL?"
+      },
+      "executorKey": "NilCheck"
+    },
+    {
+      "name": "NIL-REASON",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "hover": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-REASON"
+      },
+      "executorKey": "NilReason"
+    },
+    {
+      "name": "NIL-ORIGIN",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the origin of an operational NIL as a protocol-string Text.",
+        "hover": "Read the origin of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the origin of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-ORIGIN"
+      },
+      "executorKey": "NilOrigin"
+    },
+    {
+      "name": "NIL-RECOVERABLE?",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "hover": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-RECOVERABLE?"
+      },
+      "executorKey": "NilRecoverable"
+    },
+    {
+      "name": "NIL-DIAGNOSIS",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "hover": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "lookup": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "syntax": "1 0 / NIL-DIAGNOSIS"
+      },
+      "executorKey": "NilDiagnosis"
+    },
+    {
+      "name": "BOOL",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedValueKind"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Convert a value to a boolean by truthiness.",
+        "hover": "Convert a value to a boolean by truthiness.",
+        "lookup": "Convert a value to a boolean by truthiness.",
+        "syntax": "1 BOOL"
+      },
+      "executorKey": "Bool"
+    },
+    {
+      "name": "COMPARE-WITHIN",
+      "aliases": [],
+      "family": "comparison",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidBudget",
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Three-way compare two values within an explicit observation budget.",
+        "hover": "Three-way compare two values within an explicit observation budget.",
+        "lookup": "Three-way compare two values within an explicit observation budget.",
+        "syntax": "1/3 1/2 64 COMPARE-WITHIN"
+      },
+      "executorKey": "CompareWithin"
+    },
+    {
+      "name": "EQ",
+      "aliases": [
+        "="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test equality of two values.",
+        "hover": "Test equality of two values.",
+        "lookup": "Test equality of two values.",
+        "syntax": "1 1 ="
+      },
+      "executorKey": "Eq"
+    },
+    {
+      "name": "LT",
+      "aliases": [
+        "<"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test less-than comparison.",
+        "hover": "Test less-than comparison.",
+        "lookup": "Test less-than comparison.",
+        "syntax": "1 2 <"
+      },
+      "executorKey": "Lt"
+    },
+    {
+      "name": "LTE",
+      "aliases": [
+        "<="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test less-than-or-equal comparison.",
+        "hover": "Test less-than-or-equal comparison.",
+        "lookup": "Test less-than-or-equal comparison.",
+        "syntax": "1 1 <="
+      },
+      "executorKey": "Le"
+    },
+    {
+      "name": "GT",
+      "aliases": [
+        ">"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test greater-than comparison.",
+        "hover": "Test greater-than comparison.",
+        "lookup": "Test greater-than comparison.",
+        "syntax": "2 1 >"
+      },
+      "executorKey": "Gt"
+    },
+    {
+      "name": "GTE",
+      "aliases": [
+        ">="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test greater-than-or-equal comparison.",
+        "hover": "Test greater-than-or-equal comparison.",
+        "lookup": "Test greater-than-or-equal comparison.",
+        "syntax": "1 1 >="
+      },
+      "executorKey": "Gte"
+    },
+    {
+      "name": "NEQ",
+      "aliases": [
+        "<>"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test inequality of two values.",
+        "hover": "Test inequality of two values.",
+        "lookup": "Test inequality of two values.",
+        "syntax": "1 2 <>"
+      },
+      "executorKey": "Neq"
+    },
+    {
+      "name": "AND",
+      "aliases": [
+        "&"
+      ],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical AND with three-valued (Kleene) NIL handling.",
+        "hover": "Logical AND with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical AND with three-valued (Kleene) NIL handling.",
+        "syntax": "TRUE TRUE &"
+      },
+      "executorKey": "And"
+    },
+    {
+      "name": "OR",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical OR with three-valued (Kleene) NIL handling.",
+        "hover": "Logical OR with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical OR with three-valued (Kleene) NIL handling.",
+        "syntax": "TRUE FALSE OR"
+      },
+      "executorKey": "Or"
+    },
+    {
+      "name": "NOT",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical negation.",
+        "hover": "Logical negation.",
+        "lookup": "Logical negation.",
+        "syntax": "TRUE NOT"
+      },
+      "executorKey": "Not"
+    },
+    {
+      "name": "VENT",
+      "aliases": [
+        "^"
+      ],
+      "family": "nilRecovery",
+      "stack": {
+        "inputs": "control",
+        "outputs": "control"
+      },
+      "consumption": "conditional",
+      "nilPolicy": "inspectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingFollowingSourceUnit"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "hover": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "lookup": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "syntax": "NIL ^ [ 0 ]"
+      },
+      "executorKey": "LazyNextUnitFallback"
+    }
+  ]
+}
