@@ -1,0 +1,20 @@
+<h2 id="14-ai-first-implementation-rules">14. AI-first Implementation Rules</h2>
+
+<h3 id="141-mandatory">14.1 Mandatory</h3>
+
+<ul>
+<li>Prefer explicit, structurally searchable function and module names.</li>
+<li>Keep newly created Rust source files, and files that are substantially rewritten, at or under 500 lines. Existing over-budget files are recorded as a baseline (<code>docs/quality/file-size-baseline.json</code>) and, as a goal, must not be changed in ways that further increase their line count.</li>
+<li>Keep control flow shallow and phase-separated.</li>
+<li>Separate semantic changes from structural cleanup in change management.</li>
+<li>Maintain single canonical implementations; do not allow dual-mode drift.</li>
+<li>Source code comments are allowed when they clarify intent, invariants, traceability, or non-obvious behavior. When source code is changed, nearby comments must be reviewed and updated so they remain accurate. Comments that merely restate obvious code should be avoided.</li>
+</ul>
+
+<h3 id="142-advisory">14.2 Advisory</h3>
+
+<ul>
+<li>Prefer small helper extraction for duplicated control scaffolding.</li>
+<li>Prefer deterministic, low-ambiguity error classification.</li>
+<li>Prefer mechanically enforceable tests over narrative documentation.</li>
+</ul>
