@@ -81,3 +81,13 @@ The third Module-Word slice migrates the complete `IO` and `CRYPTO` modules.
 Host input/output, secure-random observation, deterministic digest computation,
 capability, effect, and determinism are represented as independent axes.
 Seventy-six Module Words remain deferred, so full-inventory is still false.
+
+The fourth Module-Word slice migrates all four `ALGO` contracts. Stable
+deduplication, membership, reasoned search misses, and comparison-budget
+UNKNOWN remain distinct from malformed collection use. Seventy-two Module
+Words remain deferred.
+
+The fifth Module-Word slice migrates the nine interval and Tier 2 `MATH`
+contracts. Exact roots, sound intervals, interpretation roles, reasoned scalar
+domain misses, malformed interval use, PI, and water-bounded enclosure remain
+separate observable contracts. Sixty-three Module Words remain deferred.

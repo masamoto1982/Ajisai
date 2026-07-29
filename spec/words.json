@@ -20,10 +20,12 @@
       "data-table",
       "json-value",
       "host-observation",
-      "crypto-digest"
+      "crypto-digest",
+      "algorithm-collection",
+      "exact-interval"
     ],
     "completeInventory": false,
-    "entryCount": 118
+    "entryCount": 131
   },
   "entries": [
     {
@@ -4283,6 +4285,513 @@
         "syntax": "[ bits ] value CRYPTO@HASH"
       },
       "executorKey": "hash::op_hash"
+    },
+    {
+      "name": "ALGO@SORT",
+      "module": "ALGO",
+      "aliases": [],
+      "family": "algorithmCollection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "emptyVector",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonComparableElement"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a copy of a vector sorted in ascending order.",
+        "hover": "Return a copy of a vector sorted in ascending order.",
+        "lookup": "Return a copy of a vector sorted in ascending order.",
+        "syntax": "[ 3 1 2 ] ALGO@SORT"
+      },
+      "executorKey": "sort::op_sort"
+    },
+    {
+      "name": "ALGO@UNIQUE",
+      "module": "ALGO",
+      "aliases": [],
+      "family": "algorithmCollection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "emptyVector",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        "hover": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        "lookup": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        "syntax": "[ 1 2 1 ] ALGO@UNIQUE"
+      },
+      "executorKey": "algo_ops::op_unique"
+    },
+    {
+      "name": "ALGO@CONTAINS",
+      "module": "ALGO",
+      "aliases": [],
+      "family": "algorithmCollection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "True if a vector contains an element equal to the given value.",
+        "hover": "True if a vector contains an element equal to the given value.",
+        "lookup": "True if a vector contains an element equal to the given value.",
+        "syntax": "[ 1 2 ] 2 ALGO@CONTAINS"
+      },
+      "executorKey": "algo_ops::op_contains"
+    },
+    {
+      "name": "ALGO@INDEX-OF",
+      "module": "ALGO",
+      "aliases": [],
+      "family": "algorithmCollection",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "valueAbsent",
+        "reason": "missingField"
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Index of the first element equal to the value; Bubble/NIL if absent.",
+        "hover": "Index of the first element equal to the value; Bubble/NIL if absent.",
+        "lookup": "Index of the first element equal to the value; Bubble/NIL if absent.",
+        "syntax": "[ 1 2 ] 2 ALGO@INDEX-OF"
+      },
+      "executorKey": "algo_ops::op_index_of"
+    },
+    {
+      "name": "MATH@SQRT",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "negativeScalar",
+        "reason": "domainMiss"
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval",
+        "negativeInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrInterval",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        "hover": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        "lookup": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        "syntax": "2 MATH@SQRT"
+      },
+      "executorKey": "interval_ops::op_sqrt"
+    },
+    {
+      "name": "MATH@SQRT-EPS",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval",
+        "invalidEpsilon",
+        "negativeInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrInterval",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Square root with an explicit interval width bound eps.",
+        "hover": "Square root with an explicit interval width bound eps.",
+        "lookup": "Square root with an explicit interval width bound eps.",
+        "syntax": "2 1/100 MATH@SQRT-EPS"
+      },
+      "executorKey": "interval_ops::op_sqrt_eps"
+    },
+    {
+      "name": "MATH@INTERVAL",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonScalarEndpoint",
+        "reversedBounds"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "interval",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Create a sound interval [ lo, hi ].",
+        "hover": "Create a sound interval [ lo, hi ].",
+        "lookup": "Create a sound interval [ lo, hi ].",
+        "syntax": "1 2 MATH@INTERVAL"
+      },
+      "executorKey": "interval_ops::op_interval"
+    },
+    {
+      "name": "MATH@LOWER",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Lower endpoint of a number or interval.",
+        "hover": "Lower endpoint of a number or interval.",
+        "lookup": "Lower endpoint of a number or interval.",
+        "syntax": "interval MATH@LOWER"
+      },
+      "executorKey": "interval_ops::op_lower"
+    },
+    {
+      "name": "MATH@UPPER",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Upper endpoint of a number or interval.",
+        "hover": "Upper endpoint of a number or interval.",
+        "lookup": "Upper endpoint of a number or interval.",
+        "syntax": "interval MATH@UPPER"
+      },
+      "executorKey": "interval_ops::op_upper"
+    },
+    {
+      "name": "MATH@WIDTH",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Width of an interval (hi - lo).",
+        "hover": "Width of an interval (hi - lo).",
+        "lookup": "Width of an interval (hi - lo).",
+        "syntax": "interval MATH@WIDTH"
+      },
+      "executorKey": "interval_ops::op_width"
+    },
+    {
+      "name": "MATH@IS-EXACT",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericOrInterval"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "True for an exact number or a degenerate (zero-width) interval.",
+        "hover": "True for an exact number or a degenerate (zero-width) interval.",
+        "lookup": "True for an exact number or a degenerate (zero-width) interval.",
+        "syntax": "value MATH@IS-EXACT"
+      },
+      "executorKey": "interval_ops::op_is_exact"
+    },
+    {
+      "name": "MATH@PI",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactReal",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Push the exact real pi as a refinable rational enclosure.",
+        "hover": "Push the exact real pi as a refinable rational enclosure.",
+        "lookup": "Push the exact real pi as a refinable rational enclosure.",
+        "syntax": "MATH@PI"
+      },
+      "executorKey": "tier2_ops::op_pi"
+    },
+    {
+      "name": "MATH@ENCLOSE",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactInterval",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonPositiveOrNonIntegerBudget",
+        "nonObservableValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "interval",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Observe a value's rational enclosure within an explicit water budget.",
+        "hover": "Observe a value's rational enclosure within an explicit water budget.",
+        "lookup": "Observe a value's rational enclosure within an explicit water budget.",
+        "syntax": "MATH@PI 64 MATH@ENCLOSE"
+      },
+      "executorKey": "tier2_ops::op_enclose"
     }
   ]
 }

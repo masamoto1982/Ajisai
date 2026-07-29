@@ -169,6 +169,27 @@
       "determinism": "inputRelative"
     },
     {
+      "id": "algorithmCollection",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "order": "stableWhereApplicable",
+      "undecidableComparison": "unknown"
+    },
+    {
+      "id": "exactInterval",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "representation": "unobservable",
+      "observation": "rationalEnclosure"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",
