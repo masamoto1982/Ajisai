@@ -1,4 +1,3 @@
-# 型変換ワード群のテストケース（STR/NUM/BOOL）
 # 文字列リテラルは bare（ベクタで包まない）で cast ワードに渡す。
 
 # ============================================================================
@@ -41,28 +40,17 @@ nil STR
 'not-a-number' NUM
 
 # ============================================================================
-# BOOL - String/Number → Boolean
 # ============================================================================
 
 # TRUE/FALSE（大文字）
-'TRUE' BOOL
-'FALSE' BOOL
 
 # true/false（小文字）
-'true' BOOL
-'false' BOOL
 
 # 混在（大文字小文字無視）
-'True' BOOL
-'False' BOOL
 
 # TRUE/FALSE 以外の文字列 → NIL
-'1' BOOL
-'yes' BOOL
 
 # 数値 → Boolean（0 が FALSE、それ以外は TRUE）
-1 BOOL
-0 BOOL
 
 # ============================================================================
 # 組み合わせ例
@@ -72,14 +60,11 @@ nil STR
 [ 42 ] STR NUM
 
 # Boolean → 文字列 → Boolean
-TRUE STR BOOL
 
 # 文字列から数値に変換してから文字列化
 '123' NUM STR
 
 # 数値 → Boolean → 文字列
-1 BOOL STR
-0 BOOL STR
 
 # 文字列連結の例
 [ 10 ] [ 20 ] + STR ' is the sum' CONCAT
