@@ -16,10 +16,11 @@
       "hosted-effects",
       "child-runtime",
       "conversion",
-      "staging"
+      "staging",
+      "data-table"
     ],
     "completeInventory": false,
-    "entryCount": 98
+    "entryCount": 104
   },
   "entries": [
     {
@@ -3562,6 +3563,218 @@
         "syntax": "{ ... } PRECOMPUTE"
       },
       "executorKey": "Precompute"
+    },
+    {
+      "name": "DATA@CSV-PARSE",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedOrRaggedCsv",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse CSV text into a vector of Records (the first row is the header).",
+        "hover": "Parse CSV text into a vector of Records (the first row is the header).",
+        "lookup": "Parse CSV text into a vector of Records (the first row is the header).",
+        "syntax": "'name,age\\nAjisai,1' DATA@CSV-PARSE"
+      },
+      "executorKey": "data_ops::op_csv_parse"
+    },
+    {
+      "name": "DATA@CSV-STRINGIFY",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonRectangularRecordVector",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Render a vector of Records as CSV text sharing one column shape.",
+        "hover": "Render a vector of Records as CSV text sharing one column shape.",
+        "lookup": "Render a vector of Records as CSV text sharing one column shape.",
+        "syntax": "[ record... ] DATA@CSV-STRINGIFY"
+      },
+      "executorKey": "data_ops::op_csv_stringify"
+    },
+    {
+      "name": "DATA@SELECT",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrColumns",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Project a table onto the named columns, in order.",
+        "hover": "Project a table onto the named columns, in order.",
+        "lookup": "Project a table onto the named columns, in order.",
+        "syntax": "[ record... ] [ 'name' ] DATA@SELECT"
+      },
+      "executorKey": "data_ops::op_select"
+    },
+    {
+      "name": "DATA@WHERE",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableColumnOrPredicate",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "predicateEvaluationError"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Keep the rows whose predicate on a named column is true.",
+        "hover": "Keep the rows whose predicate on a named column is true.",
+        "lookup": "Keep the rows whose predicate on a named column is true.",
+        "syntax": "[ record... ] 'age' { [ 0 ] > } DATA@WHERE"
+      },
+      "executorKey": "data_ops::op_where"
+    },
+    {
+      "name": "DATA@GROUP",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrColumn",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "groups",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Group rows by a column into { key, rows } group records.",
+        "hover": "Group rows by a column into { key, rows } group records.",
+        "lookup": "Group rows by a column into { key, rows } group records.",
+        "syntax": "[ record... ] 'kind' DATA@GROUP"
+      },
+      "executorKey": "data_ops::op_group"
+    },
+    {
+      "name": "DATA@JOIN",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrKey",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Left-join two tables on a shared key column.",
+        "hover": "Left-join two tables on a shared key column.",
+        "lookup": "Left-join two tables on a shared key column.",
+        "syntax": "[ left... ] [ right... ] 'id' DATA@JOIN"
+      },
+      "executorKey": "data_ops::op_join"
     }
   ]
 }

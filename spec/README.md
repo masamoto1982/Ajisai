@@ -65,3 +65,9 @@ contracts. The migration gate derives all 98 Core Words from the frozen
 manifest instead of maintaining a second handwritten allow-list. Module Words
 remain outside `words.json`, so `migration.completeInventory` stays false and
 legacy module metadata must not yet be removed.
+
+The first Module-Word slice migrates all six `DATA` contracts as qualified
+canonical names. Table shape, reasoned CSV projection, missing-field behavior,
+purity, executor ownership, and authored LOOKUP summaries are checked from the
+same differential contracts. The other 90 Module Words remain deferred, so
+this slice does not yet authorize Phase 5 metadata deletion.

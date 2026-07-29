@@ -132,6 +132,16 @@
       "nilPolicy": "contractSpecific"
     },
     {
+      "id": "dataTable",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "shape": "rectangularRecordVector",
+      "nilPolicy": "contractSpecific"
+    },
+    {
       "id": "observation",
       "clauses": [
         "LANG.OBSERVATION.PROJECTIONS",

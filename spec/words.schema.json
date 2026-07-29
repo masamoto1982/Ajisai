@@ -39,9 +39,10 @@
       "type": "object",
       "required": ["name", "aliases", "family", "stack", "consumption", "nilPolicy", "projection", "errorWhen", "purity", "determinism", "capability", "effects", "hostedEffect", "interpretationRole", "clauses", "documentation", "executorKey"],
       "properties": {
-        "name": { "type": "string", "pattern": "^(?:[A-Z][A-Z0-9@?-]*|>[A-Z][A-Z0-9@?-]*)$" },
+        "name": { "type": "string", "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$" },
+        "module": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" },
         "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder", "liftedBinaryExactArithmetic", "liftedUnaryExactArithmetic", "exactQuantization", "hostedEffect", "childRuntime", "conversion"] },
+        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder", "liftedBinaryExactArithmetic", "liftedUnaryExactArithmetic", "exactQuantization", "hostedEffect", "childRuntime", "conversion", "dataTable"] },
         "stack": { "type": "object", "required": ["inputs", "outputs"], "properties": { "inputs": { "$ref": "#/$defs/arity" }, "outputs": { "$ref": "#/$defs/arity" } }, "additionalProperties": false },
         "consumption": { "enum": ["none", "eat", "retain", "conditional"] },
         "nilPolicy": { "enum": ["preserveReason", "consumeNil", "rejectNil", "passthrough", "truthUnknownNotNil", "inspectNil", "createsNil", "passthroughThenProject"] },
@@ -55,7 +56,7 @@
         "interpretationRole": { "type": "string", "minLength": 1 },
         "clauses": { "type": "array", "items": { "type": "string", "pattern": "^LANG\\." }, "minItems": 1, "uniqueItems": true },
         "documentation": { "$ref": "#/$defs/documentation" },
-        "executorKey": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" }
+        "executorKey": { "type": "string", "pattern": "^(?:[A-Z][A-Za-z0-9]*|[a-z][a-z0-9_]*::[a-z][a-z0-9_]*)$" }
       },
       "additionalProperties": false
     }
