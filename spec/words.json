@@ -14,10 +14,12 @@
       "higher-order",
       "exact-arithmetic",
       "hosted-effects",
-      "child-runtime"
+      "child-runtime",
+      "conversion",
+      "staging"
     ],
     "completeInventory": false,
-    "entryCount": 84
+    "entryCount": 98
   },
   "entries": [
     {
@@ -3065,6 +3067,501 @@
         "syntax": "{ 1 2 + } [ 3 ] SUPERVISE"
       },
       "executorKey": "Supervise"
+    },
+    {
+      "name": ">CF",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumericScalar"
+      ],
+      "interpretationRole": "continuedFraction",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "hover": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "lookup": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "syntax": "1/3 >CF"
+      },
+      "executorKey": "ToCf"
+    },
+    {
+      "name": "CHARS",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Split a string into a vector of one-character strings.",
+        "hover": "Split a string into a vector of one-character strings.",
+        "lookup": "Split a string into a vector of one-character strings.",
+        "syntax": "'hi' CHARS"
+      },
+      "executorKey": "Chars"
+    },
+    {
+      "name": "JOIN",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTextVector",
+        "nonTextElement"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Join a vector of strings into a single string.",
+        "hover": "Join a vector of strings into a single string.",
+        "lookup": "Join a vector of strings into a single string.",
+        "syntax": "[ 'h' 'i' ] JOIN"
+      },
+      "executorKey": "Join"
+    },
+    {
+      "name": "TRIM",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from both ends of a string.",
+        "hover": "Remove whitespace from both ends of a string.",
+        "lookup": "Remove whitespace from both ends of a string.",
+        "syntax": "'  hi  ' TRIM"
+      },
+      "executorKey": "Trim"
+    },
+    {
+      "name": "TRIM-LEFT",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from the start of a string.",
+        "hover": "Remove whitespace from the start of a string.",
+        "lookup": "Remove whitespace from the start of a string.",
+        "syntax": "'  hi' TRIM-LEFT"
+      },
+      "executorKey": "TrimLeft"
+    },
+    {
+      "name": "TRIM-RIGHT",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from the end of a string.",
+        "hover": "Remove whitespace from the end of a string.",
+        "lookup": "Remove whitespace from the end of a string.",
+        "syntax": "'hi  ' TRIM-RIGHT"
+      },
+      "executorKey": "TrimRight"
+    },
+    {
+      "name": "TOKENIZE",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextSeparator"
+      ],
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Split a string into a vector of substrings using a separator.",
+        "hover": "Split a string into a vector of substrings using a separator.",
+        "lookup": "Split a string into a vector of substrings using a separator.",
+        "syntax": "'a,b,c' ',' TOKENIZE"
+      },
+      "executorKey": "Tokenize"
+    },
+    {
+      "name": "SUBSTITUTE",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Replace every occurrence of a substring with another.",
+        "hover": "Replace every occurrence of a substring with another.",
+        "lookup": "Replace every occurrence of a substring with another.",
+        "syntax": "'hello' 'l' 'L' SUBSTITUTE"
+      },
+      "executorKey": "Substitute"
+    },
+    {
+      "name": "STARTS-WITH?",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextPrefix"
+      ],
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Test whether a string begins with the given prefix.",
+        "hover": "Test whether a string begins with the given prefix.",
+        "lookup": "Test whether a string begins with the given prefix.",
+        "syntax": "'hello' 'he' STARTS-WITH?"
+      },
+      "executorKey": "StartsWith"
+    },
+    {
+      "name": "ENDS-WITH?",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextSuffix"
+      ],
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Test whether a string ends with the given suffix.",
+        "hover": "Test whether a string ends with the given suffix.",
+        "lookup": "Test whether a string ends with the given suffix.",
+        "syntax": "'hello' 'lo' ENDS-WITH?"
+      },
+      "executorKey": "EndsWith"
+    },
+    {
+      "name": "NUM",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "parseFailure",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse text as a number; Bubble/NIL on parse failure.",
+        "hover": "Parse text as a number; Bubble/NIL on parse failure.",
+        "lookup": "Parse text as a number; Bubble/NIL on parse failure.",
+        "syntax": "'42' NUM"
+      },
+      "executorKey": "Num"
+    },
+    {
+      "name": "STR",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Convert a value to its string representation.",
+        "hover": "Convert a value to its string representation.",
+        "lookup": "Convert a value to its string representation.",
+        "syntax": "42 STR"
+      },
+      "executorKey": "Str"
+    },
+    {
+      "name": "CHR",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "invalidCharacterCode",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonInteger"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Convert a numeric character code to a single-character string.",
+        "hover": "Convert a numeric character code to a single-character string.",
+        "lookup": "Convert a numeric character code to a single-character string.",
+        "syntax": "65 CHR"
+      },
+      "executorKey": "Chr"
+    },
+    {
+      "name": "PRECOMPUTE",
+      "aliases": [],
+      "consumption": "conditional",
+      "purity": "conditional",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "control",
+      "stack": {
+        "inputs": "variable",
+        "outputs": "variable"
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "outsideDefinition",
+        "nonCodeBlock"
+      ],
+      "interpretationRole": "definitionTime",
+      "clauses": [
+        "LANG.SOURCE.CODE",
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Definition-time staging marker (not a macro).",
+        "hover": "Definition-time staging marker (not a macro).",
+        "lookup": "Definition-time staging marker (not a macro).",
+        "syntax": "{ ... } PRECOMPUTE"
+      },
+      "executorKey": "Precompute"
     }
   ]
 }

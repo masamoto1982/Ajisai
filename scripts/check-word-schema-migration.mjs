@@ -60,21 +60,16 @@ for (const word of words.entries) {
   }
 }
 
-const priorSlice = ['TRUE', 'FALSE', 'NIL', 'NIL?', 'NIL-REASON', 'NIL-ORIGIN', 'NIL-RECOVERABLE?', 'NIL-DIAGNOSIS', 'BOOL', 'COMPARE-WITHIN', 'EQ', 'LT', 'LTE', 'GT', 'GTE', 'NEQ', 'AND', 'OR', 'NOT', 'VENT', 'TOP', 'STAK', 'EAT', 'KEEP', 'IDLE', 'COND', 'FLOW', 'FORC', 'EXEC', 'CONSERVE', 'EVAL', 'OR-ELSE', 'DEF', 'DEL', 'LOOKUP', 'IMPORT', 'IMPORT-ONLY', 'UNIMPORT', 'UNIMPORT-ONLY'];
-const collectionSlice = manifest.entries
-  .filter((entry) => entry.kind === 'coreword' && ['vector', 'tensor', 'higher-order'].includes(entry.category))
-  .map((entry) => entry.canonical);
-const arithmeticSlice = manifest.entries
-  .filter((entry) => entry.kind === 'coreword' && entry.category === 'arithmetic')
-  .map((entry) => entry.canonical);
-const hostedChildSlice = ['PRINT', 'SPAWN', 'AWAIT', 'STATUS', 'KILL', 'MONITOR', 'SUPERVISE'];
-const expected = new Set([...priorSlice, ...collectionSlice, ...arithmeticSlice, ...hostedChildSlice]);
+const expected = new Set(manifest.entries
+  .filter((entry) => entry.kind === 'coreword')
+  .map((entry) => entry.canonical));
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
-if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
+for (const name of names) if (!expected.has(name)) fail(`migration scope contains non-Core Word ${name}`);
+if (names.size !== expected.size) fail(`Core migration scope has ${names.size} entries; expected ${expected.size}`);
 
 if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log(`[word-schema] ${names.size} migrated contracts match the 224-surface manifest and current executors.`);
+  console.log(`[word-schema] all ${names.size} Core contracts match the 224-surface manifest and current executors.`);
 }

@@ -59,3 +59,9 @@ The sixth Phase 3 slice begins hosted effects with Core PRINT and migrates the
 complete child-runtime lifecycle as one unit. Capability, ordered semantic
 effect, hosted-effect request, handle role, lifecycle ERROR boundary, and
 supervision exhaustion remain separate fields rather than display inference.
+
+The final Core slice migrates conversion, text, and definition-time staging
+contracts. The migration gate derives all 98 Core Words from the frozen
+manifest instead of maintaining a second handwritten allow-list. Module Words
+remain outside `words.json`, so `migration.completeInventory` stays false and
+legacy module metadata must not yet be removed.
