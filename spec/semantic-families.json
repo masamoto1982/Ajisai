@@ -201,6 +201,17 @@
       "undecidableComparison": "unknown"
     },
     {
+      "id": "calendarTime",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "calendar": "prolepticGregorian",
+      "hostClock": "capabilityMediated"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",

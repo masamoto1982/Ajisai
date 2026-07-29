@@ -96,3 +96,8 @@ The sixth Module-Word slice completes `MATH` with eight exact arithmetic and
 number-theory contracts. NIL passthrough, comparison-budget UNKNOWN, the
 zero-to-negative-power projection, integer-domain errors, and exponent work
 limits remain distinct. Fifty-five Module Words remain deferred.
+
+The seventh Module-Word slice migrates all eighteen `TIME` contracts. Host
+clock observation, pure civil-time conversion, field extraction, calendar
+arithmetic, formatting, and reasoned ISO parse failure remain separate axes.
+Thirty-seven Module Words remain deferred.

@@ -93,7 +93,7 @@ for (const word of words.entries) {
   }
 }
 
-const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH']);
+const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH', 'TIME']);
 const expected = new Set(manifest.entries
   .filter((entry) => entry.kind === 'coreword'
     || (entry.kind === 'moduleword' && completeModules.has(entry.module)))
@@ -106,5 +106,5 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log('[word-schema] all 98 Core and 41 migrated Module contracts match the 224-surface manifest and current executors.');
+  console.log('[word-schema] all 98 Core and 59 migrated Module contracts match the 224-surface manifest and current executors.');
 }
