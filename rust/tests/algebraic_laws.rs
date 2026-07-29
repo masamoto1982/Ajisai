@@ -192,7 +192,7 @@ fn truths() -> [(&'static str, &'static str); 3] {
     [
         ("T", "TRUE"),
         ("F", "FALSE"),
-        ("U", "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
+        ("U", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
     ]
 }
 

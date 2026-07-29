@@ -96,8 +96,8 @@ fn protocol_strings_are_lower_camel_case() {
         "1 0 /",
         "[ 1 2 3 ]",
         "{ 1 ADD }",
-        "'math' IMPORT 2 MATH@SQRT",
-        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD 8 COMPARE-WITHIN",
+        "2 SQRT",
+        "2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN",
     ] {
         for v in run(src) {
             let o = observe_axes(&v);

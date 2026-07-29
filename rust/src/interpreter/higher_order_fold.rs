@@ -1,6 +1,4 @@
-use super::higher_order::{
-    execute_executable_code, extract_executable_code, ExecutableCode,
-};
+use super::higher_order::{execute_executable_code, extract_executable_code, ExecutableCode};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
@@ -78,27 +76,26 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         let elem: Value = target_val
             .child(i)
             .expect("FOLD: child index in 0..len must be valid");
-                interp.stack.clear();
-                interp.stack.push(accumulator.clone());
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => match interp.stack.pop() {
-                        Some(result) => {
-                            accumulator = result;
-                        }
-                        None => {
-                            error = Some(AjisaiError::from(
-                                "FOLD: expected return value, got empty stack",
-                            ));
-                            break;
-                        }
-                    },
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
+        interp.stack.clear();
+        interp.stack.push(accumulator.clone());
+        interp.stack.push(elem);
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => match interp.stack.pop() {
+                Some(result) => {
+                    accumulator = result;
                 }
-            
+                None => {
+                    error = Some(AjisaiError::from(
+                        "FOLD: expected return value, got empty stack",
+                    ));
+                    break;
+                }
+            },
+            Err(e) => {
+                error = Some(e);
+                break;
+            }
+        }
     }
     interp.disable_no_change_check = saved_no_change_check;
     interp.stack = saved_stack;

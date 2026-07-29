@@ -7,7 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_cannot_override_builtin_word() {
         let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         let result = interp.execute("{ [ 1 ] + } 'GET' DEF").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
@@ -21,7 +21,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_override_user_word() {
         let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
 
         let result1 = interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await;
         assert!(result1.is_ok(), "First definition should succeed");
@@ -354,38 +354,6 @@ mod tests {
             loaded
         );
     }
-
-    #[tokio::test]
-    async fn test_lookup_module_word_renders_four_section_template() {
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-        let result = interp.execute("'MUSIC@PLAY' ?").await;
-        assert!(
-            result.is_ok(),
-            "LOOKUP on module word should succeed: {:?}",
-            result.err()
-        );
-        let loaded = interp
-            .definition_to_load
-            .take()
-            .expect("definition_to_load should be set");
-        for section in [
-            "# MUSIC@PLAY",
-            "Category:",
-            "Summary:",
-            "Role:",
-            "Stack Effect:",
-        ] {
-            assert!(
-                loaded.contains(section),
-                "Module LOOKUP must include '{}' section, got: {}",
-                section,
-                loaded
-            );
-        }
-    }
-
     #[tokio::test]
     async fn test_lookup_user_word_loads_def_source() {
         let mut interp = Interpreter::new();
@@ -537,29 +505,6 @@ mod tests {
         );
         assert_eq!(interp.stack.len(), 2);
     }
-
-    #[tokio::test]
-    async fn test_numeric_vector_literal_play_after_music_sample_reset() {
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-
-        let result = interp.execute("[ 264 297 330 ] MUSIC@SEQ MUSIC@PLAY").await;
-        assert!(
-            result.is_ok(),
-            "[ 264 297 330 ] MUSIC@SEQ MUSIC@PLAY should succeed: {:?}",
-            result.err()
-        );
-
-        let output = interp.collect_output();
-
-        assert!(
-            output.contains("AUDIO:"),
-            "Should contain AUDIO command, got: {}",
-            output
-        );
-    }
-
     #[tokio::test]
     async fn test_example_words_scalar_output() {
         let mut interp = Interpreter::new();
@@ -616,31 +561,6 @@ mod tests {
             assert_eq!(only.as_scalar().unwrap().to_i64().unwrap(), 10);
         }
     }
-
-    #[tokio::test]
-    async fn test_user_word_resolved_in_nested_vector() {
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-
-        interp.execute("{ 264 } 'C4' DEF").await.unwrap();
-        interp.execute("{ 330 } 'E4' DEF").await.unwrap();
-        interp.execute("{ 396 } 'G4' DEF").await.unwrap();
-        let _ = interp.collect_output();
-
-        let result = interp
-            .execute("[ [ C4 E4 G4 ] ] MUSIC@SIM MUSIC@PLAY")
-            .await;
-        assert!(
-            result.is_ok(),
-            "Nested vector with user words should work: {:?}",
-            result.err()
-        );
-
-        let output = interp.collect_output();
-        assert!(output.contains("AUDIO:"), "Should contain AUDIO command");
-    }
-
     #[tokio::test]
     async fn test_def_with_vector_duality() {
         let mut interp = Interpreter::new();
@@ -673,93 +593,6 @@ mod tests {
             }
         }
     }
-
-    #[tokio::test]
-    async fn test_def_without_music_sample_collision_warning() {
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-
-        let result = interp.execute("{ [ 999 ] } 'C4' DEF").await;
-        assert!(
-            result.is_ok(),
-            "DEF should succeed after MUSIC sample dictionary reset: {:?}",
-            result.err()
-        );
-        let output = interp.collect_output();
-        assert!(
-            !output.contains("MUSIC@C4"),
-            "No MUSIC@C4 collision should be reported after sample reset: {}",
-            output
-        );
-    }
-
-    #[tokio::test]
-    async fn test_import_keeps_user_word_unambiguous_after_music_sample_reset() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("{ [ 999 ] } 'C4' DEF").await.unwrap();
-        assert!(interp.user_words.contains_key("C4"));
-
-        interp.execute("'music' IMPORT").await.unwrap();
-        let output = interp.collect_output();
-
-        assert!(
-            interp.user_words.contains_key("C4"),
-            "User word C4 should remain in EXAMPLE after IMPORT"
-        );
-        assert!(
-            !output.contains("MUSIC@C4"),
-            "MUSIC has no C4 sample after reset, so no conflict warning is expected: {}",
-            output
-        );
-
-        let result = interp.execute("C4").await;
-        assert!(
-            result.is_ok(),
-            "C4 should resolve to the user word after MUSIC sample reset: {:?}",
-            result.err()
-        );
-        if let Some(val) = interp.stack.last() {
-            let scalar_owned = val
-                .as_scalar()
-                .cloned()
-                .or_else(|| val.child(0).and_then(|c| c.as_scalar().cloned()));
-            let scalar = scalar_owned.expect("C4 should resolve to a numeric value");
-            assert_eq!(
-                scalar.to_i64().unwrap(),
-                999,
-                "C4 should remain the user-defined value"
-            );
-        }
-
-        let result = interp.execute("MUSIC@C4").await;
-        assert!(
-            result.is_err(),
-            "Qualified MUSIC@C4 should not exist after sample reset"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_music_sample_dictionary_is_reset() {
-        let mut interp = Interpreter::new();
-        interp.execute("'music' IMPORT").await.unwrap();
-        let _ = interp.collect_output();
-
-        let result = interp.execute("MUSIC@C4").await;
-        assert!(
-            result.is_err(),
-            "MUSIC@C4 should not exist after resetting Example Words"
-        );
-
-        let result = interp.execute("MUSIC@SEQ").await;
-        assert!(
-            result.is_ok(),
-            "MUSIC built-in words should remain available: {:?}",
-            result.err()
-        );
-    }
-
     #[tokio::test]
     async fn test_module_first_builtin_still_protected() {
         let mut interp = Interpreter::new();

@@ -6,8 +6,7 @@ use std::sync::Arc;
 
 #[inline]
 fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, _elements: usize) {
-    if let Some(_m) = metrics.as_deref_mut() {
-    }
+    if let Some(_m) = metrics.as_deref_mut() {}
 }
 
 fn record_sparse_candidate_value(metrics: &mut Option<&mut RuntimeMetrics>, value: &Value) {
@@ -34,7 +33,7 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil  => Err(AjisaiError::from(
+            ValueData::Nil => Err(AjisaiError::from(
                 "Tensor conversion requires non-NIL value",
             )),
             ValueData::Scalar(f) => Ok(Self {
@@ -42,7 +41,7 @@ impl FlatTensor {
                 shape: Vec::new(),
                 strides: Vec::new(),
             }),
-            ValueData::Vector(_)  => {
+            ValueData::Vector(_) => {
                 let shape: Vec<usize> = value.shape();
                 let total_size: usize = value.count_fractions();
                 let mut data: Vec<Fraction> = Vec::with_capacity(total_size);
@@ -66,9 +65,7 @@ impl FlatTensor {
             ValueData::ExactScalar(_) => Err(AjisaiError::from(
                 "Tensor conversion does not support exact irrational values",
             )),
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-             => Err(AjisaiError::from(
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),
         }
@@ -241,7 +238,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
-        ValueData::Vector(items)  => {
+        ValueData::Vector(items) => {
             if items.is_empty() {
                 return Some(vec![0]);
             }
@@ -259,9 +256,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
         // CS4 PR-2: U is not a numeric dense-tensor lane (unlike NIL, which is
         // a nil lane), so — like a Boolean — it has no rectangular shape and a
         // vector containing U is broadcast structurally, never densified.
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-         => None,
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -270,9 +265,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
 /// rows so that recursive broadcasting treats them like nested vectors.
 pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
     match &value.data {
-        ValueData::Vector(items)  => {
-            Some(items.as_ref().clone())
-        }
+        ValueData::Vector(items) => Some(items.as_ref().clone()),
         ValueData::Tensor { data, shape } => {
             let nested = build_nested_value(&data.to_fractions(), shape);
             match nested.data {
@@ -388,12 +381,10 @@ where
         out_shape.iter().product()
     };
 
-    if let Some(_m) = metrics.as_deref_mut() {
-    }
+    if let Some(_m) = metrics.as_deref_mut() {}
 
     if tensor_a.shape == tensor_b.shape {
-        if let Some(_m) = metrics.as_deref_mut() {
-        }
+        if let Some(_m) = metrics.as_deref_mut() {}
         // Compute-bound same-shape element-wise op. The per-lane exact-rational
         // arithmetic (num/den cross-multiply + gcd) is the robust parallel
         // scaling target (手4); fan-out is gated by the compute-bound floor and
@@ -409,8 +400,7 @@ where
         return Ok(out_tensor.to_value());
     }
 
-    if let Some(_m) = metrics {
-    }
+    if let Some(_m) = metrics {}
 
     let out_strides = compute_strides(&out_shape);
     let mut out_data = Vec::with_capacity(out_size);
@@ -480,8 +470,7 @@ where
     record_flatten(&mut metrics, element_count);
     record_sparse_candidate_value(&mut metrics, val);
 
-    if let Some(_m) = metrics {
-    }
+    if let Some(_m) = metrics {}
 
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();
     let result_tensor = FlatTensor::from_shape_and_data(tensor.shape, result_data)?;

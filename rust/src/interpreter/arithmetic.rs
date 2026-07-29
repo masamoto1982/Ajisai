@@ -250,8 +250,10 @@ fn push_scalar_fastpath_result(
         interp.stack.pop();
     }
     push_result(interp, result);
-    interp.runtime_metrics.scalar_fastpath_count =
-        interp.runtime_metrics.scalar_fastpath_count.saturating_add(1);
+    interp.runtime_metrics.scalar_fastpath_count = interp
+        .runtime_metrics
+        .scalar_fastpath_count
+        .saturating_add(1);
     Ok(true)
 }
 
@@ -365,10 +367,8 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Vector(_) => None,
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
-        ValueData::Nil  => None,
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-         => None,
+        ValueData::Nil => None,
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -390,9 +390,7 @@ fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
 fn value_contains_exact_scalar(val: &Value) -> bool {
     match &val.data {
         ValueData::ExactScalar(_) => true,
-        ValueData::Vector(items)  => {
-            items.iter().any(value_contains_exact_scalar)
-        }
+        ValueData::Vector(items) => items.iter().any(value_contains_exact_scalar),
         // Dense tensors only hold rational `Fraction` lanes; they can never
         // contain an `ExactScalar`.
         _ => false,

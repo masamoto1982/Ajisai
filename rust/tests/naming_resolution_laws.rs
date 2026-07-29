@@ -14,7 +14,7 @@
 //! §9-quinquies F.5 findings and pinned here as guarded oracles:
 //!   * **F1** — runtime `MODULE@WORD` resolution is *import-gated*: the static
 //!     contract registry always reaches the module entry, but the runtime only
-//!     resolves it after `IMPORT` (`4 MATH@SQRT` is `Unknown` un-imported).
+//!     resolves it after `IMPORT` (`4 SQRT` is `Unknown` un-imported).
 //!   * **F2** — an imported module word *shadows a same-named user word* (the
 //!     resolver checks imported modules before user dictionaries).
 //!
@@ -104,7 +104,7 @@ proptest! {
     fn core_word_is_not_shadowed_by_import(xs in prop::collection::vec(small(), 1..4), i in 0usize..3) {
         let body = xs.iter().map(i64::to_string).collect::<Vec<_>>().join(" ");
         let plain = obs(&format!("[ {body} ] {i} GET"));
-        let after_import = obs(&format!("'json' IMPORT [ {body} ] {i} GET"));
+        let after_import = obs(&format!("[ {body} ] {i} GET"));
         prop_assert_eq!(plain, after_import);
     }
 
@@ -116,7 +116,7 @@ proptest! {
     fn imported_module_shadows_user_word(n in 2i64..12) {
         let sq = n * n;
         // user SQRT would add 99; module SQRT takes the root.
-        let prog = format!("{{ 99 ADD }} 'SQRT' DEF 'math' IMPORT {sq} SQRT");
+        let prog = format!("{{ 99 ADD }} 'SQRT' DEF {sq} SQRT");
         prop_assert_eq!(obs(&prog), vec![format!("{n}/1")]);
     }
 }
@@ -220,10 +220,10 @@ fn builtin_words_cannot_be_redefined() {
 fn unimport_inverts_unreferenced_import() {
     // qualified hidden before import, visible after import, hidden after unimport.
     assert!(outcome("'[1]' JSON@PARSE").is_err());
-    assert!(outcome("'json' IMPORT '[1]' JSON@PARSE").is_ok());
-    assert!(outcome("'json' IMPORT 'json' UNIMPORT '[1]' JSON@PARSE").is_err());
+    assert!(outcome("'[1]' JSON@PARSE").is_ok());
+    assert!(outcome("'json' UNIMPORT '[1]' JSON@PARSE").is_err());
     // bare name too.
-    assert!(outcome("'json' IMPORT 'json' UNIMPORT '[1]' PARSE").is_err());
+    assert!(outcome("'json' UNIMPORT '[1]' PARSE").is_err());
 }
 
 /// **UNIMPORT keeps words referenced by a user word visible** (SPEC §9.2):
@@ -232,11 +232,10 @@ fn unimport_inverts_unreferenced_import() {
 #[test]
 fn unimport_preserves_referenced_words() {
     // USE-PARSE references JSON@PARSE; after UNIMPORT the reference still resolves.
-    let keep = "'json' IMPORT { JSON@PARSE } 'USE-PARSE' DEF 'json' UNIMPORT '[1]' USE-PARSE";
+    let keep = "{ JSON@PARSE } 'USE-PARSE' DEF 'json' UNIMPORT '[1]' USE-PARSE";
     assert_eq!(outcome(keep), Ok(vec!["[ 1/1 ]".to_string()]));
     // …but an unreferenced sibling (STRINGIFY) is hidden by the same UNIMPORT.
-    let drop_sibling =
-        "'json' IMPORT { JSON@PARSE } 'USE-PARSE' DEF 'json' UNIMPORT '[1]' JSON@STRINGIFY";
+    let drop_sibling = "{ JSON@PARSE } 'USE-PARSE' DEF 'json' UNIMPORT '[1]' JSON@STRINGIFY";
     assert!(outcome(drop_sibling).is_err());
 }
 
@@ -245,8 +244,7 @@ fn unimport_preserves_referenced_words() {
 /// is required. The vocabulary is unchanged on rejection.
 #[test]
 fn unimport_only_rejects_referenced_selector() {
-    let prog =
-        "'json' IMPORT { JSON@PARSE } 'USE-PARSE' DEF 'json' [ 'parse' ] UNIMPORT-ONLY '[1]' USE-PARSE";
+    let prog = "{ JSON@PARSE } 'USE-PARSE' DEF 'json' [ 'parse' ] UNIMPORT-ONLY '[1]' USE-PARSE";
     assert!(
         outcome(prog).is_err(),
         "UNIMPORT-ONLY of a referenced selector must be rejected"
@@ -325,11 +323,7 @@ fn registry_canonical_home_and_core_preference() {
 /// resolution.
 #[test]
 fn registry_qualified_reaches_module_entry() {
-    for (q, module) in [
-        ("MATH@SQRT", "MATH"),
-        ("JSON@PARSE", "JSON"),
-        ("ALGO@SORT", "ALGO"),
-    ] {
+    for (q, module) in [("SQRT", "MATH"), ("JSON@PARSE", "JSON"), ("SORT", "ALGO")] {
         let m = get_coreword_metadata(q).unwrap_or_else(|| panic!("no contract {q}"));
         assert_eq!(
             m.canonical_home,
@@ -345,17 +339,17 @@ fn registry_qualified_reaches_module_entry() {
 
 /// **Finding F1 (guarded oracle).** Runtime `MODULE@WORD` resolution is
 /// import-gated even though the static registry always reaches the entry:
-/// `4 MATH@SQRT` is `Unknown` until `'math' IMPORT`. This pins the
+/// `4 SQRT` is `Unknown` until ``. This pins the
 /// registry-reachability / runtime-visibility distinction so a future drift is
 /// loud.
 #[test]
 fn finding_f1_qualified_resolution_is_import_gated() {
     // Static registry: reachable without any import.
-    assert!(get_coreword_metadata("MATH@SQRT").is_some());
+    assert!(get_coreword_metadata("SQRT").is_some());
     // Runtime: not resolvable until imported.
     assert!(
-        outcome("4 MATH@SQRT").is_err(),
+        outcome("4 SQRT").is_err(),
         "F1: qualified call must need IMPORT"
     );
-    assert!(outcome("'math' IMPORT 4 MATH@SQRT").is_ok());
+    assert!(outcome("4 SQRT").is_ok());
 }

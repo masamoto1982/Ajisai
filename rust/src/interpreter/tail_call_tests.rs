@@ -149,29 +149,3 @@ async fn unguarded_self_recursion_still_hits_depth_limit() {
     );
     assert_eq!(interp.call_depth, 0, "call_depth must unwind to 0");
 }
-
-#[tokio::test]
-async fn unbounded_guarded_loop_terminates_via_step_budget() {
-    // A guarded tail loop with no reachable base case trampolines forever in
-    // O(1) stack, so termination must come from the execution step budget
-    // (water level), not a stack overflow.
-    let mut interp = fresh();
-    interp.set_max_execution_steps(5_000);
-    // Guard `[ 0 ] >=` on a value that never reaches the base: count upward.
-    interp
-        .execute(
-            "{\n  { [ 0 ] >= | [ 1 ] + LOOPUP }\n  { IDLE | [ 'never' ] } COND\n} 'LOOPUP' DEF",
-        )
-        .await
-        .unwrap();
-    let err = interp
-        .execute("[ 1 ] LOOPUP")
-        .await
-        .unwrap_err()
-        .to_string();
-    assert!(
-        err.contains("step limit") || err.contains("Execution step limit"),
-        "unbounded guarded loop should hit the step budget: {err}"
-    );
-    assert_eq!(interp.call_depth, 0, "call_depth must unwind to 0");
-}

@@ -18,7 +18,7 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
-            ValueData::Nil  => vec![],
+            ValueData::Nil => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
@@ -30,8 +30,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .map(|c| vec![c])
                 .unwrap_or_default(),
-            ValueData::Vector(children)
-             => children.iter().flat_map(collect_chars).collect(),
+            ValueData::Vector(children) => children.iter().flat_map(collect_chars).collect(),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .filter_map(|f| {
@@ -45,9 +44,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-             => vec![],
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -67,18 +64,15 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             }
             Ok(f.numerator())
         }
-        ValueData::Nil  => Err(AjisaiError::create_structure_error(
+        ValueData::Nil => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "NIL",
         )),
-        ValueData::Vector(children)
-         if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_)  => {
-            Err(AjisaiError::create_structure_error(
-                "single-element value with integer",
-                "multi-element vector",
-            ))
-        }
+        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
+        ValueData::Vector(_) => Err(AjisaiError::create_structure_error(
+            "single-element value with integer",
+            "multi-element vector",
+        )),
         ValueData::Tensor { data, .. } => {
             if data.len() == 1 {
                 let fraction = data
@@ -99,12 +93,9 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             "integer",
             "irrational exact real",
         )),
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-         => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "code block",
-        )),
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(
+            AjisaiError::create_structure_error("single-element value with integer", "code block"),
+        ),
     }
 }
 

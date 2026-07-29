@@ -16,7 +16,7 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
 
 /// `vector -- vector`. Remove duplicate elements, keeping the first
 /// occurrence and preserving order. An empty result projects to NIL,
-/// matching `ALGO@SORT`.
+/// matching `SORT`.
 pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "UNIQUE")?;
     let operands = extract_operands(interp, 1)?;

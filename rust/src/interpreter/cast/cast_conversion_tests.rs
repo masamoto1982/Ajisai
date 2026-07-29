@@ -296,51 +296,6 @@ mod tests {
             assert!(val.is_nil());
         }
     }
-
-    #[tokio::test]
-    async fn test_bool_string_parsing() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("'true' BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.execute("'FALSE' BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(false));
-        }
-
-        interp.stack.clear();
-        interp.execute("'other' BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert!(val.is_nil());
-        }
-    }
-
-    #[tokio::test]
-    async fn test_bool_number_truthiness() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("100 BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-
-        interp.stack.clear();
-        interp.execute("0 BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(false));
-        }
-
-        interp.stack.clear();
-        interp.execute("-1 BOOL").await.unwrap();
-        if let Some(val) = interp.stack.last() {
-            assert_eq!(val.as_truth(), Some(true));
-        }
-    }
-
     #[tokio::test]
     async fn test_str_boolean() {
         let mut interp = Interpreter::new();

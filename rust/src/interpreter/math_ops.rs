@@ -96,9 +96,9 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
-            AjisaiError::from("operand is outside the exact domain"),
-        ),
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => {
+            Err(AjisaiError::from("operand is outside the exact domain"))
+        }
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)
@@ -134,9 +134,9 @@ pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
-            AjisaiError::from("operand is outside the exact domain"),
-        ),
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => {
+            Err(AjisaiError::from("operand is outside the exact domain"))
+        }
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)
@@ -174,9 +174,9 @@ where
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
-            AjisaiError::from("operand is outside the exact domain"),
-        ),
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => {
+            Err(AjisaiError::from("operand is outside the exact domain"))
+        }
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)
@@ -337,7 +337,10 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
     };
 
     let Some(f) = value.as_scalar() else {
-        return Err(AjisaiError::create_structure_error("number", "other format"));
+        return Err(AjisaiError::create_structure_error(
+            "number",
+            "other format",
+        ));
     };
     match ExactReal::from_sqrt_rational(f.clone()) {
         // `from_exact_real` collapses a rational result back to Scalar.

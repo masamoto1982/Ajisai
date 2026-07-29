@@ -8,16 +8,6 @@ pub(crate) struct GeneratedCoreWordDoc {
 
 pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
-        name: "TOP",
-        hover_summary: "TOP — apply operation to stack top",
-        hover_syntax: ". +",
-    },
-    GeneratedCoreWordDoc {
-        name: "STAK",
-        hover_summary: "STAK — apply operation to whole stack",
-        hover_syntax: ".. +",
-    },
-    GeneratedCoreWordDoc {
         name: "EAT",
         hover_summary: "EAT — consume operands",
         hover_syntax: ", +",
@@ -113,26 +103,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "1 0 / NIL-REASON",
     },
     GeneratedCoreWordDoc {
-        name: "NIL-ORIGIN",
-        hover_summary: "NIL-ORIGIN — read the NIL origin protocol string",
-        hover_syntax: "1 0 / NIL-ORIGIN",
-    },
-    GeneratedCoreWordDoc {
-        name: "NIL-RECOVERABLE?",
-        hover_summary: "NIL-RECOVERABLE? — read the NIL recoverability protocol string",
-        hover_syntax: "1 0 / NIL-RECOVERABLE?",
-    },
-    GeneratedCoreWordDoc {
-        name: "NIL-DIAGNOSIS",
-        hover_summary: "NIL-DIAGNOSIS — read the three-layer NIL diagnosis record",
-        hover_syntax: "1 0 / NIL-DIAGNOSIS",
-    },
-    GeneratedCoreWordDoc {
-        name: ">CF",
-        hover_summary: ">CF — tag value for continued-fraction serialization",
-        hover_syntax: "1/3 >CF",
-    },
-    GeneratedCoreWordDoc {
         name: "CHARS",
         hover_summary: "CHARS — split string into characters",
         hover_syntax: "'hi' CHARS",
@@ -146,16 +116,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "TRIM",
         hover_summary: "TRIM — strip leading and trailing whitespace",
         hover_syntax: "'  hi  ' TRIM",
-    },
-    GeneratedCoreWordDoc {
-        name: "TRIM-LEFT",
-        hover_summary: "TRIM-LEFT — strip leading whitespace",
-        hover_syntax: "'  hi' TRIM-LEFT",
-    },
-    GeneratedCoreWordDoc {
-        name: "TRIM-RIGHT",
-        hover_summary: "TRIM-RIGHT — strip trailing whitespace",
-        hover_syntax: "'hi  ' TRIM-RIGHT",
     },
     GeneratedCoreWordDoc {
         name: "TOKENIZE",
@@ -188,11 +148,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "42 STR",
     },
     GeneratedCoreWordDoc {
-        name: "BOOL",
-        hover_summary: "BOOL — convert to boolean",
-        hover_syntax: "1 BOOL",
-    },
-    GeneratedCoreWordDoc {
         name: "CHR",
         hover_summary: "CHR — make a character",
         hover_syntax: "65 CHR",
@@ -216,11 +171,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "DIV",
         hover_summary: "DIV — divide values",
         hover_syntax: "10 2 /",
-    },
-    GeneratedCoreWordDoc {
-        name: "COMPARE-WITHIN",
-        hover_summary: "COMPARE-WITHIN — three-way compare within a budget",
-        hover_syntax: "1/3 1/2 64 COMPARE-WITHIN",
     },
     GeneratedCoreWordDoc {
         name: "EQ",
@@ -268,19 +218,9 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "TRUE NOT",
     },
     GeneratedCoreWordDoc {
-        name: "IDLE",
-        hover_summary: "IDLE — pass through unchanged",
-        hover_syntax: "IDLE",
-    },
-    GeneratedCoreWordDoc {
         name: "COND",
         hover_summary: "COND — evaluate guard/body clauses",
         hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
-    },
-    GeneratedCoreWordDoc {
-        name: "FLOW",
-        hover_summary: "FLOW — pipeline marker",
-        hover_syntax: "[ 1 2 3 ] ~ { [ 2 ] * } MAP",
     },
     GeneratedCoreWordDoc {
         name: "VENT",
@@ -303,11 +243,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 1 2 3 ] [ 0 ] { + } FOLD",
     },
     GeneratedCoreWordDoc {
-        name: "UNFOLD",
-        hover_summary: "UNFOLD — generate from state transition",
-        hover_syntax: "[ 1 ] { ... COND } UNFOLD",
-    },
-    GeneratedCoreWordDoc {
         name: "ANY",
         hover_summary: "ANY — true if any element matches",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } ANY",
@@ -318,24 +253,9 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
     },
     GeneratedCoreWordDoc {
-        name: "COUNT",
-        hover_summary: "COUNT — count matching elements",
-        hover_syntax: "[ 1 2 3 ] { [ 2 ] = } COUNT",
-    },
-    GeneratedCoreWordDoc {
-        name: "SCAN",
-        hover_summary: "SCAN — return intermediate fold results",
-        hover_syntax: "[ 1 2 3 ] [ 0 ] { + } SCAN",
-    },
-    GeneratedCoreWordDoc {
         name: "PRINT",
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
-    },
-    GeneratedCoreWordDoc {
-        name: "PRECOMPUTE",
-        hover_summary: "PRECOMPUTE — definition-time precompute marker",
-        hover_syntax: "{ ... } PRECOMPUTE",
     },
     GeneratedCoreWordDoc {
         name: "DEF",
@@ -351,31 +271,6 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         name: "LOOKUP",
         hover_summary: "LOOKUP — show word documentation",
         hover_syntax: "'ADD' ?",
-    },
-    GeneratedCoreWordDoc {
-        name: "FORC",
-        hover_summary: "FORC — force destructive operation",
-        hover_syntax: "! 'WORD' DEL",
-    },
-    GeneratedCoreWordDoc {
-        name: "SHAPE",
-        hover_summary: "SHAPE — return vector shape",
-        hover_syntax: "[ 1 2 3 ] SHAPE",
-    },
-    GeneratedCoreWordDoc {
-        name: "RANK",
-        hover_summary: "RANK — return number of dimensions",
-        hover_syntax: "[ [ 1 2 ] ] RANK",
-    },
-    GeneratedCoreWordDoc {
-        name: "RESHAPE",
-        hover_summary: "RESHAPE — reshape to specified shape",
-        hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] RESHAPE",
-    },
-    GeneratedCoreWordDoc {
-        name: "TRANSPOSE",
-        hover_summary: "TRANSPOSE — transpose vector axes",
-        hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE",
     },
     GeneratedCoreWordDoc {
         name: "FILL",
@@ -403,98 +298,60 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         hover_syntax: "[ 5/2 ] ROUND",
     },
     GeneratedCoreWordDoc {
-        name: "QUANTIZE",
-        hover_summary: "QUANTIZE — round to a rational grid, keeping the residual",
-        hover_syntax: "100/3 1/100 QUANTIZE",
-    },
-    GeneratedCoreWordDoc {
-        name: "QUANTIZE-HALF-AWAY",
-        hover_summary: "QUANTIZE-HALF-AWAY — quantize, ties away from zero",
-        hover_syntax: "5/2 1 QUANTIZE-HALF-AWAY",
-    },
-    GeneratedCoreWordDoc {
-        name: "QUANTIZE-FLOOR",
-        hover_summary: "QUANTIZE-FLOOR — quantize toward negative infinity",
-        hover_syntax: "100/3 1/100 QUANTIZE-FLOOR",
-    },
-    GeneratedCoreWordDoc {
-        name: "QUANTIZE-CEIL",
-        hover_summary: "QUANTIZE-CEIL — quantize toward positive infinity",
-        hover_syntax: "100/3 1/100 QUANTIZE-CEIL",
-    },
-    GeneratedCoreWordDoc {
-        name: "QUANTIZE-TRUNC",
-        hover_summary: "QUANTIZE-TRUNC — quantize toward zero",
-        hover_syntax: "100/3 1/100 QUANTIZE-TRUNC",
-    },
-    GeneratedCoreWordDoc {
         name: "EXEC",
         hover_summary: "EXEC — execute vector as code",
         hover_syntax: "[ 1 2 + ] EXEC",
     },
     GeneratedCoreWordDoc {
-        name: "CONSERVE",
-        hover_summary: "CONSERVE — assert parts sum exactly to a total",
-        hover_syntax: "100 [ 3333/100 6667/100 ] CONSERVE",
+        name: "SQRT",
+        hover_summary:
+            "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        hover_syntax: "2 SQRT",
     },
     GeneratedCoreWordDoc {
-        name: "EVAL",
-        hover_summary: "EVAL — parse and execute string",
-        hover_syntax: "'1 2 +' EVAL",
+        name: "ABS",
+        hover_summary: "Absolute value of a number.",
+        hover_syntax: "-2 ABS",
     },
     GeneratedCoreWordDoc {
-        name: "OR-ELSE",
-        hover_summary: "OR-ELSE — value-based NIL fallback with a block",
-        hover_syntax: "1 0 / { 0 } OR-ELSE",
+        name: "NEG",
+        hover_summary: "Numeric negation.",
+        hover_syntax: "2 NEG",
     },
     GeneratedCoreWordDoc {
-        name: "IMPORT",
-        hover_summary: "IMPORT — load module",
-        hover_syntax: "'IO' IMPORT",
+        name: "SIGN",
+        hover_summary: "Sign of a number: -1, 0, or 1.",
+        hover_syntax: "-2 SIGN",
     },
     GeneratedCoreWordDoc {
-        name: "IMPORT-ONLY",
-        hover_summary: "IMPORT-ONLY — import selected words",
-        hover_syntax: "'json' [ 'parse' ] IMPORT-ONLY",
+        name: "MIN",
+        hover_summary: "Smaller of two numbers.",
+        hover_syntax: "1 2 MIN",
     },
     GeneratedCoreWordDoc {
-        name: "UNIMPORT",
-        hover_summary: "UNIMPORT — hide imported module words",
-        hover_syntax: "'IO' UNIMPORT",
+        name: "MAX",
+        hover_summary: "Larger of two numbers.",
+        hover_syntax: "1 2 MAX",
     },
     GeneratedCoreWordDoc {
-        name: "UNIMPORT-ONLY",
-        hover_summary: "UNIMPORT-ONLY — hide selected module words",
-        hover_syntax: "'json' [ 'parse' ] UNIMPORT-ONLY",
+        name: "SORT",
+        hover_summary: "Return a copy of a vector sorted in ascending order.",
+        hover_syntax: "[ 3 1 2 ] SORT",
     },
     GeneratedCoreWordDoc {
-        name: "SPAWN",
-        hover_summary: "SPAWN — spawn isolated child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN",
+        name: "UNIQUE",
+        hover_summary:
+            "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        hover_syntax: "[ 1 2 1 ] UNIQUE",
     },
     GeneratedCoreWordDoc {
-        name: "AWAIT",
-        hover_summary: "AWAIT — wait for child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN AWAIT",
+        name: "CONTAINS",
+        hover_summary: "True if a vector contains an element equal to the given value.",
+        hover_syntax: "[ 1 2 ] 2 CONTAINS",
     },
     GeneratedCoreWordDoc {
-        name: "STATUS",
-        hover_summary: "STATUS — read child status",
-        hover_syntax: "{ 1 2 + } SPAWN STATUS",
-    },
-    GeneratedCoreWordDoc {
-        name: "KILL",
-        hover_summary: "KILL — terminate child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN KILL",
-    },
-    GeneratedCoreWordDoc {
-        name: "MONITOR",
-        hover_summary: "MONITOR — register monitor on child",
-        hover_syntax: "{ 1 2 + } SPAWN MONITOR",
-    },
-    GeneratedCoreWordDoc {
-        name: "SUPERVISE",
-        hover_summary: "SUPERVISE — run under restart policy",
-        hover_syntax: "{ 1 2 + } [ 3 ] SUPERVISE",
+        name: "INDEX-OF",
+        hover_summary: "Index of the first element equal to the value; Bubble/NIL if absent.",
+        hover_syntax: "[ 1 2 ] 2 INDEX-OF",
     },
 ];

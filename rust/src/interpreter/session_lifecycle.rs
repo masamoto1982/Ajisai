@@ -10,9 +10,7 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::types::WordDefinition;
 
-use super::compiled_plan::{
-    arc_plan, compile_word_definition, plan_is_all_fallback, CompiledPlan,
-};
+use super::compiled_plan::{arc_plan, compile_word_definition, plan_is_all_fallback, CompiledPlan};
 use super::interpreter_core::RuntimeMetrics;
 use super::Interpreter;
 

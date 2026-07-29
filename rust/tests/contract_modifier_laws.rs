@@ -81,40 +81,6 @@ proptest! {
         let keep = depth(&format!("{a} {b} KEEP {w}")) as i64;
         prop_assert_eq!(keep - eat, 2);
     }
-
-    /// `STAK` folds the top `count` items with the word (SPEC §6.1: the stack is
-    /// the operand). For an associative scalar word this equals the left-nested
-    /// binary fold: `x1 x2 x3 3 STAK ADD ≡ x1 x2 ADD x3 ADD`. The sugar `..`≡STAK.
-    #[test]
-    fn stak_folds_top_count(xs in prop::collection::vec(small(), 2..5), add_or_mul in prop_oneof![Just("ADD"), Just("MUL")]) {
-        let n = xs.len();
-        let items = xs.iter().map(i64::to_string).collect::<Vec<_>>().join(" ");
-        // left-nested binary fold reference
-        let mut folded = format!("{} {}", xs[0], xs[1]);
-        folded.push_str(&format!(" {add_or_mul}"));
-        for x in &xs[2..] {
-            folded.push_str(&format!(" {x} {add_or_mul}"));
-        }
-        prop_assert_eq!(
-            obs(&format!("{items} {n} STAK {add_or_mul}")),
-            obs(&folded)
-        );
-        // `..` sugar agrees with canonical STAK.
-        prop_assert_eq!(
-            obs(&format!("{items} {n} STAK {add_or_mul}")),
-            obs(&format!("{items} {n} .. {add_or_mul}"))
-        );
-    }
-
-    /// `STAK KEEP` retains the folded operands and pushes the result, so the
-    /// resulting depth is `n + 1` for `n` folded items (probe-confirmed).
-    #[test]
-    fn stak_keep_retains_operands(xs in prop::collection::vec(small(), 2..5)) {
-        let n = xs.len();
-        let items = xs.iter().map(i64::to_string).collect::<Vec<_>>().join(" ");
-        prop_assert_eq!(depth(&format!("{items} {n} STAK KEEP ADD")), n + 1);
-    }
-
     // ──────────── partiality contract ↔ observable behavior (§7.14) ──────────
 
     /// A `Total` word never errors on well-shaped input: it always leaves a

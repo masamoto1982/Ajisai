@@ -4,4 +4,5 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc 869d65b02cf1669f4f2ac0a6d8e2fc04272858c50a22d6bcb71ff86e331f6cc7 # shrinks to src = "<<tier2-witness>> 0 4 COMPARE-WITHIN"
+cc c98f9338a5b40f89ea692c5a45f37e2a9fd58fddc3c9a8b9a389ab8d8423a18a # shrinks to a = 0
+cc b1b54fe14ff33e5db9963c834dae12516a08e696e1f2834720fb5ce80fc114ba # shrinks to a = 0

@@ -4,7 +4,7 @@ const check = process.argv.includes('--check');
 const outputPath = 'rust/src/builtins/generated_core_word_docs.rs';
 const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
-const contracts = new Map(words.entries.filter((word) => !word.module).map((word) => [word.name, word]));
+const contracts = new Map(words.entries.map((word) => [word.name, word]));
 const coreEntries = manifest.entries.filter((entry) => entry.kind === 'coreword');
 
 if (contracts.size !== coreEntries.length) {

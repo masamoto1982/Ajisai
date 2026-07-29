@@ -5,10 +5,9 @@ use crate::types::{Interpretation, Token, Value};
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
-    arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
-    algo_ops, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort,
-    tensor_cmds,
-    vector_ops, Interpreter,
+    algo_ops, arithmetic, cast, comparison, control, control_cond, execute_def, execute_del,
+    execute_lookup, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort,
+    tensor_cmds, vector_ops, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -154,8 +153,7 @@ impl Interpreter {
                 return self.execute_builtin_by_key(executor_key);
             }
         }
-        None
-            .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
+        None.unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
     }
 
     pub(crate) fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {

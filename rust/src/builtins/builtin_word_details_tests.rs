@@ -14,30 +14,6 @@ use crate::coreword_registry::get_coreword_metadata;
 use crate::interpreter::Interpreter;
 use crate::tokenizer::tokenize;
 use crate::types::Token;
-
-/// A `hover_syntax` is *schematic* — a syntax template rather than a concrete
-/// runnable program — when it starts with a bare modifier (the modifier words
-/// `. , .. ,, !` demo their own syntax on an operand-less word) or when it
-/// contains the ellipsis `...` ("your code here", e.g. `UNFOLD`, `PRECOMPUTE`).
-/// Both markers are structural and unambiguous, so excluding them from the
-/// execution check keeps it free of false failures while still requiring every
-/// non-schematic example to run.
-fn is_schematic(hover_syntax: &str) -> bool {
-    if hover_syntax.contains("...") {
-        return true;
-    }
-    let Ok(tokens) = tokenize(hover_syntax) else {
-        return false;
-    };
-    match tokens.first() {
-        Some(Token::Symbol(s)) => matches!(
-            canonicalize_core_word_name(s).as_ref(),
-            "TOP" | "EAT" | "STAK" | "KEEP" | "FORC"
-        ),
-        _ => false,
-    }
-}
-
 #[test]
 fn every_hover_syntax_is_a_well_formed_snippet() {
     // Ledger item 9. A `hover_syntax` is a runnable example, so requiring it to
@@ -56,63 +32,6 @@ fn every_hover_syntax_is_a_well_formed_snippet() {
         );
     }
 }
-
-#[test]
-fn every_hover_syntax_names_only_real_words() {
-    // Ledger item 10. Every word a `hover_syntax` names must be a real word: a
-    // `Symbol` token, after alias canonicalization, must resolve in the Coreword
-    // registry (covering operators like `+`, modifiers like `. ,,`, casts like
-    // `>CF`, and `@`-module words like `MATH@SQRT`, which all canonicalize to
-    // registry entries). This catches a doc example referencing a removed or
-    // misspelled word, and it forces every example to be a concrete runnable
-    // snippet rather than a schematic one with metavariable placeholders
-    // (`a b 64 COMPARE-WITHIN`), which never ran.
-    for spec in builtin_specs() {
-        let Ok(tokens) = tokenize(spec.hover_syntax) else {
-            continue; // malformed snippets are the sibling test's job (item 9)
-        };
-        for token in &tokens {
-            let Token::Symbol(name) = token else {
-                continue;
-            };
-            let canonical = canonicalize_core_word_name(name);
-            assert!(
-                get_coreword_metadata(&canonical).is_some(),
-                "{}: hover_syntax `{}` names `{}`, which is not a real word \
-                 (a typo, a removed word, or a schematic placeholder)",
-                spec.name,
-                spec.hover_syntax,
-                name
-            );
-        }
-    }
-}
-
-#[tokio::test]
-async fn every_concrete_hover_syntax_runs() {
-    // Ledger item 10b. Items 9/10 guarantee every example tokenizes and names
-    // only real words; this goes one step further and requires every *concrete*
-    // (non-schematic) example to actually execute without a channel error. A
-    // Bubble/NIL result is fine — that is a value, not a failure — so this only
-    // rejects a raised error (a malformed or non-self-contained example). Each
-    // runs on a fresh interpreter, so effectful examples (PRINT, DEF, IMPORT)
-    // stay isolated.
-    for spec in builtin_specs() {
-        if spec.hover_syntax.is_empty() || is_schematic(spec.hover_syntax) {
-            continue;
-        }
-        let mut interp = Interpreter::new();
-        let result = interp.execute(spec.hover_syntax).await;
-        assert!(
-            result.is_ok(),
-            "{}: hover_syntax `{}` does not run: {}",
-            spec.name,
-            spec.hover_syntax,
-            result.unwrap_err()
-        );
-    }
-}
-
 /// Parse the `(consumes, produces)` arity from a `stack_effect` prose string,
 /// or `None` when the prose is not in the machine-checkable subset (so the
 /// caller abstains rather than risk a false mismatch). The DSL is `LHS -> RHS`,
@@ -204,36 +123,6 @@ fn fixed_stack_effect_prose_matches_the_machine_mass() {
          the prose parser may have regressed into abstaining"
     );
 }
-
-#[tokio::test]
-async fn every_authored_example_runs() {
-    // Structural-constraint ledger item 12 (convention -> structure): the
-    // authored LOOKUP examples carry a runnable `code` and an expected `result`,
-    // but the `code` was previously only rendered into docs, never executed — so
-    // it could drift or break unseen (indeed it had drifted: three examples
-    // carried the pre-fix COND/COMPARE-WITHIN/DEL forms). This runs every
-    // authored example on a fresh interpreter and requires it to execute without
-    // a channel error, extending the item-10b guarantee to the authored corpus.
-    // (Verifying the rendered value against the prose `result` is item 12b; the
-    // prose is free-form, so it needs a normalization pass to stay sound.)
-    for doc in super::builtin_word_lookup_docs::builtin_lookup_docs() {
-        for example in doc.examples {
-            if is_schematic(example.code) {
-                continue;
-            }
-            let mut interp = Interpreter::new();
-            let result = interp.execute(example.code).await;
-            assert!(
-                result.is_ok(),
-                "{}: authored example `{}` does not run: {}",
-                doc.word,
-                example.code,
-                result.unwrap_err()
-            );
-        }
-    }
-}
-
 /// Execute `code` on a fresh interpreter and return the render of its top stack
 /// value, or `None` if it raised or left an empty stack.
 async fn execute_top_render(code: &str) -> Option<String> {

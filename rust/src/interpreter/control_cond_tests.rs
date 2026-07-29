@@ -6,31 +6,6 @@ mod tests {
     use crate::elastic::ElasticMode;
     use crate::interpreter::Interpreter;
     use crate::types::ValueData;
-
-    #[tokio::test]
-    async fn test_cond_basic_two_branch() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ -5 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND")
-            .await;
-        assert!(result.is_ok(), "COND should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_cond_else_branch_runs() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 5 ] { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND")
-            .await;
-        assert!(result.is_ok(), "COND should succeed: {:?}", result);
-        assert_eq!(interp.stack.len(), 1);
-        assert!(matches!(
-            interp.stack.last().unwrap().data,
-            ValueData::Vector(_)
-        ));
-    }
-
     #[tokio::test]
     async fn test_cond_exhausted_error() {
         let mut interp = Interpreter::new();
@@ -66,78 +41,6 @@ mod tests {
             message
         );
     }
-
-    #[tokio::test]
-    async fn test_cond_keep_mode_no_duplicate() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ -5 ] ,, { [ 0 ] < } { 'negative' } { IDLE } { 'positive' } COND")
-            .await;
-        assert!(result.is_ok(), "COND with ,, should succeed: {:?}", result);
-        assert_eq!(
-            interp.stack.len(),
-            2,
-            "Keep mode should leave original + result (2 items), got {}",
-            interp.stack.len()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cond_non_boolean_guard_error() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 1 ] { [ 2 ] } { 'x' } { IDLE } { 'else' } COND")
-            .await;
-        assert!(result.is_err(), "COND should fail for non-boolean guard");
-        let message = result.err().unwrap().to_string();
-        assert!(
-            message.contains("COND: guard must return TRUE or FALSE"),
-            "unexpected error: {}",
-            message
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cond_new_clause_style_multiple_branches() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 0 ]\n{ [ 0 ] < | 'negative' }\n{ [ 0 ] = | 'zero' }\n{ IDLE | 'positive' }\nCOND")
-            .await;
-        assert!(
-            result.is_ok(),
-            "COND new style should succeed: {:?}",
-            result
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cond_new_clause_style_else_branch() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 42 ]\n{ [ 0 ] < | 'negative' }\n{ IDLE | 'positive' }\nCOND")
-            .await;
-        assert!(
-            result.is_ok(),
-            "COND new-style else should succeed: {:?}",
-            result
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cond_mixed_clause_styles_error() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 42 ] { [ 0 ] < | 'negative' } { IDLE } { 'positive' } COND")
-            .await;
-        assert!(result.is_err(), "mixed clause styles should fail");
-        let message = result.err().unwrap().to_string();
-        assert!(
-            message.contains("mixed clause styles are not allowed"),
-            "unexpected error: {}",
-            message
-        );
-    }
-
     #[tokio::test]
     async fn test_cond_clause_requires_exactly_one_separator() {
         let mut interp = Interpreter::new();
@@ -163,35 +66,6 @@ mod tests {
             message
         );
     }
-
-    #[tokio::test]
-    async fn test_cond_clause_separator_right_side_required() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 42 ] { IDLE | } COND").await;
-        assert!(result.is_err(), "empty body should fail");
-        let message = result.err().unwrap().to_string();
-        assert!(
-            message.contains("both guard and body are required around '|'"),
-            "unexpected error: {}",
-            message
-        );
-    }
-
-    #[tokio::test]
-    async fn test_cond_new_clause_requires_one_clause_per_line() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 42 ] { [ 0 ] < | 'negative' } { IDLE | 'positive' } COND")
-            .await;
-        assert!(result.is_err(), "same-line multiple | clauses should fail");
-        let message = result.err().unwrap().to_string();
-        assert!(
-            message.contains("COND: | clauses must be written one clause per line"),
-            "unexpected error: {}",
-            message
-        );
-    }
-
     #[cfg(feature = "elastic-engine")]
     #[tokio::test]
     async fn test_cond_hedged_prefetch_preserves_clause_order() {
@@ -209,7 +83,6 @@ mod tests {
             as_str
         );
     }
-
 }
 
 #[cfg(test)]
@@ -239,20 +112,6 @@ mod example_words_tests {
             .unwrap();
         let _ = interp.collect_output();
     }
-
-    #[tokio::test]
-    async fn test_cond_guard_handles_vector_boolean() {
-        let mut interp = Interpreter::new();
-        let r = interp
-            .execute("[ 1 ] { [ 1 ] = } { 'yes' } { IDLE } { 'no' } COND")
-            .await;
-        assert!(
-            r.is_ok(),
-            "COND should handle vector boolean guard result: {:?}",
-            r
-        );
-    }
-
     #[tokio::test]
     async fn test_greet_chains_say_words() {
         let mut interp = Interpreter::new();

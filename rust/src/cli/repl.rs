@@ -270,12 +270,7 @@ mod tests {
         let mut err = Vec::new();
         let opts = Opts {
             json: true,
-            explain: false,
             contract: false,
-            receipt: false,
-            fmt_check: false,
-            fmt_write: false,
-            lang: super::super::Lang::Ja,
             step_limit: None,
         };
         run_repl(input, &mut out, &mut err, &opts).unwrap();

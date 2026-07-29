@@ -42,47 +42,6 @@ fn dispatch_fast_path_fires() {
         "compiled COND dispatch should have taken the precomputed path"
     );
 }
-
-#[test]
-fn dispatch_matches_dynamic_across_shapes() {
-    // (program, expected top-of-stack) covering | clauses, pair clauses, IDLE
-    // else, multiple clauses, and a numeric (non-Boolean) guard result.
-    let cases = [
-        (format!("{SIZE_DEF}\n[ 7 ] SIZE"), "big"),
-        (format!("{SIZE_DEF}\n[ 3 ] SIZE"), "small"),
-        (
-            "{\n  { [ 0 ] > | [ 'pos' ] }\n  { [ 0 ] < | [ 'neg' ] }\n  { IDLE | [ 'zero' ] } COND\n} 'SGN' DEF\n[ 0 ] SGN".to_string(),
-            "zero",
-        ),
-        (
-            "{\n  { [ 0 ] > | [ 'pos' ] }\n  { [ 0 ] < | [ 'neg' ] }\n  { IDLE | [ 'zero' ] } COND\n} 'SGN' DEF\n[ 0 ] [ 4 ] - SGN".to_string(),
-            "neg",
-        ),
-    ];
-
-    for (src, expected) in cases {
-        let mut on = Interpreter::new();
-        on.set_cond_dispatch_enabled(true);
-        block_on(on.execute(&src)).unwrap();
-
-        let mut off = Interpreter::new();
-        off.set_cond_dispatch_enabled(false);
-        block_on(off.execute(&src)).unwrap();
-
-        assert_eq!(
-            format!("{:?}", on.get_stack()),
-            format!("{:?}", off.get_stack()),
-            "dispatch ON vs OFF diverged for: {src}"
-        );
-        let top = on
-            .get_stack()
-            .last()
-            .map(|v| format!("{v}"))
-            .unwrap_or_default();
-        assert!(top.contains(expected), "expected {expected} in {top}");
-    }
-}
-
 #[test]
 fn dispatch_preserves_cond_errors() {
     // A COND whose clauses cannot be split (odd block count, pair style) must

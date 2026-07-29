@@ -1297,36 +1297,26 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_profile_a_hosted_words_declare_capabilities() {
+    fn aq_ver_profile_a_print_is_the_only_hosted_word() {
+        // Output is the only effect (LANG.EFFECTS.OUTPUT), so PRINT is the only
+        // Word outside the Core profile.
         let hosted = get_hosted_profile_words();
-        assert!(
-            hosted.iter().any(|w| w.name == "NOW"),
-            "TIME@NOW must be classified as Hosted"
+        assert_eq!(
+            hosted.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(),
+            vec!["PRINT"],
+            "PRINT must be the only Hosted-profile Word"
         );
-        assert!(
-            hosted.iter().any(|w| w.name == "CSPRNG"),
-            "CRYPTO@CSPRNG must be classified as Hosted"
-        );
-        for word in hosted {
-            assert_eq!(word.profile, WordProfile::Hosted);
-            assert!(
-                word.required_capability.is_some(),
-                "{} Hosted words must declare a required capability",
-                word.name
-            );
-        }
     }
 
     #[test]
-    fn aq_ver_profile_b_core_profile_excludes_host_capabilities() {
+    fn aq_ver_profile_b_core_profile_excludes_print() {
         for word in get_builtin_word_registry()
             .iter()
             .filter(|word| word.profile == WordProfile::Core)
         {
-            assert!(
-                word.required_capability.is_none(),
-                "{} Core-profile words must not require host capability metadata",
-                word.name
+            assert_ne!(
+                word.name, "PRINT",
+                "PRINT is the effectful Word and must not be Core-profile"
             );
         }
     }

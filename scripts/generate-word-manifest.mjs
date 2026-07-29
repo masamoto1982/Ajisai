@@ -180,50 +180,6 @@ function extractCoreWords() {
   return entries;
 }
 
-function extractModuleWords() {
-  const sourcePath = 'rust/src/interpreter/modules/module_builtins.rs';
-  const source = readRepo(sourcePath);
-  const moduleSpecsBody = constArrayBody(source, 'MODULE_SPECS');
-  const wordsConstToModule = new Map();
-  for (const match of moduleSpecsBody.matchAll(/ModuleSpec\s*{\s*name:\s*"([^"]+)"\s*,\s*words:\s*([A-Z_]+)_WORDS\s*,/g)) {
-    wordsConstToModule.set(`${match[2]}_WORDS`, match[1]);
-  }
-  if (wordsConstToModule.size === 0) fail('no module specs extracted');
-
-  const entries = [];
-  for (const [wordsConst, moduleName] of wordsConstToModule) {
-    const body = constArrayBody(source, wordsConst);
-    for (const match of body.matchAll(/module_word!\(\s*"([^"]+)"/g)) {
-      const shortName = match[1];
-      const coverageAliases = {
-        'TIME@NOW': ['NOW'],
-        'CRYPTO@RANDOM': ['RANDOM'],
-        'CRYPTO@CSPRNG': ['RANDOM'],
-        'MATH@SQRT': [`'math' IMPORT SQRT`],
-        'SERIAL@LIST-PORTS': ['SERIAL-*'],
-        'SERIAL@OPEN': ['SERIAL-*'],
-        'SERIAL@CONFIGURE': ['SERIAL-*'],
-        'SERIAL@WRITE': ['SERIAL-*'],
-        'SERIAL@READ': ['SERIAL-*'],
-        'SERIAL@FLUSH': ['SERIAL-*'],
-        'SERIAL@CLOSE': ['SERIAL-*'],
-      }[`${moduleName}@${shortName}`];
-      entries.push({
-        id: `module.${slug(moduleName)}.${slug(shortName)}`,
-        kind: 'moduleword',
-        surface: `${moduleName}@${shortName}`,
-        ...(coverageAliases ? { coverage_aliases: coverageAliases } : {}),
-        short_surface: shortName,
-        module: moduleName,
-        category: moduleName.toLowerCase(),
-        source: sourcePath,
-      });
-    }
-  }
-  if (entries.length === 0) fail('no module words extracted');
-  return entries;
-}
-
 function extractAliases() {
   const sourcePath = 'rust/src/core_word_aliases.rs';
   const body = constArrayBody(readRepo(sourcePath), 'CORE_WORD_ALIASES');
@@ -274,7 +230,6 @@ function extractSurfaceForms() {
 
 const entries = [
   ...extractCoreWords(),
-  ...extractModuleWords(),
   ...extractAliases(),
   ...extractSurfaceForms(),
 ];
@@ -286,7 +241,7 @@ if (contracts.migration?.completeInventory !== true) {
 const contractNames = new Set(contracts.entries.map((entry) => entry.name));
 if (contractNames.size !== contracts.entries.length) fail('duplicate canonical name in spec/words.json');
 const generatedCanonicalNames = new Set(entries
-  .filter((entry) => entry.kind === 'coreword' || entry.kind === 'moduleword')
+  .filter((entry) => entry.kind === 'coreword')
   .map((entry) => entry.surface));
 for (const name of contractNames) {
   if (!generatedCanonicalNames.has(name)) fail(`Word contract ${name} is absent from the implementation catalog`);
@@ -315,14 +270,12 @@ const manifest = {
   ],
   implementationCatalogValidatedAgainst: [
     'rust/src/builtins/builtin_word_definitions.rs',
-    'rust/src/interpreter/modules/module_builtins.rs',
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {
     corewords: entries.filter((entry) => entry.kind === 'coreword').length,
-    modulewords: entries.filter((entry) => entry.kind === 'moduleword').length,
     aliases: entries.filter((entry) => ['symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
-    surface_forms: entries.filter((entry) => !['coreword', 'moduleword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
+    surface_forms: entries.filter((entry) => !['coreword', 'symbol_alias', 'syntax_sugar', 'input_helper'].includes(entry.kind)).length,
     total: entries.length,
   },
   entries,

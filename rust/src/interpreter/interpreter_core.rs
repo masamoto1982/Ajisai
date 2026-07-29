@@ -345,7 +345,6 @@ pub struct Interpreter {
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 
-
     /// When true (default), compiled builtin call sites keep a monomorphic
     /// shape cache that routes scalar-fastpath-shaped operands straight to
     /// the D1 fast path (hidden-class-style call-site specialization; see
@@ -360,9 +359,6 @@ pub struct Interpreter {
     /// NIL reasons are unchanged. Disable via `AJISAI_NO_FAST_KERNEL` for an
     /// A/B comparison.
     pub(crate) fast_kernel_enabled: bool,
-
-
-
 }
 
 impl Default for Interpreter {
@@ -622,14 +618,13 @@ impl Interpreter {
     /// builtin calls. In-process equivalent of `AJISAI_NO_SHAPE_IC`; takes
     /// effect immediately for subsequent compiled call sites. Routing only —
     /// disabling it never changes observable values, just the route taken.
-    pub fn set_shape_ic_enabled(&mut self, _enabled: bool) {
-    }
+    pub fn set_shape_ic_enabled(&mut self, _enabled: bool) {}
 
     /// Enable or disable pure HOF kernel memoization (`MAP`). In-process
     /// equivalent of `AJISAI_NO_HOF_MEMO`; lets a benchmark or differential
     /// test A/B the memoized path against re-running the kernel. Takes effect
     /// immediately for subsequent `MAP` calls.
-     /// Enable or disable the specialized HOF kernels (per-element and bulk)
+    /// Enable or disable the specialized HOF kernels (per-element and bulk)
     /// in `higher_order/fast_kernels.rs`. In-process equivalent of
     /// `AJISAI_NO_FAST_KERNEL`; lets a differential test or benchmark A/B the
     /// kernel route against the generic quantized-block route. Routing only —

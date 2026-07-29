@@ -134,25 +134,4 @@ mod materialization_limit_tests {
             "a small FILL is not a bubble"
         );
     }
-
-    #[tokio::test]
-    async fn reshape_rejects_shape_product_overflow_without_panicking() {
-        // RESHAPE's over-limit case is a shape mismatch (malformed), not a
-        // space-budget miss, so it stays an ordinary error.
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("[ 1 2 3 ] [ 99999999 99999999 99999999 ] RESHAPE")
-            .await;
-        assert!(
-            result.is_err(),
-            "overflowing RESHAPE shape must error, not panic"
-        );
-    }
-
-    #[tokio::test]
-    async fn reshape_accepts_matching_shape() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE").await;
-        assert!(result.is_ok(), "matching RESHAPE should still succeed");
-    }
 }

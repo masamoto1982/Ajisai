@@ -37,30 +37,11 @@ async fn print_dependency_makes_user_word_effectful() {
 
 #[tokio::test]
 async fn now_dependency_makes_user_word_observable_and_nondeterministic() {
-    let contract = contract_for("'time' IMPORT { NOW } 'STAMP' DEF", "STAMP").await;
+    let contract = contract_for("{ NOW } 'STAMP' DEF", "STAMP").await;
     assert_eq!(contract.purity, ContractPurity::Observable);
     assert_eq!(contract.determinism, ContractDeterminism::NonDeterministic);
     assert!(contract.capabilities.contains(Capabilities::TIME));
 }
-
-#[tokio::test]
-async fn nil_and_unknown_sources_are_not_conflated() {
-    let nil_contract = contract_for("{ DIV } 'SAFE_DIV' DEF", "SAFE_DIV").await;
-    assert_eq!(nil_contract.nil_behavior, NilBehavior::MayCreate);
-    assert_eq!(nil_contract.unknown_behavior, UnknownBehavior::NeverCreates);
-
-    let unknown_contract = contract_for("{ COMPARE-WITHIN } 'CMP' DEF", "CMP").await;
-    assert_eq!(unknown_contract.nil_behavior, NilBehavior::Propagates);
-    assert_eq!(
-        unknown_contract.unknown_behavior,
-        UnknownBehavior::MayCreate
-    );
-    assert_eq!(
-        unknown_contract.water_sensitivity,
-        WaterSensitivity::WaterSensitive
-    );
-}
-
 #[tokio::test]
 async fn dependency_chains_widen_monotonically() {
     let pure = contract_for(
@@ -136,23 +117,4 @@ async fn del_invalidates_dependency_contract_to_conservative() {
     let after = interp.infer_word_contract("USE").unwrap();
     assert_eq!(after.confidence, ContractConfidence::Conservative);
     assert_eq!(after.flow, ContractFlow::Dynamic);
-}
-
-#[tokio::test]
-async fn import_and_unimport_invalidate_contract_cache_without_changing_existing_dependency() {
-    let mut interp = Interpreter::new();
-    interp
-        .execute("'json' IMPORT { PARSE } 'WRAP' DEF")
-        .await
-        .unwrap();
-    let imported = interp.infer_word_contract("WRAP").unwrap();
-    assert_eq!(imported.purity, ContractPurity::Pure);
-    assert!(interp.word_contract_cache_len() > 0);
-
-    interp.execute("'json' UNIMPORT").await.unwrap();
-    assert_eq!(interp.word_contract_cache_len(), 0);
-
-    let after_unimport = interp.infer_word_contract("WRAP").unwrap();
-    assert_eq!(after_unimport.purity, ContractPurity::Pure);
-    assert_eq!(after_unimport.cache_key, imported.cache_key);
 }

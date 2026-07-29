@@ -44,7 +44,7 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
 
     // VTU Phase III bulk fast path: ALL over a 1-D dense Tensor with
     // a fast unary predicate. Disabled in hedged modes.
-     let mut saved_stack: Stack = Stack::new();
+    let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
@@ -55,30 +55,24 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
         let elem = target_val
             .child(i)
             .expect("ALL: child index in 0..len must be valid");
-                interp.stack.clear();
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result = match interp.stack.pop() {
-                            Some(v) => v,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "ALL: expected boolean value, got empty stack",
-                                ));
-                                break;
-                            }
-                        };
-                        match extract_predicate_boolean(condition_result) {
-                            Ok(is_true) => {
-                                if !is_true {
-                                    result = false;
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
+        interp.stack.clear();
+        interp.stack.push(elem);
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => {
+                let condition_result = match interp.stack.pop() {
+                    Some(v) => v,
+                    None => {
+                        error = Some(AjisaiError::from(
+                            "ALL: expected boolean value, got empty stack",
+                        ));
+                        break;
+                    }
+                };
+                match extract_predicate_boolean(condition_result) {
+                    Ok(is_true) => {
+                        if !is_true {
+                            result = false;
+                            break;
                         }
                     }
                     Err(e) => {
@@ -86,7 +80,12 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
                         break;
                     }
                 }
-            
+            }
+            Err(e) => {
+                error = Some(e);
+                break;
+            }
+        }
     }
     interp.disable_no_change_check = saved_no_change_check;
     interp.stack = saved_stack;

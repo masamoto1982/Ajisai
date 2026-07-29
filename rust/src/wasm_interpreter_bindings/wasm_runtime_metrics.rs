@@ -22,34 +22,16 @@ impl AjisaiInterpreter {
 
         // Fast lane: small-rational scalar ops and dense tensor kernels.
         set_js_prop(&obj, "scalarFastpathCount", &num(m.scalar_fastpath_count));
-        set_js_prop(
-            &obj,
-            "bulkKernelUseCount",
-        );
-        set_js_prop(
-            &obj,
-            "simdKernelUseCount",
-        );
+        set_js_prop(&obj, "bulkKernelUseCount");
+        set_js_prop(&obj, "simdKernelUseCount");
 
         // Data movement: dense<->nested round trips and sparse candidates.
-        set_js_prop(
-            &obj,
-            "sparseCandidateCount",
-        );
+        set_js_prop(&obj, "sparseCandidateCount");
 
         // Comparison budget: only COMPARE-WITHIN spends it.
-        set_js_prop(
-            &obj,
-            "compareWithinLazyCount",
-        );
-        set_js_prop(
-            &obj,
-            "compareWithinUnknownCount",
-        );
-        set_js_prop(
-            &obj,
-            "compareWithinBudgetTermsConsumed",
-        );
+        set_js_prop(&obj, "compareWithinLazyCount");
+        set_js_prop(&obj, "compareWithinUnknownCount");
+        set_js_prop(&obj, "compareWithinBudgetTermsConsumed");
 
         // Cross-reset artifact cache (Phase 5): how often an unchanged word's
         // compiled plan survived a session reset instead of being rebuilt.

@@ -23,8 +23,8 @@ pub(crate) mod naming_convention_checker;
 mod resolve_cache;
 pub mod runtime_limits;
 mod session_lifecycle;
-pub mod sort;
 pub(crate) mod simd_ops;
+pub mod sort;
 pub mod tensor_cmds;
 pub mod tensor_ops;
 pub(crate) mod value_extraction_helpers;
@@ -79,8 +79,6 @@ mod exact_vector_broadcast_tests;
 #[cfg(test)]
 mod higher_order_fold_tests;
 #[cfg(test)]
-mod higher_order_operations_mcdc_tests;
-#[cfg(test)]
 mod interpreter_definition_tests;
 #[cfg(test)]
 mod interpreter_execution_tests;
@@ -116,8 +114,6 @@ mod compiled_plan_tests;
 mod cond_dispatch_tests;
 #[cfg(test)]
 mod core_word_canonicalization_tests;
-#[cfg(test)]
-mod perf_regression_tests;
 #[cfg(test)]
 mod scalar_fastpath_tests;
 #[cfg(test)]

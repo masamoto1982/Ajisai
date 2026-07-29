@@ -29,26 +29,6 @@ async fn test_collect_vectors_without_flattening() {
     let val = &interp.stack[0];
     assert!(val.is_vector(), "Result should be a vector");
 }
-
-#[tokio::test]
-async fn test_collect_for_formant_synthesis() {
-    let mut interp = Interpreter::new();
-    interp.execute("'music' IMPORT").await.unwrap();
-
-    let result = interp
-        .execute("[ 800 1200 ] MUSIC@CHORD [ 300 2500 ] MUSIC@CHORD 2 COLLECT")
-        .await;
-    assert!(
-        result.is_ok(),
-        "COLLECT for formant should succeed: {:?}",
-        result
-    );
-    assert_eq!(interp.stack.len(), 1);
-
-    let val = &interp.stack[0];
-    assert!(val.is_vector(), "Result should be a vector");
-}
-
 #[tokio::test]
 async fn test_collect_error_underflow() {
     let mut interp = Interpreter::new();

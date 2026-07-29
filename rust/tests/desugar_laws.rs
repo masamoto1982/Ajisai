@@ -113,8 +113,8 @@ fn comparison_alias_decides_composed_equality_identically() {
     // identically. (This law formerly pinned the UNKNOWN diagnosis here;
     // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,
     // which has no alias sugar to desugar.)
-    let lhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
-    let rhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
+    let lhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
+    let rhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
     let alias = observed(lhs);
     let canonical = observed(rhs);
     assert_eq!(alias, canonical);

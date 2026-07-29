@@ -21,12 +21,8 @@
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
 mod contract_decl;
-#[cfg(test)]
-mod contract_decl_tests;
 mod contract_linearity;
 mod contract_report;
-#[cfg(test)]
-mod contract_report_tests;
 mod repl;
 mod report;
 mod run_render;
@@ -35,9 +31,7 @@ mod step_limit_tests;
 mod test_runner;
 
 use crate::error::ErrorCategory;
-use crate::interpreter::debug_diagnosis::{
-    DebugDiagnosis, ErrorPhase,
-};
+use crate::interpreter::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use crate::interpreter::{HostEffect, Interpreter, RuntimeMetrics};
 use crate::types::Token;
 use report::Report;

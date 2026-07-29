@@ -92,8 +92,7 @@ impl ValueArena {
             | NodeKind::Nil
             | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
-            | NodeKind::CodeBlock(_)
-             => &[],
+            | NodeKind::CodeBlock(_) => &[],
         }
     }
 }
@@ -109,7 +108,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             // via the current vocabulary (Tier ≤ 1 comparison is total, so no
             // word constructs U yet), so the gap is latent. Tracked for a
             // dedicated follow-up.
-            ValueData::Nil  => arena.alloc_nil(value.hint),
+            ValueData::Nil => arena.alloc_nil(value.hint),
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::ExactScalar(er) => {

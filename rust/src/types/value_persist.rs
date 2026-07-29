@@ -22,7 +22,6 @@
 
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::record_shape::record_shape_from_ordered_keys;
 use crate::types::{DenseTensor, Interpretation, Token, Value, ValueData};
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
@@ -132,20 +131,9 @@ enum PersistData {
         pure_int: bool,
         shape: Vec<usize>,
     },
-    Record {
-        pairs: Vec<PersistValue>,
-        keys: Vec<String>,
-    },
     Nil,
-    Unknown,
     Code {
         tokens: Vec<PersistToken>,
-    },
-    Process {
-        id: u64,
-    },
-    Supervisor {
-        id: u64,
     },
 }
 
@@ -303,24 +291,10 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
                 shape: Arc::new(shape.clone()),
             }
         }
-        PersistData::Record { pairs, keys } => {
-            let shape = record_shape_from_ordered_keys(keys.iter().cloned());
-            let values = pairs
-                .iter()
-                .map(decode_value)
-                .collect::<Result<Vec<_>, _>>()?;
-            ValueData::Record {
-                pairs: Arc::new(values),
-                shape,
-            }
-        }
         PersistData::Nil => ValueData::Nil,
-        PersistData::Unknown => ValueData::Unknown(None),
         PersistData::Code { tokens } => {
             ValueData::CodeBlock(tokens.iter().map(token_from_wire).collect())
         }
-        PersistData::Process { id } => ValueData::ProcessHandle(*id),
-        PersistData::Supervisor { id } => ValueData::SupervisorHandle(*id),
     })
 }
 

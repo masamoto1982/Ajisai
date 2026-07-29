@@ -52,8 +52,7 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
         | ValueData::Nil
-        | ValueData::CodeBlock(_)
-         => None,
+        | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -128,8 +127,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::Vector(_)
         | ValueData::Tensor { .. }
         | ValueData::Nil
-        | ValueData::CodeBlock(_)
-         => None,
+        | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -145,13 +143,8 @@ fn apply_simd_binary(
     if va.len() != vb.len() {
         return None;
     }
-    let (result, parallel) = sequential_elementwise_binary_checked(
-        word,
-        va.as_ref(),
-        vb.as_ref(),
-        op,
-        lane,
-    );
+    let (result, parallel) =
+        sequential_elementwise_binary_checked(word, va.as_ref(), vb.as_ref(), op, lane);
     // `None` => a lane overflowed `i64`; decline so the caller recomputes on
     // the exact path (Same Result). Otherwise emit the SoA tensor result.
     Some((create_value_from_integer_vector(result?), parallel))

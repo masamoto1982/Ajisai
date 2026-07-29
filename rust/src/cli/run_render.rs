@@ -12,9 +12,7 @@ use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::Interpreter;
 
 use super::report::{stack_json, Report};
-use super::{
-    emit, error_report, stack_display, Opts,
-};
+use super::{emit, error_report, stack_display, Opts};
 
 /// Emit the report for a completed execution and return the process exit code.
 pub(crate) fn render_completed_run(

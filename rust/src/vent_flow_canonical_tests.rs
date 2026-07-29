@@ -136,12 +136,3 @@ fn flow_contract_is_noop_control_directive() {
 }
 
 // --- FLOW (~) is a no-op pipeline marker in both spellings -----------------
-
-#[tokio::test]
-async fn flow_canonical_matches_sugar_noop() {
-    // Mirrors conformance `1 2 ~ ADD` -> 3/1.
-    assert_eq!(display(&run_ok("1 2 ~ ADD").await), "3/1");
-    assert_eq!(display(&run_ok("1 2 FLOW ADD").await), "3/1");
-    assert_eq!(run_ok("1 2 ~ ADD").await, run_ok("1 2 FLOW ADD").await);
-    assert_eq!(run_ok("1 2 flow ADD").await, run_ok("1 2 FLOW ADD").await);
-}

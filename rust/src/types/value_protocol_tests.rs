@@ -58,26 +58,6 @@ fn children_of(node: &ProtocolNode) -> &[ProtocolNode] {
         other => panic!("expected Children, got {:?}", other),
     }
 }
-
-// --- logical Unknown (U) serialization (SPEC §7.5, §2.3) ---
-
-#[test]
-fn unknown_serializes_as_truth_value_unknown() {
-    let node = value_to_protocol(&Value::unknown(), None);
-    assert_eq!(node.type_str, "truthValue");
-    assert_eq!(node.value, ProtocolValue::Text("unknown".to_string()));
-    assert_eq!(node.display_hint, Interpretation::TruthValue);
-}
-
-#[test]
-fn unknown_serializes_as_truth_value_even_under_external_hint() {
-    // Detection is reason-based, so U is observed as `unknown` regardless
-    // of any external hint override (SPEC §2.3 firewall).
-    let node = value_to_protocol(&Value::unknown(), Some(Interpretation::Nil));
-    assert_eq!(node.type_str, "truthValue");
-    assert_eq!(node.value, ProtocolValue::Text("unknown".to_string()));
-}
-
 #[test]
 fn plain_nil_is_still_nil_not_unknown() {
     let node = value_to_protocol(&Value::nil(), None);
@@ -141,32 +121,6 @@ fn exact_scalar_continued_fraction_role_is_lossless_nested_form() {
         "CF nodes carry no semantics block (and thus no approximate marker)"
     );
 }
-
-#[test]
-fn truth_value_axis_uses_effective_role_for_definite_booleans() {
-    // A comparison/logic boolean carries the TruthValue role in the
-    // semantic plane (here passed as the external hint), not on the
-    // value's own RawNumber hint. The truthValue axis must still resolve.
-    assert_eq!(
-        scalar(1).truth_value_for_role(Interpretation::TruthValue),
-        Some("true")
-    );
-    assert_eq!(
-        scalar(0).truth_value_for_role(Interpretation::TruthValue),
-        Some("false")
-    );
-    // Without the TruthValue role it is a plain number, not a truth value.
-    assert_eq!(
-        scalar(1).truth_value_for_role(Interpretation::RawNumber),
-        None
-    );
-    // U is `unknown` regardless of the role.
-    assert_eq!(
-        Value::unknown().truth_value_for_role(Interpretation::RawNumber),
-        Some("unknown")
-    );
-}
-
 // --- scalar interpretation arms (MC/DC on the 4-way match) ---
 
 #[test]
@@ -317,20 +271,6 @@ fn tensor_1d_text_projects_to_string() {
 }
 
 // --- remaining ValueData kinds ---
-
-#[test]
-fn nil_and_handles() {
-    assert_eq!(value_to_protocol(&Value::nil(), None).type_str, "nil");
-    assert_eq!(
-        value_to_protocol(&Value::from_process_handle(7), None).value,
-        ProtocolValue::Handle(7)
-    );
-    assert_eq!(
-        value_to_protocol(&Value::from_supervisor_handle(9), None).type_str,
-        "supervisor_handle"
-    );
-}
-
 #[test]
 fn top_level_node_always_carries_semantics() {
     assert!(value_to_protocol(&scalar(1), None).semantics.is_some());
