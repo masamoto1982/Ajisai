@@ -153,7 +153,7 @@ impl Interpreter {
                 return self.execute_builtin_by_key(executor_key);
             }
         }
-        None.unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
+        Err(AjisaiError::UnknownWord(name.to_string()))
     }
 
     pub(crate) fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {

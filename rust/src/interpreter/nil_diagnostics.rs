@@ -22,11 +22,9 @@
 //! value" case of the Bubble Rule (SPEC §11.2), never an error.
 
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
-use crate::types::{Interpretation, Value, ValueData};
-use std::sync::Arc;
+use crate::types::{Interpretation, Value};
 
 /// Borrow the operational-NIL metadata of the top-of-stack value without
 /// consuming it. Returns `None` when the stack is empty *(malformed use)*, or
@@ -90,114 +88,4 @@ pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
         .map(|reason| reason.as_protocol_str());
     push_protocol_string_or_nil(interp, protocol);
     Ok(())
-}
-
-/// `NIL-ORIGIN` — the origin as a lowerCamelCase protocol-string Text. Origin is
-/// a required field, so an operational NIL always yields Text; a non-operational
-/// value yields NIL.
-pub fn op_nil_origin(interp: &mut Interpreter) -> Result<()> {
-    require_non_empty(interp)?;
-    let protocol = peek_operational_absence(interp).map(|absence| absence.origin.as_protocol_str());
-    push_protocol_string_or_nil(interp, protocol);
-    Ok(())
-}
-
-/// `NIL-RECOVERABLE?` — the recoverability as a lowerCamelCase protocol-string
-/// Text. Recoverability is a required, four-valued field, so it is returned as
-/// Text (consistent with SPEC §4.5.0) rather than a two-valued boolean; a
-/// non-operational value yields NIL.
-pub fn op_nil_recoverable(interp: &mut Interpreter) -> Result<()> {
-    require_non_empty(interp)?;
-    let protocol =
-        peek_operational_absence(interp).map(|absence| absence.recoverability.as_protocol_str());
-    push_protocol_string_or_nil(interp, protocol);
-    Ok(())
-}
-
-/// `NIL-DIAGNOSIS` — the three-layer debug diagnosis as a Record, or NIL when
-/// there is no diagnosis or the value is not an operational NIL.
-pub fn op_nil_diagnosis(interp: &mut Interpreter) -> Result<()> {
-    require_non_empty(interp)?;
-    // Build the owned Record while the metadata borrow is live, then release the
-    // borrow before the mutable push.
-    let record_value = peek_operational_absence(interp)
-        .and_then(|absence| absence.diagnosis.as_ref())
-        .map(diagnosis_record);
-    match record_value {
-        Some(value) => push_result(interp, value, Interpretation::Unassigned),
-        None => push_result(interp, Value::nil(), Interpretation::Nil),
-    }
-    Ok(())
-}
-
-fn text(s: &str) -> Value {
-    Value::from_string(s)
-}
-
-fn plain_vector(children: Vec<Value>) -> Value {
-    Value {
-        data: ValueData::Vector(Arc::new(children)),
-        hint: Interpretation::Unassigned,
-        absence: None,
-    }
-}
-
-/// Build a vector of ordered `[ key value ]` pairs. Records are gone from the
-/// value model, so keyed data is a vector of pairs (LANG.VALUES.VECTOR).
-fn record(fields: Vec<(&str, Value)>) -> Value {
-    let pairs: Vec<Value> = fields
-        .into_iter()
-        .map(|(key, value)| plain_vector(vec![text(key), value]))
-        .collect();
-    plain_vector(pairs)
-}
-
-/// Map a [`DebugDiagnosis`] onto a Record whose keys and string values are the
-/// machine-readable protocol strings of SPEC §4.5.0 (never Rust `Debug` names).
-/// `summary` and `evidence` are carried verbatim as the non-canonical
-/// human-readable layer; `agreedPrefix` is included only when present.
-fn diagnosis_record(diagnosis: &DebugDiagnosis) -> Value {
-    let mut fields: Vec<(&str, Value)> = vec![
-        ("when", text(diagnosis.when.as_protocol_str())),
-        ("where", locus_record(&diagnosis.where_)),
-        ("why", text(diagnosis.why.as_protocol_str())),
-        ("summary", text(&diagnosis.summary)),
-        (
-            "evidence",
-            plain_vector(diagnosis.evidence.iter().map(|e| text(e)).collect()),
-        ),
-        (
-            "nextChecks",
-            plain_vector(
-                diagnosis
-                    .next_checks
-                    .iter()
-                    .map(|check| {
-                        record(vec![
-                            ("label", text(&check.label)),
-                            ("detail", text(&check.detail)),
-                        ])
-                    })
-                    .collect(),
-            ),
-        ),
-    ];
-    if let Some(prefix) = diagnosis.agreed_prefix {
-        fields.push(("agreedPrefix", Value::from_int(prefix as i64)));
-    }
-    record(fields)
-}
-
-fn locus_record(locus: &crate::interpreter::debug_diagnosis::ErrorLocus) -> Value {
-    let mut fields: Vec<(&str, Value)> = vec![("kind", text(locus.kind.as_protocol_str()))];
-    if let Some(word) = &locus.word {
-        fields.push(("word", text(word)));
-    }
-    if let Some(module) = &locus.module {
-        fields.push(("module", text(module)));
-    }
-    if let Some(dictionary) = &locus.dictionary {
-        fields.push(("dictionary", text(dictionary)));
-    }
-    record(fields)
 }

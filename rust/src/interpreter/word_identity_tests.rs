@@ -82,11 +82,3 @@ fn distinct_inputs_get_distinct_digests() {
     assert_ne!(content_digest(b"AB"), content_digest(b"ABA"));
     assert_ne!(content_digest(b""), content_digest(b"\0"));
 }
-
-#[test]
-#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-fn identity_algorithm_names_the_hash_actually_used() {
-    // The name recorded in lockfiles and receipts has to track the function
-    // that actually produced the digests above, not drift from it.
-    assert_eq!(super::word_identity::IDENTITY_ALGORITHM, "blake3");
-}

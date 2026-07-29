@@ -7,11 +7,8 @@
 //! decisions (`is_operational_nil` and reason `Some`/`None`).
 
 use crate::error::NilReason;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
-use crate::semantic::{AbsenceOrigin, Recoverability};
-use crate::types::{Value, ValueData};
 
 async fn run(code: &str) -> Interpreter {
     let mut interp = Interpreter::new();

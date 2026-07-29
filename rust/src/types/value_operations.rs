@@ -77,17 +77,8 @@ impl Value {
     /// no NIL call site can absorb it. Detect it with [`is_unknown`], never by
     /// matching the storage representation.
     #[inline]
-    /// Whether this value is the logical truth value `Unknown` (U).
-    ///
-    /// This is the single canonical predicate for U. It keys off the
-    /// dedicated [`ValueData::Unknown`] variant, so the U/NIL distinction is
-    /// a type invariant. All call sites must use this instead of matching the
-    /// storage representation.
-
-    /// Whether this value carries the `TruthValue` interpretation role
-    /// (true, false, or unknown). Used at observation boundaries to attach
-    /// the `truthValue` axis and the `truthValued` capability.
-
+    /// Whether this value carries the `TruthValue` interpretation role. Used at
+    /// observation boundaries to attach the `truthValue` axis.
     pub fn is_truth_value(&self) -> bool {
         self.hint == Interpretation::TruthValue
     }
@@ -319,15 +310,9 @@ impl Value {
         Self::from_fraction(f)
     }
 
-    #[inline]
-
     /// NIL test: `true` only for the operational absence node
-    /// ([`ValueData::Nil`], the Bubble). The logical Unknown (U) is a
-    /// separate [`ValueData::Unknown`] variant and is **not** NIL
-    /// (`unknown().is_nil() == false`), so the U/NIL firewall (SPEC §7.5 /
-    /// §2.3) is now guaranteed by the type rather than by a predicate
-    /// convention.
-
+    /// ([`ValueData::Nil`], the Bubble).
+    #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }
@@ -1100,7 +1085,6 @@ fn tensor_fractions_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<
 
 /// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
 /// Used by mutating helpers that need a uniform `Vec<Value>` representation,
-/// and by display fallbacks.
 pub(super) fn tensor_to_nested_values(data: &DenseTensor, shape: &[usize]) -> Vec<Value> {
     fn build(data: &DenseTensor, shape: &[usize], offset: usize) -> Vec<Value> {
         if shape.is_empty() || shape.len() == 1 {

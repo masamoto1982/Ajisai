@@ -5,7 +5,7 @@ mod tests {
     #[cfg(feature = "elastic-engine")]
     use crate::elastic::ElasticMode;
     use crate::interpreter::Interpreter;
-    use crate::types::ValueData;
+
     #[tokio::test]
     async fn test_cond_exhausted_error() {
         let mut interp = Interpreter::new();

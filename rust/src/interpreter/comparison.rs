@@ -285,43 +285,6 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
     true
 }
 
-/// Check whether every adjacent pair in `items` satisfies `kind`.
-/// Returns `Ok(Some(bool))` when the property is decidable for every
-/// pair, `Ok(None)` when some pair triggers SPEC §7.4.1's comparison
-/// budget short-circuit. SPEC §7.4 requires the entire STAK-mode
-/// result to be the logical `Unknown` (U) on the first U-producing
-/// pair regardless of later pairs.
-fn check_all_adjacent_pairs(items: &[Value], kind: OrderingKind) -> Result<ScalarCmp> {
-    for pair in items.windows(2) {
-        match compare_scalar_pair(&pair[0], &pair[1], kind)? {
-            ScalarCmp::Decided(true) => continue,
-            ScalarCmp::Decided(false) => return Ok(ScalarCmp::Decided(false)),
-        }
-    }
-    Ok(ScalarCmp::Decided(true))
-}
-
-/// Same three-valued discipline as `check_all_adjacent_pairs` for
-/// the EQ relation: `Some(true)` iff every adjacent pair decides
-/// equal, `Some(false)` on the first decidedly-unequal pair, `None`
-/// on the first §7.4.1 budget-exhausted pair (short-circuit per
-/// SPEC §7.4 STAK-mode short-circuit rule). `invert` flips the
-/// per-pair predicate to drive `NEQ`'s "all adjacent pairs unequal"
-/// semantics.
-fn check_all_adjacent_eq(items: &[Value], invert: bool) -> ScalarCmp {
-    for pair in items.windows(2) {
-        match pairwise_eq(&pair[0], &pair[1]) {
-            ScalarCmp::Decided(eq) => {
-                let pair_ok = if invert { !eq } else { eq };
-                if !pair_ok {
-                    return ScalarCmp::Decided(false);
-                }
-            }
-        }
-    }
-    ScalarCmp::Decided(true)
-}
-
 fn apply_binary_comparison(
     interp: &mut Interpreter,
     kind: OrderingKind,
@@ -355,34 +318,6 @@ fn apply_binary_comparison(
         }
     }
     Ok(())
-}
-
-/// Shape-IC entry points (see `shape_ic.rs`): attempt exactly the D1 scalar
-/// fast path for one comparison word. Same equivalence argument as the
-/// arithmetic wrappers — the fast path only accepts operands the preceding
-/// NIL-passthrough check would have ignored.
-pub(crate) fn scalar_fastpath_lt(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Lt)
-}
-
-pub(crate) fn scalar_fastpath_le(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Le)
-}
-
-pub(crate) fn scalar_fastpath_gt(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Gt)
-}
-
-pub(crate) fn scalar_fastpath_ge(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Ge)
-}
-
-pub(crate) fn scalar_fastpath_eq(interp: &mut Interpreter) -> bool {
-    push_equality_scalar_fastpath(interp, false)
-}
-
-pub(crate) fn scalar_fastpath_neq(interp: &mut Interpreter) -> bool {
-    push_equality_scalar_fastpath(interp, true)
 }
 
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {

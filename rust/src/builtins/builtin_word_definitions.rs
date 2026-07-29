@@ -2,7 +2,7 @@ use crate::coreword_registry::{
     ExecutionForm, MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity,
 };
 
-use super::builtin_word_types::{BuiltinExecutorKey, EvalCost};
+use super::builtin_word_types::BuiltinExecutorKey;
 
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
@@ -21,11 +21,6 @@ pub struct BuiltinSpec {
     /// Static flow-mass contract (SPEC §13.1). This is the canonical
     /// per-builtin source consumed by the Coreword registry and analyzers.
     pub mass: MassContract,
-    /// Static cost bucket used by optimization planners; authored here so
-    /// Elastic purity metadata does not keep a parallel builtin table.
-    pub eval_cost: EvalCost,
-    /// Whether this word is order-sensitive even when it is otherwise pure.
-    pub order_sensitive: bool,
 
     // Layer 2 (LOOKUP) fields. Four-section template:
     //   Category / Summary / Role / Stack Effect
@@ -63,8 +58,6 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     hover_syntax: "",
     executor_key: None,
     mass: MassContract::Dynamic,
-    eval_cost: EvalCost::Trivial,
-    order_sensitive: false,
     summary: "",
     role: "",
     stack_effect: "",
@@ -115,7 +108,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "GET — extract element at index",
         hover_syntax: "[ 10 20 30 ] [ 0 ] GET",
         executor_key: Some(BuiltinExecutorKey::Get),
-        eval_cost: EvalCost::Light,
         summary: "Extract one element of a vector by index.",
         role: "Random access into vectors and tensors.",
 
@@ -132,7 +124,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "INSERT — insert element at index",
         hover_syntax: "[ 1 3 ] [ 1 2 ] INSERT",
         executor_key: Some(BuiltinExecutorKey::Insert),
-        eval_cost: EvalCost::Light,
         summary: "Insert a value at a given index in a vector.",
         role: "Extends a vector by inserting an element at the indicated position.",
 
@@ -149,7 +140,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REPLACE — replace element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 9 ] REPLACE",
         executor_key: Some(BuiltinExecutorKey::Replace),
-        eval_cost: EvalCost::Light,
         summary: "Replace an element of a vector at a given index.",
         role: "In-place style update of a vector element.",
 
@@ -166,7 +156,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REMOVE — remove element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 ] REMOVE",
         executor_key: Some(BuiltinExecutorKey::Remove),
-        eval_cost: EvalCost::Light,
         summary: "Remove an element from a vector at a given index.",
         role: "Shrinks a vector by deleting one element.",
 
@@ -183,7 +172,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "LENGTH — return element count",
         hover_syntax: "[ 1 2 3 ] LENGTH",
         executor_key: Some(BuiltinExecutorKey::Length),
-        eval_cost: EvalCost::Light,
         summary: "Return the number of elements in a vector.",
         role: "Vector primitive: Return the number of elements in a vector.",
 
@@ -200,7 +188,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TAKE — take N elements from start or end",
         hover_syntax: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
         executor_key: Some(BuiltinExecutorKey::Take),
-        eval_cost: EvalCost::Light,
         summary: "Take the first N or last -N elements of a vector.",
         role: "Vector primitive: Take the first N or last -N elements of a vector.",
 
@@ -217,7 +204,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SPLIT — split vector at sizes",
         hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] SPLIT",
         executor_key: Some(BuiltinExecutorKey::Split),
-        eval_cost: EvalCost::Light,
         summary: "Split a vector into chunks at the specified sizes.",
         role: "Vector primitive: Split a vector into chunks at the specified sizes.",
 
@@ -234,7 +220,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CONCAT — flatten and concatenate vectors",
         hover_syntax: "[ 1 2 ] [ 3 4 ] CONCAT",
         executor_key: Some(BuiltinExecutorKey::Concat),
-        eval_cost: EvalCost::Light,
         summary: "Flatten and concatenate two vectors.",
         role: "Vector primitive: Flatten and concatenate two vectors.",
 
@@ -251,7 +236,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REVERSE — reverse element order",
         hover_syntax: "[ 1 2 3 ] REVERSE",
         executor_key: Some(BuiltinExecutorKey::Reverse),
-        eval_cost: EvalCost::Light,
         summary: "Reverse the order of vector elements.",
         role: "Vector primitive: Reverse the order of vector elements.",
 
@@ -268,7 +252,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "RANGE — generate numeric sequence",
         hover_syntax: "[ 0 5 ] RANGE",
         executor_key: Some(BuiltinExecutorKey::Range),
-        eval_cost: EvalCost::Light,
         summary: "Generate a numeric sequence from a [start, end] pair.",
         role: "Vector primitive: Generate a numeric sequence from a [start, end] pair.",
 
@@ -289,7 +272,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REORDER — reorder by index list",
         hover_syntax: "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER",
         executor_key: Some(BuiltinExecutorKey::Reorder),
-        eval_cost: EvalCost::Light,
         summary: "Reorder vector elements according to an index permutation.",
         role: "Vector primitive: Reorder vector elements according to an index permutation.",
 
@@ -306,7 +288,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "COLLECT — collect N items into vector",
         hover_syntax: "1 2 3 3 COLLECT",
         executor_key: Some(BuiltinExecutorKey::Collect),
-        eval_cost: EvalCost::Light,
         summary: "Collect N items off the stack into a new vector.",
         role: "Vector primitive: Collect N items off the stack into a new vector.",
 
@@ -375,7 +356,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NIL? — test whether a value is absent",
         hover_syntax: "1 0 / NIL?",
         executor_key: Some(BuiltinExecutorKey::NilCheck),
-        eval_cost: EvalCost::Light,
         summary: "Test whether the top value is an operational NIL (absent).",
         role: "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (SPEC §4.5.0).",
 
@@ -390,7 +370,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
         hover_syntax: "1 0 / NIL-REASON",
         executor_key: Some(BuiltinExecutorKey::NilReason),
-        eval_cost: EvalCost::Light,
         summary: "Read the direct reason of an operational NIL as a protocol-string Text.",
         role: "Diagnostic accessor: the lowerCamelCase reason protocol string (SPEC §4.5.0), or NIL when there is no reason or the value is not an operational NIL.",
 
@@ -406,7 +385,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CHARS — split string into characters",
         hover_syntax: "'hi' CHARS",
         executor_key: Some(BuiltinExecutorKey::Chars),
-        eval_cost: EvalCost::Light,
         summary: "Split a string into a vector of one-character strings.",
         role: "Cast primitive: Split a string into a vector of one-character strings.",
 
@@ -423,7 +401,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "JOIN — join characters into string",
         hover_syntax: "[ 'h' 'i' ] JOIN",
         executor_key: Some(BuiltinExecutorKey::Join),
-        eval_cost: EvalCost::Light,
         summary: "Join a vector of strings into a single string.",
         role: "Cast primitive: Join a vector of strings into a single string.",
 
@@ -440,7 +417,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TRIM — strip leading and trailing whitespace",
         hover_syntax: "'  hi  ' TRIM",
         executor_key: Some(BuiltinExecutorKey::Trim),
-        eval_cost: EvalCost::Light,
         summary: "Remove whitespace from both ends of a string.",
         role: "Cast primitive: Remove whitespace from both ends of a string.",
 
@@ -458,7 +434,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TOKENIZE — split string by separator",
         hover_syntax: "'a,b,c' ',' TOKENIZE",
         executor_key: Some(BuiltinExecutorKey::Tokenize),
-        eval_cost: EvalCost::Light,
         summary: "Split a string into a vector of substrings using a separator.",
         role: "Cast primitive: Split a string into a vector of substrings using a separator.",
 
@@ -475,7 +450,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SUBSTITUTE — replace substring occurrences",
         hover_syntax: "'hello' 'l' 'L' SUBSTITUTE",
         executor_key: Some(BuiltinExecutorKey::Substitute),
-        eval_cost: EvalCost::Light,
         summary: "Replace every occurrence of a substring with another.",
         role: "Cast primitive: Replace every occurrence of a substring with another.",
 
@@ -492,7 +466,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "STARTS-WITH? — prefix predicate",
         hover_syntax: "'hello' 'he' STARTS-WITH?",
         executor_key: Some(BuiltinExecutorKey::StartsWith),
-        eval_cost: EvalCost::Light,
         summary: "Test whether a string begins with the given prefix.",
         role: "Cast primitive: Test whether a string begins with the given prefix.",
 
@@ -509,7 +482,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ENDS-WITH? — suffix predicate",
         hover_syntax: "'hello' 'lo' ENDS-WITH?",
         executor_key: Some(BuiltinExecutorKey::EndsWith),
-        eval_cost: EvalCost::Light,
         summary: "Test whether a string ends with the given suffix.",
         role: "Cast primitive: Test whether a string ends with the given suffix.",
 
@@ -526,7 +498,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NUM — parse to number",
         hover_syntax: "'42' NUM",
         executor_key: Some(BuiltinExecutorKey::Num),
-        eval_cost: EvalCost::Light,
         summary: "Parse text as a number; Bubble/NIL on parse failure.",
         role: "Cast primitive: Parse text as a number; Bubble/NIL on parse failure.",
 
@@ -544,7 +515,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
         executor_key: Some(BuiltinExecutorKey::Str),
-        eval_cost: EvalCost::Light,
         summary: "Convert a value to its string representation.",
         role: "Cast primitive: Convert a value to its string representation.",
 
@@ -562,7 +532,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CHR — make a character",
         hover_syntax: "65 CHR",
         executor_key: Some(BuiltinExecutorKey::Chr),
-        eval_cost: EvalCost::Light,
         summary:
             "Convert a numeric character code to a single-character string.",
         role: "Cast primitive: Convert a numeric character code to a single-character string.",
@@ -791,7 +760,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "COND — evaluate guard/body clauses",
         hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
         executor_key: Some(BuiltinExecutorKey::Cond),
-        eval_cost: EvalCost::Heavy,
         summary:
             "Evaluate guard/body clauses in order, executing the first match.",
         role: "General conditional dispatch with first-match semantics.",
@@ -837,7 +805,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "MAP — apply block to each element",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] * } MAP",
         executor_key: Some(BuiltinExecutorKey::Map),
-        eval_cost: EvalCost::Medium,
         summary: "Apply a code block to each element of a vector.",
         role: "Higher-order primitive: Apply a code block to each element of a vector.",
 
@@ -854,7 +821,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FILTER — keep elements matching predicate",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } FILTER",
         executor_key: Some(BuiltinExecutorKey::Filter),
-        eval_cost: EvalCost::Medium,
         summary:
             "Keep only the elements for which a predicate block returns TRUE.",
         role: "Higher-order primitive: Keep only the elements for which a predicate block returns TRUE.",
@@ -872,8 +838,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FOLD — reduce with initial value",
         hover_syntax: "[ 1 2 3 ] [ 0 ] { + } FOLD",
         executor_key: Some(BuiltinExecutorKey::Fold),
-        eval_cost: EvalCost::Medium,
-        order_sensitive: true,
         summary:
             "Reduce a vector to a single value using an initial accumulator and combiner block.",
         role: "Higher-order primitive: Reduce a vector to a single value using an initial accumulator and combiner block.",
@@ -892,7 +856,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ANY — true if any element matches",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } ANY",
         executor_key: Some(BuiltinExecutorKey::Any),
-        eval_cost: EvalCost::Medium,
         summary: "TRUE if at least one element satisfies the predicate.",
         role: "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
 
@@ -909,7 +872,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ALL — true if all elements match",
         hover_syntax: "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
         executor_key: Some(BuiltinExecutorKey::All),
-        eval_cost: EvalCost::Medium,
         summary: "TRUE if every element satisfies the predicate.",
         role: "Higher-order primitive: TRUE if every element satisfies the predicate.",
 
@@ -928,8 +890,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
         executor_key: Some(BuiltinExecutorKey::Print),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
         role: "Io primitive: output the top stack value at the output boundary, where a string is emitted as its raw character content (the stack's surrounding quotes are a display affordance only).",
 
@@ -951,8 +911,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "DEF — define user word",
         hover_syntax: "{ 2 * } 'DOUBLE' DEF",
         executor_key: Some(BuiltinExecutorKey::Def),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Define a user word from a body and a name.",
         role: "Dictionary primitive: Define a user word from a body and a name.",
 
@@ -974,8 +932,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "DEL — delete user word",
         hover_syntax: "{ [ 1 ] } 'W' DEF 'W' DEL",
         executor_key: Some(BuiltinExecutorKey::Del),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Delete a user word from the dictionary.",
         role: "Dictionary primitive: Delete a user word from the dictionary.",
 
@@ -997,8 +953,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "LOOKUP — show word documentation",
         hover_syntax: "'ADD' ?",
         executor_key: Some(BuiltinExecutorKey::Lookup),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Display the documentation for a named word.",
         role: "Provides word-level guidance from inside Ajisai.",
 
@@ -1020,7 +974,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FILL — fill shape with value",
         hover_syntax: "[ 2 2 0 ] FILL",
         executor_key: Some(BuiltinExecutorKey::Fill),
-        eval_cost: EvalCost::Light,
         summary: "Fill a target shape with a constant value.",
         role: "Tensor primitive: Fill a target shape with a constant value.",
 
@@ -1112,7 +1065,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "EXEC — execute vector as code",
         hover_syntax: "[ 1 2 + ] EXEC",
         executor_key: Some(BuiltinExecutorKey::Exec),
-        eval_cost: EvalCost::Heavy,
         summary: "Execute a vector as Ajisai code.",
         role: "Control primitive: Execute a vector as Ajisai code.",
 
@@ -1130,7 +1082,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SQRT — exact square root",
         hover_syntax: "2 SQRT",
         executor_key: Some(BuiltinExecutorKey::Sqrt),
-        eval_cost: EvalCost::Heavy,
         summary: "Exact square root of a non-negative rational.",
         role: "The only Word that leaves the rationals: it produces the multiquadratic \u{221a}d.",
         stack_effect: "[ x ] -> [ sqrt(x) ]",
@@ -1146,7 +1097,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ABS — absolute value",
         hover_syntax: "-3 ABS",
         executor_key: Some(BuiltinExecutorKey::Abs),
-        eval_cost: EvalCost::Light,
         summary: "Absolute value of an exact scalar.",
         role: "Magnitude without sign.",
         stack_effect: "[ x ] -> [ |x| ]",
@@ -1159,7 +1109,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NEG — negate",
         hover_syntax: "3 NEG",
         executor_key: Some(BuiltinExecutorKey::Neg),
-        eval_cost: EvalCost::Light,
         summary: "Negate an exact scalar.",
         role: "Additive inverse.",
         stack_effect: "[ x ] -> [ -x ]",
@@ -1172,7 +1121,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SIGN — sign of a scalar",
         hover_syntax: "-3 SIGN",
         executor_key: Some(BuiltinExecutorKey::Sign),
-        eval_cost: EvalCost::Light,
         summary: "Sign of an exact scalar as -1, 0 or 1.",
         role: "Direction without magnitude.",
         stack_effect: "[ x ] -> [ sign ]",
@@ -1185,7 +1133,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "MIN — smaller of two scalars",
         hover_syntax: "3 5 MIN",
         executor_key: Some(BuiltinExecutorKey::Min),
-        eval_cost: EvalCost::Light,
         summary: "The smaller of two exact scalars.",
         role: "Comparison-selected operand; comparison is total, so it always decides.",
         stack_effect: "[ a ] [ b ] -> [ min ]",
@@ -1198,7 +1145,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "MAX — larger of two scalars",
         hover_syntax: "3 5 MAX",
         executor_key: Some(BuiltinExecutorKey::Max),
-        eval_cost: EvalCost::Light,
         summary: "The larger of two exact scalars.",
         role: "Comparison-selected operand; comparison is total, so it always decides.",
         stack_effect: "[ a ] [ b ] -> [ max ]",
@@ -1212,7 +1158,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SORT — ascending sort",
         hover_syntax: "[ 3 1 2 ] SORT",
         executor_key: Some(BuiltinExecutorKey::Sort),
-        eval_cost: EvalCost::Heavy,
         summary: "Sort a vector into ascending order.",
         role: "Total ordering over exact scalars.",
         stack_effect: "[ vec ] -> [ sorted ]",
@@ -1225,7 +1170,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "UNIQUE — remove duplicates",
         hover_syntax: "[ 1 1 2 ] UNIQUE",
         executor_key: Some(BuiltinExecutorKey::Unique),
-        eval_cost: EvalCost::Heavy,
         summary: "Remove duplicate elements, keeping first occurrence order.",
         role: "Set-like reduction that preserves order.",
         stack_effect: "[ vec ] -> [ vec ]",
@@ -1238,7 +1182,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CONTAINS — membership test",
         hover_syntax: "[ 1 2 3 ] [ 2 ] CONTAINS",
         executor_key: Some(BuiltinExecutorKey::Contains),
-        eval_cost: EvalCost::Light,
         summary: "TRUE when the vector contains the value.",
         role: "Membership as a definite truth value.",
         stack_effect: "[ vec ] [ x ] -> [ bool ]",
@@ -1251,7 +1194,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "INDEX-OF — position of a value",
         hover_syntax: "[ 1 2 3 ] [ 2 ] INDEX-OF",
         executor_key: Some(BuiltinExecutorKey::IndexOf),
-        eval_cost: EvalCost::Light,
         summary: "0-origin index of the first matching element.",
         role: "Search that projects to NIL when the value is absent.",
         stack_effect: "[ vec ] [ x ] -> [ idx ]",

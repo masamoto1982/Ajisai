@@ -28,17 +28,10 @@ use crate::types::{Token, WordDefinition};
 
 use super::Interpreter;
 
-/// Protocol name of the hash function behind [`content_digest`], recorded in
-/// generated artifacts (lockfile, receipt) so a future migration is legible
-/// from the artifact itself and not only from a schema-version bump. Gated to
-/// the same targets as the `content_digest` re-export, its only consumers
-/// being the host-only `cli` module.
-#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-pub(crate) const IDENTITY_ALGORITHM: &str = "blake3";
-
 /// Deterministic content digest. Returns a `#`-prefixed 64-hex-char string.
-/// Reused for execution-receipt source and result identity (Phase 6) so those
-/// identities share the same content-hash family as word identities (§8.6).
+/// The basis of content addressing (LANG.DICTIONARY.MUTATION): a Word's
+/// identity is a digest over its normalized definition and the identities of
+/// the Words it calls.
 pub(crate) fn content_digest(bytes: &[u8]) -> String {
     format!("#{}", blake3::hash(bytes).to_hex())
 }

@@ -9,7 +9,6 @@
 
 use crate::error::AjisaiError;
 use crate::interpreter::Interpreter;
-use std::sync::Arc;
 
 /// Guarded tail-recursive countdown. 200,000 iterations exceed the default
 /// 100,000-step budget but complete under a raised one — the trampoline

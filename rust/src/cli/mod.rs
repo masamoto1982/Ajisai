@@ -223,9 +223,8 @@ fn print_payloads(interp: &Interpreter) -> Vec<String> {
     interp
         .host_effects()
         .iter()
-        .filter_map(|effect| match effect {
-            HostEffect::Print(payload) => Some(payload.clone()),
-            _ => None,
+        .map(|effect| match effect {
+            HostEffect::Print(payload) => payload.clone(),
         })
         .collect()
 }

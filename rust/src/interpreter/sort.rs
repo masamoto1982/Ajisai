@@ -16,12 +16,12 @@ enum SortAttempt {
     /// Every required comparison decided; `perm` is the ascending permutation
     /// of the original indices.
     Ordered(Vec<usize>),
-    /// At least one required comparison was undecidable within the budget; the
-    /// sorted order as a whole is not established (SPEC §7.4.3: a partial order
-    /// is not a sort). Carries the agreed-prefix of the first undecidable pair.
-    Undecided(usize),
+    /// A required comparison could not be made because an element is outside
+    /// the exact domain. Comparison over that domain is total, so this is a
+    /// domain problem rather than an undecided ordering.
+    Undecided,
     /// An element was structurally non-comparable (non-numeric) — malformed use
-    /// (SPEC §11.2), distinct from the logical Unknown.
+    /// (LANG.FAILURE.ERROR).
     Malformed(AjisaiError),
 }
 
@@ -61,8 +61,8 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
     if let Some(e) = malformed.into_inner() {
         return SortAttempt::Malformed(e);
     }
-    if let Some(prefix) = undecided.into_inner() {
-        return SortAttempt::Undecided(prefix);
+    if undecided.into_inner().is_some() {
+        return SortAttempt::Undecided;
     }
     SortAttempt::Ordered(perm)
 }
@@ -107,7 +107,7 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(Value::from_vector(sorted_v));
             Ok(())
         }
-        SortAttempt::Undecided(_) => {
+        SortAttempt::Undecided => {
             // Comparison over the exact domain is total (LANG.VALUES.EXACT),
             // so an undecided pair means an operand outside that domain.
             if !is_keep_mode {
@@ -139,7 +139,7 @@ mod tests {
     fn ordered(items: &[Value]) -> Vec<usize> {
         match try_sort_indices(items) {
             SortAttempt::Ordered(perm) => perm,
-            SortAttempt::Undecided(_) => panic!("expected decidable sort"),
+            SortAttempt::Undecided => panic!("expected decidable sort"),
             SortAttempt::Malformed(e) => panic!("unexpected malformed: {e}"),
         }
     }

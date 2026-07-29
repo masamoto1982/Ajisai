@@ -8,7 +8,4 @@
 //! the tokens that follow.
 
 #[cfg(test)]
-mod tests {
-    use crate::interpreter::Interpreter;
-    use crate::types::Value;
-}
+mod tests {}

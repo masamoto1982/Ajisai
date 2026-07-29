@@ -257,28 +257,6 @@ fn push_scalar_fastpath_result(
     Ok(true)
 }
 
-/// Shape-IC entry points (see `shape_ic.rs`): attempt exactly the D1 scalar
-/// fast path for one arithmetic word, completing the operation when the
-/// operands qualify. Behaviorally identical to entering the corresponding
-/// `op_*` and exiting through `push_scalar_fastpath_result`, because that
-/// fast path only accepts operands the preceding NIL-passthrough check would
-/// have ignored anyway.
-pub(crate) fn scalar_fastpath_add(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Add)
-}
-
-pub(crate) fn scalar_fastpath_sub(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Sub)
-}
-
-pub(crate) fn scalar_fastpath_mul(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Mul)
-}
-
-pub(crate) fn scalar_fastpath_div(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Div)
-}
-
 fn apply_exact_arithmetic_schema(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
@@ -540,12 +518,6 @@ fn push_exact_real_broadcast_result(
     consume_stacktop_binary(interp);
     push_result(interp, result);
     Ok(true)
-}
-
-fn is_scalar_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
-        || matches!(&val.data, ValueData::Vector(c) if c.len() == 1 && extract_scalar_from_value(&c[0]).is_some())
-        || matches!(&val.data, ValueData::Tensor { data, .. } if data.len() == 1)
 }
 
 fn sparse_mul_candidate(a: &Value, b: &Value) -> Option<Value> {

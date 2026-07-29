@@ -9,11 +9,8 @@
 //! example must actually run (item 10b).
 
 use super::builtin_word_definitions::builtin_specs;
-use crate::core_word_aliases::canonicalize_core_word_name;
-use crate::coreword_registry::get_coreword_metadata;
 use crate::interpreter::Interpreter;
 use crate::tokenizer::tokenize;
-use crate::types::Token;
 #[test]
 fn every_hover_syntax_is_a_well_formed_snippet() {
     // Ledger item 9. A `hover_syntax` is a runnable example, so requiring it to

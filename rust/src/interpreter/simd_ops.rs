@@ -295,51 +295,7 @@ mod wasm_impl {
 // Scalar fallback: native builds, and any wasm build without `simd128`
 // (now the baseline). Same observable result as the intrinsics path.
 #[cfg(all(test, not(all(target_arch = "wasm32", target_feature = "simd128"))))]
-mod wasm_impl {
-    #[inline]
-    pub fn simd_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x + y)
-            .collect::<Vec<i64>>()
-    }
-
-    #[inline]
-    pub fn simd_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x - y)
-            .collect::<Vec<i64>>()
-    }
-
-    #[inline]
-    pub fn simd_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x * y)
-            .collect::<Vec<i64>>()
-    }
-}
-
-// Wrapping (non-overflow-checked) SIMD lane kernels. The production integer
-// path is now overflow-checked (see `checked_lane_*` and the speculative
-// lowering in `apply_simd_*`), so these wrapping kernels survive only as the
-// element-wise reference the `interpreter::parallel` bit-identity proptests
-// compare the multi-core kernel against. They are therefore test-only.
-#[cfg(test)]
-pub fn lane_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_add(a, b)
-}
-
-#[cfg(test)]
-pub fn lane_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_sub(a, b)
-}
-
-#[cfg(test)]
-pub fn lane_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_mul(a, b)
-}
+mod wasm_impl {}
 
 /// Returns `(result, parallel_used)`; `parallel_used` is `true` only when the
 /// multi-core kernel actually fired (observational metric only).

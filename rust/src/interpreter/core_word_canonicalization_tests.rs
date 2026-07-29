@@ -14,14 +14,6 @@ async fn assert_same_stack(left_code: &str, right_code: &str) {
     assert_eq!(left.get_stack(), right.get_stack());
 }
 
-async fn assert_def_rejected(name: &str) {
-    let mut interp = Interpreter::new();
-    interp.execute("").await.unwrap();
-    let code = format!("{{ [ 1 ] }} '{}' DEF", name);
-    let result = interp.execute(&code).await;
-    assert!(result.is_err(), "expected DEF rejection for {}", name);
-}
-
 #[tokio::test]
 async fn symbol_aliases_execute_same_as_canonical_words() {
     assert_same_stack("1 2 +", "1 2 ADD").await;

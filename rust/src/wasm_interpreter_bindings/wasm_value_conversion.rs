@@ -310,7 +310,6 @@ fn protocol_to_js(node: &ProtocolNode) -> JsValue {
             }
             set_prop(&obj, "value", &arr.into());
         }
-        ProtocolValue::Handle(id) => set_prop(&obj, "value", &(*id as f64).into()),
     }
     obj.into()
 }

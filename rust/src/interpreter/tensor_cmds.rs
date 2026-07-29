@@ -4,7 +4,7 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::exact::ExactReal;
-use crate::types::fraction::{Fraction, RoundingMode};
+use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 
 /// Multiply dimension sizes without ever overflowing `usize`. Returns `None`
@@ -32,57 +32,6 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
 use super::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
 };
-
-fn apply_tensor_metadata(
-    interp: &mut Interpreter,
-    _word: &str,
-    mapper: fn(&Value) -> Value,
-) -> Result<()> {
-    let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
-    let value: Value = if is_keep_mode {
-        interp
-            .stack
-            .last()
-            .cloned()
-            .ok_or(AjisaiError::StackUnderflow)?
-    } else {
-        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-    };
-
-    let result: Value = mapper(&value);
-    interp.stack.push(result);
-    Ok(())
-}
-
-fn compute_shape_of_value(value: &Value) -> Value {
-    if value.is_nil() {
-        return Value::nil();
-    }
-
-    if !value.is_vector() {
-        return Value::from_vector(vec![]);
-    }
-
-    let shape_values: Vec<Value> = value
-        .shape()
-        .iter()
-        .map(|&n| Value::from_number(Fraction::from(n as i64)))
-        .collect();
-    Value::from_vector(shape_values)
-}
-
-fn compute_rank_of_value(value: &Value) -> Value {
-    if value.is_nil() {
-        return Value::nil();
-    }
-
-    let rank: i64 = if value.is_vector() {
-        value.shape().len() as i64
-    } else {
-        0
-    };
-    create_number_value(Fraction::from(rank))
-}
 
 fn apply_unary_math<F, G>(interp: &mut Interpreter, op: F, exact_op: G, op_name: &str) -> Result<()>
 where
@@ -172,103 +121,6 @@ pub fn op_ceil(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_round(interp: &mut Interpreter) -> Result<()> {
     apply_unary_math(interp, |f| f.round(), |er| er.round(), "ROUND")
-}
-
-/// The exact rational carried by a scalar value, whether it is stored as a
-/// plain `Scalar` or as an `ExactScalar` that happens to reduce to a rational.
-/// Genuinely irrational exact-reals return `None`.
-fn scalar_as_rational(value: &Value) -> Option<Fraction> {
-    match &value.data {
-        ValueData::Scalar(f) => Some(f.clone()),
-        ValueData::ExactScalar(er) => er.to_fraction(),
-        _ => None,
-    }
-}
-
-/// Shared engine for the `QUANTIZE` family (SPEC §7.13; see
-/// docs/dev/fintech-value-integrity-design.md). Stack effect
-/// `[ x ] [ step ] -> [ q ] [ r ]` where `q` is the multiple of `step` chosen
-/// by `mode` and `r = x - q`, so `q + r == x` exactly. `word` names the calling
-/// word for diagnostics. The rounding rule is the only thing that varies across
-/// the family; NIL/error/decidability handling is identical.
-fn quantize_with_mode(interp: &mut Interpreter, mode: RoundingMode, word: &str) -> Result<()> {
-    let stack_len = interp.stack.len();
-    if stack_len < 2 {
-        return Err(AjisaiError::StackUnderflow);
-    }
-
-    // Operand order is `[ x ] [ step ] <word>`, so `x` is second from top.
-    let x_val = interp.stack[stack_len - 2].clone();
-    let step_val = interp.stack[stack_len - 1].clone();
-    let is_keep = interp.consumption_mode == ConsumptionMode::Keep;
-
-    // The step is mandatory and must be a strictly positive rational. A NIL or
-    // otherwise malformed step is a channel error (RejectsNil), matching the
-    // deliberate asymmetry of MOD-by-zero rather than producing a bubble.
-    let step = match scalar_as_rational(&step_val) {
-        Some(s) if s.is_positive() => s,
-        _ => {
-            return Err(AjisaiError::from(format!(
-                "{} requires a strictly positive rational step",
-                word
-            )));
-        }
-    };
-
-    let pop_operands = |interp: &mut Interpreter| {
-        if !is_keep {
-            interp.stack.pop();
-            interp.stack.pop();
-        }
-    };
-
-    // NIL-passthrough on `x`: a bubble flows through to both outputs, carrying
-    // its reason (SPEC §7.12). The step was already validated above, so a NIL
-    // step never reaches this point.
-    if x_val.is_operational_nil() {
-        pop_operands(interp);
-        interp
-            .stack
-            .push(Value::nil_inheriting_absence_from(&x_val));
-        interp
-            .stack
-            .push(Value::nil_inheriting_absence_from(&x_val));
-        return Ok(());
-    }
-
-    match scalar_as_rational(&x_val) {
-        Some(x) => {
-            let (q, r) = x.quantize(&step, mode);
-            pop_operands(interp);
-            interp.stack.push(create_number_value(q));
-            interp.stack.push(create_number_value(r));
-            Ok(())
-        }
-        None => {
-            // A genuinely irrational `x` cannot pick a multiple within the
-            // comparison budget for the round-to-nearest modes, so project both
-            // outputs to an Undecidable bubble rather than guess (SPEC §7.4.1,
-            // §11.2). The directed modes take the same conservative path.
-            pop_operands(interp);
-            interp
-                .stack
-                .push(Value::nil_with_reason(NilReason::Undecidable));
-            interp
-                .stack
-                .push(Value::nil_with_reason(NilReason::Undecidable));
-            Ok(())
-        }
-    }
-}
-
-/// The exact-real value carried by a scalar, whether stored as a rational
-/// `Scalar` or an `ExactScalar`. Non-scalar and NIL values return `None`.
-fn value_as_exact_real(value: &Value) -> Option<ExactReal> {
-    match &value.data {
-        ValueData::Scalar(f) => Some(ExactReal::from_fraction(f.clone())),
-        ValueData::ExactScalar(er) => Some(er.clone()),
-        _ => None,
-    }
 }
 
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {

@@ -97,9 +97,8 @@ impl ReplSession {
 
         let output: Vec<String> = self.interp.host_effects()[effects_before..]
             .iter()
-            .filter_map(|effect| match effect {
-                HostEffect::Print(payload) => Some(payload.clone()),
-                _ => None,
+            .map(|effect| match effect {
+                HostEffect::Print(payload) => payload.clone(),
             })
             .collect();
         let stack_display = stack_display(&self.interp);

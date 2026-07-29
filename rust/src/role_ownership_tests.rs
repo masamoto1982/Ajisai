@@ -6,15 +6,3 @@
 //! migrated from the parallel `SemanticStack` snapshot onto a `Stack` clone: a
 //! position cast (`>CF`) applied to a slot *below* an isolated-stack word must
 //! survive that word with its role intact.
-
-use crate::interpreter::Interpreter;
-use crate::types::display::render_stack;
-
-async fn render(code: &str) -> Vec<String> {
-    let mut interp = Interpreter::new();
-    interp
-        .execute(code)
-        .await
-        .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"));
-    render_stack(interp.get_stack())
-}

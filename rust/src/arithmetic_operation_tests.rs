@@ -257,7 +257,7 @@ mod num_tests {
 #[cfg(test)]
 mod interval_tests {
     use crate::interpreter::Interpreter;
-    use crate::types::fraction::Fraction;
+
     #[tokio::test]
     async fn test_sqrt_exact_cases() {
         let mut interp = Interpreter::new();

@@ -36,7 +36,6 @@ pub(crate) enum ProtocolValue {
         denominator: String,
     },
     Children(Vec<ProtocolNode>),
-    Handle(u64),
 }
 
 pub(crate) fn interpretation_protocol_str(hint: Interpretation) -> &'static str {

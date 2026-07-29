@@ -291,6 +291,8 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
+    /// Synchronous single-line entry point used by the WASM step controller.
+    #[cfg(feature = "wasm")]
     pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         self.execute_guard_structure(lines)
     }

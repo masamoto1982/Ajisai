@@ -23,10 +23,6 @@ mod tests {
             .expect("expected scalar i64 on stack top")
     }
 
-    fn top_is_nil(interp: &Interpreter) -> bool {
-        interp.stack.last().map(|v| v.is_nil()).unwrap_or(false)
-    }
-
     #[tokio::test]
     async fn test_fold_basic() {
         let mut interp = Interpreter::new();

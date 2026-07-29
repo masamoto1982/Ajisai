@@ -87,45 +87,6 @@ pub(crate) struct DictionaryDependencyInfo {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum ChildState {
-    Running,
-    Completed,
-    Failed,
-    Killed,
-    Timeout,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum ExitReason {
-    Normal,
-    Error,
-    Killed,
-    Timeout,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RuntimeDictionarySnapshot {
-    pub user_words: HashMap<String, Arc<WordDefinition>>,
-    pub user_dictionaries: HashMap<String, UserDictionary>,
-    pub dependents: HashMap<String, HashSet<String>>,
-    pub import_table: ImportTable,
-    pub module_vocabulary: HashMap<String, ModuleDictionary>,
-    pub dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
-    pub next_registration_order: u64,
-    pub active_user_dictionary: String,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ChildRuntime {
-    pub code_block: Vec<Token>,
-    pub dictionary_snapshot: RuntimeDictionarySnapshot,
-    pub state: ChildState,
-    pub exit_reason: Option<ExitReason>,
-    pub result_snapshot: Option<Vec<Value>>,
-    pub monitored: bool,
-}
-
-#[derive(Debug, Clone)]
 pub struct ResolveCacheEntry {
     pub resolved_name: String,
     pub dictionary_epoch: u64,
@@ -237,16 +198,6 @@ pub struct Interpreter {
     /// algebraic computation fails at `runtime_limits.max_numeric_work` rather
     /// than running for minutes. Reset per top-level `execute`.
     pub(crate) numeric_work_used: u64,
-    pub(crate) input_buffer: String,
-    pub(crate) io_output_buffer: String,
-
-    /// Host-injected serial receive buffers, keyed by opaque port id. Filled
-    /// before execution from the platform serial adapter (Section 9.4); drained
-    /// by `SERIAL@READ`.
-    pub(crate) serial_inbox: HashMap<String, Vec<u8>>,
-    /// Port ids the host has reported disconnected. `SERIAL@READ` projects this
-    /// to `NilReason::PortDisconnected` once the inbox for the port is empty.
-    pub(crate) serial_disconnected: HashSet<String>,
 
     pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
@@ -265,9 +216,6 @@ pub struct Interpreter {
     /// that future use; `dead_code` is expected until a reader lands.
     #[allow(dead_code)]
     pub(crate) semantic_registry: SemanticRegistry,
-
-    pub(crate) child_runtimes: HashMap<u64, ChildRuntime>,
-    pub(crate) next_child_id: u64,
     pub(crate) monitor_notifications: Vec<Vec<Value>>,
     pub(crate) next_supervisor_id: u64,
 
@@ -277,7 +225,6 @@ pub struct Interpreter {
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
     pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
-    pub(crate) validation_policy: ValidationPolicy,
 
     /// Owning user dictionary of the word currently being defined,
     /// dependency-scanned, or executed. Bare names resolve through this
@@ -396,10 +343,6 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             runtime_limits: super::runtime_limits::RuntimeLimits::default(),
             numeric_work_used: 0,
-            input_buffer: String::new(),
-            io_output_buffer: String::new(),
-            serial_inbox: HashMap::new(),
-            serial_disconnected: HashSet::new(),
             module_vocabulary: HashMap::new(),
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
@@ -409,8 +352,6 @@ impl Interpreter {
             module_epoch: 0,
             execution_epoch: 0,
             semantic_registry: SemanticRegistry::new(),
-            child_runtimes: HashMap::new(),
-            next_child_id: 1,
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
@@ -419,7 +360,6 @@ impl Interpreter {
 
             // Elastic Engine
             resolve_cache: HashMap::new(),
-            validation_policy: ValidationPolicy::default(),
             owning_dictionary_context: None,
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
@@ -460,16 +400,6 @@ impl Interpreter {
         eprintln!(
             "[trace-epoch] dictionary_epoch={} global_epoch={}",
             self.dictionary_epoch, self.global_epoch
-        );
-    }
-
-    pub(crate) fn bump_module_epoch(&mut self) {
-        self.module_epoch = self.next_epoch();
-        self.invalidate_execution_artifacts();
-        #[cfg(feature = "trace-epoch")]
-        eprintln!(
-            "[trace-epoch] module_epoch={} global_epoch={}",
-            self.module_epoch, self.global_epoch
         );
     }
 
