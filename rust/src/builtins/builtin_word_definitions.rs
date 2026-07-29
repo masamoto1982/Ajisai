@@ -11,7 +11,8 @@ pub struct BuiltinSpec {
     pub category: &'static str,
     /// Layer 3 (hover): one-line "WORD — short verb phrase" shown in the
     /// native button title attribute. See three-layer-documentation-model.md
-    /// §4.2.
+    /// §4.2. Retained during Phase 5 only as a migration-validation oracle.
+    #[allow(dead_code)]
     pub hover_summary: &'static str,
     /// Layer 3 (hover): shortest useful invocation (operands included, sugar
     /// preferred when shorter) shown in the inline word-info strip. See
@@ -1870,9 +1871,9 @@ pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
 /// Consumed only by the wasm bindings (feature = "wasm").
 #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
 pub fn collect_core_builtin_definitions() -> Vec<(&'static str, &'static str, &'static str)> {
-    BUILTIN_SPECS
+    super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS
         .iter()
-        .map(|spec| (spec.name, spec.hover_summary, spec.hover_syntax))
+        .map(|doc| (doc.name, doc.hover_summary, doc.hover_syntax))
         .collect()
 }
 
@@ -1907,6 +1908,18 @@ mod tests {
                 "missing canonical core word: {}",
                 name
             );
+        }
+    }
+
+    #[test]
+    fn generated_core_docs_preserve_the_legacy_observation() {
+        let generated = super::super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS;
+        assert_eq!(generated.len(), super::builtin_specs().len());
+
+        for (doc, spec) in generated.iter().zip(super::builtin_specs()) {
+            assert_eq!(doc.name, spec.name);
+            assert_eq!(doc.hover_summary, spec.hover_summary);
+            assert_eq!(doc.hover_syntax, spec.hover_syntax);
         }
     }
 
