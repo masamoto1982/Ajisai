@@ -1,8 +1,6 @@
 use super::common::{
     execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
-use super::hedged::execute_hedged_predicate_kernel;
-use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate_kernel};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::{ConsumptionMode, Interpreter};
@@ -59,38 +57,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     if n_elements == 0 {
         interp.stack.push(Value::nil());
         return Ok(());
-    }
-
-    // VTU Phase III bulk fast path for 1-D dense Tensor + fast unary
-    // predicate kernel. Builds the surviving Fraction subset directly
-    // and returns either a Tensor (>=1 survivors) or NIL.
-    if let ExecutableCode::QuantizedBlock(qb) = &executable {
-        if !super::hedged::hedged_mode(interp.elastic_mode()) {
-            if let Some(bulk) =
-                super::fast_kernels::try_bulk_quantized_predicate(interp, qb, &target_val)
-            {
-                let (data, _shape) = target_val
-                    .as_dense_tensor()
-                    .expect("predicate bulk implies dense tensor");
-                let mut kept: Vec<crate::types::fraction::Fraction> = Vec::new();
-                for (i, keep) in bulk.flags.into_iter().enumerate() {
-                    if keep {
-                        kept.push(data.fraction_or_nil(i));
-                    }
-                }
-                let result = if kept.is_empty() {
-                    Value::nil()
-                } else {
-                    let len = kept.len();
-                    Value::from_tensor(kept, vec![len])
-                };
-                if is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(result);
-                return Ok(());
-            }
-        }
     }
 
     let mut results: Vec<Value> = Vec::with_capacity(n_elements);

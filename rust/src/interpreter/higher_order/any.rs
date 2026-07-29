@@ -1,17 +1,14 @@
 use super::common::{
     execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
-use super::hedged::execute_hedged_predicate_kernel;
-use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate_kernel};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
 use crate::interpreter::Interpreter;
 use crate::types::Stack;
-use crate::types::{Token, Value};
+use crate::types::Value;
 
 pub fn op_any(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
         Err(e) => {
@@ -47,19 +44,8 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
 
     // VTU Phase III bulk fast path: ANY over a 1-D dense Tensor with
     // a fast unary predicate. Disabled in hedged modes.
-    if let ExecutableCode::QuantizedBlock(qb) = &executable {
-        if !super::hedged_mode_active(interp) {
-            if let Some(bulk) = super::try_bulk_quantized_predicate_pub(interp, qb, &target_val) {
-                let result = bulk.flags.into_iter().any(|b| b);
-                interp.stack.push(Value::from_bool(result));
-                return Ok(());
-            }
-        }
-    }
-
-    let mut saved_stack: Stack = Stack::new();
+     let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
-    let saved_target = interp.operation_target_mode;
     let saved_no_change_check = interp.disable_no_change_check;
     interp.disable_no_change_check = true;
 
@@ -69,28 +55,6 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
         let elem = target_val
             .child(i)
             .expect("ANY: child index in 0..len must be valid");
-        match &executable {
-            ExecutableCode::QuantizedBlock(qb) => {
-                match execute_hedged_predicate_kernel(
-                    interp,
-                    "ANY",
-                    qb,
-                    plain_tokens.as_deref(),
-                    elem,
-                ) {
-                    Ok(is_true) => {
-                        if is_true {
-                            result = true;
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
-                }
-            }
-            _ => {
                 interp.stack.clear();
                 interp.stack.push(elem);
                 match execute_executable_code(interp, &executable) {
@@ -122,8 +86,7 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                         break;
                     }
                 }
-            }
-        }
+            
     }
     interp.disable_no_change_check = saved_no_change_check;
     interp.stack = saved_stack;

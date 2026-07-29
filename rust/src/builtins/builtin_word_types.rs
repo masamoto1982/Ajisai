@@ -1,4 +1,18 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Rough cost class of evaluating a Word. Advisory metadata on the contract;
+/// it is diagnostics, never a semantic discriminant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EvalCost {
+    /// Constant-time arithmetic / boolean ops.
+    Trivial,
+    /// Small fixed-overhead operations (casts, single-element lookups).
+    Light,
+    /// Linear collection traversals.
+    Medium,
+    /// Unbounded or recursive operations.
+    Heavy,
+}
+
 pub enum BuiltinExecutorKey {
     Add,
     Sub,

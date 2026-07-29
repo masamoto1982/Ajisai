@@ -105,19 +105,9 @@ fn push_simd_schema_result(
     a: &Value,
     b: &Value,
 ) -> bool {
-    let Some((result, parallel_used)) = simd_schema_candidate(schema, a, b) else {
+    let Some((result, _parallel_used)) = simd_schema_candidate(schema, a, b) else {
         return false;
     };
-    interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-        .runtime_metrics
-        .vtu_simd_kernel_use_count
-        .saturating_add(1);
-    if parallel_used {
-        interp.runtime_metrics.vtu_parallel_kernel_use_count = interp
-            .runtime_metrics
-            .vtu_parallel_kernel_use_count
-            .saturating_add(1);
-    }
     consume_stacktop_binary(interp);
     interp.stack.push(result);
     true
@@ -284,10 +274,8 @@ fn push_scalar_fastpath_result(
         interp.stack.pop();
     }
     push_result(interp, result);
-    interp.runtime_metrics.scalar_fastpath_count = interp
-        .runtime_metrics
-        .scalar_fastpath_count
-        .saturating_add(1);
+    interp.runtime_metrics.scalar_fastpath_count =
+        interp.runtime_metrics.scalar_fastpath_count.saturating_add(1);
     Ok(true)
 }
 
@@ -404,11 +392,10 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Vector(_) => None,
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
-        ValueData::Nil | ValueData::Unknown(_) => None,
+        ValueData::Nil  => None,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+         => None,
     }
 }
 
@@ -430,7 +417,7 @@ fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
 fn value_contains_exact_scalar(val: &Value) -> bool {
     match &val.data {
         ValueData::ExactScalar(_) => true,
-        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+        ValueData::Vector(items)  => {
             items.iter().any(value_contains_exact_scalar)
         }
         // Dense tensors only hold rational `Fraction` lanes; they can never
@@ -565,14 +552,9 @@ fn push_exact_real_broadcast_result(
     // this shape, lane for lane.
     let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
         let n = a_lanes.len();
-        let lanes: Vec<Option<ExactReal>> =
-            crate::interpreter::parallel::compute_bound_map(n, |i| {
-                schema.exact_real(&a_lanes[i], &b_lanes[i])
-            });
-        interp.runtime_metrics.exact_real_parallel_broadcast_count = interp
-            .runtime_metrics
-            .exact_real_parallel_broadcast_count
-            .saturating_add(1);
+        let lanes: Vec<Option<ExactReal>> = (0..n)
+            .map(|i| schema.exact_real(&a_lanes[i], &b_lanes[i]))
+            .collect();
         let children: Vec<Value> = lanes
             .into_iter()
             .map(|lane| match lane {

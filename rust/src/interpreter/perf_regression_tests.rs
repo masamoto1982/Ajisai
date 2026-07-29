@@ -75,7 +75,6 @@ fn run_loop(
     // caches across iterations. Pure HOF kernel memoization is a separate,
     // higher layer: with it on, a reused interpreter serves every repeated
     // element from the result cache and never re-runs the quantized kernel, so
-    // `quantized_block_use_count` would no longer reflect plan reuse. Disable it
     // here so this regression test keeps measuring the subsystem it targets;
     // memoization has its own dedicated coverage in `higher_order::memo_tests`.
     interp.set_hof_memo_enabled(false);
@@ -107,14 +106,6 @@ fn run_loop(
         compiled_plan_cache_miss_count: final_m
             .compiled_plan_cache_miss_count
             .saturating_sub(baseline.compiled_plan_cache_miss_count),
-        quantized_block_build_count: final_m
-            .quantized_block_build_count
-            .saturating_sub(baseline.quantized_block_build_count),
-        quantized_block_use_count: final_m
-            .quantized_block_use_count
-            .saturating_sub(baseline.quantized_block_use_count),
-        ..Default::default()
-    };
 
     let plan_total = delta.compiled_plan_cache_hit_count + delta.compiled_plan_cache_miss_count;
     let hit_rate = if plan_total > 0 {
@@ -123,7 +114,6 @@ fn run_loop(
         0.0
     };
     let expected_total_quant = (iterations as u64) * expected_quant_calls_per_iter.max(1);
-    let quant_rate = (delta.quantized_block_use_count as f64 / expected_total_quant as f64) * 100.0;
     append_perf_jsonl(&PerfJsonLine {
         label: label.to_string(),
         iterations,
@@ -132,8 +122,6 @@ fn run_loop(
         plan_hit_rate_pct: hit_rate,
         plan_hits: delta.compiled_plan_cache_hit_count,
         plan_total,
-        quantized_build_count: delta.quantized_block_build_count,
-        quantized_use_count: delta.quantized_block_use_count,
     });
 
     println!(
@@ -156,7 +144,6 @@ fn run_loop(
     #[cfg(feature = "trace-compile")]
     eprintln!(
         "[metrics] quant_build={} quant_use={}",
-        delta.quantized_block_build_count, delta.quantized_block_use_count
     );
 
     (elapsed, delta)
@@ -179,15 +166,10 @@ fn perf_filter_map_fold_reports_metrics() {
     assert!(map_elapsed < PERF_LOOP_SOFT_LIMIT);
     assert!(fold_elapsed < PERF_LOOP_SOFT_LIMIT);
 
-    assert!(filter_metrics.quantized_block_use_count >= 1);
-    assert!(map_metrics.quantized_block_use_count >= 1);
-    assert!(fold_metrics.quantized_block_use_count >= 1);
 
     // With a reused interpreter, quantized kernel must be reused across iterations.
     assert!(
-        filter_metrics.quantized_block_use_count >= 1000,
         "expected quantized kernel reuse across iterations, got {}",
-        filter_metrics.quantized_block_use_count
     );
 }
 
@@ -204,10 +186,6 @@ fn perf_scan_any_all_count_reports_quantized_usage() {
         "[ 1 2 3 4 5 6 7 8 9 10 ] { [ 5 ] <= NOT } COUNT",
     );
 
-    assert!(scan_metrics.quantized_block_use_count >= 1);
-    assert!(any_metrics.quantized_block_use_count >= 1);
-    assert!(all_metrics.quantized_block_use_count >= 1);
-    assert!(count_metrics.quantized_block_use_count >= 1);
 }
 
 #[test]

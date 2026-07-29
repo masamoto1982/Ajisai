@@ -1,5 +1,4 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::quantized_block::{quantize_code_block, QuantizedBlock};
 use crate::interpreter::value_extraction_helpers::{extract_word_name_from_value, is_vector_value};
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData};
@@ -7,17 +6,13 @@ use crate::types::{Value, ValueData};
 pub(crate) enum ExecutableCode {
     WordName(String),
     CodeBlock(Vec<crate::types::Token>),
-    QuantizedBlock(std::sync::Arc<QuantizedBlock>),
 }
 
 pub(crate) fn extract_executable_code(
-    interp: &mut Interpreter,
+    _interp: &mut Interpreter,
     val: &Value,
 ) -> Result<ExecutableCode> {
     if let Some(tokens) = val.as_code_block() {
-        if let Some(qb) = quantize_code_block(tokens, interp) {
-            return Ok(ExecutableCode::QuantizedBlock(std::sync::Arc::new(qb)));
-        }
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
@@ -80,16 +75,5 @@ pub(crate) fn execute_executable_code(
             Ok(())
         }
         ExecutableCode::WordName(word_name) => interp.execute_word_core(word_name),
-        ExecutableCode::QuantizedBlock(qb) => execute_quantized_block_stack_top(interp, qb),
     }
-}
-
-pub(super) fn execute_quantized_block_stack_top(
-    interp: &mut Interpreter,
-    qb: &QuantizedBlock,
-) -> Result<()> {
-    interp.runtime_metrics.quantized_block_use_count += 1;
-    #[cfg(feature = "trace-quant")]
-    eprintln!("[trace-quant] execute quantized block");
-    crate::interpreter::compiled_plan::execute_compiled_plan(interp, &qb.compiled_plan)
 }

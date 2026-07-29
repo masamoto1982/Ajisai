@@ -196,17 +196,10 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
     if let Some(limit) = opts.step_limit {
         interp.set_max_execution_steps(limit);
     }
-    // Phase 6: opt-in provenance recording. Enabling it is observational and
-    // does not change the run's result.
-    if opts.receipt {
-        interp.set_receipt_recording(true);
-    }
     let result = block_on(interp.execute(&source));
     let trace = interp.drain_error_flow_trace();
     let output = print_payloads(&interp);
-    let receipt =
-        (opts.receipt && result.is_ok()).then(|| receipt::build_receipt(&interp, &source, &trace));
-    run_render::render_completed_run(&interp, result, trace, output, receipt, opts)
+    run_render::render_completed_run(&interp, result, trace, output, opts)
 }
 
 fn error_report(
@@ -219,9 +212,6 @@ fn error_report(
     opts: &Opts,
 ) -> Report {
     let ai = diagnosis.ai_payload(category, None, None, None);
-    let explanation = opts
-        .explain
-        .then(|| explain::explain(diagnosis, Some(&ai.recoverability), None, opts.lang));
     Report {
         status: "error",
         stack: report::stack_json(interp),
@@ -232,42 +222,8 @@ fn error_report(
         ai_diagnostic: Some(ai),
         error_flow_trace: trace,
         runtime_metrics: interp.runtime_metrics(),
-        explanation,
-        plan_check: None,
         contract_decls: None,
-        // A receipt certifies a completed result; error runs carry none.
-        receipt: None,
-        lang: opts.lang,
     }
-}
-
-/// On a *successful* run a value may still have bubbled to NIL (SPEC Bubble
-/// Rule). When `--explain` is set, project the last such NIL event so the
-/// user sees the absence in plain language. The actionable advice for a value
-/// that bubbled and flows downstream is to decide a fallback (`VENT`) or add a
-/// branch, so this projects `handleUnknownOrNil` regardless of the underlying
-/// domain cause.
-fn nil_explanation(
-    trace: &[crate::interpreter::error_flow_trace::ErrorFlowEvent],
-    opts: &Opts,
-) -> Option<Explanation> {
-    if !opts.explain {
-        return None;
-    }
-    trace.iter().rev().find_map(|event| {
-        let diagnosis = event.diagnosis.as_ref()?;
-        let nil_reason = event
-            .absence
-            .as_ref()
-            .and_then(|absence| absence.reason.as_ref())
-            .map(|reason| reason.as_protocol_str());
-        Some(explain::explain(
-            diagnosis,
-            Some("handleUnknownOrNil"),
-            nil_reason,
-            opts.lang,
-        ))
-    })
 }
 
 fn print_payloads(interp: &Interpreter) -> Vec<String> {
@@ -445,29 +401,18 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
         return 1;
     }
 
-    // Light, execution-free contract / flow-mass check (approach 2, light).
-    // A malformed plan (over-consumption) is reported as exit 1; advisories and
-    // notes do not change the exit code.
-    let plan_check = if opts.contract {
-        plan_check::check_plan(&interp, &source).ok()
-    } else {
-        None
-    };
-    // Opt-in per-word contract declarations (`#:contract`), checked against the
-    // inferred contract without executing any word body (P2).
+    // Per-word `#:contract` declarations, checked against the contract inferred
+    // from the called Core Words without executing any body. A violated
+    // declaration exits 1; a "cannot verify" note does not.
     let contract_decls = if opts.contract {
         Some(contract_decl::check_contract_decls(&source))
     } else {
         None
     };
-    let contract_failed = plan_check
+    let contract_failed = contract_decls
         .as_ref()
-        .map(|check| check.over_consumes)
-        .unwrap_or(false)
-        || contract_decls
-            .as_ref()
-            .map(|check| check.violated)
-            .unwrap_or(false);
+        .map(|check| check.violated)
+        .unwrap_or(false);
 
     if opts.json {
         let report = Report {
@@ -480,22 +425,12 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
             ai_diagnostic: None,
             error_flow_trace: Vec::new(),
             runtime_metrics: RuntimeMetrics::default(),
-            explanation: None,
-            plan_check,
             contract_decls: contract_decls.as_ref().map(|c| c.to_json()),
-            receipt: None,
-            lang: opts.lang,
         };
         println!("{}", pretty(&report.to_json()));
     } else {
         let status = if contract_failed { "fail" } else { "ok" };
         println!("{}: {} ({} tokens)", status, path, tokens.len());
-        if let Some(check) = &plan_check {
-            for finding in check.findings(opts.lang) {
-                eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
-            }
-            print_clarifications(&clarify::from_plan_check(check, opts.lang));
-        }
         if let Some(check) = &contract_decls {
             for finding in &check.findings {
                 eprintln!("  [{}] {}", finding.severity.as_str(), finding.message);
@@ -610,23 +545,7 @@ fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
         if next_words.iter().any(|w| w == "DEF") {
             locally_known.insert(text.to_uppercase());
         }
-        if next_words
-            .iter()
-            .any(|w| w == "IMPORT" || w == "IMPORT-ONLY")
-        {
-            let module = text.to_uppercase();
-            if let Some(catalog) = crate::interpreter::modules::module_catalog_words(&module) {
-                for word in catalog {
-                    locally_known.insert(word.short_name.to_uppercase());
-                }
-            }
-        }
     }
-
-    let modules: HashSet<String> = crate::interpreter::modules::available_module_names()
-        .into_iter()
-        .map(|name| name.to_uppercase())
-        .collect();
 
     let mut unknown: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
@@ -636,26 +555,9 @@ fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
         };
         let normalized = normalize_word(symbol);
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(&normalized);
-        let resolved = if let Some((module, short)) = canonical.split_once('@') {
-            if modules.contains(module) {
-                crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
-                    || crate::interpreter::modules::module_catalog_words(module)
-                        .map(|catalog| {
-                            catalog
-                                .iter()
-                                .any(|w| w.short_name.eq_ignore_ascii_case(short))
-                        })
-                        .unwrap_or(false)
-            } else {
-                // A user-dictionary reference (DICT@WORD); dictionaries are
-                // runtime state, so accept statically.
-                true
-            }
-        } else {
-            interp.core_vocabulary.contains_key(canonical.as_ref())
-                || crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
-                || locally_known.contains(canonical.as_ref())
-        };
+        let resolved = interp.core_vocabulary.contains_key(canonical.as_ref())
+            || crate::coreword_registry::get_coreword_metadata(&canonical).is_some()
+            || locally_known.contains(canonical.as_ref());
         if !resolved && seen.insert(canonical.to_string()) {
             unknown.push(canonical.into_owned());
         }

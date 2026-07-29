@@ -1,9 +1,8 @@
 use crate::coreword_registry::{
     ExecutionForm, MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity,
 };
-use crate::elastic::purity_table::EvalCost;
 
-use super::builtin_word_types::BuiltinExecutorKey;
+use super::builtin_word_types::{BuiltinExecutorKey, EvalCost};
 
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {

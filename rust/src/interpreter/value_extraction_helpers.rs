@@ -18,7 +18,7 @@ pub(crate) fn is_string_value(val: &Value) -> bool {
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
-            ValueData::Nil | ValueData::Unknown(_) => vec![],
+            ValueData::Nil  => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
@@ -31,9 +31,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 .map(|c| vec![c])
                 .unwrap_or_default(),
             ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().flat_map(collect_chars).collect(),
+             => children.iter().flat_map(collect_chars).collect(),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .filter_map(|f| {
@@ -49,8 +47,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
             ValueData::ExactScalar(_) => vec![],
             ValueData::Boolean(_)
             | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec![],
+             => vec![],
         }
     }
 
@@ -70,15 +67,13 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             }
             Ok(f.numerator())
         }
-        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
+        ValueData::Nil  => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "NIL",
         )),
         ValueData::Vector(children)
-        | ValueData::Record {
-            pairs: children, ..
-        } if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) | ValueData::Record { .. } => {
+         if children.len() == 1 => extract_integer_bigint(&children[0]),
+        ValueData::Vector(_)  => {
             Err(AjisaiError::create_structure_error(
                 "single-element value with integer",
                 "multi-element vector",
@@ -106,8 +101,7 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
         )),
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
+         => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "code block",
         )),

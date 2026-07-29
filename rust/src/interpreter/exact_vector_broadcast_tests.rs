@@ -50,7 +50,6 @@ async fn irrational_vector_plus_irrational_vector_is_exact() {
 }
 
 /// The homogeneous equal-length-vector case routes through the compute-bound
-/// parallel map (`exact_real_parallel_broadcast_count` bumps), and the result is
 /// identical to the sequential reference. The kernel decides seq-vs-fan-out by
 /// size internally; below the floor it stays sequential but still flows through
 /// this path, so the counter rises regardless of element count.

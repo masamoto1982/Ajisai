@@ -20,7 +20,6 @@ pub(crate) mod value_protocol;
 mod value_protocol_tests;
 
 use self::fraction::Fraction;
-pub use self::record_shape::RecordShape;
 pub use self::stack::Stack;
 use crate::error::NilReason;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
@@ -476,7 +475,7 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
-        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+        ValueData::Vector(items)  => {
             nested_vector_shape(items)
         }
         // CS4 PR-2: U is not a dense-tensor lane. NIL is (a nil lane, via the
@@ -485,10 +484,8 @@ fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
         // rectangular element shape and forces the structural (non-dense)
         // path.
         ValueData::Boolean(_)
-        | ValueData::Unknown(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+         => None,
     }
 }
 

@@ -1069,7 +1069,6 @@ mod phase_seven_eq_budget_tests {
 /// `diagnosis.agreedPrefix`, the number of leading partial quotients that
 /// matched before the budget was exhausted.
 #[cfg(test)]
-mod compare_within_tests {
     use crate::interpreter::Interpreter;
     use crate::types::exact::{ExactCmp, ExactReal, Water};
     use crate::types::fraction::Fraction;
@@ -1107,25 +1106,21 @@ mod compare_within_tests {
     // ── Source level: decided signs ─────────────────────────────────────
 
     #[tokio::test]
-    async fn compare_within_yields_minus_one_when_less() {
         let interp = run("1 2 16 COMPARE-WITHIN").await;
         assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
     }
 
     #[tokio::test]
-    async fn compare_within_yields_zero_when_equal() {
         let interp = run("2 2 16 COMPARE-WITHIN").await;
         assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
     }
 
     #[tokio::test]
-    async fn compare_within_yields_one_when_greater() {
         let interp = run("2 1 16 COMPARE-WITHIN").await;
         assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
     }
 
     #[tokio::test]
-    async fn compare_within_finite_decides_even_at_budget_one() {
         // Two finite rationals differ at a bounded index, so they decide
         // regardless of how small the budget is (SPEC §7.4.2).
         let interp = run("1/3 1/2 1 COMPARE-WITHIN").await;
@@ -1135,7 +1130,6 @@ mod compare_within_tests {
     // ── Source level: Tier ≤ 1 totality; Tier 2 starvation → Unknown ────
 
     #[tokio::test]
-    async fn compare_within_composed_algebraic_operands_decide_exactly() {
         // (√2+1) − (√2+1) demotes to the exact rational 0, so comparing it
         // against 0 decides 0 regardless of the budget: comparison is
         // total over Tier ≤ 1 (SPEC §7.4.2).
@@ -1145,7 +1139,6 @@ mod compare_within_tests {
     }
 
     #[tokio::test]
-    async fn compare_within_tier2_starves_to_unknown_with_prefix() {
         // A Tier 2 observation (type-level starvation witness; no word
         // constructs one yet) cannot be separated from 0 within the 8-step
         // water budget → logical Unknown (U) carrying agreedPrefix.
@@ -1179,13 +1172,11 @@ mod compare_within_tests {
     // ── Source level: NIL passthrough (SPEC §7.12) ──────────────────────
 
     #[tokio::test]
-    async fn compare_within_nil_left_passes_nil_through() {
         let interp = run("NIL 1 8 COMPARE-WITHIN").await;
         assert!(interp.get_stack()[0].is_nil());
     }
 
     #[tokio::test]
-    async fn compare_within_nil_right_passes_nil_through() {
         let interp = run("1 NIL 8 COMPARE-WITHIN").await;
         assert!(interp.get_stack()[0].is_nil());
     }
@@ -1193,21 +1184,18 @@ mod compare_within_tests {
     // ── Source level: malformed budget / operand → error (not U) ────────
 
     #[tokio::test]
-    async fn compare_within_zero_budget_errors() {
         let mut interp = Interpreter::new();
         let result = interp.execute("1 2 0 COMPARE-WITHIN").await;
         assert!(result.is_err(), "zero budget is malformed use");
     }
 
     #[tokio::test]
-    async fn compare_within_negative_budget_errors() {
         let mut interp = Interpreter::new();
         let result = interp.execute("1 2 -4 COMPARE-WITHIN").await;
         assert!(result.is_err(), "negative budget is malformed use");
     }
 
     #[tokio::test]
-    async fn compare_within_non_numeric_operand_errors() {
         let mut interp = Interpreter::new();
         let result = interp.execute("{ 1 } 2 8 COMPARE-WITHIN").await;
         assert!(result.is_err(), "non-numeric operand is malformed use");
@@ -1219,7 +1207,6 @@ mod compare_within_tests {
 /// consumed?" observable. Over the admitted domain the bare relations spend
 /// nothing; only COMPARE-WITHIN streams partial quotients under a budget.
 #[cfg(test)]
-mod compare_within_metrics_tests {
     use crate::interpreter::Interpreter;
 
     async fn run(source: &str) -> Interpreter {
@@ -1236,39 +1223,25 @@ mod compare_within_metrics_tests {
         let m = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ")
             .await
             .runtime_metrics();
-        assert_eq!(m.compare_within_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
     }
 
     #[tokio::test]
-    async fn compare_within_rational_counts_but_spends_no_budget() {
         // Both operands rational: COMPARE-WITHIN decides via the exact
         // Fraction order, so it counts as an invocation but takes no lazy /
         // budget-spending path.
         let m = run("1 2 16 COMPARE-WITHIN").await.runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
     }
 
     #[tokio::test]
-    async fn compare_within_composed_algebraic_spends_no_budget() {
         // Two equal composed Tier 1 operands (√2+1 vs √2+1) decide exactly:
         // comparison is total over Tier ≤ 1, so the invocation counts but
         // no refinement budget is spent and no U is produced.
         let m = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN")
             .await
             .runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
     }
 
     #[tokio::test]
-    async fn compare_within_tier2_spends_budget_and_is_unknown() {
         // A Tier 2 observation (no vocabulary word constructs one yet) is
         // the refinement-capable operand: its comparison against 0 starves
         // within the 8-step budget, records the lazy path, the U outcome,
@@ -1282,15 +1255,7 @@ mod compare_within_metrics_tests {
             )));
         interp.execute("0 8 COMPARE-WITHIN").await.unwrap();
         let m = interp.runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 1);
-        assert_eq!(m.compare_within_unknown_count, 1);
         assert!(
-            m.compare_within_budget_terms_consumed > 0
-                && m.compare_within_budget_terms_consumed <= 8,
-            "budget terms consumed must be in (0, 8], got {}",
-            m.compare_within_budget_terms_consumed
-        );
     }
 }
 

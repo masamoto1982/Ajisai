@@ -39,11 +39,10 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
         }
         ValueData::Scalar(_) => return false,
         ValueData::ExactScalar(_) => return false,
-        ValueData::Nil | ValueData::Unknown(_) => return false,
+        ValueData::Nil  => return false,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => return false,
+         => return false,
     };
     children.iter().all(check_char_scalar)
 }
@@ -54,11 +53,10 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::ExactScalar(_) => return false,
         ValueData::Vector(_) => return false,
         ValueData::Tensor { .. } => return false,
-        ValueData::Nil | ValueData::Unknown(_) => return false,
+        ValueData::Nil  => return false,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => return false,
+         => return false,
     };
     let n: i64 = match f.to_i64() {
         Some(n) if (0..=0x10FFFF).contains(&n) => n,
@@ -187,15 +185,12 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
                 }
             }
             ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().flat_map(collect_fractions).collect(),
+             => children.iter().flat_map(collect_fractions).collect(),
             ValueData::Tensor { data, .. } => {
                 data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }
             ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],
+             => vec!["<code>".to_string()],
         }
     }
 

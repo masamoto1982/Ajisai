@@ -163,7 +163,7 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v)  => {
             if v.is_empty() {
                 return "[ ]".to_string();
             }
@@ -345,7 +345,7 @@ fn format_as_string(data: &ValueData) -> String {
 /// `format_for_output` (which emits it bare for `PRINT`).
 fn format_text_content(data: &ValueData) -> String {
     match data {
-        ValueData::Nil | ValueData::Unknown(_) => String::new(),
+        ValueData::Nil  => String::new(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Scalar(f) => {
@@ -358,7 +358,7 @@ fn format_text_content(data: &ValueData) -> String {
             }
             format_fraction(f)
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v
+        ValueData::Vector(v)  => v
             .iter()
             .filter_map(|child| {
                 if let ValueData::Scalar(f) = &child.data {
@@ -400,7 +400,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
     match &child.data {
         // U is handled by the `is_unknown()` guard above, so this arm is
         // unreachable; grouped with NIL only for exhaustiveness.
-        ValueData::Nil | ValueData::Unknown(_) => "NIL",
+        ValueData::Nil  => "NIL",
         ValueData::Boolean(b) => {
             if *b {
                 "TRUE"
@@ -417,7 +417,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
                 "TRUE"
             }
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v)  => {
             if v.is_empty() {
                 "FALSE"
             } else {
@@ -433,7 +433,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
         }
         ValueData::ExactScalar(_) => "TRUE",
         ValueData::CodeBlock(_) => "TRUE",
-        ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
+         ValueData::SupervisorHandle(_) => "TRUE",
     }
 }
 
@@ -446,7 +446,7 @@ fn format_as_boolean(value: &Value) -> String {
     match &value.data {
         // U is handled by the `is_unknown()` guard above; grouped with NIL
         // only for exhaustiveness.
-        ValueData::Nil | ValueData::Unknown(_) => "NIL".to_string(),
+        ValueData::Nil  => "NIL".to_string(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -459,7 +459,7 @@ fn format_as_boolean(value: &Value) -> String {
                 "TRUE".to_string()
             }
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v)  => {
             if v.is_empty() {
                 return "FALSE".to_string();
             }
@@ -491,11 +491,11 @@ fn format_as_boolean(value: &Value) -> String {
 
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
-        ValueData::Nil | ValueData::Unknown(_) => format_value_recursive(data, 0),
+        ValueData::Nil  => format_value_recursive(data, 0),
         ValueData::Boolean(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
+        ValueData::Vector(_) | ValueData::Tensor { .. }  => {
             format_value_recursive(data, 0)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),

@@ -3,7 +3,6 @@ mod any;
 mod common;
 mod filter;
 mod map;
-mod runners;
 
 pub(crate) use common::{execute_executable_code, extract_executable_code, ExecutableCode};
 

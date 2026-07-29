@@ -195,7 +195,7 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                     AjisaiError::create_structure_error("scalar value", "non-rational ExactReal")
                 })
         }
-        ValueData::Vector(_) | ValueData::Record { .. } => {
+        ValueData::Vector(_)  => {
             let tensor = FlatTensor::from_value(val)?;
             if tensor.data.len() != 1 {
                 return Err(AjisaiError::create_structure_error(
@@ -216,14 +216,13 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                 AjisaiError::create_structure_error("scalar value", "non-scalar value")
             })
         }
-        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
+        ValueData::Nil  => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
+         => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),
@@ -299,10 +298,8 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
         interp.stack.pop();
     }
     push_boolean_result(interp, decided);
-    interp.runtime_metrics.scalar_fastpath_count = interp
-        .runtime_metrics
-        .scalar_fastpath_count
-        .saturating_add(1);
+    interp.runtime_metrics.scalar_fastpath_count =
+        interp.runtime_metrics.scalar_fastpath_count.saturating_add(1);
     true
 }
 
@@ -328,10 +325,8 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
         interp.stack.pop();
     }
     push_boolean_result(interp, if invert { !eq } else { eq });
-    interp.runtime_metrics.scalar_fastpath_count = interp
-        .runtime_metrics
-        .scalar_fastpath_count
-        .saturating_add(1);
+    interp.runtime_metrics.scalar_fastpath_count =
+        interp.runtime_metrics.scalar_fastpath_count.saturating_add(1);
     true
 }
 
@@ -690,13 +685,9 @@ pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
     // count invocations, the refinement-capable subset, and the steps
     // actually consumed on exhaustion. Tier ≤ 1 comparisons spend
     // nothing. Observational only; does not affect the pushed value.
-    interp.runtime_metrics.compare_within_count += 1;
     if refinement_capable {
-        interp.runtime_metrics.compare_within_lazy_count += 1;
     }
     if let ExactCmp::Starved { steps } = outcome {
-        interp.runtime_metrics.compare_within_unknown_count += 1;
-        interp.runtime_metrics.compare_within_budget_terms_consumed += steps as u64;
     }
 
     if !is_keep_mode {

@@ -1,6 +1,4 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
-#[cfg(feature = "elastic-engine")]
-use crate::elastic::ElasticMode;
 use crate::error::{AjisaiError, Result};
 use crate::types::{Interpretation, Token, Value};
 
@@ -8,8 +6,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
-    higher_order, higher_order_fold, interval_ops, io, logic, modules, nil_diagnostics,
-    tensor_cmds, vector_ops, Interpreter,
+    higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort, tensor_cmds,
+    vector_ops, Interpreter,
 };
 
 #[cfg(feature = "trace-compile")]
@@ -21,51 +19,11 @@ fn trace_compile_metrics(interp: &Interpreter) {
         m.compiled_plan_cache_hit_count,
         m.compiled_plan_cache_miss_count
     );
-    eprintln!(
-        "[metrics] quant_build={} quant_use={}",
-        m.quantized_block_build_count, m.quantized_block_use_count
-    );
 }
 
 impl Interpreter {
-    #[cfg(feature = "elastic-engine")]
-    pub(crate) fn is_hedged_mode(&self) -> bool {
-        matches!(
-            self.elastic_mode(),
-            ElasticMode::HedgedSafe | ElasticMode::HedgedTrace
-        )
-    }
-
-    /// Without the `elastic-engine` feature the mode is pinned to `Greedy`,
-    /// so hedged classification is statically false and every hedged branch
-    /// guarded by it folds away.
-    #[cfg(not(feature = "elastic-engine"))]
-    pub(crate) fn is_hedged_mode(&self) -> bool {
-        false
-    }
-
     /// Public entry point for word execution.
-    ///
-    /// When `AJISAI_TRACE=1` (or `set_trace_enabled(true)`) is active this
-    /// wraps the call with timing instrumentation.  All existing greedy
-    /// semantics are preserved unchanged.
     pub(crate) fn execute_word_core(&mut self, name: &str) -> Result<()> {
-        if crate::elastic::tracer::is_enabled() {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let t0 = std::time::Instant::now();
-                let result = self.execute_word_core_inner(name);
-                let nanos = t0.elapsed().as_nanos() as u64;
-                crate::elastic::tracer::record(name, nanos);
-                return result;
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                let result = self.execute_word_core_inner(name);
-                crate::elastic::tracer::record(name, 0);
-                return result;
-            }
-        }
         self.execute_word_core_inner(name)
     }
 
@@ -90,7 +48,6 @@ impl Interpreter {
 
         // Provenance (Phase 6): record the resolved word for the execution
         // receipt. No-op unless receipt recording is enabled.
-        self.receipt_recorder.record_executed(&resolved_name);
 
         self.execution_step_count += 1;
         if self.execution_step_count > self.max_execution_steps {
@@ -168,7 +125,6 @@ impl Interpreter {
                         && qb.purity == super::quantized_block::QuantizedPurity::Pure
                         && !self.is_hedged_mode()
                     {
-                        self.runtime_metrics.quantized_block_use_count += 1;
                         if let Some(compiled) = plan_set.compiled.as_ref() {
                             execute_compiled_plan(self, compiled)
                         } else {
@@ -184,7 +140,6 @@ impl Interpreter {
                                 plan_set,
                             );
                             if outcome.used_plain_fallback {
-                                self.runtime_metrics.hedged_race_fallback_count += 1;
                             }
                             outcome.result
                         } else {
@@ -202,7 +157,6 @@ impl Interpreter {
                             plan_set,
                         );
                         if outcome.used_plain_fallback {
-                            self.runtime_metrics.hedged_race_fallback_count += 1;
                         }
                         outcome.result
                     } else {
@@ -257,8 +211,7 @@ impl Interpreter {
                 return self.execute_builtin_by_key(executor_key);
             }
         }
-
-        modules::execute_module_word(self, name)
+        None
             .unwrap_or_else(|| Err(AjisaiError::UnknownWord(name.to_string())))
     }
 
@@ -274,15 +227,11 @@ impl Interpreter {
             BuiltinExecutorKey::Gt => comparison::op_gt(self),
             BuiltinExecutorKey::Gte => comparison::op_gte(self),
             BuiltinExecutorKey::Neq => comparison::op_neq(self),
-            BuiltinExecutorKey::CompareWithin => comparison::op_compare_within(self),
             BuiltinExecutorKey::Map => higher_order::op_map(self),
             BuiltinExecutorKey::Filter => higher_order::op_filter(self),
             BuiltinExecutorKey::Fold => higher_order_fold::op_fold(self),
-            BuiltinExecutorKey::Unfold => higher_order_fold::op_unfold(self),
             BuiltinExecutorKey::Any => higher_order::op_any(self),
             BuiltinExecutorKey::All => higher_order::op_all(self),
-            BuiltinExecutorKey::Count => higher_order::op_count(self),
-            BuiltinExecutorKey::Scan => higher_order_fold::op_scan(self),
             BuiltinExecutorKey::Get => vector_ops::op_get(self),
             BuiltinExecutorKey::Length => vector_ops::op_length(self),
             BuiltinExecutorKey::Concat => vector_ops::op_concat(self),
@@ -303,18 +252,11 @@ impl Interpreter {
                 self.stack.push_with_role(Value::nil(), Interpretation::Nil);
                 Ok(())
             }
-            BuiltinExecutorKey::Idle => Ok(()),
             BuiltinExecutorKey::Exec => control::op_exec(self),
-            BuiltinExecutorKey::Eval => control::op_eval(self),
-            BuiltinExecutorKey::OrElse => control::op_or_else(self),
             BuiltinExecutorKey::Cond => control_cond::op_cond(self),
             BuiltinExecutorKey::Def => execute_def::op_def(self),
             BuiltinExecutorKey::Del => execute_del::op_del(self),
             BuiltinExecutorKey::Lookup => execute_lookup::op_lookup(self),
-            BuiltinExecutorKey::Import => modules::op_import(self),
-            BuiltinExecutorKey::ImportOnly => modules::op_import_only(self),
-            BuiltinExecutorKey::Unimport => modules::op_unimport(self),
-            BuiltinExecutorKey::UnimportOnly => modules::op_unimport_only(self),
             BuiltinExecutorKey::Force => {
                 self.force_flag = true;
                 Ok(())
@@ -329,49 +271,23 @@ impl Interpreter {
             BuiltinExecutorKey::Range => vector_ops::op_range(self),
             BuiltinExecutorKey::Reorder => vector_ops::op_reorder(self),
             BuiltinExecutorKey::Collect => vector_ops::op_collect(self),
-            BuiltinExecutorKey::Shape => tensor_cmds::op_shape(self),
-            BuiltinExecutorKey::Rank => tensor_cmds::op_rank(self),
-            BuiltinExecutorKey::Reshape => tensor_cmds::op_reshape(self),
-            BuiltinExecutorKey::Transpose => tensor_cmds::op_transpose(self),
             BuiltinExecutorKey::Fill => tensor_cmds::op_fill(self),
             BuiltinExecutorKey::Floor => tensor_cmds::op_floor(self),
             BuiltinExecutorKey::Ceil => tensor_cmds::op_ceil(self),
             BuiltinExecutorKey::Round => tensor_cmds::op_round(self),
-            BuiltinExecutorKey::Quantize => tensor_cmds::op_quantize(self),
-            BuiltinExecutorKey::QuantizeHalfAway => tensor_cmds::op_quantize_half_away(self),
-            BuiltinExecutorKey::QuantizeFloor => tensor_cmds::op_quantize_floor(self),
-            BuiltinExecutorKey::QuantizeCeil => tensor_cmds::op_quantize_ceil(self),
-            BuiltinExecutorKey::QuantizeTrunc => tensor_cmds::op_quantize_trunc(self),
-            BuiltinExecutorKey::Conserve => tensor_cmds::op_conserve(self),
             BuiltinExecutorKey::Mod => tensor_cmds::op_mod(self),
             BuiltinExecutorKey::Str => cast::op_str(self),
             BuiltinExecutorKey::Num => cast::op_num(self),
-            BuiltinExecutorKey::Bool => cast::op_bool(self),
             BuiltinExecutorKey::Chr => cast::op_chr(self),
             BuiltinExecutorKey::Chars => cast::op_chars(self),
             BuiltinExecutorKey::Join => cast::op_join(self),
             BuiltinExecutorKey::Trim => cast::op_trim(self),
-            BuiltinExecutorKey::TrimLeft => cast::op_trim_left(self),
-            BuiltinExecutorKey::TrimRight => cast::op_trim_right(self),
             BuiltinExecutorKey::Tokenize => cast::op_tokenize(self),
             BuiltinExecutorKey::Substitute => cast::op_substitute(self),
             BuiltinExecutorKey::StartsWith => cast::op_starts_with(self),
             BuiltinExecutorKey::EndsWith => cast::op_ends_with(self),
-            BuiltinExecutorKey::Spawn => self.op_spawn(),
-            BuiltinExecutorKey::Await => self.op_await(),
-            BuiltinExecutorKey::Status => self.op_status(),
-            BuiltinExecutorKey::Kill => self.op_kill(),
-            BuiltinExecutorKey::Monitor => self.op_monitor(),
-            BuiltinExecutorKey::Supervise => self.op_supervise(),
             BuiltinExecutorKey::NilCheck => nil_diagnostics::op_nil_check(self),
             BuiltinExecutorKey::NilReason => nil_diagnostics::op_nil_reason(self),
-            BuiltinExecutorKey::NilOrigin => nil_diagnostics::op_nil_origin(self),
-            BuiltinExecutorKey::NilRecoverable => nil_diagnostics::op_nil_recoverable(self),
-            BuiltinExecutorKey::NilDiagnosis => nil_diagnostics::op_nil_diagnosis(self),
-            BuiltinExecutorKey::ToCf => interval_ops::op_to_cf(self),
-            BuiltinExecutorKey::Precompute => Err(AjisaiError::from(
-                "PRECOMPUTE can only be used during definition-time precomputation",
-            )),
         }
     }
 

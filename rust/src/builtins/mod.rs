@@ -13,7 +13,7 @@ pub use builtin_word_definitions::{builtin_specs, lookup_builtin_spec, BuiltinSp
 pub use builtin_word_definitions::collect_core_builtin_definitions;
 pub use builtin_word_details::lookup_builtin_detail;
 pub use builtin_word_details::render_four_section;
-pub use builtin_word_types::{BuiltinExecutorKey, WordShape};
+pub use builtin_word_types::{BuiltinExecutorKey, EvalCost, WordShape};
 
 use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};

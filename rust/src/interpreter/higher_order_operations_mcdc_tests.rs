@@ -48,7 +48,6 @@ use crate::types::Token;
 //   Pair (1, 3): A flips T->F, B held F -> outcome flips T->F (A independent).
 //   Pair (2, 3): B flips T->F, A held F -> outcome flips T->F (B independent).
 // ---------------------------------------------------------------------------
-mod hedged_mode_classifier {
     use super::*;
 
     // Rows 1 and 2 exercise the hedged arm of the classifier, which only

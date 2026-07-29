@@ -7,10 +7,6 @@ use std::sync::Arc;
 #[inline]
 fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
     if let Some(m) = metrics.as_deref_mut() {
-        m.vtu_tensor_flatten_count = m.vtu_tensor_flatten_count.saturating_add(1);
-        m.vtu_tensor_flattened_elements = m
-            .vtu_tensor_flattened_elements
-            .saturating_add(elements as u64);
     }
 }
 
@@ -25,15 +21,6 @@ fn record_sparse_candidate_value(metrics: &mut Option<&mut RuntimeMetrics>, valu
     if let Some(m) = metrics.as_deref_mut() {
         let nonzero = data.nonzero_count() as u64;
         let zero = data.zero_count() as u64;
-        m.vtu_sparse_candidate_count = m.vtu_sparse_candidate_count.saturating_add(1);
-        m.vtu_sparse_candidate_elements = m
-            .vtu_sparse_candidate_elements
-            .saturating_add(data.len() as u64);
-        m.vtu_sparse_candidate_nonzero_elements = m
-            .vtu_sparse_candidate_nonzero_elements
-            .saturating_add(nonzero);
-        m.vtu_sparse_skippable_zero_elements =
-            m.vtu_sparse_skippable_zero_elements.saturating_add(zero);
     }
 }
 
@@ -47,7 +34,7 @@ pub(crate) struct FlatTensor {
 impl FlatTensor {
     pub(crate) fn from_value(value: &Value) -> Result<Self> {
         match &value.data {
-            ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::from(
+            ValueData::Nil  => Err(AjisaiError::from(
                 "Tensor conversion requires non-NIL value",
             )),
             ValueData::Scalar(f) => Ok(Self {
@@ -55,7 +42,7 @@ impl FlatTensor {
                 shape: Vec::new(),
                 strides: Vec::new(),
             }),
-            ValueData::Vector(_) | ValueData::Record { .. } => {
+            ValueData::Vector(_)  => {
                 let shape: Vec<usize> = value.shape();
                 let total_size: usize = value.count_fractions();
                 let mut data: Vec<Fraction> = Vec::with_capacity(total_size);
@@ -81,8 +68,7 @@ impl FlatTensor {
             )),
             ValueData::Boolean(_)
             | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => Err(AjisaiError::from(
+             => Err(AjisaiError::from(
                 "Tensor conversion requires scalar or vector",
             )),
         }
@@ -255,7 +241,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
-        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+        ValueData::Vector(items)  => {
             if items.is_empty() {
                 return Some(vec![0]);
             }
@@ -274,10 +260,8 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
         // a nil lane), so — like a Boolean — it has no rectangular shape and a
         // vector containing U is broadcast structurally, never densified.
         ValueData::Boolean(_)
-        | ValueData::Unknown(_)
         | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+         => None,
     }
 }
 
@@ -286,7 +270,7 @@ fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
 /// rows so that recursive broadcasting treats them like nested vectors.
 pub(crate) fn broadcast_children(value: &Value) -> Option<Vec<Value>> {
     match &value.data {
-        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
+        ValueData::Vector(items)  => {
             Some(items.as_ref().clone())
         }
         ValueData::Tensor { data, shape } => {
@@ -405,14 +389,10 @@ where
     };
 
     if let Some(m) = metrics.as_deref_mut() {
-        m.vtu_broadcast_count = m.vtu_broadcast_count.saturating_add(1);
-        m.vtu_allocated_elements = m.vtu_allocated_elements.saturating_add(out_size as u64);
     }
 
     if tensor_a.shape == tensor_b.shape {
         if let Some(m) = metrics.as_deref_mut() {
-            m.vtu_same_shape_elementwise_count =
-                m.vtu_same_shape_elementwise_count.saturating_add(1);
         }
         // Compute-bound same-shape element-wise op. The per-lane exact-rational
         // arithmetic (num/den cross-multiply + gcd) is the robust parallel
@@ -430,7 +410,6 @@ where
     }
 
     if let Some(m) = metrics {
-        m.vtu_projected_broadcast_count = m.vtu_projected_broadcast_count.saturating_add(1);
     }
 
     let out_strides = compute_strides(&out_shape);
@@ -502,10 +481,6 @@ where
     record_sparse_candidate_value(&mut metrics, val);
 
     if let Some(m) = metrics {
-        m.vtu_unary_flat_count = m.vtu_unary_flat_count.saturating_add(1);
-        m.vtu_allocated_elements = m
-            .vtu_allocated_elements
-            .saturating_add(element_count as u64);
     }
 
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();

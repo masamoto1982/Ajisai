@@ -25,39 +25,30 @@ impl AjisaiInterpreter {
         set_js_prop(
             &obj,
             "bulkKernelUseCount",
-            &num(m.vtu_bulk_kernel_use_count),
         );
         set_js_prop(
             &obj,
             "simdKernelUseCount",
-            &num(m.vtu_simd_kernel_use_count),
         );
 
         // Data movement: dense<->nested round trips and sparse candidates.
-        set_js_prop(&obj, "tensorFlattenCount", &num(m.vtu_tensor_flatten_count));
-        set_js_prop(&obj, "tensorRebuildCount", &num(m.vtu_tensor_rebuild_count));
         set_js_prop(
             &obj,
             "sparseCandidateCount",
-            &num(m.vtu_sparse_candidate_count),
         );
 
         // Comparison budget: only COMPARE-WITHIN spends it.
-        set_js_prop(&obj, "compareWithinCount", &num(m.compare_within_count));
         set_js_prop(
             &obj,
             "compareWithinLazyCount",
-            &num(m.compare_within_lazy_count),
         );
         set_js_prop(
             &obj,
             "compareWithinUnknownCount",
-            &num(m.compare_within_unknown_count),
         );
         set_js_prop(
             &obj,
             "compareWithinBudgetTermsConsumed",
-            &num(m.compare_within_budget_terms_consumed),
         );
 
         // Cross-reset artifact cache (Phase 5): how often an unchanged word's

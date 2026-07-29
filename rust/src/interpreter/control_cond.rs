@@ -385,7 +385,6 @@ fn evaluate_guard_hedged_prefetch<'a>(
             continue;
         }
         if is_pure_cond_guard(&clause.guard) {
-            interp.runtime_metrics.cond_guard_prefetch_count += 1;
             prefetched[idx] = Some(evaluate_guard_isolated(
                 interp,
                 &clause.guard,

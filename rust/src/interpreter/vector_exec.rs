@@ -38,7 +38,7 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
         // source cannot spell U — so a runtime U in a serialized body falls
         // back to `NIL`, matching NIL. Unreachable via the current vocabulary
         // (no word constructs U yet); revisited if/when a U literal exists.
-        ValueData::Nil | ValueData::Unknown(_) => Ok("NIL".to_string()),
+        ValueData::Nil  => Ok("NIL".to_string()),
         ValueData::Boolean(b) => Ok(if *b { "TRUE" } else { "FALSE" }.to_string()),
         ValueData::Scalar(_) => format_scalar_to_source(val),
         ValueData::CodeBlock(tokens) => {
@@ -46,9 +46,7 @@ fn format_value_to_source_inner(val: &Value, depth: usize) -> Result<String> {
             Ok(token_strs.join(" "))
         }
         ValueData::Vector(children)
-        | ValueData::Record {
-            pairs: children, ..
-        } => {
+         => {
             let inner: Vec<String> = children
                 .iter()
                 .map(|c| format_value_to_source_inner(c, depth + 1))

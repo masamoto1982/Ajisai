@@ -161,7 +161,6 @@ pub enum IntegrityMode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationPolicy {
-    pub enable_shadow_validation: bool,
     pub max_validation_input_len: usize,
     pub warmup_runs: u64,
     /// Reaction to a compiled-vs-plain disagreement. Defaults to the safe
@@ -172,7 +171,6 @@ pub struct ValidationPolicy {
 impl Default for ValidationPolicy {
     fn default() -> Self {
         Self {
-            enable_shadow_validation: true,
             max_validation_input_len: 16,
             warmup_runs: 3,
             integrity_mode: IntegrityMode::Fallback,
@@ -185,151 +183,14 @@ pub struct RuntimeMetrics {
     pub compiled_plan_build_count: u64,
     pub compiled_plan_cache_hit_count: u64,
     pub compiled_plan_cache_miss_count: u64,
-    pub quantized_block_build_count: u64,
-    pub quantized_block_use_count: u64,
-    pub hedged_race_started_count: u64,
-    pub hedged_race_winner_quantized_count: u64,
-    pub hedged_race_winner_plain_count: u64,
-    pub hedged_race_fallback_count: u64,
-    pub hedged_race_cancel_count: u64,
-    pub hedged_race_validation_reject_count: u64,
-    pub cond_guard_prefetch_count: u64,
-    /// COND invocations that dispatched on a compile-time-precomputed clause
-    /// table (`CompiledOp::CondDispatch`) instead of re-collecting, cloning, and
-    /// re-splitting the clause blocks off the stack. Observational only.
     pub cond_dispatch_fast_count: u64,
-    /// COND guard/body executions that ran a compiled sub-plan instead of
-    /// re-interpreting the clause's token stream. Observational only.
     pub cond_clause_compiled_count: u64,
-    /// Scalar-scalar arithmetic/comparison operations completed by the D1
-    /// value-model fast path, bypassing the tensor broadcast wrapper while
-    /// preserving the same observable Value and semantic hint.
     pub scalar_fastpath_count: u64,
-    /// Homogeneous element-wise binary ops over equal-length vectors of
-    /// irrational `ExactScalar` lanes routed through the compute-bound parallel
-    /// map (`parallel::compute_bound_map`). Counts how many such flat exact
-    /// broadcasts were dispatched; whether each actually fanned out across
-    /// worker threads is decided inside the kernel by the compute-bound floor.
-    /// Observational only; never alters value results (parallel == sequential).
-    pub exact_real_parallel_broadcast_count: u64,
-    pub shadow_validation_started_count: u64,
-    pub shadow_validation_success_count: u64,
-    pub shadow_validation_fallback_count: u64,
-    /// Number of shadow validations where the compiled and plain paths
-    /// disagreed on stack value, semantic hint, absence metadata, or emitted
-    /// host effects. Counts genuine divergences the enriched comparison caught,
-    /// independent of how the active `IntegrityMode` then resolved them.
-    pub shadow_validation_integrity_mismatch_count: u64,
     pub resolve_cache_hit_count: u64,
     pub resolve_cache_miss_count: u64,
     pub resolve_cache_invalidation_count: u64,
-
-    // ── Virtual Tensor Unit / Energy-aware Execution ──────────────────────
-    // These counters are observational proxies for energy / data-movement
-    // cost. They never alter execution semantics; they only describe how
-    // much shape-aware work the runtime did. See
-    // `docs/dev/virtual-tensor-unit-design.md`.
-    /// Number of times a Value was flattened into FlatTensor form.
-    pub vtu_tensor_flatten_count: u64,
-    /// Total scalar elements observed during flattening.
-    pub vtu_tensor_flattened_elements: u64,
-    /// Number of times a FlatTensor was rebuilt into nested Value form.
-    pub vtu_tensor_rebuild_count: u64,
-    /// Total scalar elements rebuilt into Value form.
-    pub vtu_tensor_rebuilt_elements: u64,
-    /// Number of binary broadcast operations that began executing.
-    pub vtu_broadcast_count: u64,
-    /// Number of unary flat tensor operations that began executing.
-    pub vtu_unary_flat_count: u64,
-    /// Output scalar elements allocated by tensor operations.
-    pub vtu_allocated_elements: u64,
-    /// Same-shape elementwise fast paths taken inside tensor ops.
-    pub vtu_same_shape_elementwise_count: u64,
-    /// Real broadcast index-projection paths taken inside tensor ops.
-    pub vtu_projected_broadcast_count: u64,
-    /// SIMD fast paths actually taken (target-arch dependent).
-    pub vtu_simd_kernel_use_count: u64,
-    /// Native multi-core data-parallel kernels actually dispatched (Phase 3,
-    /// hierarchy A). Bumped only when an element-wise integer op cleared both
-    /// the Phase-2 `parallel_kernel_eligible` gate and the runtime dispatch
-    /// floor and fanned across worker threads. Observational only; never alters
-    /// execution semantics, and stays 0 on wasm (sequential fallback).
-    pub vtu_parallel_kernel_use_count: u64,
-    /// Dense Tensor values classified as sparse optimization candidates.
-    pub vtu_sparse_candidate_count: u64,
-    /// Total dense lanes in sparse candidate Tensor values.
-    pub vtu_sparse_candidate_elements: u64,
-    /// Non-zero dense lanes in sparse candidate Tensor values.
-    pub vtu_sparse_candidate_nonzero_elements: u64,
-    /// Zero dense lanes that sparse handling may skip moving or scanning.
-    pub vtu_sparse_skippable_zero_elements: u64,
-    /// QuantizedBlocks classified as VTU candidates (Strong or Weak).
-    pub vtu_candidate_block_count: u64,
-    /// QuantizedBlocks rejected as not suitable for VTU.
-    pub vtu_rejected_block_count: u64,
-    /// QuantizedBlocks whose VtuHint marked them as fusion candidates.
-    pub vtu_fusion_candidate_count: u64,
-    /// HOF invocations that took a Tensor-bulk fast path, iterating
-    /// `Tensor.data: &[Fraction]` directly without per-element Value
-    /// materialization. Phase III metric.
-    pub vtu_bulk_kernel_use_count: u64,
-
-    /// Guarded tail self-calls eliminated into an internal backward jump
-    /// (the "internal GOTO" trampoline). Each increment is one recursive
-    /// call that ran as a loop iteration instead of growing `call_depth`
-    /// and the native stack. Observational only; never alters value results.
     pub tail_call_jump_count: u64,
-
-    // ── Pure HOF kernel memoization (direction B) ─────────────────────────
-    /// Per-element MAP kernel applications served from the pure-result cache
-    /// instead of re-running the kernel. Observational only.
-    pub hof_memo_hit_count: u64,
-    /// Per-element MAP kernel applications that missed the cache and ran the
-    /// kernel. Observational only.
-    pub hof_memo_miss_count: u64,
-    /// Pure per-element MAP kernel results written into the cache.
-    pub hof_memo_store_count: u64,
-
-    // ── Comparison budget (SPEC §7.4.1 / §7.4.2) ──────────────────────────
-    // Observability for "when is the comparison budget consumed?" — the
-    // cost-model question the bare relations never expose over the admitted
-    // domain D (they decide exactly via the multiquadratic normal form).
-    // COMPARE-WITHIN is the one Coreword that streams partial quotients under
-    // an explicit budget, so it is the only place a budget term is spent.
-    /// COMPARE-WITHIN invocations that reached the comparison step (past NIL
-    /// passthrough and the malformed-budget guard). Observational only.
-    pub compare_within_count: u64,
-    /// Of those, invocations whose operands took the streamed partial-quotient
-    /// path (at least one non-Rational operand) rather than the exact Fraction
-    /// order — the set that can actually spend budget.
-    pub compare_within_lazy_count: u64,
-    /// COMPARE-WITHIN invocations that exhausted the budget and returned the
-    /// logical Unknown (U).
-    pub compare_within_unknown_count: u64,
-    /// Total partial-quotient (NICF) terms consumed by budget-exhausted
-    /// COMPARE-WITHIN comparisons — the sum of agreedPrefix over the Unknown
-    /// results. Never altered by the bare relations. Observational only.
-    pub compare_within_budget_terms_consumed: u64,
-
-    // ── Call-site shape inline cache (see shape_ic.rs) ────────────────────
-    /// Compiled builtin call sites completed through the shape-IC scalar
-    /// route (site monomorphic on scalar-fastpath-shaped operands).
-    /// Observational only; never alters value results.
-    pub shape_ic_hit_count: u64,
-    /// Shape-IC probes whose operands the scalar fast path rejected; the site
-    /// demoted itself to the generic route. Observational only.
-    pub shape_ic_miss_count: u64,
-
-    // ── Cross-reset artifact cache (Phase 5, see artifact_store.rs) ────────
-    /// Compiled plans built and inserted into the cross-reset artifact store.
-    pub artifact_cache_build_count: u64,
-    /// Compiled plans reused from the artifact store instead of recompiling —
-    /// the reuse that survives a GUI session reset. Observational only.
-    pub artifact_cache_hit_count: u64,
-    /// Artifact-store lookups that found no stored plan for the key.
-    pub artifact_cache_miss_count: u64,
-    /// Artifact-store entries evicted to stay within the store's capacity.
-    pub artifact_cache_eviction_count: u64,
+    pub execution_steps: u64,
 }
 
 pub struct Interpreter {
@@ -411,13 +272,10 @@ pub struct Interpreter {
     pub(crate) next_supervisor_id: u64,
 
     pub(crate) runtime_metrics: RuntimeMetrics,
-    pub(crate) hedged_trace_log: Vec<String>,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
     pub(crate) force_no_quant: bool,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
-    pub(crate) elastic_mode: crate::elastic::ElasticMode,
-    pub(crate) elastic_cache: crate::elastic::CacheManager,
     pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
     pub(crate) validation_policy: ValidationPolicy,
 
@@ -487,19 +345,12 @@ pub struct Interpreter {
     /// `AJISAI_NO_SCALAR_FASTPATH` for A/B measurement.
     pub(crate) scalar_fastpath_enabled: bool,
 
-    /// When true (default), `MAP` memoizes pure quantized kernel applications
-    /// per element, reusing the result across repeated elements. Engages only
-    /// for pure kernels and rational-scalar elements outside hedged modes;
-    /// every other case runs the kernel unchanged. Disable via
-    /// `AJISAI_NO_HOF_MEMO` for an A/B comparison.
-    pub(crate) hof_memo_enabled: bool,
 
     /// When true (default), compiled builtin call sites keep a monomorphic
     /// shape cache that routes scalar-fastpath-shaped operands straight to
     /// the D1 fast path (hidden-class-style call-site specialization; see
     /// `shape_ic.rs`). Routing only — observable values are unchanged.
     /// Disable via `AJISAI_NO_SHAPE_IC` for an A/B comparison.
-    pub(crate) shape_ic_enabled: bool,
 
     /// When true (default), `MAP`/`FILTER`/`FOLD` and the predicate family may
     /// route eligible quantized blocks through the specialized kernels in
@@ -510,22 +361,8 @@ pub struct Interpreter {
     /// A/B comparison.
     pub(crate) fast_kernel_enabled: bool,
 
-    /// Cross-reset compiled-artifact cache (Phase 5). Keyed by word content
-    /// identity plus compile flags and plan schema version, it lets an unchanged
-    /// user word survive a *session* reset (`execute_session_reset`) without
-    /// recompiling its `CompiledPlan`. The full `execute_reset` clears it.
-    pub(crate) artifact_store: super::artifact_store::ArtifactStore,
 
-    /// When true (default), a `CompiledPlan` cache miss consults the
-    /// `artifact_store` before recompiling, and freshly compiled plans are
-    /// stored there. Reuse is observationally transparent (content-identity
-    /// keyed), so disabling it via `AJISAI_NO_ARTIFACT_REUSE` only changes how
-    /// often plans are rebuilt, never a result.
-    pub(crate) artifact_reuse_enabled: bool,
 
-    /// Opt-in execution provenance recorder for receipts (Phase 6). Off unless a
-    /// receipt is requested; observational only, never affects results.
-    pub(crate) receipt_recorder: super::receipt_recorder::ReceiptRecorder,
 }
 
 impl Default for Interpreter {
@@ -581,13 +418,10 @@ impl Interpreter {
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
-            hedged_trace_log: Vec::new(),
             error_flow_trace_log: Vec::new(),
             force_no_quant: cfg!(feature = "force-no-quant"),
 
             // Elastic Engine
-            elastic_mode: crate::elastic::ElasticMode::Greedy,
-            elastic_cache: crate::elastic::CacheManager::new(),
             resolve_cache: HashMap::new(),
             validation_policy: ValidationPolicy::default(),
             owning_dictionary_context: None,
@@ -602,58 +436,10 @@ impl Interpreter {
             vector_literal_enabled: std::env::var("AJISAI_NO_VECTOR_LITERAL").is_err(),
             compiled_clause_enabled: std::env::var("AJISAI_NO_COMPILED_CLAUSE").is_err(),
             scalar_fastpath_enabled: std::env::var("AJISAI_NO_SCALAR_FASTPATH").is_err(),
-            hof_memo_enabled: std::env::var("AJISAI_NO_HOF_MEMO").is_err(),
-            shape_ic_enabled: std::env::var("AJISAI_NO_SHAPE_IC").is_err(),
             fast_kernel_enabled: std::env::var("AJISAI_NO_FAST_KERNEL").is_err(),
-            artifact_store: super::artifact_store::ArtifactStore::default(),
-            artifact_reuse_enabled: std::env::var("AJISAI_NO_ARTIFACT_REUSE").is_err(),
-            receipt_recorder: super::receipt_recorder::ReceiptRecorder::default(),
         };
-        crate::elastic::tracer::init_from_env();
         crate::builtins::register_builtins(&mut interpreter.core_vocabulary);
         interpreter
-    }
-
-    // ── Elastic Engine public API ─────────────────────────────────────────
-
-    /// Set the execution mode (greedy / elastic-safe / elastic-force).
-    #[cfg(feature = "elastic-engine")]
-    pub fn set_elastic_mode(&mut self, mode: crate::elastic::ElasticMode) {
-        self.elastic_mode = mode;
-    }
-
-    /// Without the `elastic-engine` cargo feature only `Greedy` is supported:
-    /// requests for any other mode are ignored with a warning so the execution
-    /// path stays exactly the greedy one.
-    #[cfg(not(feature = "elastic-engine"))]
-    pub fn set_elastic_mode(&mut self, mode: crate::elastic::ElasticMode) {
-        if mode != crate::elastic::ElasticMode::Greedy {
-            eprintln!(
-                "[warn] Execution mode '{}' requires the 'elastic-engine' cargo feature; staying greedy.",
-                mode
-            );
-            return;
-        }
-        self.elastic_mode = mode;
-    }
-
-    /// Read the current execution mode.
-    pub fn elastic_mode(&self) -> crate::elastic::ElasticMode {
-        self.elastic_mode
-    }
-
-    /// Enable or disable word-level tracing (`AJISAI_TRACE=1` equivalent).
-    pub fn set_trace_enabled(&mut self, enabled: bool) {
-        crate::elastic::tracer::set_enabled(enabled);
-    }
-
-    /// Returns `(hit_count, miss_count, hit_rate)` for the pure-result cache.
-    pub fn elastic_cache_stats(&self) -> (u64, u64, f64) {
-        (
-            self.elastic_cache.hit_count(),
-            self.elastic_cache.miss_count(),
-            self.elastic_cache.hit_rate(),
-        )
     }
 
     pub(crate) fn next_epoch(&mut self) -> u64 {
@@ -668,7 +454,6 @@ impl Interpreter {
 
     pub(crate) fn invalidate_execution_artifacts(&mut self) {
         self.clear_resolve_cache();
-        self.elastic_cache.clear();
         self.clear_word_contract_cache();
     }
 
@@ -702,21 +487,7 @@ impl Interpreter {
     }
 
     pub fn runtime_metrics(&self) -> RuntimeMetrics {
-        let mut metrics = self.runtime_metrics;
-        let artifact = self.artifact_store.metrics();
-        metrics.artifact_cache_build_count = artifact.build_count;
-        metrics.artifact_cache_hit_count = artifact.hit_count;
-        metrics.artifact_cache_miss_count = artifact.miss_count;
-        metrics.artifact_cache_eviction_count = artifact.eviction_count;
-        metrics
-    }
-
-    pub fn push_hedged_trace(&mut self, message: impl Into<String>) {
-        self.hedged_trace_log.push(message.into());
-    }
-
-    pub fn drain_hedged_trace(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.hedged_trace_log)
+        self.runtime_metrics
     }
 
     pub fn push_error_flow_trace(&mut self, event: super::error_flow_trace::ErrorFlowEvent) {
@@ -817,7 +588,6 @@ impl Interpreter {
     ) -> Result<()> {
         // Provenance (Phase 6): a Hosted word required this capability, whether
         // or not the host grants it. No-op unless receipt recording is enabled.
-        self.receipt_recorder.record_required(capability);
         if self.host_env.has_capability(capability) {
             return Ok(());
         }
@@ -876,18 +646,13 @@ impl Interpreter {
     /// effect immediately for subsequent compiled call sites. Routing only —
     /// disabling it never changes observable values, just the route taken.
     pub fn set_shape_ic_enabled(&mut self, enabled: bool) {
-        self.shape_ic_enabled = enabled;
     }
 
     /// Enable or disable pure HOF kernel memoization (`MAP`). In-process
     /// equivalent of `AJISAI_NO_HOF_MEMO`; lets a benchmark or differential
     /// test A/B the memoized path against re-running the kernel. Takes effect
     /// immediately for subsequent `MAP` calls.
-    pub fn set_hof_memo_enabled(&mut self, enabled: bool) {
-        self.hof_memo_enabled = enabled;
-    }
-
-    /// Enable or disable the specialized HOF kernels (per-element and bulk)
+     /// Enable or disable the specialized HOF kernels (per-element and bulk)
     /// in `higher_order/fast_kernels.rs`. In-process equivalent of
     /// `AJISAI_NO_FAST_KERNEL`; lets a differential test or benchmark A/B the
     /// kernel route against the generic quantized-block route. Routing only —

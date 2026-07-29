@@ -1,5 +1,5 @@
 use super::higher_order::{
-    execute_executable_code, execute_hedged_fold_kernel, extract_executable_code, ExecutableCode,
+    execute_executable_code, extract_executable_code, ExecutableCode,
 };
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_count_from_value, is_vector_value};
@@ -67,26 +67,6 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    // VTU Phase III bulk fast path: 1-D dense Tensor + fast binary
-    // fold kernel + scalar/Tensor[1] init → fold over Fractions
-    // directly. Disabled in hedged modes so the race observes events.
-    if let ExecutableCode::QuantizedBlock(qb) = &executable {
-        if !crate::interpreter::higher_order::hedged_mode_active(interp) {
-            if let Some(result) = crate::interpreter::higher_order::try_bulk_quantized_fold_pub(
-                interp,
-                qb,
-                &init_val,
-                &target_val,
-            ) {
-                if is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(result);
-                return Ok(());
-            }
-        }
-    }
-
     let mut accumulator: Value = init_val;
     let mut saved_stack: Stack = Stack::new();
     std::mem::swap(&mut interp.stack, &mut saved_stack);
@@ -98,26 +78,6 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
         let elem: Value = target_val
             .child(i)
             .expect("FOLD: child index in 0..len must be valid");
-        match &executable {
-            ExecutableCode::QuantizedBlock(qb) => {
-                match execute_hedged_fold_kernel(
-                    interp,
-                    "FOLD",
-                    qb,
-                    plain_tokens.as_deref(),
-                    accumulator.clone(),
-                    elem,
-                ) {
-                    Ok(result) => {
-                        accumulator = result;
-                    }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
-                }
-            }
-            _ => {
                 interp.stack.clear();
                 interp.stack.push(accumulator.clone());
                 interp.stack.push(elem);
@@ -138,8 +98,7 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
                         break;
                     }
                 }
-            }
-        }
+            
     }
     interp.disable_no_change_check = saved_no_change_check;
     interp.stack = saved_stack;
