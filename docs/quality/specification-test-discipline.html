@@ -1,0 +1,29 @@
+<h2 id="15-test-discipline">15. Test Discipline</h2>
+
+<h3 id="151-per-coreword-contract-coverage">15.1 Per-Coreword contract coverage</h3>
+
+<p>For each Coreword, the test suite must exercise:</p>
+
+<ul>
+<li>inputs that satisfy <code>requires</code> (success path)</li>
+<li>inputs that violate <code>requires</code> (failure path)</li>
+<li>the documented <code>nil_policy</code> (NIL passthrough or NIL creation, as appropriate)</li>
+<li>the documented <code>partiality</code> (every error category in the partial case; the projection target in the projecting case)</li>
+<li>effect-boundary expectations from <code>purity</code> (e.g. effectful words must not be reachable in <code>safe_preview</code>)</li>
+</ul>
+
+<h3 id="152-nil-reason-coverage">15.2 NIL reason coverage</h3>
+
+<p>Every NIL-producing path must have at least one test that asserts both the surface NIL and the structured <code>absence</code> metadata. Tests must verify protocol strings, not Rust <code>Debug</code> output.</p>
+
+<h3 id="153-mcdc-style-coverage-for-compound-decisions">15.3 MC/DC-style coverage for compound decisions</h3>
+
+<p>Words whose behavior depends on more than one independent condition (e.g. <code>/</code> decides on left-operand validity, right-operand validity, right-operand zero-ness, and NIL-passthrough applicability) must have tests that vary each condition independently with all others held fixed. Each condition must be shown to flip the outcome on its own.</p>
+
+<p>The three-valued logic words (<code>AND</code> <code>OR</code> <code>NOT</code> — Section 7.5) must cover every cell of the K3 truth tables — <code>AND</code> and <code>OR</code> over the nine \(\{T, F, U\}^2\) combinations, <code>NOT</code> over the three \(\{T, F, U\}\) inputs — plus the NIL-interaction cases (absorbing collapse, NIL propagation, and the NIL-over-U priority rule of Section 4.5.2). The comparison words must cover at least: finite CFs always deciding to a definite truth value, equal Tier &le; 1 irrationals — including operands composed through different histories (<code>√8</code> vs <code>√2+√2</code>) — deciding to a definite truth value regardless of budget, and distinct irrationals deciding at a finite prefix. The logical <code>unknown</code> (U) outcome is confined to the reserved Tier 2 regime (Section 4.2.2) and is unreachable through the current vocabulary (Sections 4.2.7, 7.4.1).</p>
+
+<p><code>COMPARE-WITHIN</code> (Section 7.4.2) must cover: each decided sign (<code>-1</code> <code>0</code> <code>1</code>); Tier ≤ 1 operands — rational and algebraic, including composed equal operands — deciding regardless of <code>budget</code>; the Tier 2 starved case yielding <code>unknown</code> with <code>diagnosis.agreedPrefix</code> equal to the consumed <code>budget</code> (exercised against a type-level Tier 2 value until a word constructs one); NIL operand passthrough; and the malformed-<code>budget</code> / non-numeric-operand error paths.</p>
+
+<p>The tiered comparison (Section 7.4.1) must cover: (i) decidability over Tier ≤ 1 at any water, including equal values built through different histories (<code>√8</code> vs <code>√2+√2</code>) and the demotion identities of Section 7.3; (ii) the Tier 2 regime starving to <code>unknown</code> with a monotone, budget-bounded <code>agreedPrefix</code>; and (iii) the unreachability of the Tier 2 regime from the current vocabulary.</p>
+
+<p>The propagation of U through comparison-dependent words (Section 7.4.3) must cover, for <code>MIN</code> and <code>MAX</code>: a decided comparison selecting the correct operand; an undecidable comparison yielding <code>unknown</code> with <code>diagnosis.agreedPrefix</code>; NIL-operand passthrough with NIL taking priority over a U-producing comparison; and the sequence-form short-circuit on the first undecidable pair. For <code>SORT</code>: a fully-decidable input (notably any vector of rationals) sorting to ascending order; an input with at least one undecidable pair yielding <code>unknown</code> for the whole result (never a partially-sorted vector) carrying <code>diagnosis.agreedPrefix</code>; and NIL handling. For <code>COND</code>: a definite-<code>true</code> guard firing its clause; a U guard <strong>not</strong> firing and falling through to the next clause; a U guard before a later definite-<code>true</code> guard selecting the later clause; and a U guard with no other match reaching the <code>IDLE</code> else clause, or <code>CondExhausted</code> when none exists.</p>

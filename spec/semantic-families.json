@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "authority": "spec/language-semantics.md",
+  "description": "Shared laws selected by canonical Word contracts. Families classify behavior; they do not add Words.",
+  "families": [
+    {
+      "id": "stackModifier",
+      "clauses": [
+        "LANG.MODIFIERS.AXES",
+        "LANG.MODIFIERS.APPLICATION"
+      ],
+      "axes": [
+        "target",
+        "consumption"
+      ]
+    },
+    {
+      "id": "nilObservation",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "nilPolicy": "inspectWithoutConflatingUnknown"
+    },
+    {
+      "id": "nilRecovery",
+      "clauses": [
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "nilPolicy": "inspectOrRecover"
+    },
+    {
+      "id": "kleeneTruth",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "nilPolicy": "contractSpecific"
+    },
+    {
+      "id": "comparison",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "budgetOutcome": "unknown"
+    },
+    {
+      "id": "liftedBinaryExactArithmetic",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "nilPolicy": "passthroughThenProject"
+    },
+    {
+      "id": "liftedUnaryExactArithmetic",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "nilPolicy": "passthroughThenProject"
+    },
+    {
+      "id": "collectionShape",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "nilPolicy": "contractSpecific"
+    },
+    {
+      "id": "generativeCollection",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.COLLECTIONS.BUDGET"
+      ],
+      "budgetOutcome": "reasonedNil"
+    },
+    {
+      "id": "higherOrder",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER"
+      ],
+      "effectOrder": "elementVisitOrder"
+    },
+    {
+      "id": "control",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.VALUES.TRUTH"
+      ],
+      "effectOrder": "evaluationOrder"
+    },
+    {
+      "id": "dictionaryMutation",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION"
+      ],
+      "commit": "atomic"
+    },
+    {
+      "id": "moduleResolution",
+      "clauses": [
+        "LANG.DICTIONARY.RESOLUTION",
+        "LANG.DICTIONARY.MODULES"
+      ],
+      "determinism": "stateRelative"
+    },
+    {
+      "id": "hostedEffect",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER"
+      ],
+      "effectOrder": "requestOrder"
+    },
+    {
+      "id": "childRuntime",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "effectOrder": "observableCommitOrder"
+    },
+    {
+      "id": "conversion",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "nilPolicy": "contractSpecific"
+    },
+    {
+      "id": "dataTable",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "shape": "rectangularRecordVector",
+      "nilPolicy": "contractSpecific"
+    },
+    {
+      "id": "observation",
+      "clauses": [
+        "LANG.OBSERVATION.PROJECTIONS",
+        "LANG.OBSERVATION.PROTOCOL"
+      ],
+      "purity": "observational"
+    },
+    {
+      "id": "exactQuantization",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "nilPolicy": "passthroughThenProject",
+      "invariant": "qPlusResidualEqualsInput"
+    }
+  ]
+}
