@@ -5,7 +5,7 @@ use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
     extract_count_from_value, extract_operands, nil_passthrough_binary, push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -178,7 +178,7 @@ fn push_exact_real_schema_result(
 }
 
 fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop || interp.stack.len() < 2 {
+    if interp.stack.len() < 2 {
         return None;
     }
     let stack_len = interp.stack.len();
@@ -260,7 +260,6 @@ fn push_scalar_fastpath_result(
     schema: ExactArithmeticSchema,
 ) -> Result<bool> {
     if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
         || interp.stack.len() < 2
     {
         return Ok(false);
@@ -320,8 +319,7 @@ fn apply_exact_arithmetic_schema(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
 ) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
+    if nil_passthrough_binary(interp)
     {
         return Ok(());
     }
@@ -355,9 +353,7 @@ fn apply_exact_arithmetic_schema(
         }
     }
 
-    if matches!(schema, ExactArithmeticSchema::Div)
-        && interp.operation_target_mode == OperationTargetMode::StackTop
-    {
+    if matches!(schema, ExactArithmeticSchema::Div) {
         let stack_len = interp.stack.len();
         if stack_len >= 2 {
             let left_hint = interp.stack.role_at(stack_len - 2);
@@ -412,7 +408,6 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
         ValueData::Nil | ValueData::Unknown(_) => None,
-        ValueData::Record { .. } => None,
         ValueData::Boolean(_)
         | ValueData::CodeBlock(_)
         | ValueData::ProcessHandle(_)
@@ -559,9 +554,6 @@ fn push_exact_real_broadcast_result(
     a: &Value,
     b: &Value,
 ) -> Result<bool> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Ok(false);
-    }
     if a.is_nil() || b.is_nil() {
         return Ok(false);
     }
@@ -671,81 +663,29 @@ where
 {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let operands = extract_operands(interp, 2)?;
-            let a_val = &operands[0];
-            let b_val = &operands[1];
+    let operands = extract_operands(interp, 2)?;
+    let a_val = &operands[0];
+    let b_val = &operands[1];
 
-            let result = match apply_binary_broadcast_with_metrics(
-                a_val,
-                b_val,
-                op,
-                Some(&mut interp.runtime_metrics),
-            ) {
-                Ok(r) => r,
-                Err(e) => {
-                    if !is_keep_mode {
-                        for val in operands {
-                            interp.stack.push(val);
-                        }
-                    }
-                    return Err(e);
+    let result = match apply_binary_broadcast_with_metrics(
+        a_val,
+        b_val,
+        op,
+        Some(&mut interp.runtime_metrics),
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            if !is_keep_mode {
+                for val in operands {
+                    interp.stack.push(val);
                 }
-            };
-
-            push_result(interp, result);
+            }
+            return Err(e);
         }
+    };
 
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp
-                    .stack
-                    .drain(interp.stack.len() - count..)
-                    .collect::<Vec<Value>>()
-            };
-
-            if items.iter().any(|v| v.is_nil()) {
-                push_result(interp, Value::nil());
-                return Ok(());
-            }
-
-            if items.iter().any(|v| !is_scalar_value(v)) {
-                if !is_keep_mode {
-                    interp.stack.extend(items);
-                }
-                interp.stack.push(count_val);
-                return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
-            }
-
-            let first_scalar: Fraction = extract_scalar_from_value(&items[0]).unwrap();
-            let mut acc = first_scalar.clone();
-
-            for item in items.iter().skip(1) {
-                if let Some(f) = extract_scalar_from_value(item) {
-                    acc = op(&acc, &f)?;
-                }
-            }
-
-            push_result(interp, Value::from_fraction(acc));
-        }
-    }
+    push_result(interp, result);
+            
     Ok(())
 }
 

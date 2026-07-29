@@ -5,8 +5,6 @@ pub mod fraction;
 mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
-pub mod interval;
-pub mod record_shape;
 pub mod stack;
 mod value_operations;
 // The lossless persistence codec is consumed only by the wasm boundary
@@ -374,11 +372,10 @@ pub enum Interpretation {
 
 #[derive(Debug, Clone)]
 pub enum ValueData {
-    /// A definite logical truth value, `true` or `false` (SPEC §7.5). A
-    /// Boolean is a data-plane value distinct from any number: `TRUE` is not
-    /// the scalar `1` and `FALSE` is not the scalar `0`, so `TRUE 1 EQ` is
-    /// false. The third truth value Unknown (U) is represented separately
-    /// (a `TruthValue`-role absence node, see `Value::unknown`).
+    /// A definite logical truth value, `true` or `false`
+    /// (LANG.VALUES.TRUTH). A Boolean is a data-plane value distinct from any
+    /// number: `TRUE` is not the scalar `1` and `FALSE` is not the scalar `0`,
+    /// so `TRUE 1 EQ` is false.
     Boolean(bool),
     Scalar(Fraction),
     /// An exact real value backed by a continued-fraction representation
@@ -390,31 +387,8 @@ pub enum ValueData {
         data: Arc<DenseTensor>,
         shape: Arc<Vec<usize>>,
     },
-    Record {
-        pairs: Arc<Vec<Value>>,
-        /// Interned key→slot layout shared by every same-layout Record
-        /// (hidden-class-style shape sharing; see `record_shape.rs`).
-        shape: Arc<RecordShape>,
-    },
     Nil,
-    /// The logical truth value `Unknown` (U), the third value of Ajisai's
-    /// K3 logic (SPEC §7.5 / §7.4.1). U is **not** an operational absence:
-    /// it is a truth-valued datum distinct at the type level from
-    /// [`ValueData::Nil`] (the Bubble). Keeping it a separate variant makes
-    /// the U/NIL split a type invariant rather than a predicate convention,
-    /// so no NIL call site can silently absorb U.
-    ///
-    /// The optional payload carries the CF-comparison agreed-prefix
-    /// diagnosis (SPEC §4.5.0): the `DebugDiagnosis` whose `agreed_prefix`
-    /// is surfaced as `diagnosis.agreedPrefix` when U is the starved result
-    /// of a Tier-2 comparison. `None` for a bare U with no comparison
-    /// provenance. This is U's own diagnostic carrier — it deliberately does
-    /// **not** reuse NIL's `AbsenceMetadata`, so U never reports an
-    /// operational NIL reason/origin/recoverability.
-    Unknown(Option<Box<DebugDiagnosis>>),
     CodeBlock(Vec<Token>),
-    ProcessHandle(u64),
-    SupervisorHandle(u64),
 }
 
 impl PartialEq for ValueData {

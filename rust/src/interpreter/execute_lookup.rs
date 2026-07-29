@@ -1,15 +1,8 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 
 pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "LOOKUP".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let name_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name_str = extract_word_name_from_value(&name_val)?;

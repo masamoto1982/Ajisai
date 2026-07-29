@@ -156,7 +156,6 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         // `is_unknown()` guards produce, and consistent with a Boolean
         // rendering `TRUE`/`FALSE` at any depth (SPEC §12.2). U is never shown
         // as `NIL`.
-        ValueData::Unknown(_) => "UNKNOWN".to_string(),
         // A definite boolean renders uniformly as TRUE/FALSE in every role
         // (SPEC §12.2), so the three-valued axis is observable consistently
         // whether the boolean came from a literal, a comparison, or a logic
@@ -192,8 +191,6 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         }
         ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -338,8 +335,6 @@ fn format_as_string(data: &ValueData) -> String {
         // These variants are not character data; they carry no surrounding
         // quotes in the stack projection either, so reuse their bare form.
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
         _ => format!("'{}'", format_text_content(data)),
     }
 }
@@ -392,8 +387,6 @@ fn format_text_content(data: &ValueData) -> String {
             })
             .collect(),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -493,8 +486,6 @@ fn format_as_boolean(value: &Value) -> String {
             format!("{{ {} }}", inner.join(" "))
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -508,8 +499,6 @@ fn format_as_datetime(data: &ValueData) -> String {
             format_value_recursive(data, 0)
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 

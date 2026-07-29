@@ -15,9 +15,7 @@
 //! flow-sensitive tracking (a handle dropped, or discharged across a call
 //! boundary) is deferred to a later increment.
 
-use super::contract_decl::{ContractDecl, DeclFinding};
-use super::explain::Lang;
-use super::plan_check::Severity;
+use super::contract_decl::{ContractDecl, DeclFinding, Severity};
 use crate::core_word_aliases::canonicalize_core_word_name;
 use crate::interpreter::Interpreter;
 use crate::types::Token;
@@ -125,7 +123,6 @@ pub(crate) fn check_linearity(
     interp: &Interpreter,
     decl: &ContractDecl,
     linearity: Linearity,
-    lang: Lang,
     findings: &mut Vec<DeclFinding>,
 ) {
     let enforcing = matches!(linearity, Linearity::Linear | Linearity::Affine);
@@ -142,41 +139,26 @@ pub(crate) fn check_linearity(
     if keeps_a_discharged_handle {
         findings.push(DeclFinding {
             severity: Severity::Error,
-            message: match lang {
-                Lang::Ja => format!(
-                    "`#:contract {}`: `{}` を宣言していますが、ハンドルを破棄する語(`KILL`/`AWAIT`)に `KEEP` を適用しており、消費後もハンドルが残ります(線形性違反)。",
-                    decl.name,
-                    linearity.as_str()
-                ),
-                Lang::En => format!(
+            message: format!(
                     "`#:contract {}`: declared `{}` but applies `KEEP` to a handle-discharging word (`KILL`/`AWAIT`), retaining the handle after its single consumption (linearity violation).",
                     decl.name,
                     linearity.as_str()
                 ),
-            },
         });
         return;
     }
 
-    let note = match (linearity, lang) {
-        (Linearity::Droppable, Lang::Ja) => format!(
-            "`#:contract {}`: 線形性 `droppable`(規律から除外)を記録しました。",
-            decl.name
-        ),
-        (Linearity::Droppable, Lang::En) => format!(
+    let note = if linearity == Linearity::Droppable {
+        format!(
             "`#:contract {}`: recorded linearity `droppable` (opts out of the discipline).",
             decl.name
-        ),
-        (_, Lang::Ja) => format!(
-            "`#:contract {}`: 線形性 `{}` を記録しました(KEEP によるハンドル破棄違反は検出されず。フロー全体の追跡は今後の増分)。",
-            decl.name,
-            linearity.as_str()
-        ),
-        (_, Lang::En) => format!(
+        )
+    } else {
+        format!(
             "`#:contract {}`: recorded linearity `{}` (no KEEP-on-discharge violation found; full flow-sensitive tracking is a later increment).",
             decl.name,
             linearity.as_str()
-        ),
+        )
     };
     findings.push(DeclFinding {
         severity: Severity::Note,

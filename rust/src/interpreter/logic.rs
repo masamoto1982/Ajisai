@@ -5,7 +5,7 @@ use crate::interpreter::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics,
 };
 use crate::interpreter::value_extraction_helpers::extract_count_from_value;
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
 use crate::types::Stack;
 use crate::types::Value;
@@ -103,195 +103,113 @@ fn compute_inverted_value(val: &Value, metrics: Option<&mut RuntimeMetrics>) -> 
 pub fn op_not(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = if is_keep_mode {
-                interp
-                    .stack
-                    .last()
-                    .cloned()
-                    .ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
+    let val = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
-            let result = match compute_inverted_value(&val, Some(&mut interp.runtime_metrics)) {
-                Ok(v) => v,
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    return Err(e);
-                }
-            };
-
-            interp.stack.push(result);
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            let source: Vec<Value> = interp.stack.to_vec();
-            let mut results: Vec<Value> = Vec::with_capacity(source.len());
-            for value in &source {
-                results.push(compute_inverted_value(
-                    value,
-                    Some(&mut interp.runtime_metrics),
-                )?);
+    let result = match compute_inverted_value(&val, Some(&mut interp.runtime_metrics)) {
+        Ok(v) => v,
+        Err(e) => {
+            if !is_keep_mode {
+                interp.stack.push(val);
             }
-
-            if is_keep_mode {
-                interp.stack.extend(results);
-            } else {
-                interp.stack = Stack::from_values(results);
-            }
-            Ok(())
+            return Err(e);
         }
-    }
+    };
+
+    interp.stack.push(result);
+    Ok(())
+            
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                (
-                    interp.stack[stack_len - 2].clone(),
-                    interp.stack[stack_len - 1].clone(),
-                )
-            } else {
-                let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                (a_val, b_val)
-            };
-
-            // K3 (SPEC §7.5) when either operand is an operational NIL or
-            // the logical Unknown (U); otherwise keep element-wise broadcast.
-            if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
-                interp
-                    .stack
-                    .push(compute_k3_binary_value(K3BinaryOp::Meet, &a_val, &b_val));
-                return Ok(());
-            }
-
-            let result = apply_binary_broadcast_with_metrics(
-                &a_val,
-                &b_val,
-                |a, b| {
-                    let a_truthy = !a.is_zero();
-                    let b_truthy = !b.is_zero();
-                    Ok(Fraction::from(if a_truthy && b_truthy { 1 } else { 0 }))
-                },
-                Some(&mut interp.runtime_metrics),
-            )?;
-            interp.stack.push(result);
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            // STAK-mode K3 fold (SPEC §7.5): `AND = meet_K3` with F as
-            // the absorbing element and NIL-over-U priority centralized in
-            // `logic_kleene`.
-            interp.stack.push(fold_k3_values(K3BinaryOp::Meet, &items));
-            Ok(())
-        }
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
+
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        (
+            interp.stack[stack_len - 2].clone(),
+            interp.stack[stack_len - 1].clone(),
+        )
+    } else {
+        let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        (a_val, b_val)
+    };
+
+    // K3 (SPEC §7.5) when either operand is an operational NIL or
+    // the logical Unknown (U); otherwise keep element-wise broadcast.
+    if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
+        interp
+            .stack
+            .push(compute_k3_binary_value(K3BinaryOp::Meet, &a_val, &b_val));
+        return Ok(());
+    }
+
+    let result = apply_binary_broadcast_with_metrics(
+        &a_val,
+        &b_val,
+        |a, b| {
+            let a_truthy = !a.is_zero();
+            let b_truthy = !b.is_zero();
+            Ok(Fraction::from(if a_truthy && b_truthy { 1 } else { 0 }))
+        },
+        Some(&mut interp.runtime_metrics),
+    )?;
+    interp.stack.push(result);
+    Ok(())
+            
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                (
-                    interp.stack[stack_len - 2].clone(),
-                    interp.stack[stack_len - 1].clone(),
-                )
-            } else {
-                let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-                (a_val, b_val)
-            };
-
-            // K3 (SPEC §7.5) when either operand is an operational NIL or
-            // the logical Unknown (U); otherwise keep element-wise broadcast.
-            if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
-                interp
-                    .stack
-                    .push(compute_k3_binary_value(K3BinaryOp::Join, &a_val, &b_val));
-                return Ok(());
-            }
-
-            let result = apply_binary_broadcast_with_metrics(
-                &a_val,
-                &b_val,
-                |a, b| {
-                    let a_truthy = !a.is_zero();
-                    let b_truthy = !b.is_zero();
-                    Ok(Fraction::from(if a_truthy || b_truthy { 1 } else { 0 }))
-                },
-                Some(&mut interp.runtime_metrics),
-            )?;
-            interp.stack.push(result);
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            // STAK-mode K3 fold (SPEC §7.5): `OR = join_K3` with T as
-            // the absorbing element and NIL-over-U priority centralized in
-            // `logic_kleene`.
-            interp.stack.push(fold_k3_values(K3BinaryOp::Join, &items));
-            Ok(())
-        }
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
+
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        (
+            interp.stack[stack_len - 2].clone(),
+            interp.stack[stack_len - 1].clone(),
+        )
+    } else {
+        let b_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        let a_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        (a_val, b_val)
+    };
+
+    // K3 (SPEC §7.5) when either operand is an operational NIL or
+    // the logical Unknown (U); otherwise keep element-wise broadcast.
+    if forces_k3_path(&a_val) || forces_k3_path(&b_val) {
+        interp
+            .stack
+            .push(compute_k3_binary_value(K3BinaryOp::Join, &a_val, &b_val));
+        return Ok(());
+    }
+
+    let result = apply_binary_broadcast_with_metrics(
+        &a_val,
+        &b_val,
+        |a, b| {
+            let a_truthy = !a.is_zero();
+            let b_truthy = !b.is_zero();
+            Ok(Fraction::from(if a_truthy || b_truthy { 1 } else { 0 }))
+        },
+        Some(&mut interp.runtime_metrics),
+    )?;
+    interp.stack.push(result);
+    Ok(())
+            
 }

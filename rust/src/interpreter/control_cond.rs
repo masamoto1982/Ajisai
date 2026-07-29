@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::{Interpretation, Stack, Token, Value, ValueData};
 
 use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
@@ -250,7 +250,6 @@ fn evaluate_guard_isolated(
     // together, so cloning it captures the aligned `(value, role)` slots
     // directly — no snapshot type and no alignment assertion needed.
     let saved_stack = interp.stack.clone();
-    let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
@@ -258,7 +257,6 @@ fn evaluate_guard_isolated(
     interp
         .stack
         .push_with_role(value.clone(), Interpretation::Unassigned);
-    interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
     // Guards are never tail position; run the compiled sub-plan when available,
@@ -274,7 +272,6 @@ fn evaluate_guard_isolated(
     restore_cond_eval_state(
         interp,
         saved_stack,
-        saved_target_mode,
         saved_consumption_mode,
         saved_epoch,
     );
@@ -345,12 +342,10 @@ fn evaluate_guard_greedy(
 fn restore_cond_eval_state(
     interp: &mut Interpreter,
     saved_stack: Stack,
-    saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
     saved_epoch: EpochSnapshot,
 ) {
     interp.stack = saved_stack;
-    interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
     interp.module_epoch = saved_epoch.module_epoch;
@@ -441,14 +436,12 @@ fn execute_cond_body(
     tail_context: bool,
 ) -> Result<()> {
     let saved_stack = interp.stack.clone();
-    let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
 
     interp.stack.clear();
     interp
         .stack
         .push_with_role(value.clone(), Interpretation::Unassigned);
-    interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
     // This clause body runs in the word's tail position iff the COND itself
@@ -473,7 +466,6 @@ fn execute_cond_body(
         };
 
     interp.stack = saved_stack;
-    interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
 
     execution_result?;

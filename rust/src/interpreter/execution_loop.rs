@@ -5,7 +5,7 @@ use crate::types::{ExecutionLine, Interpretation, Token, Value};
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
-use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
+use super::{modules, ConsumptionMode, Interpreter};
 
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
 /// either one ordinary token, or one balanced `[ ]` / `{ }` group (nesting
@@ -363,12 +363,6 @@ impl Interpreter {
                 Token::Symbol(s) => {
                     let canonical = crate::core_word_aliases::canonicalize_core_word_name(s);
                     match canonical.as_ref() {
-                        "STAK" => {
-                            self.update_operation_target_mode(OperationTargetMode::Stack);
-                        }
-                        "TOP" => {
-                            self.update_operation_target_mode(OperationTargetMode::StackTop);
-                        }
                         "KEEP" => {
                             self.update_consumption_mode(ConsumptionMode::Keep);
                         }

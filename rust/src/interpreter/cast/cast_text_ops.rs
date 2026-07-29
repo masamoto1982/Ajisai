@@ -3,7 +3,7 @@ use crate::interpreter::cast::cast_value_helpers::{
     is_boolean_value, is_number_value, is_string_value,
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::Value;
 
@@ -56,44 +56,12 @@ fn apply_trim(side: &TrimSide, s: &str) -> String {
 }
 
 fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Result<()> {
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let s = pop_string(interp, word)?;
-            interp
-                .stack
-                .push(Value::from_string(&apply_trim(&side, &s)));
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Err(AjisaiError::StackUnderflow);
-            }
-            let elements: Vec<Value> = interp.stack.drain(..).collect();
-            let mut results: Vec<Value> = Vec::with_capacity(elements.len());
-            for elem in elements {
-                if elem.is_nil() {
-                    let err = AjisaiError::from(format!("{}: expected String, got Nil", word));
-                    interp.stack = Stack::from_values(results);
-                    interp.stack.push(elem);
-                    return Err(err);
-                }
-                if is_string_value(&elem) {
-                    let s = value_as_string(&elem).unwrap_or_default();
-                    results.push(Value::from_string(&apply_trim(&side, &s)));
-                    continue;
-                }
-                let tn = type_name_of(&elem);
-                interp.stack = Stack::from_values(results);
-                interp.stack.push(elem);
-                return Err(AjisaiError::from(format!(
-                    "{}: expected String, got {}",
-                    word, tn
-                )));
-            }
-            interp.stack = Stack::from_values(results);
-            Ok(())
-        }
-    }
+    let s = pop_string(interp, word)?;
+    interp
+        .stack
+        .push(Value::from_string(&apply_trim(&side, &s)));
+    Ok(())
+            
 }
 
 pub fn op_trim(interp: &mut Interpreter) -> Result<()> {

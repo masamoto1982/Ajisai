@@ -2,7 +2,7 @@ use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
@@ -39,81 +39,52 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && matches!(interp.stack.last_role(), Interpretation::Text)
+    if matches!(interp.stack.last_role(), Interpretation::Text)
     {
         return Err(AjisaiError::create_structure_error("numeric index", "text"));
     }
     let (index_val, index) = pop_index_operand(interp)?;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let target_val = match interp.stack.last().cloned() {
-                Some(value) => value,
-                None => {
-                    interp.stack.push(index_val);
-                    return Err(AjisaiError::StackUnderflow);
-                }
-            };
-
-            if !target_val.is_vector() {
-                interp.stack.push(index_val);
-                return Err(AjisaiError::create_structure_error(
-                    "vector",
-                    "other format",
-                ));
-            }
-
-            let result_elem = {
-                let len = target_val.len();
-                let actual_index = if len == 0 {
-                    None
-                } else {
-                    normalize_index(index, len)
-                };
-
-                actual_index
-                    .and_then(|idx| target_val.child(idx))
-                    .unwrap_or_else(|| {
-                        Value::bubble_with_reason(
-                            NilReason::IndexOutOfBounds,
-                            Recoverability::Recoverable,
-                        )
-                    })
-            };
-
-            if is_keep_mode {
-                interp.stack.push(index_val);
-            }
-            interp.stack.push(result_elem);
-            Ok(())
+    let target_val = match interp.stack.last().cloned() {
+        Some(value) => value,
+        None => {
+            interp.stack.push(index_val);
+            return Err(AjisaiError::StackUnderflow);
         }
-        OperationTargetMode::Stack => {
-            let stack_len = interp.stack.len();
-            if stack_len == 0 {
-                interp.stack.push(index_val);
-                return Err(AjisaiError::IndexOutOfBounds { index, length: 0 });
-            }
+    };
 
-            let actual_index = match normalize_index(index, stack_len) {
-                Some(idx) => idx,
-                None => {
-                    interp.stack.push(index_val);
-                    return Err(AjisaiError::IndexOutOfBounds {
-                        index,
-                        length: stack_len,
-                    });
-                }
-            };
-
-            let result_elem = interp.stack[actual_index].clone();
-            if !is_keep_mode {
-                interp.stack.clear();
-            }
-            interp.stack.push(result_elem);
-            Ok(())
-        }
+    if !target_val.is_vector() {
+        interp.stack.push(index_val);
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
     }
+
+    let result_elem = {
+        let len = target_val.len();
+        let actual_index = if len == 0 {
+            None
+        } else {
+            normalize_index(index, len)
+        };
+
+        actual_index
+            .and_then(|idx| target_val.child(idx))
+            .unwrap_or_else(|| {
+                Value::bubble_with_reason(
+                    NilReason::IndexOutOfBounds,
+                    Recoverability::Recoverable,
+                )
+            })
+    };
+
+    if is_keep_mode {
+        interp.stack.push(index_val);
+    }
+    interp.stack.push(result_elem);
+    Ok(())
+            
 }
 
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
@@ -129,50 +100,30 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let inserted = with_stacktop_vector_target_with_arg(
-                interp,
-                &args_val,
-                is_keep_mode,
-                |vector_val| {
-                    let mut values = extract_vector_elements(vector_val).to_vec();
-                    let len = values.len() as i64;
-                    let insert_index = if index < 0 {
-                        (len + index).max(0) as usize
-                    } else {
-                        (index as usize).min(values.len())
-                    };
-
-                    values.insert(insert_index, element.clone());
-                    Ok(Value::from_vector(values))
-                },
-            )?;
-
-            if is_keep_mode {
-                interp.stack.push(args_val);
-            }
-            interp.stack.push(inserted);
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            let len = interp.stack.len() as i64;
+    let inserted = with_stacktop_vector_target_with_arg(
+        interp,
+        &args_val,
+        is_keep_mode,
+        |vector_val| {
+            let mut values = extract_vector_elements(vector_val).to_vec();
+            let len = values.len() as i64;
             let insert_index = if index < 0 {
                 (len + index).max(0) as usize
             } else {
-                (index as usize).min(interp.stack.len())
+                (index as usize).min(values.len())
             };
 
-            if is_keep_mode {
-                let mut modified = interp.stack.clone();
-                modified.insert(insert_index, element);
-                interp.stack.extend(modified);
-            } else {
-                interp.stack.insert(insert_index, element);
-            }
-            Ok(())
-        }
+            values.insert(insert_index, element.clone());
+            Ok(Value::from_vector(values))
+        },
+    )?;
+
+    if is_keep_mode {
+        interp.stack.push(args_val);
     }
+    interp.stack.push(inserted);
+    Ok(())
+            
 }
 
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
@@ -188,99 +139,55 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let replaced = with_stacktop_vector_target_with_arg(
-                interp,
-                &args_val,
-                is_keep_mode,
-                |vector_val| {
-                    let mut values = extract_vector_elements(vector_val).to_vec();
-                    let len = values.len();
-                    let actual_index = normalize_index(index, len)
-                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+    let replaced = with_stacktop_vector_target_with_arg(
+        interp,
+        &args_val,
+        is_keep_mode,
+        |vector_val| {
+            let mut values = extract_vector_elements(vector_val).to_vec();
+            let len = values.len();
+            let actual_index = normalize_index(index, len)
+                .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
-                    values[actual_index] = new_element.clone();
-                    Ok(Value::from_vector(values))
-                },
-            )?;
+            values[actual_index] = new_element.clone();
+            Ok(Value::from_vector(values))
+        },
+    )?;
 
-            if is_keep_mode {
-                interp.stack.push(args_val);
-            }
-            interp.stack.push(replaced);
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            let len = interp.stack.len();
-            let actual_index = match normalize_index(index, len) {
-                Some(idx) => idx,
-                None => {
-                    interp.stack.push(args_val);
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-                }
-            };
-
-            if is_keep_mode {
-                let mut modified = interp.stack.clone();
-                modified[actual_index] = new_element;
-                interp.stack.extend(modified);
-            } else {
-                interp.stack[actual_index] = new_element;
-            }
-            Ok(())
-        }
+    if is_keep_mode {
+        interp.stack.push(args_val);
     }
+    interp.stack.push(replaced);
+    Ok(())
+            
 }
 
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let removed = with_stacktop_vector_target_with_arg(
-                interp,
-                &index_val,
-                is_keep_mode,
-                |vector_val| {
-                    let mut values = extract_vector_elements(vector_val).to_vec();
-                    let len = values.len();
-                    let actual_index = normalize_index(index, len)
-                        .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
+    let removed = with_stacktop_vector_target_with_arg(
+        interp,
+        &index_val,
+        is_keep_mode,
+        |vector_val| {
+            let mut values = extract_vector_elements(vector_val).to_vec();
+            let len = values.len();
+            let actual_index = normalize_index(index, len)
+                .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
-                    values.remove(actual_index);
-                    if values.is_empty() {
-                        return Ok(Value::nil());
-                    }
-                    Ok(Value::from_vector(values))
-                },
-            )?;
-
-            if is_keep_mode {
-                interp.stack.push(index_val);
+            values.remove(actual_index);
+            if values.is_empty() {
+                return Ok(Value::nil());
             }
-            interp.stack.push(removed);
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            let len = interp.stack.len();
-            let actual_index = match normalize_index(index, len) {
-                Some(idx) => idx,
-                None => {
-                    interp.stack.push(index_val);
-                    return Err(AjisaiError::IndexOutOfBounds { index, length: len });
-                }
-            };
+            Ok(Value::from_vector(values))
+        },
+    )?;
 
-            if is_keep_mode {
-                let mut modified = interp.stack.clone();
-                modified.remove(actual_index);
-                interp.stack.extend(modified);
-            } else {
-                interp.stack.remove(actual_index);
-            }
-            Ok(())
-        }
+    if is_keep_mode {
+        interp.stack.push(index_val);
     }
+    interp.stack.push(removed);
+    Ok(())
+            
 }

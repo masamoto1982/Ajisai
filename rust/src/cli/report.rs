@@ -8,9 +8,6 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
-use super::clarify::{self, Clarification};
-use super::explain::{Explanation, Lang};
-use super::plan_check::PlanCheck;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
@@ -40,23 +37,11 @@ pub(crate) struct Report {
     pub ai_diagnostic: Option<AiDiagnosticPayload>,
     pub error_flow_trace: Vec<ErrorFlowEvent>,
     pub runtime_metrics: RuntimeMetrics,
-    /// Plain-language projection of the diagnosis (`--explain`). `None` unless
-    /// the user opted in; additive field, see the CLI output contract.
-    pub explanation: Option<Explanation>,
-    /// Light contract / flow-mass check (`check --contract`). `None` unless the
-    /// user opted in; additive field, see the CLI output contract.
-    pub plan_check: Option<PlanCheck>,
-    /// Opt-in per-word contract declarations checked against inference
+    /// Per-word contract declarations checked against inference
     /// (`check --contract`, P2). `None` unless the user opted in; additive
     /// field. Prebuilt JSON so `report` stays decoupled from the declaration
     /// types.
     pub contract_decls: Option<Json>,
-    /// Execution receipt (`run --receipt`, Phase 6). `None` unless the user
-    /// opted in; additive field. Prebuilt JSON so `report` stays decoupled from
-    /// the receipt assembly.
-    pub receipt: Option<Json>,
-    /// Language for rendering `plan_check` findings.
-    pub lang: Lang,
 }
 
 impl Report {
@@ -76,75 +61,11 @@ impl Report {
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
-            "explanation": self.explanation.as_ref().map(explanation_json),
-            "planCheck": self.plan_check.as_ref().map(|check| plan_check_json(check, self.lang)),
             "contractDecls": self.contract_decls,
-            "receipt": self.receipt,
         })
     }
 }
 
-/// JSON rendering of the light contract check (`super::plan_check`). Structured
-/// mass numbers and NIL-flow word lists, plus the plain-language `findings`.
-fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
-    let findings: Vec<Json> = check
-        .findings(lang)
-        .into_iter()
-        .map(|finding| {
-            json!({
-                "severity": finding.severity.as_str(),
-                "message": finding.message,
-            })
-        })
-        .collect();
-    json!({
-        "overConsumes": check.over_consumes,
-        "minDepth": check.min_depth,
-        "netMass": check.net_mass,
-        "massKnown": check.mass_known,
-        "mayBubble": check.may_bubble,
-        "hasFallback": check.has_fallback,
-        "rejectsNil": check.rejects_nil,
-        "unguardedNil": check.unguarded_nil,
-        "rejectsNilFlows": check.rejects_nil_flows,
-        "findings": findings,
-        "clarifications": clarifications_json(&clarify::from_plan_check(check, lang)),
-    })
-}
-
-/// JSON rendering of approach-4 clarifying questions (`super::clarify`). Each
-/// choice carries the Ajisai sugar it resolves to (`apply`), or `null` for a
-/// "leave as is" choice.
-pub(crate) fn clarifications_json(clarifications: &[Clarification]) -> Json {
-    Json::Array(
-        clarifications
-            .iter()
-            .map(|clarification| {
-                let choices: Vec<Json> = clarification
-                    .choices
-                    .iter()
-                    .map(|choice| json!({ "label": choice.label, "apply": choice.apply }))
-                    .collect();
-                json!({
-                    "kind": clarification.kind.as_str(),
-                    "question": clarification.question,
-                    "choices": choices,
-                })
-            })
-            .collect(),
-    )
-}
-
-/// JSON rendering of the plain-language projection (`super::explain`). The
-/// L0 tier is `headline` + `nextStep`; `details` is the L2 repair checklist.
-fn explanation_json(explanation: &Explanation) -> Json {
-    json!({
-        "lang": explanation.lang.as_str(),
-        "headline": explanation.headline,
-        "nextStep": explanation.next_step,
-        "details": explanation.details,
-    })
-}
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
     // The `Stack` owns aligned `(value, role)` slots, so iterate them directly.

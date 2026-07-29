@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use crate::interpreter::{HostEffect, Interpreter};
 
-use super::{block_on, host, stack_display, Opts};
+use super::{block_on, stack_display, Opts};
 
 /// Outcome kind of evaluating one REPL line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,7 +81,7 @@ pub(crate) struct ReplSession {
 impl ReplSession {
     pub(crate) fn new() -> Self {
         Self {
-            interp: Interpreter::with_host(Arc::new(host::CliHostEnv)),
+            interp: Interpreter::new(),
         }
     }
 

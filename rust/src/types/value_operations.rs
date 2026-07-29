@@ -1,5 +1,4 @@
 use super::fraction::Fraction;
-use super::interval::Interval;
 use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use crate::error::NilReason;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
@@ -78,43 +77,14 @@ impl Value {
     /// no NIL call site can absorb it. Detect it with [`is_unknown`], never by
     /// matching the storage representation.
     #[inline]
-    pub fn unknown() -> Self {
-        Self {
-            data: ValueData::Unknown(None),
-            hint: Interpretation::TruthValue,
-            absence: None,
-        }
-    }
-
-    /// The logical truth value `Unknown` (U) carrying the CF-comparison
-    /// agreed-prefix diagnosis (SPEC §4.5.0 / §7.4.1). Identical to
-    /// [`unknown`] except that U's own diagnostic carrier records a
-    /// `DebugDiagnosis` whose `agreed_prefix` is surfaced as
-    /// `diagnosis.agreedPrefix`. `word` names the comparison Coreword that
-    /// produced U (e.g. `"COMPARE-WITHIN"`, `"LT"`).
-    pub fn unknown_with_agreed_prefix(word: Option<&str>, agreed_prefix: usize) -> Self {
-        Self {
-            data: ValueData::Unknown(Some(Box::new(DebugDiagnosis::comparison_unknown(
-                word,
-                agreed_prefix,
-            )))),
-            hint: Interpretation::TruthValue,
-            absence: None,
-        }
-    }
-
-    /// Whether this value is the logical truth value `Unknown` (U).
+     /// Whether this value is the logical truth value `Unknown` (U).
     ///
     /// This is the single canonical predicate for U. It keys off the
     /// dedicated [`ValueData::Unknown`] variant, so the U/NIL distinction is
     /// a type invariant. All call sites must use this instead of matching the
     /// storage representation.
     #[inline]
-    pub fn is_unknown(&self) -> bool {
-        matches!(self.data, ValueData::Unknown(_))
-    }
-
-    /// Whether this value carries the `TruthValue` interpretation role
+     /// Whether this value carries the `TruthValue` interpretation role
     /// (true, false, or unknown). Used at observation boundaries to attach
     /// the `truthValue` axis and the `truthValued` capability.
     #[inline]
@@ -360,27 +330,8 @@ impl Value {
     }
 
     #[inline]
-    pub fn from_interval(interval: Interval) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(vec![
-                Value::from_fraction(interval.lo),
-                Value::from_fraction(interval.hi),
-            ])),
-            hint: Interpretation::Interval,
-            absence: None,
-        }
-    }
-
-    #[inline]
-    pub fn from_datetime(f: Fraction) -> Self {
-        Self {
-            data: ValueData::Scalar(f),
-            hint: Interpretation::Timestamp,
-            absence: None,
-        }
-    }
-
-    /// NIL test: `true` only for the operational absence node
+     #[inline]
+     /// NIL test: `true` only for the operational absence node
     /// ([`ValueData::Nil`], the Bubble). The logical Unknown (U) is a
     /// separate [`ValueData::Unknown`] variant and is **not** NIL
     /// (`unknown().is_nil() == false`), so the U/NIL firewall (SPEC §7.5 /
@@ -419,17 +370,13 @@ impl Value {
             ValueData::Boolean(_) => SemanticKind::Number,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
-            ValueData::Record { .. } => SemanticKind::Record,
             // CS4 PR-2: U is a truth value, not an operational absence. Like a
             // definite Boolean it reports `number` on the coarse `semanticKind`
             // axis (for protocol stability — its distinctness lives in the
             // `truthValue` axis and value identity, SPEC §2.3), never
             // `absence`.
-            ValueData::Unknown(_) => SemanticKind::Number,
             ValueData::Nil => SemanticKind::Absence,
             ValueData::CodeBlock(_) => SemanticKind::Code,
-            ValueData::ProcessHandle(_) => SemanticKind::Process,
-            ValueData::SupervisorHandle(_) => SemanticKind::Supervisor,
         }
     }
 
@@ -440,10 +387,8 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
-            ValueData::Record { .. } => ValueShape::Record,
             // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
             // an absence.
-            ValueData::Unknown(_) => ValueShape::Scalar,
             ValueData::Nil => ValueShape::Absence,
             ValueData::CodeBlock(_) => ValueShape::CodeBlock,
             ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => ValueShape::Handle,
@@ -477,10 +422,6 @@ impl Value {
             // firewall that keeps U from being absorbed as an operational NIL
             // (SPEC §2.3 / §7.5). It gains `truthValued` below via
             // `is_truth_value`.
-            ValueData::Unknown(_) => {
-                capabilities.push(Capability::Diagnosable);
-                capabilities.push(Capability::AiExplainable);
-            }
             ValueData::Nil => {
                 capabilities.push(Capability::NilPassthrough);
                 capabilities.push(Capability::Diagnosable);
@@ -608,7 +549,6 @@ impl Value {
             ValueData::Tensor { data, shape } => {
                 Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
             }
-            ValueData::Record { pairs, .. } => Arc::strong_count(pairs) == 1,
             ValueData::CodeBlock(_)
             | ValueData::ProcessHandle(_)
             | ValueData::SupervisorHandle(_) => false,
@@ -648,7 +588,6 @@ impl Value {
             // CS4 PR-2: U is a single scalar truth value, so it has length 1
             // like a Boolean (not 0 like an absence). It is not indexable —
             // `get_child`/`child` return `None`, exactly as for a Boolean.
-            ValueData::Unknown(_) => 1,
             ValueData::Boolean(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
@@ -1058,30 +997,7 @@ impl Value {
         }
     }
 
-    pub fn from_process_handle(id: u64) -> Self {
-        Self {
-            data: ValueData::ProcessHandle(id),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
-
-    pub fn as_process_handle(&self) -> Option<u64> {
-        match self.data {
-            ValueData::ProcessHandle(id) => Some(id),
-            _ => None,
-        }
-    }
-
-    pub fn from_supervisor_handle(id: u64) -> Self {
-        Self {
-            data: ValueData::SupervisorHandle(id),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
-
-    pub fn resolve_default_hint(&self) -> Interpretation {
+      pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
             ValueData::Nil => Interpretation::Nil,
             // CS4 PR-2: U's role is `TruthValue`, like a Boolean — its default

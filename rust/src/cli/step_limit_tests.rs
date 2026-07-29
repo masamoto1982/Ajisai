@@ -75,7 +75,7 @@ fn lowered_step_limit_sandboxes_a_simple_program() {
 /// (the sandbox use case), not some other error the CLI exit code would mask.
 #[test]
 fn lowered_budget_raises_execution_limit_exceeded() {
-    let mut interp = Interpreter::with_host(Arc::new(super::host::CliHostEnv));
+    let mut interp = Interpreter::new();
     interp.set_max_execution_steps(10);
     let err = super::block_on(interp.execute(SIMPLE_PROGRAM))
         .expect_err("a 10-step budget must stop this program");

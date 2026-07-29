@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 use crate::interpreter::Interpreter;
 
-use super::{block_on, host, print_payloads, stack_display, Opts};
+use super::{block_on, print_payloads, stack_display, Opts};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExpectedStatus {
@@ -107,7 +107,7 @@ fn run_test_source(name: &str, source: &str) -> TestOutcome {
     let exp = parse_directives(source);
     let mut failures = exp.directive_errors.clone();
 
-    let mut interp = Interpreter::with_host(Arc::new(host::CliHostEnv));
+    let mut interp = Interpreter::new();
     let result = block_on(interp.execute(source));
     let error_message = result.as_ref().err().map(|e| e.to_string());
     let actual_status = if result.is_ok() {

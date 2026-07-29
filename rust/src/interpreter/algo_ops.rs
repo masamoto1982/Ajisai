@@ -1,16 +1,10 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
 fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from(format!(
-            "{}: Stack mode is not supported",
-            word
-        )));
-    }
     Ok(())
 }
 

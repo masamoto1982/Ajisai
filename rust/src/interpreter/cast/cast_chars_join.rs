@@ -3,274 +3,123 @@ use crate::interpreter::cast::cast_value_helpers::{
     is_boolean_value, is_datetime_value, is_number_value, is_string_value, try_char_from_value,
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            if val.is_nil() {
-                interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: expected String, got Nil"));
-            }
-
-            if is_string_value(&val) {
-                let s = value_as_string(&val).unwrap_or_default();
-                if s.is_empty() {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::from("CHARS: expected non-empty String"));
-                }
-
-                let chars: Vec<Value> = s
-                    .chars()
-                    .map(|c| Value::from_string(&c.to_string()))
-                    .collect();
-
-                interp.stack.push(Value::from_vector(chars));
-                return Ok(());
-            }
-
-            if is_number_value(&val) {
-                interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: expected String, got Number"));
-            }
-
-            if is_boolean_value(&val) {
-                interp.stack.push(val);
-                return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
-            }
-
-            interp.stack.push(val);
-            Err(AjisaiError::from("CHARS: expected String input"))
-        }
-        OperationTargetMode::Stack => {
-            let stack_len = interp.stack.len();
-            if stack_len == 0 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let mut results = Vec::with_capacity(stack_len);
-            let elements: Vec<Value> = interp.stack.drain(..).collect();
-
-            for elem in elements {
-                if elem.is_nil() {
-                    interp.stack = Stack::from_values(results);
-                    interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: expected String, got Nil"));
-                }
-
-                if is_string_value(&elem) {
-                    let s = value_as_string(&elem).unwrap_or_default();
-                    if s.is_empty() {
-                        interp.stack = Stack::from_values(results);
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from("CHARS: expected non-empty String"));
-                    }
-                    let chars: Vec<Value> = s
-                        .chars()
-                        .map(|c| Value::from_string(&c.to_string()))
-                        .collect();
-                    results.push(Value::from_vector(chars));
-                    continue;
-                }
-
-                if is_number_value(&elem) {
-                    interp.stack = Stack::from_values(results);
-                    interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: expected String, got Number"));
-                }
-
-                if is_boolean_value(&elem) {
-                    interp.stack = Stack::from_values(results);
-                    interp.stack.push(elem);
-                    return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
-                }
-
-                interp.stack = Stack::from_values(results);
-                interp.stack.push(elem);
-                return Err(AjisaiError::from("CHARS: expected String input"));
-            }
-
-            interp.stack = Stack::from_values(results);
-            Ok(())
-        }
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHARS: expected String, got Nil"));
     }
+
+    if is_string_value(&val) {
+        let s = value_as_string(&val).unwrap_or_default();
+        if s.is_empty() {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("CHARS: expected non-empty String"));
+        }
+
+        let chars: Vec<Value> = s
+            .chars()
+            .map(|c| Value::from_string(&c.to_string()))
+            .collect();
+
+        interp.stack.push(Value::from_vector(chars));
+        return Ok(());
+    }
+
+    if is_number_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHARS: expected String, got Number"));
+    }
+
+    if is_boolean_value(&val) {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
+    }
+
+    interp.stack.push(val);
+    Err(AjisaiError::from("CHARS: expected String input"))
+            
 }
 
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-            if val.is_nil() {
-                interp.stack.push(val);
-                return Err(AjisaiError::from("JOIN: expected Vector, got Nil"));
+    if val.is_nil() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("JOIN: expected Vector, got Nil"));
+    }
+
+    if let Some(children) = val.as_vector_view() {
+        if children.is_empty() {
+            interp.stack.push(val);
+            return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
+        }
+
+        let mut result = String::new();
+        for (i, elem) in children.iter().enumerate() {
+            if is_string_value(elem) {
+                if let Some(s) = value_as_string(elem) {
+                    result.push_str(&s);
+                    continue;
+                }
             }
 
-            if let Some(children) = val.as_vector_view() {
-                if children.is_empty() {
-                    interp.stack.push(val);
-                    return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
-                }
-
-                let mut result = String::new();
-                for (i, elem) in children.iter().enumerate() {
-                    if is_string_value(elem) {
-                        if let Some(s) = value_as_string(elem) {
-                            result.push_str(&s);
-                            continue;
-                        }
+            if is_number_value(elem) {
+                match try_char_from_value(elem) {
+                    Some(c) => {
+                        result.push(c);
+                        continue;
                     }
-
-                    if is_number_value(elem) {
-                        match try_char_from_value(elem) {
-                            Some(c) => {
-                                result.push(c);
-                                continue;
-                            }
-                            None => {
-                                interp.stack.push(val);
-                                return Err(AjisaiError::from(format!(
-                                    "JOIN: invalid character code at index {}",
-                                    i
-                                )));
-                            }
-                        }
+                    None => {
+                        interp.stack.push(val);
+                        return Err(AjisaiError::from(format!(
+                            "JOIN: invalid character code at index {}",
+                            i
+                        )));
                     }
-
-                    let type_name = if elem.is_nil() {
-                        "nil"
-                    } else if is_boolean_value(elem) {
-                        "boolean"
-                    } else {
-                        "other format"
-                    };
-                    interp.stack.push(val);
-                    return Err(AjisaiError::from(format!(
-                        "JOIN: all elements must be strings, found {} at index {}",
-                        type_name, i
-                    )));
                 }
-
-                interp.stack.push(Value::from_string(&result));
-                return Ok(());
             }
 
-            let type_name = if is_string_value(&val) {
-                "String"
-            } else if is_number_value(&val) {
-                "Number"
-            } else if is_boolean_value(&val) {
-                "Boolean"
-            } else if is_datetime_value(&val) {
-                "DateTime"
+            let type_name = if elem.is_nil() {
+                "nil"
+            } else if is_boolean_value(elem) {
+                "boolean"
             } else {
                 "other format"
             };
             interp.stack.push(val);
-            Err(AjisaiError::from(format!(
-                "JOIN: expected Vector, got {}",
-                type_name
-            )))
+            return Err(AjisaiError::from(format!(
+                "JOIN: all elements must be strings, found {} at index {}",
+                type_name, i
+            )));
         }
-        OperationTargetMode::Stack => {
-            let stack_len = interp.stack.len();
-            if stack_len == 0 {
-                return Err(AjisaiError::StackUnderflow);
-            }
 
-            let mut results = Vec::with_capacity(stack_len);
-            let elements: Vec<Value> = interp.stack.drain(..).collect();
-
-            for elem in elements {
-                if elem.is_nil() {
-                    interp.stack = Stack::from_values(results);
-                    interp.stack.push(elem);
-                    return Err(AjisaiError::from("JOIN: requires vector format, got Nil"));
-                }
-
-                if let Some(children) = elem.as_vector_view() {
-                    if children.is_empty() {
-                        interp.stack = Stack::from_values(results);
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from(
-                            "JOIN: empty vector has no strings to join",
-                        ));
-                    }
-
-                    let mut result_str = String::new();
-                    for (i, v) in children.iter().enumerate() {
-                        if is_string_value(v) {
-                            if let Some(s) = value_as_string(v) {
-                                result_str.push_str(&s);
-                                continue;
-                            }
-                        }
-
-                        if is_number_value(v) {
-                            if let Some(f) = v.as_scalar() {
-                                if let Some(code) = f.to_i64() {
-                                    if (0..=0x10FFFF).contains(&code) {
-                                        if let Some(c) = char::from_u32(code as u32) {
-                                            result_str.push(c);
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
-                            interp.stack = Stack::from_values(results);
-                            interp.stack.push(elem);
-                            return Err(AjisaiError::from(format!(
-                                "JOIN: invalid character code at index {}",
-                                i
-                            )));
-                        }
-
-                        let type_name = if v.is_nil() {
-                            "nil"
-                        } else if is_boolean_value(v) {
-                            "boolean"
-                        } else {
-                            "other format"
-                        };
-                        interp.stack = Stack::from_values(results);
-                        interp.stack.push(elem);
-                        return Err(AjisaiError::from(format!(
-                            "JOIN: all elements must be strings, found {} at index {}",
-                            type_name, i
-                        )));
-                    }
-
-                    results.push(Value::from_string(&result_str));
-                    continue;
-                }
-
-                let type_name = if is_string_value(&elem) {
-                    "String"
-                } else if is_number_value(&elem) {
-                    "Number"
-                } else if is_boolean_value(&elem) {
-                    "Boolean"
-                } else if is_datetime_value(&elem) {
-                    "DateTime"
-                } else {
-                    "other format"
-                };
-                interp.stack = Stack::from_values(results);
-                interp.stack.push(elem);
-                return Err(AjisaiError::from(format!(
-                    "JOIN: requires vector format, got {}",
-                    type_name
-                )));
-            }
-
-            interp.stack = Stack::from_values(results);
-            Ok(())
-        }
+        interp.stack.push(Value::from_string(&result));
+        return Ok(());
     }
+
+    let type_name = if is_string_value(&val) {
+        "String"
+    } else if is_number_value(&val) {
+        "Number"
+    } else if is_boolean_value(&val) {
+        "Boolean"
+    } else if is_datetime_value(&val) {
+        "DateTime"
+    } else {
+        "other format"
+    };
+    interp.stack.push(val);
+    Err(AjisaiError::from(format!(
+        "JOIN: expected Vector, got {}",
+        type_name
+    )))
+            
 }
 
 #[cfg(test)]

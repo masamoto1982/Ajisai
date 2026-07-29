@@ -246,29 +246,10 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
         },
-        ValueData::Record { pairs, shape } => {
-            let len = pairs.len();
-            let mut keys = vec![String::new(); len];
-            for (key, &slot) in shape.mapping() {
-                if slot < len {
-                    keys[slot] = key.clone();
-                }
-            }
-            PersistData::Record {
-                pairs: pairs
-                    .iter()
-                    .map(encode_value)
-                    .collect::<Result<Vec<_>, _>>()?,
-                keys,
-            }
-        }
         ValueData::Nil => PersistData::Nil,
-        ValueData::Unknown(_) => PersistData::Unknown,
         ValueData::CodeBlock(tokens) => PersistData::Code {
             tokens: tokens.iter().map(token_to_wire).collect(),
         },
-        ValueData::ProcessHandle(id) => PersistData::Process { id: *id },
-        ValueData::SupervisorHandle(id) => PersistData::Supervisor { id: *id },
     })
 }
 

@@ -7,7 +7,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_bigint_from_value, extract_operands, nil_passthrough_binary, nil_passthrough_unary,
     push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -20,12 +20,6 @@ use crate::types::{Interpretation, Value, ValueData};
 const MAX_POW_EXPONENT: i64 = 1_000_000;
 
 fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from(format!(
-            "{}: Stack mode is not supported",
-            word
-        )));
-    }
     Ok(())
 }
 

@@ -5,7 +5,7 @@ use super::hedged::execute_hedged_predicate_kernel;
 use super::runners::{execute_plain_predicate_kernel, execute_quantized_predicate_kernel};
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::{Token, Value};
 
@@ -27,62 +27,86 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let target_val: Value = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(code_val.clone());
-                AjisaiError::StackUnderflow
-            })?;
+    let target_val: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::StackUnderflow
+    })?;
 
-            if target_val.is_nil() {
-                interp.stack.push(Value::from_bool(false));
+    if target_val.is_nil() {
+        interp.stack.push(Value::from_bool(false));
+        return Ok(());
+    }
+    if !is_vector_value(&target_val) {
+        interp.stack.push(target_val);
+        interp.stack.push(code_val);
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
+
+    // VTU Phase III bulk fast path: ANY over a 1-D dense Tensor with
+    // a fast unary predicate. Disabled in hedged modes.
+    if let ExecutableCode::QuantizedBlock(qb) = &executable {
+        if !super::hedged_mode_active(interp) {
+            if let Some(bulk) =
+                super::try_bulk_quantized_predicate_pub(interp, qb, &target_val)
+            {
+                let result = bulk.flags.into_iter().any(|b| b);
+                interp.stack.push(Value::from_bool(result));
                 return Ok(());
             }
-            if !is_vector_value(&target_val) {
-                interp.stack.push(target_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::create_structure_error(
-                    "vector",
-                    "other format",
-                ));
-            }
+        }
+    }
 
-            // VTU Phase III bulk fast path: ANY over a 1-D dense Tensor with
-            // a fast unary predicate. Disabled in hedged modes.
-            if let ExecutableCode::QuantizedBlock(qb) = &executable {
-                if !super::hedged_mode_active(interp) {
-                    if let Some(bulk) =
-                        super::try_bulk_quantized_predicate_pub(interp, qb, &target_val)
-                    {
-                        let result = bulk.flags.into_iter().any(|b| b);
-                        interp.stack.push(Value::from_bool(result));
-                        return Ok(());
+    let mut saved_stack: Stack = Stack::new();
+    std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let saved_target = interp.operation_target_mode;
+    let saved_no_change_check = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
+
+    let mut result = false;
+    let mut error: Option<AjisaiError> = None;
+    for i in 0..target_val.len() {
+        let elem = target_val
+            .child(i)
+            .expect("ANY: child index in 0..len must be valid");
+        match &executable {
+            ExecutableCode::QuantizedBlock(qb) => {
+                match execute_hedged_predicate_kernel(
+                    interp,
+                    "ANY",
+                    qb,
+                    plain_tokens.as_deref(),
+                    elem,
+                ) {
+                    Ok(is_true) => {
+                        if is_true {
+                            result = true;
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        error = Some(e);
+                        break;
                     }
                 }
             }
-
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-            let saved_target = interp.operation_target_mode;
-            let saved_no_change_check = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut result = false;
-            let mut error: Option<AjisaiError> = None;
-            for i in 0..target_val.len() {
-                let elem = target_val
-                    .child(i)
-                    .expect("ANY: child index in 0..len must be valid");
-                match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_hedged_predicate_kernel(
-                            interp,
-                            "ANY",
-                            qb,
-                            plain_tokens.as_deref(),
-                            elem,
-                        ) {
+            _ => {
+                interp.stack.clear();
+                interp.stack.push(elem);
+                match execute_executable_code(interp, &executable) {
+                    Ok(_) => {
+                        let condition_result = match interp.stack.pop() {
+                            Some(v) => v,
+                            None => {
+                                error = Some(AjisaiError::from(
+                                    "ANY: expected boolean value, got empty stack",
+                                ));
+                                break;
+                            }
+                        };
+                        match extract_predicate_boolean(condition_result) {
                             Ok(is_true) => {
                                 if is_true {
                                     result = true;
@@ -95,111 +119,24 @@ pub fn op_any(interp: &mut Interpreter) -> Result<()> {
                             }
                         }
                     }
-                    _ => {
-                        interp.stack.clear();
-                        interp.stack.push(elem);
-                        match execute_executable_code(interp, &executable) {
-                            Ok(_) => {
-                                let condition_result = match interp.stack.pop() {
-                                    Some(v) => v,
-                                    None => {
-                                        error = Some(AjisaiError::from(
-                                            "ANY: expected boolean value, got empty stack",
-                                        ));
-                                        break;
-                                    }
-                                };
-                                match extract_predicate_boolean(condition_result) {
-                                    Ok(is_true) => {
-                                        if is_true {
-                                            result = true;
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error = Some(e);
-                                        break;
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-
-            if let Some(e) = error {
-                interp.stack.push(target_val);
-                interp.stack.push(code_val);
-                return Err(e);
-            }
-
-            interp.stack.push(Value::from_bool(result));
-            Ok(())
-        }
-        OperationTargetMode::Stack => {
-            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count: usize = match extract_integer_from_value(&count_val) {
-                Ok(v) => v as usize,
-                Err(e) => {
-                    interp.stack.push(count_val);
-                    interp.stack.push(code_val);
-                    return Err(e);
-                }
-            };
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-            let saved_target = interp.operation_target_mode;
-            let saved_no_change_check = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut result = false;
-            for item in &targets {
-                let pred_res = match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        execute_quantized_predicate_kernel(interp, qb, item.clone())
-                    }
-                    _ => execute_plain_predicate_kernel(interp, &executable, item.clone()),
-                };
-                match pred_res {
-                    Ok(is_true) => {
-                        if is_true {
-                            result = true;
-                            break;
-                        }
-                    }
                     Err(e) => {
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = saved_stack;
-                        interp.stack.extend(targets);
-                        interp.stack.push(count_val);
-                        interp.stack.push(code_val);
-                        return Err(e);
+                        error = Some(e);
+                        break;
                     }
                 }
             }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-            interp.stack.push(Value::from_bool(result));
-            Ok(())
         }
     }
+    interp.disable_no_change_check = saved_no_change_check;
+    interp.stack = saved_stack;
+
+    if let Some(e) = error {
+        interp.stack.push(target_val);
+        interp.stack.push(code_val);
+        return Err(e);
+    }
+
+    interp.stack.push(Value::from_bool(result));
+    Ok(())
+            
 }

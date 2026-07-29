@@ -184,7 +184,6 @@ pub(crate) fn value_to_protocol(
         // U is handled by the `is_unknown()` early return above, so this arm
         // is unreachable; it deliberately reports `truthValue`, never `nil`,
         // to uphold the firewall (SPEC §2.3) even if that guard ever moves.
-        ValueData::Unknown(_) => ("truthValue", ProtocolValue::Text("unknown".to_string())),
         ValueData::Boolean(b) => ("boolean", ProtocolValue::Bool(*b)),
         ValueData::ExactScalar(er) => {
             // Serialize ExactScalar as best rational approximation with large
@@ -231,13 +230,7 @@ pub(crate) fn value_to_protocol(
                 ("vector", ProtocolValue::Children(kids))
             }
         }
-        ValueData::Record { pairs, .. } => {
-            let kids = pairs.iter().map(|p| value_to_protocol(p, None)).collect();
-            ("vector", ProtocolValue::Children(kids))
-        }
         ValueData::CodeBlock(_) => ("nil", ProtocolValue::Null),
-        ValueData::ProcessHandle(id) => ("process_handle", ProtocolValue::Handle(*id)),
-        ValueData::SupervisorHandle(id) => ("supervisor_handle", ProtocolValue::Handle(*id)),
     };
     ProtocolNode {
         type_str,

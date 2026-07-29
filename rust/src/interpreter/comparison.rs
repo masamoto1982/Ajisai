@@ -5,7 +5,7 @@ use crate::interpreter::value_extraction_helpers::{
     extract_count_from_value, extract_integer_from_value, nil_passthrough_binary,
     nil_passthrough_value,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::exact::{ExactCmp, ExactReal, Water};
 use crate::types::fraction::Fraction;
 use crate::types::interval::Interval;
@@ -279,7 +279,6 @@ fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
 
 fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
     if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
         || interp.stack.len() < 2
     {
         return false;
@@ -311,7 +310,6 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
 
 fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
     if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
         || interp.stack.len() < 2
     {
         return false;
@@ -387,77 +385,34 @@ fn apply_binary_comparison(
 ) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
+    }
+
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        let a_val = interp.stack[stack_len - 2].clone();
+        let b_val = interp.stack[stack_len - 1].clone();
+        (a_val, b_val)
+    } else {
+        let b_val = interp.stack.pop().unwrap();
+        let a_val = interp.stack.pop().unwrap();
+        (a_val, b_val)
+    };
+
+    match compare_scalar_pair(&a_val, &b_val, kind) {
+        Ok(ScalarCmp::Decided(b)) => push_boolean_result(interp, b),
+        Ok(ScalarCmp::Unknown(p)) => push_unknown(interp, Some(p)),
+        Err(e) => {
+            if !is_keep_mode {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
             }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                let a_val = interp.stack[stack_len - 2].clone();
-                let b_val = interp.stack[stack_len - 1].clone();
-                (a_val, b_val)
-            } else {
-                let b_val = interp.stack.pop().unwrap();
-                let a_val = interp.stack.pop().unwrap();
-                (a_val, b_val)
-            };
-
-            match compare_scalar_pair(&a_val, &b_val, kind) {
-                Ok(ScalarCmp::Decided(b)) => push_boolean_result(interp, b),
-                Ok(ScalarCmp::Unknown(p)) => push_unknown(interp, Some(p)),
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                    }
-                    return Err(e);
-                }
-            }
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            if let Some(nil) = nil_passthrough_value(&items) {
-                interp.stack.push(nil);
-                return Ok(());
-            }
-
-            match check_all_adjacent_pairs(&items, kind) {
-                Ok(ScalarCmp::Decided(decided)) => push_boolean_result(interp, decided),
-                Ok(ScalarCmp::Unknown(p)) => push_unknown(interp, Some(p)),
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.extend(items);
-                    }
-                    interp.stack.push(count_val);
-                    return Err(e);
-                }
-            }
-            Ok(())
+            return Err(e);
         }
     }
+    Ok(())
+            
 }
 
 /// Three-valued interval comparison for the same ordering schema used by the
@@ -525,12 +480,11 @@ pub(crate) fn scalar_fastpath_neq(interp: &mut Interpreter) -> bool {
 }
 
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
+    if nil_passthrough_binary(interp)
     {
         return Ok(());
     }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
+    {
         if push_ordering_scalar_fastpath(interp, kind) {
             return Ok(());
         }
@@ -634,8 +588,7 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
 }
 
 fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
+    if nil_passthrough_binary(interp)
     {
         return Ok(());
     }
@@ -646,65 +599,29 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                let a_val = interp.stack[stack_len - 2].clone();
-                let b_val = interp.stack[stack_len - 1].clone();
-                (a_val, b_val)
-            } else {
-                let b_val = interp.stack.pop().unwrap();
-                let a_val = interp.stack.pop().unwrap();
-                (a_val, b_val)
-            };
-
-            match pairwise_eq(&a_val, &b_val) {
-                ScalarCmp::Decided(eq) => {
-                    push_boolean_result(interp, if invert { !eq } else { eq })
-                }
-                ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
-            }
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            if let Some(nil) = nil_passthrough_value(&items) {
-                interp.stack.push(nil);
-                return Ok(());
-            }
-
-            match check_all_adjacent_eq(&items, invert) {
-                ScalarCmp::Decided(decided) => push_boolean_result(interp, decided),
-                ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
-            }
-            Ok(())
-        }
+    if interp.stack.len() < 2 {
+        return Err(AjisaiError::StackUnderflow);
     }
+
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        let a_val = interp.stack[stack_len - 2].clone();
+        let b_val = interp.stack[stack_len - 1].clone();
+        (a_val, b_val)
+    } else {
+        let b_val = interp.stack.pop().unwrap();
+        let a_val = interp.stack.pop().unwrap();
+        (a_val, b_val)
+    };
+
+    match pairwise_eq(&a_val, &b_val) {
+        ScalarCmp::Decided(eq) => {
+            push_boolean_result(interp, if invert { !eq } else { eq })
+        }
+        ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
+    }
+    Ok(())
+            
 }
 
 /// Push the three-way sign scalar (`-1` / `0` / `1`) produced by

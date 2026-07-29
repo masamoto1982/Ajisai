@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -43,9 +43,6 @@ fn pop_with_keep(interp: &mut Interpreter) -> Result<(Value, Value)> {
 }
 
 pub(crate) fn op_interval(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("INTERVAL: Stack mode is not supported"));
-    }
     let (lo_v, hi_v) = pop_with_keep(interp)?;
     let lo = lo_v
         .as_scalar()
@@ -66,9 +63,6 @@ pub(crate) fn op_interval(interp: &mut Interpreter) -> Result<()> {
 /// interpretation role (SPEC §12.2). Value-preserving: it only retags
 /// the existing top, leaving the underlying data untouched.
 pub(crate) fn op_to_cf(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from(">CF: Stack mode is not supported"));
-    }
     let len = interp.stack.len();
     if len == 0 {
         return Err(AjisaiError::StackUnderflow);
@@ -92,9 +86,6 @@ pub(crate) fn op_width(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub(crate) fn op_is_exact(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("IS_EXACT: Stack mode is not supported"));
-    }
     let value = if interp.consumption_mode == ConsumptionMode::Keep {
         interp
             .stack
@@ -115,11 +106,6 @@ fn unary_interval_accessor<F>(interp: &mut Interpreter, f: F) -> Result<()>
 where
     F: Fn(Interval) -> Fraction,
 {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from(
-            "interval accessor: Stack mode is not supported",
-        ));
-    }
     let value = if interp.consumption_mode == ConsumptionMode::Keep {
         interp
             .stack
@@ -137,9 +123,6 @@ where
 }
 
 pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("SQRT: Stack mode is not supported"));
-    }
     let value = if interp.consumption_mode == ConsumptionMode::Keep {
         interp
             .stack
@@ -190,9 +173,6 @@ pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub(crate) fn op_sqrt_eps(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from("SQRT_EPS: Stack mode is not supported"));
-    }
     let (value, eps_value) = pop_with_keep(interp)?;
     let interval = value_to_interval(&value)
         .ok_or_else(|| AjisaiError::from("SQRT_EPS: expected Number or Interval as first arg"))?;

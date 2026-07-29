@@ -20,9 +20,6 @@
 //! interpreter and serializes the existing diagnostic structures. It defines
 //! no language semantics (canonical source: `SPECIFICATION.html`).
 
-mod clarify;
-#[cfg(test)]
-mod clarify_tests;
 mod contract_decl;
 #[cfg(test)]
 mod contract_decl_tests;
@@ -30,42 +27,12 @@ mod contract_linearity;
 mod contract_report;
 #[cfg(test)]
 mod contract_report_tests;
-mod contract_space;
-mod coverage;
-#[cfg(test)]
-mod coverage_tests;
-mod explain;
-#[cfg(test)]
-mod explain_tests;
-mod fmt;
-mod host;
-mod lockfile;
-mod manifest;
-#[cfg(test)]
-mod manifest_tests;
-mod modifier;
-#[cfg(test)]
-mod modifier_tests;
-mod new_project;
-mod plan_check;
-#[cfg(test)]
-mod plan_check_tests;
-mod project;
-#[cfg(test)]
-mod project_tests;
-mod receipt;
-#[cfg(test)]
-mod receipt_tests;
 mod repl;
 mod report;
-#[cfg(test)]
-mod report_tests;
 mod run_render;
 #[cfg(test)]
 mod step_limit_tests;
 mod test_runner;
-
-use explain::{Explanation, Lang};
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{
@@ -79,57 +46,34 @@ use std::sync::Arc;
 const USAGE: &str = "Usage: ajisai <command> [options]
 
 Commands:
-  run <file.ajisai> [--json] [--receipt] [--step-limit <N>]
+  run <file.ajisai> [--json] [--step-limit <N>]
                                   Execute a program file
-  check <file.ajisai> [--json]    Tokenize, parse and resolve only (no execution)
+  check <file.ajisai> [--json] [--contract]
+                                  Tokenize, parse and resolve only (no
+                                  execution). With --contract, also check each
+                                  `#:contract` declaration against the contract
+                                  inferred from the Core Words it calls
   contract <file.ajisai> [--json] Report each user word's inferred contract
                                   (arity, purity, NIL, determinism) plus a
                                   paste-ready `#:contract` line (no execution)
-  coverage <file.ajisai> [--json] Contract coverage ratio: the fraction of word
-                                  occurrences resolving to complete SPEC 7.14
-                                  contract metadata (no execution)
-  modifier <phrase...>            Infer the modifier (TOP/STAK, EAT/KEEP, ^) for
-                                  an operation-intent phrase (no execution)
-  fmt <file.ajisai> [--write] [--check]
-                                  Rewrite source into canonical form (spacing
-                                  and indentation only; never changes meaning).
-                                  Default prints to stdout; --write edits in
-                                  place; --check exits 1 if not already canonical
   test <file-or-dir> [--json]     Run test files, checking each program against
                                   its `#@` directive comments (status/stack/
                                   output/error). Exit 1 if any test fails
-  build <dir>                     Run a project (ajisai.toml): compose its path
-                                  dependencies and entry, confine it to the
-                                  manifest's capability allow-list, and verify
-                                  ajisai.lock if present. Exit 1 on a language
-                                  error or lock drift
-  lock <dir> [--check]            Write ajisai.lock with the project's realized
-                                  source/word identities and required
-                                  capabilities. --check verifies it is current
-  new <dir>                       Scaffold a new project (ajisai.toml + a
-                                  runnable src/main.ajisai) at <dir>
   repl [--json]                   Interactive session; stack and definitions
                                   persist. :help for commands, :quit to leave
   version [--json]                Print version information
 
 Options:
   --json                          Emit one JSON document (pipe-safe)
-  --explain                       Add a plain-language explanation of any
-                                  diagnosis (headline, next step, details)
-  --contract                      With `check`: add a light, execution-free
-                                  flow-mass and NIL-flow contract check, plus
-                                  any `#:contract` word declarations checked
-                                  against the inferred contract (exit 1 on a
-                                  contradiction)
-  --receipt                       With `run --json`: attach an execution receipt
-                                  (source/result identity, executed words,
-                                  capabilities, effects, water, integrity)
-  --lang <ja|en>                  Language for --explain / --contract / modifier
-                                  output (default: ja)
+  --contract                      With `check`: verify `#:contract` word
+                                  declarations against the inferred contract
+                                  (exit 1 on a contradiction). The check is
+                                  conservative: an unanalyzable body is
+                                  reported as `cannot verify`, never as passed
   --step-limit <N>                With `run`: override the execution step
-                                  budget (water level, SPEC 5.3). N is a
-                                  positive integer; default: 100000. A runtime
-                                  safety control, not a language semantic
+                                  budget. N is a positive integer; default:
+                                  100000. A host safety control, not a language
+                                  semantic
 
 Exit codes:
   0  success
@@ -143,30 +87,14 @@ pub fn run(args: &[String]) -> i32 {
         return 2;
     };
     let mut json = false;
-    let mut want_explain = false;
     let mut contract = false;
-    let mut receipt = false;
-    let mut fmt_check = false;
-    let mut fmt_write = false;
-    let mut lang = Lang::Ja;
     let mut step_limit: Option<usize> = None;
     let mut positional: Vec<&str> = Vec::new();
     let mut iter = rest.iter();
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--json" => json = true,
-            "--explain" => want_explain = true,
             "--contract" => contract = true,
-            "--receipt" => receipt = true,
-            "--check" => fmt_check = true,
-            "--write" => fmt_write = true,
-            "--lang" => match iter.next().map(String::as_str).and_then(Lang::parse) {
-                Some(parsed) => lang = parsed,
-                None => {
-                    eprintln!("--lang expects one of: ja, en\n\n{}", USAGE);
-                    return 2;
-                }
-            },
             "--step-limit" => match iter.next().and_then(|value| value.parse::<usize>().ok()) {
                 Some(parsed) if parsed > 0 => step_limit = Some(parsed),
                 _ => {
@@ -183,25 +111,14 @@ pub fn run(args: &[String]) -> i32 {
     }
     let opts = Opts {
         json,
-        explain: want_explain,
         contract,
-        receipt,
-        fmt_check,
-        fmt_write,
-        lang,
         step_limit,
     };
     match (command.as_str(), positional.as_slice()) {
         ("run", [path]) => cmd_run(path, &opts),
         ("check", [path]) => cmd_check(path, &opts),
         ("contract", [path]) => cmd_contract(path, &opts),
-        ("coverage", [path]) => cmd_coverage(path, &opts),
-        ("modifier", phrase) if !phrase.is_empty() => cmd_modifier(&phrase.join(" "), &opts),
-        ("fmt", [path]) => fmt::cmd_fmt(path, &opts),
         ("test", [path]) => test_runner::cmd_test(path, &opts),
-        ("build", [path]) => project::cmd_build(path, &opts),
-        ("lock", [path]) => project::cmd_lock(path, &opts),
-        ("new", [path]) => new_project::cmd_new(path),
         ("repl", []) => repl::cmd_repl(&opts),
         ("version", []) => cmd_version(json),
         _ => {
@@ -214,23 +131,12 @@ pub fn run(args: &[String]) -> i32 {
 /// Parsed CLI options shared across commands.
 struct Opts {
     json: bool,
-    explain: bool,
+    /// `check --contract`: verify `#:contract` declarations against the
+    /// contract inferred from the called Core Words. Only `check` reads it.
     contract: bool,
-    /// With `run --json`: attach an execution receipt (Phase 6). Additive; a run
-    /// without it is byte-for-byte unchanged. Only `run` executes and records
-    /// provenance, so only `run` reads it.
-    receipt: bool,
-    /// The shared `--check` flag: verify without writing. `fmt --check` exits 1
-    /// if the file is not canonical; `lock --check` exits 1 if `ajisai.lock` is
-    /// out of date. Read by `fmt` and `lock`.
-    fmt_check: bool,
-    /// `fmt --write`: format the file in place instead of printing to stdout.
-    /// Only `fmt` reads it.
-    fmt_write: bool,
-    lang: Lang,
-    /// Execution step budget override (water level, SPEC §5.3). `None` keeps
-    /// the interpreter default (`DEFAULT_MAX_EXECUTION_STEPS`); only `run`
-    /// executes, so only `run` reads it.
+    /// Execution step budget override. `None` keeps the interpreter default
+    /// (`DEFAULT_MAX_EXECUTION_STEPS`); only `run` executes, so only `run`
+    /// reads it.
     step_limit: Option<usize>,
 }
 
@@ -249,61 +155,6 @@ fn cmd_version(json: bool) -> i32 {
     0
 }
 
-/// `ajisai modifier <phrase...>`: infer the modifier (approach 3) for an
-/// operation-intent phrase. Never executes; always exit 0 (an ambiguous phrase
-/// is reported via the `ambiguous` flag, not as a failure).
-fn cmd_modifier(phrase: &str, opts: &Opts) -> i32 {
-    let inference = modifier::infer(phrase, opts.lang);
-    let clarifications = clarify::from_modifier(&inference, opts.lang);
-    if opts.json {
-        let doc = serde_json::json!({
-            "schemaVersion": report::SCHEMA_VERSION,
-            "status": "ok",
-            "modifier": {
-                "target": inference.target.as_str(),
-                "consume": inference.consume.as_str(),
-                "fallback": inference.fallback,
-                "targetExplicit": inference.target_explicit,
-                "consumeExplicit": inference.consume_explicit,
-                "ambiguous": inference.ambiguous,
-                "sugar": inference.sugar,
-                "rationale": inference.rationale,
-                "clarifications": report::clarifications_json(&clarifications),
-            },
-        });
-        println!("{}", pretty(&doc));
-    } else {
-        let fallback = if inference.fallback { " ^" } else { "" };
-        println!(
-            "modifier: {} {}{}",
-            inference.target.as_str(),
-            inference.consume.as_str(),
-            fallback
-        );
-        if inference.sugar.is_empty() {
-            println!("sugar: (defaults: TOP EAT — no modifier needed)");
-        } else {
-            println!("sugar: {}", inference.sugar);
-        }
-        println!("{}", inference.rationale);
-        print_clarifications(&clarifications);
-    }
-    0
-}
-
-/// Render clarifying questions (approach 4) as plain text, each with its
-/// choices and the Ajisai sugar a choice resolves to.
-fn print_clarifications(clarifications: &[clarify::Clarification]) {
-    for clarification in clarifications {
-        eprintln!("? {}", clarification.question);
-        for choice in &clarification.choices {
-            match &choice.apply {
-                Some(sugar) => eprintln!("    - {} → {}", choice.label, sugar),
-                None => eprintln!("    - {}", choice.label),
-            }
-        }
-    }
-}
 
 fn cmd_run(path: &str, opts: &Opts) -> i32 {
     let source = match std::fs::read_to_string(path) {
@@ -342,7 +193,7 @@ fn cmd_run(path: &str, opts: &Opts) -> i32 {
         return 1;
     }
 
-    let mut interp = Interpreter::with_host(Arc::new(host::CliHostEnv));
+    let mut interp = Interpreter::new();
     if let Some(limit) = opts.step_limit {
         interp.set_max_execution_steps(limit);
     }
@@ -606,7 +457,7 @@ fn cmd_check(path: &str, opts: &Opts) -> i32 {
     // Opt-in per-word contract declarations (`#:contract`), checked against the
     // inferred contract without executing any word body (P2).
     let contract_decls = if opts.contract {
-        Some(contract_decl::check_contract_decls(&source, opts.lang))
+        Some(contract_decl::check_contract_decls(&source))
     } else {
         None
     };
@@ -692,118 +543,6 @@ fn cmd_contract(path: &str, opts: &Opts) -> i32 {
     0
 }
 
-/// `ajisai coverage <file>`: mechanical contract-coverage aggregation
-/// (`docs/dev/capability-transition-measurement-design.md` §4). Tokenizes and
-/// structure-checks like `check`, never executes. Coverage itself is
-/// observational — an uncovered or unknown word is reported in the ratio, not
-/// as a failure — so a well-formed file always exits 0.
-fn cmd_coverage(path: &str, opts: &Opts) -> i32 {
-    let source = match std::fs::read_to_string(path) {
-        Ok(source) => source,
-        Err(e) => {
-            eprintln!("ajisai: cannot read {}: {}", path, e);
-            return 2;
-        }
-    };
-    let interp = Interpreter::new();
-
-    let tokens = match crate::tokenizer::tokenize(&source) {
-        Ok(tokens) => tokens,
-        Err(message) => {
-            let diagnosis = DebugDiagnosis::from_error_category(
-                ErrorPhase::Tokenize,
-                None,
-                None,
-                None,
-                0,
-                0,
-                Some(message.clone()),
-            );
-            emit(
-                &error_report(
-                    &interp,
-                    &diagnosis,
-                    None,
-                    message,
-                    Vec::new(),
-                    Vec::new(),
-                    opts,
-                ),
-                opts,
-            );
-            return 1;
-        }
-    };
-
-    if let Err(message) = check_structure(&tokens) {
-        let category = ErrorCategory::StructureError;
-        let diagnosis = DebugDiagnosis::from_error_category(
-            ErrorPhase::ParseStructure,
-            None,
-            Some(&category),
-            None,
-            0,
-            0,
-            Some(message.clone()),
-        );
-        emit(
-            &error_report(
-                &interp,
-                &diagnosis,
-                Some(&category),
-                message,
-                Vec::new(),
-                Vec::new(),
-                opts,
-            ),
-            opts,
-        );
-        return 1;
-    }
-
-    let coverage = coverage::analyze(&interp, &tokens);
-    if opts.json {
-        let doc = serde_json::json!({
-            "schemaVersion": report::SCHEMA_VERSION,
-            "status": "ok",
-            "coverage": coverage.to_json(),
-        });
-        println!("{}", pretty(&doc));
-    } else {
-        if coverage.total == 0 {
-            println!("coverage: 0/0 (no countable word occurrences)");
-        } else {
-            println!(
-                "coverage: {}/{} word occurrences contract-covered ({}%)",
-                coverage.covered,
-                coverage.total,
-                coverage.covered * 100 / coverage.total
-            );
-        }
-        let breakdown: Vec<String> = coverage
-            .by_kind
-            .iter()
-            .filter(|(_, count)| *count > 0)
-            .map(|(kind, count)| format!("{}: {}", kind.as_str(), count))
-            .collect();
-        if !breakdown.is_empty() {
-            println!("  {}", breakdown.join("  "));
-        }
-        if coverage.excluded_modifiers > 0 {
-            println!("  modifiers excluded: {}", coverage.excluded_modifiers);
-        }
-        if !coverage.uncovered.is_empty() {
-            println!("uncovered:");
-            for word in &coverage.uncovered {
-                println!("  {} ({}) x{}", word.word, word.kind.as_str(), word.count);
-            }
-        }
-    }
-    0
-}
-
-/// Static bracket balance for vector literals and code blocks. Purely
-/// structural; the runtime performs the authoritative check during
 /// execution — this only front-loads the same failure for `check`.
 fn check_structure(tokens: &[Token]) -> Result<(), String> {
     let mut vector_depth: i64 = 0;

@@ -53,12 +53,6 @@ pub const MAX_MATERIALIZED_ELEMENTS: usize =
     super::runtime_limits::DEFAULT_MAX_MATERIALIZED_ELEMENTS;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum OperationTargetMode {
-    StackTop,
-    Stack,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConsumptionMode {
     Consume,
     Keep,
@@ -357,7 +351,6 @@ pub struct Interpreter {
     /// deterministic or restricted host.
     pub(crate) host_env: Arc<dyn super::HostEnv>,
     pub(crate) definition_to_load: Option<String>,
-    pub(crate) operation_target_mode: OperationTargetMode,
     pub(crate) consumption_mode: ConsumptionMode,
     pub(crate) force_flag: bool,
     pub(crate) disable_no_change_check: bool,
@@ -557,7 +550,6 @@ impl Interpreter {
             host_effects: Vec::new(),
             host_env,
             definition_to_load: None,
-            operation_target_mode: OperationTargetMode::StackTop,
             consumption_mode: ConsumptionMode::Consume,
             force_flag: false,
             disable_no_change_check: true,
@@ -751,17 +743,11 @@ impl Interpreter {
             execution_epoch: self.execution_epoch,
         }
     }
-
-    pub(crate) fn update_operation_target_mode(&mut self, mode: OperationTargetMode) {
-        self.operation_target_mode = mode;
-    }
-
     pub(crate) fn update_consumption_mode(&mut self, mode: ConsumptionMode) {
         self.consumption_mode = mode;
     }
 
     pub(crate) fn reset_execution_modes(&mut self) {
-        self.operation_target_mode = OperationTargetMode::StackTop;
         self.consumption_mode = ConsumptionMode::Consume;
     }
 

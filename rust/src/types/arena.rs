@@ -150,21 +150,8 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             ValueData::Tensor { data, shape } => {
                 arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
             }
-            ValueData::Record { pairs, shape } => {
-                let pair_ids = pairs
-                    .iter()
-                    .map(|pair| alloc_recursive(pair, arena))
-                    .collect();
-                arena.alloc_record(pair_ids, shape.clone(), value.hint)
-            }
             ValueData::CodeBlock(tokens) => {
                 arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), value.hint)
-            }
-            ValueData::ProcessHandle(id) => {
-                arena.alloc_node(NodeKind::ProcessHandle(*id), value.hint)
-            }
-            ValueData::SupervisorHandle(id) => {
-                arena.alloc_node(NodeKind::SupervisorHandle(*id), value.hint)
             }
         }
     }

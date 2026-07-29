@@ -4,7 +4,7 @@ use crate::interpreter::cast::cast_value_helpers::{
     is_boolean_value, is_number_value, is_string_value_with_hint,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value};
@@ -96,13 +96,6 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "NIL".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let hint: Interpretation = interp.stack.last_role();
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 

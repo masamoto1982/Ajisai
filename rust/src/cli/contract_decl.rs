@@ -16,22 +16,16 @@
 //! ```
 //!
 //! Grammar: `#:contract NAME [ ( CONSUMES -- PRODUCES ) ] [purity] [nil]
-//! [linearity] [space]`, where `purity` is one of `pure` / `observable` /
+//! [linearity]`, where `purity` is one of `pure` / `observable` /
 //! `effectful`, `nil` is `nil-free` / `may-nil`, `linearity` is
 //! `linear` / `affine` / `droppable` (the resource-ownership axis; see
-//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1), and `space` is
-//! `space:const` / `space:linear` / `space:superlinear` / `space:unbounded`
-//! (the static-footprint axis; see `docs/dev/space-contract-design.md` Phase 2).
+//! `docs/dev/structural-memory-safety-roadmap.md` Phase 1).
 //! Each part is
 //! optional; the fields left out are not checked. Because inference is
 //! deliberately conservative (SPEC §7.14), an unprovable declaration is reported
 //! as a `note`, never a false `error`.
 
 use super::contract_linearity::{check_linearity, linearity_from_word, Linearity};
-use super::contract_space::{check_space, space_from_word, SpaceClass};
-use super::explain::Lang;
-use super::plan_check::Severity;
-use crate::interpreter::modules;
 use crate::interpreter::word_contract::{
     ContractConfidence, ContractFlow, ContractPurity, NilBehavior,
 };
@@ -50,12 +44,30 @@ pub(crate) struct ContractDecl {
     /// Declared resource linearity, or `None` when the directive omits it.
     pub linearity: Option<Linearity>,
     /// Declared static-footprint class, or `None` when the directive omits it.
-    pub space: Option<SpaceClass>,
     /// The original directive text, for diagnostics.
     pub raw: String,
 }
 
 /// One declaration-check finding, mirroring `plan_check::Finding`.
+/// Outcome of checking one declaration axis. The specification fixes exactly
+/// three results for `check --contract`: verified (no finding), violated
+/// (`Error`), or cannot verify (`Note`) when inference is too conservative to
+/// decide. A `Note` never fails the check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Severity {
+    Error,
+    Note,
+}
+
+impl Severity {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Severity::Error => "error",
+            Severity::Note => "note",
+        }
+    }
+}
+
 pub(crate) struct DeclFinding {
     pub severity: Severity,
     pub message: String,
@@ -134,7 +146,6 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
             purity: None,
             nil_free: None,
             linearity: None,
-            space: None,
             raw: raw.clone(),
         };
         let mut malformed: Option<String> = None;
@@ -173,11 +184,9 @@ pub(crate) fn parse_contract_directives(source: &str) -> (Vec<ContractDecl>, Vec
                         decl.purity = Some(p);
                     } else if let Some(l) = linearity_from_word(other) {
                         decl.linearity = Some(l);
-                    } else if let Some(s) = space_from_word(other) {
-                        decl.space = Some(s);
                     } else {
                         malformed = Some(format!(
-                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, `linear`/`affine`/`droppable`, or `space:const`/`space:linear`/`space:superlinear`/`space:unbounded`)"
+                            "`#:contract {name}`: unknown term `{other}` (expected `( c -- p )`, `pure`/`observable`/`effectful`, `nil-free`/`may-nil`, or `linear`/`affine`/`droppable`)"
                         ));
                         break;
                     }
@@ -276,28 +285,6 @@ fn collect_top_level_defs(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
     defs
 }
 
-/// Bring the file's `'MODULE' IMPORT` modules into scope so module-word
-/// dependencies resolve during inference. Uses the same non-executing module
-/// restore the session-load path uses — no word body runs.
-fn restore_imports(interp: &mut Interpreter, tokens: &[Token]) {
-    for (i, token) in tokens.iter().enumerate() {
-        let Token::String(name) = token else {
-            continue;
-        };
-        let follows_import = tokens[i + 1..]
-            .iter()
-            .find(|t| !matches!(t, Token::LineBreak))
-            .is_some_and(|t| {
-                matches!(t, Token::Symbol(s)
-                if { let c = crate::core_word_aliases::canonicalize_core_word_name(s);
-                     c.eq_ignore_ascii_case("IMPORT") || c.eq_ignore_ascii_case("IMPORT-ONLY") })
-            });
-        if follows_import {
-            modules::restore_module(interp, &name.to_uppercase());
-        }
-    }
-}
-
 /// Build an interpreter from `source` by registering its top-level word
 /// definitions and imports **without executing any word body or top-level
 /// code**, returning it alongside the user words it defined, in source order.
@@ -307,7 +294,6 @@ pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<S
     let mut interp = Interpreter::new();
     let mut names = Vec::new();
     if let Ok(tokens) = crate::tokenizer::tokenize(source) {
-        restore_imports(&mut interp, &tokens);
         for (name, body) in collect_top_level_defs(&tokens) {
             // A malformed body is not this pass's concern (the structural check
             // ran earlier); skip a definition that will not register.
@@ -328,7 +314,7 @@ pub(crate) fn build_definitions_interpreter(source: &str) -> (Interpreter, Vec<S
 /// Build a check interpreter from `source` by registering its top-level word
 /// definitions (and imports) without executing any word body or top-level code,
 /// then check every `#:contract` declaration against the inferred contract.
-pub(crate) fn check_contract_decls(source: &str, lang: Lang) -> ContractDeclCheck {
+pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
     let (decls, parse_errors) = parse_contract_directives(source);
     let mut findings: Vec<DeclFinding> = parse_errors
         .into_iter()
@@ -348,7 +334,7 @@ pub(crate) fn check_contract_decls(source: &str, lang: Lang) -> ContractDeclChec
     let (mut interp, _names) = build_definitions_interpreter(source);
 
     for decl in &decls {
-        check_one(&mut interp, decl, lang, &mut findings);
+        check_one(&mut interp, decl, &mut findings);
     }
 
     ContractDeclCheck {
@@ -360,16 +346,12 @@ pub(crate) fn check_contract_decls(source: &str, lang: Lang) -> ContractDeclChec
 fn check_one(
     interp: &mut Interpreter,
     decl: &ContractDecl,
-    lang: Lang,
     findings: &mut Vec<DeclFinding>,
 ) {
     let Some(contract) = interp.infer_word_contract(&decl.name) else {
         findings.push(DeclFinding {
             severity: Severity::Error,
-            message: match lang {
-                Lang::Ja => format!("`#:contract {}`: その名前の語が見つかりません。", decl.name),
-                Lang::En => format!("`#:contract {}`: no such word is defined.", decl.name),
-            },
+            message: format!("`#:contract {}`: no such word is defined.", decl.name),
         });
         return;
     };
@@ -384,7 +366,7 @@ fn check_one(
                 if *consumes != dc || *produces != dp {
                     findings.push(DeclFinding {
                         severity: Severity::Error,
-                        message: arity_msg(lang, &decl.name, dc, dp, *consumes, *produces),
+                        message: arity_msg(&decl.name, dc, dp, *consumes, *produces),
                     });
                 }
             }
@@ -394,18 +376,11 @@ fn check_one(
                 } else {
                     Severity::Error
                 },
-                message: match lang {
-                    Lang::Ja => format!(
-                        "`#:contract {}`: 固定アリティ ( {} -- {} ) を宣言していますが、推論は可変アリティです{}。",
-                        decl.name, dc, dp,
-                        if conservative { "(確証なし)" } else { "" }
-                    ),
-                    Lang::En => format!(
+                message: format!(
                         "`#:contract {}`: declared fixed arity ( {} -- {} ) but the inferred arity is dynamic{}.",
                         decl.name, dc, dp,
                         if conservative { " (unverified)" } else { "" }
                     ),
-                },
             }),
         }
     }
@@ -418,22 +393,13 @@ fn check_one(
                 } else {
                     Severity::Error
                 },
-                message: match lang {
-                    Lang::Ja => format!(
-                        "`#:contract {}`: `{}` を宣言していますが、推論は `{}` です{}。",
-                        decl.name,
-                        purity_label(declared),
-                        purity_label(contract.purity),
-                        if conservative { "(確証なし)" } else { "" }
-                    ),
-                    Lang::En => format!(
+                message: format!(
                         "`#:contract {}`: declared `{}` but inferred `{}`{}.",
                         decl.name,
                         purity_label(declared),
                         purity_label(contract.purity),
                         if conservative { " (unverified)" } else { "" }
                     ),
-                },
             });
         }
     }
@@ -451,38 +417,22 @@ fn check_one(
                 } else {
                     Severity::Error
                 },
-                message: match lang {
-                    Lang::Ja => format!(
-                        "`#:contract {}`: `nil-free` を宣言していますが、推論では NIL を生成/透過し得ます{}。",
-                        decl.name,
-                        if conservative { "(確証なし)" } else { "" }
-                    ),
-                    Lang::En => format!(
+                message: format!(
                         "`#:contract {}`: declared `nil-free` but inference shows it can create or propagate NIL{}.",
                         decl.name,
                         if conservative { " (unverified)" } else { "" }
                     ),
-                },
             });
         }
     }
 
     if let Some(linearity) = decl.linearity {
-        check_linearity(interp, decl, linearity, lang, findings);
-    }
-
-    if let Some(space) = decl.space {
-        check_space(decl, space, &contract, lang, findings);
+        check_linearity(interp, decl, linearity, findings);
     }
 }
 
-fn arity_msg(lang: Lang, name: &str, dc: u16, dp: u16, ic: u16, ip: u16) -> String {
-    match lang {
-        Lang::Ja => format!(
-            "`#:contract {name}`: アリティ ( {dc} -- {dp} ) を宣言していますが、推論は ( {ic} -- {ip} ) です。"
-        ),
-        Lang::En => format!(
+fn arity_msg(name: &str, dc: u16, dp: u16, ic: u16, ip: u16) -> String {
+    format!(
             "`#:contract {name}`: declared arity ( {dc} -- {dp} ) but inferred ( {ic} -- {ip} )."
-        ),
-    }
+        )
 }
