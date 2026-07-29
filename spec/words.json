@@ -30,7 +30,7 @@
       ],
       "documentation": {
         "summary": "Push the boolean TRUE onto the stack.",
-        "hover": "Push the boolean TRUE onto the stack.",
+        "hover": "TRUE — push TRUE",
         "lookup": "Push the boolean TRUE onto the stack.",
         "syntax": "TRUE"
       },
@@ -62,7 +62,7 @@
       ],
       "documentation": {
         "summary": "Push the boolean FALSE onto the stack.",
-        "hover": "Push the boolean FALSE onto the stack.",
+        "hover": "FALSE — push FALSE",
         "lookup": "Push the boolean FALSE onto the stack.",
         "syntax": "FALSE"
       },
@@ -95,7 +95,7 @@
       ],
       "documentation": {
         "summary": "Push the NIL value onto the stack.",
-        "hover": "Push the NIL value onto the stack.",
+        "hover": "NIL — push NIL",
         "lookup": "Push the NIL value onto the stack.",
         "syntax": "NIL"
       },
@@ -128,7 +128,7 @@
       ],
       "documentation": {
         "summary": "Test whether the top value is an operational NIL (absent).",
-        "hover": "Test whether the top value is an operational NIL (absent).",
+        "hover": "NIL? — test whether a value is absent",
         "lookup": "Test whether the top value is an operational NIL (absent).",
         "syntax": "1 0 / NIL?"
       },
@@ -161,7 +161,7 @@
       ],
       "documentation": {
         "summary": "Read the direct reason of an operational NIL as a protocol-string Text.",
-        "hover": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "hover": "NIL-REASON — read the NIL reason protocol string",
         "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-REASON"
       },
@@ -194,7 +194,7 @@
       ],
       "documentation": {
         "summary": "Read the origin of an operational NIL as a protocol-string Text.",
-        "hover": "Read the origin of an operational NIL as a protocol-string Text.",
+        "hover": "NIL-ORIGIN — read the NIL origin protocol string",
         "lookup": "Read the origin of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-ORIGIN"
       },
@@ -227,7 +227,7 @@
       ],
       "documentation": {
         "summary": "Read the recoverability of an operational NIL as a protocol-string Text.",
-        "hover": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "hover": "NIL-RECOVERABLE? — read the NIL recoverability protocol string",
         "lookup": "Read the recoverability of an operational NIL as a protocol-string Text.",
         "syntax": "1 0 / NIL-RECOVERABLE?"
       },
@@ -260,7 +260,7 @@
       ],
       "documentation": {
         "summary": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
-        "hover": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "hover": "NIL-DIAGNOSIS — read the three-layer NIL diagnosis record",
         "lookup": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
         "syntax": "1 0 / NIL-DIAGNOSIS"
       },
@@ -294,7 +294,7 @@
       ],
       "documentation": {
         "summary": "Convert a value to a boolean by truthiness.",
-        "hover": "Convert a value to a boolean by truthiness.",
+        "hover": "BOOL — convert to boolean",
         "lookup": "Convert a value to a boolean by truthiness.",
         "syntax": "1 BOOL"
       },
@@ -331,7 +331,7 @@
       ],
       "documentation": {
         "summary": "Three-way compare two values within an explicit observation budget.",
-        "hover": "Three-way compare two values within an explicit observation budget.",
+        "hover": "COMPARE-WITHIN — three-way compare within a budget",
         "lookup": "Three-way compare two values within an explicit observation budget.",
         "syntax": "1/3 1/2 64 COMPARE-WITHIN"
       },
@@ -369,7 +369,7 @@
       ],
       "documentation": {
         "summary": "Test equality of two values.",
-        "hover": "Test equality of two values.",
+        "hover": "EQ — test equality",
         "lookup": "Test equality of two values.",
         "syntax": "1 1 ="
       },
@@ -407,7 +407,7 @@
       ],
       "documentation": {
         "summary": "Test less-than comparison.",
-        "hover": "Test less-than comparison.",
+        "hover": "LT — test less than",
         "lookup": "Test less-than comparison.",
         "syntax": "1 2 <"
       },
@@ -445,7 +445,7 @@
       ],
       "documentation": {
         "summary": "Test less-than-or-equal comparison.",
-        "hover": "Test less-than-or-equal comparison.",
+        "hover": "LTE — test less than or equal",
         "lookup": "Test less-than-or-equal comparison.",
         "syntax": "1 1 <="
       },
@@ -483,7 +483,7 @@
       ],
       "documentation": {
         "summary": "Test greater-than comparison.",
-        "hover": "Test greater-than comparison.",
+        "hover": "GT — test greater than",
         "lookup": "Test greater-than comparison.",
         "syntax": "2 1 >"
       },
@@ -521,7 +521,7 @@
       ],
       "documentation": {
         "summary": "Test greater-than-or-equal comparison.",
-        "hover": "Test greater-than-or-equal comparison.",
+        "hover": "GTE — test greater than or equal",
         "lookup": "Test greater-than-or-equal comparison.",
         "syntax": "1 1 >="
       },
@@ -559,7 +559,7 @@
       ],
       "documentation": {
         "summary": "Test inequality of two values.",
-        "hover": "Test inequality of two values.",
+        "hover": "NEQ — test inequality",
         "lookup": "Test inequality of two values.",
         "syntax": "1 2 <>"
       },
@@ -595,7 +595,7 @@
       ],
       "documentation": {
         "summary": "Logical AND with three-valued (Kleene) NIL handling.",
-        "hover": "Logical AND with three-valued (Kleene) NIL handling.",
+        "hover": "AND — logical AND",
         "lookup": "Logical AND with three-valued (Kleene) NIL handling.",
         "syntax": "TRUE TRUE &"
       },
@@ -629,7 +629,7 @@
       ],
       "documentation": {
         "summary": "Logical OR with three-valued (Kleene) NIL handling.",
-        "hover": "Logical OR with three-valued (Kleene) NIL handling.",
+        "hover": "OR — logical OR",
         "lookup": "Logical OR with three-valued (Kleene) NIL handling.",
         "syntax": "TRUE FALSE OR"
       },
@@ -663,7 +663,7 @@
       ],
       "documentation": {
         "summary": "Logical negation.",
-        "hover": "Logical negation.",
+        "hover": "NOT — logical negation",
         "lookup": "Logical negation.",
         "syntax": "TRUE NOT"
       },
@@ -700,7 +700,7 @@
       ],
       "documentation": {
         "summary": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
-        "hover": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "hover": "VENT — lazy NIL-coalescing fallback",
         "lookup": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
         "syntax": "NIL ^ [ 0 ]"
       },
@@ -735,7 +735,7 @@
       ],
       "documentation": {
         "summary": "Set the operation target mode to the top of the stack.",
-        "hover": "Set the operation target mode to the top of the stack.",
+        "hover": "TOP — apply operation to stack top",
         "lookup": "Set the operation target mode to the top of the stack.",
         "syntax": ". +"
       },
@@ -770,7 +770,7 @@
       ],
       "documentation": {
         "summary": "Set the operation target mode to the whole stack.",
-        "hover": "Set the operation target mode to the whole stack.",
+        "hover": "STAK — apply operation to whole stack",
         "lookup": "Set the operation target mode to the whole stack.",
         "syntax": ".. +"
       },
@@ -805,7 +805,7 @@
       ],
       "documentation": {
         "summary": "Set the consumption mode to consume operands.",
-        "hover": "Set the consumption mode to consume operands.",
+        "hover": "EAT — consume operands",
         "lookup": "Set the consumption mode to consume operands.",
         "syntax": ", +"
       },
@@ -840,7 +840,7 @@
       ],
       "documentation": {
         "summary": "Set the consumption mode to keep operands.",
-        "hover": "Set the consumption mode to keep operands.",
+        "hover": "KEEP — keep operands and append result",
         "lookup": "Set the consumption mode to keep operands.",
         "syntax": ",, +"
       },
@@ -873,7 +873,7 @@
       ],
       "documentation": {
         "summary": "Pass control through unchanged (no-op).",
-        "hover": "Pass control through unchanged (no-op).",
+        "hover": "IDLE — pass through unchanged",
         "lookup": "Pass control through unchanged (no-op).",
         "syntax": "IDLE"
       },
@@ -909,7 +909,7 @@
       ],
       "documentation": {
         "summary": "Evaluate guard/body clauses in order, executing the first match.",
-        "hover": "Evaluate guard/body clauses in order, executing the first match.",
+        "hover": "COND — evaluate guard/body clauses",
         "lookup": "Evaluate guard/body clauses in order, executing the first match.",
         "syntax": "1 { TRUE } { 'y' } { IDLE } { 'n' } COND"
       },
@@ -944,7 +944,7 @@
       ],
       "documentation": {
         "summary": "Pipeline visual marker (no-op).",
-        "hover": "Pipeline visual marker (no-op).",
+        "hover": "FLOW — pipeline marker",
         "lookup": "Pipeline visual marker (no-op).",
         "syntax": "[ 1 2 3 ] ~ { [ 2 ] * } MAP"
       },
@@ -979,7 +979,7 @@
       ],
       "documentation": {
         "summary": "Force destructive dictionary operations to apply.",
-        "hover": "Force destructive dictionary operations to apply.",
+        "hover": "FORC — force destructive operation",
         "lookup": "Force destructive dictionary operations to apply.",
         "syntax": "! 'WORD' DEL"
       },
@@ -1017,7 +1017,7 @@
       ],
       "documentation": {
         "summary": "Execute a vector as Ajisai code.",
-        "hover": "Execute a vector as Ajisai code.",
+        "hover": "EXEC — execute vector as code",
         "lookup": "Execute a vector as Ajisai code.",
         "syntax": "[ 1 2 + ] EXEC"
       },
@@ -1053,7 +1053,7 @@
       ],
       "documentation": {
         "summary": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
-        "hover": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
+        "hover": "CONSERVE — assert parts sum exactly to a total",
         "lookup": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
         "syntax": "100 [ 3333/100 6667/100 ] CONSERVE"
       },
@@ -1090,7 +1090,7 @@
       ],
       "documentation": {
         "summary": "Parse a string as Ajisai source code and execute it.",
-        "hover": "Parse a string as Ajisai source code and execute it.",
+        "hover": "EVAL — parse and execute string",
         "lookup": "Parse a string as Ajisai source code and execute it.",
         "syntax": "'1 2 +' EVAL"
       },
@@ -1127,7 +1127,7 @@
       ],
       "documentation": {
         "summary": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
-        "hover": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
+        "hover": "OR-ELSE — value-based NIL fallback with a block",
         "lookup": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
         "syntax": "1 0 / { 0 } OR-ELSE"
       },
@@ -1164,7 +1164,7 @@
       ],
       "documentation": {
         "summary": "Define a user word from a body and a name.",
-        "hover": "Define a user word from a body and a name.",
+        "hover": "DEF — define user word",
         "lookup": "Define a user word from a body and a name.",
         "syntax": "{ 2 * } 'DOUBLE' DEF"
       },
@@ -1203,7 +1203,7 @@
       ],
       "documentation": {
         "summary": "Delete a user word from the dictionary.",
-        "hover": "Delete a user word from the dictionary.",
+        "hover": "DEL — delete user word",
         "lookup": "Delete a user word from the dictionary.",
         "syntax": "{ [ 1 ] } 'W' DEF 'W' DEL"
       },
@@ -1243,7 +1243,7 @@
       ],
       "documentation": {
         "summary": "Display the documentation for a named word.",
-        "hover": "Display the documentation for a named word.",
+        "hover": "LOOKUP — show word documentation",
         "lookup": "Display the documentation for a named word.",
         "syntax": "'ADD' ?"
       },
@@ -1282,7 +1282,7 @@
       ],
       "documentation": {
         "summary": "Load all public words of a module into the dictionary.",
-        "hover": "Load all public words of a module into the dictionary.",
+        "hover": "IMPORT — load module",
         "lookup": "Load all public words of a module into the dictionary.",
         "syntax": "'IO' IMPORT"
       },
@@ -1321,7 +1321,7 @@
       ],
       "documentation": {
         "summary": "Load only the listed public words of a module.",
-        "hover": "Load only the listed public words of a module.",
+        "hover": "IMPORT-ONLY — import selected words",
         "lookup": "Load only the listed public words of a module.",
         "syntax": "'json' [ 'parse' ] IMPORT-ONLY"
       },
@@ -1360,7 +1360,7 @@
       ],
       "documentation": {
         "summary": "Hide unused imported words from a module while keeping words referenced by user definitions.",
-        "hover": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "hover": "UNIMPORT — hide imported module words",
         "lookup": "Hide unused imported words from a module while keeping words referenced by user definitions.",
         "syntax": "'IO' UNIMPORT"
       },
@@ -1399,7 +1399,7 @@
       ],
       "documentation": {
         "summary": "Hide only the listed imported module words.",
-        "hover": "Hide only the listed imported module words.",
+        "hover": "UNIMPORT-ONLY — hide selected module words",
         "lookup": "Hide only the listed imported module words.",
         "syntax": "'json' [ 'parse' ] UNIMPORT-ONLY"
       },
@@ -1437,7 +1437,7 @@
       ],
       "documentation": {
         "summary": "Extract one element of a vector by index.",
-        "hover": "Extract one element of a vector by index.",
+        "hover": "GET — extract element at index",
         "lookup": "Extract one element of a vector by index.",
         "syntax": "[ 10 20 30 ] [ 0 ] GET"
       },
@@ -1472,7 +1472,7 @@
       ],
       "documentation": {
         "summary": "Insert a value at a given index in a vector.",
-        "hover": "Insert a value at a given index in a vector.",
+        "hover": "INSERT — insert element at index",
         "lookup": "Insert a value at a given index in a vector.",
         "syntax": "[ 1 3 ] [ 1 2 ] INSERT"
       },
@@ -1508,7 +1508,7 @@
       ],
       "documentation": {
         "summary": "Replace an element of a vector at a given index.",
-        "hover": "Replace an element of a vector at a given index.",
+        "hover": "REPLACE — replace element at index",
         "lookup": "Replace an element of a vector at a given index.",
         "syntax": "[ 1 2 3 ] [ 0 9 ] REPLACE"
       },
@@ -1544,7 +1544,7 @@
       ],
       "documentation": {
         "summary": "Remove an element from a vector at a given index.",
-        "hover": "Remove an element from a vector at a given index.",
+        "hover": "REMOVE — remove element at index",
         "lookup": "Remove an element from a vector at a given index.",
         "syntax": "[ 1 2 3 ] [ 0 ] REMOVE"
       },
@@ -1578,7 +1578,7 @@
       ],
       "documentation": {
         "summary": "Return the number of elements in a vector.",
-        "hover": "Return the number of elements in a vector.",
+        "hover": "LENGTH — return element count",
         "lookup": "Return the number of elements in a vector.",
         "syntax": "[ 1 2 3 ] LENGTH"
       },
@@ -1613,7 +1613,7 @@
       ],
       "documentation": {
         "summary": "Take the first N or last -N elements of a vector.",
-        "hover": "Take the first N or last -N elements of a vector.",
+        "hover": "TAKE — take N elements from start or end",
         "lookup": "Take the first N or last -N elements of a vector.",
         "syntax": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
       },
@@ -1648,7 +1648,7 @@
       ],
       "documentation": {
         "summary": "Split a vector into chunks at the specified sizes.",
-        "hover": "Split a vector into chunks at the specified sizes.",
+        "hover": "SPLIT — split vector at sizes",
         "lookup": "Split a vector into chunks at the specified sizes.",
         "syntax": "[ 1 2 3 4 ] [ 2 2 ] SPLIT"
       },
@@ -1682,7 +1682,7 @@
       ],
       "documentation": {
         "summary": "Flatten and concatenate two vectors.",
-        "hover": "Flatten and concatenate two vectors.",
+        "hover": "CONCAT — flatten and concatenate vectors",
         "lookup": "Flatten and concatenate two vectors.",
         "syntax": "[ 1 2 ] [ 3 4 ] CONCAT"
       },
@@ -1716,7 +1716,7 @@
       ],
       "documentation": {
         "summary": "Reverse the order of vector elements.",
-        "hover": "Reverse the order of vector elements.",
+        "hover": "REVERSE — reverse element order",
         "lookup": "Reverse the order of vector elements.",
         "syntax": "[ 1 2 3 ] REVERSE"
       },
@@ -1751,7 +1751,7 @@
       ],
       "documentation": {
         "summary": "Reorder vector elements according to an index permutation.",
-        "hover": "Reorder vector elements according to an index permutation.",
+        "hover": "REORDER — reorder by index list",
         "lookup": "Reorder vector elements according to an index permutation.",
         "syntax": "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER"
       },
@@ -1786,7 +1786,7 @@
       ],
       "documentation": {
         "summary": "Collect N items off the stack into a new vector.",
-        "hover": "Collect N items off the stack into a new vector.",
+        "hover": "COLLECT — collect N items into vector",
         "lookup": "Collect N items off the stack into a new vector.",
         "syntax": "1 2 3 3 COLLECT"
       },
@@ -1820,7 +1820,7 @@
       ],
       "documentation": {
         "summary": "Return a vector describing the dimensions of a value.",
-        "hover": "Return a vector describing the dimensions of a value.",
+        "hover": "SHAPE — return vector shape",
         "lookup": "Return a vector describing the dimensions of a value.",
         "syntax": "[ 1 2 3 ] SHAPE"
       },
@@ -1854,7 +1854,7 @@
       ],
       "documentation": {
         "summary": "Return the number of dimensions of a value.",
-        "hover": "Return the number of dimensions of a value.",
+        "hover": "RANK — return number of dimensions",
         "lookup": "Return the number of dimensions of a value.",
         "syntax": "[ [ 1 2 ] ] RANK"
       },
@@ -1889,7 +1889,7 @@
       ],
       "documentation": {
         "summary": "Reshape a vector to a target shape with the same total length.",
-        "hover": "Reshape a vector to a target shape with the same total length.",
+        "hover": "RESHAPE — reshape to specified shape",
         "lookup": "Reshape a vector to a target shape with the same total length.",
         "syntax": "[ 1 2 3 4 ] [ 2 2 ] RESHAPE"
       },
@@ -1924,7 +1924,7 @@
       ],
       "documentation": {
         "summary": "Transpose the axes of a tensor.",
-        "hover": "Transpose the axes of a tensor.",
+        "hover": "TRANSPOSE — transpose vector axes",
         "lookup": "Transpose the axes of a tensor.",
         "syntax": "[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE"
       },
@@ -1959,7 +1959,7 @@
       ],
       "documentation": {
         "summary": "Generate a numeric sequence from a [start, end] pair.",
-        "hover": "Generate a numeric sequence from a [start, end] pair.",
+        "hover": "RANGE — generate numeric sequence",
         "lookup": "Generate a numeric sequence from a [start, end] pair.",
         "syntax": "[ 0 5 ] RANGE"
       },
@@ -1994,7 +1994,7 @@
       ],
       "documentation": {
         "summary": "Fill a target shape with a constant value.",
-        "hover": "Fill a target shape with a constant value.",
+        "hover": "FILL — fill shape with value",
         "lookup": "Fill a target shape with a constant value.",
         "syntax": "[ 2 2 0 ] FILL"
       },
@@ -2031,7 +2031,7 @@
       ],
       "documentation": {
         "summary": "Apply a code block to each element of a vector.",
-        "hover": "Apply a code block to each element of a vector.",
+        "hover": "MAP — apply block to each element",
         "lookup": "Apply a code block to each element of a vector.",
         "syntax": "[ 1 2 3 ] { [ 2 ] * } MAP"
       },
@@ -2068,7 +2068,7 @@
       ],
       "documentation": {
         "summary": "Keep only the elements for which a predicate block returns TRUE.",
-        "hover": "Keep only the elements for which a predicate block returns TRUE.",
+        "hover": "FILTER — keep elements matching predicate",
         "lookup": "Keep only the elements for which a predicate block returns TRUE.",
         "syntax": "[ 1 2 3 ] { [ 2 ] = } FILTER"
       },
@@ -2105,7 +2105,7 @@
       ],
       "documentation": {
         "summary": "Reduce a vector to a single value using an initial accumulator and combiner block.",
-        "hover": "Reduce a vector to a single value using an initial accumulator and combiner block.",
+        "hover": "FOLD — reduce with initial value",
         "lookup": "Reduce a vector to a single value using an initial accumulator and combiner block.",
         "syntax": "[ 1 2 3 ] [ 0 ] { + } FOLD"
       },
@@ -2142,7 +2142,7 @@
       ],
       "documentation": {
         "summary": "Generate a sequence by repeatedly applying a state transition.",
-        "hover": "Generate a sequence by repeatedly applying a state transition.",
+        "hover": "UNFOLD — generate from state transition",
         "lookup": "Generate a sequence by repeatedly applying a state transition.",
         "syntax": "[ 1 ] { ... COND } UNFOLD"
       },
@@ -2179,7 +2179,7 @@
       ],
       "documentation": {
         "summary": "TRUE if at least one element satisfies the predicate.",
-        "hover": "TRUE if at least one element satisfies the predicate.",
+        "hover": "ANY — true if any element matches",
         "lookup": "TRUE if at least one element satisfies the predicate.",
         "syntax": "[ 1 2 3 ] { [ 2 ] = } ANY"
       },
@@ -2216,7 +2216,7 @@
       ],
       "documentation": {
         "summary": "TRUE if every element satisfies the predicate.",
-        "hover": "TRUE if every element satisfies the predicate.",
+        "hover": "ALL — true if all elements match",
         "lookup": "TRUE if every element satisfies the predicate.",
         "syntax": "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL"
       },
@@ -2253,7 +2253,7 @@
       ],
       "documentation": {
         "summary": "Count the elements that satisfy the predicate.",
-        "hover": "Count the elements that satisfy the predicate.",
+        "hover": "COUNT — count matching elements",
         "lookup": "Count the elements that satisfy the predicate.",
         "syntax": "[ 1 2 3 ] { [ 2 ] = } COUNT"
       },
@@ -2290,7 +2290,7 @@
       ],
       "documentation": {
         "summary": "Return a vector of intermediate fold accumulators.",
-        "hover": "Return a vector of intermediate fold accumulators.",
+        "hover": "SCAN — return intermediate fold results",
         "lookup": "Return a vector of intermediate fold accumulators.",
         "syntax": "[ 1 2 3 ] [ 0 ] { + } SCAN"
       },
@@ -2329,7 +2329,7 @@
       ],
       "documentation": {
         "summary": "Add two numeric values, element-wise with broadcasting.",
-        "hover": "Add two numeric values, element-wise with broadcasting.",
+        "hover": "ADD — add values",
         "lookup": "Add two numeric values, element-wise with broadcasting.",
         "syntax": "1 2 +"
       },
@@ -2368,7 +2368,7 @@
       ],
       "documentation": {
         "summary": "Subtract two numeric values, element-wise with broadcasting.",
-        "hover": "Subtract two numeric values, element-wise with broadcasting.",
+        "hover": "SUB — subtract values",
         "lookup": "Subtract two numeric values, element-wise with broadcasting.",
         "syntax": "5 3 -"
       },
@@ -2407,7 +2407,7 @@
       ],
       "documentation": {
         "summary": "Multiply two numeric values, element-wise with broadcasting.",
-        "hover": "Multiply two numeric values, element-wise with broadcasting.",
+        "hover": "MUL — multiply values",
         "lookup": "Multiply two numeric values, element-wise with broadcasting.",
         "syntax": "2 4 *"
       },
@@ -2446,7 +2446,7 @@
       ],
       "documentation": {
         "summary": "Divide two numeric values exactly (fractional result).",
-        "hover": "Divide two numeric values exactly (fractional result).",
+        "hover": "DIV — divide values",
         "lookup": "Divide two numeric values exactly (fractional result).",
         "syntax": "10 2 /"
       },
@@ -2486,7 +2486,7 @@
       ],
       "documentation": {
         "summary": "Modulo (remainder) of two numeric values.",
-        "hover": "Modulo (remainder) of two numeric values.",
+        "hover": "MOD — modulo",
         "lookup": "Modulo (remainder) of two numeric values.",
         "syntax": "7 3 %"
       },
@@ -2523,7 +2523,7 @@
       ],
       "documentation": {
         "summary": "Round toward negative infinity.",
-        "hover": "Round toward negative infinity.",
+        "hover": "FLOOR — round toward negative infinity",
         "lookup": "Round toward negative infinity.",
         "syntax": "[ 7/3 ] FLOOR"
       },
@@ -2560,7 +2560,7 @@
       ],
       "documentation": {
         "summary": "Round toward positive infinity.",
-        "hover": "Round toward positive infinity.",
+        "hover": "CEIL — round toward positive infinity",
         "lookup": "Round toward positive infinity.",
         "syntax": "[ 7/3 ] CEIL"
       },
@@ -2597,7 +2597,7 @@
       ],
       "documentation": {
         "summary": "Round to nearest integer (half-up).",
-        "hover": "Round to nearest integer (half-up).",
+        "hover": "ROUND — round to nearest integer",
         "lookup": "Round to nearest integer (half-up).",
         "syntax": "[ 5/2 ] ROUND"
       },
@@ -2635,7 +2635,7 @@
       ],
       "documentation": {
         "summary": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
-        "hover": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "hover": "QUANTIZE — round to a rational grid, keeping the residual",
         "lookup": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
         "syntax": "100/3 1/100 QUANTIZE"
       },
@@ -2673,7 +2673,7 @@
       ],
       "documentation": {
         "summary": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
-        "hover": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "hover": "QUANTIZE-HALF-AWAY — quantize, ties away from zero",
         "lookup": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
         "syntax": "5/2 1 QUANTIZE-HALF-AWAY"
       },
@@ -2711,7 +2711,7 @@
       ],
       "documentation": {
         "summary": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
-        "hover": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "hover": "QUANTIZE-FLOOR — quantize toward negative infinity",
         "lookup": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
         "syntax": "100/3 1/100 QUANTIZE-FLOOR"
       },
@@ -2749,7 +2749,7 @@
       ],
       "documentation": {
         "summary": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
-        "hover": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "hover": "QUANTIZE-CEIL — quantize toward positive infinity",
         "lookup": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
         "syntax": "100/3 1/100 QUANTIZE-CEIL"
       },
@@ -2787,7 +2787,7 @@
       ],
       "documentation": {
         "summary": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
-        "hover": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "hover": "QUANTIZE-TRUNC — quantize toward zero",
         "lookup": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
         "syntax": "100/3 1/100 QUANTIZE-TRUNC"
       },
@@ -2822,7 +2822,7 @@
       ],
       "documentation": {
         "summary": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
-        "hover": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "hover": "PRINT — output value to display",
         "lookup": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
         "syntax": "42 PRINT"
       },
@@ -2859,7 +2859,7 @@
       ],
       "documentation": {
         "summary": "Spawn an isolated child runtime from a code block.",
-        "hover": "Spawn an isolated child runtime from a code block.",
+        "hover": "SPAWN — spawn isolated child runtime",
         "lookup": "Spawn an isolated child runtime from a code block.",
         "syntax": "{ 1 2 + } SPAWN"
       },
@@ -2896,7 +2896,7 @@
       ],
       "documentation": {
         "summary": "Wait for a child runtime to finish and return its exit tuple.",
-        "hover": "Wait for a child runtime to finish and return its exit tuple.",
+        "hover": "AWAIT — wait for child runtime",
         "lookup": "Wait for a child runtime to finish and return its exit tuple.",
         "syntax": "{ 1 2 + } SPAWN AWAIT"
       },
@@ -2933,7 +2933,7 @@
       ],
       "documentation": {
         "summary": "Read the current status of a child runtime.",
-        "hover": "Read the current status of a child runtime.",
+        "hover": "STATUS — read child status",
         "lookup": "Read the current status of a child runtime.",
         "syntax": "{ 1 2 + } SPAWN STATUS"
       },
@@ -2970,7 +2970,7 @@
       ],
       "documentation": {
         "summary": "Forcibly terminate a child runtime.",
-        "hover": "Forcibly terminate a child runtime.",
+        "hover": "KILL — terminate child runtime",
         "lookup": "Forcibly terminate a child runtime.",
         "syntax": "{ 1 2 + } SPAWN KILL"
       },
@@ -3007,7 +3007,7 @@
       ],
       "documentation": {
         "summary": "Register a monitor on a child handle.",
-        "hover": "Register a monitor on a child handle.",
+        "hover": "MONITOR — register monitor on child",
         "lookup": "Register a monitor on a child handle.",
         "syntax": "{ 1 2 + } SPAWN MONITOR"
       },
@@ -3045,7 +3045,7 @@
       ],
       "documentation": {
         "summary": "Run a code block under a one-for-one restart policy.",
-        "hover": "Run a code block under a one-for-one restart policy.",
+        "hover": "SUPERVISE — run under restart policy",
         "lookup": "Run a code block under a one-for-one restart policy.",
         "syntax": "{ 1 2 + } [ 3 ] SUPERVISE"
       },
@@ -3080,7 +3080,7 @@
       ],
       "documentation": {
         "summary": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
-        "hover": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "hover": ">CF — tag value for continued-fraction serialization",
         "lookup": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
         "syntax": "1/3 >CF"
       },
@@ -3115,7 +3115,7 @@
       ],
       "documentation": {
         "summary": "Split a string into a vector of one-character strings.",
-        "hover": "Split a string into a vector of one-character strings.",
+        "hover": "CHARS — split string into characters",
         "lookup": "Split a string into a vector of one-character strings.",
         "syntax": "'hi' CHARS"
       },
@@ -3151,7 +3151,7 @@
       ],
       "documentation": {
         "summary": "Join a vector of strings into a single string.",
-        "hover": "Join a vector of strings into a single string.",
+        "hover": "JOIN — join characters into string",
         "lookup": "Join a vector of strings into a single string.",
         "syntax": "[ 'h' 'i' ] JOIN"
       },
@@ -3186,7 +3186,7 @@
       ],
       "documentation": {
         "summary": "Remove whitespace from both ends of a string.",
-        "hover": "Remove whitespace from both ends of a string.",
+        "hover": "TRIM — strip leading and trailing whitespace",
         "lookup": "Remove whitespace from both ends of a string.",
         "syntax": "'  hi  ' TRIM"
       },
@@ -3221,7 +3221,7 @@
       ],
       "documentation": {
         "summary": "Remove whitespace from the start of a string.",
-        "hover": "Remove whitespace from the start of a string.",
+        "hover": "TRIM-LEFT — strip leading whitespace",
         "lookup": "Remove whitespace from the start of a string.",
         "syntax": "'  hi' TRIM-LEFT"
       },
@@ -3256,7 +3256,7 @@
       ],
       "documentation": {
         "summary": "Remove whitespace from the end of a string.",
-        "hover": "Remove whitespace from the end of a string.",
+        "hover": "TRIM-RIGHT — strip trailing whitespace",
         "lookup": "Remove whitespace from the end of a string.",
         "syntax": "'hi  ' TRIM-RIGHT"
       },
@@ -3292,7 +3292,7 @@
       ],
       "documentation": {
         "summary": "Split a string into a vector of substrings using a separator.",
-        "hover": "Split a string into a vector of substrings using a separator.",
+        "hover": "TOKENIZE — split string by separator",
         "lookup": "Split a string into a vector of substrings using a separator.",
         "syntax": "'a,b,c' ',' TOKENIZE"
       },
@@ -3327,7 +3327,7 @@
       ],
       "documentation": {
         "summary": "Replace every occurrence of a substring with another.",
-        "hover": "Replace every occurrence of a substring with another.",
+        "hover": "SUBSTITUTE — replace substring occurrences",
         "lookup": "Replace every occurrence of a substring with another.",
         "syntax": "'hello' 'l' 'L' SUBSTITUTE"
       },
@@ -3363,7 +3363,7 @@
       ],
       "documentation": {
         "summary": "Test whether a string begins with the given prefix.",
-        "hover": "Test whether a string begins with the given prefix.",
+        "hover": "STARTS-WITH? — prefix predicate",
         "lookup": "Test whether a string begins with the given prefix.",
         "syntax": "'hello' 'he' STARTS-WITH?"
       },
@@ -3399,7 +3399,7 @@
       ],
       "documentation": {
         "summary": "Test whether a string ends with the given suffix.",
-        "hover": "Test whether a string ends with the given suffix.",
+        "hover": "ENDS-WITH? — suffix predicate",
         "lookup": "Test whether a string ends with the given suffix.",
         "syntax": "'hello' 'lo' ENDS-WITH?"
       },
@@ -3434,7 +3434,7 @@
       ],
       "documentation": {
         "summary": "Parse text as a number; Bubble/NIL on parse failure.",
-        "hover": "Parse text as a number; Bubble/NIL on parse failure.",
+        "hover": "NUM — parse to number",
         "lookup": "Parse text as a number; Bubble/NIL on parse failure.",
         "syntax": "'42' NUM"
       },
@@ -3467,7 +3467,7 @@
       ],
       "documentation": {
         "summary": "Convert a value to its string representation.",
-        "hover": "Convert a value to its string representation.",
+        "hover": "STR — convert to string",
         "lookup": "Convert a value to its string representation.",
         "syntax": "42 STR"
       },
@@ -3503,7 +3503,7 @@
       ],
       "documentation": {
         "summary": "Convert a numeric character code to a single-character string.",
-        "hover": "Convert a numeric character code to a single-character string.",
+        "hover": "CHR — make a character",
         "lookup": "Convert a numeric character code to a single-character string.",
         "syntax": "65 CHR"
       },
@@ -3540,7 +3540,7 @@
       ],
       "documentation": {
         "summary": "Definition-time staging marker (not a macro).",
-        "hover": "Definition-time staging marker (not a macro).",
+        "hover": "PRECOMPUTE — definition-time precompute marker",
         "lookup": "Definition-time staging marker (not a macro).",
         "syntax": "{ ... } PRECOMPUTE"
       },

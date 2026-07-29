@@ -78,6 +78,7 @@ for (const word of words.entries) {
   }
   const normalizedBlock = block.replace(/\\\s*\n\s*/g, '').replace(/\s+/g, ' ');
   if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);
+  if (!block.includes(`hover_summary: "${word.documentation.hover}"`)) fail(`${word.name} hover drift`);
   if (!block.includes(`hover_syntax: "${word.documentation.syntax}"`)) fail(`${word.name} syntax drift`);
   for (const effect of word.effects) {
     const rustEffect = effect.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);

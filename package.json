@@ -37,6 +37,8 @@
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
     "word:reference": "node scripts/generate-word-reference.mjs",
     "word:reference:check": "node scripts/generate-word-reference.mjs --check",
+    "core-word-docs:generate": "node scripts/generate-core-word-docs.mjs",
+    "core-word-docs:check": "node scripts/generate-core-word-docs.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "generate:skill": "node scripts/generate-skill-md.mjs",
     "check:skill": "node scripts/generate-skill-md.mjs --check",

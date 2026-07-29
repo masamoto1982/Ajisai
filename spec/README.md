@@ -137,3 +137,9 @@ The fourth Phase 5 cleanup adds the generated human-facing Word Reference.
 `docs/word-reference.md` renders stack, NIL/projection, failure, effect,
 capability, clause, and syntax fields directly from every canonical contract.
 Its freshness check makes hand-authored per-Word reference prose unnecessary.
+
+The fifth Phase 5 cleanup connects Core hover and dictionary descriptions to
+generated Rust data. `spec/words.json` supplies the displayed summary and
+syntax, while the generated manifest preserves the frozen Core ordering. The
+legacy fields in `BuiltinSpec` remain temporarily as a validation oracle, and
+the migration check rejects any drift until their later removal is safe.
