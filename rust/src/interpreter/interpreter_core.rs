@@ -558,42 +558,19 @@ impl Interpreter {
         self.host_effects.push(effect);
     }
 
-    /// HostedEffect schema: capability.check → request construction → Eff append.
+    /// Effect schema: request construction → effect append.
     ///
-    /// The capability gate runs before the request builder, so missing-host
-    /// failures emit only the structured diagnostic and do not let the word
-    /// consume stack values or touch a host boundary. The builder constructs the
-    /// structured effect payload (and may update the legacy output channel kept
-    /// for adapters); the resulting `HostEffect` is then appended to the
-    /// language-independent effect log.
-    pub(crate) fn run_hosted_effect_schema<F>(
-        &mut self,
-        word: &str,
-        capability: super::HostCapability,
-        build_effect: F,
-    ) -> Result<()>
+    /// Output is the only effect (LANG.EFFECTS.OUTPUT), so there is no
+    /// capability to gate on: the builder constructs the structured payload
+    /// (and may update the legacy output channel kept for adapters), and the
+    /// resulting `HostEffect` is appended to the effect log in request order.
+    pub(crate) fn run_effect_schema<F>(&mut self, build_effect: F) -> Result<()>
     where
         F: FnOnce(&mut Self) -> Result<super::HostEffect>,
     {
-        self.require_host_capability(word, capability)?;
         let effect = build_effect(self)?;
         self.emit_host_effect(effect);
         Ok(())
-    }
-
-    pub(crate) fn require_host_capability(
-        &mut self,
-        word: &str,
-        capability: super::HostCapability,
-    ) -> Result<()> {
-        // Provenance (Phase 6): a Hosted word required this capability, whether
-        // or not the host grants it. No-op unless receipt recording is enabled.
-        if self.host_env.has_capability(capability) {
-            return Ok(());
-        }
-        let payload = super::host::missing_capability_payload(word, capability);
-        self.emit_host_effect(super::HostEffect::Diagnostic(payload));
-        Err(super::host::missing_capability_error(word, capability))
     }
 
     pub fn get_stack(&self) -> &Stack {
@@ -645,7 +622,7 @@ impl Interpreter {
     /// builtin calls. In-process equivalent of `AJISAI_NO_SHAPE_IC`; takes
     /// effect immediately for subsequent compiled call sites. Routing only —
     /// disabling it never changes observable values, just the route taken.
-    pub fn set_shape_ic_enabled(&mut self, enabled: bool) {
+    pub fn set_shape_ic_enabled(&mut self, _enabled: bool) {
     }
 
     /// Enable or disable pure HOF kernel memoization (`MAP`). In-process

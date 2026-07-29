@@ -362,6 +362,33 @@ pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<(Value, bool)> {
     apply_simd_binary("*", a, b, |x, y| x.checked_mul(y), checked_lane_mul)
 }
 
+/// Apply an element-wise checked op over two equal-length lanes.
+///
+/// The native data-parallel dispatch this used to route through is gone, so the
+/// lane kernel is the only path. The `bool` in the return keeps the callers'
+/// shape and is always `false`: no parallel kernel fires.
+fn sequential_elementwise_binary_checked(
+    _word: &str,
+    a: &[i64],
+    b: &[i64],
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    (lane(a, b), false)
+}
+
+/// Apply an element-wise checked op between a lane and a broadcast scalar.
+/// Same contract as [`sequential_elementwise_binary_checked`].
+fn sequential_elementwise_scalar_checked(
+    _word: &str,
+    a: &[i64],
+    scalar: i64,
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], i64) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    (lane(a, scalar), false)
+}
+
 pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;

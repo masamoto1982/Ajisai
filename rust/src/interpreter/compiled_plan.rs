@@ -6,7 +6,7 @@ use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Token, Value, WordDefinition};
 
 use super::compiled_call::{execute_compiled_call, CompiledCall};
-use super::{modules, ConsumptionMode, EpochSnapshot, Interpreter};
+use super::{ConsumptionMode, EpochSnapshot, Interpreter};
 
 /// Schema version of the `CompiledPlan` lowering. Bump whenever the set of
 /// `CompiledOp` variants or their semantics change in a way that makes an
@@ -381,8 +381,8 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
     }
 }
 
-fn post_call_cleanup(interp: &mut Interpreter, name: &str) {
-    if !modules::is_mode_preserving_word(name) {
+fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
+    if true {
         interp.reset_execution_modes();
     }
 }

@@ -1,9 +1,8 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
-    extract_count_from_value, extract_operands, nil_passthrough_binary, push_result,
+    extract_operands, nil_passthrough_binary, push_result,
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
@@ -55,29 +54,6 @@ fn consume_stacktop_binary(interp: &mut Interpreter) {
 
 fn division_by_zero_bubble() -> Value {
     Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
-}
-
-fn push_interval_schema_result(
-    interp: &mut Interpreter,
-    schema: ExactArithmeticSchema,
-    a: &Value,
-    b: &Value,
-) -> Result<bool> {
-    let (Some(ai), Some(bi)) = (value_to_interval(a), value_to_interval(b)) else {
-        return Ok(false);
-    };
-    consume_stacktop_binary(interp);
-    match schema {
-        ExactArithmeticSchema::Add => interp.stack.push(interval_to_value(ai.add(&bi))),
-        ExactArithmeticSchema::Sub => interp.stack.push(interval_to_value(ai.sub(&bi))),
-        ExactArithmeticSchema::Mul => interp.stack.push(interval_to_value(ai.mul(&bi))),
-        ExactArithmeticSchema::Div => match ai.div(&bi) {
-            Ok(result) => interp.stack.push(interval_to_value(result)),
-            Err(AjisaiError::DivisionByZero) => interp.stack.push(division_by_zero_bubble()),
-            Err(error) => return Err(error),
-        },
-    }
-    Ok(true)
 }
 
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
@@ -314,9 +290,6 @@ fn apply_exact_arithmetic_schema(
     }
 
     if let Some((a, b)) = stacktop_pair(interp) {
-        if push_interval_schema_result(interp, schema, &a, &b)? {
-            return Ok(());
-        }
         if push_simd_schema_result(interp, schema, &a, &b) {
             return Ok(());
         }

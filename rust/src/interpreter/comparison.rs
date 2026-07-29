@@ -1,11 +1,8 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::tensor_ops::FlatTensor;
-use crate::interpreter::value_extraction_helpers::{
-    extract_count_from_value, extract_integer_from_value, nil_passthrough_binary,
-    nil_passthrough_value,
-};
+use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::exact::{ExactCmp, ExactReal, Water};
+use crate::types::exact::{ExactCmp, ExactReal};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 

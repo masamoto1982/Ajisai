@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter};
-use crate::types::Stack;
 use crate::types::Value;
 use std::cell::RefCell;
 

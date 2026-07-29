@@ -36,7 +36,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if crate::interpreter::modules::is_known_module(&word_name) {
+        if false {
             interp.force_flag = false;
             return Err(AjisaiError::from(format!(
                 "Cannot delete module dictionary {}. Use '{}' UNIMPORT to hide imported module words.",

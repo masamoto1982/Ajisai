@@ -2,14 +2,14 @@ use super::higher_order::{
     execute_executable_code, extract_executable_code, ExecutableCode,
 };
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_count_from_value, is_vector_value};
+use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> =
+    let _plain_tokens: Option<Vec<crate::types::Token>> =
         code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
@@ -217,7 +217,7 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
 
 pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> =
+    let _plain_tokens: Option<Vec<crate::types::Token>> =
         code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
@@ -281,48 +281,25 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
         let elem: Value = target_val
             .child(i)
             .expect("SCAN: child index in 0..len must be valid");
-        match &executable {
-            ExecutableCode::QuantizedBlock(qb) => {
-                match execute_hedged_fold_kernel(
-                    interp,
-                    "SCAN",
-                    qb,
-                    plain_tokens.as_deref(),
-                    accumulator.clone(),
-                    elem,
-                ) {
-                    Ok(result) => {
-                        accumulator = result;
-                        results.push(accumulator.clone());
-                    }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
+        interp.stack.clear();
+        interp.stack.push(accumulator.clone());
+        interp.stack.push(elem);
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => match interp.stack.pop() {
+                Some(result) => {
+                    accumulator = result;
+                    results.push(accumulator.clone());
                 }
-            }
-            _ => {
-                interp.stack.clear();
-                interp.stack.push(accumulator.clone());
-                interp.stack.push(elem);
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => match interp.stack.pop() {
-                        Some(result) => {
-                            accumulator = result;
-                            results.push(accumulator.clone());
-                        }
-                        None => {
-                            error = Some(AjisaiError::from(
-                                "SCAN: expected return value, got empty stack",
-                            ));
-                            break;
-                        }
-                    },
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
+                None => {
+                    error = Some(AjisaiError::from(
+                        "SCAN: expected return value, got empty stack",
+                    ));
+                    break;
                 }
+            },
+            Err(e) => {
+                error = Some(e);
+                break;
             }
         }
     }

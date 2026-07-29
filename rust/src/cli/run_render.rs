@@ -13,7 +13,7 @@ use crate::interpreter::Interpreter;
 
 use super::report::{stack_json, Report};
 use super::{
-    emit, error_report, missing_capability_diagnosis, stack_display, Opts,
+    emit, error_report, stack_display, Opts,
 };
 
 /// Emit the report for a completed execution and return the process exit code.
@@ -44,8 +44,10 @@ pub(crate) fn render_completed_run(
         Err(err) => {
             let message = err.to_string();
             let stack_len = interp.get_stack().len();
-            let diagnosis = missing_capability_diagnosis(interp, &message)
-                .or_else(|| trace.iter().rev().find_map(|event| event.diagnosis.clone()))
+            let diagnosis = trace
+                .iter()
+                .rev()
+                .find_map(|event| event.diagnosis.clone())
                 .unwrap_or_else(|| DebugDiagnosis::from_error(&err, None, stack_len, stack_len));
             let category = ErrorCategory::from_error(&err);
             emit(

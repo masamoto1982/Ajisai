@@ -6,7 +6,6 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::Stack;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
@@ -33,7 +32,7 @@ fn compute_take_bounds(len: usize, count: i64, target: &str) -> Result<(usize, u
 }
 
 pub fn op_length(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
+    let _is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     let len = {
         let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;

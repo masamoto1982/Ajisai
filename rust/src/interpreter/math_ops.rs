@@ -19,7 +19,7 @@ use crate::types::{Interpretation, Value, ValueData};
 /// exhausting memory; it is not a language-level semantic constraint.
 const MAX_POW_EXPONENT: i64 = 1_000_000;
 
-fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
+fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
@@ -316,4 +316,38 @@ pub(crate) fn op_lcm(interp: &mut Interpreter) -> Result<()> {
             a.lcm(b)
         }
     })
+}
+
+/// `SQRT`: the exact square root of a non-negative rational, and the only Word
+/// that leaves the rationals (LANG.VALUES.EXACT). The result is carried in the
+/// multiquadratic normal form, so it compares and decides with no rounding.
+///
+/// A negative radicand is a well-formed domain miss: the multiquadratic field
+/// is not closed under it, so the operation projects to NIL rather than raising
+/// (LANG.FAILURE.PROJECT). It is recoverable — a different input resolves it.
+pub(crate) fn op_sqrt(interp: &mut Interpreter) -> Result<()> {
+    let value = if interp.consumption_mode == ConsumptionMode::Keep {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
+
+    let Some(f) = value.as_scalar() else {
+        return Err(AjisaiError::create_structure_error("number", "other format"));
+    };
+    match ExactReal::from_sqrt_rational(f.clone()) {
+        // `from_exact_real` collapses a rational result back to Scalar.
+        Some(er) => interp
+            .stack
+            .push_with_role(Value::from_exact_real(er), Interpretation::RawNumber),
+        None => interp.stack.push_with_role(
+            Value::bubble_with_reason(NilReason::DomainMiss, Recoverability::Recoverable),
+            Interpretation::Nil,
+        ),
+    }
+    Ok(())
 }

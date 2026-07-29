@@ -210,18 +210,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "elastic-engine")]
-    #[tokio::test]
-    async fn test_cond_hedged_prefetch_metrics_increment() {
-        let mut interp = Interpreter::new();
-        interp.set_elastic_mode(ElasticMode::HedgedSafe);
-        let result = interp
-            .execute("[ 5 ] { TRUE } { 'first' } { TRUE } { 'second' } { IDLE } { 'else' } COND")
-            .await;
-        assert!(result.is_ok(), "hedged COND should succeed: {:?}", result);
-        let m = interp.runtime_metrics();
-        assert!(
-    }
 }
 
 #[cfg(test)]

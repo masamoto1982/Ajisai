@@ -22,7 +22,6 @@ mod value_protocol_tests;
 use self::fraction::Fraction;
 pub use self::stack::Stack;
 use crate::error::NilReason;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
 use std::any::Any;

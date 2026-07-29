@@ -1,6 +1,4 @@
 use crate::builtins::builtin_specs;
-use crate::interpreter::modules::module_word_metadata_entries;
-use crate::interpreter::HostCapability;
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
@@ -148,7 +146,6 @@ pub struct CorewordMetadata {
     /// profile free of host-boundary words.
     pub profile: WordProfile,
     /// Capability required when `profile == Hosted`; absent for Core words.
-    pub required_capability: Option<HostCapability>,
     /// Where the canonical implementation lives (Core or a specific module).
     pub canonical_home: CanonicalHome,
     /// Whether the word appears in the Core word listing view.
@@ -289,7 +286,7 @@ fn build_builtin_word_registry() -> Vec<CorewordMetadata> {
     for meta in registry.iter_mut() {
         apply_core_boundary_listings(meta);
     }
-    let mut module_entries = module_word_metadata_entries();
+    let mut module_entries = Vec::new();
     for meta in module_entries.iter_mut() {
         apply_module_to_core_listings(meta);
     }
@@ -520,15 +517,17 @@ impl std::hash::Hash for CanonicalHome {
     }
 }
 
-fn builtin_profile(name: &str) -> (WordProfile, Option<HostCapability>) {
-    match name {
-        "PRINT" => (WordProfile::Hosted, Some(HostCapability::Effect)),
-        _ => (WordProfile::Core, None),
+fn builtin_profile(name: &str) -> WordProfile {
+    // Output is the only effect, so PRINT is the only non-Core-profile Word.
+    if name == "PRINT" {
+        WordProfile::Hosted
+    } else {
+        WordProfile::Core
     }
 }
 
 fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> CorewordMetadata {
-    let (profile, required_capability) = builtin_profile(spec.name);
+    let profile = builtin_profile(spec.name);
     CorewordMetadata {
         name: spec.name.to_string(),
         category: spec.category.to_lowercase(),
@@ -541,7 +540,6 @@ fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> Coreword
         safety_level: spec.safety_level,
         mass: spec.mass,
         profile,
-        required_capability,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -562,7 +560,6 @@ pub(crate) fn pure(name: &str, category: &str) -> CorewordMetadata {
         safety_level: SafetyLevel::A,
         mass: mass_contract(name),
         profile: WordProfile::Core,
-        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -588,7 +585,6 @@ pub(crate) fn observable(
         safety_level: SafetyLevel::C,
         mass: mass_contract(name),
         profile: WordProfile::Core,
-        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -609,7 +605,6 @@ pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> Corewor
         safety_level: SafetyLevel::D,
         mass: mass_contract(name),
         profile: WordProfile::Core,
-        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),

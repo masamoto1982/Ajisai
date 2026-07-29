@@ -142,23 +142,14 @@ fn plain_vector(children: Vec<Value>) -> Value {
     }
 }
 
-/// Build a Record value from ordered key/value fields, following the two-element
-/// `[ key value ]` pair layout used elsewhere in the runtime.
+/// Build a vector of ordered `[ key value ]` pairs. Records are gone from the
+/// value model, so keyed data is a vector of pairs (LANG.VALUES.VECTOR).
 fn record(fields: Vec<(&str, Value)>) -> Value {
-    let mut pairs = Vec::with_capacity(fields.len());
-    let mut keys = Vec::with_capacity(fields.len());
-    for (key, value) in fields {
-        keys.push(key);
-        pairs.push(plain_vector(vec![text(key), value]));
-    }
-    Value {
-        data: ValueData::Record {
-            pairs: Arc::new(pairs),
-            shape: crate::types::record_shape::record_shape_from_ordered_keys(keys),
-        },
-        hint: Interpretation::Unassigned,
-        absence: None,
-    }
+    let pairs: Vec<Value> = fields
+        .into_iter()
+        .map(|(key, value)| plain_vector(vec![text(key), value]))
+        .collect();
+    plain_vector(pairs)
 }
 
 /// Map a [`DebugDiagnosis`] onto a Record whose keys and string values are the

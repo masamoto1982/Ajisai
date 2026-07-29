@@ -12,8 +12,7 @@ pub use builtin_word_definitions::{builtin_specs, lookup_builtin_spec, BuiltinSp
 #[cfg_attr(not(feature = "wasm"), allow(unused_imports))]
 pub use builtin_word_definitions::collect_core_builtin_definitions;
 pub use builtin_word_details::lookup_builtin_detail;
-pub use builtin_word_details::render_four_section;
-pub use builtin_word_types::{BuiltinExecutorKey, EvalCost, WordShape};
+pub use builtin_word_types::BuiltinExecutorKey;
 
 use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};
@@ -51,20 +50,8 @@ fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Cap
     match (key, name) {
         (Some(BuiltinExecutorKey::Def), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Del), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Import), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::ImportOnly), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Unimport), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::UnimportOnly), _) => Capabilities::MUTATES_DICT,
         (Some(BuiltinExecutorKey::Force), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Eval), _) => Capabilities::EVAL,
-        (Some(BuiltinExecutorKey::Spawn), _) => Capabilities::SPAWN,
-        (Some(BuiltinExecutorKey::Await), _) => Capabilities::SPAWN,
-        (Some(BuiltinExecutorKey::Status), _) => Capabilities::SPAWN,
-        (Some(BuiltinExecutorKey::Kill), _) => Capabilities::SPAWN,
-        (Some(BuiltinExecutorKey::Monitor), _) => Capabilities::SPAWN,
-        (Some(BuiltinExecutorKey::Supervise), _) => Capabilities::SPAWN,
         (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
-        (Some(BuiltinExecutorKey::Precompute), _) => Capabilities::MUTATES_DICT,
         _ => Capabilities::PURE,
     }
 }

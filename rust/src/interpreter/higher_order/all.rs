@@ -2,7 +2,7 @@ use super::common::{
     execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
+use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::Interpreter;
 use crate::types::Stack;
 use crate::types::Value;

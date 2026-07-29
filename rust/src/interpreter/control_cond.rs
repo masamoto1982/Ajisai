@@ -280,9 +280,6 @@ fn evaluate_guard_isolated(
     // an undecidable continued-fraction comparison — is not a definite
     // `true`, so its clause does not fire. Fall through to the next clause
     // exactly as for a `false` guard. U is neither an error nor a match.
-    if result_value.is_unknown() {
-        return Ok(false);
-    }
     // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
     // bare Boolean or one wrapped in a single-element vector; fall back to the
     // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.

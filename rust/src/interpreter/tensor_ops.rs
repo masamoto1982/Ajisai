@@ -5,8 +5,8 @@ use crate::types::{Interpretation, Value, ValueData};
 use std::sync::Arc;
 
 #[inline]
-fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, elements: usize) {
-    if let Some(m) = metrics.as_deref_mut() {
+fn record_flatten(metrics: &mut Option<&mut RuntimeMetrics>, _elements: usize) {
+    if let Some(_m) = metrics.as_deref_mut() {
     }
 }
 
@@ -18,9 +18,9 @@ fn record_sparse_candidate_value(metrics: &mut Option<&mut RuntimeMetrics>, valu
         return;
     }
 
-    if let Some(m) = metrics.as_deref_mut() {
-        let nonzero = data.nonzero_count() as u64;
-        let zero = data.zero_count() as u64;
+    if let Some(_m) = metrics.as_deref_mut() {
+        let _nonzero = data.nonzero_count() as u64;
+        let _zero = data.zero_count() as u64;
     }
 }
 
@@ -388,11 +388,11 @@ where
         out_shape.iter().product()
     };
 
-    if let Some(m) = metrics.as_deref_mut() {
+    if let Some(_m) = metrics.as_deref_mut() {
     }
 
     if tensor_a.shape == tensor_b.shape {
-        if let Some(m) = metrics.as_deref_mut() {
+        if let Some(_m) = metrics.as_deref_mut() {
         }
         // Compute-bound same-shape element-wise op. The per-lane exact-rational
         // arithmetic (num/den cross-multiply + gcd) is the robust parallel
@@ -402,14 +402,14 @@ where
         // output is structurally identical regardless of worker count.
         let data_a = &tensor_a.data;
         let data_b = &tensor_b.data;
-        let out_data = crate::interpreter::parallel::compute_bound_elementwise(out_size, |i| {
-            op(&data_a[i], &data_b[i])
-        })?;
+        let out_data: Vec<_> = (0..out_size)
+            .map(|i| op(&data_a[i], &data_b[i]))
+            .collect::<Result<Vec<_>>>()?;
         let out_tensor = FlatTensor::from_shape_and_data(out_shape, out_data)?;
         return Ok(out_tensor.to_value());
     }
 
-    if let Some(m) = metrics {
+    if let Some(_m) = metrics {
     }
 
     let out_strides = compute_strides(&out_shape);
@@ -480,7 +480,7 @@ where
     record_flatten(&mut metrics, element_count);
     record_sparse_candidate_value(&mut metrics, val);
 
-    if let Some(m) = metrics {
+    if let Some(_m) = metrics {
     }
 
     let result_data: Vec<Fraction> = tensor.data.into_iter().map(|f| op(&f)).collect();

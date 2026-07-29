@@ -4,7 +4,7 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
-fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
+fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 

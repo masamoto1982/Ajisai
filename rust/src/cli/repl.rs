@@ -13,7 +13,6 @@
 //! surface syntax — they are not language words and never reach the interpreter.
 
 use std::io::{BufRead, Write};
-use std::sync::Arc;
 
 use crate::interpreter::{HostEffect, Interpreter};
 

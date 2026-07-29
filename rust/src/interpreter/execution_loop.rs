@@ -5,7 +5,7 @@ use crate::types::{ExecutionLine, Interpretation, Token, Value};
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
-use super::{modules, ConsumptionMode, Interpreter};
+use super::{ConsumptionMode, Interpreter};
 
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
 /// either one ordinary token, or one balanced `[ ]` / `{ }` group (nesting
@@ -431,7 +431,7 @@ impl Interpreter {
                                     return Err(err);
                                 }
                             }
-                            if !modules::is_mode_preserving_word(upper.as_ref()) {
+                            if true {
                                 self.reset_execution_modes();
                             }
                         }

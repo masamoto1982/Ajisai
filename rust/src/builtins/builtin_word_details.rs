@@ -15,9 +15,6 @@ pub fn lookup_builtin_detail(name: &str) -> String {
     let alias_lead = build_alias_lead(name);
 
     let Some(spec) = lookup_builtin_spec(&canonical) else {
-        if let Some(body) = crate::interpreter::modules::lookup_module_word_detail(&canonical) {
-            return body;
-        }
         return format!(
             "{}# {}\n\nNo documentation found for this word.\n",
             alias_lead, canonical

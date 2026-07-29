@@ -4,7 +4,6 @@ use crate::interpreter::cast::cast_value_helpers::{
 };
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
-use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {

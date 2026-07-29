@@ -6,7 +6,8 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 
 use super::{
     arithmetic, cast, comparison, control, control_cond, execute_def, execute_del, execute_lookup,
-    higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort, tensor_cmds,
+    algo_ops, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort,
+    tensor_cmds,
     vector_ops, Interpreter,
 };
 
@@ -230,6 +231,16 @@ impl Interpreter {
             BuiltinExecutorKey::EndsWith => cast::op_ends_with(self),
             BuiltinExecutorKey::NilCheck => nil_diagnostics::op_nil_check(self),
             BuiltinExecutorKey::NilReason => nil_diagnostics::op_nil_reason(self),
+            BuiltinExecutorKey::Abs => math_ops::op_abs(self),
+            BuiltinExecutorKey::Neg => math_ops::op_neg(self),
+            BuiltinExecutorKey::Sign => math_ops::op_sign(self),
+            BuiltinExecutorKey::Min => math_ops::op_min(self),
+            BuiltinExecutorKey::Max => math_ops::op_max(self),
+            BuiltinExecutorKey::Sqrt => math_ops::op_sqrt(self),
+            BuiltinExecutorKey::Sort => sort::op_sort(self),
+            BuiltinExecutorKey::Unique => algo_ops::op_unique(self),
+            BuiltinExecutorKey::Contains => algo_ops::op_contains(self),
+            BuiltinExecutorKey::IndexOf => algo_ops::op_index_of(self),
         }
     }
 

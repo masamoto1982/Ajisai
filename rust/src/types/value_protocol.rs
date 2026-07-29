@@ -171,14 +171,6 @@ pub(crate) fn value_to_protocol(
     // `truthValue` axis as `unknown`, never as a NIL. Detected via the
     // canonical `is_unknown()` predicate (SPEC §2.3 firewall: the internal
     // NIL representation is not observable).
-    if value.is_unknown() {
-        return ProtocolNode {
-            type_str: "truthValue",
-            value: ProtocolValue::Text("unknown".to_string()),
-            display_hint: Interpretation::TruthValue,
-            semantics: Some(value.clone()),
-        };
-    }
     let (type_str, protocol_value) = match &value.data {
         ValueData::Nil => ("nil", ProtocolValue::Null),
         // U is handled by the `is_unknown()` early return above, so this arm

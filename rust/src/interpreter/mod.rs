@@ -43,8 +43,6 @@ mod word_space_tests;
 // Re-exported only for the host-only `cli` consumers (receipt / lockfile source
 // identity); `content_digest` itself is used internally by `word_identity`, so
 // gate just this re-export to the same target as `cli` to stay wasm-clean.
-#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
-pub(crate) use word_identity::{content_digest, IDENTITY_ALGORITHM};
 
 pub mod interpreter_core;
 

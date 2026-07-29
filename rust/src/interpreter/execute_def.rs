@@ -123,7 +123,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
+    let staged_tokens = tokens.to_vec();
     let lines = parse_definition_body(&staged_tokens)?;
 
     // Content store (Section 8.6): share one stored body across textually

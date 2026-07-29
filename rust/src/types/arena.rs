@@ -2,7 +2,6 @@ use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub type NodeId = u32;
@@ -230,20 +229,14 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
                 return Ok(arena.alloc_nil(Interpretation::Unassigned));
             }
             let mut pairs = Vec::with_capacity(map.len());
-            let mut index = HashMap::with_capacity(map.len());
             for (key, value) in map {
-                index.insert(key.clone(), pairs.len());
                 let key_id = arena.alloc_string(&key);
                 let value_id = json_to_arena_node(arena, value)?;
                 let pair_id =
                     arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
                 pairs.push(pair_id);
             }
-            Ok(arena.alloc_record(
-                pairs,
-                crate::types::record_shape::intern_record_shape(index),
-                Interpretation::Unassigned,
-            ))
+            Ok(arena.alloc_vector(pairs, Interpretation::Unassigned))
         }
     }
 }
@@ -298,9 +291,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::Array(arr)
         }
         NodeKind::Tensor { data, shape } => tensor_to_json(arena.hint(root), data, shape),
-        NodeKind::CodeBlock(_) | NodeKind::ProcessHandle(_) | NodeKind::SupervisorHandle(_) => {
-            JsonValue::Null
-        }
+        NodeKind::CodeBlock(_) => JsonValue::Null,
     }
 }
 

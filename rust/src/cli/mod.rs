@@ -36,12 +36,11 @@ mod test_runner;
 
 use crate::error::ErrorCategory;
 use crate::interpreter::debug_diagnosis::{
-    CauseClass, DebugCheck, DebugDiagnosis, ErrorLocus, ErrorLocusKind, ErrorPhase,
+    DebugDiagnosis, ErrorPhase,
 };
 use crate::interpreter::{HostEffect, Interpreter, RuntimeMetrics};
 use crate::types::Token;
 use report::Report;
-use std::sync::Arc;
 
 const USAGE: &str = "Usage: ajisai <command> [options]
 
@@ -209,7 +208,7 @@ fn error_report(
     message: String,
     output: Vec<String>,
     trace: Vec<crate::interpreter::error_flow_trace::ErrorFlowEvent>,
-    opts: &Opts,
+    _opts: &Opts,
 ) -> Report {
     let ai = diagnosis.ai_payload(category, None, None, None);
     Report {
@@ -242,68 +241,6 @@ fn stack_display(interp: &Interpreter) -> Vec<String> {
     // surface; the `Stack` owns aligned values and roles, so no snapshot/
     // realignment step is needed here.
     crate::types::display::render_stack(interp.get_stack())
-}
-
-/// When a Hosted word failed because this terminal host does not provide its
-/// capability (no audio device, no serial port, ...), the interpreter emitted
-/// a structured `Diagnostic` host effect before consuming anything. Surface
-/// it as the top-level diagnosis: `why: environment`, locus
-/// `hostEnvironment` — a property of the execution environment, not of the
-/// program (§2.5 of the CLI work order).
-fn missing_capability_diagnosis(interp: &Interpreter, message: &str) -> Option<DebugDiagnosis> {
-    if !message.contains("requires missing host capability") {
-        return None;
-    }
-    let (word, capability) = interp.host_effects().iter().rev().find_map(|effect| {
-        let HostEffect::Diagnostic(payload) = effect else {
-            return None;
-        };
-        let parsed: serde_json::Value = serde_json::from_str(payload).ok()?;
-        if parsed.get("op")?.as_str()? != "missingCapability" {
-            return None;
-        }
-        Some((
-            parsed.get("word")?.as_str()?.to_string(),
-            parsed.get("capability")?.as_str()?.to_string(),
-        ))
-    })?;
-    let module = word.split_once('@').map(|(m, _)| m.to_string());
-    Some(DebugDiagnosis {
-        when: ErrorPhase::HostIo,
-        where_: ErrorLocus {
-            kind: ErrorLocusKind::HostEnvironment,
-            word: Some(word.clone()),
-            module,
-            dictionary: None,
-        },
-        why: CauseClass::Environment,
-        summary: format!(
-            "hostIo / {} / environment (missing host capability {})",
-            word, capability
-        ),
-        evidence: vec![format!("missingCapability={}", capability)],
-        next_checks: vec![
-            DebugCheck {
-                label: "Check host capability".to_string(),
-                detail: format!(
-                    "この実行環境（ajisai CLI）は capability '{}' を提供していない",
-                    capability
-                ),
-            },
-            DebugCheck {
-                label: "Check execution host".to_string(),
-                detail: format!(
-                    "{} を実行するには該当 capability を持つホスト（GUI/Tauri 等）を使う",
-                    word
-                ),
-            },
-            DebugCheck {
-                label: "Check program intent".to_string(),
-                detail: "CLI 上で完結させる場合は該当 word の使用を避ける".to_string(),
-            },
-        ],
-        agreed_prefix: None,
-    })
 }
 
 fn cmd_check(path: &str, opts: &Opts) -> i32 {
@@ -579,25 +516,12 @@ fn emit(report: &Report, opts: &Opts) {
         } else {
             println!("stack: {}", report.stack_display.join(" "));
         }
-        // A value bubbled to NIL on an otherwise successful run; surface it as
-        // an advisory note when --explain is set (L0 plain language).
-        if let Some(explanation) = &report.explanation {
-            eprintln!("note: {} {}", explanation.headline, explanation.next_step);
-        }
         return;
     }
     if let Some(message) = &report.message {
         eprintln!("error: {}", message);
     }
-    // L0: when --explain is set, lead with the plain-language projection and
-    // the L2 detail list. Otherwise fall back to the raw machine summary.
-    if let Some(explanation) = &report.explanation {
-        eprintln!("{}", explanation.headline);
-        eprintln!("{}", explanation.next_step);
-        for detail in &explanation.details {
-            eprintln!("  - {}", detail);
-        }
-    } else if let Some(diagnosis) = &report.diagnosis {
+    if let Some(diagnosis) = &report.diagnosis {
         eprintln!("diagnosis: {}", diagnosis.summary);
         for check in &diagnosis.next_checks {
             eprintln!("  - {}: {}", check.label, check.detail);

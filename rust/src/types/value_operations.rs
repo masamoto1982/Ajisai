@@ -83,11 +83,11 @@ impl Value {
     /// dedicated [`ValueData::Unknown`] variant, so the U/NIL distinction is
     /// a type invariant. All call sites must use this instead of matching the
     /// storage representation.
-    #[inline]
+    
     /// Whether this value carries the `TruthValue` interpretation role
     /// (true, false, or unknown). Used at observation boundaries to attach
     /// the `truthValue` axis and the `truthValued` capability.
-    #[inline]
+    
     pub fn is_truth_value(&self) -> bool {
         self.hint == Interpretation::TruthValue
     }
@@ -320,14 +320,14 @@ impl Value {
     }
 
     #[inline]
-    #[inline]
+    
     /// NIL test: `true` only for the operational absence node
     /// ([`ValueData::Nil`], the Bubble). The logical Unknown (U) is a
     /// separate [`ValueData::Unknown`] variant and is **not** NIL
     /// (`unknown().is_nil() == false`), so the U/NIL firewall (SPEC §7.5 /
     /// §2.3) is now guaranteed by the type rather than by a predicate
     /// convention.
-    #[inline]
+    
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
     }

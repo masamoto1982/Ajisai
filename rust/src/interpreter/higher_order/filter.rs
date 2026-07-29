@@ -2,14 +2,13 @@ use super::common::{
     execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, is_vector_value};
+use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
-use crate::types::{Token, Value};
+use crate::types::Value;
 
 pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<Token>> = code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
         Ok(exec) => exec,
@@ -70,58 +69,35 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
         let elem: Value = target_val
             .child(i)
             .expect("FILTER: child index in 0..len must be valid");
-        match &executable {
-            ExecutableCode::QuantizedBlock(qb) => {
-                match execute_hedged_predicate_kernel(
-                    interp,
-                    "FILTER",
-                    qb,
-                    plain_tokens.as_deref(),
-                    elem.clone(),
-                ) {
-                    Ok(is_true) => {
-                        if is_true {
-                            results.push(elem);
-                        }
+        interp.stack.clear();
+        interp.stack.push(elem.clone());
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => {
+                let condition_result: Value = match interp.stack.pop() {
+                    Some(r) => r,
+                    None => {
+                        error = Some(AjisaiError::from(
+                            "FILTER: expected boolean value, got empty stack",
+                        ));
+                        break;
                     }
+                };
+
+                let is_true: bool = match extract_predicate_boolean(condition_result) {
+                    Ok(v) => v,
                     Err(e) => {
                         error = Some(e);
                         break;
                     }
+                };
+
+                if is_true {
+                    results.push(elem);
                 }
             }
-            _ => {
-                interp.stack.clear();
-                interp.stack.push(elem.clone());
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let condition_result: Value = match interp.stack.pop() {
-                            Some(r) => r,
-                            None => {
-                                error = Some(AjisaiError::from(
-                                    "FILTER: expected boolean value, got empty stack",
-                                ));
-                                break;
-                            }
-                        };
-
-                        let is_true: bool = match extract_predicate_boolean(condition_result) {
-                            Ok(v) => v,
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        };
-
-                        if is_true {
-                            results.push(elem);
-                        }
-                    }
-                    Err(e) => {
-                        error = Some(e);
-                        break;
-                    }
-                }
+            Err(e) => {
+                error = Some(e);
+                break;
             }
         }
     }

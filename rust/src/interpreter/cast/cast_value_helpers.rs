@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Stack, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 
 pub(crate) fn is_string_value(val: &Value) -> bool {
     is_string_value_with_hint(val, Interpretation::Unassigned)

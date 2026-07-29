@@ -12,7 +12,6 @@ use crate::types::WordDefinition;
 
 use super::compiled_plan::{
     arc_plan, compile_word_definition, plan_is_all_fallback, CompiledPlan,
-    COMPILED_PLAN_SCHEMA_VERSION,
 };
 use super::interpreter_core::RuntimeMetrics;
 use super::Interpreter;
@@ -66,7 +65,6 @@ impl Interpreter {
         self.error_flow_trace_log.clear();
         // Provenance recording flag persists across a reset; only its data is
         // cleared (Phase 6).
-        self.receipt_recorder.clear();
         crate::builtins::register_builtins(&mut self.core_vocabulary);
     }
 

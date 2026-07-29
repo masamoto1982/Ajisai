@@ -2,7 +2,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, nil_passthrough_binary, nil_passthrough_unary,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::exact::ExactReal;
 use crate::types::fraction::{Fraction, RoundingMode};
 use crate::types::{Interpretation, Value, ValueData};
@@ -31,21 +31,13 @@ fn push_undecidable_nil(interp: &mut Interpreter) {
 
 use super::tensor_ops::{
     apply_binary_broadcast_with_metrics, apply_unary_flat_with_metrics, build_nested_value,
-    FlatTensor,
 };
 
 fn apply_tensor_metadata(
     interp: &mut Interpreter,
-    word: &str,
+    _word: &str,
     mapper: fn(&Value) -> Value,
 ) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: word.into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
     let value: Value = if is_keep_mode {
         interp
@@ -97,13 +89,6 @@ where
     F: Fn(&Fraction) -> Fraction + Copy,
     G: Fn(&ExactReal) -> Option<ExactReal>,
 {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: op_name.to_string(),
-            mode: "Stack".into(),
-        });
-    }
-
     if nil_passthrough_unary(interp) {
         return Ok(());
     }
@@ -207,13 +192,6 @@ fn scalar_as_rational(value: &Value) -> Option<Fraction> {
 /// word for diagnostics. The rounding rule is the only thing that varies across
 /// the family; NIL/error/decidability handling is identical.
 fn quantize_with_mode(interp: &mut Interpreter, mode: RoundingMode, word: &str) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: word.into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let stack_len = interp.stack.len();
     if stack_len < 2 {
         return Err(AjisaiError::StackUnderflow);
@@ -294,19 +272,12 @@ fn value_as_exact_real(value: &Value) -> Option<ExactReal> {
 }
 
 pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "MOD".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     if nil_passthrough_binary(interp) {
         return Ok(());
     }
 
     // ExactScalar path: a mod b = a - b * floor(a/b), exact over Tier 1
-    if interp.operation_target_mode == OperationTargetMode::StackTop && interp.stack.len() >= 2 {
+    if interp.stack.len() >= 2 {
         let stack_len = interp.stack.len();
         let a_ref = &interp.stack[stack_len - 2];
         let b_ref = &interp.stack[stack_len - 1];
@@ -401,13 +372,6 @@ pub fn op_mod(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_fill(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::Stack {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "FILL".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let args_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if args_val.is_nil() {

@@ -12,8 +12,7 @@
 use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
 use crate::error::Result;
 
-use super::shape_ic::{try_shape_ic_call, ShapeIc, ShapeIcOp};
-use super::{modules, Interpreter};
+use super::Interpreter;
 
 #[derive(Debug)]
 pub struct CompiledCall {
@@ -27,11 +26,6 @@ pub struct CompiledCall {
     /// Precomputed `modules::is_mode_preserving_word(name)` so the post-call
     /// cleanup skips the per-call uppercase allocation.
     pub mode_preserving: bool,
-    /// Which scalar fast path this word has, if any (shape-IC target).
-    pub ic_op: Option<ShapeIcOp>,
-    /// Per-site monomorphic shape cache. Routing state only; every route
-    /// revalidates operands, so stale entries cannot change results.
-    pub shape_ic: ShapeIc,
 }
 
 impl CompiledCall {
@@ -40,9 +34,7 @@ impl CompiledCall {
         let key = lookup_builtin_spec(&canonical).and_then(|spec| spec.executor_key);
         Self {
             resets_force_flag: canonical != "DEL" && canonical != "DEF" && canonical != "FORC",
-            mode_preserving: modules::is_mode_preserving_word(&canonical),
-            ic_op: key.and_then(ShapeIcOp::from_executor_key),
-            shape_ic: ShapeIc::default(),
+            mode_preserving: false,
             key,
             name: canonical,
         }
@@ -62,10 +54,5 @@ pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCal
     let Some(key) = call.key else {
         return interp.execute_builtin_direct(&call.name);
     };
-    if let Some(ic_op) = call.ic_op {
-        if try_shape_ic_call(interp, &call.shape_ic, ic_op)? {
-            return Ok(());
-        }
-    }
     interp.execute_builtin_by_key(key)
 }
