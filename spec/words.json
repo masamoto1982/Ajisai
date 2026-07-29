@@ -18,10 +18,12 @@
       "conversion",
       "staging",
       "data-table",
-      "json-value"
+      "json-value",
+      "host-observation",
+      "crypto-digest"
     ],
     "completeInventory": false,
-    "entryCount": 114
+    "entryCount": 118
   },
   "entries": [
     {
@@ -4127,6 +4129,160 @@
         "syntax": "value JSON@EXPORT"
       },
       "executorKey": "json::op_json_export"
+    },
+    {
+      "name": "IO@INPUT",
+      "module": "IO",
+      "aliases": [],
+      "family": "observation",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "observational",
+      "determinism": "hostRelative",
+      "capability": "effect",
+      "effects": [
+        "ioRead"
+      ],
+      "hostedEffect": "inputRead",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Read text from the host input buffer.",
+        "hover": "Read text from the host input buffer.",
+        "lookup": "Read text from the host input buffer.",
+        "syntax": "IO@INPUT"
+      },
+      "executorKey": "json::op_input"
+    },
+    {
+      "name": "IO@OUTPUT",
+      "module": "IO",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "effect",
+      "effects": [
+        "ioWrite"
+      ],
+      "hostedEffect": "outputWrite",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Write a value to the host output buffer.",
+        "hover": "Write a value to the host output buffer.",
+        "lookup": "Write a value to the host output buffer.",
+        "syntax": "value IO@OUTPUT"
+      },
+      "executorKey": "json::op_output"
+    },
+    {
+      "name": "CRYPTO@CSPRNG",
+      "module": "CRYPTO",
+      "aliases": [],
+      "family": "observation",
+      "stack": {
+        "inputs": "variable",
+        "outputs": 1
+      },
+      "consumption": "conditional",
+      "nilPolicy": "inspectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "countTooLarge",
+        "nonPositiveDenominator",
+        "hostEntropyFailure"
+      ],
+      "purity": "observational",
+      "determinism": "hostRelative",
+      "capability": "secureRandom",
+      "effects": [
+        "randomRead"
+      ],
+      "hostedEffect": "secureRandomRead",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Generate cryptographically secure random rationals with the given denominator.",
+        "hover": "Generate cryptographically secure random rationals with the given denominator.",
+        "lookup": "Generate cryptographically secure random rationals with the given denominator.",
+        "syntax": "[ denominator ] [ count ] CRYPTO@CSPRNG"
+      },
+      "executorKey": "random::op_csprng"
+    },
+    {
+      "name": "CRYPTO@HASH",
+      "module": "CRYPTO",
+      "aliases": [],
+      "family": "cryptoDigest",
+      "stack": {
+        "inputs": "variable",
+        "outputs": 1
+      },
+      "consumption": "conditional",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "missingValue",
+        "invalidBitWidth"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "hover": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "lookup": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "syntax": "[ bits ] value CRYPTO@HASH"
+      },
+      "executorKey": "hash::op_hash"
     }
   ]
 }

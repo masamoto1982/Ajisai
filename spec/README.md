@@ -76,3 +76,8 @@ The second Module-Word slice migrates all ten `JSON` contracts. JSON parsing,
 functional object access/update, missing-value projection, and host-mediated
 export remain separate contract axes. Eighty Module Words remain deferred, so
 the full-inventory and Phase 5 deletion gates remain closed.
+
+The third Module-Word slice migrates the complete `IO` and `CRYPTO` modules.
+Host input/output, secure-random observation, deterministic digest computation,
+capability, effect, and determinism are represented as independent axes.
+Seventy-six Module Words remain deferred, so full-inventory is still false.

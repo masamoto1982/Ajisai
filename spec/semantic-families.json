@@ -160,6 +160,15 @@
       "purity": "observational"
     },
     {
+      "id": "cryptoDigest",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "purity": "pure",
+      "determinism": "inputRelative"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",
