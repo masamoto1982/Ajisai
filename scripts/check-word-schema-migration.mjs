@@ -93,12 +93,10 @@ for (const word of words.entries) {
   }
 }
 
-const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO']);
-const migratedMath = new Set(['SQRT', 'SQRT-EPS', 'INTERVAL', 'LOWER', 'UPPER', 'WIDTH', 'IS-EXACT', 'PI', 'ENCLOSE']);
+const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH']);
 const expected = new Set(manifest.entries
   .filter((entry) => entry.kind === 'coreword'
-    || (entry.kind === 'moduleword' && completeModules.has(entry.module))
-    || (entry.kind === 'moduleword' && entry.module === 'MATH' && migratedMath.has(entry.short_surface)))
+    || (entry.kind === 'moduleword' && completeModules.has(entry.module)))
   .map((entry) => entry.canonical));
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 for (const name of names) if (!expected.has(name)) fail(`migration scope contains unexpected Word ${name}`);
@@ -108,5 +106,5 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log('[word-schema] all 98 Core and 33 migrated Module contracts match the 224-surface manifest and current executors.');
+  console.log('[word-schema] all 98 Core and 41 migrated Module contracts match the 224-surface manifest and current executors.');
 }

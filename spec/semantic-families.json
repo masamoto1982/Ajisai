@@ -190,6 +190,17 @@
       "observation": "rationalEnclosure"
     },
     {
+      "id": "exactMath",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "nilPolicy": "passthroughThenProject",
+      "undecidableComparison": "unknown"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",

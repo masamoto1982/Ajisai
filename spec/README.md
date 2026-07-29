@@ -91,3 +91,8 @@ The fifth Module-Word slice migrates the nine interval and Tier 2 `MATH`
 contracts. Exact roots, sound intervals, interpretation roles, reasoned scalar
 domain misses, malformed interval use, PI, and water-bounded enclosure remain
 separate observable contracts. Sixty-three Module Words remain deferred.
+
+The sixth Module-Word slice completes `MATH` with eight exact arithmetic and
+number-theory contracts. NIL passthrough, comparison-budget UNKNOWN, the
+zero-to-negative-power projection, integer-domain errors, and exponent work
+limits remain distinct. Fifty-five Module Words remain deferred.

@@ -22,10 +22,11 @@
       "host-observation",
       "crypto-digest",
       "algorithm-collection",
-      "exact-interval"
+      "exact-interval",
+      "exact-math"
     ],
     "completeInventory": false,
-    "entryCount": 131
+    "entryCount": 139
   },
   "entries": [
     {
@@ -4792,6 +4793,320 @@
         "syntax": "MATH@PI 64 MATH@ENCLOSE"
       },
       "executorKey": "tier2_ops::op_enclose"
+    },
+    {
+      "name": "MATH@ABS",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrUnknown",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Absolute value of a number.",
+        "hover": "Absolute value of a number.",
+        "lookup": "Absolute value of a number.",
+        "syntax": "-2 MATH@ABS"
+      },
+      "executorKey": "math_ops::op_abs"
+    },
+    {
+      "name": "MATH@NEG",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Numeric negation.",
+        "hover": "Numeric negation.",
+        "lookup": "Numeric negation.",
+        "syntax": "2 MATH@NEG"
+      },
+      "executorKey": "math_ops::op_neg"
+    },
+    {
+      "name": "MATH@SIGN",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrUnknown",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Sign of a number: -1, 0, or 1.",
+        "hover": "Sign of a number: -1, 0, or 1.",
+        "lookup": "Sign of a number: -1, 0, or 1.",
+        "syntax": "-2 MATH@SIGN"
+      },
+      "executorKey": "math_ops::op_sign"
+    },
+    {
+      "name": "MATH@MIN",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrUnknown",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Smaller of two numbers.",
+        "hover": "Smaller of two numbers.",
+        "lookup": "Smaller of two numbers.",
+        "syntax": "1 2 MATH@MIN"
+      },
+      "executorKey": "math_ops::op_min"
+    },
+    {
+      "name": "MATH@MAX",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumeric"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactOrUnknown",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Larger of two numbers.",
+        "hover": "Larger of two numbers.",
+        "lookup": "Larger of two numbers.",
+        "syntax": "1 2 MATH@MAX"
+      },
+      "executorKey": "math_ops::op_max"
+    },
+    {
+      "name": "MATH@POW",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "zeroToNegativeExponent",
+        "reason": "divisionByZero"
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonNumericBase",
+        "nonIntegerExponent",
+        "exponentMagnitudeExceeded"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Integer-exponent exact power: base^exp.",
+        "hover": "Integer-exponent exact power: base^exp.",
+        "lookup": "Integer-exponent exact power: base^exp.",
+        "syntax": "2 10 MATH@POW"
+      },
+      "executorKey": "math_ops::op_pow"
+    },
+    {
+      "name": "MATH@GCD",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonInteger"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Greatest common divisor of two integers.",
+        "hover": "Greatest common divisor of two integers.",
+        "lookup": "Greatest common divisor of two integers.",
+        "syntax": "12 18 MATH@GCD"
+      },
+      "executorKey": "math_ops::op_gcd"
+    },
+    {
+      "name": "MATH@LCM",
+      "module": "MATH",
+      "aliases": [],
+      "family": "exactMath",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "nonInteger"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Least common multiple of two integers.",
+        "hover": "Least common multiple of two integers.",
+        "lookup": "Least common multiple of two integers.",
+        "syntax": "12 18 MATH@LCM"
+      },
+      "executorKey": "math_ops::op_lcm"
     }
   ]
 }
