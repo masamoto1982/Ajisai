@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const repoRoot = resolve(import.meta.dirname, '..');
 const outputPath = resolve(repoRoot, 'docs/word-manifest.json');
 const coveragePath = resolve(repoRoot, 'docs/formalization-coverage.json');
+const contractsPath = resolve(repoRoot, 'spec/words.json');
 
 function fail(message) {
   throw new Error(`[word-manifest] ${message}`);
@@ -278,6 +279,22 @@ const entries = [
   ...extractSurfaceForms(),
 ];
 
+const contracts = JSON.parse(readFileSync(contractsPath, 'utf8'));
+if (contracts.migration?.completeInventory !== true) {
+  fail('spec/words.json does not declare a complete canonical inventory');
+}
+const contractNames = new Set(contracts.entries.map((entry) => entry.name));
+if (contractNames.size !== contracts.entries.length) fail('duplicate canonical name in spec/words.json');
+const generatedCanonicalNames = new Set(entries
+  .filter((entry) => entry.kind === 'coreword' || entry.kind === 'moduleword')
+  .map((entry) => entry.surface));
+for (const name of contractNames) {
+  if (!generatedCanonicalNames.has(name)) fail(`Word contract ${name} is absent from the implementation catalog`);
+}
+for (const name of generatedCanonicalNames) {
+  if (!contractNames.has(name)) fail(`implementation catalog Word ${name} is absent from spec/words.json`);
+}
+
 const coverageEntries = loadCoverageEntries();
 for (const entry of entries) {
   Object.assign(entry, semanticMetadataForEntry(entry, coverageEntries));
@@ -292,10 +309,13 @@ for (const entry of entries) {
 const manifest = {
   schemaVersion: 1,
   generatedFrom: [
-    'rust/src/builtins/builtin_word_definitions.rs',
-    'rust/src/interpreter/modules/module_builtins.rs',
+    'spec/words.json',
     'rust/src/core_word_aliases.rs',
     'rust/src/surface_forms.rs',
+  ],
+  implementationCatalogValidatedAgainst: [
+    'rust/src/builtins/builtin_word_definitions.rs',
+    'rust/src/interpreter/modules/module_builtins.rs',
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {
