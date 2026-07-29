@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ajisai-lang.org/spec/host-protocol-v1.schema.json",
+  "title": "Ajisai HostProtocolV1 observable payloads",
+  "description": "Compatibility boundary between the Ajisai runtime and its hosts. V1 permits only optional additions; existing fields, tuple order, shapes, and meanings are frozen.",
+  "oneOf": [
+    { "$ref": "#/$defs/executeResult" },
+    { "$ref": "#/$defs/value" },
+    { "$ref": "#/$defs/importState" },
+    { "$ref": "#/$defs/userWordsInfo" },
+    { "$ref": "#/$defs/coreWordsInfo" },
+    { "$ref": "#/$defs/moduleCatalog" }
+  ],
+  "x-ajisai-version": 1,
+  "x-ajisai-compatibility": {
+    "allowed": ["add optional fields"],
+    "forbidden": ["remove fields", "rename fields", "change field meaning", "reorder tuple elements", "change tuple shape"],
+    "breakingChangesRequire": "HostProtocolV2"
+  },
+  "x-ajisai-methods": [
+    "execute", "execute_step", "reset", "reset_session", "collect_stack",
+    "collect_user_words_info", "collect_word_identities", "collect_core_words_info",
+    "collect_core_listed_words_info", "collect_core_word_aliases_info",
+    "collect_input_helper_words_info", "lookup_word_definition", "restore_stack",
+    "snapshot_stack", "restore_stack_snapshot", "restore_user_words", "remove_word",
+    "push_json_string", "collect_imported_modules", "collect_available_modules",
+    "collect_module_words_info", "collect_module_catalog_words_info",
+    "collect_dictionary_dependencies", "restore_imported_modules", "collect_import_state",
+    "restore_import_state", "set_execution_mode", "get_execution_mode",
+    "set_max_execution_steps", "collect_hedged_trace", "collect_runtime_metrics",
+    "update_serial_inbox", "mark_serial_disconnected", "clear_serial_inboxes"
+  ],
+  "$defs": {
+    "diagnosis": {
+      "type": "object",
+      "required": ["when", "where", "why", "summary", "evidence", "nextChecks"],
+      "properties": {
+        "when": { "type": "string" },
+        "where": {
+          "type": "object", "required": ["kind"],
+          "properties": { "kind": { "type": "string" }, "word": { "type": "string" }, "module": { "type": "string" }, "dictionary": { "type": "string" } }
+        },
+        "why": { "type": "string" }, "summary": { "type": "string" },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "nextChecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "detail"],
+            "properties": { "label": { "type": "string" }, "detail": { "type": "string" } }
+          }
+        },
+        "agreedPrefix": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "absence": {
+      "type": "object", "required": ["origin", "recoverability"],
+      "properties": { "reason": { "type": "string" }, "origin": { "type": "string" }, "recoverability": { "type": "string" }, "diagnosis": { "$ref": "#/$defs/diagnosis" } }
+    },
+    "semantics": {
+      "type": "object", "required": ["semanticKind", "shape", "capabilities", "origin"],
+      "properties": {
+        "semanticKind": { "type": "string" }, "shape": { "type": "string" },
+        "truthValue": { "enum": ["true", "false", "unknown"] },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "origin": { "type": "string" }, "absence": { "$ref": "#/$defs/absence" }, "approximate": { "type": "boolean" }
+      }
+    },
+    "fraction": { "type": "object", "required": ["numerator", "denominator"], "properties": { "numerator": { "type": "string" }, "denominator": { "type": "string" } } },
+    "value": {
+      "type": "object", "required": ["type", "value"],
+      "properties": {
+        "type": { "type": "string" }, "value": {},
+        "displayHint": { "enum": ["unassigned", "rawNumber", "interval", "text", "truthValue", "timestamp", "nil"] },
+        "semantics": { "$ref": "#/$defs/semantics" }
+      }
+    },
+    "userWord": { "type": "object", "required": ["name", "definition"], "properties": { "dictionary": { "type": ["string", "null"] }, "name": { "type": "string" }, "definition": { "type": ["string", "null"] } } },
+    "metrics": { "type": "object", "required": ["scalarFastpathCount", "bulkKernelUseCount", "simdKernelUseCount", "tensorFlattenCount", "tensorRebuildCount", "sparseCandidateCount", "compareWithinCount", "compareWithinLazyCount", "compareWithinUnknownCount", "compareWithinBudgetTermsConsumed"], "additionalProperties": { "type": "number" } },
+    "executeResult": {
+      "type": "object", "required": ["status"],
+      "properties": {
+        "status": { "enum": ["OK", "ERROR"] }, "output": { "type": "string" }, "debugOutput": { "type": "string" }, "message": { "type": "string" }, "error": { "type": "boolean" }, "hasMore": { "type": "boolean" }, "definition_to_load": { "type": "string" }, "inputHelper": { "type": "string" },
+        "stack": { "type": "array", "items": { "$ref": "#/$defs/value" } }, "stackSnapshot": { "type": "string" }, "userWords": { "type": "array", "items": { "$ref": "#/$defs/userWord" } }, "importedModules": { "type": "array", "items": { "type": "string" } }, "hedgedTrace": { "type": "array", "items": { "type": "string" } }, "hedgedWinner": { "type": "string" }, "hedgedFallbackReason": { "type": "string" }, "hedgedCancelled": { "type": "array", "items": { "type": "string" } }, "errorFlowTrace": { "type": "array", "items": { "type": "object" } }, "runtimeMetricsDelta": { "$ref": "#/$defs/metrics" }
+      }
+    },
+    "importStateEntry": { "type": "array", "prefixItems": [{ "type": "string" }, { "type": "boolean" }, { "type": "array", "items": { "type": "string" } }, { "type": "array", "items": { "type": "string" } }], "items": false },
+    "importState": { "type": "array", "items": { "$ref": "#/$defs/importStateEntry" } },
+    "userWordsInfo": { "type": "array", "items": { "type": "array", "prefixItems": [{ "type": "string" }, { "type": "string" }, { "type": "boolean" }], "items": false } },
+    "coreWordsInfo": { "type": "array", "items": { "type": "array", "prefixItems": [{ "type": "string" }, { "type": "string" }, { "type": "string" }], "items": false } },
+    "moduleCatalog": { "type": "array", "items": { "type": "array", "prefixItems": [{ "type": "string" }, { "type": "string" }, { "type": "boolean" }], "items": false } }
+  }
+}
