@@ -4,11 +4,28 @@
 <h1 id="ajisai-language-semantics">Ajisai Language Semantics</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Version: <strong>2026-07-28</strong></p>
+Version: <strong>2026-07-29</strong></p>
 
 <p>
-This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is intentionally a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.
+This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.
 </p>
+
+<p>
+Ajisai is built from ten concepts and nothing else. Everything below is one of them, or a consequence of one of them.
+</p>
+
+<ol>
+<li>Exact rational arithmetic, closed under square roots, with no rounding.</li>
+<li>Three outcomes and no fourth: a value, a reasoned absence, or an error.</li>
+<li>A stack of values and vectors of values.</li>
+<li>Code blocks, evaluated only when a Word asks for it.</li>
+<li>One modifier axis: consume or keep.</li>
+<li>A two-tier dictionary — sealed Core, user-defined User — with content-addressed identity.</li>
+<li>A machine-readable contract for every Word.</li>
+<li>A pre-execution check of user declarations against those contracts.</li>
+<li>One host protocol, which is the only way anything outside the language observes it.</li>
+<li>An executable conformance corpus that decides whether an implementation is Ajisai.</li>
+</ol>
 
 <nav class="toc">
 <h2>Contents</h2>
@@ -20,7 +37,8 @@ This document defines the correspondence between Ajisai source programs and obse
 <li><a href="#lang-modifiers">Stack and Modifiers</a></li>
 <li><a href="#lang-failure">Partiality and Failure</a></li>
 <li><a href="#lang-collections">Collections and Higher-order Evaluation</a></li>
-<li><a href="#lang-dictionary">Dictionary, Modules, and Effects</a></li>
+<li><a href="#lang-dictionary">Dictionary and Effects</a></li>
+<li><a href="#lang-contract">Contracts and Static Checking</a></li>
 <li><a href="#lang-observation">Observation and Host Protocol</a></li>
 <li><a href="#lang-conformance">Conformance</a></li>
 </ol>
@@ -31,37 +49,31 @@ This document defines the correspondence between Ajisai source programs and obse
 <h3 id="lang-authority-sources">LANG.AUTHORITY.SOURCES — Normative sources</h3>
 
 <p>
-This Language Semantics is authoritative for program meaning. <code>spec/gui-semantics.md</code> is authoritative for presentation. <code>spec/host-protocol-v1.schema.json</code> is authoritative for their compatibility boundary. <code>SPECIFICATION.html</code> is generated from those sources and is not edited directly.
+This Language Semantics is authoritative for program meaning. <code>spec/words.json</code> is authoritative for the vocabulary, <code>spec/semantic-families.json</code> for the laws Words share, <code>spec/gui-semantics.md</code> for presentation, and <code>spec/host-protocol-v1.schema.json</code> for the compatibility boundary between them. <code>SPECIFICATION.html</code> is generated from those sources and is not edited directly.
 </p>
 
 <p>
-The semantic-family registry classifies shared Word behavior. The generated Word manifest records the complete visible vocabulary until each family is migrated to the single Word schema. Neither implementation layout nor explanatory text can override an observable contract.
+Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the list above defines nothing.
 </p>
 
 <h3 id="lang-authority-identity">LANG.AUTHORITY.IDENTITY — Language identity</h3>
 
 <p>
-Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, hosted effects, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
+Ajisai identity is the correspondence from normalized source to the ordered observation of stack, output, dictionary state, and structured diagnosis. Two implementations are semantically equivalent when that correspondence agrees for every conforming program.
 </p>
 
 <p>
-The current 224 Word, alias, and surface-form inventory is preserved. Compaction changes where meaning is recorded, not the language surface or its results.
+The vocabulary is 69 canonical Words and 16 symbolic aliases. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
 
 <p>
-AST, IR, dispatch, caching, scheduling, storage layout, numeric representation, and optimization are unobservable. An implementation may change them when all observations and HostProtocolV1 payload meanings remain unchanged.
+AST, IR, dispatch, caching, storage layout, numeric representation, and optimization are unobservable. An implementation may change them when all observations and HostProtocolV1 payload meanings remain unchanged.
 </p>
 
 <p>
-Internal exact-real representation, Rust enum names, debug strings, allocation identity, GUI colors, and private serialization are not semantic discriminants.
-</p>
-
-<h3 id="lang-authority-legacy">LANG.AUTHORITY.LEGACY — Legacy correspondence</h3>
-
-<p>
-<code>spec/legacy-clause-map.json</code> maps every heading in the pre-compaction integrated specification to a kernel clause. <code>spec/legacy/integrated-specification-2026-07-15.html</code> preserves the prior normative wording for audit. The map preserves traceability; this document remains the active authority.
+Internal exact-real representation, Rust enum names, debug strings, allocation identity, GUI colors, and private serialization are not semantic discriminants. In particular an implementation may execute a Word by any route it likes, provided the route is unobservable.
 </p>
 
 <h2 id="lang-source">2. Source and Desugaring</h2>
@@ -69,17 +81,17 @@ Internal exact-real representation, Rust enum names, debug strings, allocation i
 <h3 id="lang-source-text">LANG.SOURCE.TEXT — Source domain</h3>
 
 <p>
-A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens distinguish literals, canonical Words, aliases, modifier forms, code blocks, vectors, definitions, deletion, module operations, and reserved syntax.
+A program is Unicode text tokenized by the sealed Ajisai lexical grammar. Tokens distinguish literals, canonical Words, aliases, modifier forms, code blocks, vectors, definitions, and deletion.
 </p>
 
 <p>
-Malformed delimiters, malformed literals, reserved tokens, invalid names, and invalid definition forms are source errors. They do not denote NIL.
+Malformed delimiters, malformed literals, invalid names, and invalid definition forms are source errors. They do not denote NIL.
 </p>
 
 <h3 id="lang-source-normalize">LANG.SOURCE.NORMALIZE — Name normalization</h3>
 
 <p>
-Word lookup is case-insensitive through the existing canonical normalization. A visible symbolic alias resolves to exactly the same canonical Word contract and executor as its English name.
+Word lookup is case-insensitive through the canonical normalization. A symbolic alias resolves to exactly the same canonical Word contract and executor as its English name.
 </p>
 
 <p>
@@ -89,21 +101,21 @@ Normalization does not merge distinct value tags, invent dictionary entries, or 
 <h3 id="lang-source-desugar">LANG.SOURCE.DESUGAR — Surface forms</h3>
 
 <p>
-Desugaring is deterministic and semantics-preserving. Modifier punctuation, sealed control sugar, conversion forms, import forms, and other registered surface syntax lower to their existing canonical concepts before evaluation.
+Desugaring is deterministic and semantics-preserving. Modifier punctuation and the registered delimiter forms lower to canonical concepts before evaluation.
 </p>
 
 <p>
-If (D) is desugaring and (O) observation, then (O(p)=O(D(p))) for every well-formed program (p). Sugar cannot introduce a new value domain or failure category.
+If \(D\) is desugaring and \(O\) observation, then \(O(p)=O(D(p))\) for every well-formed program \(p\). Sugar cannot introduce a new value domain or failure category.
 </p>
 
 <h3 id="lang-source-code">LANG.SOURCE.CODE — Code values</h3>
 
 <p>
-A code block is a tagged value containing source for later evaluation. Producing, storing, displaying, and evaluating code are distinct operations. Evaluation occurs only through a Word whose contract requests it.
+A code block is a tagged value containing source for later evaluation. Producing, storing, displaying, and evaluating code are distinct operations. Evaluation occurs only through a Word whose contract requests it — <code>EXEC</code>, <code>COND</code>, and the higher-order family.
 </p>
 
 <p>
-Quoted code is not eagerly executed. Nested code and vector delimiters retain their existing parse boundaries.
+Quoted code is not eagerly executed. A vector is data and is never executable; Ajisai makes no claim to homoiconicity.
 </p>
 
 <h2 id="lang-values">3. Value Domains</h2>
@@ -111,61 +123,55 @@ Quoted code is not eagerly executed. Nested code and vector delimiters retain th
 <h3 id="lang-values-disjoint">LANG.VALUES.DISJOINT — Tagged domains</h3>
 
 <p>
-Values form a disjoint tagged sum. Scalar, Boolean truth, String, Vector, Record, NIL, CodeBlock, ProcessHandle, SupervisorHandle, and other registered protocol kinds are never equal merely because their encodings resemble one another.
+Values form a disjoint tagged sum of exactly six domains: Scalar, Boolean, String, Vector, NIL, and CodeBlock. Two values are never equal merely because their encodings resemble one another.
 </p>
 
 <p>
-In particular FALSE is not scalar zero, TRUE is not scalar one, UNKNOWN is not NIL, and an absent value is not an ERROR.
+In particular FALSE is not scalar zero, TRUE is not scalar one, and an absent value is not an ERROR.
 </p>
 
 <h3 id="lang-values-exact">LANG.VALUES.EXACT — Exact scalars</h3>
 
 <p>
-Every admitted scalar denotes an exact real in the current exact rational and multiquadratic domain. Arithmetic performs no intermediate rounding. A representation is conforming when refinement and comparison observations agree with the denoted value.
+Every scalar denotes an exact element of the field \(\mathbb{Q}(\sqrt{d_1},\dots,\sqrt{d_k})\) generated over the rationals by square roots of non-negative rationals — a multiquadratic normal form \(\sum_d c_d\sqrt{d}\) with rational \(c_d\). Integer, fraction, decimal, and scientific-notation literals are source forms for exact rationals; <code>SQRT</code> is the only Word that leaves the rationals.
 </p>
 
 <p>
-The internal exact-real representation is unobservable. Canonical continued-fraction display is derived from a value; it is not evidence of the runtime storage form.
-</p>
-
-<h3 id="lang-values-truth">LANG.VALUES.TRUTH — Three-valued truth</h3>
-
-<p>
-Truth values are TRUE, FALSE, and UNKNOWN. UNKNOWN represents logical undecidability under the applicable comparison observation and follows the registered Kleene three-valued truth tables.
+Arithmetic performs no intermediate rounding, and coefficients are arbitrary-precision, so overflow is impossible rather than wrapped. Comparison over this domain is <strong>total and decidable</strong>: every comparison of two scalars yields TRUE or FALSE in finite time, with no budget, no refinement limit, and no undecided outcome. Values built through different histories compare equal when they denote the same real — \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value.
 </p>
 
 <p>
-UNKNOWN carries <code>truthValue = unknown</code> on protocol surfaces and never carries absence metadata. Exhausting comparison water yields UNKNOWN rather than NIL or ERROR.
+The internal representation is unobservable. Canonical continued-fraction display is derived from a value; it is not evidence of the runtime storage form.
+</p>
+
+<h3 id="lang-values-truth">LANG.VALUES.TRUTH — Two-valued truth</h3>
+
+<p>
+Truth values are TRUE and FALSE. <code>AND</code>, <code>OR</code>, and <code>NOT</code> are the ordinary Boolean operations, and every comparison decides.
+</p>
+
+<p>
+There is no third truth value. An operation that cannot produce a value produces NIL, which is absence and not undecidability; an operation that is malformed raises ERROR.
 </p>
 
 <h3 id="lang-values-nil">LANG.VALUES.NIL — Diagnostic absence</h3>
 
 <p>
-NIL is a value representing absence from a well-formed partial operation. Its protocol semantics may carry reason, origin, recoverability, and structured diagnosis. These fields are observable when present.
+NIL is a value representing absence from a well-formed partial operation. It carries a <strong>reason</strong>: a stable, machine-readable identifier for why production failed. The reason is observable through <code>NIL-REASON</code> and through the protocol.
 </p>
 
 <p>
-NIL reason identifies why production failed; origin identifies where the absence arose; recoverability describes permitted recovery; diagnosis supplies stable machine-readable evidence and next checks.
+NIL carries the reason and nothing else. Origin, recoverability, and structured diagnosis records are not part of the value; an implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.
 </p>
 
-<h3 id="lang-values-collections">LANG.VALUES.COLLECTIONS — Structured values</h3>
+<h3 id="lang-values-vector">LANG.VALUES.VECTOR — Vectors</h3>
 
 <p>
-A Vector is an ordered finite collection and a Record is a tagged keyed collection under their existing contracts. Shape is semantic even when storage is flattened, sparse, shared, or lazily materialized.
-</p>
-
-<p>
-Strings and encoded values retain their interpretation role and encoding contract; they are not guessed from numeric contents.
-</p>
-
-<h3 id="lang-values-roles">LANG.VALUES.ROLES — Interpretation roles</h3>
-
-<p>
-A value is observed as data paired with an interpretation role. Roles include unassigned, raw number, interval, text, truth value, timestamp, and nil. Rendering derives from the pair rather than from GUI heuristics.
+A Vector is an ordered finite collection of values. Indexing is 0-origin and negative indices count from the end. Vectors nest, and nesting expresses ragged and grouped data.
 </p>
 
 <p>
-Changing a display role cannot change exact value identity, stack behavior, dictionary resolution, or failure classification.
+Vector length is semantic even when storage is flattened, shared, or lazily materialized. There is no separate rank, shape, or reshape algebra: a vector is a sequence, not a tensor.
 </p>
 
 <h2 id="lang-machine">4. Machine State and Evaluation</h2>
@@ -173,185 +179,173 @@ Changing a display role cannot change exact value identity, stack behavior, dict
 <h3 id="lang-machine-state">LANG.MACHINE.STATE — State</h3>
 
 <p>
-A machine state contains the data stack, dictionary and module state, output stream, ordered hosted-effect sequence, child-runtime state, execution controls, and diagnostic context needed by observable contracts.
+A machine state contains the data stack, the dictionary, the output stream, and the execution controls needed by observable contracts.
 </p>
 
 <p>
-Host-only caches, allocation arenas, compiled plans, and counters are not semantic state unless explicitly exposed as diagnostic protocol fields.
+Host-only caches, allocation arenas, compiled plans, and counters are not semantic state.
 </p>
 
 <h3 id="lang-machine-transformers">LANG.MACHINE.TRANSFORMERS — Programs</h3>
 
 <p>Each executable token denotes a partial state transformer. A program denotes left-to-right composition of those transformers after desugaring and name resolution.</p>
 
-<p>Successful composition is deterministic relative to the initial semantic state and ordered host responses. Optimization may reassociate internal work only when the observable sequence is unchanged.</p>
+<p>Execution is deterministic relative to the initial state. Optimization may reassociate internal work only when the observable sequence is unchanged.</p>
 
 <h3 id="lang-machine-word-contract">LANG.MACHINE.WORD — Word contracts</h3>
 
-<p>A canonical Word contract selects a semantic family and supplies its differences: stack arity, consumption, NIL policy, projection condition and reason, error conditions, purity, determinism, capabilities, effects, interpretation role, clause links, documentation, and executor key.</p>
+<p>A canonical Word contract selects a semantic family and supplies its differences: stack arity, consumption, NIL policy, projection condition and reason, error conditions, purity, determinism, effects, clause links, documentation, and executor key.</p>
 
 <p>The executor must refine its contract. Aliases and documentation are projections of the same canonical entry, not independent semantic authorities.</p>
 
 <h3 id="lang-machine-order">LANG.MACHINE.ORDER — Evaluation order</h3>
 
-<p>Token evaluation, output emission, dictionary mutation, hosted effects, and diagnosis events preserve their existing observable order. Parallel or hedged execution may occur only behind an order-preserving commit boundary.</p>
-
-<p>Cancelled speculative work contributes no semantic effect.</p>
+<p>Token evaluation, output emission, and dictionary mutation preserve their observable order.</p>
 
 <h3 id="lang-machine-limits">LANG.MACHINE.LIMITS — Work limits</h3>
 
-<p>Execution-step, recursion, comparison, and materialization limits retain distinct meanings. A malformed program raises its registered ERROR; step or recursion exhaustion raises its registered limit ERROR; comparison exhaustion yields UNKNOWN; a well-formed generative space miss projects to reasoned NIL.</p>
+<p>Two limits exist and they mean different things. The <strong>execution-step limit</strong> bounds total work; exhausting it raises its registered ERROR. The <strong>materialization ceiling</strong> bounds how large a single generated collection may become; a well-formed request that exceeds it projects to NIL with reason <code>spaceExhausted</code>.</p>
+
+<p>Both are host safety controls rather than language-semantic constraints: their numeric values are implementation freedom, but the outcome category each produces is normative.</p>
 
 <h2 id="lang-modifiers">5. Stack and Modifiers</h2>
 
 <h3 id="lang-stack-order">LANG.STACK.ORDER — Stack observation</h3>
 
-<p>The stack is an ordered sequence with a distinguished top. Canonical stack collection and lossless stack snapshot are separate observations and retain their HostProtocolV1 shapes.</p>
+<p>The stack is an ordered sequence with a distinguished top. A Word takes its operands from the top and returns its results to the top.</p>
 
 <p>A display transformation cannot reorder, coerce, drop, or invent stack values.</p>
 
-<h3 id="lang-modifiers-axes">LANG.MODIFIERS.AXES — Orthogonal axes</h3>
+<h3 id="lang-modifiers-consumption">LANG.MODIFIERS.CONSUMPTION — The consumption axis</h3>
 
-<p>TOP versus STAK selects the operand region. EAT versus KEEP selects consumption. These axes are orthogonal; choosing one never implies a value on the other.</p>
+<p>There is exactly one modifier axis. <code>EAT</code> consumes the operands a Word reads; <code>KEEP</code> leaves them on the stack beneath the result, in their existing order. The default is <code>EAT</code>.</p>
 
-<p>The default is TOP with EAT. Existing punctuation and named forms desugar to one point in the Cartesian product ({TOP,STAK}\times\{EAT,KEEP}).</p>
-
-<h3 id="lang-modifiers-application">LANG.MODIFIERS.APPLICATION — Application</h3>
-
-<p>A Word first selects operands according to its target axis, validates the registered contract, computes or projects the result, and commits consumption according to its consumption axis. ERROR does not masquerade as a successful NIL projection.</p>
-
-<p>KEEP retains selected operands in their existing order; EAT applies the Word contract's existing consumption behavior.</p>
+<p>A Word selects operands from the top of the stack, validates its registered contract, computes or projects the result, and then commits consumption according to the axis. ERROR does not masquerade as a successful NIL projection.</p>
 
 <h2 id="lang-failure">6. Partiality and Failure</h2>
 
 <h3 id="lang-failure-trichotomy">LANG.FAILURE.TRICHOTOMY — Value, absence, misuse</h3>
 
-<p>Every attempted operation distinguishes success, well-formed partial failure, and malformed use. Success yields its registered outputs. Well-formed partial failure yields reasoned NIL. Malformed use yields ERROR.</p>
+<p>Every attempted operation ends in exactly one of three categories. Success yields its registered outputs. Well-formed partial failure yields NIL with a reason. Malformed use yields ERROR.</p>
 
-<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value.</p>
+<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. There is no mode or modifier that converts an ERROR into a value.</p>
 
 <h3 id="lang-failure-project">LANG.FAILURE.PROJECT — Projection</h3>
 
-<p>A projection condition is a semantic predicate over well-formed inputs. When it holds, the family produces NIL with the Word contract's reason and origin while retaining diagnosis and recoverability.</p>
+<p>A projection condition is a semantic predicate over well-formed inputs. When it holds, the Word produces NIL with the reason its contract registers.</p>
 
-<p>Division by zero, domain exclusion, unavailable hosted input, and space exhaustion remain distinct reasons where registered.</p>
+<p>Division by zero, domain exclusion, out-of-range indexing, failed parsing, and space exhaustion remain distinct reasons.</p>
 
 <h3 id="lang-failure-error">LANG.FAILURE.ERROR — Errors</h3>
 
-<p>Arity failure, nonconforming type or shape, malformed source, forbidden capability use, invalid dictionary operation, and exhausted hard execution controls raise their existing ERROR category.</p>
+<p>Arity failure, nonconforming type, malformed source, invalid dictionary operation, and an exhausted execution-step limit raise their registered ERROR category.</p>
 
-<p>ERROR terminates or propagates according to the existing execution contract and is never a truth value or stack NIL.</p>
+<p>ERROR halts evaluation and propagates. It is never a truth value and never a stack value.</p>
 
 <h3 id="lang-failure-passthrough">LANG.FAILURE.PASSTHROUGH — NIL passthrough</h3>
 
-<p>For a passthrough family, an input NIL flows to the registered output position without changing reason, origin, recoverability, or diagnosis. Passthrough does not re-run a projection condition and does not relabel the absence.</p>
+<p>For a passthrough family, an input NIL flows to the registered output position without changing its reason. Passthrough does not re-run a projection condition and does not relabel the absence.</p>
 
-<p>A non-passthrough Word handles NIL only as explicitly stated by its family or Word contract.</p>
+<p>A non-passthrough Word handles NIL only as its family or contract states.</p>
 
 <h3 id="lang-failure-recovery">LANG.FAILURE.RECOVERY — Recovery</h3>
 
-<p>Recovery Words may inspect or recover absence only through the published absence contract. Recovery does not erase the historical diagnosis from already emitted traces.</p>
+<p><code>VENT</code> is the single recovery form: a non-NIL top passes through and the following source unit is skipped; a NIL top is discarded and the following source unit is evaluated as the fallback.</p>
+
+<p>Recovery does not erase absence from already emitted output.</p>
 
 <h2 id="lang-collections">7. Collections and Higher-order Evaluation</h2>
 
-<h3 id="lang-collections-shape">LANG.COLLECTIONS.SHAPE — Shape rules</h3>
-
-<p>Collection families validate scalar, vector, tensor, record, and broadcast shapes before element evaluation. An incompatible shape is ERROR unless a Word contract explicitly defines a partial projection.</p>
-
-<p>Output shape is determined by the family's registered shape rule and not by storage representation.</p>
-
 <h3 id="lang-collections-lift">LANG.COLLECTIONS.LIFT — Element lifting</h3>
 
-<p>A lifted scalar family applies its scalar law element-wise after shape validation. Each lane preserves exactness, truth, NIL, and ERROR distinctions under the family's lifting policy.</p>
+<p>An arithmetic or comparison Word applies element-wise when given vectors. Two vectors combine element-wise when their lengths are equal; a scalar combines with every element of a vector. Any other pairing is ERROR.</p>
 
-<p>Vectorization cannot turn an ERROR lane into NIL or collapse UNKNOWN into absence.</p>
+<p>Each lane preserves the exactness, truth, NIL, and ERROR distinctions of the scalar law. Vectorization cannot turn an ERROR lane into NIL.</p>
 
 <h3 id="lang-collections-higher">LANG.COLLECTIONS.HIGHER — Higher-order evaluation</h3>
 
-<p>MAP, FILTER, FOLD, control Words, and other higher-order families evaluate CodeBlocks using their existing stack isolation, order, arity, and result-shape contracts.</p>
+<p><code>MAP</code>, <code>FILTER</code>, <code>FOLD</code>, <code>ANY</code>, and <code>ALL</code> evaluate a CodeBlock once per visited element, in index order, with the block's stack effect isolated to its own operands.</p>
 
-<p>Element visitation and effect order remain observable where a supplied block can emit output, mutate permitted dictionary state, or request hosted effects.</p>
+<p>Element visitation order is observable where a supplied block can emit output or mutate dictionary state.</p>
 
 <h3 id="lang-collections-budget">LANG.COLLECTIONS.BUDGET — Materialization</h3>
 
-<p>Generative families honor the existing materialization ceiling. A well-formed request that cannot materialize within that ceiling yields recoverable NIL with <code>spaceExhausted</code>; malformed dimensions or shapes remain ERROR.</p>
+<p><code>RANGE</code> and <code>FILL</code> honor the materialization ceiling. A well-formed request that cannot materialize within it yields NIL with reason <code>spaceExhausted</code>; malformed dimensions remain ERROR.</p>
 
-<h2 id="lang-dictionary">8. Dictionary, Modules, and Effects</h2>
+<h2 id="lang-dictionary">8. Dictionary and Effects</h2>
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>Name resolution is a deterministic function of the normalized name and current dictionary/import state. Core, User, and Module tiers retain their existing precedence, protection, dependency, and visibility rules.</p>
+<p>The dictionary has two tiers. <strong>Core</strong> holds the 69 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
 
-<p>LOOKUP, Hover, Reference, and execution must identify the same canonical entry.</p>
+<p>There is no module system, no import state, and no third tier. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 
-<p>Definition, replacement, deletion, recursion, identity, content addressing, import, export, and restoration retain their existing validation and observation contracts.</p>
+<p><code>DEF</code> binds a name to a code block; <code>DEL</code> removes a User Word and fails with ERROR if any other definition still depends on it. A definition may call itself. A dictionary mutation commits atomically or raises ERROR with no partial visible mutation.</p>
 
-<p>A dictionary mutation commits atomically or raises ERROR without a partial visible mutation.</p>
+<p>Every Word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the Words it calls. Two definitions with the same identity are the same Word, and a change to a dependency changes the identity of everything that depends on it.</p>
 
-<h3 id="lang-dictionary-modules">LANG.DICTIONARY.MODULES — Modules</h3>
+<h3 id="lang-effects-output">LANG.EFFECTS.OUTPUT — Output</h3>
 
-<p>Module catalogs distinguish availability from import state. Full and partial imports preserve module, public-word, selected-word, and sample state through HostProtocolV1 tuple order.</p>
+<p>Output is the only effect. <code>PRINT</code> appends to the ordered output stream and returns its operand. Every other Word is pure: given the same stack and dictionary it produces the same result and changes nothing else.</p>
 
-<p>Import and unimport change resolution state; they do not rewrite source or canonical Word identity.</p>
+<p>A host may render, capture, or discard the output stream, but may not reorder it or change language-side validation.</p>
 
-<h3 id="lang-effects-hosted">LANG.EFFECTS.HOSTED — Hosted effects</h3>
+<h2 id="lang-contract">9. Contracts and Static Checking</h2>
 
-<p>A hosted Word requests a declared capability and contributes an effect to an ordered effect sequence. The host supplies the response without redefining language-side validation, stack effects, or diagnosis.</p>
+<h3 id="lang-contract-registry">LANG.CONTRACT.REGISTRY — Machine-readable contracts</h3>
 
-<p>NOW, CSPRNG, serial, standard I/O, audio, files, persistence, and other hosted capabilities retain their existing availability and failure contracts.</p>
+<p>Every Core Word's contract is a machine-readable record in <code>spec/words.json</code>, conforming to <code>spec/words.schema.json</code>. The record is the single place a Word's arity, consumption, NIL policy, projection reason, error conditions, purity, and documentation are stated.</p>
 
-<h3 id="lang-effects-child">LANG.EFFECTS.CHILD — Child runtime</h3>
+<p>Prose that restates a contract is a projection of that record and carries no independent authority.</p>
 
-<p>Child handles, states, spawn, await, status, kill, monitor, and supervise retain their observable lifecycle contracts. Scheduling is free only where stack, output, effect, handle, and diagnosis observations cannot distinguish it.</p>
+<h3 id="lang-contract-check">LANG.CONTRACT.CHECK — Pre-execution check</h3>
 
-<h2 id="lang-observation">9. Observation and Host Protocol</h2>
+<p>A user definition may carry a declaration of its own arity, purity, and NIL behavior. <code>ajisai check --contract</code> verifies that declaration against the Core contracts of the Words it calls, <strong>without running the program</strong>.</p>
+
+<p>The check is deliberately <strong>conservative and partial</strong>. It reports exactly three outcomes per declaration: <em>verified</em>, <em>violated</em>, or <em>cannot verify</em>. Anything outside the syntactic fragment the inference analyzes — a higher-order body whose block is not statically known, or dynamic control — is reported as <em>cannot verify</em> and is never silently passed. A tool that reports <em>verified</em> for an unanalyzable body is nonconforming.</p>
+
+<h2 id="lang-observation">10. Observation and Host Protocol</h2>
 
 <h3 id="lang-observation-projections">LANG.OBSERVATION.PROJECTIONS — Observable surfaces</h3>
 
-<p>Ajisai exposes Input, Output, Stack, and Dictionary projections. Presentation may tile or select them according to GUI Semantics, but their language-side contents are determined here.</p>
+<p>Ajisai exposes four projections: Input, Output, Stack, and Dictionary. Presentation may tile or select them according to the Presentation Profile, but their language-side contents are determined here.</p>
 
-<p>Output is ordered text/effect observation; Stack is ordered typed values; Dictionary is resolved catalog and user/module state; Input is normalized source and host editing state where applicable.</p>
+<p>Output is the ordered text observation; Stack is the ordered typed values; Dictionary is the resolved Core and User catalog; Input is normalized source and host editing state where applicable.</p>
 
 <h3 id="lang-observation-protocol">LANG.OBSERVATION.PROTOCOL — HostProtocolV1</h3>
 
-<p>HostProtocolV1 fixes execute, step, reset, stack collection and snapshot, user/core/module metadata, lookup, catalog, import state, and the structured ExecuteResult, Value, semantics, absence, and diagnosis payloads.</p>
+<p>HostProtocolV1 fixes execute, step, reset, stack collection and snapshot, Core and User metadata, lookup, and the structured ExecuteResult, Value, and absence payloads. It is the only channel through which anything outside the language observes it.</p>
 
 <p>Within V1 only optional fields may be added. Existing field deletion, rename, semantic change, and tuple reorder or reshape are forbidden. Breaking changes coexist as V2 while V1 remains usable.</p>
 
 <h3 id="lang-observation-firewall">LANG.OBSERVATION.FIREWALL — Semantic firewall</h3>
 
-<p>External consumers branch only on published protocol axes. They do not branch on Rust types, debug strings, display text, internal numeric/tensor form, or incidental GUI state.</p>
+<p>External consumers branch only on published protocol axes. They do not branch on Rust types, debug strings, display text, internal numeric form, or incidental GUI state.</p>
 
-<p>The GUI never infers NIL versus UNKNOWN, exact equality, stack effect, resolution, diagnosis, or recoverability.</p>
+<p>The GUI never infers exact equality, stack effect, resolution, or absence reasons on its own.</p>
 
 <h3 id="lang-observation-diagnosis">LANG.OBSERVATION.DIAGNOSIS — Diagnosis</h3>
 
-<p>Structured diagnosis includes when, where, why, summary, evidence, and next checks, plus registered optional evidence such as an agreed comparison prefix. Human wording may evolve only where machine-field meaning is preserved.</p>
+<p>An ERROR carries a stable category identifier and a human-readable message; a NIL carries its reason. Those identifiers are the machine-readable surface, and human wording may evolve only where they are preserved.</p>
 
-<h2 id="lang-conformance">10. Conformance</h2>
+<h2 id="lang-conformance">11. Conformance</h2>
 
 <h3 id="lang-conformance-corpus">LANG.CONFORMANCE.CORPUS — Executable correspondence</h3>
 
-<p>The conformance corpus links each case to one or more clause IDs and compares native, WASM, and Python observations. Required comparison includes stack, output, dictionary state, ordered effects, and structured diagnosis payloads.</p>
+<p>The conformance corpus links each case to one or more clause IDs and compares stack, output, dictionary state, and diagnosis identifiers. An implementation is Ajisai when it preserves the source-to-observation correspondence for every case.</p>
 
-<p>A port is Ajisai only when it preserves the source-to-observation correspondence for the supported profile.</p>
+<p>The corpus is the decision procedure for the question "is this Ajisai?". No prose answers it.</p>
 
 <h3 id="lang-conformance-families">LANG.CONFORMANCE.FAMILIES — Family laws</h3>
 
-<p>Every semantic family has law tests for arity, modifiers, NIL policy, projection, ERROR boundaries, shape, purity, determinism, capability, and effects as applicable. Every Word contract has at least one conformance path to its family and clause IDs.</p>
-
-<h3 id="lang-conformance-gui">LANG.CONFORMANCE.GUI — GUI boundary</h3>
-
-<p>GUI contract tests are blocking. They freeze DOM labels, keyboard operations, panel transitions, persistence formats, dictionary content, canonical and LaTeX rendering, and protocol-only semantic decisions without changing production GUI files during compaction phases 0 through 2.</p>
+<p>Every semantic family has law tests for arity, the consumption modifier, NIL policy, projection, ERROR boundaries, lifting, purity, and effects as applicable. Every Word contract has at least one conformance path to its family and clause IDs.</p>
 
 <h3 id="lang-conformance-change">LANG.CONFORMANCE.CHANGE — Change discipline</h3>
 
-<p>A semantic change begins in one authoritative contract, regenerates all derived surfaces, updates clause-linked conformance cases, and demonstrates unchanged observations unless the change is explicitly versioned.</p>
+<p>A semantic change begins in one authoritative source, regenerates all derived surfaces, updates clause-linked conformance cases, and demonstrates unchanged observations unless the change is explicitly versioned.</p>
 
-<!-- INCLUDE:14-ai-first-implementation-rules -->
-
-<!-- INCLUDE:15-test-discipline -->
+<!-- INCLUDE:12-ai-first-implementation-rules -->
 
 <!-- INCLUDE:presentation-profile -->
