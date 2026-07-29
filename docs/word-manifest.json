@@ -1,10 +1,13 @@
 {
   "schemaVersion": 1,
   "generatedFrom": [
-    "rust/src/builtins/builtin_word_definitions.rs",
-    "rust/src/interpreter/modules/module_builtins.rs",
+    "spec/words.json",
     "rust/src/core_word_aliases.rs",
     "rust/src/surface_forms.rs"
+  ],
+  "implementationCatalogValidatedAgainst": [
+    "rust/src/builtins/builtin_word_definitions.rs",
+    "rust/src/interpreter/modules/module_builtins.rs"
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {

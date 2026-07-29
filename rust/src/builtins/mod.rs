@@ -4,6 +4,7 @@ mod builtin_word_details;
 mod builtin_word_details_tests;
 mod builtin_word_lookup_docs;
 mod builtin_word_types;
+mod generated_core_word_docs;
 
 pub use builtin_word_definitions::{builtin_specs, lookup_builtin_spec, BuiltinSpec};
 // Re-exported for the wasm bindings (feature = "wasm") only; the re-export is
@@ -21,7 +22,9 @@ use std::sync::Arc;
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
     for spec in builtin_specs() {
         let name = spec.name;
-        let description = spec.hover_summary;
+        let description = generated_core_word_docs::lookup_generated_core_word_doc(name)
+            .expect("every registered Core Word must have generated documentation")
+            .hover_summary;
         let capabilities = core_builtin_capabilities(spec.executor_key, name);
         dictionary.insert(
             name.to_string(),

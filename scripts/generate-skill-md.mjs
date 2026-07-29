@@ -4,9 +4,8 @@
 // ai-first-competitive-upgrade-instructions.md, Phase 2).
 //
 // Inputs:
-//   - docs/word-manifest.json            (the word inventory gate: §9)
-//   - rust/src/builtins/builtin_word_definitions.rs   (coreword summaries)
-//   - rust/src/interpreter/modules/module_builtins.rs (moduleword summaries)
+//   - docs/word-manifest.json            (the surface inventory gate: §9)
+//   - spec/words.json                    (canonical Word documentation)
 //   - examples/*.ajisai                  (freshness gate: all must run)
 //   - curated snippet data in this file  (§6 examples, §7 errors, §8 forbidden)
 //
@@ -90,64 +89,30 @@ function expectError(code) {
 }
 
 // ---------------------------------------------------------------------------
-// Word inventory (§9) — manifest is the gate; descriptions from Rust sources
+// Word inventory (§9) — surfaces from the manifest, contracts from words.json
 // ---------------------------------------------------------------------------
 
 function readRepo(path) {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
-function constArrayBody(source, constName) {
-  const startPattern = new RegExp(`(?:pub\\([^)]*\\)\\s+)?(?:pub\\s+)?const\\s+${constName}[^=]*=\\s*&\\[`);
-  const start = source.search(startPattern);
-  if (start < 0) fail(`could not find const array ${constName}`);
-  const open = source.indexOf('[', source.indexOf('&[', start));
-  const end = source.indexOf('\n];', open);
-  if (end < 0) fail(`could not find end of const array ${constName}`);
-  return source.slice(open + 1, end);
-}
-
-function corewordSummaries() {
-  const body = constArrayBody(readRepo('rust/src/builtins/builtin_word_definitions.rs'), 'BUILTIN_SPECS');
-  const summaries = new Map();
-  const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];|$)/g;
-  for (const match of body.matchAll(pattern)) {
-    const item = match[1];
-    const name = item.match(/\bname:\s*"([^"]+)"/)?.[1];
-    const summary = item.match(/\bsummary:\s*"([^"]+)"/)?.[1];
-    const syntax = item.match(/\bhover_syntax:\s*"([^"]*)"/)?.[1];
-    if (name && summary) summaries.set(name, { summary, syntax: syntax ?? '' });
-  }
-  return summaries;
-}
-
-function modulewordSummaries() {
-  const source = readRepo('rust/src/interpreter/modules/module_builtins.rs');
-  const summaries = new Map();
-  // Both macro arms: the optional second argument (a WordShape path or
-  // call) is skipped; the description is the next string literal.
-  const pattern = /module_word!\(\s*"([^"]+)"\s*,(?:\s*[A-Za-z_][A-Za-z0-9_:]*(?:\([^)]*\))?\s*,)?\s*"([^"]+)"/g;
-  for (const match of source.matchAll(pattern)) {
-    summaries.set(match[1], match[2]);
-  }
-  return summaries;
-}
-
 function buildWordTable() {
   const manifest = JSON.parse(readRepo('docs/word-manifest.json'));
-  const core = corewordSummaries();
-  const mod = modulewordSummaries();
+  const words = JSON.parse(readRepo('spec/words.json'));
+  if (words.migration?.completeInventory !== true) fail('spec/words.json inventory is incomplete');
+  const contracts = new Map(words.entries.map((entry) => [entry.name, entry]));
+  if (contracts.size !== words.entries.length) fail('spec/words.json contains duplicate canonical names');
   const rows = [];
   for (const entry of manifest.entries) {
     if (entry.kind === 'coreword') {
-      const meta = core.get(entry.surface);
-      if (!meta) fail(`no summary found for coreword ${entry.surface}`);
-      const syntax = meta.syntax ? ` — e.g. \`${meta.syntax}\`` : '';
-      rows.push(`| \`${entry.surface}\` | ${entry.category} | ${meta.summary}${syntax} |`);
+      const contract = contracts.get(entry.canonical);
+      if (!contract) fail(`no contract found for coreword ${entry.surface}`);
+      const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
+      rows.push(`| \`${entry.surface}\` | ${entry.category} | ${contract.documentation.summary}${syntax} |`);
     } else if (entry.kind === 'moduleword') {
-      const summary = mod.get(entry.short_surface);
-      if (!summary) fail(`no summary found for moduleword ${entry.surface}`);
-      rows.push(`| \`${entry.surface}\` | ${entry.category} (module) | ${summary} — needs \`'${entry.module}' IMPORT\` (or call as \`${entry.surface}\`) |`);
+      const contract = contracts.get(entry.canonical);
+      if (!contract) fail(`no contract found for moduleword ${entry.surface}`);
+      rows.push(`| \`${entry.surface}\` | ${entry.category} (module) | ${contract.documentation.summary} — needs \`'${entry.module}' IMPORT\` (or call as \`${entry.surface}\`) |`);
     } else if (entry.canonical && entry.canonical !== 'RESERVED-BEGIN') {
       rows.push(`| \`${entry.surface.replace(/\|/g, '\\|')}\` | ${entry.kind.replace(/_/g, ' ')} | shorthand for \`${entry.canonical.replace(/\|/g, '\\|')}\` |`);
     }

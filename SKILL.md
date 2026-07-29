@@ -224,9 +224,7 @@ program (then the short name works), or can be called fully qualified.
 | `IDLE` | control | Pass control through unchanged (no-op). — e.g. `IDLE` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `[ 1 2 3 ] ~ { [ 2 ] * } MAP` |
-| `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip \
-             the following source unit; on a NIL top, discard it and evaluate \
-             the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
+| `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
@@ -269,102 +267,102 @@ program (then the short name works), or can be called fully qualified.
 | `KILL` | control | Forcibly terminate a child runtime. — e.g. `{ 1 2 + } SPAWN KILL` |
 | `MONITOR` | control | Register a monitor on a child handle. — e.g. `{ 1 2 + } SPAWN MONITOR` |
 | `SUPERVISE` | control | Run a code block under a one-for-one restart policy. — e.g. `{ 1 2 + } [ 3 ] SUPERVISE` |
-| `MUSIC@SEQ` | music (module) | Set sequential playback mode — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ`) |
-| `MUSIC@SIM` | music (module) | Set simultaneous playback mode — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM`) |
-| `MUSIC@SLOT` | music (module) | Set slot duration in seconds — needs `'MUSIC' IMPORT` (or call as `MUSIC@SLOT`) |
-| `MUSIC@GAIN` | music (module) | Set volume level (0.0-1.0) — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN`) |
-| `MUSIC@GAIN-RESET` | music (module) | Reset volume to default (1.0) — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN-RESET`) |
-| `MUSIC@PAN` | music (module) | Set stereo position (-1.0 left to 1.0 right) — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN`) |
-| `MUSIC@PAN-RESET` | music (module) | Reset pan to center (0.0) — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN-RESET`) |
-| `MUSIC@FX-RESET` | music (module) | Reset all audio effects to defaults — needs `'MUSIC' IMPORT` (or call as `MUSIC@FX-RESET`) |
-| `MUSIC@PLAY` | music (module) | Play audio — needs `'MUSIC' IMPORT` (or call as `MUSIC@PLAY`) |
-| `MUSIC@SEQ-GROUP` | music (module) | Build an explicit sequential music group from a vector — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ-GROUP`) |
-| `MUSIC@SIM-GROUP` | music (module) | Build an explicit simultaneous music group from a vector — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM-GROUP`) |
-| `MUSIC@CHORD` | music (module) | Build an explicit chord group (simultaneous) from a vector — needs `'MUSIC' IMPORT` (or call as `MUSIC@CHORD`) |
-| `MUSIC@HZ` | music (module) | Build a music.pitch from a frequency in Hz (exact rational) — needs `'MUSIC' IMPORT` (or call as `MUSIC@HZ`) |
-| `MUSIC@DUR` | music (module) | Build a music.duration from a number of seconds — needs `'MUSIC' IMPORT` (or call as `MUSIC@DUR`) |
-| `MUSIC@NOTE` | music (module) | Combine a music.pitch and a music.duration into a music.note — needs `'MUSIC' IMPORT` (or call as `MUSIC@NOTE`) |
-| `MUSIC@REST` | music (module) | Build a music.rest from a music.duration — needs `'MUSIC' IMPORT` (or call as `MUSIC@REST`) |
-| `MUSIC@EDO` | music (module) | Build an equal-division-of-the-octave music.tuning — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDO`) |
-| `MUSIC@EDR` | music (module) | Build an equal-division-of-a-ratio music.tuning (non-octave) — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDR`) |
-| `MUSIC@STEP` | music (module) | Resolve a step within a music.tuning into a music.pitch — needs `'MUSIC' IMPORT` (or call as `MUSIC@STEP`) |
-| `MUSIC@VOICE` | music (module) | Build a music group with the role of a single melodic voice — needs `'MUSIC' IMPORT` (or call as `MUSIC@VOICE`) |
-| `MUSIC@TRACK` | music (module) | Build a music group with the role of an instrument track — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRACK`) |
-| `MUSIC@MEASURE` | music (module) | Build a music group with the role of a measure (bar) — needs `'MUSIC' IMPORT` (or call as `MUSIC@MEASURE`) |
-| `MUSIC@PHRASE` | music (module) | Build a music group with the role of a phrase — needs `'MUSIC' IMPORT` (or call as `MUSIC@PHRASE`) |
-| `MUSIC@WITH-TUNING` | music (module) | Bind a tuning over a body so bare integers become tuning steps — needs `'MUSIC' IMPORT` (or call as `MUSIC@WITH-TUNING`) |
-| `MUSIC@EXPLAIN` | music (module) | Explain how MUSIC@PLAY would interpret a value — needs `'MUSIC' IMPORT` (or call as `MUSIC@EXPLAIN`) |
-| `MUSIC@ADSR` | music (module) | Set ADSR envelope — needs `'MUSIC' IMPORT` (or call as `MUSIC@ADSR`) |
-| `MUSIC@SINE` | music (module) | Set sine waveform — needs `'MUSIC' IMPORT` (or call as `MUSIC@SINE`) |
-| `MUSIC@SQUARE` | music (module) | Set square waveform — needs `'MUSIC' IMPORT` (or call as `MUSIC@SQUARE`) |
-| `MUSIC@SAW` | music (module) | Set sawtooth waveform — needs `'MUSIC' IMPORT` (or call as `MUSIC@SAW`) |
-| `MUSIC@TRI` | music (module) | Set triangle waveform — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRI`) |
-| `JSON@PARSE` | json (module) | Parse JSON string to Ajisai value — needs `'JSON' IMPORT` (or call as `JSON@PARSE`) |
-| `JSON@STRINGIFY` | json (module) | Convert Ajisai value to JSON string — needs `'JSON' IMPORT` (or call as `JSON@STRINGIFY`) |
-| `JSON@GET` | json (module) | Get value by key from JSON object — needs `'JSON' IMPORT` (or call as `JSON@GET`) |
-| `JSON@KEYS` | json (module) | Get all keys from JSON object — needs `'JSON' IMPORT` (or call as `JSON@KEYS`) |
-| `JSON@SET` | json (module) | Set key-value in JSON object — needs `'JSON' IMPORT` (or call as `JSON@SET`) |
-| `JSON@HAS` | json (module) | True if a JSON object contains the given key — needs `'JSON' IMPORT` (or call as `JSON@HAS`) |
-| `JSON@VALUES` | json (module) | Get all values from a JSON object — needs `'JSON' IMPORT` (or call as `JSON@VALUES`) |
-| `JSON@MERGE` | json (module) | Merge two JSON objects; right-hand keys win on conflict — needs `'JSON' IMPORT` (or call as `JSON@MERGE`) |
-| `JSON@DELETE` | json (module) | Remove a key from a JSON object — needs `'JSON' IMPORT` (or call as `JSON@DELETE`) |
-| `JSON@EXPORT` | json (module) | Export stack top as JSON file download — needs `'JSON' IMPORT` (or call as `JSON@EXPORT`) |
-| `DATA@CSV-PARSE` | data (module) | Parse CSV text into a vector of Records — needs `'DATA' IMPORT` (or call as `DATA@CSV-PARSE`) |
-| `DATA@CSV-STRINGIFY` | data (module) | Convert a vector of Records into CSV text — needs `'DATA' IMPORT` (or call as `DATA@CSV-STRINGIFY`) |
-| `DATA@SELECT` | data (module) | Project a table onto the named columns — needs `'DATA' IMPORT` (or call as `DATA@SELECT`) |
-| `DATA@WHERE` | data (module) | Keep table rows whose column predicate is true — needs `'DATA' IMPORT` (or call as `DATA@WHERE`) |
-| `DATA@GROUP` | data (module) | Group table rows by the value of a column — needs `'DATA' IMPORT` (or call as `DATA@GROUP`) |
-| `DATA@JOIN` | data (module) | Left-join two tables on a shared key column — needs `'DATA' IMPORT` (or call as `DATA@JOIN`) |
-| `IO@INPUT` | io (module) | Read text from input buffer — needs `'IO' IMPORT` (or call as `IO@INPUT`) |
-| `IO@OUTPUT` | io (module) | Write value to output buffer — needs `'IO' IMPORT` (or call as `IO@OUTPUT`) |
-| `TIME@NOW` | time (module) | Get current Unix timestamp — needs `'TIME' IMPORT` (or call as `TIME@NOW`) |
-| `TIME@DATETIME` | time (module) | Render an instant as civil [Y M D h m s] at a UTC offset (hours) — needs `'TIME' IMPORT` (or call as `TIME@DATETIME`) |
-| `TIME@TIMESTAMP` | time (module) | Resolve a civil datetime to an instant at a UTC offset (hours) — needs `'TIME' IMPORT` (or call as `TIME@TIMESTAMP`) |
-| `TIME@DATE` | time (module) | Extract the [Y M D] date from a datetime — needs `'TIME' IMPORT` (or call as `TIME@DATE`) |
-| `TIME@TIME` | time (module) | Extract the [h m s] time-of-day from a datetime — needs `'TIME' IMPORT` (or call as `TIME@TIME`) |
-| `TIME@YEAR` | time (module) | Year field of a date or datetime — needs `'TIME' IMPORT` (or call as `TIME@YEAR`) |
-| `TIME@MONTH` | time (module) | Month field of a date or datetime — needs `'TIME' IMPORT` (or call as `TIME@MONTH`) |
-| `TIME@DAY` | time (module) | Day field of a date or datetime — needs `'TIME' IMPORT` (or call as `TIME@DAY`) |
-| `TIME@HOUR` | time (module) | Hour field of a time or datetime — needs `'TIME' IMPORT` (or call as `TIME@HOUR`) |
-| `TIME@MINUTE` | time (module) | Minute field of a time or datetime — needs `'TIME' IMPORT` (or call as `TIME@MINUTE`) |
-| `TIME@SECOND` | time (module) | Second field of a time or datetime — needs `'TIME' IMPORT` (or call as `TIME@SECOND`) |
-| `TIME@WEEKDAY` | time (module) | ISO weekday of a date or datetime (Monday=1 .. Sunday=7) — needs `'TIME' IMPORT` (or call as `TIME@WEEKDAY`) |
-| `TIME@ADD-DAYS` | time (module) | Shift a date or datetime by N whole days — needs `'TIME' IMPORT` (or call as `TIME@ADD-DAYS`) |
-| `TIME@DIFF-DAYS` | time (module) | Whole-day difference a-b between two dates/datetimes — needs `'TIME' IMPORT` (or call as `TIME@DIFF-DAYS`) |
-| `TIME@FORMAT` | time (module) | ISO-8601 text for a date (YYYY-MM-DD) or datetime (YYYY-MM-DDThh:mm:ss) — needs `'TIME' IMPORT` (or call as `TIME@FORMAT`) |
-| `TIME@PARSE-ISO` | time (module) | Parse an ISO-8601 civil string into a datetime; Bubble/NIL if invalid — needs `'TIME' IMPORT` (or call as `TIME@PARSE-ISO`) |
-| `TIME@ADD-MONTHS` | time (module) | Add N months to a date/datetime, clamping to the month end — needs `'TIME' IMPORT` (or call as `TIME@ADD-MONTHS`) |
-| `TIME@ADD-YEARS` | time (module) | Add N years to a date/datetime, clamping Feb 29 in non-leap years — needs `'TIME' IMPORT` (or call as `TIME@ADD-YEARS`) |
-| `CRYPTO@CSPRNG` | crypto (module) | Generate cryptographically secure random numbers — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@CSPRNG`) |
-| `CRYPTO@HASH` | crypto (module) | Compute hash value — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@HASH`) |
-| `ALGO@SORT` | algo (module) | Sort vector elements in ascending order — needs `'ALGO' IMPORT` (or call as `ALGO@SORT`) |
-| `ALGO@UNIQUE` | algo (module) | Remove duplicate elements, preserving first-occurrence order — needs `'ALGO' IMPORT` (or call as `ALGO@UNIQUE`) |
-| `ALGO@CONTAINS` | algo (module) | True if a vector contains an element equal to the given value — needs `'ALGO' IMPORT` (or call as `ALGO@CONTAINS`) |
-| `ALGO@INDEX-OF` | algo (module) | Index of the first element equal to the value; Bubble/NIL if absent — needs `'ALGO' IMPORT` (or call as `ALGO@INDEX-OF`) |
-| `MATH@SQRT` | math (module) | Square root. Exact rational roots stay exact; otherwise returns sound interval. — needs `'MATH' IMPORT` (or call as `MATH@SQRT`) |
-| `MATH@SQRT-EPS` | math (module) | Square root with explicit interval width bound eps. — needs `'MATH' IMPORT` (or call as `MATH@SQRT-EPS`) |
-| `MATH@INTERVAL` | math (module) | Create interval [lo, hi]. — needs `'MATH' IMPORT` (or call as `MATH@INTERVAL`) |
-| `MATH@LOWER` | math (module) | Lower endpoint of number/interval. — needs `'MATH' IMPORT` (or call as `MATH@LOWER`) |
-| `MATH@UPPER` | math (module) | Upper endpoint of number/interval. — needs `'MATH' IMPORT` (or call as `MATH@UPPER`) |
-| `MATH@WIDTH` | math (module) | Interval width hi-lo. — needs `'MATH' IMPORT` (or call as `MATH@WIDTH`) |
-| `MATH@IS-EXACT` | math (module) | True for exact number or degenerate interval. — needs `'MATH' IMPORT` (or call as `MATH@IS-EXACT`) |
+| `MUSIC@SEQ` | music (module) | Set the active playback mode to sequential. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ`) |
+| `MUSIC@SIM` | music (module) | Set the active playback mode to simultaneous. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM`) |
+| `MUSIC@SLOT` | music (module) | Set the slot duration (in seconds) used by bare notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SLOT`) |
+| `MUSIC@GAIN` | music (module) | Set the master output gain (0.0-1.0). — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN`) |
+| `MUSIC@GAIN-RESET` | music (module) | Reset the master gain to the default 1.0. — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN-RESET`) |
+| `MUSIC@PAN` | music (module) | Set the stereo pan position (-1.0 left .. 1.0 right). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN`) |
+| `MUSIC@PAN-RESET` | music (module) | Reset pan to center (0.0). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN-RESET`) |
+| `MUSIC@FX-RESET` | music (module) | Reset all audio effects (gain, pan, envelope, waveform) to defaults. — needs `'MUSIC' IMPORT` (or call as `MUSIC@FX-RESET`) |
+| `MUSIC@PLAY` | music (module) | Play a music value (note, group, voice, ...). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PLAY`) |
+| `MUSIC@SEQ-GROUP` | music (module) | Build an explicit sequential music group from a vector of notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ-GROUP`) |
+| `MUSIC@SIM-GROUP` | music (module) | Build an explicit simultaneous music group from a vector of notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM-GROUP`) |
+| `MUSIC@CHORD` | music (module) | Build a chord (simultaneous group) from a vector of pitches or notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@CHORD`) |
+| `MUSIC@HZ` | music (module) | Build a music.pitch from a frequency in hertz. — needs `'MUSIC' IMPORT` (or call as `MUSIC@HZ`) |
+| `MUSIC@DUR` | music (module) | Build a music.duration from a number of seconds. — needs `'MUSIC' IMPORT` (or call as `MUSIC@DUR`) |
+| `MUSIC@NOTE` | music (module) | Combine a music.pitch and a music.duration into a music.note. — needs `'MUSIC' IMPORT` (or call as `MUSIC@NOTE`) |
+| `MUSIC@REST` | music (module) | Build a music.rest from a music.duration. — needs `'MUSIC' IMPORT` (or call as `MUSIC@REST`) |
+| `MUSIC@EDO` | music (module) | Build an equal-division-of-the-octave tuning. — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDO`) |
+| `MUSIC@EDR` | music (module) | Build an equal-division-of-a-ratio tuning (non-octave). — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDR`) |
+| `MUSIC@STEP` | music (module) | Resolve a tuning step into an exact music.pitch. — needs `'MUSIC' IMPORT` (or call as `MUSIC@STEP`) |
+| `MUSIC@VOICE` | music (module) | Build a music group with the role of a single melodic voice. — needs `'MUSIC' IMPORT` (or call as `MUSIC@VOICE`) |
+| `MUSIC@TRACK` | music (module) | Build a music group with the role of an instrument track. — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRACK`) |
+| `MUSIC@MEASURE` | music (module) | Build a music group with the role of a measure (bar). — needs `'MUSIC' IMPORT` (or call as `MUSIC@MEASURE`) |
+| `MUSIC@PHRASE` | music (module) | Build a music group with the role of a phrase. — needs `'MUSIC' IMPORT` (or call as `MUSIC@PHRASE`) |
+| `MUSIC@WITH-TUNING` | music (module) | Bind a tuning over a body so bare integers are read as tuning steps. — needs `'MUSIC' IMPORT` (or call as `MUSIC@WITH-TUNING`) |
+| `MUSIC@EXPLAIN` | music (module) | Describe how MUSIC@PLAY would interpret a value, without playing it. — needs `'MUSIC' IMPORT` (or call as `MUSIC@EXPLAIN`) |
+| `MUSIC@ADSR` | music (module) | Set the ADSR envelope used by subsequent notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@ADSR`) |
+| `MUSIC@SINE` | music (module) | Select the sine waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SINE`) |
+| `MUSIC@SQUARE` | music (module) | Select the square waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SQUARE`) |
+| `MUSIC@SAW` | music (module) | Select the sawtooth waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SAW`) |
+| `MUSIC@TRI` | music (module) | Select the triangle waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRI`) |
+| `JSON@PARSE` | json (module) | Parse a JSON string into an Ajisai value. — needs `'JSON' IMPORT` (or call as `JSON@PARSE`) |
+| `JSON@STRINGIFY` | json (module) | Serialise an Ajisai value to a JSON string. — needs `'JSON' IMPORT` (or call as `JSON@STRINGIFY`) |
+| `JSON@GET` | json (module) | Look up a key in a JSON object. — needs `'JSON' IMPORT` (or call as `JSON@GET`) |
+| `JSON@KEYS` | json (module) | Return all keys of a JSON object as a vector. — needs `'JSON' IMPORT` (or call as `JSON@KEYS`) |
+| `JSON@SET` | json (module) | Return a JSON object with the given key bound to the given value. — needs `'JSON' IMPORT` (or call as `JSON@SET`) |
+| `JSON@HAS` | json (module) | True if a JSON object contains the given key. — needs `'JSON' IMPORT` (or call as `JSON@HAS`) |
+| `JSON@VALUES` | json (module) | Return all values of a JSON object as a vector. — needs `'JSON' IMPORT` (or call as `JSON@VALUES`) |
+| `JSON@MERGE` | json (module) | Merge two JSON objects; right-hand keys win on conflict. — needs `'JSON' IMPORT` (or call as `JSON@MERGE`) |
+| `JSON@DELETE` | json (module) | Return a JSON object with the given key removed. — needs `'JSON' IMPORT` (or call as `JSON@DELETE`) |
+| `JSON@EXPORT` | json (module) | Export the top of the stack as a downloadable JSON file. — needs `'JSON' IMPORT` (or call as `JSON@EXPORT`) |
+| `DATA@CSV-PARSE` | data (module) | Parse CSV text into a vector of Records (the first row is the header). — needs `'DATA' IMPORT` (or call as `DATA@CSV-PARSE`) |
+| `DATA@CSV-STRINGIFY` | data (module) | Render a vector of Records as CSV text sharing one column shape. — needs `'DATA' IMPORT` (or call as `DATA@CSV-STRINGIFY`) |
+| `DATA@SELECT` | data (module) | Project a table onto the named columns, in order. — needs `'DATA' IMPORT` (or call as `DATA@SELECT`) |
+| `DATA@WHERE` | data (module) | Keep the rows whose predicate on a named column is true. — needs `'DATA' IMPORT` (or call as `DATA@WHERE`) |
+| `DATA@GROUP` | data (module) | Group rows by a column into { key, rows } group records. — needs `'DATA' IMPORT` (or call as `DATA@GROUP`) |
+| `DATA@JOIN` | data (module) | Left-join two tables on a shared key column. — needs `'DATA' IMPORT` (or call as `DATA@JOIN`) |
+| `IO@INPUT` | io (module) | Read text from the host input buffer. — needs `'IO' IMPORT` (or call as `IO@INPUT`) |
+| `IO@OUTPUT` | io (module) | Write a value to the host output buffer. — needs `'IO' IMPORT` (or call as `IO@OUTPUT`) |
+| `TIME@NOW` | time (module) | Return the current Unix timestamp. — needs `'TIME' IMPORT` (or call as `TIME@NOW`) |
+| `TIME@DATETIME` | time (module) | Render an instant as civil [ Y M D h m s ] at a UTC offset (hours). — needs `'TIME' IMPORT` (or call as `TIME@DATETIME`) |
+| `TIME@TIMESTAMP` | time (module) | Resolve a civil datetime to an instant at a UTC offset (hours). — needs `'TIME' IMPORT` (or call as `TIME@TIMESTAMP`) |
+| `TIME@DATE` | time (module) | Extract the [ Y M D ] date portion of a datetime. — needs `'TIME' IMPORT` (or call as `TIME@DATE`) |
+| `TIME@TIME` | time (module) | Extract the [ h m s ] time-of-day from a datetime. — needs `'TIME' IMPORT` (or call as `TIME@TIME`) |
+| `TIME@YEAR` | time (module) | Return the year field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@YEAR`) |
+| `TIME@MONTH` | time (module) | Return the month field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@MONTH`) |
+| `TIME@DAY` | time (module) | Return the day field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@DAY`) |
+| `TIME@HOUR` | time (module) | Return the hour field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@HOUR`) |
+| `TIME@MINUTE` | time (module) | Return the minute field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@MINUTE`) |
+| `TIME@SECOND` | time (module) | Return the second field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@SECOND`) |
+| `TIME@WEEKDAY` | time (module) | Return the ISO weekday of a date or datetime (Monday=1 .. Sunday=7). — needs `'TIME' IMPORT` (or call as `TIME@WEEKDAY`) |
+| `TIME@ADD-DAYS` | time (module) | Shift a date or datetime by N whole days. — needs `'TIME' IMPORT` (or call as `TIME@ADD-DAYS`) |
+| `TIME@DIFF-DAYS` | time (module) | Whole-day difference (a - b) between two dates or datetimes. — needs `'TIME' IMPORT` (or call as `TIME@DIFF-DAYS`) |
+| `TIME@FORMAT` | time (module) | Render a date as YYYY-MM-DD or a datetime as YYYY-MM-DDThh:mm:ss. — needs `'TIME' IMPORT` (or call as `TIME@FORMAT`) |
+| `TIME@PARSE-ISO` | time (module) | Parse an ISO-8601 civil string into a datetime; Bubble/NIL if invalid. — needs `'TIME' IMPORT` (or call as `TIME@PARSE-ISO`) |
+| `TIME@ADD-MONTHS` | time (module) | Add N months to a date/datetime, clamping to the month end. — needs `'TIME' IMPORT` (or call as `TIME@ADD-MONTHS`) |
+| `TIME@ADD-YEARS` | time (module) | Add N years to a date/datetime, clamping Feb 29 in non-leap years. — needs `'TIME' IMPORT` (or call as `TIME@ADD-YEARS`) |
+| `CRYPTO@CSPRNG` | crypto (module) | Generate cryptographically secure random rationals with the given denominator. — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@CSPRNG`) |
+| `CRYPTO@HASH` | crypto (module) | Compute a cryptographic hash of a value at a chosen bit width. — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@HASH`) |
+| `ALGO@SORT` | algo (module) | Return a copy of a vector sorted in ascending order. — needs `'ALGO' IMPORT` (or call as `ALGO@SORT`) |
+| `ALGO@UNIQUE` | algo (module) | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — needs `'ALGO' IMPORT` (or call as `ALGO@UNIQUE`) |
+| `ALGO@CONTAINS` | algo (module) | True if a vector contains an element equal to the given value. — needs `'ALGO' IMPORT` (or call as `ALGO@CONTAINS`) |
+| `ALGO@INDEX-OF` | algo (module) | Index of the first element equal to the value; Bubble/NIL if absent. — needs `'ALGO' IMPORT` (or call as `ALGO@INDEX-OF`) |
+| `MATH@SQRT` | math (module) | Square root. Exact rational roots stay exact; otherwise returns a sound interval. — needs `'MATH' IMPORT` (or call as `MATH@SQRT`) |
+| `MATH@SQRT-EPS` | math (module) | Square root with an explicit interval width bound eps. — needs `'MATH' IMPORT` (or call as `MATH@SQRT-EPS`) |
+| `MATH@INTERVAL` | math (module) | Create a sound interval [ lo, hi ]. — needs `'MATH' IMPORT` (or call as `MATH@INTERVAL`) |
+| `MATH@LOWER` | math (module) | Lower endpoint of a number or interval. — needs `'MATH' IMPORT` (or call as `MATH@LOWER`) |
+| `MATH@UPPER` | math (module) | Upper endpoint of a number or interval. — needs `'MATH' IMPORT` (or call as `MATH@UPPER`) |
+| `MATH@WIDTH` | math (module) | Width of an interval (hi - lo). — needs `'MATH' IMPORT` (or call as `MATH@WIDTH`) |
+| `MATH@IS-EXACT` | math (module) | True for an exact number or a degenerate (zero-width) interval. — needs `'MATH' IMPORT` (or call as `MATH@IS-EXACT`) |
 | `MATH@ABS` | math (module) | Absolute value of a number. — needs `'MATH' IMPORT` (or call as `MATH@ABS`) |
-| `MATH@NEG` | math (module) | Negate a number. — needs `'MATH' IMPORT` (or call as `MATH@NEG`) |
+| `MATH@NEG` | math (module) | Numeric negation. — needs `'MATH' IMPORT` (or call as `MATH@NEG`) |
 | `MATH@SIGN` | math (module) | Sign of a number: -1, 0, or 1. — needs `'MATH' IMPORT` (or call as `MATH@SIGN`) |
 | `MATH@MIN` | math (module) | Smaller of two numbers. — needs `'MATH' IMPORT` (or call as `MATH@MIN`) |
 | `MATH@MAX` | math (module) | Larger of two numbers. — needs `'MATH' IMPORT` (or call as `MATH@MAX`) |
-| `MATH@POW` | math (module) | Integer-exponent exact power: base exp -- base^exp. — needs `'MATH' IMPORT` (or call as `MATH@POW`) |
+| `MATH@POW` | math (module) | Integer-exponent exact power: base^exp. — needs `'MATH' IMPORT` (or call as `MATH@POW`) |
 | `MATH@GCD` | math (module) | Greatest common divisor of two integers. — needs `'MATH' IMPORT` (or call as `MATH@GCD`) |
 | `MATH@LCM` | math (module) | Least common multiple of two integers. — needs `'MATH' IMPORT` (or call as `MATH@LCM`) |
 | `MATH@PI` | math (module) | Push the exact real pi as a refinable rational enclosure. — needs `'MATH' IMPORT` (or call as `MATH@PI`) |
 | `MATH@ENCLOSE` | math (module) | Observe a value's rational enclosure within an explicit water budget. — needs `'MATH' IMPORT` (or call as `MATH@ENCLOSE`) |
-| `SERIAL@LIST-PORTS` | serial (module) | Ask the host to enumerate available serial ports — needs `'SERIAL' IMPORT` (or call as `SERIAL@LIST-PORTS`) |
-| `SERIAL@OPEN` | serial (module) | Open a serial port by id; leaves the port-id handle on the stack — needs `'SERIAL' IMPORT` (or call as `SERIAL@OPEN`) |
-| `SERIAL@CONFIGURE` | serial (module) | Set the baud rate of an open serial port — needs `'SERIAL' IMPORT` (or call as `SERIAL@CONFIGURE`) |
-| `SERIAL@WRITE` | serial (module) | Write a byte vector to an open serial port — needs `'SERIAL' IMPORT` (or call as `SERIAL@WRITE`) |
-| `SERIAL@READ` | serial (module) | Drain received bytes from an open serial port; Bubble/NIL when none — needs `'SERIAL' IMPORT` (or call as `SERIAL@READ`) |
-| `SERIAL@FLUSH` | serial (module) | Flush the outgoing buffer of an open serial port — needs `'SERIAL' IMPORT` (or call as `SERIAL@FLUSH`) |
-| `SERIAL@CLOSE` | serial (module) | Close an open serial port — needs `'SERIAL' IMPORT` (or call as `SERIAL@CLOSE`) |
+| `SERIAL@LIST-PORTS` | serial (module) | Ask the host to enumerate available serial ports. — needs `'SERIAL' IMPORT` (or call as `SERIAL@LIST-PORTS`) |
+| `SERIAL@OPEN` | serial (module) | Open a serial port by id; leaves the port handle on the stack. — needs `'SERIAL' IMPORT` (or call as `SERIAL@OPEN`) |
+| `SERIAL@CONFIGURE` | serial (module) | Set the baud rate of an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@CONFIGURE`) |
+| `SERIAL@WRITE` | serial (module) | Write a byte vector to an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@WRITE`) |
+| `SERIAL@READ` | serial (module) | Drain received bytes from an open serial port; Bubble/NIL when none. — needs `'SERIAL' IMPORT` (or call as `SERIAL@READ`) |
+| `SERIAL@FLUSH` | serial (module) | Flush the outgoing buffer of an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@FLUSH`) |
+| `SERIAL@CLOSE` | serial (module) | Close an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@CLOSE`) |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |
