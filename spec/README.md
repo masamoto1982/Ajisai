@@ -121,3 +121,9 @@ and checker module allow-list are removed. Families are derived from each Word
 contract and checked against `semantic-families.json`; inventory membership and
 Core/Module counts are derived from the frozen manifest. No runtime registry or
 user-facing generated artifact is deleted in this first cleanup slice.
+
+The second Phase 5 cleanup makes `spec/words.json` the declared canonical
+source for `docs/word-manifest.json`. Rust Core and Module catalogs are retained
+as implementation-validation inputs rather than generation authorities;
+aliases and surface forms remain their dedicated syntactic sources. Manifest
+generation now fails on either a missing contract or an uncontracted executor.

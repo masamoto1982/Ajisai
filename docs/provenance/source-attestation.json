@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:ce72e4877c82c9afcbd7503f8d8a8fcdcc9d8fb20966f2fa1770bf90808dceb5",
+  "rootIdentity": "sha256:148a0b7dcc85d166b82983847d77af6d236b6de8b9f4bab6df4552096b14a4e9",
   "fileCount": 376,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1472,8 +1472,8 @@
     },
     {
       "path": "scripts/generate-word-manifest.mjs",
-      "sha256": "7be89829622813d838bc01e587c9efdb2f07dc94e1194281153abf9f93a5eadf",
-      "bytes": 12167
+      "sha256": "c8e09ca9254104fb14711d449d108f284b84e48e010b19d8af23aec9db22d1e6",
+      "bytes": 13152
     },
     {
       "path": "scripts/install-wasm-pack.sh",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "spec/README.md",
-      "sha256": "e38b4da4645815ad83d9dac9f68dcc4e631442011090517830170fb13fcfe34f",
-      "bytes": 7395
+      "sha256": "6524c9ee918fd44e059c15b05565465247b9fffcbf2ce3663ee9b43f98c86eee",
+      "bytes": 7779
     },
     {
       "path": "spec/freeze/gui-production-files.json",
