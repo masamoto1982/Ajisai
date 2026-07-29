@@ -65,8 +65,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     // quantized/plain race still observes per-element kernel events.
     if let ExecutableCode::QuantizedBlock(qb) = &executable {
         if !super::hedged::hedged_mode(interp.elastic_mode()) {
-            if let Some(out) =
-                super::fast_kernels::try_bulk_quantized_map(interp, qb, &target_val)
+            if let Some(out) = super::fast_kernels::try_bulk_quantized_map(interp, qb, &target_val)
             {
                 let result = Value::from_tensor(out.data, vec![n_elements]);
                 if is_keep_mode {
@@ -154,9 +153,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
                                 && !is_string_result
                             {
                                 results.push(
-                                    result_val
-                                        .child(0)
-                                        .expect("len==1 implies child(0) exists"),
+                                    result_val.child(0).expect("len==1 implies child(0) exists"),
                                 );
                             } else {
                                 results.push(result_val);
@@ -189,6 +186,6 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     }
 
     interp.stack.push(Value::from_vector_promoted(results));
-            
+
     Ok(())
 }

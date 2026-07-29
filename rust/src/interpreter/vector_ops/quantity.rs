@@ -36,20 +36,19 @@ pub fn op_length(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
     let len = {
-let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
+        let target_val = interp.stack.last().ok_or(AjisaiError::StackUnderflow)?;
 
-if target_val.is_nil() {
-    0
-} else if target_val.is_vector() {
-    extract_vector_elements(target_val).len()
-} else {
-    return Err(AjisaiError::create_structure_error(
-        "vector",
-        "other format",
-    ));
-}
-        
-    };;
+        if target_val.is_nil() {
+            0
+        } else if target_val.is_vector() {
+            extract_vector_elements(target_val).len()
+        } else {
+            return Err(AjisaiError::create_structure_error(
+                "vector",
+                "other format",
+            ));
+        }
+    };
     let len_frac = Fraction::from(len as i64);
     interp.stack.push(create_number_value(len_frac));
     Ok(())
@@ -66,16 +65,12 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let result = with_stacktop_vector_target_with_arg(
-        interp,
-        &count_val,
-        is_keep_mode,
-        |vector_val| {
+    let result =
+        with_stacktop_vector_target_with_arg(interp, &count_val, is_keep_mode, |vector_val| {
             let elements = extract_vector_elements(vector_val);
             let (start, end) = compute_take_bounds(elements.len(), count, "vector")?;
             Ok(elements[start..end].to_vec())
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(count_val);
@@ -86,7 +81,6 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(Value::from_vector(result));
     }
     Ok(())
-            
 }
 
 pub fn op_split(interp: &mut Interpreter) -> Result<()> {
@@ -126,11 +120,8 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::from("SPLIT requires [sizes...] vector"));
     };
 
-    let result_vectors = with_stacktop_vector_target_with_arg(
-        interp,
-        &args_val,
-        is_keep_mode,
-        |vector_val| {
+    let result_vectors =
+        with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
             let elements = extract_vector_elements(vector_val);
             let total_size: usize = sizes.iter().sum();
             if total_size > elements.len() {
@@ -149,13 +140,11 @@ pub fn op_split(interp: &mut Interpreter) -> Result<()> {
                 result_vectors.push(Value::from_vector(chunk));
             }
             Ok(result_vectors)
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(args_val);
     }
     interp.stack.extend(result_vectors);
     Ok(())
-            
 }

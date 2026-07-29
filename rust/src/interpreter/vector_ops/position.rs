@@ -39,8 +39,7 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    if matches!(interp.stack.last_role(), Interpretation::Text)
-    {
+    if matches!(interp.stack.last_role(), Interpretation::Text) {
         return Err(AjisaiError::create_structure_error("numeric index", "text"));
     }
     let (index_val, index) = pop_index_operand(interp)?;
@@ -72,10 +71,7 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
         actual_index
             .and_then(|idx| target_val.child(idx))
             .unwrap_or_else(|| {
-                Value::bubble_with_reason(
-                    NilReason::IndexOutOfBounds,
-                    Recoverability::Recoverable,
-                )
+                Value::bubble_with_reason(NilReason::IndexOutOfBounds, Recoverability::Recoverable)
             })
     };
 
@@ -84,7 +80,6 @@ pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     }
     interp.stack.push(result_elem);
     Ok(())
-            
 }
 
 pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
@@ -100,11 +95,8 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let inserted = with_stacktop_vector_target_with_arg(
-        interp,
-        &args_val,
-        is_keep_mode,
-        |vector_val| {
+    let inserted =
+        with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
             let mut values = extract_vector_elements(vector_val).to_vec();
             let len = values.len() as i64;
             let insert_index = if index < 0 {
@@ -115,15 +107,13 @@ pub fn op_insert(interp: &mut Interpreter) -> Result<()> {
 
             values.insert(insert_index, element.clone());
             Ok(Value::from_vector(values))
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(args_val);
     }
     interp.stack.push(inserted);
     Ok(())
-            
 }
 
 pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
@@ -139,11 +129,8 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let replaced = with_stacktop_vector_target_with_arg(
-        interp,
-        &args_val,
-        is_keep_mode,
-        |vector_val| {
+    let replaced =
+        with_stacktop_vector_target_with_arg(interp, &args_val, is_keep_mode, |vector_val| {
             let mut values = extract_vector_elements(vector_val).to_vec();
             let len = values.len();
             let actual_index = normalize_index(index, len)
@@ -151,26 +138,21 @@ pub fn op_replace(interp: &mut Interpreter) -> Result<()> {
 
             values[actual_index] = new_element.clone();
             Ok(Value::from_vector(values))
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(args_val);
     }
     interp.stack.push(replaced);
     Ok(())
-            
 }
 
 pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
     let (index_val, index) = pop_index_operand(interp)?;
 
-    let removed = with_stacktop_vector_target_with_arg(
-        interp,
-        &index_val,
-        is_keep_mode,
-        |vector_val| {
+    let removed =
+        with_stacktop_vector_target_with_arg(interp, &index_val, is_keep_mode, |vector_val| {
             let mut values = extract_vector_elements(vector_val).to_vec();
             let len = values.len();
             let actual_index = normalize_index(index, len)
@@ -181,13 +163,11 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 return Ok(Value::nil());
             }
             Ok(Value::from_vector(values))
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(index_val);
     }
     interp.stack.push(removed);
     Ok(())
-            
 }

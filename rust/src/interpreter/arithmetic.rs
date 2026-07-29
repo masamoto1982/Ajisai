@@ -259,9 +259,7 @@ fn push_scalar_fastpath_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
 ) -> Result<bool> {
-    if !interp.scalar_fastpath_enabled
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return Ok(false);
     }
 
@@ -319,8 +317,7 @@ fn apply_exact_arithmetic_schema(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
 ) -> Result<()> {
-    if nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
 
@@ -685,7 +682,7 @@ where
     };
 
     push_result(interp, result);
-            
+
     Ok(())
 }
 

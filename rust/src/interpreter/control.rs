@@ -4,7 +4,7 @@ use crate::interpreter::Interpreter;
 use crate::types::{Token, Value, ValueData};
 
 pub(crate) fn op_exec(interp: &mut Interpreter) -> Result<()> {
-    let target_vector: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;;
+    let target_vector: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     crate::interpreter::vector_exec::execute_vector_as_code(interp, &target_vector)
 }
@@ -56,11 +56,10 @@ pub(crate) fn op_or_else(interp: &mut Interpreter) -> Result<()> {
 
 pub(crate) fn op_eval(interp: &mut Interpreter) -> Result<()> {
     let source_code: String = {
-let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-value_as_string(&val)
-    .ok_or_else(|| AjisaiError::from("EVAL: expected string value, got non-string"))?
-        
-    };;
+        let val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+        value_as_string(&val)
+            .ok_or_else(|| AjisaiError::from("EVAL: expected string value, got non-string"))?
+    };
 
     let tokens: Vec<Token> = crate::tokenizer::tokenize(&source_code).map_err(|e| {
         AjisaiError::from(format!(

@@ -278,9 +278,7 @@ fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
 }
 
 fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
-    if !interp.scalar_fastpath_enabled
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return false;
     }
 
@@ -309,9 +307,7 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
 }
 
 fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
-    if !interp.scalar_fastpath_enabled
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return false;
     }
 
@@ -412,7 +408,6 @@ fn apply_binary_comparison(
         }
     }
     Ok(())
-            
 }
 
 /// Three-valued interval comparison for the same ordering schema used by the
@@ -480,8 +475,7 @@ pub(crate) fn scalar_fastpath_neq(interp: &mut Interpreter) -> bool {
 }
 
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
-    if nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
     {
@@ -588,8 +582,7 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
 }
 
 fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
-    if nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
 
@@ -615,13 +608,10 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
     };
 
     match pairwise_eq(&a_val, &b_val) {
-        ScalarCmp::Decided(eq) => {
-            push_boolean_result(interp, if invert { !eq } else { eq })
-        }
+        ScalarCmp::Decided(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
         ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
     }
     Ok(())
-            
 }
 
 /// Push the three-way sign scalar (`-1` / `0` / `1`) produced by

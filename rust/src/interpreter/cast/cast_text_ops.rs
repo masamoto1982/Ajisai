@@ -61,7 +61,6 @@ fn op_trim_generic(interp: &mut Interpreter, word: &str, side: TrimSide) -> Resu
         .stack
         .push(Value::from_string(&apply_trim(&side, &s)));
     Ok(())
-            
 }
 
 pub fn op_trim(interp: &mut Interpreter) -> Result<()> {

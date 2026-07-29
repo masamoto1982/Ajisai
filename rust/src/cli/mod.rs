@@ -155,7 +155,6 @@ fn cmd_version(json: bool) -> i32 {
     0
 }
 
-
 fn cmd_run(path: &str, opts: &Opts) -> i32 {
     let source = match std::fs::read_to_string(path) {
         Ok(source) => source,

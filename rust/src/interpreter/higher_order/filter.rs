@@ -139,14 +139,13 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
                             }
                         };
 
-                        let is_true: bool =
-                            match extract_predicate_boolean(condition_result) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    error = Some(e);
-                                    break;
-                                }
-                            };
+                        let is_true: bool = match extract_predicate_boolean(condition_result) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
+                        };
 
                         if is_true {
                             results.push(elem);
@@ -176,6 +175,6 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     } else {
         interp.stack.push(Value::from_vector_promoted(results));
     }
-            
+
     Ok(())
 }

@@ -269,12 +269,7 @@ fn evaluate_guard_isolated(
     };
     let guard_result_value: Option<Value> = interp.stack.pop();
 
-    restore_cond_eval_state(
-        interp,
-        saved_stack,
-        saved_consumption_mode,
-        saved_epoch,
-    );
+    restore_cond_eval_state(interp, saved_stack, saved_consumption_mode, saved_epoch);
 
     execution_result?;
 

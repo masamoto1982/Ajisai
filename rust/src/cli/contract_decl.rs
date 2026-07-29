@@ -343,11 +343,7 @@ pub(crate) fn check_contract_decls(source: &str) -> ContractDeclCheck {
     }
 }
 
-fn check_one(
-    interp: &mut Interpreter,
-    decl: &ContractDecl,
-    findings: &mut Vec<DeclFinding>,
-) {
+fn check_one(interp: &mut Interpreter, decl: &ContractDecl, findings: &mut Vec<DeclFinding>) {
     let Some(contract) = interp.infer_word_contract(&decl.name) else {
         findings.push(DeclFinding {
             severity: Severity::Error,
@@ -394,12 +390,12 @@ fn check_one(
                     Severity::Error
                 },
                 message: format!(
-                        "`#:contract {}`: declared `{}` but inferred `{}`{}.",
-                        decl.name,
-                        purity_label(declared),
-                        purity_label(contract.purity),
-                        if conservative { " (unverified)" } else { "" }
-                    ),
+                    "`#:contract {}`: declared `{}` but inferred `{}`{}.",
+                    decl.name,
+                    purity_label(declared),
+                    purity_label(contract.purity),
+                    if conservative { " (unverified)" } else { "" }
+                ),
             });
         }
     }
@@ -432,7 +428,5 @@ fn check_one(
 }
 
 fn arity_msg(name: &str, dc: u16, dp: u16, ic: u16, ip: u16) -> String {
-    format!(
-            "`#:contract {name}`: declared arity ( {dc} -- {dp} ) but inferred ( {ic} -- {ip} )."
-        )
+    format!("`#:contract {name}`: declared arity ( {dc} -- {dp} ) but inferred ( {ic} -- {ip} ).")
 }

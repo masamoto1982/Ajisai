@@ -125,7 +125,6 @@ pub fn op_not(interp: &mut Interpreter) -> Result<()> {
 
     interp.stack.push(result);
     Ok(())
-            
 }
 
 pub fn op_and(interp: &mut Interpreter) -> Result<()> {
@@ -168,7 +167,6 @@ pub fn op_and(interp: &mut Interpreter) -> Result<()> {
     )?;
     interp.stack.push(result);
     Ok(())
-            
 }
 
 pub fn op_or(interp: &mut Interpreter) -> Result<()> {
@@ -211,5 +209,4 @@ pub fn op_or(interp: &mut Interpreter) -> Result<()> {
     )?;
     interp.stack.push(result);
     Ok(())
-            
 }

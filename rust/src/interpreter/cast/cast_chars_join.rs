@@ -43,7 +43,6 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
 
     interp.stack.push(val);
     Err(AjisaiError::from("CHARS: expected String input"))
-            
 }
 
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
@@ -119,7 +118,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
         "JOIN: expected Vector, got {}",
         type_name
     )))
-            
 }
 
 #[cfg(test)]

@@ -116,7 +116,6 @@ pub(crate) fn apply_unary_cast(
             Err(error)
         }
     }
-            
 }
 
 pub(crate) fn format_fraction_to_string(f: &Fraction) -> String {

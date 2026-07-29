@@ -116,7 +116,7 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let default_count = 2;;
+    let default_count = 2;
     let (count_i64, count_value_opt) = parse_concat_count(interp, default_count)?;
 
     let abs_count = count_i64.unsigned_abs() as usize;
@@ -153,15 +153,13 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
 pub fn op_reverse(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let reversed =
-        with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
-            let mut v = extract_vector_elements(vector_val).to_vec();
-            v.reverse();
-            Ok(Value::from_vector(v))
-        })?;
+    let reversed = with_stacktop_vector_target_no_arg(interp, is_keep_mode, |vector_val| {
+        let mut v = extract_vector_elements(vector_val).to_vec();
+        v.reverse();
+        Ok(Value::from_vector(v))
+    })?;
     interp.stack.push(reversed);
     Ok(())
-            
 }
 
 pub fn op_range(interp: &mut Interpreter) -> Result<()> {
@@ -247,11 +245,8 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
         }
     };
 
-    let reordered = with_stacktop_vector_target_with_arg(
-        interp,
-        &indices_val,
-        is_keep_mode,
-        |target_val| {
+    let reordered =
+        with_stacktop_vector_target_with_arg(interp, &indices_val, is_keep_mode, |target_val| {
             let len = target_val.len();
             if len == 0 {
                 return Err(AjisaiError::from("REORDER: target vector is empty"));
@@ -259,17 +254,18 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
 
             let mut result = Vec::with_capacity(indices.len());
             for &idx in &indices {
-                let actual =
-                    normalize_index(idx, len).ok_or(AjisaiError::IndexOutOfBounds {
-                        index: idx,
-                        length: len,
-                    })?;
-                result.push(target_val.child(actual).ok_or(
-                    AjisaiError::IndexOutOfBounds {
-                        index: idx,
-                        length: len,
-                    },
-                )?);
+                let actual = normalize_index(idx, len).ok_or(AjisaiError::IndexOutOfBounds {
+                    index: idx,
+                    length: len,
+                })?;
+                result.push(
+                    target_val
+                        .child(actual)
+                        .ok_or(AjisaiError::IndexOutOfBounds {
+                            index: idx,
+                            length: len,
+                        })?,
+                );
             }
 
             if result.is_empty() {
@@ -277,15 +273,13 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
             } else {
                 Ok(Value::from_vector(result))
             }
-        },
-    )?;
+        })?;
 
     if is_keep_mode {
         interp.stack.push(indices_val);
     }
     interp.stack.push(reordered);
     Ok(())
-            
 }
 
 pub fn op_collect(interp: &mut Interpreter) -> Result<()> {

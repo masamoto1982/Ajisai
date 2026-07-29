@@ -49,9 +49,7 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
     // a fast unary predicate. Disabled in hedged modes.
     if let ExecutableCode::QuantizedBlock(qb) = &executable {
         if !super::hedged_mode_active(interp) {
-            if let Some(bulk) =
-                super::try_bulk_quantized_predicate_pub(interp, qb, &target_val)
-            {
+            if let Some(bulk) = super::try_bulk_quantized_predicate_pub(interp, qb, &target_val) {
                 let result = bulk.flags.into_iter().all(|b| b);
                 interp.stack.push(Value::from_bool(result));
                 return Ok(());
@@ -138,5 +136,4 @@ pub fn op_all(interp: &mut Interpreter) -> Result<()> {
 
     interp.stack.push(Value::from_bool(result));
     Ok(())
-            
 }

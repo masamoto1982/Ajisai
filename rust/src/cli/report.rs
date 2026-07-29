@@ -66,7 +66,6 @@ impl Report {
     }
 }
 
-
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
     // The `Stack` owns aligned `(value, role)` slots, so iterate them directly.
     let nodes: Vec<Json> = interp

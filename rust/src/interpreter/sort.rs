@@ -122,7 +122,6 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             Err(e)
         }
     }
-            
 }
 
 #[cfg(test)]
