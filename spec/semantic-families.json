@@ -222,6 +222,26 @@
       "effectOrder": "requestOrder"
     },
     {
+      "id": "musicValue",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "composition": "roleTaggedValue",
+      "purity": "pure"
+    },
+    {
+      "id": "musicEffect",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "capability": "audio",
+      "effectOrder": "requestOrder"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",

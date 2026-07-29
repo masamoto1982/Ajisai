@@ -25,10 +25,12 @@
       "exact-interval",
       "exact-math",
       "calendar-time",
-      "serial-effects"
+      "serial-effects",
+      "music-values",
+      "music-effects"
     ],
-    "completeInventory": false,
-    "entryCount": 164
+    "completeInventory": true,
+    "entryCount": 194
   },
   "entries": [
     {
@@ -6103,6 +6105,1176 @@
         "syntax": "handle SERIAL@CLOSE"
       },
       "executorKey": "serial::op_close"
+    },
+    {
+      "name": "MUSIC@SEQ",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the active playback mode to sequential.",
+        "hover": "Set the active playback mode to sequential.",
+        "lookup": "Set the active playback mode to sequential.",
+        "syntax": "MUSIC@SEQ"
+      },
+      "executorKey": "audio::op_seq"
+    },
+    {
+      "name": "MUSIC@SIM",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the active playback mode to simultaneous.",
+        "hover": "Set the active playback mode to simultaneous.",
+        "lookup": "Set the active playback mode to simultaneous.",
+        "syntax": "MUSIC@SIM"
+      },
+      "executorKey": "audio::op_sim"
+    },
+    {
+      "name": "MUSIC@SLOT",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the slot duration (in seconds) used by bare notes.",
+        "hover": "Set the slot duration (in seconds) used by bare notes.",
+        "lookup": "Set the slot duration (in seconds) used by bare notes.",
+        "syntax": "arg1 MUSIC@SLOT"
+      },
+      "executorKey": "audio::op_slot"
+    },
+    {
+      "name": "MUSIC@GAIN",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the master output gain (0.0-1.0).",
+        "hover": "Set the master output gain (0.0-1.0).",
+        "lookup": "Set the master output gain (0.0-1.0).",
+        "syntax": "arg1 MUSIC@GAIN"
+      },
+      "executorKey": "audio::op_gain"
+    },
+    {
+      "name": "MUSIC@GAIN-RESET",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Reset the master gain to the default 1.0.",
+        "hover": "Reset the master gain to the default 1.0.",
+        "lookup": "Reset the master gain to the default 1.0.",
+        "syntax": "MUSIC@GAIN-RESET"
+      },
+      "executorKey": "audio::op_gain_reset"
+    },
+    {
+      "name": "MUSIC@PAN",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the stereo pan position (-1.0 left .. 1.0 right).",
+        "hover": "Set the stereo pan position (-1.0 left .. 1.0 right).",
+        "lookup": "Set the stereo pan position (-1.0 left .. 1.0 right).",
+        "syntax": "arg1 MUSIC@PAN"
+      },
+      "executorKey": "audio::op_pan"
+    },
+    {
+      "name": "MUSIC@PAN-RESET",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Reset pan to center (0.0).",
+        "hover": "Reset pan to center (0.0).",
+        "lookup": "Reset pan to center (0.0).",
+        "syntax": "MUSIC@PAN-RESET"
+      },
+      "executorKey": "audio::op_pan_reset"
+    },
+    {
+      "name": "MUSIC@FX-RESET",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Reset all audio effects (gain, pan, envelope, waveform) to defaults.",
+        "hover": "Reset all audio effects (gain, pan, envelope, waveform) to defaults.",
+        "lookup": "Reset all audio effects (gain, pan, envelope, waveform) to defaults.",
+        "syntax": "MUSIC@FX-RESET"
+      },
+      "executorKey": "audio::op_fx_reset"
+    },
+    {
+      "name": "MUSIC@PLAY",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioOutput"
+      ],
+      "hostedEffect": "audioOutput",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Play a music value (note, group, voice, ...).",
+        "hover": "Play a music value (note, group, voice, ...).",
+        "lookup": "Play a music value (note, group, voice, ...).",
+        "syntax": "arg1 MUSIC@PLAY"
+      },
+      "executorKey": "audio::op_play"
+    },
+    {
+      "name": "MUSIC@SEQ-GROUP",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicGroup",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build an explicit sequential music group from a vector of notes.",
+        "hover": "Build an explicit sequential music group from a vector of notes.",
+        "lookup": "Build an explicit sequential music group from a vector of notes.",
+        "syntax": "arg1 MUSIC@SEQ-GROUP"
+      },
+      "executorKey": "audio::op_seq_group"
+    },
+    {
+      "name": "MUSIC@SIM-GROUP",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicGroup",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build an explicit simultaneous music group from a vector of notes.",
+        "hover": "Build an explicit simultaneous music group from a vector of notes.",
+        "lookup": "Build an explicit simultaneous music group from a vector of notes.",
+        "syntax": "arg1 MUSIC@SIM-GROUP"
+      },
+      "executorKey": "audio::op_sim_group"
+    },
+    {
+      "name": "MUSIC@CHORD",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicChord",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a chord (simultaneous group) from a vector of pitches or notes.",
+        "hover": "Build a chord (simultaneous group) from a vector of pitches or notes.",
+        "lookup": "Build a chord (simultaneous group) from a vector of pitches or notes.",
+        "syntax": "arg1 MUSIC@CHORD"
+      },
+      "executorKey": "audio::op_chord"
+    },
+    {
+      "name": "MUSIC@HZ",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicPitch",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music.pitch from a frequency in hertz.",
+        "hover": "Build a music.pitch from a frequency in hertz.",
+        "lookup": "Build a music.pitch from a frequency in hertz.",
+        "syntax": "arg1 MUSIC@HZ"
+      },
+      "executorKey": "audio::op_hz"
+    },
+    {
+      "name": "MUSIC@DUR",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicDuration",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music.duration from a number of seconds.",
+        "hover": "Build a music.duration from a number of seconds.",
+        "lookup": "Build a music.duration from a number of seconds.",
+        "syntax": "arg1 MUSIC@DUR"
+      },
+      "executorKey": "audio::op_dur"
+    },
+    {
+      "name": "MUSIC@NOTE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicNote",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Combine a music.pitch and a music.duration into a music.note.",
+        "hover": "Combine a music.pitch and a music.duration into a music.note.",
+        "lookup": "Combine a music.pitch and a music.duration into a music.note.",
+        "syntax": "arg1 arg2 MUSIC@NOTE"
+      },
+      "executorKey": "audio::op_note"
+    },
+    {
+      "name": "MUSIC@REST",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicRest",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music.rest from a music.duration.",
+        "hover": "Build a music.rest from a music.duration.",
+        "lookup": "Build a music.rest from a music.duration.",
+        "syntax": "arg1 MUSIC@REST"
+      },
+      "executorKey": "audio::op_rest"
+    },
+    {
+      "name": "MUSIC@EDO",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicTuning",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build an equal-division-of-the-octave tuning.",
+        "hover": "Build an equal-division-of-the-octave tuning.",
+        "lookup": "Build an equal-division-of-the-octave tuning.",
+        "syntax": "arg1 arg2 MUSIC@EDO"
+      },
+      "executorKey": "audio::op_edo"
+    },
+    {
+      "name": "MUSIC@EDR",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicTuning",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build an equal-division-of-a-ratio tuning (non-octave).",
+        "hover": "Build an equal-division-of-a-ratio tuning (non-octave).",
+        "lookup": "Build an equal-division-of-a-ratio tuning (non-octave).",
+        "syntax": "arg1 arg2 arg3 MUSIC@EDR"
+      },
+      "executorKey": "audio::op_edr"
+    },
+    {
+      "name": "MUSIC@STEP",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicPitch",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Resolve a tuning step into an exact music.pitch.",
+        "hover": "Resolve a tuning step into an exact music.pitch.",
+        "lookup": "Resolve a tuning step into an exact music.pitch.",
+        "syntax": "arg1 arg2 MUSIC@STEP"
+      },
+      "executorKey": "audio::op_step"
+    },
+    {
+      "name": "MUSIC@VOICE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicVoice",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music group with the role of a single melodic voice.",
+        "hover": "Build a music group with the role of a single melodic voice.",
+        "lookup": "Build a music group with the role of a single melodic voice.",
+        "syntax": "arg1 MUSIC@VOICE"
+      },
+      "executorKey": "audio::op_voice"
+    },
+    {
+      "name": "MUSIC@TRACK",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicTrack",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music group with the role of an instrument track.",
+        "hover": "Build a music group with the role of an instrument track.",
+        "lookup": "Build a music group with the role of an instrument track.",
+        "syntax": "arg1 MUSIC@TRACK"
+      },
+      "executorKey": "audio::op_track"
+    },
+    {
+      "name": "MUSIC@MEASURE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicMeasure",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music group with the role of a measure (bar).",
+        "hover": "Build a music group with the role of a measure (bar).",
+        "lookup": "Build a music group with the role of a measure (bar).",
+        "syntax": "arg1 MUSIC@MEASURE"
+      },
+      "executorKey": "audio::op_measure"
+    },
+    {
+      "name": "MUSIC@PHRASE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicPhrase",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Build a music group with the role of a phrase.",
+        "hover": "Build a music group with the role of a phrase.",
+        "lookup": "Build a music group with the role of a phrase.",
+        "syntax": "arg1 MUSIC@PHRASE"
+      },
+      "executorKey": "audio::op_phrase"
+    },
+    {
+      "name": "MUSIC@WITH-TUNING",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidMusicValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "musicScope",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Bind a tuning over a body so bare integers are read as tuning steps.",
+        "hover": "Bind a tuning over a body so bare integers are read as tuning steps.",
+        "lookup": "Bind a tuning over a body so bare integers are read as tuning steps.",
+        "syntax": "arg1 arg2 MUSIC@WITH-TUNING"
+      },
+      "executorKey": "audio::op_with_tuning"
+    },
+    {
+      "name": "MUSIC@EXPLAIN",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioOutput"
+      ],
+      "hostedEffect": "audioOutput",
+      "interpretationRole": "musicValue",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Describe how MUSIC@PLAY would interpret a value, without playing it.",
+        "hover": "Describe how MUSIC@PLAY would interpret a value, without playing it.",
+        "lookup": "Describe how MUSIC@PLAY would interpret a value, without playing it.",
+        "syntax": "arg1 MUSIC@EXPLAIN"
+      },
+      "executorKey": "audio::op_explain"
+    },
+    {
+      "name": "MUSIC@ADSR",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "musicTarget",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the ADSR envelope used by subsequent notes.",
+        "hover": "Set the ADSR envelope used by subsequent notes.",
+        "lookup": "Set the ADSR envelope used by subsequent notes.",
+        "syntax": "arg1 arg2 MUSIC@ADSR"
+      },
+      "executorKey": "audio::op_adsr"
+    },
+    {
+      "name": "MUSIC@SINE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "musicTarget",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Select the sine waveform on a target.",
+        "hover": "Select the sine waveform on a target.",
+        "lookup": "Select the sine waveform on a target.",
+        "syntax": "arg1 MUSIC@SINE"
+      },
+      "executorKey": "audio::op_sine"
+    },
+    {
+      "name": "MUSIC@SQUARE",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "musicTarget",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Select the square waveform on a target.",
+        "hover": "Select the square waveform on a target.",
+        "lookup": "Select the square waveform on a target.",
+        "syntax": "arg1 MUSIC@SQUARE"
+      },
+      "executorKey": "audio::op_square"
+    },
+    {
+      "name": "MUSIC@SAW",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "musicTarget",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Select the sawtooth waveform on a target.",
+        "hover": "Select the sawtooth waveform on a target.",
+        "lookup": "Select the sawtooth waveform on a target.",
+        "syntax": "arg1 MUSIC@SAW"
+      },
+      "executorKey": "audio::op_saw"
+    },
+    {
+      "name": "MUSIC@TRI",
+      "module": "MUSIC",
+      "aliases": [],
+      "family": "musicEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingAudioCapability",
+        "invalidMusicValue",
+        "hostAudioFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "audio",
+      "effects": [
+        "audioControl"
+      ],
+      "hostedEffect": "audioControl",
+      "interpretationRole": "musicTarget",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Select the triangle waveform on a target.",
+        "hover": "Select the triangle waveform on a target.",
+        "lookup": "Select the triangle waveform on a target.",
+        "syntax": "arg1 MUSIC@TRI"
+      },
+      "executorKey": "audio::op_tri"
     }
   ]
 }

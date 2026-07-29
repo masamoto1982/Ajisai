@@ -35,7 +35,7 @@ const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
 if (words.migration.entryCount !== words.entries.length) fail('migration.entryCount does not match entries');
-if (words.migration.completeInventory !== false) fail('the family rollout must not claim complete inventory');
+if (words.migration.completeInventory !== true) fail('the canonical Word inventory must be marked complete');
 
 for (const word of words.entries) {
   if (names.has(word.name)) fail(`duplicate Word: ${word.name}`);
@@ -93,7 +93,7 @@ for (const word of words.entries) {
   }
 }
 
-const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH', 'TIME', 'SERIAL']);
+const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH', 'TIME', 'SERIAL', 'MUSIC']);
 const expected = new Set(manifest.entries
   .filter((entry) => entry.kind === 'coreword'
     || (entry.kind === 'moduleword' && completeModules.has(entry.module)))
@@ -106,5 +106,5 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log('[word-schema] all 98 Core and 66 migrated Module contracts match the 224-surface manifest and current executors.');
+  console.log('[word-schema] all 98 Core and 96 Module contracts cover the 224-surface manifest and current executors.');
 }

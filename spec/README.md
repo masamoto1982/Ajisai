@@ -106,3 +106,11 @@ The eighth Module-Word slice migrates all seven `SERIAL` contracts. Serial
 capability, ordered query/control/read/write effects, handle roles, host ERROR,
 and the `noData` versus `portDisconnected` NIL reasons remain independently
 represented. Thirty Module Words remain deferred.
+
+The ninth Module-Word slice migrates all thirty `MUSIC` contracts. Pure,
+role-tagged music construction stays separate from capability-mediated audio
+control and output effects. All 98 Core and 96 Module canonical Words are now
+represented; together with the frozen aliases and surface forms they preserve
+the 224-surface inventory. `migration.completeInventory` is therefore true.
+Phase 5 duplication removal may begin only while every blocking gate remains
+green; this completion flag alone does not authorize deletion.
