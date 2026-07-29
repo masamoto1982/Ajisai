@@ -132,3 +132,8 @@ The third Phase 5 cleanup moves the generated `SKILL.md` Word table to the same
 contracts. The surface inventory and categories still come from the generated
 manifest, while summaries and syntax come only from `spec/words.json`; the
 generator no longer scrapes duplicate prose from Rust registries.
+
+The fourth Phase 5 cleanup adds the generated human-facing Word Reference.
+`docs/word-reference.md` renders stack, NIL/projection, failure, effect,
+capability, clause, and syntax fields directly from every canonical contract.
+Its freshness check makes hand-authored per-Word reference prose unnecessary.

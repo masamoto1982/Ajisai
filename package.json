@@ -35,6 +35,8 @@
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
+    "word:reference": "node scripts/generate-word-reference.mjs",
+    "word:reference:check": "node scripts/generate-word-reference.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
     "generate:skill": "node scripts/generate-skill-md.mjs",
     "check:skill": "node scripts/generate-skill-md.mjs --check",
