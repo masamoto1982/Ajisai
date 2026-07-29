@@ -3257,56 +3257,6 @@
       "desugars_to": "END-BLOCK"
     },
     {
-      "id": "surface.semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Modifier shorthand equivalent to `. ,` / TOP EAT under the desugar laws.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": ". ,"
-    },
-    {
-      "id": "surface.semicolon-semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";;",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Modifier shorthand equivalent to `.. ,,` / STAK KEEP under the desugar laws.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": ".. ,,"
-    },
-    {
       "id": "surface.left-paren",
       "kind": "reserved_marker",
       "surface": "(",
@@ -3572,30 +3522,6 @@
       "desugars_to": "NEQ"
     },
     {
-      "id": "alias.bang",
-      "kind": "symbol_alias",
-      "surface": "!",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for FORC; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "FORC"
-    },
-    {
       "id": "alias.ampersand",
       "kind": "symbol_alias",
       "surface": "&",
@@ -3618,54 +3544,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "AND"
-    },
-    {
-      "id": "alias.dot",
-      "kind": "syntax_sugar",
-      "surface": ".",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for TOP; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "TOP"
-    },
-    {
-      "id": "alias.dot-dot",
-      "kind": "syntax_sugar",
-      "surface": "..",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for STAK; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "STAK"
     },
     {
       "id": "alias.comma",
@@ -3760,30 +3638,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "LOOKUP"
-    },
-    {
-      "id": "alias.tilde",
-      "kind": "syntax_sugar",
-      "surface": "~",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for FLOW; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "FLOW"
     }
   ],
   "unclassified_allowlist": []

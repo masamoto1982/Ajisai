@@ -26,19 +26,19 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: `[ 1 ] [ 2 ] +`.
 - Numbers are **exact rationals** (`1/3`, `3.14` → 157/50). No floats. Display shows `3/1` for 3.
-- Data lives in vectors: `[ 1 2 3 ]`. Nest for tensors: `[ [ 1 2 ] [ 3 4 ] ]`. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar.
+- Data lives in vectors: `[ 1 2 3 ]`. Vectors nest for ragged and grouped data. A lone number like `42` is allowed but `[ 42 ]` is the idiomatic scalar.
 - Strings: `'single quotes'` (a codepoint vector with text role). Booleans: `TRUE` / `FALSE`. Absence: `NIL`.
 - Code blocks: `{ ... }` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: `{ body } 'NAME' DEF` then call `NAME`. Words are case-insensitive (canonicalized to upper case).
 - Comments: `#` to end of line.
-- Modifiers prefix the *next word only*: `,,` (KEEP: don't consume operands), `..` (STAK: apply to whole stack), `,` (EAT, default), `.` (TOP, default).
+- One modifier axis, prefixing the *next word only*: `,,` (KEEP: don't consume operands) and `,` (EAT, the default).
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
 
 - Branch: `value { guard } { body } { guard } { body } ... COND`. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use `{ TRUE }` as the final else-guard. The value remains on the stack after COND.
-- Iterate data, not counters: `MAP` / `FILTER` / `FOLD` / `SCAN` / `UNFOLD` with `{ }` blocks (examples in §6). `FOLD` requires an explicit `[ init ]`.
-- Predicates: `ANY` / `ALL` / `COUNT` with a `{ predicate }` block.
+- Iterate data, not counters: `MAP` / `FILTER` / `FOLD` with `{ }` blocks (examples in §6). `FOLD` requires an explicit `[ init ]`.
+- Predicates: `ANY` / `ALL` with a `{ predicate }` block.
 - Recursion is allowed in user words (execution-step and depth limits apply; exceeding them is a diagnosed error, not a hang).
 
 ## 4. NIL — absence is a value, not an exception
@@ -51,23 +51,20 @@ value itself carries `semantics.absence.reason` on the stack.
 - Provide a fallback with `^`: `[ 1 ] [ 0 ] DIV ^ [ 99 ]` → stack `[ 99/1 ]`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
-## 5. UNKNOWN — the third truth value
+## 5. Exactness — comparison always decides
 
-Every comparison of values the current vocabulary can construct — rationals
-and `SQRT`-built algebraic values — is *decidable*, whatever budget is named:
+Numbers are exact rationals, closed under `SQRT`. Arithmetic never rounds,
+coefficients are arbitrary-precision, and **every comparison of two scalars
+decides**: there is no budget, no refinement limit, and no undecided outcome.
 
 ```ajisai
-'MATH' IMPORT
-2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN   # √2 vs √8/2, budget 3
+8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
 ```
 
-→ stack `0/1` (exit 0): √2 equals √8/2 exactly, decided with no
-budget consumed. The logical `UNKNOWN` — serialized as
-`{ "type": "truthValue", "value": "unknown" }` with a
-`semantics.absence.diagnosis.agreedPrefix` refinement count — is reserved for
-future general computable reals whose observation can exhaust its budget; it
-is not an error and not NIL, and AND/OR/NOT follow Kleene three-valued logic
-over it.
+→ stack `TRUE` (exit 0). Values built through different
+histories are the same value when they denote the same real. Truth is
+two-valued: `TRUE` and `FALSE`, nothing else. An operation that cannot
+produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 
@@ -89,15 +86,13 @@ over it.
   `[ 0 10 2 ] RANGE` → stack: `[ 0/1 2/1 4/1 6/1 8/1 10/1 ]`
 - Fill a tensor: [ shape... value ]
   `[ 2 2 7 ] FILL` → stack: `[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]`
-- Reshape
-  `[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE` → stack: `[ [ 1/1 2/1 3/1 ] [ 4/1 5/1 6/1 ] ]`
 - MAP with a { } code block
   `[ 0 4 ] RANGE { [ 2 ] * } MAP` → stack: `[ 0/1 2/1 4/1 6/1 8/1 ]`
 - FILTER keeps matching elements
   `[ 0 10 ] RANGE { [ 5 ] > } FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
   `[ 1 2 3 ] [ 0 ] { + } FOLD` → stack: `[ 6/1 ]`
-- ANY / ALL / COUNT take predicate blocks
+- ANY / ALL take predicate blocks
   `[ 1 2 3 ] { [ 1 ] > } ANY` → stack: `TRUE`
 - Define a user word: { body } then name, then DEF
   `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
@@ -109,8 +104,10 @@ over it.
   `'42' NUM` → stack: `42/1`
 - PRINT pops and emits to output (not the stack)
   `[ 1 2 3 ] PRINT` → prints `[ 1/1 2/1 3/1 ]`
-- Module words need IMPORT first
-  `'ALGO' IMPORT [ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
+- Sorting is a plain Core word
+  `[ 3 1 2 ] SORT` → stack: `[ 1/1 2/1 3/1 ]`
+- Exact square root takes a bare scalar
+  `2 SQRT` → stack: `( 1 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ( 2 ...) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )`
 - KEEP modifier `,,` makes the next word non-consuming
   `[ 5 ] ,, PRINT` → prints `[ 5/1 ]`; stack: `[ 5/1 ]`
 
@@ -155,22 +152,20 @@ over it.
 
 ## 8. Forbidden patterns (each verified to fail)
 
-- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use the modifiers instead: `,,` (KEEP: next word does not consume), `..` (STAK: next word applies to the whole stack).
-- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD / UNFOLD or recursive user words.
+- **DUP / SWAP / DROP / OVER / ROT** (`DUP` fails) — Forth-style stack shufflers do not exist. Use the one modifier axis instead: `,,` (KEEP: the next word does not consume its operands), `,` (EAT, the default).
+- **IF / ELSE / THEN / WHILE** (`[ 1 ] IF` fails) — No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.
 - **Parentheses ( )** (`( 1 2 )` fails) — Reserved for the continued-fraction *display* form only. Vectors are `[ ]`, code blocks are `{ }`.
 - **Double-quoted strings** (`"hello" PRINT` fails) — Strings use single quotes: 'hello'.
 - **// line comments** (`// comment` fails) — Comments start with `#`.
 
 ## 9. Word quick reference
 
-Generated from `docs/word-manifest.json` — the complete inventory. A word
-absent here does not exist. Module words need `'MODULE' IMPORT` once per
-program (then the short name works), or can be called fully qualified.
+Generated from `docs/word-manifest.json` — the complete inventory: 69
+canonical Words in one flat Core dictionary. A word absent here does not
+exist. There is no module system and nothing to import.
 
 | word | category | summary |
 |---|---|---|
-| `TOP` | modifier | Set the operation target mode to the top of the stack. — e.g. `. +` |
-| `STAK` | modifier | Set the operation target mode to the whole stack. — e.g. `.. +` |
 | `EAT` | modifier | Set the consumption mode to consume operands. — e.g. `, +` |
 | `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `,, +` |
 | `GET` | vector | Extract one element of a vector by index. — e.g. `[ 10 20 30 ] [ 0 ] GET` |
@@ -190,28 +185,20 @@ program (then the short name works), or can be called fully qualified.
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
-| `NIL-ORIGIN` | absence | Read the origin of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-ORIGIN` |
-| `NIL-RECOVERABLE?` | absence | Read the recoverability of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-RECOVERABLE?` |
-| `NIL-DIAGNOSIS` | absence | Read the three-layer debug diagnosis of an operational NIL as a Record. — e.g. `1 0 / NIL-DIAGNOSIS` |
-| `>CF` | conversion | Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2). — e.g. `1/3 >CF` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
-| `TRIM-LEFT` | cast | Remove whitespace from the start of a string. — e.g. `'  hi' TRIM-LEFT` |
-| `TRIM-RIGHT` | cast | Remove whitespace from the end of a string. — e.g. `'hi  ' TRIM-RIGHT` |
 | `TOKENIZE` | cast | Split a string into a vector of substrings using a separator. — e.g. `'a,b,c' ',' TOKENIZE` |
 | `SUBSTITUTE` | cast | Replace every occurrence of a substring with another. — e.g. `'hello' 'l' 'L' SUBSTITUTE` |
 | `STARTS-WITH?` | cast | Test whether a string begins with the given prefix. — e.g. `'hello' 'he' STARTS-WITH?` |
 | `ENDS-WITH?` | cast | Test whether a string ends with the given suffix. — e.g. `'hello' 'lo' ENDS-WITH?` |
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
-| `BOOL` | cast | Convert a value to a boolean by truthiness. — e.g. `1 BOOL` |
 | `CHR` | cast | Convert a numeric character code to a single-character string. — e.g. `65 CHR` |
 | `ADD` | arithmetic | Add two numeric values, element-wise with broadcasting. — e.g. `1 2 +` |
 | `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
 | `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
 | `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
-| `COMPARE-WITHIN` | comparison | Three-way compare two values within an explicit observation budget. — e.g. `1/3 1/2 64 COMPARE-WITHIN` |
 | `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
 | `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
 | `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 <=` |
@@ -221,148 +208,33 @@ program (then the short name works), or can be called fully qualified.
 | `AND` | logic | Logical AND with three-valued (Kleene) NIL handling. — e.g. `TRUE TRUE &` |
 | `OR` | logic | Logical OR with three-valued (Kleene) NIL handling. — e.g. `TRUE FALSE OR` |
 | `NOT` | logic | Logical negation. — e.g. `TRUE NOT` |
-| `IDLE` | control | Pass control through unchanged (no-op). — e.g. `IDLE` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
-| `FLOW` | control-directive | Pipeline visual marker (no-op). — e.g. `[ 1 2 3 ] ~ { [ 2 ] * } MAP` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
 | `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
-| `UNFOLD` | higher-order | Generate a sequence by repeatedly applying a state transition. — e.g. `[ 1 ] { ... COND } UNFOLD` |
 | `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } ANY` |
 | `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
-| `COUNT` | higher-order | Count the elements that satisfy the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } COUNT` |
-| `SCAN` | higher-order | Return a vector of intermediate fold accumulators. — e.g. `[ 1 2 3 ] [ 0 ] { + } SCAN` |
 | `PRINT` | io | Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack. — e.g. `42 PRINT` |
-| `PRECOMPUTE` | Control / Staging | Definition-time staging marker (not a macro). — e.g. `{ ... } PRECOMPUTE` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
-| `FORC` | control | Force destructive dictionary operations to apply. — e.g. `! 'WORD' DEL` |
-| `SHAPE` | tensor | Return a vector describing the dimensions of a value. — e.g. `[ 1 2 3 ] SHAPE` |
-| `RANK` | tensor | Return the number of dimensions of a value. — e.g. `[ [ 1 2 ] ] RANK` |
-| `RESHAPE` | tensor | Reshape a vector to a target shape with the same total length. — e.g. `[ 1 2 3 4 ] [ 2 2 ] RESHAPE` |
-| `TRANSPOSE` | tensor | Transpose the axes of a tensor. — e.g. `[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE` |
 | `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
 | `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
 | `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
 | `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
-| `QUANTIZE` | arithmetic | Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual. — e.g. `100/3 1/100 QUANTIZE` |
-| `QUANTIZE-HALF-AWAY` | arithmetic | Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual. — e.g. `5/2 1 QUANTIZE-HALF-AWAY` |
-| `QUANTIZE-FLOOR` | arithmetic | Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-FLOOR` |
-| `QUANTIZE-CEIL` | arithmetic | Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-CEIL` |
-| `QUANTIZE-TRUNC` | arithmetic | Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual. — e.g. `100/3 1/100 QUANTIZE-TRUNC` |
 | `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
-| `CONSERVE` | control | Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly. — e.g. `100 [ 3333/100 6667/100 ] CONSERVE` |
-| `EVAL` | control | Parse a string as Ajisai source code and execute it. — e.g. `'1 2 +' EVAL` |
-| `OR-ELSE` | control | Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback. — e.g. `1 0 / { 0 } OR-ELSE` |
-| `IMPORT` | module | Load all public words of a module into the dictionary. — e.g. `'IO' IMPORT` |
-| `IMPORT-ONLY` | module | Load only the listed public words of a module. — e.g. `'json' [ 'parse' ] IMPORT-ONLY` |
-| `UNIMPORT` | module | Hide unused imported words from a module while keeping words referenced by user definitions. — e.g. `'IO' UNIMPORT` |
-| `UNIMPORT-ONLY` | module | Hide only the listed imported module words. — e.g. `'json' [ 'parse' ] UNIMPORT-ONLY` |
-| `SPAWN` | control | Spawn an isolated child runtime from a code block. — e.g. `{ 1 2 + } SPAWN` |
-| `AWAIT` | control | Wait for a child runtime to finish and return its exit tuple. — e.g. `{ 1 2 + } SPAWN AWAIT` |
-| `STATUS` | control | Read the current status of a child runtime. — e.g. `{ 1 2 + } SPAWN STATUS` |
-| `KILL` | control | Forcibly terminate a child runtime. — e.g. `{ 1 2 + } SPAWN KILL` |
-| `MONITOR` | control | Register a monitor on a child handle. — e.g. `{ 1 2 + } SPAWN MONITOR` |
-| `SUPERVISE` | control | Run a code block under a one-for-one restart policy. — e.g. `{ 1 2 + } [ 3 ] SUPERVISE` |
-| `MUSIC@SEQ` | music (module) | Set the active playback mode to sequential. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ`) |
-| `MUSIC@SIM` | music (module) | Set the active playback mode to simultaneous. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM`) |
-| `MUSIC@SLOT` | music (module) | Set the slot duration (in seconds) used by bare notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SLOT`) |
-| `MUSIC@GAIN` | music (module) | Set the master output gain (0.0-1.0). — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN`) |
-| `MUSIC@GAIN-RESET` | music (module) | Reset the master gain to the default 1.0. — needs `'MUSIC' IMPORT` (or call as `MUSIC@GAIN-RESET`) |
-| `MUSIC@PAN` | music (module) | Set the stereo pan position (-1.0 left .. 1.0 right). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN`) |
-| `MUSIC@PAN-RESET` | music (module) | Reset pan to center (0.0). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PAN-RESET`) |
-| `MUSIC@FX-RESET` | music (module) | Reset all audio effects (gain, pan, envelope, waveform) to defaults. — needs `'MUSIC' IMPORT` (or call as `MUSIC@FX-RESET`) |
-| `MUSIC@PLAY` | music (module) | Play a music value (note, group, voice, ...). — needs `'MUSIC' IMPORT` (or call as `MUSIC@PLAY`) |
-| `MUSIC@SEQ-GROUP` | music (module) | Build an explicit sequential music group from a vector of notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SEQ-GROUP`) |
-| `MUSIC@SIM-GROUP` | music (module) | Build an explicit simultaneous music group from a vector of notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SIM-GROUP`) |
-| `MUSIC@CHORD` | music (module) | Build a chord (simultaneous group) from a vector of pitches or notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@CHORD`) |
-| `MUSIC@HZ` | music (module) | Build a music.pitch from a frequency in hertz. — needs `'MUSIC' IMPORT` (or call as `MUSIC@HZ`) |
-| `MUSIC@DUR` | music (module) | Build a music.duration from a number of seconds. — needs `'MUSIC' IMPORT` (or call as `MUSIC@DUR`) |
-| `MUSIC@NOTE` | music (module) | Combine a music.pitch and a music.duration into a music.note. — needs `'MUSIC' IMPORT` (or call as `MUSIC@NOTE`) |
-| `MUSIC@REST` | music (module) | Build a music.rest from a music.duration. — needs `'MUSIC' IMPORT` (or call as `MUSIC@REST`) |
-| `MUSIC@EDO` | music (module) | Build an equal-division-of-the-octave tuning. — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDO`) |
-| `MUSIC@EDR` | music (module) | Build an equal-division-of-a-ratio tuning (non-octave). — needs `'MUSIC' IMPORT` (or call as `MUSIC@EDR`) |
-| `MUSIC@STEP` | music (module) | Resolve a tuning step into an exact music.pitch. — needs `'MUSIC' IMPORT` (or call as `MUSIC@STEP`) |
-| `MUSIC@VOICE` | music (module) | Build a music group with the role of a single melodic voice. — needs `'MUSIC' IMPORT` (or call as `MUSIC@VOICE`) |
-| `MUSIC@TRACK` | music (module) | Build a music group with the role of an instrument track. — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRACK`) |
-| `MUSIC@MEASURE` | music (module) | Build a music group with the role of a measure (bar). — needs `'MUSIC' IMPORT` (or call as `MUSIC@MEASURE`) |
-| `MUSIC@PHRASE` | music (module) | Build a music group with the role of a phrase. — needs `'MUSIC' IMPORT` (or call as `MUSIC@PHRASE`) |
-| `MUSIC@WITH-TUNING` | music (module) | Bind a tuning over a body so bare integers are read as tuning steps. — needs `'MUSIC' IMPORT` (or call as `MUSIC@WITH-TUNING`) |
-| `MUSIC@EXPLAIN` | music (module) | Describe how MUSIC@PLAY would interpret a value, without playing it. — needs `'MUSIC' IMPORT` (or call as `MUSIC@EXPLAIN`) |
-| `MUSIC@ADSR` | music (module) | Set the ADSR envelope used by subsequent notes. — needs `'MUSIC' IMPORT` (or call as `MUSIC@ADSR`) |
-| `MUSIC@SINE` | music (module) | Select the sine waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SINE`) |
-| `MUSIC@SQUARE` | music (module) | Select the square waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SQUARE`) |
-| `MUSIC@SAW` | music (module) | Select the sawtooth waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@SAW`) |
-| `MUSIC@TRI` | music (module) | Select the triangle waveform on a target. — needs `'MUSIC' IMPORT` (or call as `MUSIC@TRI`) |
-| `JSON@PARSE` | json (module) | Parse a JSON string into an Ajisai value. — needs `'JSON' IMPORT` (or call as `JSON@PARSE`) |
-| `JSON@STRINGIFY` | json (module) | Serialise an Ajisai value to a JSON string. — needs `'JSON' IMPORT` (or call as `JSON@STRINGIFY`) |
-| `JSON@GET` | json (module) | Look up a key in a JSON object. — needs `'JSON' IMPORT` (or call as `JSON@GET`) |
-| `JSON@KEYS` | json (module) | Return all keys of a JSON object as a vector. — needs `'JSON' IMPORT` (or call as `JSON@KEYS`) |
-| `JSON@SET` | json (module) | Return a JSON object with the given key bound to the given value. — needs `'JSON' IMPORT` (or call as `JSON@SET`) |
-| `JSON@HAS` | json (module) | True if a JSON object contains the given key. — needs `'JSON' IMPORT` (or call as `JSON@HAS`) |
-| `JSON@VALUES` | json (module) | Return all values of a JSON object as a vector. — needs `'JSON' IMPORT` (or call as `JSON@VALUES`) |
-| `JSON@MERGE` | json (module) | Merge two JSON objects; right-hand keys win on conflict. — needs `'JSON' IMPORT` (or call as `JSON@MERGE`) |
-| `JSON@DELETE` | json (module) | Return a JSON object with the given key removed. — needs `'JSON' IMPORT` (or call as `JSON@DELETE`) |
-| `JSON@EXPORT` | json (module) | Export the top of the stack as a downloadable JSON file. — needs `'JSON' IMPORT` (or call as `JSON@EXPORT`) |
-| `DATA@CSV-PARSE` | data (module) | Parse CSV text into a vector of Records (the first row is the header). — needs `'DATA' IMPORT` (or call as `DATA@CSV-PARSE`) |
-| `DATA@CSV-STRINGIFY` | data (module) | Render a vector of Records as CSV text sharing one column shape. — needs `'DATA' IMPORT` (or call as `DATA@CSV-STRINGIFY`) |
-| `DATA@SELECT` | data (module) | Project a table onto the named columns, in order. — needs `'DATA' IMPORT` (or call as `DATA@SELECT`) |
-| `DATA@WHERE` | data (module) | Keep the rows whose predicate on a named column is true. — needs `'DATA' IMPORT` (or call as `DATA@WHERE`) |
-| `DATA@GROUP` | data (module) | Group rows by a column into { key, rows } group records. — needs `'DATA' IMPORT` (or call as `DATA@GROUP`) |
-| `DATA@JOIN` | data (module) | Left-join two tables on a shared key column. — needs `'DATA' IMPORT` (or call as `DATA@JOIN`) |
-| `IO@INPUT` | io (module) | Read text from the host input buffer. — needs `'IO' IMPORT` (or call as `IO@INPUT`) |
-| `IO@OUTPUT` | io (module) | Write a value to the host output buffer. — needs `'IO' IMPORT` (or call as `IO@OUTPUT`) |
-| `TIME@NOW` | time (module) | Return the current Unix timestamp. — needs `'TIME' IMPORT` (or call as `TIME@NOW`) |
-| `TIME@DATETIME` | time (module) | Render an instant as civil [ Y M D h m s ] at a UTC offset (hours). — needs `'TIME' IMPORT` (or call as `TIME@DATETIME`) |
-| `TIME@TIMESTAMP` | time (module) | Resolve a civil datetime to an instant at a UTC offset (hours). — needs `'TIME' IMPORT` (or call as `TIME@TIMESTAMP`) |
-| `TIME@DATE` | time (module) | Extract the [ Y M D ] date portion of a datetime. — needs `'TIME' IMPORT` (or call as `TIME@DATE`) |
-| `TIME@TIME` | time (module) | Extract the [ h m s ] time-of-day from a datetime. — needs `'TIME' IMPORT` (or call as `TIME@TIME`) |
-| `TIME@YEAR` | time (module) | Return the year field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@YEAR`) |
-| `TIME@MONTH` | time (module) | Return the month field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@MONTH`) |
-| `TIME@DAY` | time (module) | Return the day field of a date or datetime. — needs `'TIME' IMPORT` (or call as `TIME@DAY`) |
-| `TIME@HOUR` | time (module) | Return the hour field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@HOUR`) |
-| `TIME@MINUTE` | time (module) | Return the minute field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@MINUTE`) |
-| `TIME@SECOND` | time (module) | Return the second field of a time or datetime. — needs `'TIME' IMPORT` (or call as `TIME@SECOND`) |
-| `TIME@WEEKDAY` | time (module) | Return the ISO weekday of a date or datetime (Monday=1 .. Sunday=7). — needs `'TIME' IMPORT` (or call as `TIME@WEEKDAY`) |
-| `TIME@ADD-DAYS` | time (module) | Shift a date or datetime by N whole days. — needs `'TIME' IMPORT` (or call as `TIME@ADD-DAYS`) |
-| `TIME@DIFF-DAYS` | time (module) | Whole-day difference (a - b) between two dates or datetimes. — needs `'TIME' IMPORT` (or call as `TIME@DIFF-DAYS`) |
-| `TIME@FORMAT` | time (module) | Render a date as YYYY-MM-DD or a datetime as YYYY-MM-DDThh:mm:ss. — needs `'TIME' IMPORT` (or call as `TIME@FORMAT`) |
-| `TIME@PARSE-ISO` | time (module) | Parse an ISO-8601 civil string into a datetime; Bubble/NIL if invalid. — needs `'TIME' IMPORT` (or call as `TIME@PARSE-ISO`) |
-| `TIME@ADD-MONTHS` | time (module) | Add N months to a date/datetime, clamping to the month end. — needs `'TIME' IMPORT` (or call as `TIME@ADD-MONTHS`) |
-| `TIME@ADD-YEARS` | time (module) | Add N years to a date/datetime, clamping Feb 29 in non-leap years. — needs `'TIME' IMPORT` (or call as `TIME@ADD-YEARS`) |
-| `CRYPTO@CSPRNG` | crypto (module) | Generate cryptographically secure random rationals with the given denominator. — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@CSPRNG`) |
-| `CRYPTO@HASH` | crypto (module) | Compute a cryptographic hash of a value at a chosen bit width. — needs `'CRYPTO' IMPORT` (or call as `CRYPTO@HASH`) |
-| `ALGO@SORT` | algo (module) | Return a copy of a vector sorted in ascending order. — needs `'ALGO' IMPORT` (or call as `ALGO@SORT`) |
-| `ALGO@UNIQUE` | algo (module) | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — needs `'ALGO' IMPORT` (or call as `ALGO@UNIQUE`) |
-| `ALGO@CONTAINS` | algo (module) | True if a vector contains an element equal to the given value. — needs `'ALGO' IMPORT` (or call as `ALGO@CONTAINS`) |
-| `ALGO@INDEX-OF` | algo (module) | Index of the first element equal to the value; Bubble/NIL if absent. — needs `'ALGO' IMPORT` (or call as `ALGO@INDEX-OF`) |
-| `MATH@SQRT` | math (module) | Square root. Exact rational roots stay exact; otherwise returns a sound interval. — needs `'MATH' IMPORT` (or call as `MATH@SQRT`) |
-| `MATH@SQRT-EPS` | math (module) | Square root with an explicit interval width bound eps. — needs `'MATH' IMPORT` (or call as `MATH@SQRT-EPS`) |
-| `MATH@INTERVAL` | math (module) | Create a sound interval [ lo, hi ]. — needs `'MATH' IMPORT` (or call as `MATH@INTERVAL`) |
-| `MATH@LOWER` | math (module) | Lower endpoint of a number or interval. — needs `'MATH' IMPORT` (or call as `MATH@LOWER`) |
-| `MATH@UPPER` | math (module) | Upper endpoint of a number or interval. — needs `'MATH' IMPORT` (or call as `MATH@UPPER`) |
-| `MATH@WIDTH` | math (module) | Width of an interval (hi - lo). — needs `'MATH' IMPORT` (or call as `MATH@WIDTH`) |
-| `MATH@IS-EXACT` | math (module) | True for an exact number or a degenerate (zero-width) interval. — needs `'MATH' IMPORT` (or call as `MATH@IS-EXACT`) |
-| `MATH@ABS` | math (module) | Absolute value of a number. — needs `'MATH' IMPORT` (or call as `MATH@ABS`) |
-| `MATH@NEG` | math (module) | Numeric negation. — needs `'MATH' IMPORT` (or call as `MATH@NEG`) |
-| `MATH@SIGN` | math (module) | Sign of a number: -1, 0, or 1. — needs `'MATH' IMPORT` (or call as `MATH@SIGN`) |
-| `MATH@MIN` | math (module) | Smaller of two numbers. — needs `'MATH' IMPORT` (or call as `MATH@MIN`) |
-| `MATH@MAX` | math (module) | Larger of two numbers. — needs `'MATH' IMPORT` (or call as `MATH@MAX`) |
-| `MATH@POW` | math (module) | Integer-exponent exact power: base^exp. — needs `'MATH' IMPORT` (or call as `MATH@POW`) |
-| `MATH@GCD` | math (module) | Greatest common divisor of two integers. — needs `'MATH' IMPORT` (or call as `MATH@GCD`) |
-| `MATH@LCM` | math (module) | Least common multiple of two integers. — needs `'MATH' IMPORT` (or call as `MATH@LCM`) |
-| `MATH@PI` | math (module) | Push the exact real pi as a refinable rational enclosure. — needs `'MATH' IMPORT` (or call as `MATH@PI`) |
-| `MATH@ENCLOSE` | math (module) | Observe a value's rational enclosure within an explicit water budget. — needs `'MATH' IMPORT` (or call as `MATH@ENCLOSE`) |
-| `SERIAL@LIST-PORTS` | serial (module) | Ask the host to enumerate available serial ports. — needs `'SERIAL' IMPORT` (or call as `SERIAL@LIST-PORTS`) |
-| `SERIAL@OPEN` | serial (module) | Open a serial port by id; leaves the port handle on the stack. — needs `'SERIAL' IMPORT` (or call as `SERIAL@OPEN`) |
-| `SERIAL@CONFIGURE` | serial (module) | Set the baud rate of an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@CONFIGURE`) |
-| `SERIAL@WRITE` | serial (module) | Write a byte vector to an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@WRITE`) |
-| `SERIAL@READ` | serial (module) | Drain received bytes from an open serial port; Bubble/NIL when none. — needs `'SERIAL' IMPORT` (or call as `SERIAL@READ`) |
-| `SERIAL@FLUSH` | serial (module) | Flush the outgoing buffer of an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@FLUSH`) |
-| `SERIAL@CLOSE` | serial (module) | Close an open serial port. — needs `'SERIAL' IMPORT` (or call as `SERIAL@CLOSE`) |
+| `SQRT` | math | Square root. Exact rational roots stay exact; otherwise returns a sound interval. — e.g. `2 SQRT` |
+| `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
+| `NEG` | math | Numeric negation. — e.g. `2 NEG` |
+| `SIGN` | math | Sign of a number: -1, 0, or 1. — e.g. `-2 SIGN` |
+| `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
+| `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
+| `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
+| `UNIQUE` | vector | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — e.g. `[ 1 2 1 ] UNIQUE` |
+| `CONTAINS` | vector | True if a vector contains an element equal to the given value. — e.g. `[ 1 2 ] 2 CONTAINS` |
+| `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |
@@ -374,15 +246,11 @@ program (then the short name works), or can be called fully qualified.
 | `>` | symbol alias | shorthand for `GT` |
 | `>=` | symbol alias | shorthand for `GTE` |
 | `<>` | symbol alias | shorthand for `NEQ` |
-| `!` | symbol alias | shorthand for `FORC` |
 | `&` | symbol alias | shorthand for `AND` |
-| `.` | syntax sugar | shorthand for `TOP` |
-| `..` | syntax sugar | shorthand for `STAK` |
 | `,` | syntax sugar | shorthand for `EAT` |
 | `,,` | syntax sugar | shorthand for `KEEP` |
 | `'` | input helper | shorthand for `STRING-QUOTE` |
 | `?` | symbol alias | shorthand for `LOOKUP` |
-| `~` | syntax sugar | shorthand for `FLOW` |
 | `#` | source directive | shorthand for `COMMENT-LINE` |
 | `\|` | control directive | shorthand for `COND-CLAUSE` |
 | `[` | delimiter sugar | shorthand for `BEGIN-VECTOR` |
@@ -390,5 +258,3 @@ program (then the short name works), or can be called fully qualified.
 | `{` | delimiter sugar | shorthand for `BEGIN-BLOCK` |
 | `}` | delimiter sugar | shorthand for `END-BLOCK` |
 | `'` | literal sugar | shorthand for `STRING-QUOTE` |
-| `;` | modifier sugar | shorthand for `. ,` |
-| `;;` | modifier sugar | shorthand for `.. ,,` |

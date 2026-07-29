@@ -81,28 +81,10 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         summary: "Compare inequality",
     },
     CoreWordAlias {
-        alias: "!",
-        canonical: Some("FORC"),
-        kind: CoreWordAliasKind::SymbolAlias,
-        summary: "Force destructive dictionary operations",
-    },
-    CoreWordAlias {
         alias: "&",
         canonical: Some("AND"),
         kind: CoreWordAliasKind::SymbolAlias,
         summary: "Logical AND alias",
-    },
-    CoreWordAlias {
-        alias: ".",
-        canonical: Some("TOP"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "Target stack top",
-    },
-    CoreWordAlias {
-        alias: "..",
-        canonical: Some("STAK"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "Target whole stack",
     },
     CoreWordAlias {
         alias: ",",
@@ -127,12 +109,6 @@ pub const CORE_WORD_ALIASES: &[CoreWordAlias] = &[
         canonical: Some("LOOKUP"),
         kind: CoreWordAliasKind::SymbolAlias,
         summary: "Look up and display word definition",
-    },
-    CoreWordAlias {
-        alias: "~",
-        canonical: Some("FLOW"),
-        kind: CoreWordAliasKind::SyntaxSugar,
-        summary: "Pipeline visual marker (no-op)",
     },
     CoreWordAlias {
         alias: "^",

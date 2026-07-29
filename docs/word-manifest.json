@@ -11,9 +11,9 @@
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
     "corewords": 69,
-    "aliases": 20,
-    "surface_forms": 10,
-    "total": 99
+    "aliases": 16,
+    "surface_forms": 8,
+    "total": 93
   },
   "entries": [
     {
@@ -1356,20 +1356,6 @@
       "classification": "Surface"
     },
     {
-      "id": "alias.bang",
-      "kind": "symbol_alias",
-      "surface": "!",
-      "canonical": "FORC",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.bang",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "FORC",
-      "classification": "Surface"
-    },
-    {
       "id": "alias.ampersand",
       "kind": "symbol_alias",
       "surface": "&",
@@ -1381,34 +1367,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "AND",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.dot",
-      "kind": "syntax_sugar",
-      "surface": ".",
-      "canonical": "TOP",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.dot",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "TOP",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.dot-dot",
-      "kind": "syntax_sugar",
-      "surface": "..",
-      "canonical": "STAK",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.dot-dot",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "STAK",
       "classification": "Surface"
     },
     {
@@ -1465,20 +1423,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "LOOKUP",
-      "classification": "Surface"
-    },
-    {
-      "id": "alias.tilde",
-      "kind": "syntax_sugar",
-      "surface": "~",
-      "canonical": "FLOW",
-      "source": "rust/src/core_word_aliases.rs",
-      "coverage_entry_id": "alias.tilde",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": "FLOW",
       "classification": "Surface"
     },
     {
@@ -1591,38 +1535,6 @@
       "core_tier": "sugar",
       "derived_from": [],
       "desugars_to": "STRING-QUOTE",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";",
-      "concept": "TOP-EAT",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": ". ,",
-      "coverage_entry_id": "surface.semicolon",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": ". ,",
-      "classification": "Surface"
-    },
-    {
-      "id": "surface.semicolon-semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";;",
-      "concept": "STAK-KEEP",
-      "runtime_word": false,
-      "source": "rust/src/surface_forms.rs",
-      "canonical": ".. ,,",
-      "coverage_entry_id": "surface.semicolon-semicolon",
-      "semantic_role": "Sugar",
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "derived_from": [],
-      "desugars_to": ".. ,,",
       "classification": "Surface"
     },
     {

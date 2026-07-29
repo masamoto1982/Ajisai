@@ -107,20 +107,6 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         summary: "String literal delimiter (serves as both open and close)",
     },
     SurfaceForm {
-        surface: ";",
-        concept: "TOP-EAT",
-        kind: SurfaceFormKind::ModifierSugar,
-        runtime_word: false,
-        summary: "Shorthand for `. ,` (TOP EAT)",
-    },
-    SurfaceForm {
-        surface: ";;",
-        concept: "STAK-KEEP",
-        kind: SurfaceFormKind::ModifierSugar,
-        runtime_word: false,
-        summary: "Shorthand for `.. ,,` (STAK KEEP)",
-    },
-    SurfaceForm {
         surface: "(",
         concept: "RESERVED-BEGIN",
         kind: SurfaceFormKind::ReservedMarker,
