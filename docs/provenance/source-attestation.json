@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:e9537cf7485c89093e70dd29db9b7feb8a7639cefcc552fec7b50d23113fe4a0",
+  "rootIdentity": "sha256:ce72e4877c82c9afcbd7503f8d8a8fcdcc9d8fb20966f2fa1770bf90808dceb5",
   "fileCount": 376,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1432,8 +1432,8 @@
     },
     {
       "path": "scripts/check-word-schema-migration.mjs",
-      "sha256": "d94a89396d55104aec95d3bb1e7be99e5f622a979435987dc406471822d5ebfb",
-      "bytes": 6139
+      "sha256": "b2f170ecc2c8495c956aa55ba72620c42ed2c7a1107cb25b6aa9bb0cc3b040cb",
+      "bytes": 6177
     },
     {
       "path": "scripts/compare-perf.sh",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "spec/README.md",
-      "sha256": "749c9bf89a805ab957bc40ec754b3695d32eb5641a30944733738820791b4729",
-      "bytes": 6932
+      "sha256": "e38b4da4645815ad83d9dac9f68dcc4e631442011090517830170fb13fcfe34f",
+      "bytes": 7395
     },
     {
       "path": "spec/freeze/gui-production-files.json",
@@ -1547,13 +1547,13 @@
     },
     {
       "path": "spec/words.json",
-      "sha256": "c2a73e44d1c73cecc922a5616826ca733f6f354d37cd0927600e37e2a57afb2a",
-      "bytes": 201401
+      "sha256": "b66e043e42199b02a31f5443bf6f1d8e581cb48ec6c63494debd5bd0b21ee60b",
+      "bytes": 200827
     },
     {
       "path": "spec/words.schema.json",
-      "sha256": "025d58a3b0eb885c8d821f84978ac1dbca08d044a8e11a63eeb314349785cb4a",
-      "bytes": 4398
+      "sha256": "ea190ef947523dada02fde7a9d7ba39de207cb793cd166f551e776e7d937e0a5",
+      "bytes": 4205
     },
     {
       "path": "src-tauri/Cargo.lock",

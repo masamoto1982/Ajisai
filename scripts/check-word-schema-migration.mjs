@@ -34,7 +34,6 @@ const familyIds = new Set(families.families.map((family) => family.id));
 const manifestNames = new Set(manifest.entries.map((entry) => entry.canonical));
 const names = new Set();
 
-if (words.migration.entryCount !== words.entries.length) fail('migration.entryCount does not match entries');
 if (words.migration.completeInventory !== true) fail('the canonical Word inventory must be marked complete');
 
 for (const word of words.entries) {
@@ -93,11 +92,9 @@ for (const word of words.entries) {
   }
 }
 
-const completeModules = new Set(['DATA', 'JSON', 'IO', 'CRYPTO', 'ALGO', 'MATH', 'TIME', 'SERIAL', 'MUSIC']);
-const expected = new Set(manifest.entries
-  .filter((entry) => entry.kind === 'coreword'
-    || (entry.kind === 'moduleword' && completeModules.has(entry.module)))
-  .map((entry) => entry.canonical));
+const canonicalManifestEntries = manifest.entries
+  .filter((entry) => entry.kind === 'coreword' || entry.kind === 'moduleword');
+const expected = new Set(canonicalManifestEntries.map((entry) => entry.canonical));
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 for (const name of names) if (!expected.has(name)) fail(`migration scope contains unexpected Word ${name}`);
 if (names.size !== expected.size) fail(`migration scope has ${names.size} entries; expected ${expected.size}`);
@@ -106,5 +103,7 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log('[word-schema] all 98 Core and 96 Module contracts cover the 224-surface manifest and current executors.');
+  const coreCount = canonicalManifestEntries.filter((entry) => entry.kind === 'coreword').length;
+  const moduleCount = canonicalManifestEntries.filter((entry) => entry.kind === 'moduleword').length;
+  console.log(`[word-schema] all ${coreCount} Core and ${moduleCount} Module contracts cover the ${manifest.entries.length}-surface manifest and current executors.`);
 }

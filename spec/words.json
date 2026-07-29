@@ -1,36 +1,8 @@
 {
   "schemaVersion": 1,
   "migration": {
-    "phase": 3,
-    "families": [
-      "NIL",
-      "truth",
-      "comparison",
-      "modifiers",
-      "control",
-      "dictionary",
-      "module",
-      "collection",
-      "higher-order",
-      "exact-arithmetic",
-      "hosted-effects",
-      "child-runtime",
-      "conversion",
-      "staging",
-      "data-table",
-      "json-value",
-      "host-observation",
-      "crypto-digest",
-      "algorithm-collection",
-      "exact-interval",
-      "exact-math",
-      "calendar-time",
-      "serial-effects",
-      "music-values",
-      "music-effects"
-    ],
-    "completeInventory": true,
-    "entryCount": 194
+    "phase": 5,
+    "completeInventory": true
   },
   "entries": [
     {

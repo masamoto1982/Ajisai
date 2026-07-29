@@ -114,3 +114,10 @@ represented; together with the frozen aliases and surface forms they preserve
 the 224-surface inventory. `migration.completeInventory` is therefore true.
 Phase 5 duplication removal may begin only while every blocking gate remains
 green; this completion flag alone does not authorize deletion.
+
+Phase 5 begins by deleting migration-only metadata that merely restated the
+canonical entries. The handwritten family rollout list, stored entry count,
+and checker module allow-list are removed. Families are derived from each Word
+contract and checked against `semantic-families.json`; inventory membership and
+Core/Module counts are derived from the frozen manifest. No runtime registry or
+user-facing generated artifact is deleted in this first cleanup slice.

@@ -8,12 +8,10 @@
     "schemaVersion": { "const": 1 },
     "migration": {
       "type": "object",
-      "required": ["phase", "families", "completeInventory", "entryCount"],
+      "required": ["phase", "completeInventory"],
       "properties": {
         "phase": { "type": "integer", "minimum": 3 },
-        "families": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
-        "completeInventory": { "type": "boolean" },
-        "entryCount": { "type": "integer", "minimum": 1 }
+        "completeInventory": { "type": "boolean" }
       },
       "additionalProperties": false
     },
