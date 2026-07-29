@@ -1,0 +1,4288 @@
+{
+  "schemaVersion": 1,
+  "migration": {
+    "phase": 3,
+    "families": [
+      "NIL",
+      "truth",
+      "comparison",
+      "modifiers",
+      "control",
+      "dictionary",
+      "module",
+      "collection",
+      "higher-order",
+      "exact-arithmetic",
+      "hosted-effects",
+      "child-runtime",
+      "conversion",
+      "staging",
+      "data-table",
+      "json-value",
+      "host-observation",
+      "crypto-digest"
+    ],
+    "completeInventory": false,
+    "entryCount": 118
+  },
+  "entries": [
+    {
+      "name": "TRUE",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Push the boolean TRUE onto the stack.",
+        "hover": "Push the boolean TRUE onto the stack.",
+        "lookup": "Push the boolean TRUE onto the stack.",
+        "syntax": "TRUE"
+      },
+      "executorKey": "True",
+      "effects": []
+    },
+    {
+      "name": "FALSE",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Push the boolean FALSE onto the stack.",
+        "hover": "Push the boolean FALSE onto the stack.",
+        "lookup": "Push the boolean FALSE onto the stack.",
+        "syntax": "FALSE"
+      },
+      "executorKey": "False",
+      "effects": []
+    },
+    {
+      "name": "NIL",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "nil",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Push the NIL value onto the stack.",
+        "hover": "Push the NIL value onto the stack.",
+        "lookup": "Push the NIL value onto the stack.",
+        "syntax": "NIL"
+      },
+      "executorKey": "Nil",
+      "effects": []
+    },
+    {
+      "name": "NIL?",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Test whether the top value is an operational NIL (absent).",
+        "hover": "Test whether the top value is an operational NIL (absent).",
+        "lookup": "Test whether the top value is an operational NIL (absent).",
+        "syntax": "1 0 / NIL?"
+      },
+      "executorKey": "NilCheck",
+      "effects": []
+    },
+    {
+      "name": "NIL-REASON",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "hover": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the direct reason of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-REASON"
+      },
+      "executorKey": "NilReason",
+      "effects": []
+    },
+    {
+      "name": "NIL-ORIGIN",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the origin of an operational NIL as a protocol-string Text.",
+        "hover": "Read the origin of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the origin of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-ORIGIN"
+      },
+      "executorKey": "NilOrigin",
+      "effects": []
+    },
+    {
+      "name": "NIL-RECOVERABLE?",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "hover": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "lookup": "Read the recoverability of an operational NIL as a protocol-string Text.",
+        "syntax": "1 0 / NIL-RECOVERABLE?"
+      },
+      "executorKey": "NilRecoverable",
+      "effects": []
+    },
+    {
+      "name": "NIL-DIAGNOSIS",
+      "aliases": [],
+      "family": "nilObservation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 2
+      },
+      "consumption": "retain",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "reason": "notAvailable"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "hover": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "lookup": "Read the three-layer debug diagnosis of an operational NIL as a Record.",
+        "syntax": "1 0 / NIL-DIAGNOSIS"
+      },
+      "executorKey": "NilDiagnosis",
+      "effects": []
+    },
+    {
+      "name": "BOOL",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedValueKind"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Convert a value to a boolean by truthiness.",
+        "hover": "Convert a value to a boolean by truthiness.",
+        "lookup": "Convert a value to a boolean by truthiness.",
+        "syntax": "1 BOOL"
+      },
+      "executorKey": "Bool",
+      "effects": []
+    },
+    {
+      "name": "COMPARE-WITHIN",
+      "aliases": [],
+      "family": "comparison",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidBudget",
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Three-way compare two values within an explicit observation budget.",
+        "hover": "Three-way compare two values within an explicit observation budget.",
+        "lookup": "Three-way compare two values within an explicit observation budget.",
+        "syntax": "1/3 1/2 64 COMPARE-WITHIN"
+      },
+      "executorKey": "CompareWithin",
+      "effects": []
+    },
+    {
+      "name": "EQ",
+      "aliases": [
+        "="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test equality of two values.",
+        "hover": "Test equality of two values.",
+        "lookup": "Test equality of two values.",
+        "syntax": "1 1 ="
+      },
+      "executorKey": "Eq",
+      "effects": []
+    },
+    {
+      "name": "LT",
+      "aliases": [
+        "<"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test less-than comparison.",
+        "hover": "Test less-than comparison.",
+        "lookup": "Test less-than comparison.",
+        "syntax": "1 2 <"
+      },
+      "executorKey": "Lt",
+      "effects": []
+    },
+    {
+      "name": "LTE",
+      "aliases": [
+        "<="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test less-than-or-equal comparison.",
+        "hover": "Test less-than-or-equal comparison.",
+        "lookup": "Test less-than-or-equal comparison.",
+        "syntax": "1 1 <="
+      },
+      "executorKey": "Le",
+      "effects": []
+    },
+    {
+      "name": "GT",
+      "aliases": [
+        ">"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test greater-than comparison.",
+        "hover": "Test greater-than comparison.",
+        "lookup": "Test greater-than comparison.",
+        "syntax": "2 1 >"
+      },
+      "executorKey": "Gt",
+      "effects": []
+    },
+    {
+      "name": "GTE",
+      "aliases": [
+        ">="
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test greater-than-or-equal comparison.",
+        "hover": "Test greater-than-or-equal comparison.",
+        "lookup": "Test greater-than-or-equal comparison.",
+        "syntax": "1 1 >="
+      },
+      "executorKey": "Gte",
+      "effects": []
+    },
+    {
+      "name": "NEQ",
+      "aliases": [
+        "<>"
+      ],
+      "family": "comparison",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedComparison",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH",
+        "LANG.MACHINE.LIMITS"
+      ],
+      "documentation": {
+        "summary": "Test inequality of two values.",
+        "hover": "Test inequality of two values.",
+        "lookup": "Test inequality of two values.",
+        "syntax": "1 2 <>"
+      },
+      "executorKey": "Neq",
+      "effects": []
+    },
+    {
+      "name": "AND",
+      "aliases": [
+        "&"
+      ],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical AND with three-valued (Kleene) NIL handling.",
+        "hover": "Logical AND with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical AND with three-valued (Kleene) NIL handling.",
+        "syntax": "TRUE TRUE &"
+      },
+      "executorKey": "And",
+      "effects": []
+    },
+    {
+      "name": "OR",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical OR with three-valued (Kleene) NIL handling.",
+        "hover": "Logical OR with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical OR with three-valued (Kleene) NIL handling.",
+        "syntax": "TRUE FALSE OR"
+      },
+      "executorKey": "Or",
+      "effects": []
+    },
+    {
+      "name": "NOT",
+      "aliases": [],
+      "family": "kleeneTruth",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "truthUnknownNotNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTruthValue"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.VALUES.TRUTH"
+      ],
+      "documentation": {
+        "summary": "Logical negation.",
+        "hover": "Logical negation.",
+        "lookup": "Logical negation.",
+        "syntax": "TRUE NOT"
+      },
+      "executorKey": "Not",
+      "effects": []
+    },
+    {
+      "name": "VENT",
+      "aliases": [
+        "^"
+      ],
+      "family": "nilRecovery",
+      "stack": {
+        "inputs": "control",
+        "outputs": "control"
+      },
+      "consumption": "conditional",
+      "nilPolicy": "inspectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingFollowingSourceUnit"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.NIL",
+        "LANG.FAILURE.RECOVERY"
+      ],
+      "documentation": {
+        "summary": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "hover": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "lookup": "Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.",
+        "syntax": "NIL ^ [ 0 ]"
+      },
+      "executorKey": "LazyNextUnitFallback",
+      "effects": []
+    },
+    {
+      "name": "TOP",
+      "aliases": [
+        "."
+      ],
+      "family": "stackModifier",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MODIFIERS.AXES",
+        "LANG.MODIFIERS.APPLICATION"
+      ],
+      "documentation": {
+        "summary": "Set the operation target mode to the top of the stack.",
+        "hover": "Set the operation target mode to the top of the stack.",
+        "lookup": "Set the operation target mode to the top of the stack.",
+        "syntax": ". +"
+      },
+      "executorKey": "SetTargetModeStackTop",
+      "effects": []
+    },
+    {
+      "name": "STAK",
+      "aliases": [
+        ".."
+      ],
+      "family": "stackModifier",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MODIFIERS.AXES",
+        "LANG.MODIFIERS.APPLICATION"
+      ],
+      "documentation": {
+        "summary": "Set the operation target mode to the whole stack.",
+        "hover": "Set the operation target mode to the whole stack.",
+        "lookup": "Set the operation target mode to the whole stack.",
+        "syntax": ".. +"
+      },
+      "executorKey": "SetTargetModeStack",
+      "effects": []
+    },
+    {
+      "name": "EAT",
+      "aliases": [
+        ","
+      ],
+      "family": "stackModifier",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MODIFIERS.AXES",
+        "LANG.MODIFIERS.APPLICATION"
+      ],
+      "documentation": {
+        "summary": "Set the consumption mode to consume operands.",
+        "hover": "Set the consumption mode to consume operands.",
+        "lookup": "Set the consumption mode to consume operands.",
+        "syntax": ", +"
+      },
+      "executorKey": "SetConsumptionConsume",
+      "effects": []
+    },
+    {
+      "name": "KEEP",
+      "aliases": [
+        ",,"
+      ],
+      "family": "stackModifier",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MODIFIERS.AXES",
+        "LANG.MODIFIERS.APPLICATION"
+      ],
+      "documentation": {
+        "summary": "Set the consumption mode to keep operands.",
+        "hover": "Set the consumption mode to keep operands.",
+        "lookup": "Set the consumption mode to keep operands.",
+        "syntax": ",, +"
+      },
+      "executorKey": "SetConsumptionKeep",
+      "effects": []
+    },
+    {
+      "name": "IDLE",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Pass control through unchanged (no-op).",
+        "hover": "Pass control through unchanged (no-op).",
+        "lookup": "Pass control through unchanged (no-op).",
+        "syntax": "IDLE"
+      },
+      "executorKey": "Idle",
+      "effects": []
+    },
+    {
+      "name": "COND",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": "variable",
+        "outputs": "variable"
+      },
+      "consumption": "conditional",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidClauseShape",
+        "nonTruthGuard"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Evaluate guard/body clauses in order, executing the first match.",
+        "hover": "Evaluate guard/body clauses in order, executing the first match.",
+        "lookup": "Evaluate guard/body clauses in order, executing the first match.",
+        "syntax": "1 { TRUE } { 'y' } { IDLE } { 'n' } COND"
+      },
+      "executorKey": "Cond",
+      "effects": []
+    },
+    {
+      "name": "FLOW",
+      "aliases": [
+        "~"
+      ],
+      "family": "control",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Pipeline visual marker (no-op).",
+        "hover": "Pipeline visual marker (no-op).",
+        "lookup": "Pipeline visual marker (no-op).",
+        "syntax": "[ 1 2 3 ] ~ { [ 2 ] * } MAP"
+      },
+      "executorKey": "NoOpControlDirective",
+      "effects": []
+    },
+    {
+      "name": "FORC",
+      "aliases": [
+        "!"
+      ],
+      "family": "control",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Force destructive dictionary operations to apply.",
+        "hover": "Force destructive dictionary operations to apply.",
+        "lookup": "Force destructive dictionary operations to apply.",
+        "syntax": "! 'WORD' DEL"
+      },
+      "executorKey": "Force",
+      "effects": [
+        "interpreterModeWrite"
+      ]
+    },
+    {
+      "name": "EXEC",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": "variable"
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonCodeVector",
+        "nestedExecutionError"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Execute a vector as Ajisai code.",
+        "hover": "Execute a vector as Ajisai code.",
+        "lookup": "Execute a vector as Ajisai code.",
+        "syntax": "[ 1 2 + ] EXEC"
+      },
+      "executorKey": "Exec",
+      "effects": []
+    },
+    {
+      "name": "CONSERVE",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonScalarParts",
+        "conservationViolation"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
+        "hover": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
+        "lookup": "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
+        "syntax": "100 [ 3333/100 6667/100 ] CONSERVE"
+      },
+      "executorKey": "Conserve",
+      "effects": []
+    },
+    {
+      "name": "EVAL",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 1,
+        "outputs": "variable"
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "parseError",
+        "nestedExecutionError"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Parse a string as Ajisai source code and execute it.",
+        "hover": "Parse a string as Ajisai source code and execute it.",
+        "lookup": "Parse a string as Ajisai source code and execute it.",
+        "syntax": "'1 2 +' EVAL"
+      },
+      "executorKey": "Eval",
+      "effects": [
+        "codeExecution"
+      ]
+    },
+    {
+      "name": "OR-ELSE",
+      "aliases": [],
+      "family": "control",
+      "stack": {
+        "inputs": 2,
+        "outputs": "variable"
+      },
+      "consumption": "conditional",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "fallbackNotCodeBlock"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
+        "hover": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
+        "lookup": "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
+        "syntax": "1 0 / { 0 } OR-ELSE"
+      },
+      "executorKey": "OrElse",
+      "effects": []
+    },
+    {
+      "name": "DEF",
+      "aliases": [],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "protectedWord",
+        "definitionConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Define a user word from a body and a name.",
+        "hover": "Define a user word from a body and a name.",
+        "lookup": "Define a user word from a body and a name.",
+        "syntax": "{ 2 * } 'DOUBLE' DEF"
+      },
+      "executorKey": "Def",
+      "effects": [
+        "dictionaryWrite"
+      ]
+    },
+    {
+      "name": "DEL",
+      "aliases": [],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "wordNotFound",
+        "protectedWord"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Delete a user word from the dictionary.",
+        "hover": "Delete a user word from the dictionary.",
+        "lookup": "Delete a user word from the dictionary.",
+        "syntax": "{ [ 1 ] } 'W' DEF 'W' DEL"
+      },
+      "executorKey": "Del",
+      "effects": [
+        "dictionaryDelete"
+      ]
+    },
+    {
+      "name": "LOOKUP",
+      "aliases": [
+        "?"
+      ],
+      "family": "dictionaryMutation",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidName",
+        "wordNotFound"
+      ],
+      "purity": "observational",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MUTATION",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Display the documentation for a named word.",
+        "hover": "Display the documentation for a named word.",
+        "lookup": "Display the documentation for a named word.",
+        "syntax": "'ADD' ?"
+      },
+      "executorKey": "Lookup",
+      "effects": [
+        "dictionaryRead"
+      ]
+    },
+    {
+      "name": "IMPORT",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Load all public words of a module into the dictionary.",
+        "hover": "Load all public words of a module into the dictionary.",
+        "lookup": "Load all public words of a module into the dictionary.",
+        "syntax": "'IO' IMPORT"
+      },
+      "executorKey": "Import",
+      "effects": [
+        "dictionaryImport"
+      ]
+    },
+    {
+      "name": "IMPORT-ONLY",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Load only the listed public words of a module.",
+        "hover": "Load only the listed public words of a module.",
+        "lookup": "Load only the listed public words of a module.",
+        "syntax": "'json' [ 'parse' ] IMPORT-ONLY"
+      },
+      "executorKey": "ImportOnly",
+      "effects": [
+        "dictionaryImportOnly"
+      ]
+    },
+    {
+      "name": "UNIMPORT",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "hover": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "lookup": "Hide unused imported words from a module while keeping words referenced by user definitions.",
+        "syntax": "'IO' UNIMPORT"
+      },
+      "executorKey": "Unimport",
+      "effects": [
+        "dictionaryUnimport"
+      ]
+    },
+    {
+      "name": "UNIMPORT-ONLY",
+      "aliases": [],
+      "family": "moduleResolution",
+      "stack": {
+        "inputs": 2,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidModule",
+        "unknownPublicWord",
+        "dependencyConflict"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.DICTIONARY.MODULES",
+        "LANG.DICTIONARY.RESOLUTION"
+      ],
+      "documentation": {
+        "summary": "Hide only the listed imported module words.",
+        "hover": "Hide only the listed imported module words.",
+        "lookup": "Hide only the listed imported module words.",
+        "syntax": "'json' [ 'parse' ] UNIMPORT-ONLY"
+      },
+      "executorKey": "UnimportOnly",
+      "effects": [
+        "dictionaryUnimportOnly"
+      ]
+    },
+    {
+      "name": "GET",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "indexOutOfBounds",
+        "reason": "indexOutOfBounds"
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidIndex"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Extract one element of a vector by index.",
+        "hover": "Extract one element of a vector by index.",
+        "lookup": "Extract one element of a vector by index.",
+        "syntax": "[ 10 20 30 ] [ 0 ] GET"
+      },
+      "executorKey": "Get"
+    },
+    {
+      "name": "INSERT",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidIndexPair"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Insert a value at a given index in a vector.",
+        "hover": "Insert a value at a given index in a vector.",
+        "lookup": "Insert a value at a given index in a vector.",
+        "syntax": "[ 1 3 ] [ 1 2 ] INSERT"
+      },
+      "executorKey": "Insert"
+    },
+    {
+      "name": "REPLACE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidIndexPair",
+        "indexOutOfBounds"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Replace an element of a vector at a given index.",
+        "hover": "Replace an element of a vector at a given index.",
+        "lookup": "Replace an element of a vector at a given index.",
+        "syntax": "[ 1 2 3 ] [ 0 9 ] REPLACE"
+      },
+      "executorKey": "Replace"
+    },
+    {
+      "name": "REMOVE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidIndex",
+        "indexOutOfBounds"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Remove an element from a vector at a given index.",
+        "hover": "Remove an element from a vector at a given index.",
+        "lookup": "Remove an element from a vector at a given index.",
+        "syntax": "[ 1 2 3 ] [ 0 ] REMOVE"
+      },
+      "executorKey": "Remove"
+    },
+    {
+      "name": "LENGTH",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Return the number of elements in a vector.",
+        "hover": "Return the number of elements in a vector.",
+        "lookup": "Return the number of elements in a vector.",
+        "syntax": "[ 1 2 3 ] LENGTH"
+      },
+      "executorKey": "Length"
+    },
+    {
+      "name": "TAKE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidCount"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Take the first N or last -N elements of a vector.",
+        "hover": "Take the first N or last -N elements of a vector.",
+        "lookup": "Take the first N or last -N elements of a vector.",
+        "syntax": "[ 1 2 3 4 5 ] [ 3 ] TAKE"
+      },
+      "executorKey": "Take"
+    },
+    {
+      "name": "SPLIT",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": "variable"
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidSizes"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Split a vector into chunks at the specified sizes.",
+        "hover": "Split a vector into chunks at the specified sizes.",
+        "lookup": "Split a vector into chunks at the specified sizes.",
+        "syntax": "[ 1 2 3 4 ] [ 2 2 ] SPLIT"
+      },
+      "executorKey": "Split"
+    },
+    {
+      "name": "CONCAT",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Flatten and concatenate two vectors.",
+        "hover": "Flatten and concatenate two vectors.",
+        "lookup": "Flatten and concatenate two vectors.",
+        "syntax": "[ 1 2 ] [ 3 4 ] CONCAT"
+      },
+      "executorKey": "Concat"
+    },
+    {
+      "name": "REVERSE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Reverse the order of vector elements.",
+        "hover": "Reverse the order of vector elements.",
+        "lookup": "Reverse the order of vector elements.",
+        "syntax": "[ 1 2 3 ] REVERSE"
+      },
+      "executorKey": "Reverse"
+    },
+    {
+      "name": "REORDER",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "invalidPermutation"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Reorder vector elements according to an index permutation.",
+        "hover": "Reorder vector elements according to an index permutation.",
+        "lookup": "Reorder vector elements according to an index permutation.",
+        "syntax": "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER"
+      },
+      "executorKey": "Reorder"
+    },
+    {
+      "name": "COLLECT",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": "variable",
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "invalidCount",
+        "stackUnderflow"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Collect N items off the stack into a new vector.",
+        "hover": "Collect N items off the stack into a new vector.",
+        "lookup": "Collect N items off the stack into a new vector.",
+        "syntax": "1 2 3 3 COLLECT"
+      },
+      "executorKey": "Collect"
+    },
+    {
+      "name": "SHAPE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedValueKind"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Return a vector describing the dimensions of a value.",
+        "hover": "Return a vector describing the dimensions of a value.",
+        "lookup": "Return a vector describing the dimensions of a value.",
+        "syntax": "[ 1 2 3 ] SHAPE"
+      },
+      "executorKey": "Shape"
+    },
+    {
+      "name": "RANK",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "unsupportedValueKind"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Return the number of dimensions of a value.",
+        "hover": "Return the number of dimensions of a value.",
+        "lookup": "Return the number of dimensions of a value.",
+        "syntax": "[ [ 1 2 ] ] RANK"
+      },
+      "executorKey": "Rank"
+    },
+    {
+      "name": "RESHAPE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Reshape a vector to a target shape with the same total length.",
+        "hover": "Reshape a vector to a target shape with the same total length.",
+        "lookup": "Reshape a vector to a target shape with the same total length.",
+        "syntax": "[ 1 2 3 4 ] [ 2 2 ] RESHAPE"
+      },
+      "executorKey": "Reshape"
+    },
+    {
+      "name": "TRANSPOSE",
+      "aliases": [],
+      "family": "collectionShape",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTensor",
+        "raggedShape"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE"
+      ],
+      "documentation": {
+        "summary": "Transpose the axes of a tensor.",
+        "hover": "Transpose the axes of a tensor.",
+        "lookup": "Transpose the axes of a tensor.",
+        "syntax": "[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE"
+      },
+      "executorKey": "Transpose"
+    },
+    {
+      "name": "RANGE",
+      "aliases": [],
+      "family": "generativeCollection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "materializationBudgetExceeded",
+        "reason": "spaceExhausted"
+      },
+      "errorWhen": [
+        "invalidRange"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.COLLECTIONS.BUDGET"
+      ],
+      "documentation": {
+        "summary": "Generate a numeric sequence from a [start, end] pair.",
+        "hover": "Generate a numeric sequence from a [start, end] pair.",
+        "lookup": "Generate a numeric sequence from a [start, end] pair.",
+        "syntax": "[ 0 5 ] RANGE"
+      },
+      "executorKey": "Range"
+    },
+    {
+      "name": "FILL",
+      "aliases": [],
+      "family": "generativeCollection",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "materializationBudgetExceeded",
+        "reason": "spaceExhausted"
+      },
+      "errorWhen": [
+        "invalidShape"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.COLLECTIONS.BUDGET"
+      ],
+      "documentation": {
+        "summary": "Fill a target shape with a constant value.",
+        "hover": "Fill a target shape with a constant value.",
+        "lookup": "Fill a target shape with a constant value.",
+        "syntax": "[ 2 2 0 ] FILL"
+      },
+      "executorKey": "Fill"
+    },
+    {
+      "name": "MAP",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Apply a code block to each element of a vector.",
+        "hover": "Apply a code block to each element of a vector.",
+        "lookup": "Apply a code block to each element of a vector.",
+        "syntax": "[ 1 2 3 ] { [ 2 ] * } MAP"
+      },
+      "executorKey": "Map"
+    },
+    {
+      "name": "FILTER",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Keep only the elements for which a predicate block returns TRUE.",
+        "hover": "Keep only the elements for which a predicate block returns TRUE.",
+        "lookup": "Keep only the elements for which a predicate block returns TRUE.",
+        "syntax": "[ 1 2 3 ] { [ 2 ] = } FILTER"
+      },
+      "executorKey": "Filter"
+    },
+    {
+      "name": "FOLD",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Reduce a vector to a single value using an initial accumulator and combiner block.",
+        "hover": "Reduce a vector to a single value using an initial accumulator and combiner block.",
+        "lookup": "Reduce a vector to a single value using an initial accumulator and combiner block.",
+        "syntax": "[ 1 2 3 ] [ 0 ] { + } FOLD"
+      },
+      "executorKey": "Fold"
+    },
+    {
+      "name": "UNFOLD",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Generate a sequence by repeatedly applying a state transition.",
+        "hover": "Generate a sequence by repeatedly applying a state transition.",
+        "lookup": "Generate a sequence by repeatedly applying a state transition.",
+        "syntax": "[ 1 ] { ... COND } UNFOLD"
+      },
+      "executorKey": "Unfold"
+    },
+    {
+      "name": "ANY",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "TRUE if at least one element satisfies the predicate.",
+        "hover": "TRUE if at least one element satisfies the predicate.",
+        "lookup": "TRUE if at least one element satisfies the predicate.",
+        "syntax": "[ 1 2 3 ] { [ 2 ] = } ANY"
+      },
+      "executorKey": "Any"
+    },
+    {
+      "name": "ALL",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truthValue",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "TRUE if every element satisfies the predicate.",
+        "hover": "TRUE if every element satisfies the predicate.",
+        "lookup": "TRUE if every element satisfies the predicate.",
+        "syntax": "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL"
+      },
+      "executorKey": "All"
+    },
+    {
+      "name": "COUNT",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Count the elements that satisfy the predicate.",
+        "hover": "Count the elements that satisfy the predicate.",
+        "lookup": "Count the elements that satisfy the predicate.",
+        "syntax": "[ 1 2 3 ] { [ 2 ] = } COUNT"
+      },
+      "executorKey": "Count"
+    },
+    {
+      "name": "SCAN",
+      "aliases": [],
+      "family": "higherOrder",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonVector",
+        "nonCodeBlock",
+        "blockContractViolation"
+      ],
+      "purity": "conditional",
+      "determinism": "stateRelative",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.COLLECTIONS.HIGHER",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Return a vector of intermediate fold accumulators.",
+        "hover": "Return a vector of intermediate fold accumulators.",
+        "lookup": "Return a vector of intermediate fold accumulators.",
+        "syntax": "[ 1 2 3 ] [ 0 ] { + } SCAN"
+      },
+      "executorKey": "Scan"
+    },
+    {
+      "name": "ADD",
+      "aliases": [
+        "+"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Add two numeric values, element-wise with broadcasting.",
+        "hover": "Add two numeric values, element-wise with broadcasting.",
+        "lookup": "Add two numeric values, element-wise with broadcasting.",
+        "syntax": "1 2 +"
+      },
+      "executorKey": "Add"
+    },
+    {
+      "name": "SUB",
+      "aliases": [
+        "-"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Subtract two numeric values, element-wise with broadcasting.",
+        "hover": "Subtract two numeric values, element-wise with broadcasting.",
+        "lookup": "Subtract two numeric values, element-wise with broadcasting.",
+        "syntax": "5 3 -"
+      },
+      "executorKey": "Sub"
+    },
+    {
+      "name": "MUL",
+      "aliases": [
+        "*"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Multiply two numeric values, element-wise with broadcasting.",
+        "hover": "Multiply two numeric values, element-wise with broadcasting.",
+        "lookup": "Multiply two numeric values, element-wise with broadcasting.",
+        "syntax": "2 4 *"
+      },
+      "executorKey": "Mul"
+    },
+    {
+      "name": "DIV",
+      "aliases": [
+        "/"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "divisorEqualsZero",
+        "reason": "divisionByZero"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Divide two numeric values exactly (fractional result).",
+        "hover": "Divide two numeric values exactly (fractional result).",
+        "lookup": "Divide two numeric values exactly (fractional result).",
+        "syntax": "10 2 /"
+      },
+      "executorKey": "Div"
+    },
+    {
+      "name": "MOD",
+      "aliases": [
+        "%"
+      ],
+      "family": "liftedBinaryExactArithmetic",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch",
+        "divisorEqualsZero"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Modulo (remainder) of two numeric values.",
+        "hover": "Modulo (remainder) of two numeric values.",
+        "lookup": "Modulo (remainder) of two numeric values.",
+        "syntax": "7 3 %"
+      },
+      "executorKey": "Mod"
+    },
+    {
+      "name": "FLOOR",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round toward negative infinity.",
+        "hover": "Round toward negative infinity.",
+        "lookup": "Round toward negative infinity.",
+        "syntax": "[ 7/3 ] FLOOR"
+      },
+      "executorKey": "Floor"
+    },
+    {
+      "name": "CEIL",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round toward positive infinity.",
+        "hover": "Round toward positive infinity.",
+        "lookup": "Round toward positive infinity.",
+        "syntax": "[ 7/3 ] CEIL"
+      },
+      "executorKey": "Ceil"
+    },
+    {
+      "name": "ROUND",
+      "aliases": [],
+      "family": "liftedUnaryExactArithmetic",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "integerProjectionUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Round to nearest integer (half-up).",
+        "hover": "Round to nearest integer (half-up).",
+        "lookup": "Round to nearest integer (half-up).",
+        "syntax": "[ 5/2 ] ROUND"
+      },
+      "executorKey": "Round"
+    },
+    {
+      "name": "QUANTIZE",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "hover": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "lookup": "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
+        "syntax": "100/3 1/100 QUANTIZE"
+      },
+      "executorKey": "Quantize"
+    },
+    {
+      "name": "QUANTIZE-HALF-AWAY",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
+        "syntax": "5/2 1 QUANTIZE-HALF-AWAY"
+      },
+      "executorKey": "QuantizeHalfAway"
+    },
+    {
+      "name": "QUANTIZE-FLOOR",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-FLOOR"
+      },
+      "executorKey": "QuantizeFloor"
+    },
+    {
+      "name": "QUANTIZE-CEIL",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-CEIL"
+      },
+      "executorKey": "QuantizeCeil"
+    },
+    {
+      "name": "QUANTIZE-TRUNC",
+      "aliases": [],
+      "family": "exactQuantization",
+      "stack": {
+        "inputs": 2,
+        "outputs": 2
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthroughThenProject",
+      "projection": {
+        "when": "operandUndecidable",
+        "reason": "undecidable"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonPositiveStep",
+        "shapeMismatch"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "rawNumber",
+      "clauses": [
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "hover": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "lookup": "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
+        "syntax": "100/3 1/100 QUANTIZE-TRUNC"
+      },
+      "executorKey": "QuantizeTrunc"
+    },
+    {
+      "name": "PRINT",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "retain",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "console",
+      "effects": [
+        "consoleWrite"
+      ],
+      "hostedEffect": "consoleWrite",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "hover": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "lookup": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "syntax": "42 PRINT"
+      },
+      "executorKey": "Print"
+    },
+    {
+      "name": "SPAWN",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonCodeBlock"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "processHandle",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Spawn an isolated child runtime from a code block.",
+        "hover": "Spawn an isolated child runtime from a code block.",
+        "lookup": "Spawn an isolated child runtime from a code block.",
+        "syntax": "{ 1 2 + } SPAWN"
+      },
+      "executorKey": "Spawn"
+    },
+    {
+      "name": "AWAIT",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Wait for a child runtime to finish and return its exit tuple.",
+        "hover": "Wait for a child runtime to finish and return its exit tuple.",
+        "lookup": "Wait for a child runtime to finish and return its exit tuple.",
+        "syntax": "{ 1 2 + } SPAWN AWAIT"
+      },
+      "executorKey": "Await"
+    },
+    {
+      "name": "STATUS",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Read the current status of a child runtime.",
+        "hover": "Read the current status of a child runtime.",
+        "lookup": "Read the current status of a child runtime.",
+        "syntax": "{ 1 2 + } SPAWN STATUS"
+      },
+      "executorKey": "Status"
+    },
+    {
+      "name": "KILL",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Forcibly terminate a child runtime.",
+        "hover": "Forcibly terminate a child runtime.",
+        "lookup": "Forcibly terminate a child runtime.",
+        "syntax": "{ 1 2 + } SPAWN KILL"
+      },
+      "executorKey": "Kill"
+    },
+    {
+      "name": "MONITOR",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonChildHandle"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "processHandle",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Register a monitor on a child handle.",
+        "hover": "Register a monitor on a child handle.",
+        "lookup": "Register a monitor on a child handle.",
+        "syntax": "{ 1 2 + } SPAWN MONITOR"
+      },
+      "executorKey": "Monitor"
+    },
+    {
+      "name": "SUPERVISE",
+      "aliases": [],
+      "family": "childRuntime",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "restartPolicyExhausted",
+        "reason": "childFailed"
+      },
+      "errorWhen": [
+        "nonCodeBlock",
+        "invalidRetryPolicy"
+      ],
+      "purity": "effectful",
+      "determinism": "stateRelative",
+      "capability": "childRuntime",
+      "effects": [
+        "runtimeControl"
+      ],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.EFFECTS.CHILD",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Run a code block under a one-for-one restart policy.",
+        "hover": "Run a code block under a one-for-one restart policy.",
+        "lookup": "Run a code block under a one-for-one restart policy.",
+        "syntax": "{ 1 2 + } [ 3 ] SUPERVISE"
+      },
+      "executorKey": "Supervise"
+    },
+    {
+      "name": ">CF",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonNumericScalar"
+      ],
+      "interpretationRole": "continuedFraction",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "hover": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "lookup": "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
+        "syntax": "1/3 >CF"
+      },
+      "executorKey": "ToCf"
+    },
+    {
+      "name": "CHARS",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Split a string into a vector of one-character strings.",
+        "hover": "Split a string into a vector of one-character strings.",
+        "lookup": "Split a string into a vector of one-character strings.",
+        "syntax": "'hi' CHARS"
+      },
+      "executorKey": "Chars"
+    },
+    {
+      "name": "JOIN",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonTextVector",
+        "nonTextElement"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Join a vector of strings into a single string.",
+        "hover": "Join a vector of strings into a single string.",
+        "lookup": "Join a vector of strings into a single string.",
+        "syntax": "[ 'h' 'i' ] JOIN"
+      },
+      "executorKey": "Join"
+    },
+    {
+      "name": "TRIM",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from both ends of a string.",
+        "hover": "Remove whitespace from both ends of a string.",
+        "lookup": "Remove whitespace from both ends of a string.",
+        "syntax": "'  hi  ' TRIM"
+      },
+      "executorKey": "Trim"
+    },
+    {
+      "name": "TRIM-LEFT",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from the start of a string.",
+        "hover": "Remove whitespace from the start of a string.",
+        "lookup": "Remove whitespace from the start of a string.",
+        "syntax": "'  hi' TRIM-LEFT"
+      },
+      "executorKey": "TrimLeft"
+    },
+    {
+      "name": "TRIM-RIGHT",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Remove whitespace from the end of a string.",
+        "hover": "Remove whitespace from the end of a string.",
+        "lookup": "Remove whitespace from the end of a string.",
+        "syntax": "'hi  ' TRIM-RIGHT"
+      },
+      "executorKey": "TrimRight"
+    },
+    {
+      "name": "TOKENIZE",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextSeparator"
+      ],
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Split a string into a vector of substrings using a separator.",
+        "hover": "Split a string into a vector of substrings using a separator.",
+        "lookup": "Split a string into a vector of substrings using a separator.",
+        "syntax": "'a,b,c' ',' TOKENIZE"
+      },
+      "executorKey": "Tokenize"
+    },
+    {
+      "name": "SUBSTITUTE",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Replace every occurrence of a substring with another.",
+        "hover": "Replace every occurrence of a substring with another.",
+        "lookup": "Replace every occurrence of a substring with another.",
+        "syntax": "'hello' 'l' 'L' SUBSTITUTE"
+      },
+      "executorKey": "Substitute"
+    },
+    {
+      "name": "STARTS-WITH?",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextPrefix"
+      ],
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Test whether a string begins with the given prefix.",
+        "hover": "Test whether a string begins with the given prefix.",
+        "lookup": "Test whether a string begins with the given prefix.",
+        "syntax": "'hello' 'he' STARTS-WITH?"
+      },
+      "executorKey": "StartsWith"
+    },
+    {
+      "name": "ENDS-WITH?",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "nonText",
+        "nonTextSuffix"
+      ],
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Test whether a string ends with the given suffix.",
+        "hover": "Test whether a string ends with the given suffix.",
+        "lookup": "Test whether a string ends with the given suffix.",
+        "syntax": "'hello' 'lo' ENDS-WITH?"
+      },
+      "executorKey": "EndsWith"
+    },
+    {
+      "name": "NUM",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "parseFailure",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "nonText"
+      ],
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse text as a number; Bubble/NIL on parse failure.",
+        "hover": "Parse text as a number; Bubble/NIL on parse failure.",
+        "lookup": "Parse text as a number; Bubble/NIL on parse failure.",
+        "syntax": "'42' NUM"
+      },
+      "executorKey": "Num"
+    },
+    {
+      "name": "STR",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Convert a value to its string representation.",
+        "hover": "Convert a value to its string representation.",
+        "lookup": "Convert a value to its string representation.",
+        "syntax": "42 STR"
+      },
+      "executorKey": "Str"
+    },
+    {
+      "name": "CHR",
+      "aliases": [],
+      "consumption": "eat",
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "conversion",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "invalidCharacterCode",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "nonNumeric",
+        "nonInteger"
+      ],
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.ROLES",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Convert a numeric character code to a single-character string.",
+        "hover": "Convert a numeric character code to a single-character string.",
+        "lookup": "Convert a numeric character code to a single-character string.",
+        "syntax": "65 CHR"
+      },
+      "executorKey": "Chr"
+    },
+    {
+      "name": "PRECOMPUTE",
+      "aliases": [],
+      "consumption": "conditional",
+      "purity": "conditional",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "family": "control",
+      "stack": {
+        "inputs": "variable",
+        "outputs": "variable"
+      },
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "outsideDefinition",
+        "nonCodeBlock"
+      ],
+      "interpretationRole": "definitionTime",
+      "clauses": [
+        "LANG.SOURCE.CODE",
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Definition-time staging marker (not a macro).",
+        "hover": "Definition-time staging marker (not a macro).",
+        "lookup": "Definition-time staging marker (not a macro).",
+        "syntax": "{ ... } PRECOMPUTE"
+      },
+      "executorKey": "Precompute"
+    },
+    {
+      "name": "DATA@CSV-PARSE",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedOrRaggedCsv",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse CSV text into a vector of Records (the first row is the header).",
+        "hover": "Parse CSV text into a vector of Records (the first row is the header).",
+        "lookup": "Parse CSV text into a vector of Records (the first row is the header).",
+        "syntax": "'name,age\\nAjisai,1' DATA@CSV-PARSE"
+      },
+      "executorKey": "data_ops::op_csv_parse"
+    },
+    {
+      "name": "DATA@CSV-STRINGIFY",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonRectangularRecordVector",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Render a vector of Records as CSV text sharing one column shape.",
+        "hover": "Render a vector of Records as CSV text sharing one column shape.",
+        "lookup": "Render a vector of Records as CSV text sharing one column shape.",
+        "syntax": "[ record... ] DATA@CSV-STRINGIFY"
+      },
+      "executorKey": "data_ops::op_csv_stringify"
+    },
+    {
+      "name": "DATA@SELECT",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrColumns",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Project a table onto the named columns, in order.",
+        "hover": "Project a table onto the named columns, in order.",
+        "lookup": "Project a table onto the named columns, in order.",
+        "syntax": "[ record... ] [ 'name' ] DATA@SELECT"
+      },
+      "executorKey": "data_ops::op_select"
+    },
+    {
+      "name": "DATA@WHERE",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableColumnOrPredicate",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [
+        "predicateEvaluationError"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Keep the rows whose predicate on a named column is true.",
+        "hover": "Keep the rows whose predicate on a named column is true.",
+        "lookup": "Keep the rows whose predicate on a named column is true.",
+        "syntax": "[ record... ] 'age' { [ 0 ] > } DATA@WHERE"
+      },
+      "executorKey": "data_ops::op_where"
+    },
+    {
+      "name": "DATA@GROUP",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrColumn",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "groups",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Group rows by a column into { key, rows } group records.",
+        "hover": "Group rows by a column into { key, rows } group records.",
+        "lookup": "Group rows by a column into { key, rows } group records.",
+        "syntax": "[ record... ] 'kind' DATA@GROUP"
+      },
+      "executorKey": "data_ops::op_group"
+    },
+    {
+      "name": "DATA@JOIN",
+      "module": "DATA",
+      "aliases": [],
+      "family": "dataTable",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "malformedTableOrKey",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "table",
+      "clauses": [
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.COLLECTIONS.SHAPE",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Left-join two tables on a shared key column.",
+        "hover": "Left-join two tables on a shared key column.",
+        "lookup": "Left-join two tables on a shared key column.",
+        "syntax": "[ left... ] [ right... ] 'id' DATA@JOIN"
+      },
+      "executorKey": "data_ops::op_join"
+    },
+    {
+      "name": "JSON@PARSE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "invalidJsonEncoding",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse a JSON string into an Ajisai value.",
+        "hover": "Parse a JSON string into an Ajisai value.",
+        "lookup": "Parse a JSON string into an Ajisai value.",
+        "syntax": "'{\"x\":1}' JSON@PARSE"
+      },
+      "executorKey": "json::op_parse"
+    },
+    {
+      "name": "JSON@STRINGIFY",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Serialise an Ajisai value to a JSON string.",
+        "hover": "Serialise an Ajisai value to a JSON string.",
+        "lookup": "Serialise an Ajisai value to a JSON string.",
+        "syntax": "[ 1 2 ] JSON@STRINGIFY"
+      },
+      "executorKey": "json::op_stringify"
+    },
+    {
+      "name": "JSON@GET",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "missingKeyOrNonObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Look up a key in a JSON object.",
+        "hover": "Look up a key in a JSON object.",
+        "lookup": "Look up a key in a JSON object.",
+        "syntax": "record 'x' JSON@GET"
+      },
+      "executorKey": "json::op_json_get"
+    },
+    {
+      "name": "JSON@KEYS",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObjectOrEmptyObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return all keys of a JSON object as a vector.",
+        "hover": "Return all keys of a JSON object as a vector.",
+        "lookup": "Return all keys of a JSON object as a vector.",
+        "syntax": "record JSON@KEYS"
+      },
+      "executorKey": "json::op_json_keys"
+    },
+    {
+      "name": "JSON@SET",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a JSON object with the given key bound to the given value.",
+        "hover": "Return a JSON object with the given key bound to the given value.",
+        "lookup": "Return a JSON object with the given key bound to the given value.",
+        "syntax": "record 'x' 1 JSON@SET"
+      },
+      "executorKey": "json::op_json_set"
+    },
+    {
+      "name": "JSON@HAS",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "True if a JSON object contains the given key.",
+        "hover": "True if a JSON object contains the given key.",
+        "lookup": "True if a JSON object contains the given key.",
+        "syntax": "record 'x' JSON@HAS"
+      },
+      "executorKey": "json::op_json_has"
+    },
+    {
+      "name": "JSON@VALUES",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObjectOrEmptyObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return all values of a JSON object as a vector.",
+        "hover": "Return all values of a JSON object as a vector.",
+        "lookup": "Return all values of a JSON object as a vector.",
+        "syntax": "record JSON@VALUES"
+      },
+      "executorKey": "json::op_json_values"
+    },
+    {
+      "name": "JSON@MERGE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Merge two JSON objects; right-hand keys win on conflict.",
+        "hover": "Merge two JSON objects; right-hand keys win on conflict.",
+        "lookup": "Merge two JSON objects; right-hand keys win on conflict.",
+        "syntax": "base overlay JSON@MERGE"
+      },
+      "executorKey": "json::op_json_merge"
+    },
+    {
+      "name": "JSON@DELETE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a JSON object with the given key removed.",
+        "hover": "Return a JSON object with the given key removed.",
+        "lookup": "Return a JSON object with the given key removed.",
+        "syntax": "record 'x' JSON@DELETE"
+      },
+      "executorKey": "json::op_json_delete"
+    },
+    {
+      "name": "JSON@EXPORT",
+      "module": "JSON",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "jsonExport",
+      "effects": [
+        "fileWrite"
+      ],
+      "hostedEffect": "jsonExport",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Export the top of the stack as a downloadable JSON file.",
+        "hover": "Export the top of the stack as a downloadable JSON file.",
+        "lookup": "Export the top of the stack as a downloadable JSON file.",
+        "syntax": "value JSON@EXPORT"
+      },
+      "executorKey": "json::op_json_export"
+    },
+    {
+      "name": "IO@INPUT",
+      "module": "IO",
+      "aliases": [],
+      "family": "observation",
+      "stack": {
+        "inputs": 0,
+        "outputs": 1
+      },
+      "consumption": "none",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "observational",
+      "determinism": "hostRelative",
+      "capability": "effect",
+      "effects": [
+        "ioRead"
+      ],
+      "hostedEffect": "inputRead",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Read text from the host input buffer.",
+        "hover": "Read text from the host input buffer.",
+        "lookup": "Read text from the host input buffer.",
+        "syntax": "IO@INPUT"
+      },
+      "executorKey": "json::op_input"
+    },
+    {
+      "name": "IO@OUTPUT",
+      "module": "IO",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "preserveReason",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "effect",
+      "effects": [
+        "ioWrite"
+      ],
+      "hostedEffect": "outputWrite",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Write a value to the host output buffer.",
+        "hover": "Write a value to the host output buffer.",
+        "lookup": "Write a value to the host output buffer.",
+        "syntax": "value IO@OUTPUT"
+      },
+      "executorKey": "json::op_output"
+    },
+    {
+      "name": "CRYPTO@CSPRNG",
+      "module": "CRYPTO",
+      "aliases": [],
+      "family": "observation",
+      "stack": {
+        "inputs": "variable",
+        "outputs": 1
+      },
+      "consumption": "conditional",
+      "nilPolicy": "inspectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "countTooLarge",
+        "nonPositiveDenominator",
+        "hostEntropyFailure"
+      ],
+      "purity": "observational",
+      "determinism": "hostRelative",
+      "capability": "secureRandom",
+      "effects": [
+        "randomRead"
+      ],
+      "hostedEffect": "secureRandomRead",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER",
+        "LANG.OBSERVATION.PROJECTIONS"
+      ],
+      "documentation": {
+        "summary": "Generate cryptographically secure random rationals with the given denominator.",
+        "hover": "Generate cryptographically secure random rationals with the given denominator.",
+        "lookup": "Generate cryptographically secure random rationals with the given denominator.",
+        "syntax": "[ denominator ] [ count ] CRYPTO@CSPRNG"
+      },
+      "executorKey": "random::op_csprng"
+    },
+    {
+      "name": "CRYPTO@HASH",
+      "module": "CRYPTO",
+      "aliases": [],
+      "family": "cryptoDigest",
+      "stack": {
+        "inputs": "variable",
+        "outputs": 1
+      },
+      "consumption": "conditional",
+      "nilPolicy": "consumeNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "stackTargetMode",
+        "missingValue",
+        "invalidBitWidth"
+      ],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "exactScalar",
+      "clauses": [
+        "LANG.MACHINE.TRANSFORMERS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "hover": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "lookup": "Compute a cryptographic hash of a value at a chosen bit width.",
+        "syntax": "[ bits ] value CRYPTO@HASH"
+      },
+      "executorKey": "hash::op_hash"
+    }
+  ]
+}
