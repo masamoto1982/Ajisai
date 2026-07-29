@@ -24,10 +24,11 @@
       "algorithm-collection",
       "exact-interval",
       "exact-math",
-      "calendar-time"
+      "calendar-time",
+      "serial-effects"
     ],
     "completeInventory": false,
-    "entryCount": 157
+    "entryCount": 164
   },
   "entries": [
     {
@@ -5812,6 +5813,296 @@
         "syntax": "date 1 TIME@ADD-YEARS"
       },
       "executorKey": "time_ops::op_add_years"
+    },
+    {
+      "name": "SERIAL@LIST-PORTS",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 0,
+        "outputs": 0
+      },
+      "consumption": "none",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialQuery"
+      ],
+      "hostedEffect": "serialQuery",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Ask the host to enumerate available serial ports.",
+        "hover": "Ask the host to enumerate available serial ports.",
+        "lookup": "Ask the host to enumerate available serial ports.",
+        "syntax": "SERIAL@LIST-PORTS"
+      },
+      "executorKey": "serial::op_list_ports"
+    },
+    {
+      "name": "SERIAL@OPEN",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialControl"
+      ],
+      "hostedEffect": "serialControl",
+      "interpretationRole": "portHandle",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Open a serial port by id; leaves the port handle on the stack.",
+        "hover": "Open a serial port by id; leaves the port handle on the stack.",
+        "lookup": "Open a serial port by id; leaves the port handle on the stack.",
+        "syntax": "'port-id' SERIAL@OPEN"
+      },
+      "executorKey": "serial::op_open"
+    },
+    {
+      "name": "SERIAL@CONFIGURE",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialControl"
+      ],
+      "hostedEffect": "serialControl",
+      "interpretationRole": "portHandle",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Set the baud rate of an open serial port.",
+        "hover": "Set the baud rate of an open serial port.",
+        "lookup": "Set the baud rate of an open serial port.",
+        "syntax": "handle 115200 SERIAL@CONFIGURE"
+      },
+      "executorKey": "serial::op_configure"
+    },
+    {
+      "name": "SERIAL@WRITE",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialWrite"
+      ],
+      "hostedEffect": "serialWrite",
+      "interpretationRole": "portHandle",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Write a byte vector to an open serial port.",
+        "hover": "Write a byte vector to an open serial port.",
+        "lookup": "Write a byte vector to an open serial port.",
+        "syntax": "handle [ 1 2 ] SERIAL@WRITE"
+      },
+      "executorKey": "serial::op_write"
+    },
+    {
+      "name": "SERIAL@READ",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "noDataOrDisconnected",
+        "reason": [
+          "noData",
+          "portDisconnected"
+        ]
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialRead"
+      ],
+      "hostedEffect": "serialRead",
+      "interpretationRole": "byteVector",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Drain received bytes from an open serial port; Bubble/NIL when none.",
+        "hover": "Drain received bytes from an open serial port; Bubble/NIL when none.",
+        "lookup": "Drain received bytes from an open serial port; Bubble/NIL when none.",
+        "syntax": "handle SERIAL@READ"
+      },
+      "executorKey": "serial::op_read"
+    },
+    {
+      "name": "SERIAL@FLUSH",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialControl"
+      ],
+      "hostedEffect": "serialControl",
+      "interpretationRole": "portHandle",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Flush the outgoing buffer of an open serial port.",
+        "hover": "Flush the outgoing buffer of an open serial port.",
+        "lookup": "Flush the outgoing buffer of an open serial port.",
+        "syntax": "handle SERIAL@FLUSH"
+      },
+      "executorKey": "serial::op_flush"
+    },
+    {
+      "name": "SERIAL@CLOSE",
+      "module": "SERIAL",
+      "aliases": [],
+      "family": "serialEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [
+        "missingSerialCapability",
+        "invalidSerialArgument",
+        "hostSerialFailure"
+      ],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "serial",
+      "effects": [
+        "serialControl"
+      ],
+      "hostedEffect": "serialControl",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "documentation": {
+        "summary": "Close an open serial port.",
+        "hover": "Close an open serial port.",
+        "lookup": "Close an open serial port.",
+        "syntax": "handle SERIAL@CLOSE"
+      },
+      "executorKey": "serial::op_close"
     }
   ]
 }

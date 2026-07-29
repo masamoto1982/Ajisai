@@ -212,6 +212,16 @@
       "hostClock": "capabilityMediated"
     },
     {
+      "id": "serialEffect",
+      "clauses": [
+        "LANG.MACHINE.ORDER",
+        "LANG.FAILURE.TRICHOTOMY",
+        "LANG.EFFECTS.HOSTED"
+      ],
+      "capability": "serial",
+      "effectOrder": "requestOrder"
+    },
+    {
       "id": "exactQuantization",
       "clauses": [
         "LANG.VALUES.EXACT",

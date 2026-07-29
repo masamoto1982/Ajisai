@@ -101,3 +101,8 @@ The seventh Module-Word slice migrates all eighteen `TIME` contracts. Host
 clock observation, pure civil-time conversion, field extraction, calendar
 arithmetic, formatting, and reasoned ISO parse failure remain separate axes.
 Thirty-seven Module Words remain deferred.
+
+The eighth Module-Word slice migrates all seven `SERIAL` contracts. Serial
+capability, ordered query/control/read/write effects, handle roles, host ERROR,
+and the `noData` versus `portDisconnected` NIL reasons remain independently
+represented. Thirty Module Words remain deferred.

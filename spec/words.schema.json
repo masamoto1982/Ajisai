@@ -24,7 +24,14 @@
     "arity": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "enum": ["control", "variable"] }] },
     "projection": {
       "type": "object", "required": ["when", "reason"],
-      "properties": { "when": { "type": "string", "minLength": 1 }, "reason": { "type": ["string", "null"] } },
+      "properties": {
+        "when": { "type": "string", "minLength": 1 },
+        "reason": { "oneOf": [
+          { "type": "string", "minLength": 1 },
+          { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+          { "type": "null" }
+        ] }
+      },
       "additionalProperties": false
     },
     "documentation": {
@@ -42,7 +49,7 @@
         "name": { "type": "string", "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$" },
         "module": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" },
         "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder", "liftedBinaryExactArithmetic", "liftedUnaryExactArithmetic", "exactQuantization", "hostedEffect", "childRuntime", "conversion", "dataTable", "jsonValue", "observation", "cryptoDigest", "algorithmCollection", "exactInterval", "exactMath", "calendarTime"] },
+        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder", "liftedBinaryExactArithmetic", "liftedUnaryExactArithmetic", "exactQuantization", "hostedEffect", "childRuntime", "conversion", "dataTable", "jsonValue", "observation", "cryptoDigest", "algorithmCollection", "exactInterval", "exactMath", "calendarTime", "serialEffect"] },
         "stack": { "type": "object", "required": ["inputs", "outputs"], "properties": { "inputs": { "$ref": "#/$defs/arity" }, "outputs": { "$ref": "#/$defs/arity" } }, "additionalProperties": false },
         "consumption": { "enum": ["none", "eat", "retain", "conditional"] },
         "nilPolicy": { "enum": ["preserveReason", "consumeNil", "rejectNil", "passthrough", "truthUnknownNotNil", "inspectNil", "createsNil", "passthroughThenProject"] },
