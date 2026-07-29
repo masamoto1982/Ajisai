@@ -1,0 +1,776 @@
+{
+  "schemaVersion": 2,
+  "purpose": "Complete heading-level trace from the pre-compaction integrated specification to active kernel clauses.",
+  "legacySnapshot": "spec/legacy/integrated-specification-2026-07-15.html",
+  "headingCount": 128,
+  "mappings": [
+    {
+      "legacyAnchor": "1-language-identity",
+      "legacyHeading": "1. Language Identity",
+      "clause": "LANG.AUTHORITY.IDENTITY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "2-specification-authority",
+      "legacyHeading": "2. Specification Authority",
+      "clause": "LANG.AUTHORITY.SOURCES",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "21-canonical",
+      "legacyHeading": "2.1 Canonical",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "22-non-canonical",
+      "legacyHeading": "2.2 Non-canonical",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "23-semantic-firewall",
+      "legacyHeading": "2.3 Semantic Firewall",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "231-identity-model",
+      "legacyHeading": "2.3.1 Identity Model",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "2311-user-facing-transparency",
+      "legacyHeading": "2.3.1.1 User-facing transparency",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "24-documentation-layers",
+      "legacyHeading": "2.4 Documentation layers and their responsibilities",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "241-mathematical-formalization",
+      "legacyHeading": "2.4.1 Mathematical formalization",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "242-the-specification",
+      "legacyHeading": "2.4.2 The specification",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "243-reference-documentation",
+      "legacyHeading": "2.4.3 Reference documentation",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "244-authoring-discipline",
+      "legacyHeading": "2.4.4 Authoring discipline",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "25-authority-order",
+      "legacyHeading": "2.5 Authority order",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "26-ajisai-minimal-core",
+      "legacyHeading": "2.6 Ajisai Minimal Core",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "3-syntax",
+      "legacyHeading": "3. Syntax",
+      "clause": "LANG.SOURCE.TEXT",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "31-token-types",
+      "legacyHeading": "3.1 Token types",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "32-numeric-literal-formats",
+      "legacyHeading": "3.2 Numeric literal formats",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "33-string-literals",
+      "legacyHeading": "3.3 String literals",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "34-code-blocks",
+      "legacyHeading": "3.4 Code blocks",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "35-vectors",
+      "legacyHeading": "3.5 Vectors",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "36-cond-clauses",
+      "legacyHeading": "3.6 COND clauses",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "37-syntax-constraints",
+      "legacyHeading": "3.7 Syntax constraints",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "38-word-name-normalization",
+      "legacyHeading": "3.8 Word name normalization",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "39-surface-forms",
+      "legacyHeading": "3.9 Surface forms",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "4-value-model",
+      "legacyHeading": "4. Value Model",
+      "clause": "LANG.VALUES.DISJOINT",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "41-value-types",
+      "legacyHeading": "4.1 Value types",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "42-scalar-exact-real-continued-fraction-arithmetic",
+      "legacyHeading": "4.2 Scalar: exact-real arithmetic",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "421-canonical-form",
+      "legacyHeading": "4.2.1 Canonical form",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "422-internal-representation",
+      "legacyHeading": "4.2.2 Observation contract and cost tiers",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "423-display-and-serialization",
+      "legacyHeading": "4.2.3 Display and serialization",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "424-equivalence-of-representations",
+      "legacyHeading": "4.2.4 Equivalence of representations",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "425-nearest-integer-continued-fractions-comparison-expansion",
+      "legacyHeading": "4.2.5 Nearest-integer continued fractions (historical note)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "426-numeric-error-policy",
+      "legacyHeading": "4.2.6 Numeric error policy",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "427-admitted-exact-real-domain",
+      "legacyHeading": "4.2.7 Admitted exact-real domain of the current Coreword set",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "43-vector",
+      "legacyHeading": "4.3 Vector",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "431-internal-representation-classes",
+      "legacyHeading": "4.3.1 Internal representation classes",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "44-record",
+      "legacyHeading": "4.4 Record",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "45-nil",
+      "legacyHeading": "4.5 NIL",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "450-diagnostic-absence-metadata",
+      "legacyHeading": "4.5.0 Diagnostic absence metadata",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "451-nil-passthrough",
+      "legacyHeading": "4.5.1 NIL passthrough",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "452-nil-versus-unknown",
+      "legacyHeading": "4.5.2 NIL versus Unknown",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "46-codeblock",
+      "legacyHeading": "4.6 CodeBlock",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "47-processhandle-and-supervisorhandle",
+      "legacyHeading": "4.7 ProcessHandle and SupervisorHandle",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "48-cost-model",
+      "legacyHeading": "4.8 Cost model (performance contract)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "5-stack",
+      "legacyHeading": "5. Stack",
+      "clause": "LANG.STACK.ORDER",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "51-structure",
+      "legacyHeading": "5.1 Structure",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "52-two-plane-architecture",
+      "legacyHeading": "5.2 Two-plane architecture",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "53-execution-step-limit",
+      "legacyHeading": "5.3 Execution step limit",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "6-modifiers",
+      "legacyHeading": "6. Modifiers",
+      "clause": "LANG.MODIFIERS.AXES",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "61-target-modifiers",
+      "legacyHeading": "6.1 Target modifiers",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "62-consumption-modifiers",
+      "legacyHeading": "6.2 Consumption modifiers",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "63-modifier-combinations",
+      "legacyHeading": "6.3 Modifier combinations",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "64-additional-syntax-forms",
+      "legacyHeading": "6.4 Additional syntax forms",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "7-built-in-words",
+      "legacyHeading": "7. Built-in Words",
+      "clause": "LANG.MACHINE.WORD",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "70-english-word-based-naming",
+      "legacyHeading": "7.0 English-word-based naming",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "71-vector-operations",
+      "legacyHeading": "7.1 Vector operations",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "711-stack-signatures",
+      "legacyHeading": "7.1.1 Stack signatures and consumption (normative)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "72-tensor-operations",
+      "legacyHeading": "7.2 Tensor operations",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "73-arithmetic",
+      "legacyHeading": "7.3 Arithmetic",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "74-comparison",
+      "legacyHeading": "7.4 Comparison",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "741-decidability-and-comparison-budget",
+      "legacyHeading": "7.4.1 Decidability and comparison water",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "7411-nicf-accelerated-comparison",
+      "legacyHeading": "7.4.1.1 NICF-accelerated comparison (historical note)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "742-explicit-budget-comparison-compare-within",
+      "legacyHeading": "7.4.2 Explicit-budget comparison: COMPARE-WITHIN",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "743-propagation-of-u-through-comparison-dependent-words",
+      "legacyHeading": "7.4.3 Propagation of U through comparison-dependent words",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "75-logic",
+      "legacyHeading": "7.5 Logic",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "76-string-and-type-conversion",
+      "legacyHeading": "7.6 String and type conversion",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "761-str-bool-join-contracts",
+      "legacyHeading": "7.6.1 STR, BOOL, and JOIN conversion contracts (normative)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "77-control-and-higher-order-words",
+      "legacyHeading": "7.7 Control and higher-order words",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "771-stack-signatures",
+      "legacyHeading": "7.7.1 Stack signatures and consumption (normative)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "78-user-word-dictionary",
+      "legacyHeading": "7.8 User word dictionary",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "79-io-and-utilities",
+      "legacyHeading": "7.9 IO and utilities",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "710-module-loading",
+      "legacyHeading": "7.10 Module loading",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "711-child-runtime-words",
+      "legacyHeading": "7.11 Child runtime words",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "712-nil-passthrough-words",
+      "legacyHeading": "7.12 NIL-passthrough words",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "713-explicit-quantization-and-residual",
+      "legacyHeading": "7.13 Explicit quantization and residual",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "714-coreword-contract-metadata",
+      "legacyHeading": "7.14 Coreword contract metadata",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "715-diagnostic-absence-accessors",
+      "legacyHeading": "7.15 Diagnostic absence accessors",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "8-user-words",
+      "legacyHeading": "8. User Words",
+      "clause": "LANG.DICTIONARY.MUTATION",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "81-definition-syntax",
+      "legacyHeading": "8.1 Definition syntax",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "82-rules",
+      "legacyHeading": "8.2 Rules",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "83-deletion-syntax",
+      "legacyHeading": "8.3 Deletion syntax",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "84-recursion",
+      "legacyHeading": "8.4 Recursion",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "85-naming-conventions",
+      "legacyHeading": "8.5 Naming conventions",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "86-word-identity-and-content-addressing",
+      "legacyHeading": "8.6 Word identity and content addressing",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "9-module-system",
+      "legacyHeading": "9. Module System",
+      "clause": "LANG.DICTIONARY.MODULES",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "91-available-modules",
+      "legacyHeading": "9.1 Available modules",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "92-import-and-unimport-syntax",
+      "legacyHeading": "9.2 Import and unimport syntax",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "93-dictionary-word-tiers",
+      "legacyHeading": "9.3 Dictionary word tiers",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "94-serial-module-host-mediated-serial-output",
+      "legacyHeading": "9.4 SERIAL module (host-mediated serial output)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "95-io-module-host-mediated-standard-inputoutput",
+      "legacyHeading": "9.5 IO module (host-mediated standard input/output)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "10-child-runtime",
+      "legacyHeading": "10. Child Runtime",
+      "clause": "LANG.EFFECTS.CHILD",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "101-overview",
+      "legacyHeading": "10.1 Overview",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "102-child-states",
+      "legacyHeading": "10.2 Child states",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "103-spawn",
+      "legacyHeading": "10.3 SPAWN",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "104-await",
+      "legacyHeading": "10.4 AWAIT",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "105-status",
+      "legacyHeading": "10.5 STATUS",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "106-kill",
+      "legacyHeading": "10.6 KILL",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "107-monitor-and-supervise",
+      "legacyHeading": "10.7 MONITOR and SUPERVISE",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "108-observable-guarantees-and-scheduling-freedom",
+      "legacyHeading": "10.8 Observable guarantees and scheduling freedom (normative)",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "11-error-model",
+      "legacyHeading": "11. Error Model",
+      "clause": "LANG.FAILURE.TRICHOTOMY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "111-user-level-error-categories",
+      "legacyHeading": "11.1 User-level error categories",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "112-bubble-rule",
+      "legacyHeading": "11.2 Bubble Rule",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "113-equal-value-output",
+      "legacyHeading": "11.3 Equal-value output",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "114-error-propagation",
+      "legacyHeading": "11.4 Error propagation",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "12-semantic-plane",
+      "legacyHeading": "12. Semantic Plane",
+      "clause": "LANG.OBSERVATION.PROJECTIONS",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "121-purpose",
+      "legacyHeading": "12.1 Purpose",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "122-interpretation-roles",
+      "legacyHeading": "12.2 Interpretation roles",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "123-observation-surfaces",
+      "legacyHeading": "12.3 Observation surfaces",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "13-fractional-dataflow-internal-invariants",
+      "legacyHeading": "13. Fractional-Dataflow Internal Invariants",
+      "clause": "LANG.MACHINE.STATE",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "131-static-mass-conservation",
+      "legacyHeading": "13.1 Static Mass Conservation",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "132-bifurcation",
+      "legacyHeading": "13.2 Bifurcation",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "133-value-conservation",
+      "legacyHeading": "13.3 Value Conservation",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "14-ai-first-implementation-rules",
+      "legacyHeading": "14. AI-first Implementation Rules",
+      "clause": "DEV.IMPLEMENTATION",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "141-mandatory",
+      "legacyHeading": "14.1 Mandatory",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "142-advisory",
+      "legacyHeading": "14.2 Advisory",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "15-test-discipline",
+      "legacyHeading": "15. Test Discipline",
+      "clause": "QUALITY.TESTS",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "151-per-coreword-contract-coverage",
+      "legacyHeading": "15.1 Per-Coreword contract coverage",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "152-nil-reason-coverage",
+      "legacyHeading": "15.2 NIL reason coverage",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "153-mcdc-style-coverage-for-compound-decisions",
+      "legacyHeading": "15.3 MC/DC-style coverage for compound decisions",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "16-conformance-checklist",
+      "legacyHeading": "16. Conformance Checklist",
+      "clause": "LANG.CONFORMANCE.CORPUS",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "appendix-a-gates-and-water-levels-non-normative-index",
+      "legacyHeading": "Appendix A. Gates and Water Levels (non-normative index)",
+      "clause": "LANG.MACHINE.LIMITS",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "portability-profiles",
+      "legacyHeading": "Portability Profiles",
+      "clause": "LANG.AUTHORITY.FREEDOM",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "core-profile",
+      "legacyHeading": "Core Profile",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "hosted-profile",
+      "legacyHeading": "Hosted Profile",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "platform-profile",
+      "legacyHeading": "Platform Profile",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "presentation-profile",
+      "legacyHeading": "Presentation Profile",
+      "clause": "GUI.PRESENTATION",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "gui-current-host-contract",
+      "legacyHeading": "Current GUI contract",
+      "clause": "LANG.AUTHORITY.LEGACY",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    },
+    {
+      "legacyAnchor": "conformance-and-identity",
+      "legacyHeading": "Conformance and Identity",
+      "clause": "LANG.CONFORMANCE.CORPUS",
+      "source": "spec/legacy/integrated-specification-2026-07-15.html"
+    }
+  ]
+}
