@@ -17,10 +17,11 @@
       "child-runtime",
       "conversion",
       "staging",
-      "data-table"
+      "data-table",
+      "json-value"
     ],
     "completeInventory": false,
-    "entryCount": 104
+    "entryCount": 114
   },
   "entries": [
     {
@@ -3775,6 +3776,357 @@
         "syntax": "[ left... ] [ right... ] 'id' DATA@JOIN"
       },
       "executorKey": "data_ops::op_join"
+    },
+    {
+      "name": "JSON@PARSE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "invalidJsonEncoding",
+        "reason": "invalidEncoding"
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Parse a JSON string into an Ajisai value.",
+        "hover": "Parse a JSON string into an Ajisai value.",
+        "lookup": "Parse a JSON string into an Ajisai value.",
+        "syntax": "'{\"x\":1}' JSON@PARSE"
+      },
+      "executorKey": "json::op_parse"
+    },
+    {
+      "name": "JSON@STRINGIFY",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "text",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Serialise an Ajisai value to a JSON string.",
+        "hover": "Serialise an Ajisai value to a JSON string.",
+        "lookup": "Serialise an Ajisai value to a JSON string.",
+        "syntax": "[ 1 2 ] JSON@STRINGIFY"
+      },
+      "executorKey": "json::op_stringify"
+    },
+    {
+      "name": "JSON@GET",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "missingKeyOrNonObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "unassigned",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Look up a key in a JSON object.",
+        "hover": "Look up a key in a JSON object.",
+        "lookup": "Look up a key in a JSON object.",
+        "syntax": "record 'x' JSON@GET"
+      },
+      "executorKey": "json::op_json_get"
+    },
+    {
+      "name": "JSON@KEYS",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObjectOrEmptyObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return all keys of a JSON object as a vector.",
+        "hover": "Return all keys of a JSON object as a vector.",
+        "lookup": "Return all keys of a JSON object as a vector.",
+        "syntax": "record JSON@KEYS"
+      },
+      "executorKey": "json::op_json_keys"
+    },
+    {
+      "name": "JSON@SET",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 3,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a JSON object with the given key bound to the given value.",
+        "hover": "Return a JSON object with the given key bound to the given value.",
+        "lookup": "Return a JSON object with the given key bound to the given value.",
+        "syntax": "record 'x' 1 JSON@SET"
+      },
+      "executorKey": "json::op_json_set"
+    },
+    {
+      "name": "JSON@HAS",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "truth",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "True if a JSON object contains the given key.",
+        "hover": "True if a JSON object contains the given key.",
+        "lookup": "True if a JSON object contains the given key.",
+        "syntax": "record 'x' JSON@HAS"
+      },
+      "executorKey": "json::op_json_has"
+    },
+    {
+      "name": "JSON@VALUES",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 1,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObjectOrEmptyObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "vector",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return all values of a JSON object as a vector.",
+        "hover": "Return all values of a JSON object as a vector.",
+        "lookup": "Return all values of a JSON object as a vector.",
+        "syntax": "record JSON@VALUES"
+      },
+      "executorKey": "json::op_json_values"
+    },
+    {
+      "name": "JSON@MERGE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "passthrough",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Merge two JSON objects; right-hand keys win on conflict.",
+        "hover": "Merge two JSON objects; right-hand keys win on conflict.",
+        "lookup": "Merge two JSON objects; right-hand keys win on conflict.",
+        "syntax": "base overlay JSON@MERGE"
+      },
+      "executorKey": "json::op_json_merge"
+    },
+    {
+      "name": "JSON@DELETE",
+      "module": "JSON",
+      "aliases": [],
+      "family": "jsonValue",
+      "stack": {
+        "inputs": 2,
+        "outputs": 1
+      },
+      "consumption": "eat",
+      "nilPolicy": "createsNil",
+      "projection": {
+        "when": "nonObject",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "pure",
+      "determinism": "deterministic",
+      "capability": "none",
+      "effects": [],
+      "hostedEffect": "none",
+      "interpretationRole": "record",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "documentation": {
+        "summary": "Return a JSON object with the given key removed.",
+        "hover": "Return a JSON object with the given key removed.",
+        "lookup": "Return a JSON object with the given key removed.",
+        "syntax": "record 'x' JSON@DELETE"
+      },
+      "executorKey": "json::op_json_delete"
+    },
+    {
+      "name": "JSON@EXPORT",
+      "module": "JSON",
+      "aliases": [],
+      "family": "hostedEffect",
+      "stack": {
+        "inputs": 1,
+        "outputs": 0
+      },
+      "consumption": "eat",
+      "nilPolicy": "rejectNil",
+      "projection": {
+        "when": "never",
+        "reason": null
+      },
+      "errorWhen": [],
+      "purity": "effectful",
+      "determinism": "hostRelative",
+      "capability": "jsonExport",
+      "effects": [
+        "fileWrite"
+      ],
+      "hostedEffect": "jsonExport",
+      "interpretationRole": "none",
+      "clauses": [
+        "LANG.EFFECTS.HOSTED",
+        "LANG.MACHINE.ORDER"
+      ],
+      "documentation": {
+        "summary": "Export the top of the stack as a downloadable JSON file.",
+        "hover": "Export the top of the stack as a downloadable JSON file.",
+        "lookup": "Export the top of the stack as a downloadable JSON file.",
+        "syntax": "value JSON@EXPORT"
+      },
+      "executorKey": "json::op_json_export"
     }
   ]
 }

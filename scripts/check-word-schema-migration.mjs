@@ -94,7 +94,7 @@ for (const word of words.entries) {
 }
 
 const expected = new Set(manifest.entries
-  .filter((entry) => entry.kind === 'coreword' || (entry.kind === 'moduleword' && entry.module === 'DATA'))
+  .filter((entry) => entry.kind === 'coreword' || (entry.kind === 'moduleword' && ['DATA', 'JSON'].includes(entry.module)))
   .map((entry) => entry.canonical));
 for (const name of expected) if (!names.has(name)) fail(`migration scope omits ${name}`);
 for (const name of names) if (!expected.has(name)) fail(`migration scope contains unexpected Word ${name}`);
@@ -104,5 +104,5 @@ if (errors.length) {
   for (const error of errors) console.error(`[word-schema] ${error}`);
   process.exitCode = 1;
 } else {
-  console.log('[word-schema] all 98 Core and 6 DATA contracts match the 224-surface manifest and current executors.');
+  console.log('[word-schema] all 98 Core, 6 DATA, and 10 JSON contracts match the 224-surface manifest and current executors.');
 }

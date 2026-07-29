@@ -142,6 +142,16 @@
       "nilPolicy": "contractSpecific"
     },
     {
+      "id": "jsonValue",
+      "clauses": [
+        "LANG.VALUES.DISJOINT",
+        "LANG.VALUES.COLLECTIONS",
+        "LANG.FAILURE.TRICHOTOMY"
+      ],
+      "objectModel": "recordOrPairVector",
+      "nilPolicy": "contractSpecific"
+    },
+    {
       "id": "observation",
       "clauses": [
         "LANG.OBSERVATION.PROJECTIONS",

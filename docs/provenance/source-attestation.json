@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Content-addressed provenance of the trust-critical source surface. A drift in rootIdentity is a backdoor-injection tripwire (docs/dev/source-provenance-attestation-design.md).",
   "algorithm": "sha256",
-  "rootIdentity": "sha256:2b139fd2e4ff2ea7033b2501e99c26cb7c1fea7416cd5c9f2f3813c50107218c",
+  "rootIdentity": "sha256:6fe9065e027e1d5889a4c62e86905ea4a05d4096bd41a295a6b0ba948ca1e342",
   "fileCount": 376,
   "enumeratedFrom": "git ls-files (committed files only)",
   "trackedDirPrefixes": [
@@ -1432,8 +1432,8 @@
     },
     {
       "path": "scripts/check-word-schema-migration.mjs",
-      "sha256": "7efd565afb765d3439b9292e759dbf35c8a82a3d3cc409f23764f8592d065b01",
-      "bytes": 6013
+      "sha256": "ba8c733e23a2b46b5e7e928ad8a0a9dd80556a17dfee291d34aad1616d47918a",
+      "bytes": 6039
     },
     {
       "path": "scripts/compare-perf.sh",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "spec/README.md",
-      "sha256": "fb65f5028a7b7d619df3a414f65ac0fda2103ac33f0e65bf92e30cd0a46d9966",
-      "bytes": 4416
+      "sha256": "6e5cfe64088c002d85a061980e0dc16c5d699abf7743b7c59b16818c40a3f506",
+      "bytes": 4711
     },
     {
       "path": "spec/freeze/gui-production-files.json",
@@ -1537,8 +1537,8 @@
     },
     {
       "path": "spec/semantic-families.json",
-      "sha256": "6290e4caa0e951b301d325462fece020350dd54fbe0cc38caa83181f60d3886b",
-      "bytes": 3586
+      "sha256": "620feb4f71f765a96068b57b0683f1be814d4c43d684f982dc80403216c8fe99",
+      "bytes": 3834
     },
     {
       "path": "spec/specification.template.html",
@@ -1547,13 +1547,13 @@
     },
     {
       "path": "spec/words.json",
-      "sha256": "adaebae54f971082c590acb553fd52ebb41f6aaf8416f9c77ef49c66366fa2f7",
-      "bytes": 104484
+      "sha256": "ce1d0cf1bfc0b6334f651ff912874a9552e81b1a62fc3e0c654d301e5046d638",
+      "bytes": 114396
     },
     {
       "path": "spec/words.schema.json",
-      "sha256": "48d319014282108f369510c61c956f4c425bb78f62d038db256c608f21ea46b8",
-      "bytes": 4033
+      "sha256": "c796e1f79db3cfbc277c261f3d9233654e66d5f9b99aa3634daa352cf561753e",
+      "bytes": 4046
     },
     {
       "path": "src-tauri/Cargo.lock",

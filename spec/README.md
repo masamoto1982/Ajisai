@@ -71,3 +71,8 @@ canonical names. Table shape, reasoned CSV projection, missing-field behavior,
 purity, executor ownership, and authored LOOKUP summaries are checked from the
 same differential contracts. The other 90 Module Words remain deferred, so
 this slice does not yet authorize Phase 5 metadata deletion.
+
+The second Module-Word slice migrates all ten `JSON` contracts. JSON parsing,
+functional object access/update, missing-value projection, and host-mediated
+export remain separate contract axes. Eighty Module Words remain deferred, so
+the full-inventory and Phase 5 deletion gates remain closed.
