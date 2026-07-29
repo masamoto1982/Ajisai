@@ -127,3 +127,8 @@ source for `docs/word-manifest.json`. Rust Core and Module catalogs are retained
 as implementation-validation inputs rather than generation authorities;
 aliases and surface forms remain their dedicated syntactic sources. Manifest
 generation now fails on either a missing contract or an uncontracted executor.
+
+The third Phase 5 cleanup moves the generated `SKILL.md` Word table to the same
+contracts. The surface inventory and categories still come from the generated
+manifest, while summaries and syntax come only from `spec/words.json`; the
+generator no longer scrapes duplicate prose from Rust registries.
