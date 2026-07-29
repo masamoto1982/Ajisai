@@ -29,9 +29,6 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     // The logical Unknown (U, SPEC §7.5) always renders as `UNKNOWN`,
     // regardless of the effective hint, so it is never shown as `NIL`.
     // Display-only and non-canonical (SPEC §12.2).
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     // An operational NIL (a bubble carrying absence metadata) always renders
     // as `NIL`, regardless of the effective hint. A positional hint can carry
     // a word's declared output role (e.g. CHR is declared to yield TEXT),
@@ -321,9 +318,6 @@ fn format_exact_real(er: &ExactReal) -> String {
 /// that are part of the content survive unchanged (`'T'ES'T'` prints as
 /// `T'ES'T`). Non-text values render exactly as they do on the stack.
 pub fn format_for_output(value: &Value) -> String {
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     if value.hint == Interpretation::Text {
         return format_text_content(&value.data);
     }
@@ -394,9 +388,6 @@ fn format_text_content(data: &ValueData) -> String {
 /// The logical Unknown (U, SPEC §7.5) renders as `UNKNOWN`; an
 /// operational NIL stays `NIL`.
 fn boolean_element_label(child: &Value) -> &'static str {
-    if child.is_unknown() {
-        return "UNKNOWN";
-    }
     match &child.data {
         // U is handled by the `is_unknown()` guard above, so this arm is
         // unreachable; grouped with NIL only for exhaustiveness.
@@ -433,16 +424,12 @@ fn boolean_element_label(child: &Value) -> &'static str {
         }
         ValueData::ExactScalar(_) => "TRUE",
         ValueData::CodeBlock(_) => "TRUE",
-         ValueData::SupervisorHandle(_) => "TRUE",
     }
 }
 
 fn format_as_boolean(value: &Value) -> String {
     // The logical Unknown is handled by `format_with_hint`, but guard
     // here too so the function is correct in isolation.
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     match &value.data {
         // U is handled by the `is_unknown()` guard above; grouped with NIL
         // only for exhaustiveness.

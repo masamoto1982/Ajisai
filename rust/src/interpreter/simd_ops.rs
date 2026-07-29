@@ -145,7 +145,7 @@ fn apply_simd_binary(
     if va.len() != vb.len() {
         return None;
     }
-    let (result, parallel) = crate::interpreter::parallel::elementwise_binary_checked(
+    let (result, parallel) = sequential_elementwise_binary_checked(
         word,
         va.as_ref(),
         vb.as_ref(),
@@ -365,7 +365,7 @@ pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<(Value, bool)> {
 pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+    let (result, parallel) = sequential_elementwise_scalar_checked(
         "+",
         va.as_ref(),
         scalar,
@@ -378,7 +378,7 @@ pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Val
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+    let (result, parallel) = sequential_elementwise_scalar_checked(
         "*",
         va.as_ref(),
         scalar,

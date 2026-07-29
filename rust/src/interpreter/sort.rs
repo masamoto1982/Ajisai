@@ -108,12 +108,15 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
             interp.stack.push(Value::from_vector(sorted_v));
             Ok(())
         }
-        SortAttempt::Undecided(agreed_prefix) => {
-            // SPEC §7.4.3: a single undecidable pair makes the whole
-            // order unestablished — yield the logical Unknown (U),
-            // never a partially-sorted vector.
-            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-            Ok(())
+        SortAttempt::Undecided(_) => {
+            // Comparison over the exact domain is total (LANG.VALUES.EXACT),
+            // so an undecided pair means an operand outside that domain.
+            if !is_keep_mode {
+                interp.stack.push(val);
+            }
+            Err(AjisaiError::from(
+                "SORT: element is outside the exact domain",
+            ))
         }
         SortAttempt::Malformed(e) => {
             if !is_keep_mode {

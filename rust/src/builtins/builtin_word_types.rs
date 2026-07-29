@@ -1,4 +1,3 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Rough cost class of evaluating a Word. Advisory metadata on the contract;
 /// it is diagnostics, never a semantic discriminant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,6 +12,7 @@ pub enum EvalCost {
     Heavy,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BuiltinExecutorKey {
     Add,
     Sub,

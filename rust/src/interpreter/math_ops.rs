@@ -96,10 +96,9 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
-            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-            Ok(())
-        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
+            AjisaiError::from("operand is outside the exact domain"),
+        ),
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)
@@ -135,10 +134,9 @@ pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
-            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-            Ok(())
-        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
+            AjisaiError::from("operand is outside the exact domain"),
+        ),
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)
@@ -176,10 +174,9 @@ where
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(agreed_prefix)) => {
-            crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-            Ok(())
-        }
+        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => Err(
+            AjisaiError::from("operand is outside the exact domain"),
+        ),
         Err(e) => {
             restore_operands(interp, operands);
             Err(e)

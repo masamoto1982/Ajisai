@@ -411,25 +411,8 @@ impl PartialEq for ValueData {
             | (ValueData::Tensor { data, shape }, ValueData::Vector(v)) => {
                 tensor_eq_vector(data, shape, v)
             }
-            (
-                ValueData::Record {
-                    pairs: ap,
-                    shape: ai,
-                },
-                ValueData::Record {
-                    pairs: bp,
-                    shape: bi,
-                },
-            ) => ap == bp && (Arc::ptr_eq(ai, bi) || ai == bi),
             (ValueData::Nil, ValueData::Nil) => true,
-            // U equals U by logical identity: the agreed-prefix diagnosis is
-            // provenance metadata (like NIL's reason), not part of the value's
-            // identity, so it is ignored here exactly as NIL ignores its
-            // absence metadata in equality.
-            (ValueData::Unknown(_), ValueData::Unknown(_)) => true,
             (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
-            (ValueData::ProcessHandle(a), ValueData::ProcessHandle(b)) => a == b,
-            (ValueData::SupervisorHandle(a), ValueData::SupervisorHandle(b)) => a == b,
             _ => false,
         }
     }

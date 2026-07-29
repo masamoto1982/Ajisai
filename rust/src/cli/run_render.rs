@@ -2,7 +2,7 @@
 //!
 //! Factored out of `mod.rs` so a single-file `run` and a project `build`
 //! (`project.rs`) render identically: the same JSON/text envelope, the same NIL
-//! explanation on a successful bubble, and the same missing-capability
+//! the same missing-capability
 //! diagnosis path on failure. This module adds no behavior of its own — it only
 //! assembles the existing `Report` and delegates to the shared `emit`.
 
@@ -13,23 +13,19 @@ use crate::interpreter::Interpreter;
 
 use super::report::{stack_json, Report};
 use super::{
-    emit, error_report, missing_capability_diagnosis, nil_explanation, stack_display, Opts,
+    emit, error_report, missing_capability_diagnosis, stack_display, Opts,
 };
 
 /// Emit the report for a completed execution and return the process exit code.
-/// `receipt` is prebuilt by the caller (only `run --receipt` on a successful
-/// run supplies one).
 pub(crate) fn render_completed_run(
     interp: &Interpreter,
     result: crate::error::Result<()>,
     trace: Vec<ErrorFlowEvent>,
     output: Vec<String>,
-    receipt: Option<serde_json::Value>,
     opts: &Opts,
 ) -> i32 {
     match result {
         Ok(()) => {
-            let explanation = nil_explanation(&trace, opts);
             let report = Report {
                 status: "ok",
                 stack: stack_json(interp),
@@ -40,11 +36,7 @@ pub(crate) fn render_completed_run(
                 ai_diagnostic: None,
                 error_flow_trace: trace,
                 runtime_metrics: interp.runtime_metrics(),
-                explanation,
-                plan_check: None,
                 contract_decls: None,
-                receipt,
-                lang: opts.lang,
             };
             emit(&report, opts);
             0

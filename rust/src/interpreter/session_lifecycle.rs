@@ -70,28 +70,6 @@ impl Interpreter {
         crate::builtins::register_builtins(&mut self.core_vocabulary);
     }
 
-    /// Compile-time flags that affect `CompiledPlan` shape, forming part of the
-    /// cross-reset artifact key (Phase 5).
-    pub(crate) fn compile_flags(&self) -> CompileFlags {
-        CompileFlags {
-            cond_dispatch: self.cond_dispatch_enabled,
-            vector_literal: self.vector_literal_enabled,
-            compiled_clause: self.compiled_clause_enabled,
-        }
-    }
-
-    /// Cross-reset artifact key for a user word, if it has a content identity
-    /// (Section 8.6). Module words and anonymous blocks have no such identity
-    /// and therefore never participate in cross-reset reuse.
-    pub(crate) fn artifact_key_for(&self, resolved_name: &str) -> Option<ArtifactKey> {
-        let identity = self.word_identities.get(resolved_name)?;
-        Some(ArtifactKey::new(
-            identity.clone(),
-            self.compile_flags(),
-            COMPILED_PLAN_SCHEMA_VERSION,
-        ))
-    }
-
     /// Compile a word body into a `CompiledPlan`, or decline when the compiled
     /// form would be all-fallback. Compilation is unobservable: a run produces
     /// the same result whether it went through a plan or the plain path.

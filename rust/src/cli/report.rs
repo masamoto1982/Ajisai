@@ -156,8 +156,8 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
 }
 
 pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
-    // Diagnostics only: these counters describe work the runtime was observed to
-    // do. Reading them changes no result and no Word reads them.
+    // Diagnostics only: these counters describe work the runtime was observed
+    // to do. Reading them changes no result, and no Word reads them.
     json!({
         "compiledPlanBuildCount": metrics.compiled_plan_build_count,
         "compiledPlanCacheHitCount": metrics.compiled_plan_cache_hit_count,
@@ -170,110 +170,6 @@ pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
         "resolveCacheInvalidationCount": metrics.resolve_cache_invalidation_count,
         "tailCallJumpCount": metrics.tail_call_jump_count,
         "executionSteps": metrics.execution_steps,
-    })
-}
-
-pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
-    let mut where_obj = Map::new();
-    where_obj.insert(
-        "kind".into(),
-        json!(diagnosis.where_.kind.as_protocol_str()),
-    );
-    if let Some(word) = &diagnosis.where_.word {
-        where_obj.insert("word".into(), json!(word));
-    }
-    if let Some(module) = &diagnosis.where_.module {
-        where_obj.insert("module".into(), json!(module));
-    }
-    if let Some(dictionary) = &diagnosis.where_.dictionary {
-        where_obj.insert("dictionary".into(), json!(dictionary));
-    }
-    json!({
-        "when": diagnosis.when.as_protocol_str(),
-        "why": diagnosis.why.as_protocol_str(),
-        "summary": diagnosis.summary,
-        "where": Json::Object(where_obj),
-        "evidence": diagnosis.evidence,
-        "nextChecks": diagnosis.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-        "agreedPrefix": diagnosis.agreed_prefix,
-    })
-}
-
-fn check_json(check: &crate::interpreter::debug_diagnosis::DebugCheck) -> Json {
-    json!({ "label": check.label, "detail": check.detail })
-}
-
-pub(crate) fn ai_payload_json(payload: &AiDiagnosticPayload) -> Json {
-    json!({
-        "kind": payload.kind,
-        "recoverability": payload.recoverability,
-        "semanticArea": payload.semantic_area,
-        "word": payload.word,
-        "semanticRole": payload.semantic_role,
-        "algebraicFamily": payload.algebraic_family,
-        "absenceReason": payload.nil_reason,
-        "truthValue": payload.truth_value,
-        "effect": payload.effect,
-        "nextChecks": payload.next_checks.iter().map(check_json).collect::<Vec<_>>(),
-    })
-}
-
-fn absence_json(absence: &AbsenceMetadata) -> Json {
-    let mut obj = Map::new();
-    if let Some(reason) = &absence.reason {
-        obj.insert("reason".into(), json!(reason.as_protocol_str()));
-    }
-    obj.insert("origin".into(), json!(absence.origin.as_protocol_str()));
-    obj.insert(
-        "recoverability".into(),
-        json!(absence.recoverability.as_protocol_str()),
-    );
-    if let Some(diagnosis) = &absence.diagnosis {
-        obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
-    }
-    Json::Object(obj)
-}
-
-pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
-    let mut obj = Map::new();
-    obj.insert("kind".into(), json!(event.kind.as_protocol_str()));
-    if let Some(word) = &event.word {
-        obj.insert("word".into(), json!(word));
-    }
-    if let Some(absence) = &event.absence {
-        obj.insert("absence".into(), absence_json(absence));
-    }
-    obj.insert("stackLenBefore".into(), json!(event.stack_len_before));
-    obj.insert("stackLenAfter".into(), json!(event.stack_len_after));
-    obj.insert("message".into(), json!(event.message));
-    if let Some(diagnosis) = &event.diagnosis {
-        obj.insert("diagnosis".into(), diagnosis_json(diagnosis));
-    }
-    Json::Object(obj)
-}
-
-pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
-    // The VTU observation counters (docs/dev/virtual-tensor-unit-design.md)
-    // plus the aggregate energyProxyScore (docs/quality/energy-proxy-score.md).
-    // Counter names and the score describe observed structural work; they are
-    // a proxy and never assert an energy outcome in joules.
-    let proxy = crate::interpreter::energy_proxy::energy_proxy_report(metrics);
-    json!({
-        "vtu": {
-            // Aggregate structural-cost proxy. Not joules; comparable only
-            // within one proxyVersion. See docs/quality/energy-proxy-score.md.
-            "energyProxyScore": proxy.score,
-            "proxyVersion": proxy.proxy_version,
-            "suggestions": proxy.suggestions,
-        },
-        // Cost-model observability (SPECIFICATION.html Cost Model section).
-        // Small-rational scalar-scalar operations that took the D1 fast lane.
-        "scalarFastpathCount": metrics.scalar_fastpath_count,
-        // When is the comparison budget consumed? Over the admitted domain the
-        // bare relations decide exactly and spend nothing; COMPARE-WITHIN is
-        // the one Coreword that streams partial quotients under a budget.
-        "comparison": {
-        },
     })
 }
 

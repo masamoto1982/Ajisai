@@ -105,9 +105,6 @@ impl Value {
     /// must read this axis rather than the internal NIL representation or
     /// display text.
     pub fn truth_value_for_role(&self, effective: Interpretation) -> Option<&'static str> {
-        if self.is_unknown() {
-            return Some("unknown");
-        }
         // A Boolean is intrinsically truth-valued: it reports its truth on the
         // axis regardless of the effective role, because its data identity —
         // not a semantic-plane role — carries the truth.
@@ -196,13 +193,6 @@ impl Value {
 
     #[inline]
     pub fn nil_diagnosis(&self) -> Option<&DebugDiagnosis> {
-        // The logical Unknown (U) carries its comparison diagnosis on its own
-        // variant, not in NIL's absence metadata. Surface it here so the
-        // `agreedPrefix` accessors keep working for U without U ever holding
-        // an operational NIL reason.
-        if let ValueData::Unknown(diagnosis) = &self.data {
-            return diagnosis.as_deref();
-        }
         self.absence
             .as_ref()
             .and_then(|absence| absence.diagnosis.as_ref())
@@ -391,7 +381,6 @@ impl Value {
             // an absence.
             ValueData::Nil => ValueShape::Absence,
             ValueData::CodeBlock(_) => ValueShape::CodeBlock,
-             ValueData::SupervisorHandle(_) => ValueShape::Handle,
         }
     }
 
@@ -430,7 +419,6 @@ impl Value {
             ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
             // A boolean's only extra capability is `truthValued`, added below.
             ValueData::Boolean(_) => {}
-             ValueData::SupervisorHandle(_) => {}
         }
         // Truth-valued values (true / false / unknown) advertise the
         // `truthValued` capability so consumers know to read the
@@ -595,7 +583,6 @@ impl Value {
                 }
             }
             ValueData::CodeBlock(tokens) => tokens.len(),
-             ValueData::SupervisorHandle(_) => 1,
         }
     }
 

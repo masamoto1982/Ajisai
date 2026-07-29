@@ -94,21 +94,6 @@ impl Interpreter {
         let prev_in_tail = self.in_tail_context;
         self.tail_self_word = Some(resolved_name.clone());
 
-        // A word's body is identical at every recursion level, so shadow
-        // validation only needs to run at its outermost entry. Skipping it on
-        // recursive re-entry keeps the same divergence coverage while removing
-        // the heavy validation frame from the recursion chain — recovering
-        // native-stack headroom (the depth guard's whole purpose) and avoiding a
-        // redundant double execution of the body per level. `call_stack` already
-        // holds this call's name (pushed above), so a count above one means we
-        // are nested inside an earlier activation of the same word.
-        let recursive_reentry = self
-            .call_stack
-            .iter()
-            .filter(|n| n.as_str() == resolved_name)
-            .count()
-            > 1;
-
         // The dispatch is inlined into the loop rather than extracted into a
         // helper so the legacy (non-trampolined) recursion path adds no extra
         // native-stack frame per call — important because that path is still
@@ -118,55 +103,12 @@ impl Interpreter {
             self.in_tail_context = false;
             self.tail_jump_pending = false;
 
-            let body_result = if let Some(plan_set) = plan_set.as_ref() {
-                if let Some(qb) = plan_set.quantized.as_ref() {
-                    if qb.guard_signature.dictionary_epoch == self.dictionary_epoch
-                        && qb.guard_signature.module_epoch == self.module_epoch
-                        && qb.purity == super::quantized_block::QuantizedPurity::Pure
-                        && !self.is_hedged_mode()
-                    {
-                        if let Some(compiled) = plan_set.compiled.as_ref() {
-                            execute_compiled_plan(self, compiled)
-                        } else {
-                            self.execute_guard_structure(&def.lines)
-                        }
-                    } else if let Some(compiled) = plan_set.compiled.as_ref() {
-                        if !recursive_reentry
-                            && self.should_shadow_validate(plan_set, self.stack.len())
-                        {
-                            let outcome = self.run_compiled_with_shadow_validation(
-                                &resolved_name,
-                                &def,
-                                plan_set,
-                            );
-                            if outcome.used_plain_fallback {
-                            }
-                            outcome.result
-                        } else {
-                            execute_compiled_plan(self, compiled)
-                        }
-                    } else {
-                        self.execute_guard_structure(&def.lines)
-                    }
-                } else if let Some(compiled) = plan_set.compiled.as_ref() {
-                    if !recursive_reentry && self.should_shadow_validate(plan_set, self.stack.len())
-                    {
-                        let outcome = self.run_compiled_with_shadow_validation(
-                            &resolved_name,
-                            &def,
-                            plan_set,
-                        );
-                        if outcome.used_plain_fallback {
-                        }
-                        outcome.result
-                    } else {
-                        execute_compiled_plan(self, compiled)
-                    }
-                } else {
-                    self.execute_guard_structure(&def.lines)
-                }
-            } else {
-                self.execute_guard_structure(&def.lines)
+            // Compiling a body is unobservable (LANG.AUTHORITY.FREEDOM): a run
+            // produces the same result whether it went through the compiled
+            // plan or the plain guard structure.
+            let body_result = match plan_set.as_ref().and_then(|set| set.compiled.as_ref()) {
+                Some(compiled) => execute_compiled_plan(self, compiled),
+                None => self.execute_guard_structure(&def.lines),
             };
 
             if body_result.is_ok() && self.tail_jump_pending {
@@ -307,16 +249,7 @@ impl Interpreter {
                 .map(|p| is_plan_valid(p, self))
                 .unwrap_or(false);
 
-            let quant_valid = existing
-                .quantized
-                .as_ref()
-                .map(|q| {
-                    q.guard_signature.dictionary_epoch == self.dictionary_epoch
-                        && q.guard_signature.module_epoch == self.module_epoch
-                })
-                .unwrap_or(false);
-
-            if compiled_valid || quant_valid {
+            if compiled_valid {
                 self.runtime_metrics.compiled_plan_cache_hit_count += 1;
                 return Some(existing.clone());
             }
@@ -327,17 +260,7 @@ impl Interpreter {
         let mut set =
             super::execution_plan_set::ExecutionPlanSet::new(self.current_epoch_snapshot());
 
-        // Phase 5: reuse the word's compiled plan from the cross-reset artifact
-        // store when its content identity matches, otherwise compile and store
-        // it. See `build_or_reuse_compiled_plan` for the reuse/rebuild contract.
         set.compiled = self.build_or_reuse_compiled_plan(resolved_name, def);
-
-        if !self.force_no_quant && def.lines.len() == 1 {
-            let tokens: Vec<_> = def.lines[0].body_tokens.iter().cloned().collect();
-            if let Some(qb) = super::quantized_block::quantize_code_block(&tokens, self) {
-                set.quantized = Some(std::sync::Arc::new(qb));
-            }
-        }
 
         let set_arc = std::sync::Arc::new(set);
         self.store_execution_plan_set_for_word(resolved_name, set_arc.clone());
