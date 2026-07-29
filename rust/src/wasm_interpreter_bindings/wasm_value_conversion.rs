@@ -100,10 +100,6 @@ fn js_value_to_value_with_depth(js_val: JsValue, depth: usize) -> Result<Value, 
             let fraction = parse_js_fraction(&js_sys::Object::from(value_js))?;
             Ok(Value::from_fraction(fraction))
         }
-        "datetime" => {
-            let fraction = parse_js_fraction(&js_sys::Object::from(value_js))?;
-            Ok(Value::from_datetime(fraction))
-        }
         "string" => {
             let s = value_js.as_string().ok_or("Value not string")?;
             Ok(Value::from_string(&s))
@@ -141,16 +137,6 @@ fn js_value_to_value_with_depth(js_val: JsValue, depth: usize) -> Result<Value, 
             Ok(Value::from_children(children))
         }
         "nil" => Ok(Value::nil()),
-        "process_handle" => {
-            let id = value_js.as_f64().ok_or("Process handle id is not number")? as u64;
-            Ok(Value::from_process_handle(id))
-        }
-        "supervisor_handle" => {
-            let id = value_js
-                .as_f64()
-                .ok_or("Supervisor handle id is not number")? as u64;
-            Ok(Value::from_supervisor_handle(id))
-        }
         _ => Err(format!("Unknown type: {}", type_str)),
     }
 }
@@ -508,25 +494,9 @@ pub(crate) fn arena_node_to_js(
                 js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
             }
         }
-        NodeKind::Record { pairs, .. } => {
-            let js_array = js_sys::Array::new();
-            for pair_id in pairs {
-                js_array.push(&arena_node_to_js(arena, *pair_id, None));
-            }
-            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-        }
         NodeKind::CodeBlock(_) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
-        }
-        NodeKind::ProcessHandle(id) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"process_handle".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &(*id as f64).into()).unwrap();
-        }
-        NodeKind::SupervisorHandle(id) => {
-            js_sys::Reflect::set(&obj, &"type".into(), &"supervisor_handle".into()).unwrap();
-            js_sys::Reflect::set(&obj, &"value".into(), &(*id as f64).into()).unwrap();
         }
     }
 

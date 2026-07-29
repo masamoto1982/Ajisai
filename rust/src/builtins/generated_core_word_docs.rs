@@ -304,7 +304,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     },
     GeneratedCoreWordDoc {
         name: "SQRT",
-        hover_summary: "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        hover_summary:
+            "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
         hover_syntax: "2 SQRT",
     },
     GeneratedCoreWordDoc {
@@ -339,7 +340,8 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     },
     GeneratedCoreWordDoc {
         name: "UNIQUE",
-        hover_summary: "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        hover_summary:
+            "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
         hover_syntax: "[ 1 2 1 ] UNIQUE",
     },
     GeneratedCoreWordDoc {

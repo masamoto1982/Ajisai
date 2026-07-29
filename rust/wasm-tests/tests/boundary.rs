@@ -100,7 +100,7 @@ async fn bubble_nil_serializes_as_nil() {
 /// approximation for an exact rational (SPEC §2.3 firewall; P1).
 #[wasm_bindgen_test]
 async fn exact_scalar_rawnumber_marks_approximate_at_boundary() {
-    let stack = stack_of("'math' IMPORT 2 SQRT").await;
+    let stack = stack_of("2 SQRT").await;
     assert_eq!(stack.length(), 1);
     let node = stack.get(0);
     assert_eq!(

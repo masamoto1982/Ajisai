@@ -147,7 +147,7 @@ impl AjisaiInterpreter {
         let outcome = if full {
             self.interpreter.execute_reset()
         } else {
-            self.interpreter.execute_session_reset()
+            self.interpreter.execute_reset()
         };
 
         match outcome {
