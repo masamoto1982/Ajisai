@@ -15,6 +15,7 @@ pub mod coreword_registry;
 mod error;
 pub use error::{AjisaiError, ErrorCategory, NilReason};
 pub mod interpreter;
+pub mod kernel;
 pub mod semantic;
 pub mod surface_forms;
 mod tokenizer;

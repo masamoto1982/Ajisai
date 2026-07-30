@@ -93,6 +93,24 @@ check_absent \
   '\b([Nn]o longer|[Uu]sed to be|[Ff]ormerly|[Pp]reviously|[Dd]eprecated|[Ll]egacy|[Ee]arlier versions?|[Oo]nce (had|carried|supported)|has been removed|was removed|reserved for future)\b' \
   "${READING_SURFACES[@]}"
 
+# ── Semantic Spine public-API closure (migration plan §11, SPEC §20) ───────
+# The Spine (rust/src/kernel/) may name only concepts the language exposes. The
+# optimization representations demoted below it (dense-tensor storage, exact
+# scalars) and the legacy/removed concepts (interpretation roles, the logical
+# Unknown, absence origin/recoverability, module/import state) must never appear
+# on a *public* declaration inside the kernel. Doc comments are exempt — they
+# explain the boundary — so only `pub` declaration lines are scanned.
+if [[ -d rust/src/kernel ]]; then
+  echo "[semantic-firewall] checking: Semantic Spine public-API closure"
+  if rg -n --color never \
+      '^\s*pub\s+(use|enum|struct|fn|type|mod|const|static|trait)\b.*\b(Tensor|ExactScalar|Interpretation|UnknownBehavior|WaterSensitivity|AbsenceOrigin|Recoverability|ImportTable|ModuleDictionary|module_vocabulary)\b' \
+      rust/src/kernel
+  then
+    echo "[semantic-firewall] FAIL: forbidden concept in Semantic Spine public API" >&2
+    failed=1
+  fi
+fi
+
 if [[ "$failed" -ne 0 ]]; then
   echo "[semantic-firewall] residue checks failed" >&2
   exit 1
