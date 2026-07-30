@@ -50,13 +50,25 @@ function countLines(content) {
   return count;
 }
 
+// A file is exempt when its first line carries the `// @generated` marker.
+// The §14.1 budget exists to keep *hand-written and hand-maintained* Rust
+// reviewable; a generated file is a mechanical projection of a source that is
+// itself reviewed and drift-checked (e.g. spec/words.json), so its line count
+// is not a maintainability signal and cannot be reduced by hand-splitting.
+function isGenerated(absPath) {
+  const content = readFileSync(absPath, 'utf8');
+  const firstNewline = content.indexOf('\n');
+  const firstLine = firstNewline === -1 ? content : content.slice(0, firstNewline);
+  return firstLine.includes('@generated');
+}
+
 function collectRustFiles(dir) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = resolve(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...collectRustFiles(full));
-    } else if (entry.isFile() && entry.name.endsWith('.rs')) {
+    } else if (entry.isFile() && entry.name.endsWith('.rs') && !isGenerated(full)) {
       out.push(full);
     }
   }

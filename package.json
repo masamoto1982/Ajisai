@@ -33,6 +33,8 @@
     "conformance:manifest": "node scripts/generate-conformance-manifest.mjs",
     "word:manifest": "node scripts/generate-word-manifest.mjs",
     "word:manifest:check": "node scripts/generate-word-manifest.mjs --check",
+    "word-registry:generate": "node scripts/generate-word-registry.mjs",
+    "word-registry:check": "node scripts/generate-word-registry.mjs --check",
     "word:reference": "node scripts/generate-word-reference.mjs",
     "word:reference:check": "node scripts/generate-word-reference.mjs --check",
     "core-word-docs:generate": "node scripts/generate-core-word-docs.mjs",
