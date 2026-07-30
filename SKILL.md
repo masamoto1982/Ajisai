@@ -205,9 +205,9 @@ exist. There is no module system and nothing to import.
 | `GT` | comparison | Test greater-than comparison. — e.g. `2 1 >` |
 | `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 >=` |
 | `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 <>` |
-| `AND` | logic | Logical AND with three-valued (Kleene) NIL handling. — e.g. `TRUE TRUE &` |
-| `OR` | logic | Logical OR with three-valued (Kleene) NIL handling. — e.g. `TRUE FALSE OR` |
-| `NOT` | logic | Logical negation. — e.g. `TRUE NOT` |
+| `AND` | logic | Logical AND. A NIL operand passes through. — e.g. `TRUE TRUE &` |
+| `OR` | logic | Logical OR. A NIL operand passes through. — e.g. `TRUE FALSE OR` |
+| `NOT` | logic | Logical negation. A NIL operand passes through. — e.g. `TRUE NOT` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
@@ -225,7 +225,7 @@ exist. There is no module system and nothing to import.
 | `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
 | `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
 | `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
-| `SQRT` | math | Square root. Exact rational roots stay exact; otherwise returns a sound interval. — e.g. `2 SQRT` |
+| `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
 | `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
 | `NEG` | math | Numeric negation. — e.g. `2 NEG` |
 | `SIGN` | math | Sign of a number: -1, 0, or 1. — e.g. `-2 SIGN` |

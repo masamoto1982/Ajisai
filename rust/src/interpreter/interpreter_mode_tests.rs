@@ -22,37 +22,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_modifiers_order_independent_stack_keep() {
-        let mut interp = Interpreter::new();
-
-        let result1 = interp.execute("[1] [2] [3] [3] .. ,, +").await;
-        assert!(
-            result1.is_ok(),
-            "Stack+Keep mode (.. ,,) should succeed: {:?}",
-            result1
-        );
-        let stack1 = interp.stack.clone();
-
-        interp.execute_reset().unwrap();
-
-        let result2 = interp.execute("[1] [2] [3] [3] ,, .. +").await;
-        assert!(
-            result2.is_ok(),
-            "Stack+Keep mode (,, ..) should succeed: {:?}",
-            result2
-        );
-        let stack2 = interp.stack.clone();
-
-        assert_eq!(
-            stack1.len(),
-            stack2.len(),
-            "Both modifier orders should produce same stack length: {} vs {}",
-            stack1.len(),
-            stack2.len()
-        );
-    }
-
-    #[tokio::test]
     async fn test_consume_mode_default() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[1] [2] +").await;

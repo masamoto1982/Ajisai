@@ -31,13 +31,13 @@ mod tests {
 
     #[tokio::test]
     async fn abs_of_negative_is_positive() {
-        assert_eq!(top_i64("7 ABS").await, 7);
+        assert_eq!(top_i64("-7 ABS").await, 7);
     }
 
     #[tokio::test]
     async fn neg_flips_sign() {
         assert_eq!(top_i64("5 NEG").await, -5);
-        assert_eq!(top_i64("3 NEG").await, 3);
+        assert_eq!(top_i64("-3 NEG").await, 3);
     }
 
     /// NEG computes the additive inverse directly on the exact-real
@@ -66,7 +66,7 @@ mod tests {
 
     #[tokio::test]
     async fn sign_reports_three_values() {
-        assert_eq!(top_i64("42 SIGN").await, -1);
+        assert_eq!(top_i64("-42 SIGN").await, -1);
         assert_eq!(top_i64("0 SIGN").await, 0);
         assert_eq!(top_i64("42 SIGN").await, 1);
     }
@@ -105,14 +105,14 @@ mod tests {
     async fn min_and_max_pick_correctly() {
         assert_eq!(top_i64("3 8 MIN").await, 3);
         assert_eq!(top_i64("3 8 MAX").await, 8);
-        assert_eq!(top_i64("2 -9 MIN").await, -9);
-        assert_eq!(top_i64("2 -9 MAX").await, -2);
+        assert_eq!(top_i64("-2 -9 MIN").await, -9);
+        assert_eq!(top_i64("-2 -9 MAX").await, -2);
     }
 
     #[tokio::test]
     async fn abs_handles_fractions() {
         let mut interp = Interpreter::new();
-        interp.execute("3/4 ABS").await.expect("should succeed");
+        interp.execute("-3/4 ABS").await.expect("should succeed");
         let scalar = interp.stack[0].as_scalar().expect("scalar");
         assert_eq!(scalar.numerator().to_string(), "3");
         assert_eq!(scalar.denominator().to_string(), "4");
@@ -122,7 +122,7 @@ mod tests {
     async fn nil_passes_through_unary() {
         let mut interp = Interpreter::new();
         interp
-            .execute("ABS")
+            .execute("NIL ABS")
             .await
             .expect("NIL passthrough should not error");
         assert_eq!(interp.stack.len(), 1);
@@ -133,7 +133,7 @@ mod tests {
     async fn nil_passes_through_binary() {
         let mut interp = Interpreter::new();
         interp
-            .execute("5 MIN")
+            .execute("NIL 5 MIN")
             .await
             .expect("NIL passthrough should not error");
         assert_eq!(interp.stack.len(), 1);
@@ -148,14 +148,6 @@ mod tests {
             result.is_err(),
             "ABS of text should be a malformed-use error"
         );
-    }
-
-    #[tokio::test]
-    async fn stack_mode_is_rejected() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("1 2 3 .. MAX").await;
-        assert!(result.is_err(), "MAX should reject Stack mode");
-        assert!(result.unwrap_err().to_string().contains("Stack mode"));
     }
     #[tokio::test]
     async fn keep_mode_retains_operands() {

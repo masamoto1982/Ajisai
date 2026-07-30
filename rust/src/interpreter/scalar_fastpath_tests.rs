@@ -132,35 +132,6 @@ fn arithmetic_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors(
 }
 
 #[test]
-fn comparison_fast_path_matches_baseline_for_bare_scalars_and_singleton_tensors() {
-    for src in [
-        "2 3 <",
-        "3 3 <=",
-        "4 3 >",
-        "4 4 >=",
-        "4 4 =",
-        "4 5 !=",
-        "[ 2 ] [ 3 ] <",
-        "[ 3 ] [ 3 ] <=",
-        "[ 4 ] [ 3 ] >",
-        "[ 4 ] [ 4 ] >=",
-        "[ 4 ] [ 4 ] =",
-        "[ 4 ] [ 5 ] !=",
-    ] {
-        let (on, off) = assert_on_equals_off(src);
-        assert!(
-            on.runtime_metrics().scalar_fastpath_count >= 1,
-            "expected scalar fast path to fire for: {src}"
-        );
-        assert_eq!(
-            off.runtime_metrics().scalar_fastpath_count,
-            0,
-            "disabled scalar fast path should not count for: {src}"
-        );
-    }
-}
-
-#[test]
 fn fast_path_preserves_tensor_wrapping() {
     let (on, _) = assert_on_equals_off("[ 1 ] [ 2 ] +");
     let rendered = rendered_stack(&on);

@@ -178,8 +178,6 @@ mod tests {
         assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-BLOCK");
         assert_eq!(lookup_surface_form("}").unwrap().concept, "END-BLOCK");
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
-        assert_eq!(lookup_surface_form(";").unwrap().concept, "TOP-EAT");
-        assert_eq!(lookup_surface_form(";;").unwrap().concept, "STAK-KEEP");
         assert_eq!(lookup_surface_form("(").unwrap().concept, "RESERVED-BEGIN");
         assert_eq!(lookup_surface_form(")").unwrap().concept, "RESERVED-END");
     }

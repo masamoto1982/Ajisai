@@ -31,7 +31,7 @@ Push the boolean FALSE onto the stack.
 
 ## `AND`
 
-Logical AND with three-valued (Kleene) NIL handling.
+Logical AND. A NIL operand passes through.
 
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
@@ -45,7 +45,7 @@ Logical AND with three-valued (Kleene) NIL handling.
 
 ## `OR`
 
-Logical OR with three-valued (Kleene) NIL handling.
+Logical OR. A NIL operand passes through.
 
 - **Family:** `booleanLogic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
@@ -58,7 +58,7 @@ Logical OR with three-valued (Kleene) NIL handling.
 
 ## `NOT`
 
-Logical negation.
+Logical negation. A NIL operand passes through.
 
 - **Family:** `booleanLogic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
@@ -329,7 +329,7 @@ Larger of two numbers.
 
 ## `SQRT`
 
-Square root. Exact rational roots stay exact; otherwise returns a sound interval.
+Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
 
 - **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption

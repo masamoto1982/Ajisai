@@ -366,11 +366,11 @@ mod tests {
 
     #[test]
     fn word_without_authored_entry_falls_back_to_hover_example() {
-        let body = lookup_builtin_detail("SHAPE");
-        let spec = lookup_builtin_spec("SHAPE").expect("SHAPE spec");
+        let body = lookup_builtin_detail("SIGN");
+        let spec = lookup_builtin_spec("SIGN").expect("SIGN spec");
         assert!(
             body.contains(spec.hover_syntax),
-            "SHAPE Examples should reuse hover_syntax until authored:\n{}",
+            "SIGN Examples should reuse hover_syntax until authored:\n{}",
             body
         );
     }
@@ -419,11 +419,11 @@ mod tests {
 
     #[test]
     fn experimental_word_header_shows_stability() {
-        // SPAWN is marked experimental in BUILTIN_SPECS.
-        let body = lookup_builtin_detail("SPAWN");
+        // PRINT is marked experimental in BUILTIN_SPECS.
+        let body = lookup_builtin_detail("PRINT");
         assert!(
-            body.contains("# SPAWN  (experimental)"),
-            "SPAWN header must show '(experimental)':\n{}",
+            body.contains("# PRINT  (experimental)"),
+            "PRINT header must show '(experimental)':\n{}",
             body
         );
     }

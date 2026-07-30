@@ -61,21 +61,6 @@ fn non_square_radicand() -> impl Strategy<Value = i64> {
     prop::sample::select(vec![2i64, 3, 5, 6, 7, 8, 10, 11, 13])
 }
 
-/// Pushes the logical Unknown (U). Comparison is total over Tier ≤ 1 —
-/// everything the current vocabulary constructs — so U is produced through
-/// `COMPARE-WITHIN` against a pre-loaded **Tier 2** starvation witness
-/// (`observe::TIER2_WITNESS`): the enclosure process never separates from
-/// zero, so the explicit water budget is exhausted and the comparison
-/// starves to U.
-pub fn unknown_src() -> impl Strategy<Value = String> {
-    prop::sample::select(vec![4usize, 8, 16]).prop_map(|budget| {
-        format!(
-            "{} 0 {budget} COMPARE-WITHIN",
-            crate::test_support::observe::TIER2_WITNESS
-        )
-    })
-}
-
 /// Pushes an irrational exact-real scalar `√n` (n not a perfect square, so the
 /// value is a genuine lazy continued fraction).
 pub fn irrational_src() -> impl Strategy<Value = String> {
@@ -151,7 +136,6 @@ pub fn any_value_src() -> impl Strategy<Value = String> {
         scalar_src(),
         boolean_src(),
         nil_src(),
-        unknown_src(),
         irrational_src(),
         vector_src(),
         block_src(),
@@ -170,7 +154,6 @@ pub fn effect_free_src() -> impl Strategy<Value = String> {
         scalar_src(),
         boolean_src(),
         nil_src(),
-        unknown_src(),
         irrational_src(),
         vector_src(),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),

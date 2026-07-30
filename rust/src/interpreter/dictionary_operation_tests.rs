@@ -298,36 +298,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_def_rejects_stack_mode() {
-        let mut interp = Interpreter::new();
-
-        let result = interp.execute("{ [ 2 ] * } 'DOUBLE' .. DEF").await;
-        assert!(result.is_err(), "DEF should reject Stack mode");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("DEF") && err_msg.contains("Stack mode"),
-            "Expected Stack mode error for DEF, got: {}",
-            err_msg
-        );
-    }
-
-    #[tokio::test]
-    async fn test_del_rejects_stack_mode() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-
-        let result = interp.execute("'DOUBLE' .. DEL").await;
-        assert!(result.is_err(), "DEL should reject Stack mode");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("DEL") && err_msg.contains("Stack mode"),
-            "Expected Stack mode error for DEL, got: {}",
-            err_msg
-        );
-    }
-
-    #[tokio::test]
     async fn test_lookup_builtin_renders_four_section_template() {
         let mut interp = Interpreter::new();
         let result = interp.execute("'GET' ?").await;
@@ -381,22 +351,6 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_lookup_rejects_stack_mode() {
-        let mut interp = Interpreter::new();
-
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-
-        let result = interp.execute("'DOUBLE' .. ?").await;
-        assert!(result.is_err(), "LOOKUP should reject Stack mode");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("LOOKUP") && err_msg.contains("Stack mode"),
-            "Expected Stack mode error for LOOKUP, got: {}",
-            err_msg
-        );
-    }
-
     fn restore_example_words(interp: &mut Interpreter, example_words: &[(&str, &str, &str)]) {
         use crate::tokenizer;
 
@@ -435,8 +389,19 @@ mod tests {
         let result = interp.execute("'C4' DEL").await;
         assert!(result.is_err(), "Should not delete C4 (has dependents)");
 
-        let result = interp.execute("! 'C4' DEL").await;
-        assert!(result.is_ok(), "Should force delete C4: {:?}", result.err());
+        // There is no force modifier: DEL fails while any definition still
+        // depends on the target (LANG.DICTIONARY.MUTATION). Removing the last
+        // dependent is what makes the delete legal.
+        interp
+            .execute("'E4' DEL")
+            .await
+            .expect("Should delete the remaining dependent E4");
+        let result = interp.execute("'C4' DEL").await;
+        assert!(
+            result.is_ok(),
+            "Should delete C4 once nothing depends on it: {:?}",
+            result.err()
+        );
         assert!(!interp.user_words.contains_key("C4"));
     }
 
@@ -470,10 +435,14 @@ mod tests {
             "Should not delete C4 via FQN (has dependents)"
         );
 
-        let result = interp.execute("! 'EXAMPLE@C4' DEL").await;
+        interp
+            .execute("'EXAMPLE@E4' DEL")
+            .await
+            .expect("Should delete the remaining dependent E4");
+        let result = interp.execute("'EXAMPLE@C4' DEL").await;
         assert!(
             result.is_ok(),
-            "Should force delete C4 via FQN: {:?}",
+            "Should delete C4 via FQN once nothing depends on it: {:?}",
             result.err()
         );
         assert!(!interp.user_words.contains_key("C4"));

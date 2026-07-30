@@ -128,11 +128,4 @@ fn vent_contract_is_lazy_not_eager_binary() {
     assert!(vent.mass.fixed().is_none());
 }
 
-#[test]
-fn flow_contract_is_noop_control_directive() {
-    let flow = lookup_builtin_spec("FLOW").expect("FLOW spec");
-    assert_eq!(flow.execution_form, ExecutionForm::NoOpControlDirective);
-    assert!(flow.executor_key.is_none());
-}
-
 // --- FLOW (~) is a no-op pipeline marker in both spellings -----------------

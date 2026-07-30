@@ -97,9 +97,9 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical AND with three-valued (Kleene) NIL handling.",
+        "summary": "Logical AND. A NIL operand passes through.",
         "hover": "AND — logical AND",
-        "lookup": "Logical AND with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical AND. A NIL operand passes through.",
         "syntax": "TRUE TRUE &"
       },
       "executorKey": "And",
@@ -131,9 +131,9 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical OR with three-valued (Kleene) NIL handling.",
+        "summary": "Logical OR. A NIL operand passes through.",
         "hover": "OR — logical OR",
-        "lookup": "Logical OR with three-valued (Kleene) NIL handling.",
+        "lookup": "Logical OR. A NIL operand passes through.",
         "syntax": "TRUE FALSE OR"
       },
       "executorKey": "Or",
@@ -165,9 +165,9 @@
         "LANG.VALUES.TRUTH"
       ],
       "documentation": {
-        "summary": "Logical negation.",
+        "summary": "Logical negation. A NIL operand passes through.",
         "hover": "NOT — logical negation",
-        "lookup": "Logical negation.",
+        "lookup": "Logical negation. A NIL operand passes through.",
         "syntax": "TRUE NOT"
       },
       "executorKey": "Not",
@@ -923,9 +923,9 @@
         "LANG.FAILURE.TRICHOTOMY"
       ],
       "documentation": {
-        "summary": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
-        "hover": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
-        "lookup": "Square root. Exact rational roots stay exact; otherwise returns a sound interval.",
+        "summary": "Exact square root of a non-negative rational.",
+        "hover": "SQRT — exact square root",
+        "lookup": "Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.",
         "syntax": "2 SQRT"
       },
       "executorKey": "math_ops::op_sqrt",
@@ -1476,7 +1476,7 @@
       ],
       "documentation": {
         "summary": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
-        "hover": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        "hover": "UNIQUE — remove duplicates, keeping first-occurrence order",
         "lookup": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
         "syntax": "[ 1 2 1 ] UNIQUE"
       },

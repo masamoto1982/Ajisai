@@ -33,15 +33,6 @@ async fn run_ok(code: &str) -> Vec<Value> {
 fn is_nil(v: &Value) -> bool {
     v.is_nil()
 }
-
-fn is_true(v: &Value) -> bool {
-    v.as_truth() == Some(true)
-}
-
-fn is_false(v: &Value) -> bool {
-    v.as_truth() == Some(false)
-}
-
 fn reason_of(v: &Value) -> Option<NilReason> {
     v.nil_reason().cloned()
 }
@@ -54,13 +45,9 @@ enum NilClass {
     BinaryBlanket,
     /// Unary word: NIL operand yields NIL.
     UnaryNil,
-    /// Ternary comparison `[ a ] [ b ] [ budget ] -> ...` whose a/b operands
-    /// are NIL-passthrough (COMPARE-WITHIN, SPEC §7.4.2). A NIL in either
-    /// value operand yields NIL; the budget operand is a plain integer.
-    TernaryValueNil,
-    /// Three-valued AND: NIL with definite-false => false, else NIL.
+    /// Boolean AND: a NIL operand passes through.
     ThreeValAnd,
-    /// Three-valued OR: NIL with definite-true => true, else NIL.
+    /// Boolean OR: a NIL operand passes through.
     ThreeValOr,
 }
 
@@ -72,34 +59,22 @@ const CORE_PASSTHROUGH: &[(&str, NilClass)] = &[
     ("ADD", NilClass::BinaryBlanket),
     ("SUB", NilClass::BinaryBlanket),
     ("MUL", NilClass::BinaryBlanket),
-    // MOD/FLOOR/CEIL/ROUND are Projecting/CreatesNil: on ExactScalar (CF)
-    // operands the partial-quotient budget can exhaust, yielding an
-    // Undecidable NIL (SPEC §7.4.1). They are covered by
-    // projecting_word_set_matches_registry and the arithmetic NIL-input
-    // probes below.
-    // Comparison words (EQ/NEQ/LT/LTE/GT/GTE) are Projecting/Passthrough
-    // per SPEC §7.14 (revised): budget exhaustion now yields the logical
-    // truth value Unknown (U), not a reasoned NIL, so they no longer create
-    // NIL — but they still pass NIL operands through (§7.12), which is the
-    // BinaryBlanket behavior verified here.
+    // MOD / FLOOR / CEIL / ROUND create NIL on a domain miss and are covered
+    // by projecting_word_set_matches_registry.
+    // The comparison words pass NIL operands through. Comparison itself is
+    // total (LANG.VALUES.EXACT), so they never create NIL.
     ("EQ", NilClass::BinaryBlanket),
     ("NEQ", NilClass::BinaryBlanket),
     ("LT", NilClass::BinaryBlanket),
     ("LTE", NilClass::BinaryBlanket),
     ("GT", NilClass::BinaryBlanket),
     ("GTE", NilClass::BinaryBlanket),
-    // COMPARE-WITHIN (SPEC §7.4.2) is Projecting/Passthrough like the six
-    // relations, but ternary: its a/b value operands pass NIL through while
-    // the trailing budget operand is a plain positive integer.
-    ("COMPARE-WITHIN", NilClass::TernaryValueNil),
     ("NOT", NilClass::UnaryNil),
     ("AND", NilClass::ThreeValAnd),
     ("OR", NilClass::ThreeValOr),
 ];
 
 /// Categories whose Core passthrough words this suite is responsible for.
-/// Module-canonical passthrough words (MUSIC/MATH/...) have their own
-/// operand shapes and import needs and are covered by module suites.
 const COVERED_CATEGORIES: &[&str] = &["arithmetic", "comparison", "logic"];
 
 fn lookup_class(name: &str) -> Option<NilClass> {
@@ -169,79 +144,20 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
                 assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
                 assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
             }
-            NilClass::TernaryValueNil => {
-                // §7.12 / §7.4.2: a NIL in either value operand (with a
-                // valid budget) passes through to a single NIL result.
-                for code in [
-                    format!("NIL 1 8 {name}"),
-                    format!("1 NIL 8 {name}"),
-                    format!("NIL NIL 8 {name}"),
-                ] {
-                    let stack = run_ok(&code).await;
-                    assert_eq!(stack.len(), 1, "`{code}` must leave exactly one value");
-                    assert!(is_nil(&stack[0]), "`{code}` must produce NIL");
-                }
-            }
-            // Three-valued words are verified by their dedicated truth-table
-            // tests below; the completeness test guarantees they are present.
+            // AND / OR pass NIL through rather than absorbing it into a
+            // definite operand; covered by the corpus's logic cases.
             NilClass::ThreeValAnd | NilClass::ThreeValOr => {}
         }
     }
 }
 
-#[tokio::test]
-async fn three_valued_and() {
-    // SPEC §7.12: NIL with a definite false collapses to false; otherwise NIL.
-    let nil_cases = ["TRUE NIL AND", "NIL TRUE AND", "NIL NIL AND"];
-    for code in nil_cases {
-        let stack = run_ok(code).await;
-        assert!(is_nil(&stack[0]), "`{code}` must be NIL");
-    }
-    for code in ["FALSE NIL AND", "NIL FALSE AND"] {
-        let stack = run_ok(code).await;
-        assert!(is_false(&stack[0]), "`{code}` must collapse to FALSE");
-    }
-}
-
-#[tokio::test]
-async fn three_valued_or() {
-    // SPEC §7.12: NIL with a definite true collapses to true; otherwise NIL.
-    for code in ["FALSE NIL OR", "NIL FALSE OR", "NIL NIL OR"] {
-        let stack = run_ok(code).await;
-        assert!(is_nil(&stack[0]), "`{code}` must be NIL");
-    }
-    for code in ["TRUE NIL OR", "NIL TRUE OR"] {
-        let stack = run_ok(code).await;
-        assert!(is_true(&stack[0]), "`{code}` must collapse to TRUE");
-    }
-}
-
-// --- Three-valued logic with the logical Unknown (SPEC §7.5, §4.5.2) ------
 // --- Bubble creation: Projecting / CreatesNil words (SPEC §11.2) ----------
 
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
-/// reason; malformed use raises an ordinary error. `READ` is host/serial
-/// dependent (needs a port) so only its registry presence is asserted.
+/// reason; malformed use raises an ordinary error.
 const PROJECTING_WORDS: &[&str] = &[
-    "CEIL",
-    "CHR",
-    "DIV",
-    "FILL",
-    "FLOOR",
-    "GET",
-    "INDEX-OF",
-    "MOD",
-    "NUM",
-    "PARSE-ISO",
-    "POW",
-    "QUANTIZE",
-    "QUANTIZE-CEIL",
-    "QUANTIZE-FLOOR",
-    "QUANTIZE-HALF-AWAY",
-    "QUANTIZE-TRUNC",
-    "RANGE",
-    "READ",
-    "ROUND",
+    "CEIL", "CHR", "DIV", "FILL", "FLOOR", "GET", "INDEX-OF", "MOD", "NUM", "RANGE", "ROUND",
+    "SQRT",
 ];
 
 #[test]

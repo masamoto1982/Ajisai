@@ -253,7 +253,7 @@
       "canonical": "TRUE",
       "coverage_entry_id": "core.true",
       "semantic_role": "Primitive",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.k3.domain"
@@ -269,7 +269,7 @@
       "canonical": "FALSE",
       "coverage_entry_id": "core.false",
       "semantic_role": "Primitive",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.k3.domain"
@@ -685,7 +685,7 @@
       "canonical": "AND",
       "coverage_entry_id": "core.and",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.k3.meet"
@@ -702,7 +702,7 @@
       "canonical": "OR",
       "coverage_entry_id": "core.or",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.k3.join"
@@ -719,7 +719,7 @@
       "canonical": "NOT",
       "coverage_entry_id": "core.not",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.k3.involution"
@@ -825,7 +825,7 @@
       "canonical": "ANY",
       "coverage_entry_id": "core.any",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
@@ -843,7 +843,7 @@
       "canonical": "ALL",
       "coverage_entry_id": "core.all",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",
@@ -864,8 +864,6 @@
       "algebraic_family": "hosted-effect",
       "core_tier": "material",
       "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "capability": "io.write",
@@ -1172,7 +1170,7 @@
       "canonical": "CONTAINS",
       "coverage_entry_id": "module.algo.contains",
       "semantic_role": "Derived",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "material",
       "derived_from": [
         "algebra.structure-lift.indexed-sequence",

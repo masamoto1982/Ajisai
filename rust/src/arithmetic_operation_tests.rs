@@ -500,36 +500,6 @@ mod ai_first_comparison_tests {
 
     // ── stack-mode sequence properties ───────────────────────────────────
 
-    #[tokio::test]
-    async fn gt_stack_mode_holds_for_strictly_decreasing_sequence() {
-        let interp = run("5 4 3 2 4 .. GT").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gt_stack_mode_false_when_not_strictly_decreasing() {
-        let interp = run("5 4 4 3 4 .. GT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_stack_mode_holds_for_nonincreasing_sequence() {
-        let interp = run("5 4 4 3 4 .. GTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn neq_stack_mode_holds_when_all_adjacent_pairs_differ() {
-        let interp = run("1 2 3 1 4 .. NEQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn neq_stack_mode_false_when_two_adjacent_values_match() {
-        let interp = run("1 2 2 3 4 .. NEQ").await;
-        assert!(!bool_of(&interp));
-    }
-
     // ── KEEP modifier preserves operands ─────────────────────────────────
 
     #[tokio::test]
@@ -600,24 +570,6 @@ mod comparison_budget_infrastructure_tests {
     }
 
     // ── Regression: STAK-mode property checks still produce a single bool
-
-    #[tokio::test]
-    async fn stak_lt_monotonic_sequence_is_true() {
-        let interp = run("1 2 3 5 8 5 .. LT").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_lt_non_monotonic_sequence_is_false() {
-        let interp = run("1 3 2 4 4 .. LT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_gte_non_increasing_sequence_is_true() {
-        let interp = run("5 5 3 1 0 5 .. GTE").await;
-        assert!(bool_of(&interp));
-    }
 
     // ── NIL projection contract for the Undecidable case ─────────────────
 
@@ -739,30 +691,6 @@ mod phase_seven_eq_budget_tests {
     }
 
     // ── STAK-mode regression ─────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn stak_eq_all_equal_is_true() {
-        let interp = run("2/4 1/2 4/8 3 .. EQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_eq_with_one_distinct_is_false() {
-        let interp = run("1/2 1/2 2/3 3 .. EQ").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_neq_all_adjacent_unequal_is_true() {
-        let interp = run("1 2 3 4 4 .. NEQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_neq_with_adjacent_duplicate_is_false() {
-        let interp = run("1 2 2 3 4 .. NEQ").await;
-        assert!(!bool_of(&interp));
-    }
 
     // ── NIL passthrough is unchanged ─────────────────────────────────────
 

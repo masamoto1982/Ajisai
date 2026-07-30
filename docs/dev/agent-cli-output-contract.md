@@ -176,10 +176,10 @@ fields so agents never have to parse display strings.
 {
   "kind": "unknownWord | stackUnderflow | divisionByZero | ... | null",
   "recoverability": "fixInput | fixProgram | fixHost | fixCapabilityOrForce | addBudgetOrFixRecursion | handleUnknownOrNil | inspectContext",
-  "semanticArea": "exact-real-arithmetic | exact-real-comparison | k3-truth | hosted-effect | unknown-or-absence | stack-value-shape | unknown",
+  "semanticArea": "exact-real-arithmetic | exact-real-comparison | boolean-truth | hosted-effect | unknown-or-absence | stack-value-shape | unknown",
   "word": "... | null",
   "semanticRole": "Primitive | Derived | HostedEffect | Extension | Unknown",
-  "algebraicFamily": "exact-arithmetic | observation | k3-truth | hosted-effect | ...",
+  "algebraicFamily": "exact-arithmetic | observation | boolean-truth | hosted-effect | ...",
   "absenceReason": "divisionByZero | emptySequence | ... | null",
   "truthValue": "true | false | unknown | null",
   "effect": "... | null",

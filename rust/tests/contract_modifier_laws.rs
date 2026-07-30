@@ -4,8 +4,7 @@
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-quater E (Phase 3):
 //!
 //! 1. **Modifier combinators** (`SPEC §6`): `⟦μ·w⟧ = κ_consume ∘ δ_region ∘
-//!    base(w)`. `TOP`/`EAT` are the identity defaults; `KEEP` is bifurcation
-//!    (§13.2); `STAK` is the top-`count` fold.
+//!    base(w)`. `EAT` is the identity default and `KEEP` is bifurcation.
 //! 2. **Coreword contracts** (`SPEC §7.14`): the `partiality` / `nil_policy` /
 //!    `safety_level` lattices, with contract absence = conformance violation.
 //! 3. **Static mass conservation** (`SPEC §13`): consumption/production as a
@@ -15,7 +14,7 @@
 //! Every law was checked against the reference implementation with a throwaway
 //! probe before being written (roadmap §1.2-(T) discipline). Probe findings are
 //! recorded as §9-quater E.5 findings; the two that are tracked oracles
-//! (E2 = GCD/LCM safety/partiality mismatch) are asserted as guarded
+//! are asserted as guarded
 //! invariants so a future drift is loud.
 
 mod test_support;
@@ -50,13 +49,13 @@ fn binary_arith() -> impl Strategy<Value = &'static str> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
-    /// `TOP` and `EAT` are the identity defaults of the modifier algebra: the
-    /// bare word and every default-modifier spelling render the same stack
-    /// (SPEC §6.1/§6.2; the sugar `.`≡TOP, `,`≡EAT per §6.1/§6.2 tables).
+    /// `EAT` is the identity default of the one modifier axis: the bare word
+    /// and every default-modifier spelling render the same stack
+    /// (LANG.MODIFIERS.CONSUMPTION; the sugar `,` ≡ EAT).
     #[test]
     fn default_modifiers_are_identities(a in small(), b in small(), w in binary_arith()) {
         let bare = obs(&format!("{a} {b} {w}"));
-        for variant in ["TOP", "EAT", "TOP EAT", ".", ",", ". ,"] {
+        for variant in ["EAT", ","] {
             prop_assert_eq!(&bare, &obs(&format!("{a} {b} {variant} {w}")));
         }
     }
@@ -187,14 +186,10 @@ fn safety_lattice_is_monotone() {
     }
 }
 
-/// **Finding E2 (resolved).** SPEC §7.14 defines safety `A` as "total, pure,
-/// deterministic". `GCD`/`LCM` genuinely raise on non-integer input (they are
-/// `Partial`), so they were corrected from `A` to `B` ("partial but with
-/// explicit error categories"). The invariant now holds with no exceptions:
-/// **no** word is both safety `A` and `Partial`, and `GCD`/`LCM` are `B`. This
-/// guards against regressing the contract.
+/// Safety `A` means "total, pure, deterministic", so no Word may be both `A`
+/// and `Partial`. This guards against regressing the contract.
 #[test]
-fn safety_a_partial_invariant_holds_and_gcd_lcm_are_b() {
+fn safety_a_words_are_total() {
     let a_but_partial: Vec<&str> = get_builtin_word_registry()
         .iter()
         .filter(|m| m.safety_level == SafetyLevel::A && m.partiality == Partiality::Partial)
@@ -204,11 +199,6 @@ fn safety_a_partial_invariant_holds_and_gcd_lcm_are_b() {
         a_but_partial.is_empty(),
         "SPEC §7.14: safety A must be total, but these are A+Partial: {a_but_partial:?}"
     );
-    for w in ["GCD", "LCM"] {
-        let m = get_coreword_metadata(w).unwrap_or_else(|| panic!("no contract {w}"));
-        assert_eq!(m.partiality, Partiality::Partial, "{w}");
-        assert_eq!(m.safety_level, SafetyLevel::B, "{w} must be safety B");
-    }
 }
 
 /// Concrete §7.14 anchor contracts (the narrative examples of §7.14, pinned as

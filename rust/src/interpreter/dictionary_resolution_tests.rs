@@ -108,21 +108,6 @@ mod tests {
             result.err()
         );
     }
-
-    #[tokio::test]
-    async fn test_path_case_insensitive() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        let _ = interp.collect_output();
-
-        let result = interp.execute("music@seq").await;
-        assert!(
-            result.is_ok(),
-            "music@seq should resolve (case insensitive): {:?}",
-            result.err()
-        );
-    }
-
     #[tokio::test]
     async fn test_path_case_insensitive_user() {
         let mut interp = Interpreter::new();

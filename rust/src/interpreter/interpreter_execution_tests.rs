@@ -5,35 +5,6 @@ mod tests {
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
-    async fn test_stack_get_basic() {
-        let mut interp = Interpreter::new();
-
-        let code = "[5] [0] .. GET";
-
-        let result = interp.execute(code).await;
-        assert!(result.is_ok());
-        assert_eq!(
-            interp.stack.len(),
-            1,
-            "Stack+Consume GET should consume stack and push result only"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_stack_get_with_guard_and_comparison() {
-        let mut interp = Interpreter::new();
-
-        let code = "[10] [20] [30] [1] ,, .. GET [20] =";
-
-        let result = interp.execute(code).await;
-        assert!(result.is_ok());
-        assert_eq!(interp.stack.len(), 4);
-        let val = &interp.stack[3];
-
-        assert_eq!(val.as_truth(), Some(true), "Expected TRUE from comparison");
-    }
-
-    #[tokio::test]
     async fn test_simple_addition() {
         let mut interp = Interpreter::new();
 

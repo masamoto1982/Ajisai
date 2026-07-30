@@ -30,32 +30,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn standard_module_words_have_expected_attributes() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("").await.unwrap();
-
-        let time_now = interp
-            .module_vocabulary
-            .get("TIME")
-            .and_then(|m| m.words.get("TIME@NOW"))
-            .unwrap();
-        assert_eq!(time_now.tier, Tier::Standard);
-        assert_eq!(time_now.capabilities, Capabilities::TIME);
-
-        let csprng = interp
-            .module_vocabulary
-            .get("CRYPTO")
-            .and_then(|m| m.words.get("CRYPTO@CSPRNG"))
-            .unwrap();
-        assert_eq!(csprng.tier, Tier::Standard);
-        assert_eq!(
-            csprng.capabilities,
-            Capabilities::RANDOM | Capabilities::CRYPTO
-        );
-    }
-
-    #[tokio::test]
     async fn user_defined_word_is_contrib_tier() {
         let mut interp = Interpreter::new();
         interp.execute("{ 1 } 'X' DEF").await.unwrap();

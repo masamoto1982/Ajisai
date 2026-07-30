@@ -29,7 +29,6 @@ async fn lookup_alias_canonicalizes_to_english_word() {
     use crate::core_word_aliases::canonicalize_core_word_name;
     assert_eq!(canonicalize_core_word_name("+"), "ADD");
     assert_eq!(canonicalize_core_word_name("?"), "LOOKUP");
-    assert_eq!(canonicalize_core_word_name("~"), "FLOW");
     assert_eq!(canonicalize_core_word_name("^"), "VENT");
 }
 
@@ -43,7 +42,6 @@ async fn surface_form_concepts_are_not_runtime_canonicalizations() {
 
     assert_eq!(lookup_surface_form("#").unwrap().concept, "COMMENT-LINE");
     assert_eq!(lookup_surface_form("[").unwrap().concept, "BEGIN-VECTOR");
-    assert_eq!(lookup_surface_form(";").unwrap().concept, "TOP-EAT");
 
     assert_ne!(canonicalize_core_word_name("#"), "COMMENT-LINE");
     assert_ne!(canonicalize_core_word_name("["), "BEGIN-VECTOR");

@@ -368,16 +368,23 @@ mod tests {
     }
 
     #[test]
-    fn json_roundtrip_through_arena_node_keeps_primitives_and_objects() {
+    fn json_object_becomes_a_vector_of_key_value_pairs() {
+        // Records are gone from the value model, so a JSON object is modelled as
+        // a vector of `[ key value ]` pairs (LANG.VALUES.VECTOR). The mapping is
+        // therefore lossy in one direction by design: an object goes in, pairs
+        // come back.
         let json = serde_json::json!({
             "name": "Ajisai",
             "values": [1, 2, 3],
             "flag": true
         });
         let mut arena = ValueArena::new();
-        let root = json_to_arena_node(&mut arena, json.clone()).expect("json to arena");
+        let root = json_to_arena_node(&mut arena, json).expect("json to arena");
         let restored = arena_node_to_json(&arena, root);
-        assert_eq!(restored, json);
+        assert_eq!(
+            restored,
+            serde_json::json!([["flag", true], ["name", "Ajisai"], ["values", [1, 2, 3]]])
+        );
     }
 
     #[test]

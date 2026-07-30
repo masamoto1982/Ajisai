@@ -3,9 +3,8 @@
 //! Encodes the algebraic content of
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-octies I.2 (Phase 9):
 //! a string literal `'abc'` is a **codepoint sequence** (a `Text`-hinted vector,
-//! empty → NIL §4.5). The text words (`STR`/`NUM`/`BOOL`/`CHR`/`CHARS`/`JOIN`/
-//! `TRIM*`/`TOKENIZE`/`SUBSTITUTE`/`STARTS-WITH?`/`ENDS-WITH?`) are Canonical
-//! Core (boundary-listed `TEXT`), so no import is needed.
+//! empty → NIL). The text words (`STR`/`NUM`/`CHR`/`CHARS`/`JOIN`/
+//! `TRIM`/`TOKENIZE`/`SUBSTITUTE`/`STARTS-WITH?`/`ENDS-WITH?`) are Core Words.
 //!
 //! Observation is firewall-clean: text is read through the pure `render` (a
 //! `Text`-hinted value renders `'…'`); predicates through `render`
@@ -126,13 +125,10 @@ fn num_of_non_numeric_projects_nil() {
     assert_eq!(obs1("'abc' NUM"), "NIL");
 }
 
-/// **`CHR` maps a codepoint to its single-character string** and `BOOL` parses
-/// a truth literal — concrete §7.6 anchors.
+/// **`CHR` maps a codepoint to its single-character string** — a concrete anchor.
 #[test]
-fn chr_and_bool_anchors() {
+fn chr_anchor() {
     assert_eq!(obs1("65 CHR"), "'A'");
-    assert_eq!(obs1("'TRUE' BOOL"), "TRUE");
-    assert_eq!(obs1("'FALSE' BOOL"), "FALSE");
 }
 
 /// **Finding I2 (guarded oracle): `CONCAT` underflows on a single-element top

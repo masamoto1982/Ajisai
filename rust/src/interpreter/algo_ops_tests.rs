@@ -78,24 +78,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn index_of_can_fall_back_with_or_nil() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("1 [ 1 2 3 ] 9 INDEX-OF ^")
-            .await
-            .expect("should succeed");
-        assert_eq!(interp.stack[0].as_scalar().unwrap().to_i64().unwrap(), -1);
-    }
-
-    #[tokio::test]
-    async fn stack_mode_is_rejected() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 1 2 ] .. UNIQUE").await;
-        assert!(result.is_err(), "UNIQUE should reject Stack mode");
-        assert!(result.unwrap_err().to_string().contains("Stack mode"));
-    }
-
-    #[tokio::test]
     async fn keep_mode_retains_operands() {
         let mut interp = Interpreter::new();
         interp

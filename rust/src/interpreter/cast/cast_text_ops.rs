@@ -265,20 +265,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn trim_left_only() {
-        let mut interp = Interpreter::new();
-        interp.execute("'  hello  ' TRIM-LEFT").await.unwrap();
-        assert_eq!(top_str(&interp), "hello  ");
-    }
-
-    #[tokio::test]
-    async fn trim_right_only() {
-        let mut interp = Interpreter::new();
-        interp.execute("'  hello  ' TRIM-RIGHT").await.unwrap();
-        assert_eq!(top_str(&interp), "  hello");
-    }
-
-    #[tokio::test]
     async fn tokenize_basic() {
         let mut interp = Interpreter::new();
         interp.execute("'a,b,c' ',' TOKENIZE").await.unwrap();

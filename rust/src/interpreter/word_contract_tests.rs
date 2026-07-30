@@ -34,14 +34,6 @@ async fn print_dependency_makes_user_word_effectful() {
     assert_eq!(contract.purity, ContractPurity::Effectful);
     assert!(contract.capabilities.contains(Capabilities::IO));
 }
-
-#[tokio::test]
-async fn now_dependency_makes_user_word_observable_and_nondeterministic() {
-    let contract = contract_for("{ NOW } 'STAMP' DEF", "STAMP").await;
-    assert_eq!(contract.purity, ContractPurity::Observable);
-    assert_eq!(contract.determinism, ContractDeterminism::NonDeterministic);
-    assert!(contract.capabilities.contains(Capabilities::TIME));
-}
 #[tokio::test]
 async fn dependency_chains_widen_monotonically() {
     let pure = contract_for(
@@ -104,7 +96,11 @@ async fn different_content_does_not_share_contract_cache_entry() {
 }
 
 #[tokio::test]
-async fn del_invalidates_dependency_contract_to_conservative() {
+async fn del_refuses_while_a_dependent_would_be_left_dangling() {
+    // A word's inferred contract cannot go stale by losing a dependency: DEL
+    // fails with ERROR while any definition still depends on the target
+    // (LANG.DICTIONARY.MUTATION), so there is no force path to a dangling
+    // reference.
     let mut interp = Interpreter::new();
     interp
         .execute("{ DIV } 'DEP' DEF { DEP } 'USE' DEF")
@@ -113,8 +109,11 @@ async fn del_invalidates_dependency_contract_to_conservative() {
     let before = interp.infer_word_contract("USE").unwrap();
     assert_eq!(before.nil_behavior, NilBehavior::MayCreate);
 
-    interp.execute("! 'DEP' DEL").await.unwrap();
+    interp
+        .execute("'DEP' DEL")
+        .await
+        .expect_err("DEL must refuse while USE still depends on DEP");
+
     let after = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(after.confidence, ContractConfidence::Conservative);
-    assert_eq!(after.flow, ContractFlow::Dynamic);
+    assert_eq!(after.nil_behavior, NilBehavior::MayCreate);
 }

@@ -196,7 +196,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes TRUE.",
         }],
         failure_note: "",
-        related: &["NEQ", "LT", "LTE", "GT", "GTE", "COMPARE-WITHIN"],
+        related: &["NEQ", "LT", "LTE", "GT", "GTE"],
     },
     BuiltinLookupDoc {
         word: "LT",
@@ -206,17 +206,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes TRUE.",
         }],
         failure_note: "",
-        related: &["LTE", "GT", "GTE", "EQ", "COMPARE-WITHIN"],
-    },
-    BuiltinLookupDoc {
-        word: "COMPARE-WITHIN",
-        behavior: "Pops the budget, then two values, and pushes -1, 0, or 1\nfor their ordering. Every value the current vocabulary can\nconstruct decides regardless of the budget; the budget bounds\nthe refinement of future general computable reals, whose\nexhaustion yields UNKNOWN.",
-        examples: &[BuiltinExampleDoc {
-            code: "1/3 1/2 64 COMPARE-WITHIN",
-            result: "Pushes -1, 0, 1, or UNKNOWN.",
-        }],
-        failure_note: "UNKNOWN is a value, not an error: it reports that the\nrequested depth was reached before the order was decided.",
-        related: &["EQ", "LT", "GT"],
+        related: &["LTE", "GT", "GTE", "EQ"],
     },
     // ── Casts and text ────────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -227,7 +217,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 42.",
         }],
         failure_note: "Text with no numeric reading yields a Bubble/NIL.",
-        related: &["STR", "BOOL", "CHR"],
+        related: &["STR", "CHR"],
     },
     BuiltinLookupDoc {
         word: "STR",
@@ -237,7 +227,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes '42'.",
         }],
         failure_note: "",
-        related: &["NUM", "BOOL", "CHARS", "JOIN"],
+        related: &["NUM", "CHARS", "JOIN"],
     },
     BuiltinLookupDoc {
         word: "CHR",
@@ -278,7 +268,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 'y'.",
         }],
         failure_note: "When every guard fails and no else clause exists, COND\nraises an error.",
-        related: &["IDLE", "MAP", "EXEC"],
+        related: &["MAP", "EXEC"],
     },
     BuiltinLookupDoc {
         word: "MAP",
@@ -288,7 +278,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 2 4 6 ].",
         }],
         failure_note: "An element the block cannot produce a value for follows\nthe Bubble Rule: that lane becomes a Bubble/NIL, e.g.\ndividing by zero maps the element to NIL.",
-        related: &["FILTER", "FOLD", "SCAN", "COUNT"],
+        related: &["FILTER", "FOLD"],
     },
     BuiltinLookupDoc {
         word: "FILTER",
@@ -298,7 +288,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 2 ].",
         }],
         failure_note: "",
-        related: &["MAP", "FOLD", "ANY", "ALL", "COUNT"],
+        related: &["MAP", "FOLD", "ANY", "ALL"],
     },
     BuiltinLookupDoc {
         word: "FOLD",
@@ -308,7 +298,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 6 ].",
         }],
         failure_note: "",
-        related: &["MAP", "FILTER", "SCAN", "UNFOLD"],
+        related: &["MAP", "FILTER"],
     },
     // ── Dictionary words ──────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -319,7 +309,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Defines DOUBLE; 5 DOUBLE then pushes 10.",
         }],
         failure_note: "Redefining a built-in word is refused.",
-        related: &["DEL", "LOOKUP", "FORC"],
+        related: &["DEL", "LOOKUP"],
     },
     BuiltinLookupDoc {
         word: "DEL",
@@ -329,7 +319,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Defines a word, then removes it from the dictionary.",
         }],
         failure_note: "Deleting a built-in word is refused. Deleting a word other\nwords depend on requires FORC.",
-        related: &["DEF", "FORC", "LOOKUP"],
+        related: &["DEF", "LOOKUP"],
     },
     BuiltinLookupDoc {
         word: "LOOKUP",
@@ -350,17 +340,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Writes 42 to the output.",
         }],
         failure_note: "",
-        related: &["STR", "EVAL"],
-    },
-    BuiltinLookupDoc {
-        word: "EVAL",
-        behavior: "Pops a text value, parses it as Ajisai source, and\nexecutes it in the current context.",
-        examples: &[BuiltinExampleDoc {
-            code: "'1 2 +' EVAL",
-            result: "Pushes 3.",
-        }],
-        failure_note: "",
-        related: &["EXEC", "PRINT"],
+        related: &["STR"],
     },
     BuiltinLookupDoc {
         word: "NIL-REASON",
@@ -370,6 +350,5 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 'divisionByZero'.",
         }],
         failure_note: "",
-        related: &["NIL?", "NIL-ORIGIN", "NIL-RECOVERABLE?", "NIL-DIAGNOSIS"],
-    },
-];
+        related: &["NIL?"],
+    }];

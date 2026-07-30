@@ -192,16 +192,6 @@ mod dimension_limit_tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_dotdot_operation_sets_mode() {
-        let mut interp = Interpreter::new();
-        interp.execute("").await.unwrap();
-        interp.execute("[ 1 2 3 ]").await.unwrap();
-
-        let result = interp.execute("..").await;
-        assert!(result.is_ok(), ".. operation should succeed");
-    }
-
     // Regression: deeply nested vector literals must be rejected before they
     // build a value whose recursive display/drop overflows the native stack
     // (an unrecoverable abort / WASM trap). See MAX_VECTOR_NESTING_DEPTH.

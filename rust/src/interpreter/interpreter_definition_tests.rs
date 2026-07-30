@@ -36,21 +36,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_map_stack_mode() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("{ [ 2 ] * } 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP")
-            .await;
-        assert!(
-            result.is_ok(),
-            "MAP in Stack mode should work: {:?}",
-            result
-        );
-
-        assert_eq!(interp.stack.len(), 3);
-    }
-
-    #[tokio::test]
     async fn test_empty_vector_error() {
         let mut interp = Interpreter::new();
 
@@ -93,21 +78,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_force_flag_del_with_dependents_forced() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        let result = interp.execute("! 'DOUBLE' DEL").await;
-        assert!(result.is_ok());
-        assert!(!interp.user_words.contains_key("DOUBLE"));
-        assert!(interp.output_buffer.contains("Warning"));
-    }
-
-    #[tokio::test]
     async fn test_force_flag_def_with_dependents_error() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
@@ -121,39 +91,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_force_flag_def_with_dependents_forced() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        let result = interp.execute("! { [ 3 ] * } 'DOUBLE' DEF").await;
-        assert!(result.is_ok());
-        assert!(interp.output_buffer.contains("Warning"));
-    }
-
-    #[tokio::test]
     async fn test_force_flag_builtin_always_error() {
         let mut interp = Interpreter::new();
 
         let result = interp.execute("! '+' DEL").await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_force_flag_reset_after_other_word() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        interp.execute("!").await.unwrap();
-        interp.execute("[ 1 2 ] LENGTH").await.unwrap();
-        let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
     }
 
@@ -251,42 +192,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_false_and_nil_returns_false() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("FALSE NIL AND").await;
-        assert!(result.is_ok(), "FALSE AND NIL should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "FALSE AND NIL should return FALSE, not NIL");
-        assert!(!val.is_truthy(), "FALSE AND NIL should be falsy");
-    }
-
-    #[tokio::test]
-    async fn test_false_and_nil_alias_returns_false() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("FALSE NIL &").await;
-        assert!(result.is_ok(), "FALSE NIL & should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "FALSE NIL & should return FALSE, not NIL");
-        assert!(!val.is_truthy(), "FALSE NIL & should be falsy");
-    }
-
-    #[tokio::test]
     async fn test_true_and_nil_alias_returns_nil() {
         let mut interp = Interpreter::new();
         let result = interp.execute("TRUE NIL &").await;
         assert!(result.is_ok(), "TRUE NIL & should work: {:?}", result);
         let val = interp.stack.pop().unwrap();
         assert!(val.is_nil(), "TRUE NIL & should return NIL, got {:?}", val);
-    }
-
-    #[tokio::test]
-    async fn test_true_or_nil_returns_true() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("TRUE NIL OR").await;
-        assert!(result.is_ok(), "TRUE OR NIL should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "TRUE OR NIL should return TRUE, not NIL");
-        assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
 
     #[tokio::test]

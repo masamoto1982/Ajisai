@@ -128,56 +128,16 @@ fn point_updates_and_collect_are_sequence_transforms() {
     assert_law("remove-point", "[ 1 2 3 ] 1 REMOVE", "[ 1 3 ]");
     assert_law("collect-stack", "1 2 3 3 COLLECT", "[ 1 2 3 ]");
 }
-
-// ── Tensor / reshape-group laws ──
-
-#[test]
-fn transpose_is_involution_2d() {
-    for m in ["[ [ 1 2 3 ] [ 4 5 6 ] ]", "[ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]"] {
-        assert_law(
-            "transpose-involution",
-            &format!("{m} TRANSPOSE TRANSPOSE"),
-            m,
-        );
-    }
-}
-
-#[test]
-fn reshape_round_trips() {
-    assert_law(
-        "reshape-roundtrip",
-        "[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE [ 6 ] RESHAPE",
-        "[ 1 2 3 4 5 6 ]",
-    );
-}
-
-#[test]
-fn shape_and_rank_read_index_structure() {
-    assert_law("shape-2x3", "[ [ 1 2 3 ] [ 4 5 6 ] ] SHAPE", "[ 2 3 ]");
-    assert_law("rank-2", "[ [ 1 2 3 ] [ 4 5 6 ] ] RANK", "2");
-    // FILL builds a tensor of the requested shape: shape∘fill = id on the shape.
-    assert_law("fill-shape", "[ 2 2 7 ] FILL SHAPE", "[ 2 2 ]");
-    assert_law("range-literal", "[ 0 5 ] RANGE", "[ 0 1 2 3 4 5 ]");
-}
-
 // ── SORT (ALGO) on the decidable rational sub-domain (§7.4.3) ──
 
 #[test]
 fn sort_is_idempotent_and_permutation_invariant() {
-    assert_law(
-        "sort-idempotent",
-        "'ALGO' IMPORT [ 3 1 2 ] SORT SORT",
-        "'ALGO' IMPORT [ 3 1 2 ] SORT",
-    );
+    assert_law("sort-idempotent", "[ 3 1 2 ] SORT SORT", "[ 3 1 2 ] SORT");
     // Sorting is invariant under any prior permutation of the input.
     assert_law(
         "sort-permutation-invariant",
-        "'ALGO' IMPORT [ 3 1 2 ] SORT",
-        "'ALGO' IMPORT [ 3 1 2 ] REVERSE SORT",
+        "[ 3 1 2 ] SORT",
+        "[ 3 1 2 ] REVERSE SORT",
     );
-    assert_law(
-        "sort-rationals",
-        "'ALGO' IMPORT [ 3 1 2 ] SORT",
-        "[ 1 2 3 ]",
-    );
+    assert_law("sort-rationals", "[ 3 1 2 ] SORT", "[ 1 2 3 ]");
 }

@@ -38,7 +38,7 @@ const allowedAlgebraicFamilies = new Set([
   'dictionary',
   'exact-scalar',
   'exact-arithmetic',
-  'k3-truth',
+  'boolean-truth',
   'bubble',
   'modifier',
   'structure-lift',
