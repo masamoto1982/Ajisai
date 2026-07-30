@@ -456,7 +456,7 @@
             <article class="ref-article">
                 <section id="intro" class="ref-page">
                     <h2>Introduction</h2>
-                    <p>Ajisai is an AI-first, vector-oriented, fractional-dataflow stack language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is <strong>exact</strong> — exact rationals and the algebraic <code>SQRT</code> closure (a multiquadratic normal form), compared with no rounding — so arithmetic never rounds. Its continued-fraction form is a canonical display <em>derived from</em> the value, not its internal storage.</p>
+                    <p>Ajisai is an AI-first, vector-oriented dataflow language. A program is a sequence of <strong>words</strong>: values are pushed onto a single stack, and each word consumes operands from the stack and pushes its results. Every number is <strong>exact</strong> — exact rationals and the algebraic <code>SQRT</code> closure over them, carried in a multiquadratic normal form — so arithmetic and comparison both work without rounding. A number's continued-fraction form is a canonical display <em>derived from</em> the value, not its internal storage.</p>
                     <p>This reference introduces each feature with short, verified examples. Every example has an <strong>"Open in Playground"</strong> button; pressing it loads the code into the app's editor so you can run it and see how it behaves.</p>
                     <p><strong>The Reference is for using Ajisai.</strong> If you are implementing or porting the language, the single design authority is the <a href="../SPECIFICATION.html">Specification</a>; this page is derived from it for learners and day-to-day users.</p>
                     <h3>How to read the examples</h3>
@@ -497,7 +497,7 @@
                                 <tr>
                                     <td><code>[ [ 1 2 ] [ 3 4 ] ]</code></td>
                                     <td><code>[ [ 1/1 2/1 ] [ 3/1 4/1 ] ]</code></td>
-                                    <td class="notes">Nesting is preserved; nested vectors act as tensors.</td>
+                                    <td class="notes">Nesting is preserved, and nesting is how grouped and ragged data is expressed.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -530,7 +530,7 @@
 
                 <section id="numbers" class="ref-page">
                     <h2>Exact Numbers</h2>
-                    <p>Every numeric value is exact; its continued-fraction form is a canonical display <em>derived</em> from the value, not its internal storage. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact value — <code>0.5</code> <em>is</em> one half, not a binary approximation. The implemented domain is exact rationals and the algebraic <code>SQRT</code> closure; general computable reals (π, e, log, …) are reserved for future words.</p>
+                    <p>Every numeric value is exact; its continued-fraction form is a canonical display <em>derived</em> from the value, not its internal storage. Integer, fraction, decimal, and scientific-notation literals are all surface forms of the same exact value — <code>0.5</code> <em>is</em> one half, not a binary approximation. The numeric domain is exact rationals together with the algebraic <code>SQRT</code> closure over them, and every number you can build is one of those.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -650,7 +650,7 @@
 
                 <section id="stack" class="ref-page">
                     <h2>Stack and Modifiers</h2>
-                    <p>Words take their operands from the stack and push their results back. Two pairs of <strong>modifiers</strong>, written before a word, control where the operands come from and whether they survive:</p>
+                    <p>Words take their operands from the stack and push their results back. A <strong>modifier</strong>, written before a word, controls whether the operands survive the call:</p>
                     <div class="ref-table-wrap word-table">
                         <table class="ref-table">
                             <thead>
@@ -854,12 +854,12 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">The six relations decide exactly over every value the words can build — rationals and square roots alike — so a comparison always answers <code>TRUE</code> or <code>FALSE</code>. There is no budget to run out of and no undecided outcome.</p>
+                    <p class="ref-note">The six relations decide exactly over every value the words can build — rationals and square roots alike — so a comparison always answers <code>TRUE</code> or <code>FALSE</code> in finite time.</p>
                 </section>
 
                 <section id="logic" class="ref-page">
                     <h2>Logic</h2>
-                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> are the ordinary Boolean operations over <code>TRUE</code> and <code>FALSE</code>. There is no third truth value: every comparison decides, so logic never has to represent "undecided". An absent operand passes through rather than being absorbed — <code>NIL</code> in, <code>NIL</code> out — so a bubble stays visible instead of being swallowed by a definite operand.</p>
+                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> are the Boolean operations over the two truth values <code>TRUE</code> and <code>FALSE</code>. An absent operand passes through: <code>NIL</code> in, <code>NIL</code> out, so a bubble stays visible in the result even when the other operand would settle the answer.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -927,7 +927,7 @@
                                 <tr>
                                     <td><code>1 0 DIV TRUE AND</code></td>
                                     <td><code>NIL</code></td>
-                                    <td class="notes">The left operand bubbled, so the absence flows to the result instead of being absorbed. Recover it with <code>^</code> where it matters.</td>
+                                    <td class="notes">The left operand bubbled, so the absence flows through to the result. Recover it with <code>^</code> where it matters.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1400,7 +1400,7 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">Every guard decides, so a clause either fires or does not. If no clause matches and there is no else clause, <code>COND</code> raises an error.</p>
+                    <p class="ref-note">Each guard answers <code>TRUE</code> or <code>FALSE</code>, so a clause either fires or does not. If no clause matches and no else clause is present, <code>COND</code> raises an error.</p>
                 </section>
 
                 <section id="strings" class="ref-page">
@@ -1638,7 +1638,7 @@ COND</code></td>
 
                     <h3>Words are identified by content</h3>
                     <p>Ajisai is <strong>content-addressed</strong>: a user word's identity is computed from its content — its normalized body together with the identities of the words it calls — not from its name. Renaming a word, or defining an identical body in another dictionary, produces the very same identity, while changing the body produces a new one. A word's name is a label for an identity, not the word itself.</p>
-                    <p>Two consequences follow directly. Defining the same body twice does not store it twice — identical definitions share one identity and deduplicate. And because each word's dependencies are pinned to the <em>identities</em> they referenced at definition time, adding a core word, importing a module, or loading another dictionary later can never silently recapture an existing reference.</p>
+                    <p>Two consequences follow directly. Defining the same body twice does not store it twice — identical definitions share one identity and deduplicate. And because each word's dependencies are pinned to the <em>identities</em> they referenced at definition time, defining a new word or loading another dictionary later can never silently recapture an existing reference.</p>
 
                     <h3>Resolving a bare name</h3>
                     <p>A bare name is looked up in a fixed order, and the first match wins:</p>
@@ -1653,7 +1653,7 @@ COND</code></td>
 
                     <h3>Importing word groups</h3>
                     <p>You can export a word group, edit the file, rename it, and import it again. Import is a <strong>merge by identity</strong>, never a destructive overwrite. Identical definitions deduplicate automatically, so re-importing an unchanged group is a no-op. If you edited a word and import it under a name that already exists, the name is re-pointed to the new identity while the previous identity stays in place — any words that referenced the old version remain pinned to it, so nothing breaks. The bundled <code>EXAMPLE</code> dictionary is treated exactly like any other in this respect; there is no special name to protect.</p>
-                    <p class="ref-note">Because identity is content-addressed, an imported group behaves identically in every environment, regardless of which other dictionaries or modules happen to be loaded.</p>
+                    <p class="ref-note">Because identity is content-addressed, an imported group behaves identically in every environment, regardless of which other dictionaries happen to be loaded.</p>
                 </section>
 
 
@@ -1737,7 +1737,7 @@ COND</code></td>
                         </tbody>
                     </table>
                     </div>
-                    <p>For current algebraic Ajisai values, comparison is exact and total. Users do not choose an equality mode: they use the existing words, and Ajisai keeps representation details and display roles out of the value model.</p>
+                    <p>Comparison words work at the top layer only: over every Ajisai value they are exact and total, and they answer the mathematical question. The layers below stay out of the value model, so representation and display never affect what a comparison says.</p>
                 </section>
 
             </article>
