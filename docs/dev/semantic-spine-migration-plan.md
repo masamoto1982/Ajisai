@@ -328,6 +328,35 @@ rust/build.rs                        # spec/words.json → kernel/generated/*.rs
 配線する**作業（execute wrapper を dispatch へ、`Observation` を serializer へ、V2 producer を
 wasm へ）が先行する。§23 の原則どおり、**到達不能になってから削除する**。
 
+### 10.2 Phase 9 実施記録（module runtime の削除）
+
+正典から削除済みで、登録経路も既に存在しなかった module runtime を削除した:
+
+- `ModuleDictionary` / `ImportedModule` / `ImportTable` と `Interpreter` の
+  `module_vocabulary` / `import_table` を削除。
+- bare name、修飾名、resolve cache、dependency graph、`DEL` に残っていた module 分岐を削除。
+- module の変更元が無いにもかかわらず cache と compiled plan の invalidation に残っていた
+  `module_epoch` を削除。
+- Word contract cache が借用していた `module_state` は、実際の責務を表す
+  `runtime_scratch` に改名。
+- 凍結済み V1 / wasm 互換 API は anti-corruption boundary として署名を保持し、module catalog、
+  import state、imported module の各結果を常に空として返す。restore は no-op のままとする。
+
+これにより module は Kernel の解決・実行状態から到達不能になり、空の legacy wire shape のみが
+host boundary に残る。
+
+追加監査では、module runtime 削除後も error model に残っていた到達不能な
+`AjisaiError::UnknownModule` / `ErrorCategory::UnknownModule` / `ErrorLocusKind::ModuleWord`
+と `ErrorLocus.module` を削除した。`DICTIONARY@WORD` は module ではなく User dictionary の
+Word として分類し、unknown-word 診断も import ではなく User dictionary の定義確認を案内する。
+V1 が固定する module 関連 wasm method の**署名**は保持するが、restore method の空ループは
+引数を無視する明示的 no-op に縮約した。
+
+GUI 側も常に空の `collect_available_modules()` を入力としていたため、到達不能な module sheet
+manager、import gesture、module autocomplete、module change detection と専用 CSS を削除した。
+dictionary selector は正典どおり Core/User の二項だけを扱う。snapshot と HostProtocolV1 の
+module field、および V1 が固定する wasm method は互換 adapter として引き続き保持する。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

@@ -35,7 +35,7 @@ impl Interpreter {
         self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
-        self.module_state.clear();
+        self.runtime_scratch.clear();
         self.call_stack.clear();
         self.call_depth = 0;
         self.tail_self_word = None;
@@ -47,8 +47,6 @@ impl Interpreter {
         self.word_identities.clear();
         self.body_store.clear();
         self.defer_identity_recompute = false;
-        self.import_table.modules.clear();
-        self.module_vocabulary.clear();
         self.dictionary_dependencies.clear();
         self.next_registration_order = 1;
         self.active_user_dictionary = "EXAMPLE".to_string();

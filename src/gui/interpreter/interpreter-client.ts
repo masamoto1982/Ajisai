@@ -17,8 +17,6 @@ export type InterpreterClient = {
     readonly getRequired: () => AjisaiInterpreter;
     readonly collectCoreWordsInfo: () => ReturnType<AjisaiInterpreter['collect_core_words_info']>;
     readonly collectUserWordsInfo: () => ReturnType<AjisaiInterpreter['collect_user_words_info']>;
-    readonly collectImportedModules: () => ReturnType<AjisaiInterpreter['collect_imported_modules']>;
-    readonly collectModuleWordsInfo: (moduleName: string) => ReturnType<AjisaiInterpreter['collect_module_words_info']>;
     readonly collectStack: () => ReturnType<AjisaiInterpreter['collect_stack']>;
 };
 
@@ -28,8 +26,6 @@ export function createInterpreterClient(): InterpreterClient {
         getRequired: getRequiredInterpreter,
         collectCoreWordsInfo: () => getRequiredInterpreter().collect_core_words_info(),
         collectUserWordsInfo: () => getRequiredInterpreter().collect_user_words_info(),
-        collectImportedModules: () => getRequiredInterpreter().collect_imported_modules(),
-        collectModuleWordsInfo: (moduleName: string) => getRequiredInterpreter().collect_module_words_info(moduleName),
         collectStack: () => getRequiredInterpreter().collect_stack()
     };
 }

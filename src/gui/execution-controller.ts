@@ -149,8 +149,7 @@ export const createExecutionController = (
                 currentState,
                 {
                     stack: interpreter.collect_stack(),
-                    userWords: collectUserWords(interpreter),
-                    importedModules: interpreter.collect_imported_modules()
+                    userWords: collectUserWords(interpreter)
                 },
                 result
             );

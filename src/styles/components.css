@@ -626,22 +626,6 @@
         color: var(--color-non-dependency);
     }
 
-    /* Module words are built-ins too: keep the same visual treatment as Core words. */
-    &.module {
-        border-color: var(--color-core);
-        color: var(--color-core);
-    }
-
-    /* Inactive (un-imported) module words and selector entries: faded, signalling
-       they are candidates to be activated with a long-press. */
-    &.is-inactive {
-        opacity: 0.4;
-        background: repeating-linear-gradient(
-            45deg, transparent, transparent 4px,
-            rgba(0, 0, 0, 0.03) 4px, rgba(0, 0, 0, 0.03) 8px
-        );
-    }
-
     /* Container query: in a narrow panel (the mobile column, or a slim desktop
        one) grow the chips into comfortable touch targets. Responds to the panel
        width, so it follows a resized desktop column without a viewport rule. */
@@ -717,9 +701,6 @@
         background: var(--color-light);
     }
 
-    &.is-inactive {
-        color: #aaa;
-    }
 }
 
 

@@ -1,7 +1,6 @@
 import type { ViewMode } from './mobile-view-switcher';
 import type { MobileHandler } from './mobile-view-switcher';
 import type { GUIElements } from './gui-dom-cache';
-import type { ModuleTabManager } from './module-selector-sheets';
 
 const LEFT_TAB_MODES: ViewMode[] = ['input', 'output'];
 const RIGHT_TAB_MODES: ViewMode[] = ['stack', 'dictionary'];
@@ -124,7 +123,6 @@ export interface ApplyAreaStateDeps {
     readonly elements: GUIElements;
     readonly state: LayoutState;
     readonly mobile: MobileHandler;
-    readonly moduleTabManager: ModuleTabManager;
     readonly switchDictionarySheet: (sheetId: string) => void;
 }
 
@@ -136,12 +134,6 @@ const applyMobileAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void =>
 
 const applyDesktopAreaState = (deps: ApplyAreaStateDeps, mode: ViewMode): void => {
     updateDesktopModes(deps.state, mode);
-
-    const currentSheet = deps.elements.dictionarySheetSelect?.value;
-    if (currentSheet?.startsWith('module-') && !deps.moduleTabManager.lookupModuleArea(currentSheet)) {
-        deps.elements.dictionarySheetSelect.value = 'core';
-        deps.switchDictionarySheet('core');
-    }
 
     syncDesktopLayout(deps.elements, deps.state);
     document.body.dataset.activeArea = deps.state.currentRightMode;

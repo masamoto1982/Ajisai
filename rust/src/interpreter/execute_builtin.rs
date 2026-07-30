@@ -289,15 +289,6 @@ impl Interpreter {
                     dict.words
                         .insert(word.to_string(), std::sync::Arc::new(updated));
                     self.sync_user_words_cache();
-                    return;
-                }
-            }
-            if let Some(module) = self.module_vocabulary.get_mut(ns) {
-                let qualified = format!("{}@{}", ns, word);
-                if let Some(old_def) = module.words.get(&qualified).cloned() {
-                    let mut updated = (*old_def).clone();
-                    updated.execution_plans = Some(plan_set);
-                    module.words.insert(qualified, std::sync::Arc::new(updated));
                 }
             }
         }

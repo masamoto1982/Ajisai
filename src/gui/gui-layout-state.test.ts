@@ -28,9 +28,6 @@ const makeDeps = (mobileMode: boolean, state: LayoutState): ApplyAreaStateDeps =
             extractCurrentMode: () => state.currentMode,
             updateView: vi.fn((mode: ViewMode) => { state.currentMode = mode; }),
         },
-        moduleTabManager: {
-            lookupModuleArea: vi.fn(() => null),
-        } as unknown as ApplyAreaStateDeps['moduleTabManager'],
         switchDictionarySheet: vi.fn(),
     };
 };
@@ -185,12 +182,12 @@ describe('applyExecutionAreaState', () => {
             outputChanged: false,
             stackChanged: true,
             dictionaryChanged: true,
-            dictionarySheetId: 'module-math',
+            dictionarySheetId: 'user',
         });
 
         expect(state.currentRightMode).toBe('dictionary');
-        expect(deps.elements.dictionarySheetSelect.value).toBe('module-math');
-        expect(deps.switchDictionarySheet).toHaveBeenCalledWith('module-math');
+        expect(deps.elements.dictionarySheetSelect.value).toBe('user');
+        expect(deps.switchDictionarySheet).toHaveBeenCalledWith('user');
     });
 
     it('reveals the changed Words sheet on mobile when the dictionary changes', () => {

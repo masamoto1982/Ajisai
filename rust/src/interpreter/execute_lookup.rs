@@ -24,12 +24,10 @@ pub fn op_lookup(interp: &mut Interpreter) -> Result<()> {
                 .unwrap_or_default();
             let full_definition = if definition.is_empty() {
                 format!("[ NIL ] '{}' DEF", name_str)
+            } else if let Some(desc) = &def.description {
+                format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc)
             } else {
-                if let Some(desc) = &def.description {
-                    format!("[ {} ] '{}' '{}' DEF", definition, name_str, desc)
-                } else {
-                    format!("[ {} ] '{}' DEF", definition, name_str)
-                }
+                format!("[ {} ] '{}' DEF", definition, name_str)
             };
             interp.definition_to_load = Some(full_definition);
         }

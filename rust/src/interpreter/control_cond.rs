@@ -323,7 +323,6 @@ fn restore_cond_eval_state(
     interp.stack = saved_stack;
     interp.consumption_mode = saved_consumption_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
-    interp.module_epoch = saved_epoch.module_epoch;
     interp.execution_epoch = saved_epoch.execution_epoch;
     interp.global_epoch = saved_epoch.global_epoch;
 }
