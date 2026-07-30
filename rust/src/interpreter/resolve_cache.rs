@@ -20,9 +20,7 @@ impl Interpreter {
     pub(crate) fn lookup_resolve_cache(&mut self, name: &str) -> Option<String> {
         let key = self.contextual_resolve_cache_key(name);
         let entry = self.resolve_cache.get(&key)?;
-        if entry.dictionary_epoch == self.dictionary_epoch
-            && entry.module_epoch == self.module_epoch
-        {
+        if entry.dictionary_epoch == self.dictionary_epoch {
             self.runtime_metrics.resolve_cache_hit_count += 1;
             Some(entry.resolved_name.clone())
         } else {
@@ -43,7 +41,6 @@ impl Interpreter {
             ResolveCacheEntry {
                 resolved_name: resolved_name.to_string(),
                 dictionary_epoch: self.dictionary_epoch,
-                module_epoch: self.module_epoch,
                 registration_order,
             },
         );

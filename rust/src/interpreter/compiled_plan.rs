@@ -62,7 +62,6 @@ pub enum CompiledOp {
 
 pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
     plan.compiled_at.dictionary_epoch == interp.dictionary_epoch
-        && plan.compiled_at.module_epoch == interp.module_epoch
 }
 
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
