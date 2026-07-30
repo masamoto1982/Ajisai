@@ -90,6 +90,7 @@ jobs:
           npm run word-schema:check
           npm run word:reference:check
           npm run core-word-docs:check
+          npm run word-registry:check
 
       - name: Generate conformance manifest
         run: npm run conformance:manifest
