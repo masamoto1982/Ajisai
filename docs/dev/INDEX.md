@@ -25,6 +25,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | 文書 | 説明 | 状態 |
 | --- | --- | --- |
 | `concept-reduction-2026-07.md` | 十概念への削減。何を捨て、何を残し、実装削減がどの順で進むか | `[設計根拠]` |
+| `semantic-spine-migration-plan.md` | 整理後正典と整理前実装の乖離を収束させる Semantic Spine 移行計画（9 Phase） | `[方針記録]` |
 | `ajisai-minimal-core-identity.md` | 何が変われば Ajisai でなくなるか——同一性の幹の切り分け | `[方針記録]` |
 | `ajisai-self-hosting-design.md` | セルフホスティングの位置づけ（新しい権威層を作らない） | `[方針記録]` |
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割（Lisp 的動機の廃止） | `[方針記録]` |
