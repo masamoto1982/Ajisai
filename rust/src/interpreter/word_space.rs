@@ -104,7 +104,7 @@ fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
         StartsWith | EndsWith => (Linear, false),
         // Repetition can multiply sizes (pattern × replacement, k × separator).
         Substitute | Join => (Superlinear, false),
-        // Dictionary/module registration copies bounded structure.
+        // Dictionary registration copies bounded structure.
         Def => (Linear, false),
         Del | Lookup => (Const, false),
         Print => (Linear, false),
@@ -132,8 +132,8 @@ fn space_arity_override(key: BuiltinExecutorKey) -> Option<(u16, u16)> {
 
 /// Space classification for a resolved built-in word, by canonical name.
 /// A spec without an executor key is a modifier/directive marker that
-/// materializes nothing (`Const`); a name with no builtin spec (module words)
-/// is conservatively unclassified.
+/// materializes nothing (`Const`); a name with no builtin spec is
+/// conservatively unclassified.
 pub(crate) fn builtin_space_for(name: &str) -> (SpaceClass, bool) {
     match crate::builtins::lookup_builtin_spec(name) {
         Some(spec) => match spec.executor_key {

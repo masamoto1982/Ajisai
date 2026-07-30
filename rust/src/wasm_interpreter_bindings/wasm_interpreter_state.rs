@@ -180,9 +180,8 @@ impl AjisaiInterpreter {
         js_sys::Array::new().into()
     }
 
-    /// All importable module names, in specification order. Drives the GUI's
-    /// module selector, which pre-lists every module (active or not) so an
-    /// inactive module can be surfaced greyed-out and toggled with IMPORT.
+    /// Frozen V1 surface. Modules are gone from the language, so the catalog
+    /// of importable module names is always empty.
     #[wasm_bindgen]
     pub fn collect_available_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
@@ -190,20 +189,17 @@ impl AjisaiInterpreter {
         arr.into()
     }
 
-    /// Full word catalog for a module, regardless of import state.
-    /// Tuple shape: `(shortName, description, imported: bool)`.
-    /// `imported` reflects the live import table so the GUI can render active
-    /// words normally and inactive words greyed-out within the same sheet.
+    /// Frozen V1 surface. Tuple shape: `(shortName, description, imported:
+    /// bool)`. No module owns any word, so every catalog is empty.
     #[wasm_bindgen]
     pub fn collect_module_catalog_words_info(&self, _module_name: &str) -> JsValue {
         // Modules are gone from the language; every catalog is empty.
         js_sys::Array::new().into()
     }
 
-    /// Detailed import state for persistence. Tuple shape:
-    /// `(module, importAllPublic: bool, words: string[], samples: string[])`.
-    /// Captures partial imports (IMPORT-ONLY / UNIMPORT-ONLY results) that
-    /// `collect_imported_modules` (module names only) cannot represent.
+    /// Frozen V1 surface. Tuple shape: `(module, importAllPublic: bool,
+    /// words: string[], samples: string[])`. There is no import state to
+    /// report, so the result is always empty.
     #[wasm_bindgen]
     pub fn collect_import_state(&self) -> JsValue {
         js_sys::Array::new().into()

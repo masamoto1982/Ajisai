@@ -86,29 +86,6 @@ pub fn block_src() -> impl Strategy<Value = String> {
 
 // ───────────────────────── Phase 6: names & dictionary ──────────────────────
 
-/// A canonical **module word call**: `(module, bare-program, qualified-program)`.
-/// Both programs assume the module is already imported and, when run after
-/// `'module' IMPORT`, leave the *same* stack — the boundary-word law
-/// `bare ≡ MODULE@WORD` (roadmap Phase 6). Every entry is a `Total` module word
-/// over the chosen operands (probe-confirmed: no NIL / error).
-pub fn module_word_call() -> impl Strategy<Value = (&'static str, String, String)> {
-    prop::sample::select(vec![
-        ("MATH", "4 SQRT", "4 SQRT"),
-        ("MATH", "9 SQRT", "9 SQRT"),
-        ("MATH", "-5 ABS", "-5 ABS"),
-        ("MATH", "7 NEG", "7 NEG"),
-        ("MATH", "-3 SIGN", "-3 SIGN"),
-        ("MATH", "2 10 POW", "2 10 MATH@POW"),
-        ("MATH", "3 7 MIN", "3 7 MIN"),
-        ("MATH", "3 7 MAX", "3 7 MAX"),
-        ("JSON", "'[1]' PARSE", "'[1]' JSON@PARSE"),
-        ("JSON", "'[1,2]' PARSE", "'[1,2]' JSON@PARSE"),
-        ("ALGO", "[ 3 1 2 ] SORT", "[ 3 1 2 ] SORT"),
-        ("ALGO", "[ 5 ] SORT", "[ 5 ] SORT"),
-    ])
-    .prop_map(|(m, b, q)| (m, b.to_string(), q.to_string()))
-}
-
 /// A short user-word name in the runtime's action-object style (already
 /// uppercase, so word-name normalization §3.8 is a no-op on it). Kept distinct
 /// from every built-in so `DEF` never hits the "cannot redefine built-in" path.

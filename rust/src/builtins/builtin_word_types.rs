@@ -68,18 +68,3 @@ pub enum BuiltinExecutorKey {
     NilCheck,
     NilReason,
 }
-
-// WordShape classifies how a word treats its data argument. Used by
-// module words (see ModuleWord::word_shape) to feed future
-// vector-pipeline planning. `Fold` and `Other` are not produced by
-// any current module spec but are reserved for completeness of the
-// classification and to keep planning code able to pattern-match all
-// variants without `_ =>` catch-alls.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum WordShape {
-    Map,
-    Form,
-    Fold,
-    Other,
-}

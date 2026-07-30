@@ -15,7 +15,7 @@
 //!   - `COND` `IDLE` — flow tier (state-transformer composition/identity, §7.7)
 //!   - `NIL` and numeric literals — identity / sugar
 //!
-//! No `material`-tier word (no arithmetic, no vector word, no module word)
+//! No `material`-tier word (no arithmetic, no vector word)
 //! appears in the definition, so a green run witnesses that `SIGN`'s
 //! observable contract is reconstructible from the Minimal Core alone.
 //!
@@ -136,8 +136,8 @@ fn minimal_core_sign_decided_spot_checks() {
 /// finding this witness first surfaced: the built-in used to reject these
 /// operands with `SIGN: expected a number` while the derivation handled them,
 /// and once `SIGN` was fixed the two became fully equivalent here too.
-/// Each operand needs the math module in scope to be *constructed*; `SIGN2`
-/// itself still uses only Minimal Core words.
+/// Each operand is *constructed* with `SQRT`; `SIGN2` itself still uses only
+/// Minimal Core words.
 #[test]
 fn minimal_core_sign_matches_builtin_on_lazy_irrationals() {
     for (x, want) in [
