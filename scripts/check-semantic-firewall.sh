@@ -81,6 +81,18 @@ check_user_visible_absent 'epoch vocabulary' '[Ee]poch'
 check_user_visible_absent 'internal roadmap phase numbers' '[Pp]hase [0-9]'
 check_user_visible_absent 'memoization vocabulary' '[Mm]emoiz'
 
+# ── Reading surfaces describe the present language ────────────────────────
+# LANG.AUTHORITY.PRESENT: the README, the Reference, and the Specification
+# describe Ajisai as it currently is. History and superseded designs live in
+# docs/dev/, which defines nothing. This catches the framing half of the
+# clause; check-reading-surfaces.mjs catches the vocabulary half.
+READING_SURFACES=(README.md public/docs/index.html SPECIFICATION.html spec/language-semantics.md spec/gui-semantics.md)
+
+check_absent \
+  'history framing on a reading surface (LANG.AUTHORITY.PRESENT)' \
+  '\b([Nn]o longer|[Uu]sed to be|[Ff]ormerly|[Pp]reviously|[Dd]eprecated|[Ll]egacy|[Ee]arlier versions?|[Oo]nce (had|carried|supported)|has been removed|was removed|reserved for future)\b' \
+  "${READING_SURFACES[@]}"
+
 if [[ "$failed" -ne 0 ]]; then
   echo "[semantic-firewall] residue checks failed" >&2
   exit 1

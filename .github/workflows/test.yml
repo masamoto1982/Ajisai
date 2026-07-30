@@ -73,6 +73,24 @@ jobs:
         # may not grow by >=10%. See scripts/check-file-size-budget.mjs.
         run: npm run check:file-size
 
+      - name: Reading surfaces describe the present language (LANG.AUTHORITY.PRESENT)
+        # The README, the Reference, and the Specification may name only Words the
+        # vocabulary registry still holds. Derived from the registry rather than a
+        # blocklist, so deleting a Word is enough to keep prose honest about it.
+        run: npm run check:reading-surfaces
+
+      - name: Verify generated specification surfaces are in sync
+        # SPECIFICATION.html is generated from spec/ and must never be hand-edited;
+        # the Word reference and Core hover contracts are generated from
+        # spec/words.json. None of these were gated in CI, which is how a stale
+        # generated surface and a broken word-schema checker both went unnoticed.
+        run: |
+          npm run specification:check
+          npm run semantic-kernel:check
+          npm run word-schema:check
+          npm run word:reference:check
+          npm run core-word-docs:check
+
       - name: Generate conformance manifest
         run: npm run conformance:manifest
 
