@@ -39,6 +39,7 @@ use std::sync::Arc;
 
 use crate::types::{Interpretation, Value, ValueData};
 
+use super::observation::{Observation, ObservedValue, PresentationHint};
 use super::scalar::Scalar;
 use super::value::{CodeBlock, KernelValue};
 
@@ -135,6 +136,51 @@ fn dense_to_kernel(
         let stride: usize = rest.iter().product();
         let rows = (0..outer).map(|i| dense_to_kernel(data, rest, offset + i * stride));
         KernelValue::Vector(rows.collect())
+    }
+}
+
+// ── Observation bridge (migration plan §17–18) ────────────────────────────
+// Projecting the runtime into an `Observation` is the seam that lets
+// conformance, host protocols, the CLI, and the GUI compare *observed values*
+// rather than the engine's private representation. The legacy display intent
+// (an `Interpretation` role) is demoted here to a presentation-only hint: it
+// selects rendering, never execution. The absence origin/recoverability a
+// legacy NIL carries is intentionally not observed — a NIL's reason is on the
+// value; its provenance is diagnostic state (§9).
+
+/// Demote a legacy interpretation role to a presentation-only hint. Roles that
+/// carry no display intent (a plain number, a truth value, an unassigned or NIL
+/// role, the machine continued-fraction serialization) observe structurally.
+fn presentation_hint(role: Interpretation) -> PresentationHint {
+    match role {
+        Interpretation::Text => PresentationHint::Text,
+        Interpretation::Interval => PresentationHint::Interval,
+        Interpretation::Timestamp => PresentationHint::Timestamp,
+        Interpretation::Unassigned
+        | Interpretation::RawNumber
+        | Interpretation::TruthValue
+        | Interpretation::Nil
+        | Interpretation::ContinuedFraction => PresentationHint::Structural,
+    }
+}
+
+/// Observe a single legacy [`Value`]: its domain becomes a [`KernelValue`], its
+/// display role a [`PresentationHint`].
+impl From<&Value> for ObservedValue {
+    fn from(value: &Value) -> Self {
+        ObservedValue {
+            value: KernelValue::from(value),
+            presentation: presentation_hint(value.hint),
+        }
+    }
+}
+
+impl Observation {
+    /// Project a runtime stack (bottom → top) into a spine [`Observation`].
+    pub fn from_stack(values: &[Value]) -> Self {
+        Observation {
+            stack: values.iter().map(ObservedValue::from).collect(),
+        }
     }
 }
 
@@ -236,5 +282,81 @@ mod tests {
             from_empty_string,
             KernelValue::Nil(Some(NilReason::EmptySequence))
         );
+    }
+}
+
+#[cfg(test)]
+mod observation_tests {
+    use super::*;
+    use crate::kernel::observation::{ObservedValue, PresentationHint};
+    use crate::kernel::scalar::Scalar;
+    use crate::types::fraction::Fraction;
+    use crate::types::ValueData;
+
+    async fn observe_program(program: &str) -> Observation {
+        let mut interp = crate::interpreter::Interpreter::new();
+        interp.execute(program).await.expect("program runs");
+        Observation::from_stack(interp.stack.as_slice())
+    }
+
+    fn scalar(n: i64) -> KernelValue {
+        KernelValue::Scalar(Scalar::from_fraction(Fraction::from(n)))
+    }
+
+    #[tokio::test]
+    async fn observation_reflects_the_live_stack_values() {
+        let observation = observe_program("3 4 +").await;
+        assert_eq!(
+            observation.stack,
+            vec![ObservedValue {
+                value: scalar(7),
+                presentation: PresentationHint::Structural,
+            }]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_string_observes_as_a_string_value_with_a_text_hint() {
+        let observation = observe_program("'hi'").await;
+        assert_eq!(
+            observation.stack,
+            vec![ObservedValue {
+                value: KernelValue::String(Arc::from("hi")),
+                presentation: PresentationHint::Text,
+            }]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_multi_value_stack_observes_in_bottom_to_top_order() {
+        let observation = observe_program("1 2 3").await;
+        let values: Vec<&KernelValue> = observation.stack.iter().map(|o| &o.value).collect();
+        assert_eq!(values, vec![&scalar(1), &scalar(2), &scalar(3)]);
+    }
+
+    #[test]
+    fn presentation_hint_captures_display_intent_without_changing_the_value() {
+        // Interval/Timestamp display intents ride as presentation hints; the
+        // observed value stays a plain Vector/Scalar (no second type system).
+        let interval = Value {
+            data: ValueData::Vector(std::sync::Arc::new(vec![
+                Value::from_int(1),
+                Value::from_int(2),
+            ])),
+            hint: Interpretation::Interval,
+            absence: None,
+        };
+        let observed = ObservedValue::from(&interval);
+        assert_eq!(observed.presentation, PresentationHint::Interval);
+        assert!(matches!(observed.value, KernelValue::Vector(_)));
+
+        let timestamp = Value {
+            data: ValueData::Scalar(Fraction::from(1_700_000_000_i64)),
+            hint: Interpretation::Timestamp,
+            absence: None,
+        };
+        let observed = ObservedValue::from(&timestamp);
+        assert_eq!(observed.presentation, PresentationHint::Timestamp);
+        assert!(matches!(observed.value, KernelValue::Scalar(_)));
     }
 }
