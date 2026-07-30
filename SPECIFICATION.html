@@ -199,12 +199,12 @@ This document defines the correspondence between Ajisai source programs and obse
 </p>
 
 <p>
-Ajisai is built from ten concepts and nothing else. Everything below is one of them, or a consequence of one of them.
+Ajisai is built from ten concepts. Everything below is one of them, or a consequence of one of them.
 </p>
 
 <ol>
 <li>Exact rational arithmetic, closed under square roots, with no rounding.</li>
-<li>Three outcomes and no fourth: a value, a reasoned absence, or an error.</li>
+<li>Three outcomes: a value, a reasoned absence, or an error.</li>
 <li>A stack of values and vectors of values.</li>
 <li>Code blocks, evaluated only when a Word asks for it.</li>
 <li>One modifier axis: consume or keep.</li>
@@ -303,7 +303,7 @@ A code block is a tagged value containing source for later evaluation. Producing
 </p>
 
 <p>
-Quoted code is not eagerly executed. A vector is data and is never executable; Ajisai makes no claim to homoiconicity.
+Quoted code is not eagerly executed. Code and data are distinct value domains: executable source lives in a CodeBlock, and a Vector is data and is never executable.
 </p>
 
 <h2 id="lang-values">3. Value Domains</h2>
@@ -325,7 +325,7 @@ Every scalar denotes an exact element of the field \(\mathbb{Q}(\sqrt{d_1},\dots
 </p>
 
 <p>
-Arithmetic performs no intermediate rounding, and coefficients are arbitrary-precision, so overflow is impossible rather than wrapped. Comparison over this domain is <strong>total and decidable</strong>: every comparison of two scalars yields TRUE or FALSE in finite time, with no budget, no refinement limit, and no undecided outcome. Values built through different histories compare equal when they denote the same real — \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value.
+Arithmetic performs no intermediate rounding, and coefficients are arbitrary-precision, so a coefficient grows to whatever size the value requires. Comparison over this domain is <strong>total and decidable</strong>: every comparison of two scalars yields TRUE or FALSE in finite time. Values built through different histories compare equal when they denote the same real — \(\sqrt{8}\) and \(\sqrt{2}+\sqrt{2}\) are one value.
 </p>
 
 <p>
@@ -335,11 +335,11 @@ The internal representation is unobservable. Canonical continued-fraction displa
 <h3 id="lang-values-truth">LANG.VALUES.TRUTH — Two-valued truth</h3>
 
 <p>
-Truth values are TRUE and FALSE. <code>AND</code>, <code>OR</code>, and <code>NOT</code> are the ordinary Boolean operations, and every comparison decides.
+The Boolean domain has exactly two values, TRUE and FALSE. <code>AND</code>, <code>OR</code>, and <code>NOT</code> are the ordinary Boolean operations, and every comparison decides.
 </p>
 
 <p>
-There is no third truth value. An operation that cannot produce a value produces NIL, which is absence and not undecidability; an operation that is malformed raises ERROR.
+Absence and misuse live outside this domain: an operation that cannot produce a value produces NIL, which is absence rather than undecidability, and an operation that is malformed raises ERROR.
 </p>
 
 <h3 id="lang-values-nil">LANG.VALUES.NIL — Diagnostic absence</h3>
@@ -349,7 +349,7 @@ NIL is a value representing absence from a well-formed partial operation. It car
 </p>
 
 <p>
-NIL carries the reason and nothing else. Origin, recoverability, and structured diagnosis records are not part of the value; an implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.
+The reason is the entire observable content of a NIL: two NILs with the same reason are the same value. An implementation may emit richer diagnostics on the host channel, and no program behavior may depend on them.
 </p>
 
 <h3 id="lang-values-vector">LANG.VALUES.VECTOR — Vectors</h3>
@@ -359,7 +359,7 @@ A Vector is an ordered finite collection of values. Indexing is 0-origin and neg
 </p>
 
 <p>
-Vector length is semantic even when storage is flattened, shared, or lazily materialized. There is no separate rank, shape, or reshape algebra: a vector is a sequence, not a tensor.
+Vector length is semantic even when storage is flattened, shared, or lazily materialized. Order and length are a Vector's whole observable structure, and a nested Vector is an element like any other.
 </p>
 
 <h2 id="lang-machine">4. Machine State and Evaluation</h2>
@@ -416,7 +416,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>Every attempted operation ends in exactly one of three categories. Success yields its registered outputs. Well-formed partial failure yields NIL with a reason. Malformed use yields ERROR.</p>
 
-<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. There is no mode or modifier that converts an ERROR into a value.</p>
+<p>An implementation must not convert malformed use to NIL and must not raise ERROR merely because a registered partial projection has no value. Recovery operates on absence alone: <code>VENT</code> acts on a NIL top, while an ERROR propagates and halts evaluation.</p>
 
 <h3 id="lang-failure-project">LANG.FAILURE.PROJECT — Projection</h3>
 
@@ -466,7 +466,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <p>The dictionary has two tiers. <strong>Core</strong> holds the 69 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
 
-<p>There is no module system, no import state, and no third tier. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
+<p>Those two tiers are the whole dictionary: a name resolves in Core or in User, and a Core name is reachable by itself. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
 
 <h3 id="lang-dictionary-mutation">LANG.DICTIONARY.MUTATION — User Words</h3>
 

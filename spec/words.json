@@ -742,7 +742,7 @@
         "lookup": "Absolute value of a number.",
         "syntax": "-2 ABS"
       },
-      "executorKey": "math_ops::op_abs",
+      "executorKey": "Abs",
       "effects": []
     },
     {
@@ -779,7 +779,7 @@
         "lookup": "Numeric negation.",
         "syntax": "2 NEG"
       },
-      "executorKey": "math_ops::op_neg",
+      "executorKey": "Neg",
       "effects": []
     },
     {
@@ -816,7 +816,7 @@
         "lookup": "Sign of a number: -1, 0, or 1.",
         "syntax": "-2 SIGN"
       },
-      "executorKey": "math_ops::op_sign",
+      "executorKey": "Sign",
       "effects": []
     },
     {
@@ -853,7 +853,7 @@
         "lookup": "Smaller of two numbers.",
         "syntax": "1 2 MIN"
       },
-      "executorKey": "math_ops::op_min",
+      "executorKey": "Min",
       "effects": []
     },
     {
@@ -890,7 +890,7 @@
         "lookup": "Larger of two numbers.",
         "syntax": "1 2 MAX"
       },
-      "executorKey": "math_ops::op_max",
+      "executorKey": "Max",
       "effects": []
     },
     {
@@ -928,7 +928,7 @@
         "lookup": "Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.",
         "syntax": "2 SQRT"
       },
-      "executorKey": "math_ops::op_sqrt",
+      "executorKey": "Sqrt",
       "effects": []
     },
     {
@@ -1443,7 +1443,7 @@
         "lookup": "Return a copy of a vector sorted in ascending order.",
         "syntax": "[ 3 1 2 ] SORT"
       },
-      "executorKey": "sort::op_sort",
+      "executorKey": "Sort",
       "effects": []
     },
     {
@@ -1480,7 +1480,7 @@
         "lookup": "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
         "syntax": "[ 1 2 1 ] UNIQUE"
       },
-      "executorKey": "algo_ops::op_unique",
+      "executorKey": "Unique",
       "effects": []
     },
     {
@@ -1517,7 +1517,7 @@
         "lookup": "True if a vector contains an element equal to the given value.",
         "syntax": "[ 1 2 ] 2 CONTAINS"
       },
-      "executorKey": "algo_ops::op_contains",
+      "executorKey": "Contains",
       "effects": []
     },
     {
@@ -1554,7 +1554,7 @@
         "lookup": "Index of the first element equal to the value; Bubble/NIL if absent.",
         "syntax": "[ 1 2 ] 2 INDEX-OF"
       },
-      "executorKey": "algo_ops::op_index_of",
+      "executorKey": "IndexOf",
       "effects": []
     },
     {
