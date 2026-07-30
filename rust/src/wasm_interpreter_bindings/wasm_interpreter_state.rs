@@ -448,16 +448,12 @@ impl AjisaiInterpreter {
         }
     }
 
-    /// Only exported when the `elastic-engine` feature is compiled in; the
-    /// GUI already tolerates the `hedgedTrace` payload field being absent.
-    #[cfg(feature = "elastic-engine")]
+    /// HostProtocolV1 pins this method, so it stays as a stable no-op: the
+    /// hedged execution engine it reported on is gone, and there is one
+    /// execution path with nothing to trace.
     #[wasm_bindgen]
     pub fn collect_hedged_trace(&mut self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for item in self.interpreter.drain_hedged_trace() {
-            arr.push(&JsValue::from_str(&item));
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
     #[wasm_bindgen]

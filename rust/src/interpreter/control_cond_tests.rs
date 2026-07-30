@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "elastic-engine")]
-    use crate::elastic::ElasticMode;
     use crate::interpreter::Interpreter;
 
     #[tokio::test]
@@ -66,17 +64,16 @@ mod tests {
             message
         );
     }
-    #[cfg(feature = "elastic-engine")]
+
+    /// Clause order is observable: the first matching guard wins.
     #[tokio::test]
-    async fn test_cond_hedged_prefetch_preserves_clause_order() {
+    async fn test_cond_first_matching_clause_wins() {
         let mut interp = Interpreter::new();
-        interp.set_elastic_mode(ElasticMode::HedgedSafe);
         let result = interp
             .execute("[ 1 ] { [ 1 ] = } { 'first' } { [ 1 ] = } { 'second' } COND")
             .await;
-        assert!(result.is_ok(), "hedged COND should succeed: {:?}", result);
-        let top = interp.stack.last().expect("stack top");
-        let as_str = format!("{}", top);
+        assert!(result.is_ok(), "COND should succeed: {:?}", result);
+        let as_str = format!("{}", interp.stack.last().expect("stack top"));
         assert!(
             as_str.contains("first"),
             "first matching clause must win in order, got {}",

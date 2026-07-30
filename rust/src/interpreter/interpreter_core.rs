@@ -221,7 +221,6 @@ pub struct Interpreter {
 
     pub(crate) runtime_metrics: RuntimeMetrics,
     pub(crate) error_flow_trace_log: Vec<super::error_flow_trace::ErrorFlowEvent>,
-    pub(crate) force_no_quant: bool,
 
     // ── Elastic Engine (MVP) ──────────────────────────────────────────────
     pub(crate) resolve_cache: HashMap<String, ResolveCacheEntry>,
@@ -356,7 +355,6 @@ impl Interpreter {
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),
             error_flow_trace_log: Vec::new(),
-            force_no_quant: cfg!(feature = "force-no-quant"),
 
             // Elastic Engine
             resolve_cache: HashMap::new(),
@@ -502,11 +500,6 @@ impl Interpreter {
     pub fn get_stack(&self) -> &Stack {
         &self.stack
     }
-
-    pub fn set_force_no_quant(&mut self, force_no_quant: bool) {
-        self.force_no_quant = force_no_quant;
-    }
-
     /// Enable or disable internal tail-call elimination (the guarded-tail-`COND`
     /// backward-jump trampoline). Default is on; this is the in-process
     /// equivalent of the `AJISAI_NO_TAIL_CALL` environment switch and exists so
