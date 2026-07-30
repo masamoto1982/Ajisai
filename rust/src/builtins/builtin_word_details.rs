@@ -156,10 +156,6 @@ fn derive_side_effects_text(spec: &BuiltinSpec) -> String {
             "dictionary-write" | "dictionary-register" => "Modifies the dictionary.",
             "dictionary-delete" => "Removes a word from the dictionary.",
             "dictionary-read" => "Loads documentation into the editor.",
-            "dictionary-import"
-            | "dictionary-import-only"
-            | "dictionary-unimport"
-            | "dictionary-unimport-only" => "Changes which module words are active.",
             "interpreter-mode-write" => "Changes the interpreter mode for the next word.",
             "runtime-control" => "Controls child runtime execution.",
             other => other,

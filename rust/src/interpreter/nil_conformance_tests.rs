@@ -13,7 +13,7 @@
 //!
 //! Trace: docs/quality/TRACEABILITY_MATRIX.md (NIL/Bubble conformance).
 
-use crate::coreword_registry::{get_builtin_word_registry, CanonicalHome, NilPolicy};
+use crate::coreword_registry::{get_builtin_word_registry, NilPolicy};
 use crate::error::NilReason;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
@@ -89,8 +89,7 @@ fn core_passthrough_completeness() {
     // Every Core passthrough word in a covered category must be classified,
     // and every classified word must still be a Core passthrough word.
     for meta in get_builtin_word_registry() {
-        let covered = meta.canonical_home == CanonicalHome::Core
-            && meta.nil_policy == NilPolicy::Passthrough
+        let covered = meta.nil_policy == NilPolicy::Passthrough
             && COVERED_CATEGORIES.contains(&meta.category.as_str());
         if covered {
             assert!(
@@ -113,11 +112,6 @@ fn core_passthrough_completeness() {
             NilPolicy::Passthrough,
             "`{name}` is classified as passthrough but registry says {:?}",
             meta.nil_policy
-        );
-        assert_eq!(
-            meta.canonical_home,
-            CanonicalHome::Core,
-            "`{name}` is classified as a Core passthrough word but is not Core"
         );
     }
 }

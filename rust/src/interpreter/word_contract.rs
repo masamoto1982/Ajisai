@@ -2,7 +2,7 @@
 //!
 //! Phase 1 deliberately does not add surface syntax. A user word's contract is
 //! inferred from its body and resolved dependency contracts without executing
-//! Ajisai code. Built-in and module contracts are projected from the existing
+//! Ajisai code. Built-in contracts are projected from the existing
 //! §7.14 registry; user-word contracts are widened monotonically as dependencies
 //! are joined. When recursion or a dynamic structure prevents a complete proof,
 //! the result is conservative rather than Ajisai's logical `UNKNOWN` value.

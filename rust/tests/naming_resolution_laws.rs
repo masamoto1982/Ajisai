@@ -1,27 +1,17 @@
-//! Property-based name-resolution / dictionary / module laws (Phase 6).
+//! Property-based name-resolution / dictionary laws (Phase 6).
 //!
 //! Encodes the algebraic content of
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-quinquies F (Phase 6):
 //! the dictionary `Dict = Name ⇀ Blk`, the deterministic resolver
-//! `resolve : Name × Vis ⇀ Blk + Unknown` with order **Core → imported module →
-//! user**, `DEF`/`DEL` as state transducers with a dependency guard (`FORC`,
-//! SPEC §8.2), and `IMPORT`/`IMPORT-ONLY`/`UNIMPORT`/`UNIMPORT-ONLY` as
-//! monotone visibility operators (SPEC §9.2).
+//! `resolve : Name × Vis ⇀ Blk + Unknown` with order **Core → user**, and
+//! `DEF`/`DEL` as state transducers with a dependency guard (SPEC §8.2).
 //!
 //! Every law was checked against the reference implementation with a throwaway
 //! probe (`_probe_naming.rs`, deleted) before being written (roadmap §1.2-(T)
-//! discipline). The two surprises the probe surfaced are recorded as
-//! §9-quinquies F.5 findings and pinned here as guarded oracles:
-//!   * **F1** — runtime `MODULE@WORD` resolution is *import-gated*: the static
-//!     contract registry always reaches the module entry, but the runtime only
-//!     resolves it after `IMPORT` (`4 SQRT` is `Unknown` un-imported).
-//!   * **F2** — an imported module word *shadows a same-named user word* (the
-//!     resolver checks imported modules before user dictionaries).
+//! discipline).
 //!
 //! Observation stays firewall-clean: laws compare whole-stack renders / the
-//! Ok-vs-Err resolution outcome, never a Rust enum or `Debug` string. The few
-//! registry-level invariants read the public contract metadata (SPEC §7.14
-//! listing fields), mirroring `contract_modifier_laws.rs`.
+//! Ok-vs-Err resolution outcome, never a Rust enum or `Debug` string.
 
 mod test_support;
 
@@ -62,18 +52,6 @@ fn outcome(src: &str) -> Result<Vec<String>, ()> {
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
-    /// **Core precedence — import never shadows a Canonical Core word.** Bare
-    /// `GET` is core (`canonical_home = Core`), so it resolves to the core
-    /// vector index whether or not `JSON` (which also lists a `GET`) is
-    /// imported. The observation is invariant under the import.
-    #[test]
-    fn core_word_is_not_shadowed_by_import(xs in prop::collection::vec(small(), 1..4), i in 0usize..3) {
-        let body = xs.iter().map(i64::to_string).collect::<Vec<_>>().join(" ");
-        let plain = obs(&format!("[ {body} ] {i} GET"));
-        let after_import = obs(&format!("[ {body} ] {i} GET"));
-        prop_assert_eq!(plain, after_import);
-    }
-
     /// **User never shadows Core** (LANG.DICTIONARY.RESOLUTION). Core is
     /// sealed: defining a user word over a Core name is rejected outright, so
     /// a Core name always means the Core Word.

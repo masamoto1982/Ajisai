@@ -352,6 +352,41 @@ Word として分類し、unknown-word 診断も import ではなく User dictio
 V1 が固定する module 関連 wasm method の**署名**は保持するが、restore method の空ループは
 引数を無視する明示的 no-op に縮約した。
 
+### 10.3 Phase 9 実施記録（module メタデータと listing 模型の削除）
+
+10.2 で module runtime を削除した後も、**静的メタデータ側**に module 座標系が残っていた。
+到達可能性を実測し、構築者が 0 になったものを削除した。
+
+| 削除対象 | 到達可能性の実測 |
+| --- | --- |
+| `CanonicalHome`（`Core` / `Module(String)`） | 構築点は `core_word_metadata_from_spec` の 1 箇所のみで、常に `Core`。`Module(_)` は構築 0 |
+| `CorewordMetadata.listed_in_core` | 常に `true` の定数フィールド |
+| `CorewordMetadata.listed_in_modules` | 供給元は `CORE_BOUNDARY_LISTINGS` の `IO` / `MATH` のみ。両 module とも既に存在しない |
+| `CORE_BOUNDARY_LISTINGS` / `MODULE_CORE_LISTINGS` / `apply_*_listings` | `MODULE_CORE_LISTINGS` は空の `module_entries` に対してのみ適用され、効果 0 |
+| `build_builtin_word_registry` の `module_entries` | `Vec::new()` のまま `extend` される空ベクタと、その上の空ループ |
+| listing 問い合わせ関数群（`get_module_listed_words` / `get_category_listed_words` / `get_core_listed_words` / `get_boundary_words` / `get_canonical_core_words` / `get_canonical_module_words` / `is_listing_only_for_module`） | 参照は自テストのみ。`get_module_listed_words` / `get_category_listed_words` / `get_boundary_words` は参照 0 |
+| `get_coreword_metadata` の `MODULE@WORD` 分岐 | `canonical_module()` が常に `None` のため常に `None` を返す。builtin 名に `@` は現れないので、平坦な名前一致に縮約しても挙動は不変 |
+| `WordShape`（`builtin_word_types.rs`） | 唯一の消費者と説明されていた `ModuleWord` が存在せず、`#[allow(dead_code)]` で黙らされていた |
+| `execute_def.rs` の `collision_modules` | `Vec::new()` 固定のため、module 衝突警告のブロック全体が到達不能 |
+| `builtin_word_details.rs` の `dictionary-{,un}import{,-only}` effect arm | どの `BuiltinSpec` もこれらの effect を宣言しない |
+| `module_word_call()`（`tests/test_support/generators.rs`） | 参照 0。`MATH` / `JSON` / `ALGO` という存在しない module を前提にしていた |
+| `core_word_is_not_shadowed_by_import`（`naming_resolution_laws.rs`） | import 削除後、同一文字列同士を比較する恒真テストになっていた |
+
+`listed_in_categories`（`CAST` / `TEXT` / `TENSOR` / `RUNTIME`）も併せて削除した。参照は
+自テストのみで、語の分類は正典側 `spec/words.json` の `family`（11 分類）が担っている。
+§4.2 の「1事実・複数記述」を残さない方針に従い、Rust 側の並行分類は保持しない。
+
+あわせて、10.2 の `ErrorLocus.module` 削除時に追随漏れとなり4つの law test binary を
+コンパイル不能にしていた `tests/test_support/observe.rs` の `DiagnosisObservation.module`
+を削除した（write のみで read 0）。
+
+凍結済み V1 wasm method（`collect_available_modules` / `collect_module_catalog_words_info` /
+`collect_import_state` / `restore_import_state`）は §10.2 の方針どおり署名を保持する。
+実挙動に合わせて doc comment のみ「常に空」を記述するよう更新した。
+
+これで module は runtime に続き**静的メタデータからも到達不能**になり、
+built-in Word は単一の平坦な名前空間になった。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

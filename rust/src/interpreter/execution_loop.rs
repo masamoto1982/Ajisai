@@ -36,7 +36,7 @@ pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
     i
 }
 
-/// After a core/module word runs, retag the top-of-stack plane role from a small
+/// After a core word runs, retag the top-of-stack plane role from a small
 /// name-keyed table (SPEC §12). The interpreted loop applies this after every
 /// symbol; the compiled plan mirrors it after each call op so the two routes
 /// leave identical `(value, role)` observations. A no-op for words not in the

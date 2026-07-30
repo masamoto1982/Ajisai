@@ -87,8 +87,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
-    let collision_modules: Vec<String> = Vec::new();
-
     let dict_name = interp.active_user_dictionary.clone();
     let fq_name = format!("{}@{}", dict_name, upper_name);
 
@@ -201,23 +199,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .output_buffer
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
 
-    if !collision_modules.is_empty() {
-        let module_paths: Vec<String> = collision_modules
-            .iter()
-            .map(|m| format!("{}@{}", m, upper_name))
-            .collect();
-        let user_path = format!("{}@{}", dict_name, upper_name);
-        let all_paths: Vec<String> = module_paths
-            .iter()
-            .chain(std::iter::once(&user_path))
-            .cloned()
-            .collect();
-        interp.output_buffer.push_str(&format!(
-            "Warning: '{}' now exists in both {}. Use a qualified path when calling this word.\n",
-            upper_name,
-            all_paths.join(" and ")
-        ));
-    }
     interp.bump_dictionary_epoch();
     interp.force_flag = false;
     Ok(())

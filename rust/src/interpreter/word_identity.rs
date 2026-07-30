@@ -250,7 +250,7 @@ impl Interpreter {
                                     // later same-named word as a fresh capture.
                                     Atom::Ref(resolved)
                                 } else if rdef.is_builtin {
-                                    // Core / module word: stable global vocabulary,
+                                    // Core word: stable global vocabulary,
                                     // encoded by its canonical resolved name.
                                     let mut b = vec![b'G'];
                                     b.extend_from_slice(resolved.as_bytes());

@@ -227,12 +227,12 @@ mod tests {
         );
     }
     #[tokio::test]
-    async fn test_fully_qualified_requires_import() {
+    async fn test_unknown_qualified_name_does_not_resolve() {
         let mut interp = Interpreter::new();
         let result = interp.execute("JSON@PARSE").await;
         assert!(
             result.is_err(),
-            "Unimported module words should not resolve"
+            "A qualified name with no matching user dictionary word must not resolve"
         );
     }
 }

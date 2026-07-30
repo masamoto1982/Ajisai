@@ -448,17 +448,15 @@ fn normalize_word(symbol: &str) -> String {
 }
 
 /// Best-effort static resolution: a word resolves when it is a builtin, a
-/// canonical alias, a word the file itself defines via DEF, a word imported
-/// from a module the file IMPORTs, or a qualified `DICT@WORD` reference into
-/// a user dictionary (runtime state, accepted statically). Returns unknown
+/// canonical alias, or a word the file itself defines via DEF. Returns unknown
 /// words in first-appearance order, deduplicated.
 fn resolve_words(interp: &Interpreter, tokens: &[Token]) -> Vec<String> {
     use std::collections::HashSet;
 
     let mut locally_known: HashSet<String> = HashSet::new();
-    // Pre-pass: `'NAME' DEF` definitions and `'MODULE' IMPORT[-ONLY]`
-    // imports anywhere in the file (definitions may be referenced before
-    // they appear, e.g. mutual recursion between user words).
+    // Pre-pass: `'NAME' DEF` definitions anywhere in the file (definitions may
+    // be referenced before they appear, e.g. mutual recursion between user
+    // words).
     for (i, token) in tokens.iter().enumerate() {
         let Token::String(text) = token else {
             continue;
