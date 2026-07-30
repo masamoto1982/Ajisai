@@ -328,6 +328,23 @@ rust/build.rs                        # spec/words.json → kernel/generated/*.rs
 配線する**作業（execute wrapper を dispatch へ、`Observation` を serializer へ、V2 producer を
 wasm へ）が先行する。§23 の原則どおり、**到達不能になってから削除する**。
 
+### 10.2 Phase 9 実施記録（module runtime の削除）
+
+正典から削除済みで、登録経路も既に存在しなかった module runtime を削除した:
+
+- `ModuleDictionary` / `ImportedModule` / `ImportTable` と `Interpreter` の
+  `module_vocabulary` / `import_table` を削除。
+- bare name、修飾名、resolve cache、dependency graph、`DEL` に残っていた module 分岐を削除。
+- module の変更元が無いにもかかわらず cache と compiled plan の invalidation に残っていた
+  `module_epoch` を削除。
+- Word contract cache が借用していた `module_state` は、実際の責務を表す
+  `runtime_scratch` に改名。
+- 凍結済み V1 / wasm 互換 API は anti-corruption boundary として署名を保持し、module catalog、
+  import state、imported module の各結果を常に空として返す。restore は no-op のままとする。
+
+これにより module は Kernel の解決・実行状態から到達不能になり、空の legacy wire shape のみが
+host boundary に残る。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

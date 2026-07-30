@@ -75,29 +75,11 @@ impl Interpreter {
             .unwrap_or_default();
     }
 
-    fn is_module_word_imported(&self, module_name: &str, short_name: &str) -> bool {
-        self.import_table
-            .modules
-            .get(module_name)
-            .map(|m| m.import_all_public || m.imported_words.contains(short_name))
-            .unwrap_or(false)
-    }
-
     pub(crate) fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
         let upper = name.to_uppercase();
 
         if let Some(def) = self.core_vocabulary.get(&upper) {
             return Some((upper, def.clone()));
-        }
-
-        for (module_name, module) in &self.module_vocabulary {
-            if !self.is_module_word_imported(module_name, &upper) {
-                continue;
-            }
-            let qualified = format!("{}@{}", module_name, upper);
-            if let Some(def) = module.words.get(&qualified) {
-                return Some((qualified, def.clone()));
-            }
         }
 
         // Section 8.6: a bare name resolves through the owning dictionary's
@@ -174,7 +156,7 @@ impl Interpreter {
     pub(crate) fn check_ambiguity(&self, name: &str) -> Vec<String> {
         let upper = name.to_uppercase();
 
-        // Core / Module words win the bare-name ladder and are never ambiguous.
+        // Core words win the bare-name ladder and are never ambiguous.
         if self.core_vocabulary.contains_key(&upper) {
             return vec![];
         }
@@ -204,15 +186,6 @@ impl Interpreter {
                         .cloned()
                         .map(|def| (word.clone(), def));
                 }
-                if let Some(module_dict) = self.module_vocabulary.get(ns.as_str()) {
-                    let qualified = format!("{}@{}", ns, word);
-                    if self.is_module_word_imported(ns, &word) {
-                        if let Some(def) = module_dict.words.get(&qualified) {
-                            return Some((qualified, def.clone()));
-                        }
-                    }
-                    return None;
-                }
                 if let Some(user_dict) = self.user_dictionaries.get(ns.as_str()) {
                     if let Some(def) = user_dict.words.get(&word) {
                         return Some((format!("{}@{}", ns, word), def.clone()));
@@ -229,22 +202,12 @@ impl Interpreter {
                             return Some((format!("{}@{}", second, word), def.clone()));
                         }
                     }
-                } else if first == "DICT" {
-                    if second == "CORE" {
-                        return self
-                            .core_vocabulary
-                            .get(&word)
-                            .cloned()
-                            .map(|def| (word.clone(), def));
-                    }
-                    if let Some(module_dict) = self.module_vocabulary.get(second.as_str()) {
-                        let qualified = format!("{}@{}", second, word);
-                        if self.is_module_word_imported(second, &word) {
-                            if let Some(def) = module_dict.words.get(&qualified) {
-                                return Some((qualified, def.clone()));
-                            }
-                        }
-                    }
+                } else if first == "DICT" && second == "CORE" {
+                    return self
+                        .core_vocabulary
+                        .get(&word)
+                        .cloned()
+                        .map(|def| (word.clone(), def));
                 }
                 None
             }
@@ -282,12 +245,6 @@ impl Interpreter {
                 if let Some(dict) = self.user_dictionaries.get(ns.as_str()) {
                     if let Some(def) = dict.words.get(&word).cloned() {
                         return Some((format!("{}@{}", ns, word), def));
-                    }
-                }
-                if let Some(module) = self.module_vocabulary.get(ns.as_str()) {
-                    let qualified = format!("{}@{}", ns, word);
-                    if let Some(def) = module.words.get(&qualified).cloned() {
-                        return Some((qualified, def));
                     }
                 }
             }
@@ -375,11 +332,6 @@ impl Interpreter {
         self.owning_dictionary_context = None;
 
         for dict in self.user_dictionaries.keys() {
-            self.dictionary_dependencies
-                .entry(dict.clone())
-                .or_default();
-        }
-        for dict in self.module_vocabulary.keys() {
             self.dictionary_dependencies
                 .entry(dict.clone())
                 .or_default();

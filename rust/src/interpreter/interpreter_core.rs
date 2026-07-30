@@ -64,22 +64,6 @@ pub(crate) struct UserDictionary {
     pub words: HashMap<String, Arc<WordDefinition>>,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct ModuleDictionary {
-    pub words: HashMap<String, Arc<WordDefinition>>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ImportedModule {
-    pub import_all_public: bool,
-    pub imported_words: HashSet<String>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct ImportTable {
-    pub modules: HashMap<String, ImportedModule>,
-}
-
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DictionaryDependencyInfo {
     pub depends_on: HashSet<String>,
@@ -90,7 +74,6 @@ pub(crate) struct DictionaryDependencyInfo {
 pub struct ResolveCacheEntry {
     pub resolved_name: String,
     pub dictionary_epoch: u64,
-    pub module_epoch: u64,
     pub registration_order: u64,
 }
 
@@ -178,8 +161,8 @@ pub struct Interpreter {
     pub(crate) disable_no_change_check: bool,
     pub(crate) pending_tokens: Option<Vec<Token>>,
     pub(crate) pending_token_index: usize,
-    pub(crate) module_state: HashMap<String, Box<dyn std::any::Any + Send>>,
-    pub(crate) import_table: ImportTable,
+    /// Type-erased caches owned by runtime subsystems.
+    pub(crate) runtime_scratch: HashMap<String, Box<dyn std::any::Any + Send>>,
     pub(crate) call_stack: SmallVec<[String; 5]>,
     /// User-word call depth. Incremented on entry to a user-word body in
     /// `execute_word_core_inner`, decremented on exit. Compared against
@@ -199,14 +182,12 @@ pub struct Interpreter {
     /// than running for minutes. Reset per top-level `execute`.
     pub(crate) numeric_work_used: u64,
 
-    pub(crate) module_vocabulary: HashMap<String, ModuleDictionary>,
     pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
     pub(crate) active_user_dictionary: String,
 
     pub(crate) global_epoch: u64,
     pub(crate) dictionary_epoch: u64,
-    pub(crate) module_epoch: u64,
     pub(crate) execution_epoch: u64,
 
     pub(crate) monitor_notifications: Vec<Vec<Value>>,
@@ -327,21 +308,18 @@ impl Interpreter {
             disable_no_change_check: true,
             pending_tokens: None,
             pending_token_index: 0,
-            module_state: HashMap::new(),
-            import_table: ImportTable::default(),
+            runtime_scratch: HashMap::new(),
             call_stack: SmallVec::new(),
             call_depth: 0,
             execution_step_count: 0,
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             runtime_limits: super::runtime_limits::RuntimeLimits::default(),
             numeric_work_used: 0,
-            module_vocabulary: HashMap::new(),
             dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
             active_user_dictionary: "EXAMPLE".to_string(),
             global_epoch: 0,
             dictionary_epoch: 0,
-            module_epoch: 0,
             execution_epoch: 0,
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
@@ -426,7 +404,6 @@ impl Interpreter {
         EpochSnapshot {
             global_epoch: self.global_epoch,
             dictionary_epoch: self.dictionary_epoch,
-            module_epoch: self.module_epoch,
             execution_epoch: self.execution_epoch,
         }
     }
