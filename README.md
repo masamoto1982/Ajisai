@@ -8,7 +8,9 @@ Ajisai is an AI-first, vector-oriented dataflow language for **auditable, exact 
 
 Its central promise is **value integrity first**: numbers stay exact, structure stays visible, partial failure stays diagnosable, and every built-in word is expected to have a machine-readable contract that a user word's declaration can be checked against ahead of execution (`ajisai check --contract`) — a conservative, partial check: declarations are verified within the syntactic fragment the inference can analyze, and anything it cannot prove (higher-order bodies, dynamic control, child runtimes) is reported as "cannot verify", never silently passed.
 
-**Numeric scope (implemented today vs. planned).** Ajisai is *exact by default*: exact rationals and the multiquadratic field they generate under `SQRT` — square roots of non-negative rationals, closed under field arithmetic, in a **multiquadratic** normal form (\(\sum_d c_d\sqrt d\)), compared and decided with no rounding and no budget. This sits on a **tiered architecture that is extensible toward general exact reals**, but general computable reals (π, e, log, …) are *reserved for future words* and are not claimed today. "Exact-by-default numeric with an extensible exact-real architecture" is the precise description; earlier framing as a flat "exact-real language" over-stated the current domain.
+**Ten concepts.** Ajisai is deliberately small: exact rationals closed under `SQRT`; three outcomes and no fourth (a value, a reasoned absence, an error); a stack and vectors; code blocks evaluated only on request; one modifier axis; a sealed-Core / User dictionary with content-addressed identity; a machine-readable contract per Word; a pre-execution check of user declarations against those contracts; one host protocol; and an executable conformance corpus. The vocabulary is **69 Words** in one flat dictionary. Anything not on that list is not part of the language — see [`docs/dev/concept-reduction-2026-07.md`](docs/dev/concept-reduction-2026-07.md) for what was cut and why.
+
+**Numeric scope.** Numbers are *exact by default*: exact rationals and the multiquadratic field they generate under `SQRT` — square roots of non-negative rationals, closed under field arithmetic, in a normal form \(\sum_d c_d\sqrt d\). Arithmetic never rounds, coefficients are arbitrary-precision, and **comparison is total**: every comparison of two scalars decides, with no budget and no undecided outcome. General computable reals (π, e, log, …) are outside the language.
 
 The name *Ajisai* comes from hydrangea, often interpreted as a “water vessel.” Ajisai uses water as its main metaphor: values flow through channels, operations shape those channels, and exceptional situations remain visible instead of disappearing into hidden runtime state.
 
@@ -30,88 +32,74 @@ The HTML source of the specification lives at [`SPECIFICATION.html`](SPECIFICATI
 
 | Water metaphor | Language meaning | Observable idea |
 | --- | --- | --- |
-| Flow | ordinary values moving through the stack | Scalars, vectors, records, code blocks, handles |
-| Bubble | a well-formed operation could not produce a value | `NIL` with structured absence metadata |
-| Stagnation *(reserved for future words)* | a value exists, but the current observation cannot decide the next direction | logical `UNKNOWN` in Kleene three-valued logic — unreachable from today's vocabulary |
+| Flow | ordinary values moving through the stack | Scalars, booleans, strings, vectors, code blocks |
+| Bubble | a well-formed operation could not produce a value | `NIL`, carrying a machine-readable reason |
 | Channel error | the operation or input shape is malformed | raised error that propagates and halts evaluation |
 
-Ajisai keeps these cases separate. A bubble is absence. Stagnation is undecidability. An error is not a value in the stream. Today, only three of the four rows can actually occur: every comparison the current vocabulary can express decides, so no current program produces a Stagnation — the row describes semantics reserved for future general computable reals.
+Ajisai keeps these three cases separate, and there is no fourth. A bubble is absence, not falsehood. An error is not a value in the stream. Truth is two-valued: every comparison decides, so the language never has to represent "undecided".
 
-Spec links: [§4 Value Model](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#4-value-model), [§4.5 NIL](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#45-nil), [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§11 Error Model](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#11-error-model)
+Spec links: [Value Domains](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values), [Diagnostic absence](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-nil), [Partiality and Failure](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure)
 
 ---
 
 ## Why Ajisai exists
 
-### 1) Exact numbers: water with a traceable flow history
+### 1) Exact numbers: no hidden detour through floating point
 
-Every numeric value in Ajisai is **exact and defined by observation rather than by any single representation**: a number can always report a rational enclosure of itself and refine it on demand. Integer, fraction, decimal, and scientific-notation literals are just convenient source forms for exact rationals. Runtime words such as `SQRT` produce exact algebraic irrationals, carried in a decidable multiquadratic normal form. This is the **implemented** domain — exact rationals plus the algebraic (`SQRT`) closure; the general-computable-real tier (π, e, log, …) is an extensible-architecture reservation, not a current capability.
+Every numeric value is **exact**. Integer, fraction, decimal, and scientific-notation literals are convenient source forms for exact rationals, and `SQRT` produces exact algebraic irrationals carried in a multiquadratic normal form \(\sum_d c_d\sqrt d\). That is the whole numeric domain: rationals plus the `SQRT` closure over them.
 
-Ajisai therefore avoids the usual hidden detour through approximate floating-point values. Arithmetic is exact over every tier, and canonical AI-readable display uses a nested continued-fraction form — derived from the value for display — rather than remembering the original source literal.
+Arithmetic never rounds, and coefficients are arbitrary-precision, so overflow is impossible rather than wrapped. Canonical AI-readable display uses a nested continued-fraction form derived from the value, rather than remembering the original source literal.
 
-Ajisai's numerical-error stance is broader than “no rounding error.” The language design also treats loss of significance, cancellation, truncation error, and overflow as failures to be made impossible, exact, or diagnosable instead of silently accepted. Exact tiered values, arbitrary-precision integer state, explicit observation water, and visible `UNKNOWN` / `NIL` outcomes are the mechanisms that keep these error classes from becoming hidden value corruption.
+**Comparison is total.** Every comparison of two scalars answers `TRUE` or `FALSE` in finite time — no budget, no refinement limit, no undecided outcome. Values built through different histories are the same value when they denote the same real: `8 SQRT` equals `2 SQRT 2 SQRT +`.
 
-Comparison is **decidable for everything the current vocabulary can construct** — rationals, and the multiquadratic field generated by square roots of non-negative rationals — so no comparison of such values consumes observation budget or returns `UNKNOWN`. The budgeted-observation machinery exists for future general computable reals (π, e, log, …).
+Spec links: [Exact scalars](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-exact), [Two-valued truth](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-truth), [Work limits](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-machine-limits)
 
-Spec links: [§3.2 Numeric literal formats](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#32-numeric-literal-formats), [§4.2 Scalar: exact-real arithmetic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#42-scalar-exact-real-continued-fraction-arithmetic), [§4.2.6 Numeric error policy](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#426-numeric-error-policy), [§12.2 Interpretation roles](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#122-interpretation-roles)
+### 2) Bubble: partial failure stays visible
 
-### 2) Bubble and Stagnation: failure and undecidability stay visible
+Ajisai distinguishes three outcomes and nothing else. A **value** is ordinary success. A **bubble** is `NIL`: a well-formed operation that could not produce a value — division by zero, a failed `NUM` parse, an invalid `CHR` code point, an out-of-range `GET`. A **channel error** is malformed use, which propagates and halts evaluation.
 
-Ajisai uses the **Bubble and Stagnation Model** to explain partial computation.
+A bubble carries a machine-readable **reason** and flows downstream, so absence stays diagnosable instead of disappearing into a sentinel. `NIL` is not `FALSE` and an error is not a value.
 
-A **Bubble** is `NIL`. It appears when an operation is well-formed but cannot produce a meaningful value: division by zero, a failed `NUM` parse, an invalid `CHR` code point, or an out-of-range `GET` on a valid vector. The bubble carries a reason and diagnostic metadata as it flows downstream.
+- `NIL` means "the value is absent", and `^` (`VENT`) turns it into a fallback at the end of a pipeline.
+- `AND` / `OR` / `NOT` pass a `NIL` operand through rather than absorbing it, so a bubble is never silently swallowed by a definite operand.
+- There is no modifier that converts an error into a value.
 
-A **Stagnation** is `UNKNOWN` — and it is **future semantics, fully specified but unreachable today**. Every value the current vocabulary can construct compares decidably, with no budget in play, so no current program produces `UNKNOWN`. The concept exists for future general computable reals (π, e, log, …), whose refinement could exhaust its observation water without separating two values; Ajisai will report that as logical `UNKNOWN`, with comparison diagnosis such as `agreedPrefix`.
+Spec links: [Diagnostic absence](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-nil), [Value, absence, misuse](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-trichotomy), [NIL passthrough](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-passthrough), [Recovery](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-recovery)
 
-The distinction matters:
+### 3) Vectors: the one way to hold many values
 
-- `NIL` means “the value is absent.”
-- `UNKNOWN` means “the value exists, but this question is not decided yet.”
-- Generic NIL passthrough uses operational NIL only, so logical `UNKNOWN` is not silently absorbed as a bubble.
-- Logic words use Strong Kleene three-valued logic, whose `UNKNOWN` rows are normative and pinned by tests — for example, `FALSE AND UNKNOWN` is `FALSE`, while `TRUE OR UNKNOWN` is `TRUE` — even though no source program can construct an `UNKNOWN` operand today.
+Ajisai is vector-oriented. A vector is an ordered, indexable sequence; indexing is 0-origin and negative indices count from the end. Vectors nest, which is how ragged and grouped data is expressed.
 
-Spec links: [§4.5.0 Diagnostic absence metadata](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#450-diagnostic-absence-metadata), [§4.5.1 NIL passthrough](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#451-nil-passthrough), [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§7.4.1 Decidability and comparison water](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§7.5 Logic](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#75-logic), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule)
+Arithmetic and comparison **lift element-wise**: two vectors of equal length combine pairwise, and a scalar combines with every element. Any other pairing is an error rather than a silent reshape.
 
-### 3) Vectors and tensors: channels can be nested or dense
+A vector is a sequence, not a tensor: there is no rank, shape, or reshape algebra. It is also not a code-as-data mechanism — executable code lives in `{ }` code blocks, a vector is never executable, and Ajisai makes no claim to Lisp-style homoiconicity. Internal storage (nested trees or dense buffers) is unobservable.
 
-Ajisai is vector-oriented. A vector is an ordered, indexable sequence, and nested vectors naturally express tensor-like structures. Indexing is 0-origin, and negative indices count from the end.
+Spec links: [Vectors](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values-vector), [Element lifting](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-collections-lift), [Higher-order evaluation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-collections-higher)
 
-Nesting exists for exactly two jobs: as the substrate for tensor operations (shape, rank, reshape, transpose, element-wise arithmetic), and for ragged or mixed structured data such as `SPLIT` results, JSON arrays, and multitrack music data. It is **not** a code-as-data mechanism: executable code lives in `{ }` code blocks, a vector is never executable, and Ajisai makes no claim to Lisp-style homoiconicity.
+### 4) One modifier axis: consume or keep
 
-Internally, vectors may be represented either as nested `Value` trees or as dense tensor buffers. Dense tensors use exact small rational lanes plus a validity mask for NIL occupancy. They do not approximate irrational or BigInt-scale exact values just to fit a fast path, and they do not rebuild into nested vectors merely because a lane becomes NIL.
+A modifier prefixes the next word only, and there is exactly one axis: **consumption**. `EAT` (`,`, the default) consumes the operands a word reads; `KEEP` (`,,`) leaves them on the stack beneath the result.
 
-This is part of Ajisai's Virtual Tensor Unit direction: optimize movement and shape operations without weakening exactness.
+That is the whole modifier system. There is no target axis, and no error-swallowing modifier: partial failure of a well-formed operation becomes a reasoned `NIL`, and malformed use raises an error that propagates rather than becoming a value.
 
-Spec links: [§4.3 Vector](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#43-vector), [§4.3.1 Internal representation classes](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#431-internal-representation-classes), [§7.1 Vector operations](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#71-vector-operations), [§7.2 Tensor operations](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#72-tensor-operations), [VTU design note](docs/dev/virtual-tensor-unit-design.md)
+Spec links: [The consumption axis](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-modifiers-consumption), [Stack observation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-stack-order)
 
-### 4) Modifiers: how a word touches the stream
+### 5) Words and contracts: searchable channels for humans and AI
 
-Ajisai modifiers control how a word touches the stream.
+The dictionary has two tiers and no more: **Core** holds the 69 canonical Words and is sealed, and **User** holds definitions made by `DEF`. There is no module system and nothing to import — every Word is reachable by its plain name.
 
-- **Target mode** chooses where the word acts: `TOP` for the surface point, `STAK` for the whole stack.
-- **Consumption mode** chooses whether the input is consumed or preserved: `EAT` consumes, `KEEP` branches.
+Each Core Word's contract is a machine-readable record in [`spec/words.json`](spec/words.json): arity, consumption, NIL policy, projection reason, error conditions, purity, effects, and documentation. That record is the single place the Word is defined; prose is a projection of it.
 
-There is no error-swallowing modifier. Partial failure of a well-formed operation is handled by the Bubble Rule, which produces a reasoned `NIL` directly; a malformed operation raises an error that propagates rather than becoming a value.
+Every Word also has a **content identity** — a digest over its normalized definition and the identities of the Words it calls — so a change to a dependency changes the identity of everything downstream.
 
-Spec links: [§6 Modifiers](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#6-modifiers), [§6.1 Target modifiers](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#61-target-modifiers), [§6.2 Consumption modifiers](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#62-consumption-modifiers), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule), [§11.4 Error propagation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#114-error-propagation)
+Spec links: [Word contracts](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-machine-word-contract), [Deterministic lookup](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-dictionary-resolution), [User Words](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-dictionary-mutation), [Contracts and Static Checking](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-contract)
 
-### 5) Words, modules, and contracts: searchable channels for humans and AI
-
-Ajisai treats built-in words as documented, searchable units. The registry records canonical names, aliases, categories, purity, stack effects, canonical home, and module listings. Module words can live in importable dictionaries while still appearing in documentation views where they make sense.
-
-The design goal is not only to make the language usable by people, but also mechanically inspectable by AI tools: every Coreword should expose contracts for requirements, guarantees, partiality, NIL policy, safety level, and effects.
-
-Spec links: [§7.0 English-word-based naming](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#70-english-word-based-naming), [§7.14 Coreword contract metadata](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#714-coreword-contract-metadata), [§8 User Words](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#8-user-words), [§9 Module System](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#9-module-system), [§14 AI-first Implementation Rules](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#14-ai-first-implementation-rules)
-
----
-
-## Safety model: safe by design, with gates and water levels
+## Safety model: safe by design
 
 Ajisai does **not** rely on a broad "safe mode" that wraps evaluation. There is no
 global safe/unsafe switch. Ordinary value flow is safe by design:
 
 - a well-formed operation that cannot produce a value becomes a **bubble** (`NIL`),
-- an observation that cannot decide a truth value becomes **stagnation** (`UNKNOWN`),
 - a malformed use raises a **channel error**.
 
 There is no mode or modifier that converts an error into a value: a channel error
@@ -119,37 +107,25 @@ propagates and halts evaluation, while well-formed partial failure already flows
 as a reasoned bubble that a single `^` (`VENT`) can turn into a fallback at the
 end of a pipeline.
 
-Two further controls complete the water metaphor — both are names for mechanisms
-Ajisai already has, not new subsystems:
+Two limits bound how much a program may do, and they mean different things:
 
-- **Gates** control *where* flow may cross a boundary. Outward gates guard host
-  effects (such as serial and future IO), where effects are emitted as host
-  commands and the host performs them. Inward gates guard module imports crossing
-  the Core / Module / User trust boundary (`IMPORT` / `UNIMPORT`).
-- **Water levels** control *how much* flow may run. The evaluation step budget
-  bounds total work and raises `ExecutionLimitExceeded` when reached. The
-  observation water bounds refinement depth; when a future undecidable
-  observation reaches it the result is
-  the logical `UNKNOWN` (stagnation), never a bubble — keeping operational
-  absence and logical undecidability distinct.
+- The **execution-step limit** bounds total work and raises its registered error
+  when reached.
+- The **materialization ceiling** bounds how large a single generated collection
+  may become; exceeding it projects to `NIL` with reason `spaceExhausted` rather
+  than aborting.
 
-Spec links: [§4.5.2 NIL versus Unknown](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#452-nil-versus-unknown), [§5.2 Two-plane architecture](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#52-two-plane-architecture), [§5.3 Execution step limit](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#53-execution-step-limit), [§7.4.1 Decidability and comparison water](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#741-decidability-and-comparison-budget), [§7.4.2 `COMPARE-WITHIN`](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#742-explicit-budget-comparison-compare-within), [§9 Module System](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#9-module-system), [§11.2 Bubble Rule](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#112-bubble-rule), [§11.4 Error propagation](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#114-error-propagation), [Appendix A Gates and Water Levels](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#appendix-a-gates-and-water-levels-non-normative-index)
+Both are host safety controls, not language-semantic constraints: their numeric
+values are implementation freedom, but the outcome category each produces is
+normative.
 
-### Supply-chain integrity: content-addressed source provenance
+Beyond runtime, `ajisai check --contract` verifies a user word's `#:contract`
+declaration against the Core contracts of the words it calls **without running
+the program**. The check is deliberately conservative: it reports *verified*,
+*violated*, or *cannot verify*, and anything outside the fragment it can analyze
+is reported as *cannot verify*, never silently passed.
 
-The same content-addressing that gives each word a stable identity (§8.6) is
-lifted to the whole trust-critical source surface. `npm run provenance:attest`
-records a SHA-256 digest of every tracked source file and a Merkle-style **root
-identity** in [`docs/provenance/`](docs/provenance/); `npm run provenance:check`
-(run in CI) fails the moment any tracked source drifts from that recorded
-identity. This is the defensible form of "detect a backdoor the instant it is
-injected": rather than embedding something that constantly phones home (which
-the pure core has no capability to do), the injection shows up as a content-hash
-mismatch, with no network involved. See [the design
-note](docs/dev/source-provenance-attestation-design.md) for the threat model and
-how to anchor the root pin externally.
-
----
+Spec links: [Work limits](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-machine-limits), [Value, absence, misuse](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-trichotomy), [Errors](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-failure-error), [Pre-execution check](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-contract-check)
 
 ## A small taste
 
@@ -158,15 +134,14 @@ The **Expected value** column shows the final stack exactly as the language rend
 | Sample code | Expected value | Notes |
 | --- | --- | --- |
 | `2 3 / 1 3 / +` | `1/1` | Exact rational arithmetic: two thirds plus one third is exactly one. |
-| `[ 1 2 3 ] [ 4 5 6 ] +` | `[ 5/1 7/1 9/1 ]` | Vectorized arithmetic: equal-length vectors combine element-wise. |
-| `1 0 / ^ 99` | `99/1` | Division by zero produces a Bubble (`NIL`); `^` (`VENT`) replaces it with the fallback value. |
-| `'math' IMPORT 2 SQRT 2 LT` | `TRUE` | `SQRT` yields the exact algebraic √2 and compares it without rounding — decidably, with no budget in play. |
+| `[ 1 2 3 ] [ 4 5 6 ] +` | `[ 5/1 7/1 9/1 ]` | Element-wise arithmetic: equal-length vectors combine pairwise. |
+| `1 0 / ^ 99` | `99/1` | Division by zero produces a bubble (`NIL`); `^` (`VENT`) replaces it with the fallback value. |
+| `2 SQRT 2 LT` | `TRUE` | `SQRT` yields the exact algebraic √2 and compares it without rounding. |
+| `8 SQRT 2 SQRT 2 SQRT + =` | `TRUE` | Values built through different histories are one value when they denote the same real. |
 
 More examples are available in [`examples/`](examples/) and in the [Reference](https://masamoto1982.github.io/Ajisai/docs/index.html), where every sample opens in the Playground.
 
-Spec links: [§3 Syntax](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#3-syntax), [§7 Built-in Words](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#7-built-in-words), [§9.2 Import and unimport syntax](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#92-import-and-unimport-syntax)
-
----
+Spec links: [Source and Desugaring](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-source), [Value Domains](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-values), [Dictionary and Effects](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-dictionary)
 
 ## Runtime architecture
 
@@ -175,14 +150,14 @@ Rust interpreter core → WASM boundary → TypeScript GUI/runtime shell
                               └──────→ Tauri desktop shell
 ```
 
-- Rust core: tokenizer, value model, interpreter, built-in words, modules, tests
+- Rust core: tokenizer, value model, interpreter, Core words, tests
 - WASM boundary: protocol conversion between Rust values and the TypeScript runtime
 - TypeScript GUI: editor, dictionary sheets, execution controller, output rendering, platform adapters
 - Tauri shell: desktop integration and host capabilities
 
 Runtime-specific behavior such as persistence, file I/O, and host hooks is abstracted through [`src/platform/`](src/platform/).
 
-Spec links: [§1 Language Identity](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#1-language-identity), [§12 Semantic Plane](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#12-semantic-plane), [§13 Fractional-Dataflow Internal Invariants](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#13-fractional-dataflow-internal-invariants)
+Spec links: [Language identity](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-authority-identity), [Implementation freedom](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-authority-freedom), [Observation and Host Protocol](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html#lang-observation)
 
 ---
 
@@ -222,7 +197,8 @@ Quality process documents live in [`docs/quality/`](docs/quality/), including th
 
 | Path | Purpose |
 | --- | --- |
-| [`SPECIFICATION.html`](SPECIFICATION.html) | Canonical language specification (HTML source; [rendered here](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html)) |
+| [`spec/`](spec/) | Canonical sources: the semantic kernel, the 69-Word registry, the shared laws, presentation, and the host protocol |
+| [`SPECIFICATION.html`](SPECIFICATION.html) | Generated from `spec/` ([rendered here](https://masamoto1982.github.io/Ajisai/SPECIFICATION.html)) |
 | [`rust/src/`](rust/src/) | Rust interpreter core and value model |
 | [`src/`](src/) | TypeScript GUI/runtime shell |
 | [`src-tauri/`](src-tauri/) | Desktop wrapper |
