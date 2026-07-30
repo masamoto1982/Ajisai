@@ -10,15 +10,10 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
     matches!(&val.data, ValueData::Vector(_) | ValueData::Tensor { .. })
 }
 
-#[inline]
-pub(crate) fn is_string_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Vector(_))
-}
-
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
-            ValueData::Nil | ValueData::Unknown(_) => vec![],
+            ValueData::Nil => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
                 .and_then(|n| {
@@ -30,10 +25,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .map(|c| vec![c])
                 .unwrap_or_default(),
-            ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().flat_map(collect_chars).collect(),
+            ValueData::Vector(children) => children.iter().flat_map(collect_chars).collect(),
             ValueData::Tensor { data, .. } => data
                 .iter()
                 .filter_map(|f| {
@@ -47,10 +39,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
                 })
                 .collect(),
             ValueData::ExactScalar(_) => vec![],
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec![],
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -70,20 +59,15 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             }
             Ok(f.numerator())
         }
-        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
+        ValueData::Nil => Err(AjisaiError::create_structure_error(
             "single-element value with integer",
             "NIL",
         )),
-        ValueData::Vector(children)
-        | ValueData::Record {
-            pairs: children, ..
-        } if children.len() == 1 => extract_integer_bigint(&children[0]),
-        ValueData::Vector(_) | ValueData::Record { .. } => {
-            Err(AjisaiError::create_structure_error(
-                "single-element value with integer",
-                "multi-element vector",
-            ))
-        }
+        ValueData::Vector(children) if children.len() == 1 => extract_integer_bigint(&children[0]),
+        ValueData::Vector(_) => Err(AjisaiError::create_structure_error(
+            "single-element value with integer",
+            "multi-element vector",
+        )),
         ValueData::Tensor { data, .. } => {
             if data.len() == 1 {
                 let fraction = data
@@ -104,13 +88,9 @@ fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
             "integer",
             "irrational exact real",
         )),
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
-            "single-element value with integer",
-            "code block",
-        )),
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(
+            AjisaiError::create_structure_error("single-element value with integer", "code block"),
+        ),
     }
 }
 
@@ -118,13 +98,6 @@ pub(crate) fn extract_integer_from_value(value: &Value) -> Result<i64> {
     let n = extract_integer_bigint(value)?;
     n.to_i64()
         .ok_or_else(|| AjisaiError::from("Integer value is too large for i64"))
-}
-
-pub(crate) fn extract_count_from_value(value: &Value) -> Result<usize> {
-    let n = extract_integer_bigint(value)?;
-    n.to_usize().ok_or_else(|| {
-        AjisaiError::from("Count value must be a non-negative integer that fits usize")
-    })
 }
 
 pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
@@ -177,10 +150,6 @@ pub(crate) fn create_number_value(fraction: Fraction) -> Value {
     Value::from_fraction(fraction)
 }
 
-pub(crate) fn create_datetime_value(fraction: Fraction) -> Value {
-    Value::from_fraction(fraction)
-}
-
 pub(crate) fn extract_operands(interp: &mut Interpreter, count: usize) -> Result<Vec<Value>> {
     if interp.stack.len() < count {
         return Err(AjisaiError::StackUnderflow);
@@ -220,15 +189,6 @@ pub(crate) fn nil_passthrough_unary(interp: &mut Interpreter) -> bool {
     }
     interp.stack.push(inherited);
     true
-}
-
-pub(crate) fn nil_passthrough_value<'a>(
-    items: impl IntoIterator<Item = &'a Value>,
-) -> Option<Value> {
-    items
-        .into_iter()
-        .find(|v| v.is_operational_nil())
-        .map(Value::nil_inheriting_absence_from)
 }
 
 pub(crate) fn nil_passthrough_binary(interp: &mut Interpreter) -> bool {
@@ -286,26 +246,5 @@ mod tests {
         let wrapped = create_number_value(Fraction::new(BigInt::from(42), BigInt::one()));
         let result = extract_integer_from_value(&wrapped).unwrap();
         assert_eq!(result, 42);
-    }
-
-    #[test]
-    fn extract_count_rejects_negative_without_wrapping() {
-        let wrapped = create_number_value(Fraction::new(BigInt::from(-1), BigInt::one()));
-        let err = extract_count_from_value(&wrapped).unwrap_err();
-        assert!(
-            err.to_string().contains("non-negative integer"),
-            "unexpected error: {err}"
-        );
-    }
-
-    #[test]
-    fn extract_count_rejects_too_large_without_truncating() {
-        let huge = BigInt::from(usize::MAX) + BigInt::one();
-        let wrapped = create_number_value(Fraction::new(huge, BigInt::one()));
-        let err = extract_count_from_value(&wrapped).unwrap_err();
-        assert!(
-            err.to_string().contains("fits usize"),
-            "unexpected error: {err}"
-        );
     }
 }

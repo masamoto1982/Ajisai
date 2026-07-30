@@ -54,32 +54,6 @@ fn truth_value_is_observably_not_a_number() {
         render(&run_one("1"), Interpretation::Unassigned),
     );
 }
-
-/// NIL is an operational absence, not FALSE and not logical UNKNOWN. The
-/// distinction is visible through protocol axes, not through Rust storage or
-/// display internals.
-#[test]
-fn nil_is_observably_operational_absence() {
-    let nil = observe_axes(&run_one("NIL"));
-    let false_value = observe_axes(&run_one("FALSE"));
-    let unknown = observe_axes(&run_one(&format!(
-        "{} 0 8 COMPARE-WITHIN",
-        test_support::observe::TIER2_WITNESS
-    )));
-
-    assert_eq!(nil.semantic_kind, "absence");
-    assert_eq!(nil.shape, "absence");
-    assert_eq!(nil.truth_value, None);
-    assert!(nil.capabilities.contains(&"nilPassthrough"));
-    assert!(nil.capabilities.contains(&"diagnosable"));
-    assert!(!nil.capabilities.contains(&"truthValued"));
-
-    assert_eq!(false_value.truth_value, Some("false"));
-    assert_eq!(unknown.truth_value, Some("unknown"));
-    assert!(false_value.capabilities.contains(&"truthValued"));
-    assert!(unknown.capabilities.contains(&"truthValued"));
-}
-
 /// Every observed protocol string is canonical lower-camelCase (SPEC §2.3):
 /// nonempty, lowercase first letter, ASCII-alphanumeric only (no `_`, no `-`).
 #[test]
@@ -96,8 +70,7 @@ fn protocol_strings_are_lower_camel_case() {
         "1 0 /",
         "[ 1 2 3 ]",
         "{ 1 ADD }",
-        "'math' IMPORT 2 MATH@SQRT",
-        "'math' IMPORT 2 MATH@SQRT 1 ADD 2 MATH@SQRT 1 ADD 8 COMPARE-WITHIN",
+        "2 SQRT",
     ] {
         for v in run(src) {
             let o = observe_axes(&v);
@@ -157,19 +130,6 @@ proptest! {
         let v = run_one(&src);
         prop_assert_eq!(v.to_string(), render(&v, v.hint));
     }
-
-    /// **U is render-absorbing** (SPEC §2.3, §7.5): the logical Unknown renders
-    /// as `UNKNOWN` under *every* role — its truth surface is role-invariant and
-    /// never leaks as `NIL` or a numeric form.
-    #[test]
-    fn unknown_renders_absorbingly(src in unknown_src()) {
-        let u = run_one(&src);
-        prop_assert_eq!(u.truth_value(), Some("unknown"));
-        for role in ALL_ROLES {
-            prop_assert_eq!(render(&u, role), "UNKNOWN");
-        }
-    }
-
     // ───────────────────────── semantic firewall on the axes ─────────────────
 
     /// **Structural axes are role-orthogonal** (semantic firewall): the

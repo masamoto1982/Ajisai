@@ -36,21 +36,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_map_stack_mode() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("{ [ 2 ] * } 'DOUBLE' DEF [ 1 ] [ 2 ] [ 3 ] [ 3 ] 'DOUBLE' .. MAP")
-            .await;
-        assert!(
-            result.is_ok(),
-            "MAP in Stack mode should work: {:?}",
-            result
-        );
-
-        assert_eq!(interp.stack.len(), 3);
-    }
-
-    #[tokio::test]
     async fn test_empty_vector_error() {
         let mut interp = Interpreter::new();
 
@@ -93,21 +78,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_force_flag_del_with_dependents_forced() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        let result = interp.execute("! 'DOUBLE' DEL").await;
-        assert!(result.is_ok());
-        assert!(!interp.user_words.contains_key("DOUBLE"));
-        assert!(interp.output_buffer.contains("Warning"));
-    }
-
-    #[tokio::test]
     async fn test_force_flag_def_with_dependents_error() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
@@ -121,39 +91,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_force_flag_def_with_dependents_forced() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        let result = interp.execute("! { [ 3 ] * } 'DOUBLE' DEF").await;
-        assert!(result.is_ok());
-        assert!(interp.output_buffer.contains("Warning"));
-    }
-
-    #[tokio::test]
     async fn test_force_flag_builtin_always_error() {
         let mut interp = Interpreter::new();
 
         let result = interp.execute("! '+' DEL").await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_force_flag_reset_after_other_word() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
-        interp
-            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
-            .await
-            .unwrap();
-
-        interp.execute("!").await.unwrap();
-        interp.execute("[ 1 2 ] LENGTH").await.unwrap();
-        let result = interp.execute("'DOUBLE' DEL").await;
         assert!(result.is_err());
     }
 
@@ -251,42 +192,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_false_and_nil_returns_false() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("FALSE NIL AND").await;
-        assert!(result.is_ok(), "FALSE AND NIL should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "FALSE AND NIL should return FALSE, not NIL");
-        assert!(!val.is_truthy(), "FALSE AND NIL should be falsy");
-    }
-
-    #[tokio::test]
-    async fn test_false_and_nil_alias_returns_false() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("FALSE NIL &").await;
-        assert!(result.is_ok(), "FALSE NIL & should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "FALSE NIL & should return FALSE, not NIL");
-        assert!(!val.is_truthy(), "FALSE NIL & should be falsy");
-    }
-
-    #[tokio::test]
     async fn test_true_and_nil_alias_returns_nil() {
         let mut interp = Interpreter::new();
         let result = interp.execute("TRUE NIL &").await;
         assert!(result.is_ok(), "TRUE NIL & should work: {:?}", result);
         let val = interp.stack.pop().unwrap();
         assert!(val.is_nil(), "TRUE NIL & should return NIL, got {:?}", val);
-    }
-
-    #[tokio::test]
-    async fn test_true_or_nil_returns_true() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("TRUE NIL OR").await;
-        assert!(result.is_ok(), "TRUE OR NIL should work: {:?}", result);
-        let val = interp.stack.pop().unwrap();
-        assert!(!val.is_nil(), "TRUE OR NIL should return TRUE, not NIL");
-        assert!(val.is_truthy(), "TRUE OR NIL should be truthy");
     }
 
     #[tokio::test]
@@ -440,108 +351,6 @@ mod tests {
             err_msg
         );
     }
-
-    #[tokio::test]
-    async fn test_precompute_basic_arithmetic() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("{ { 1 2 ADD } PRECOMPUTE } 'X' DEF")
-            .await
-            .expect("DEF with PRECOMPUTE should succeed");
-        let stack_before = interp.stack.len();
-        assert_eq!(stack_before, 0, "DEF should not leave residue on stack");
-        interp.execute("X").await.expect("X should evaluate");
-        assert_eq!(interp.stack.len(), 1);
-        let val = interp.stack.last().unwrap();
-        assert_eq!(
-            val.as_scalar().expect("scalar").numerator().to_string(),
-            "3"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_precompute_multivalue_result() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("{ { 1 2 } PRECOMPUTE ADD } 'THREE' DEF")
-            .await
-            .expect("multi-value PRECOMPUTE should succeed");
-        interp
-            .execute("THREE")
-            .await
-            .expect("THREE should evaluate");
-        let val = interp.stack.last().unwrap();
-        assert_eq!(
-            val.as_scalar().expect("scalar").numerator().to_string(),
-            "3"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_precompute_runtime_call_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("PRECOMPUTE").await;
-        assert!(result.is_err(), "PRECOMPUTE at runtime should error");
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("PRECOMPUTE"));
-    }
-
-    #[tokio::test]
-    async fn test_precompute_does_not_pollute_parent_stack() {
-        let mut interp = Interpreter::new();
-        interp.execute("42").await.unwrap();
-        let before = interp.stack.len();
-        let result = interp
-            .execute("{ { 'hello' PRINT } PRECOMPUTE } 'BAD' DEF")
-            .await;
-        assert!(result.is_err(), "impure PRECOMPUTE block should fail");
-        assert_eq!(
-            interp.stack.len(),
-            before,
-            "failed PRECOMPUTE must not pollute parent stack"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_precompute_runtime_error_is_wrapped() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("{ { 1 0 DIV } PRECOMPUTE } 'BAD' DEF").await;
-        assert!(
-            result.is_err(),
-            "division by zero in PRECOMPUTE should fail DEF"
-        );
-        let err = result.unwrap_err().to_string();
-        assert!(
-            err.contains("PRECOMPUTE"),
-            "runtime error inside PRECOMPUTE must mention PRECOMPUTE: {}",
-            err
-        );
-    }
-
-    #[tokio::test]
-    async fn test_precompute_rejects_impure_builtin() {
-        let mut interp = Interpreter::new();
-        let result = interp
-            .execute("{ { 'hello' PRINT } PRECOMPUTE } 'BAD' DEF")
-            .await;
-        assert!(result.is_err(), "impure PRECOMPUTE block should fail");
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("PRECOMPUTE"));
-        assert!(err.contains("not comptime-safe"));
-        assert!(err.contains("PRINT"));
-    }
-
-    #[tokio::test]
-    async fn test_precompute_rejects_recursive_user_word() {
-        let mut interp = Interpreter::new();
-        interp.execute("{ REC } 'REC' DEF").await.unwrap();
-        let result = interp.execute("{ { REC } PRECOMPUTE } 'BAD' DEF").await;
-        assert!(result.is_err(), "recursive PRECOMPUTE should fail");
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("PRECOMPUTE"));
-        assert!(err.contains("recursive dependency"));
-    }
-
     #[tokio::test]
     async fn test_def_with_code_block_body() {
         // DEF is strictly `{ body } 'NAME' DEF`. The body is a code block, not
@@ -603,40 +412,6 @@ mod tests {
             "DEF with a data-array body should be rejected"
         );
     }
-
-    #[tokio::test]
-    async fn test_def_multiline_dollar_cond_word() {
-        // The redesigned multi-line `|`-style COND body must define and branch
-        // correctly. Each clause is one line inside the outer `{ }` body.
-        let mut interp = Interpreter::new();
-        let src = "{\n\
-                   { [ 1 ] = | [ 100 ] }\n\
-                   { [ 2 ] = | [ 200 ] }\n\
-                   { IDLE   | [ 0 ]   } COND\n\
-                   } 'CLS' DEF";
-        interp
-            .execute(src)
-            .await
-            .expect("multi-line | COND word should define");
-
-        let check = |interp: &Interpreter| -> String {
-            let val = interp.stack.last().expect("result present");
-            val.child(0)
-                .expect("child")
-                .as_scalar()
-                .expect("scalar")
-                .numerator()
-                .to_string()
-        };
-
-        interp.execute("[ 1 ] CLS").await.expect("CLS [ 1 ]");
-        assert_eq!(check(&interp), "100");
-        interp.execute("[ 2 ] CLS").await.expect("CLS [ 2 ]");
-        assert_eq!(check(&interp), "200");
-        interp.execute("[ 9 ] CLS").await.expect("CLS [ 9 ]");
-        assert_eq!(check(&interp), "0");
-    }
-
     #[tokio::test]
     async fn test_def_ignores_leftover_string_like_value() {
         // A leftover string-like value below the body must not shift argument

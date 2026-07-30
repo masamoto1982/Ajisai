@@ -107,20 +107,6 @@ pub const SURFACE_FORMS: &[SurfaceForm] = &[
         summary: "String literal delimiter (serves as both open and close)",
     },
     SurfaceForm {
-        surface: ";",
-        concept: "TOP-EAT",
-        kind: SurfaceFormKind::ModifierSugar,
-        runtime_word: false,
-        summary: "Shorthand for `. ,` (TOP EAT)",
-    },
-    SurfaceForm {
-        surface: ";;",
-        concept: "STAK-KEEP",
-        kind: SurfaceFormKind::ModifierSugar,
-        runtime_word: false,
-        summary: "Shorthand for `.. ,,` (STAK KEEP)",
-    },
-    SurfaceForm {
         surface: "(",
         concept: "RESERVED-BEGIN",
         kind: SurfaceFormKind::ReservedMarker,
@@ -192,8 +178,6 @@ mod tests {
         assert_eq!(lookup_surface_form("{").unwrap().concept, "BEGIN-BLOCK");
         assert_eq!(lookup_surface_form("}").unwrap().concept, "END-BLOCK");
         assert_eq!(lookup_surface_form("'").unwrap().concept, "STRING-QUOTE");
-        assert_eq!(lookup_surface_form(";").unwrap().concept, "TOP-EAT");
-        assert_eq!(lookup_surface_form(";;").unwrap().concept, "STAK-KEEP");
         assert_eq!(lookup_surface_form("(").unwrap().concept, "RESERVED-BEGIN");
         assert_eq!(lookup_surface_form(")").unwrap().concept, "RESERVED-END");
     }

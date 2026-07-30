@@ -9,40 +9,11 @@
 
 use crate::interpreter::Interpreter;
 
-fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    use std::task::{Context, Poll};
-    let mut fut = Box::pin(fut);
-    let waker = std::task::Waker::noop();
-    let mut cx = Context::from_waker(waker);
-    loop {
-        match fut.as_mut().poll(&mut cx) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => std::thread::yield_now(),
-        }
-    }
-}
-
 const COUNTDOWN: &str =
     "{\n  { [ 0 ] > | [ 1 ] - DOWN }\n  { IDLE | [ 'done' ] } COND\n} 'DOWN' DEF";
 
 fn fresh() -> Interpreter {
     Interpreter::new()
-}
-
-fn assert_on_equals_off(src: &str) {
-    let mut on = fresh();
-    on.set_compiled_clause_enabled(true);
-    block_on(on.execute(src)).unwrap();
-
-    let mut off = fresh();
-    off.set_compiled_clause_enabled(false);
-    block_on(off.execute(src)).unwrap();
-
-    assert_eq!(
-        format!("{:?}", on.get_stack()),
-        format!("{:?}", off.get_stack()),
-        "compiled-clause ON vs OFF diverged for: {src}"
-    );
 }
 
 #[tokio::test]
@@ -85,22 +56,6 @@ async fn compiled_clause_disabled_count_is_zero() {
         "no compiled clause executions expected when disabled"
     );
 }
-
-#[test]
-fn compiled_clause_matches_interpreted_across_shapes() {
-    assert_on_equals_off(&format!("{COUNTDOWN}\n[ 7 ] DOWN"));
-    assert_on_equals_off(
-        "{\n  { [ 5 ] > | [ 'big' ] }\n  { IDLE | [ 'small' ] } COND\n} 'SIZE' DEF\n[ 7 ] SIZE",
-    );
-    // Multi-clause with numeric guard fall-through and arithmetic bodies.
-    assert_on_equals_off(
-        "{\n  { [ 0 ] > | [ 10 ] + }\n  { [ 0 ] < | [ 10 ] - }\n  { IDLE | [ 0 ] } COND\n} 'ADJ' DEF\n[ 3 ] ADJ",
-    );
-    assert_on_equals_off(
-        "{\n  { [ 0 ] > | [ 10 ] + }\n  { [ 0 ] < | [ 10 ] - }\n  { IDLE | [ 0 ] } COND\n} 'ADJ' DEF\n[ 0 ] [ 4 ] - ADJ",
-    );
-}
-
 #[tokio::test]
 async fn unguarded_recursion_unaffected_by_compiled_clauses() {
     // `{ REC }` has no COND, so no compiled clause is involved; it must keep the

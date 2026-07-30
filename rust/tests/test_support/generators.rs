@@ -61,25 +61,10 @@ fn non_square_radicand() -> impl Strategy<Value = i64> {
     prop::sample::select(vec![2i64, 3, 5, 6, 7, 8, 10, 11, 13])
 }
 
-/// Pushes the logical Unknown (U). Comparison is total over Tier ≤ 1 —
-/// everything the current vocabulary constructs — so U is produced through
-/// `COMPARE-WITHIN` against a pre-loaded **Tier 2** starvation witness
-/// (`observe::TIER2_WITNESS`): the enclosure process never separates from
-/// zero, so the explicit water budget is exhausted and the comparison
-/// starves to U.
-pub fn unknown_src() -> impl Strategy<Value = String> {
-    prop::sample::select(vec![4usize, 8, 16]).prop_map(|budget| {
-        format!(
-            "{} 0 {budget} COMPARE-WITHIN",
-            crate::test_support::observe::TIER2_WITNESS
-        )
-    })
-}
-
 /// Pushes an irrational exact-real scalar `√n` (n not a perfect square, so the
 /// value is a genuine lazy continued fraction).
 pub fn irrational_src() -> impl Strategy<Value = String> {
-    non_square_radicand().prop_map(|n| format!("'math' IMPORT {n} MATH@SQRT"))
+    non_square_radicand().prop_map(|n| format!("{n} SQRT"))
 }
 
 /// Pushes a single vector/tensor literal (1–3 elements).
@@ -108,18 +93,18 @@ pub fn block_src() -> impl Strategy<Value = String> {
 /// over the chosen operands (probe-confirmed: no NIL / error).
 pub fn module_word_call() -> impl Strategy<Value = (&'static str, String, String)> {
     prop::sample::select(vec![
-        ("MATH", "4 SQRT", "4 MATH@SQRT"),
-        ("MATH", "9 SQRT", "9 MATH@SQRT"),
-        ("MATH", "-5 ABS", "-5 MATH@ABS"),
-        ("MATH", "7 NEG", "7 MATH@NEG"),
-        ("MATH", "-3 SIGN", "-3 MATH@SIGN"),
+        ("MATH", "4 SQRT", "4 SQRT"),
+        ("MATH", "9 SQRT", "9 SQRT"),
+        ("MATH", "-5 ABS", "-5 ABS"),
+        ("MATH", "7 NEG", "7 NEG"),
+        ("MATH", "-3 SIGN", "-3 SIGN"),
         ("MATH", "2 10 POW", "2 10 MATH@POW"),
-        ("MATH", "3 7 MIN", "3 7 MATH@MIN"),
-        ("MATH", "3 7 MAX", "3 7 MATH@MAX"),
+        ("MATH", "3 7 MIN", "3 7 MIN"),
+        ("MATH", "3 7 MAX", "3 7 MAX"),
         ("JSON", "'[1]' PARSE", "'[1]' JSON@PARSE"),
         ("JSON", "'[1,2]' PARSE", "'[1,2]' JSON@PARSE"),
-        ("ALGO", "[ 3 1 2 ] SORT", "[ 3 1 2 ] ALGO@SORT"),
-        ("ALGO", "[ 5 ] SORT", "[ 5 ] ALGO@SORT"),
+        ("ALGO", "[ 3 1 2 ] SORT", "[ 3 1 2 ] SORT"),
+        ("ALGO", "[ 5 ] SORT", "[ 5 ] SORT"),
     ])
     .prop_map(|(m, b, q)| (m, b.to_string(), q.to_string()))
 }
@@ -151,7 +136,6 @@ pub fn any_value_src() -> impl Strategy<Value = String> {
         scalar_src(),
         boolean_src(),
         nil_src(),
-        unknown_src(),
         irrational_src(),
         vector_src(),
         block_src(),
@@ -170,7 +154,6 @@ pub fn effect_free_src() -> impl Strategy<Value = String> {
         scalar_src(),
         boolean_src(),
         nil_src(),
-        unknown_src(),
         irrational_src(),
         vector_src(),
         (small(), small()).prop_map(|(a, b)| format!("[ {a} {b} ] REVERSE")),
@@ -178,7 +161,7 @@ pub fn effect_free_src() -> impl Strategy<Value = String> {
     ]
 }
 
-/// A canonical `SERIAL` outbound program (after `'serial' IMPORT`), as
+/// A canonical `SERIAL` outbound program (after ``), as
 /// `(bare-program, qualified-program)`. Both spellings emit the *same* ordered
 /// `serial` effect list (boundary `bare ≡ SERIAL@W`, applied to effectful
 /// words). Every program threads a port-id handle so it is well-formed in

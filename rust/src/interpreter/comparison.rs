@@ -1,14 +1,9 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::interval_ops::value_to_interval;
 use crate::interpreter::tensor_ops::FlatTensor;
-use crate::interpreter::value_extraction_helpers::{
-    extract_count_from_value, extract_integer_from_value, nil_passthrough_binary,
-    nil_passthrough_value,
-};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::exact::{ExactCmp, ExactReal, Water};
+use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
+use crate::interpreter::{ConsumptionMode, Interpreter};
+use crate::types::exact::{ExactCmp, ExactReal};
 use crate::types::fraction::Fraction;
-use crate::types::interval::Interval;
 use crate::types::{Interpretation, Value, ValueData};
 
 /// One of the four ordering comparisons. Carries the dispatch
@@ -45,22 +40,6 @@ impl OrderingKind {
         }
     }
 
-    fn interval_decision(self, a: &Interval, b: &Interval) -> Option<bool> {
-        let (definitely_true, definitely_false) = match self {
-            OrderingKind::Lt => (a.hi.lt(&b.lo), a.lo.ge(&b.hi)),
-            OrderingKind::Le => (a.hi.le(&b.lo), a.lo.gt(&b.hi)),
-            OrderingKind::Gt => (a.lo.gt(&b.hi), a.hi.le(&b.lo)),
-            OrderingKind::Ge => (a.lo.ge(&b.hi), a.hi.lt(&b.lo)),
-        };
-        if definitely_true {
-            Some(true)
-        } else if definitely_false {
-            Some(false)
-        } else {
-            None
-        }
-    }
-
     fn surface(self) -> &'static str {
         match self {
             OrderingKind::Lt => "<",
@@ -80,7 +59,6 @@ impl OrderingKind {
 /// passthrough).
 enum ScalarCmp {
     Decided(bool),
-    Unknown(usize),
 }
 
 fn push_boolean_result(interp: &mut Interpreter, result: bool) {
@@ -91,30 +69,11 @@ fn push_boolean_result(interp: &mut Interpreter, result: bool) {
         .set_role_at(stack_len - 1, Interpretation::TruthValue);
 }
 
-/// Push the SPEC §7.4.1 logical `Unknown` (U): a `TruthValue`-role value
-/// produced when an observation cannot separate two values within its
-/// water (Tier 2 only). U is a logical truth value, not an operational
-/// NIL — it flows into the three-valued logic of SPEC §7.5 directly. The
-/// `TruthValue` interpretation role makes it observable as
-/// `truthValue = unknown`.
-fn push_unknown(interp: &mut Interpreter, agreed_prefix: Option<usize>) {
-    let value = match agreed_prefix {
-        Some(prefix) => Value::unknown_with_agreed_prefix(None, prefix),
-        None => Value::unknown(),
-    };
-    interp.stack.push(value);
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::TruthValue);
-}
-
-/// Compare two scalar values under an ordering kind. Returns `Err(_)`
-/// for structurally-non-comparable operands. Both-Rational operands take
-/// the Fraction fast path; any pair involving a Tier 1 algebraic decides
-/// through the total `ExactReal::cmp_exact` — budget-free per SPEC
-/// §7.4.1, so `Unknown` cannot arise from the current vocabulary (it is
-/// reserved for Tier 2 and for a defensively-handled absent operand).
+/// Compare two scalar values under an ordering kind. Returns `Err(_)` for
+/// structurally-non-comparable operands. Comparison over the exact domain is
+/// total (LANG.VALUES.EXACT): both-rational operands take the Fraction fast
+/// path, and any pair involving an algebraic decides through the total
+/// `ExactReal::cmp_exact`. There is no undecided outcome.
 fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<ScalarCmp> {
     let a = extract_exact_real_for_comparison(a_val)?;
     let b = extract_exact_real_for_comparison(b_val)?;
@@ -122,8 +81,11 @@ fn compare_scalar_pair(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Resu
         (Some(af), Some(bf)) => ScalarCmp::Decided(kind.apply_to_fraction(af, bf)),
         _ => match a.cmp_exact(&b) {
             ExactCmp::Decided(o) => ScalarCmp::Decided(kind.apply_ordering(o)),
-            ExactCmp::Starved { steps } => ScalarCmp::Unknown(steps),
-            ExactCmp::Absent => ScalarCmp::Unknown(0),
+            ExactCmp::Starved { .. } | ExactCmp::Absent => {
+                return Err(AjisaiError::from(
+                    "comparison: operand is outside the exact domain",
+                ))
+            }
         },
     })
 }
@@ -159,14 +121,6 @@ pub(crate) fn three_way_compare(a_val: &Value, b_val: &Value) -> Result<OrderOut
     })
 }
 
-/// Push the logical `Unknown` (U) carrying a refinement-step diagnosis,
-/// for the comparison-dependent words of SPEC §7.4.3. Mirrors the
-/// relations' own U production: a `TruthValue`-role value observed as
-/// `truthValue = unknown` with `diagnosis.agreedPrefix`.
-pub(crate) fn push_comparison_unknown(interp: &mut Interpreter, agreed_prefix: usize) {
-    push_unknown(interp, Some(agreed_prefix));
-}
-
 /// Extract an `ExactReal` view of a value's scalar content for
 /// comparison. Scalar (`Fraction`-backed) values lift to
 /// `ExactReal::Rational`; singleton Vector / Tensor values also
@@ -195,7 +149,7 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                     AjisaiError::create_structure_error("scalar value", "non-rational ExactReal")
                 })
         }
-        ValueData::Vector(_) | ValueData::Record { .. } => {
+        ValueData::Vector(_) => {
             let tensor = FlatTensor::from_value(val)?;
             if tensor.data.len() != 1 {
                 return Err(AjisaiError::create_structure_error(
@@ -216,17 +170,13 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                 AjisaiError::create_structure_error("scalar value", "non-scalar value")
             })
         }
-        ValueData::Nil | ValueData::Unknown(_) => Err(AjisaiError::create_structure_error(
+        ValueData::Nil => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
         )),
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => Err(AjisaiError::create_structure_error(
-            "scalar value",
-            "non-scalar value",
-        )),
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => Err(
+            AjisaiError::create_structure_error("scalar value", "non-scalar value"),
+        ),
     }
 }
 
@@ -278,10 +228,7 @@ fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
 }
 
 fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -> bool {
-    if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return false;
     }
 
@@ -310,10 +257,7 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
 }
 
 fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool {
-    if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return false;
     }
 
@@ -341,45 +285,6 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
     true
 }
 
-/// Check whether every adjacent pair in `items` satisfies `kind`.
-/// Returns `Ok(Some(bool))` when the property is decidable for every
-/// pair, `Ok(None)` when some pair triggers SPEC §7.4.1's comparison
-/// budget short-circuit. SPEC §7.4 requires the entire STAK-mode
-/// result to be the logical `Unknown` (U) on the first U-producing
-/// pair regardless of later pairs.
-fn check_all_adjacent_pairs(items: &[Value], kind: OrderingKind) -> Result<ScalarCmp> {
-    for pair in items.windows(2) {
-        match compare_scalar_pair(&pair[0], &pair[1], kind)? {
-            ScalarCmp::Decided(true) => continue,
-            ScalarCmp::Decided(false) => return Ok(ScalarCmp::Decided(false)),
-            ScalarCmp::Unknown(p) => return Ok(ScalarCmp::Unknown(p)),
-        }
-    }
-    Ok(ScalarCmp::Decided(true))
-}
-
-/// Same three-valued discipline as `check_all_adjacent_pairs` for
-/// the EQ relation: `Some(true)` iff every adjacent pair decides
-/// equal, `Some(false)` on the first decidedly-unequal pair, `None`
-/// on the first §7.4.1 budget-exhausted pair (short-circuit per
-/// SPEC §7.4 STAK-mode short-circuit rule). `invert` flips the
-/// per-pair predicate to drive `NEQ`'s "all adjacent pairs unequal"
-/// semantics.
-fn check_all_adjacent_eq(items: &[Value], invert: bool) -> ScalarCmp {
-    for pair in items.windows(2) {
-        match pairwise_eq(&pair[0], &pair[1]) {
-            ScalarCmp::Decided(eq) => {
-                let pair_ok = if invert { !eq } else { eq };
-                if !pair_ok {
-                    return ScalarCmp::Decided(false);
-                }
-            }
-            ScalarCmp::Unknown(p) => return ScalarCmp::Unknown(p),
-        }
-    }
-    ScalarCmp::Decided(true)
-}
-
 fn apply_binary_comparison(
     interp: &mut Interpreter,
     kind: OrderingKind,
@@ -387,155 +292,41 @@ fn apply_binary_comparison(
 ) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                let a_val = interp.stack[stack_len - 2].clone();
-                let b_val = interp.stack[stack_len - 1].clone();
-                (a_val, b_val)
-            } else {
-                let b_val = interp.stack.pop().unwrap();
-                let a_val = interp.stack.pop().unwrap();
-                (a_val, b_val)
-            };
-
-            match compare_scalar_pair(&a_val, &b_val, kind) {
-                Ok(ScalarCmp::Decided(b)) => push_boolean_result(interp, b),
-                Ok(ScalarCmp::Unknown(p)) => push_unknown(interp, Some(p)),
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(a_val);
-                        interp.stack.push(b_val);
-                    }
-                    return Err(e);
-                }
-            }
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            if let Some(nil) = nil_passthrough_value(&items) {
-                interp.stack.push(nil);
-                return Ok(());
-            }
-
-            match check_all_adjacent_pairs(&items, kind) {
-                Ok(ScalarCmp::Decided(decided)) => push_boolean_result(interp, decided),
-                Ok(ScalarCmp::Unknown(p)) => push_unknown(interp, Some(p)),
-                Err(e) => {
-                    if !is_keep_mode {
-                        interp.stack.extend(items);
-                    }
-                    interp.stack.push(count_val);
-                    return Err(e);
-                }
-            }
-            Ok(())
-        }
-    }
-}
-
-/// Three-valued interval comparison for the same ordering schema used by the
-/// budgeted exact-real path: `Some(true)` and `Some(false)` are decidable;
-/// `None` means the intervals overlap in a way that depends on unresolved
-/// precision and therefore projects to logical `Unknown`.
-fn interval_relation_for_kind(interp: &mut Interpreter, kind: OrderingKind) -> Option<Result<()>> {
     if interp.stack.len() < 2 {
-        return None;
+        return Err(AjisaiError::StackUnderflow);
     }
-    let len = interp.stack.len();
-    let a = interp.stack[len - 2].clone();
-    let b = interp.stack[len - 1].clone();
-    let (ai, bi) = match (value_to_interval(&a), value_to_interval(&b)) {
-        (Some(ai), Some(bi)) => (ai, bi),
-        _ => return None,
+
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        let a_val = interp.stack[stack_len - 2].clone();
+        let b_val = interp.stack[stack_len - 1].clone();
+        (a_val, b_val)
+    } else {
+        let b_val = interp.stack.pop().unwrap();
+        let a_val = interp.stack.pop().unwrap();
+        (a_val, b_val)
     };
-    Some(match kind.interval_decision(&ai, &bi) {
-        Some(v) => {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
+
+    match compare_scalar_pair(&a_val, &b_val, kind) {
+        Ok(ScalarCmp::Decided(b)) => push_boolean_result(interp, b),
+        Err(e) => {
+            if !is_keep_mode {
+                interp.stack.push(a_val);
+                interp.stack.push(b_val);
             }
-            push_boolean_result(interp, v);
-            Ok(())
+            return Err(e);
         }
-        None => {
-            if interp.consumption_mode != ConsumptionMode::Keep {
-                interp.stack.pop();
-                interp.stack.pop();
-            }
-            // Interval-overlap undecidability carries no CF prefix.
-            push_unknown(interp, None);
-            Ok(())
-        }
-    })
-}
-
-/// Shape-IC entry points (see `shape_ic.rs`): attempt exactly the D1 scalar
-/// fast path for one comparison word. Same equivalence argument as the
-/// arithmetic wrappers — the fast path only accepts operands the preceding
-/// NIL-passthrough check would have ignored.
-pub(crate) fn scalar_fastpath_lt(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Lt)
-}
-
-pub(crate) fn scalar_fastpath_le(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Le)
-}
-
-pub(crate) fn scalar_fastpath_gt(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Gt)
-}
-
-pub(crate) fn scalar_fastpath_ge(interp: &mut Interpreter) -> bool {
-    push_ordering_scalar_fastpath(interp, OrderingKind::Ge)
-}
-
-pub(crate) fn scalar_fastpath_eq(interp: &mut Interpreter) -> bool {
-    push_equality_scalar_fastpath(interp, false)
-}
-
-pub(crate) fn scalar_fastpath_neq(interp: &mut Interpreter) -> bool {
-    push_equality_scalar_fastpath(interp, true)
+    }
+    Ok(())
 }
 
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
-    if interp.operation_target_mode == OperationTargetMode::StackTop {
+    {
         if push_ordering_scalar_fastpath(interp, kind) {
             return Ok(());
-        }
-        if let Some(res) = interval_relation_for_kind(interp, kind) {
-            return res;
         }
     }
     apply_binary_comparison(interp, kind, kind.surface())
@@ -565,21 +356,11 @@ pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
     apply_equality(interp, true)
 }
 
-/// Three-valued pairwise equality matching the SPEC §7.4.1
-/// discipline. Every pair the current vocabulary can build decides
-/// (`Decided`); the `Unknown` arm is reserved for Tier 2 observations
-/// and the defensive absent-operand fallback. The structural Vector /
-/// Tensor / Record paths and the singleton-projection paths always
-/// decide.
+/// Pairwise equality. Every pair decides: the structural Vector / Tensor paths
+/// and the singleton-projection paths are total, as is scalar comparison.
 fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
     if a_val.data == b_val.data {
         return ScalarCmp::Decided(true);
-    }
-    if let (Some(ai), Some(bi)) = (value_to_interval(a_val), value_to_interval(b_val)) {
-        if ai.is_exact() && bi.is_exact() {
-            return ScalarCmp::Decided(ai.lo == bi.lo);
-        }
-        return ScalarCmp::Decided(false);
     }
     match (&a_val.data, &b_val.data) {
         (ValueData::Scalar(_), ValueData::Scalar(_))
@@ -627,16 +408,13 @@ fn scalar_pair_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
         (Some(af), Some(bf)) => ScalarCmp::Decided(af == bf),
         _ => match a.cmp_exact(&b) {
             ExactCmp::Decided(o) => ScalarCmp::Decided(o == std::cmp::Ordering::Equal),
-            ExactCmp::Starved { steps } => ScalarCmp::Unknown(steps),
-            ExactCmp::Absent => ScalarCmp::Unknown(0),
+            ExactCmp::Starved { .. } | ExactCmp::Absent => ScalarCmp::Decided(false),
         },
     }
 }
 
 fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
 
@@ -646,185 +424,23 @@ fn apply_equality(interp: &mut Interpreter, invert: bool) -> Result<()> {
 
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            if interp.stack.len() < 2 {
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let (a_val, b_val) = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                let a_val = interp.stack[stack_len - 2].clone();
-                let b_val = interp.stack[stack_len - 1].clone();
-                (a_val, b_val)
-            } else {
-                let b_val = interp.stack.pop().unwrap();
-                let a_val = interp.stack.pop().unwrap();
-                (a_val, b_val)
-            };
-
-            match pairwise_eq(&a_val, &b_val) {
-                ScalarCmp::Decided(eq) => {
-                    push_boolean_result(interp, if invert { !eq } else { eq })
-                }
-                ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
-            }
-            Ok(())
-        }
-
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
-
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp.stack.drain(interp.stack.len() - count..).collect()
-            };
-
-            if let Some(nil) = nil_passthrough_value(&items) {
-                interp.stack.push(nil);
-                return Ok(());
-            }
-
-            match check_all_adjacent_eq(&items, invert) {
-                ScalarCmp::Decided(decided) => push_boolean_result(interp, decided),
-                ScalarCmp::Unknown(p) => push_unknown(interp, Some(p)),
-            }
-            Ok(())
-        }
-    }
-}
-
-/// Push the three-way sign scalar (`-1` / `0` / `1`) produced by
-/// `COMPARE-WITHIN`, carrying the `RawNumber` interpretation role.
-fn push_sign_result(interp: &mut Interpreter, sign: i64) {
-    interp.stack.push(Value::from_int(sign));
-    let stack_len = interp.stack.len();
-    interp
-        .stack
-        .set_role_at(stack_len - 1, Interpretation::RawNumber);
-}
-
-/// `COMPARE-WITHIN` (SPEC §7.4.2): three-way compare two values within an
-/// explicit observation budget (water).
-///
-/// Stack effect: `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]`.
-///
-/// Pushes the exact sign of `a − b` (`-1` if `a < b`, `0` if equal, `1`
-/// if `a > b`). Tier ≤ 1 operands — everything the current vocabulary
-/// can construct — are decidable, so the budget does not affect their
-/// result; it bounds the refinement only when a Tier 2 observation is
-/// involved, where exhaustion yields the logical `Unknown` (U) carrying
-/// `diagnosis.agreedPrefix` (the refinement steps spent without
-/// separation). A non-positive / non-integer `budget` or non-numeric
-/// `a`/`b` is malformed use and raises an error (not U); a NIL `a`/`b`
-/// operand passes through per SPEC §7.12.
-pub fn op_compare_within(interp: &mut Interpreter) -> Result<()> {
-    let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    if interp.stack.len() < 3 {
+    if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
-    let stack_len = interp.stack.len();
-    let budget_val = interp.stack[stack_len - 1].clone();
-    let b_val = interp.stack[stack_len - 2].clone();
-    let a_val = interp.stack[stack_len - 3].clone();
 
-    // The budget must be a positive integer (SPEC §7.4.2): a non-integer
-    // or non-positive budget is malformed use and raises an error rather
-    // than producing U. Read it without mutating the stack so the error
-    // path leaves operands intact.
-    let budget_i = extract_integer_from_value(&budget_val)?;
-    if budget_i <= 0 {
-        return Err(AjisaiError::create_structure_error(
-            "positive integer budget",
-            "non-positive budget",
-        ));
-    }
-    let budget = budget_i as usize;
-
-    // NIL passthrough for the a/b operands (SPEC §7.12 / §7.4.2).
-    if let Some(nil) = nil_passthrough_value(&[a_val.clone(), b_val.clone()]) {
-        if !is_keep_mode {
-            interp.stack.truncate(stack_len - 3);
-        }
-        interp.stack.push(nil);
-        return Ok(());
-    }
-
-    // Non-numeric a/b is malformed use and raises an error. Extraction
-    // happens before any pop, so the error path leaves the stack intact.
-    let a = extract_exact_real_for_comparison(&a_val)?;
-    let b = extract_exact_real_for_comparison(&b_val)?;
-
-    // The explicit budget is water for Tier 2 observations; Tier ≤ 1
-    // pairs decide via the exact Fraction order or the total algebraic
-    // comparison, unaffected by it.
-    let refinement_capable =
-        matches!(a, ExactReal::Computable(_)) || matches!(b, ExactReal::Computable(_));
-    let outcome = match (a.as_rational(), b.as_rational()) {
-        (Some(af), Some(bf)) => ExactCmp::Decided(af.cmp(bf)),
-        _ => a.cmp_within(&b, Water(budget as u64)),
+    let (a_val, b_val) = if is_keep_mode {
+        let stack_len = interp.stack.len();
+        let a_val = interp.stack[stack_len - 2].clone();
+        let b_val = interp.stack[stack_len - 1].clone();
+        (a_val, b_val)
+    } else {
+        let b_val = interp.stack.pop().unwrap();
+        let a_val = interp.stack.pop().unwrap();
+        (a_val, b_val)
     };
 
-    // Cost-model observability (SPEC §7.4.2): COMPARE-WITHIN is the one
-    // Coreword whose budget can be spent by a Tier 2 observation, so
-    // count invocations, the refinement-capable subset, and the steps
-    // actually consumed on exhaustion. Tier ≤ 1 comparisons spend
-    // nothing. Observational only; does not affect the pushed value.
-    interp.runtime_metrics.compare_within_count += 1;
-    if refinement_capable {
-        interp.runtime_metrics.compare_within_lazy_count += 1;
-    }
-    if let ExactCmp::Starved { steps } = outcome {
-        interp.runtime_metrics.compare_within_unknown_count += 1;
-        interp.runtime_metrics.compare_within_budget_terms_consumed += steps as u64;
-    }
-
-    if !is_keep_mode {
-        interp.stack.truncate(stack_len - 3);
-    }
-
-    match outcome {
-        ExactCmp::Decided(o) => {
-            use std::cmp::Ordering;
-            let sign = match o {
-                Ordering::Less => -1,
-                Ordering::Equal => 0,
-                Ordering::Greater => 1,
-            };
-            push_sign_result(interp, sign);
-        }
-        ExactCmp::Starved { steps } => {
-            interp.stack.push(Value::unknown_with_agreed_prefix(
-                Some("COMPARE-WITHIN"),
-                steps,
-            ));
-            let len = interp.stack.len();
-            interp
-                .stack
-                .set_role_at(len - 1, Interpretation::TruthValue);
-        }
-        ExactCmp::Absent => {
-            interp
-                .stack
-                .push(Value::unknown_with_agreed_prefix(Some("COMPARE-WITHIN"), 0));
-            let len = interp.stack.len();
-            interp
-                .stack
-                .set_role_at(len - 1, Interpretation::TruthValue);
-        }
+    match pairwise_eq(&a_val, &b_val) {
+        ScalarCmp::Decided(eq) => push_boolean_result(interp, if invert { !eq } else { eq }),
     }
     Ok(())
 }

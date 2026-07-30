@@ -7,7 +7,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_positive_remainder() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 7/3 ] CEIL").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -18,7 +18,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_negative_remainder() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -7/3 ] CEIL").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -29,7 +29,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_positive_integer() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 6/3 ] CEIL").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -40,7 +40,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_negative_integer() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -6/3 ] CEIL").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -51,7 +51,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_operation_target_stack_error() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         let result = interp.execute("[ 1 2 3 ] .. CEIL").await;
         assert!(result.is_err(), "CEIL should not support Stack mode (..)");
     }
@@ -59,7 +59,7 @@ mod ceil_tests {
     #[tokio::test]
     async fn test_ceil_of_nil_passes_nil_through() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("NIL").await.unwrap();
         interp
             .execute("CEIL")
@@ -78,7 +78,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_positive_below_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 7/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -89,7 +89,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_positive_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 5/2 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -114,7 +114,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_positive_above_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 8/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -125,7 +125,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_negative_below_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -7/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -136,7 +136,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_negative_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -5/2 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -147,7 +147,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_negative_above_half() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -8/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -158,7 +158,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_positive_integer() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 6/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -169,7 +169,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_negative_integer() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ -6/3 ] ROUND").await.unwrap();
         let stack = interp.get_stack();
         assert_eq!(stack.len(), 1);
@@ -180,7 +180,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_operation_target_stack_error() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         let result = interp.execute("[ 1 2 3 ] .. ROUND").await;
         assert!(result.is_err(), "ROUND should not support Stack mode (..)");
     }
@@ -188,7 +188,7 @@ mod round_tests {
     #[tokio::test]
     async fn test_round_of_nil_passes_nil_through() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("NIL").await.unwrap();
         interp
             .execute("ROUND")
@@ -207,7 +207,7 @@ mod num_tests {
     #[tokio::test]
     async fn test_num_parse_error_stack_restoration() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 'hello' ]").await.unwrap();
         let result = interp.execute("NUM").await;
         assert!(result.is_err());
@@ -218,7 +218,7 @@ mod num_tests {
     #[tokio::test]
     async fn test_num_same_structure_error_stack_restoration() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ 42 ]").await.unwrap();
         let result = interp.execute("NUM").await;
 
@@ -230,7 +230,7 @@ mod num_tests {
     #[tokio::test]
     async fn test_num_nil_error_stack_restoration() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ nil ]").await.unwrap();
         let result = interp.execute("NUM").await;
         assert!(result.is_err());
@@ -241,7 +241,7 @@ mod num_tests {
     #[tokio::test]
     async fn test_num_operation_target_stack_error() {
         let mut interp = Interpreter::new();
-        interp.execute("'json' IMPORT 'io' IMPORT").await.unwrap();
+        interp.execute("").await.unwrap();
         interp.execute("[ '42' ] [ '123' ]").await.unwrap();
         let result = interp.execute(".. NUM").await;
         assert!(result.is_err());
@@ -256,163 +256,17 @@ mod num_tests {
 
 #[cfg(test)]
 mod interval_tests {
-    use crate::interpreter::interval_ops::value_to_interval;
     use crate::interpreter::Interpreter;
-    use crate::types::fraction::Fraction;
-
-    #[tokio::test]
-    async fn test_interval_creation_success_and_failure() {
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 1 2 INTERVAL").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(format!("{}", stack[0]), "[1/1, 2/1]");
-
-        let mut interp_fail = Interpreter::new();
-        let result = interp_fail.execute("'math' IMPORT 2 1 INTERVAL").await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_interval_basic_arithmetic() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL +")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[4/1, 6/1]");
-
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL -")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[-3/1, -1/1]");
-
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL *")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[3/1, 8/1]");
-
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT -1 2 INTERVAL 3 4 INTERVAL *")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[-4/1, 8/1]");
-
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 4 INTERVAL 1 2 INTERVAL /")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[1/1, 4/1]");
-    }
-
-    #[tokio::test]
-    async fn test_interval_division_by_zero_interval_bubbles() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 INTERVAL -1 1 INTERVAL /")
-            .await
-            .unwrap();
-        assert!(interp.get_stack().last().unwrap().is_nil());
-    }
 
     #[tokio::test]
     async fn test_sqrt_exact_cases() {
         let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 4 SQRT").await.unwrap();
+        interp.execute("4 SQRT").await.unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "2/1");
 
         let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 9/16 SQRT").await.unwrap();
+        interp.execute("9/16 SQRT").await.unwrap();
         assert_eq!(format!("{}", interp.get_stack()[0]), "3/4");
-    }
-
-    #[tokio::test]
-    async fn test_sqrt_interval_soundness_and_eps() {
-        // SQRT now returns an exact AlgebraicSqrt for rational scalar inputs
-        // instead of an interval. Verify the result is an ExactScalar.
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(
-            matches!(&val.data, crate::types::ValueData::ExactScalar(er)
-                if er.mul(er) == crate::types::exact::ExactReal::from_fraction(crate::types::fraction::Fraction::from(2))),
-            "SQRT(2) must be the exact irrational whose square is 2/1, got: {val}"
-        );
-
-        // SQRT-EPS still returns an interval (interval path unchanged)
-        let mut interp_eps = Interpreter::new();
-        interp_eps
-            .execute("'math' IMPORT 2 1/100 SQRT-EPS")
-            .await
-            .unwrap();
-        let iv_eps =
-            value_to_interval(&interp_eps.get_stack()[0]).expect("sqrt_eps(2) must be interval");
-        assert!(iv_eps.width().le(&Fraction::new(1.into(), 100.into())));
-    }
-
-    #[tokio::test]
-    async fn test_sqrt_interval_monotonicity() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 4 INTERVAL SQRT")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[1/1, 2/1]");
-    }
-
-    #[tokio::test]
-    async fn test_interval_comparison_policy() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 INTERVAL 3 4 INTERVAL <")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "TRUE");
-
-        let mut interp_undetermined = Interpreter::new();
-        interp_undetermined
-            .execute("'math' IMPORT 2 3 INTERVAL 3 4 INTERVAL <")
-            .await
-            .unwrap();
-        // SPEC §7.4.1 (revised): an undecidable comparison yields the logical
-        // truth value `Unknown` (U), observed as `truthValue = unknown`, not
-        // a `reason = undecidable` NIL.
-        let result = &interp_undetermined.get_stack()[0];
-        assert!(
-            result.is_unknown(),
-            "overlapping interval comparison projects to the logical Unknown"
-        );
-        assert_eq!(result.truth_value(), Some("unknown"));
-        assert_eq!(format!("{}", result), "UNKNOWN");
-
-        let mut interp_eq = Interpreter::new();
-        interp_eq
-            .execute("'math' IMPORT 1 5 INTERVAL 2 4 INTERVAL =")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp_eq.get_stack()[0]), "FALSE");
-    }
-
-    #[tokio::test]
-    async fn test_mixed_arithmetic() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 1 2 3 INTERVAL +")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[3/1, 4/1]");
-
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 3 5 INTERVAL *")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", interp.get_stack()[0]), "[6/1, 10/1]");
     }
 }
 
@@ -622,87 +476,6 @@ mod ai_first_comparison_tests {
         let interp = run("[ 1 2 3 ] [ 1 2 4 ] NEQ").await;
         assert!(bool_of(&interp));
     }
-
-    // ── interval undecidability mirrors LT/LE ────────────────────────────
-
-    #[tokio::test]
-    async fn gt_on_disjoint_intervals_decides_true() {
-        let interp = run("'math' IMPORT 3 4 INTERVAL 1 2 INTERVAL GT").await;
-        let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "TRUE");
-    }
-
-    #[tokio::test]
-    async fn gte_on_disjoint_intervals_decides_false() {
-        let interp = run("'math' IMPORT 0 1 INTERVAL 2 3 INTERVAL GTE").await;
-        let s = format!("{}", interp.get_stack()[0]);
-        assert_eq!(s, "FALSE");
-    }
-
-    #[tokio::test]
-    async fn gt_on_overlapping_intervals_projects_unknown() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 3 INTERVAL 2 4 INTERVAL GT")
-            .await
-            .unwrap();
-        // SPEC §7.4.1 (revised): undecidable comparison yields the logical
-        // truth value `Unknown` (U), not a `reason = undecidable` NIL.
-        let result = &interp.get_stack()[0];
-        assert!(
-            result.is_unknown(),
-            "overlapping interval GT yields Unknown"
-        );
-        assert_eq!(result.truth_value(), Some("unknown"));
-    }
-
-    #[tokio::test]
-    async fn finite_cf_comparison_always_decides() {
-        for (code, expected) in [("1 1 EQ", "TRUE"), ("1 2 EQ", "FALSE"), ("1 2 LT", "TRUE")] {
-            let mut interp = Interpreter::new();
-            interp.execute(code).await.unwrap();
-            let v = &interp.get_stack()[0];
-            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
-            assert_eq!(format!("{}", v), expected, "`{code}`");
-        }
-    }
-
-    #[tokio::test]
-    async fn equal_composed_irrationals_decide_exactly() {
-        // (√2 + 1) − (√2 + 1) is a composed Gosper node whose CF streams
-        // never diverge from 0, but it is an admitted-domain element
-        // (SPEC §4.2.7), so the bare relations decide it exactly via the
-        // multiquadratic normal form: never Unknown (SPEC §7.4).
-        for (code, expected) in [
-            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ", "TRUE"),
-            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LT", "FALSE"),
-            ("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 LTE", "TRUE"),
-        ] {
-            let mut interp = Interpreter::new();
-            interp
-                .execute(&format!("'math' IMPORT {code}"))
-                .await
-                .unwrap();
-            let v = &interp.get_stack()[0];
-            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
-            assert_eq!(format!("{}", v), expected, "`{code}`");
-        }
-    }
-
-    #[tokio::test]
-    async fn distinct_irrationals_decide_at_finite_prefix() {
-        for (code, expected) in [("2 SQRT 3 SQRT EQ", "FALSE"), ("2 SQRT 3 SQRT LT", "TRUE")] {
-            let mut interp = Interpreter::new();
-            interp
-                .execute(&format!("'math' IMPORT {code}"))
-                .await
-                .unwrap();
-            let v = &interp.get_stack()[0];
-            assert!(!v.is_unknown(), "`{code}` must decide, not be Unknown");
-            assert_eq!(format!("{}", v), expected, "`{code}`");
-        }
-    }
-
     // ── NIL passthrough for the new ops (contract: nil_policy = Passthrough)
 
     #[tokio::test]
@@ -726,36 +499,6 @@ mod ai_first_comparison_tests {
     }
 
     // ── stack-mode sequence properties ───────────────────────────────────
-
-    #[tokio::test]
-    async fn gt_stack_mode_holds_for_strictly_decreasing_sequence() {
-        let interp = run("5 4 3 2 4 .. GT").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gt_stack_mode_false_when_not_strictly_decreasing() {
-        let interp = run("5 4 4 3 4 .. GT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn gte_stack_mode_holds_for_nonincreasing_sequence() {
-        let interp = run("5 4 4 3 4 .. GTE").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn neq_stack_mode_holds_when_all_adjacent_pairs_differ() {
-        let interp = run("1 2 3 1 4 .. NEQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn neq_stack_mode_false_when_two_adjacent_values_match() {
-        let interp = run("1 2 2 3 4 .. NEQ").await;
-        assert!(!bool_of(&interp));
-    }
 
     // ── KEEP modifier preserves operands ─────────────────────────────────
 
@@ -827,24 +570,6 @@ mod comparison_budget_infrastructure_tests {
     }
 
     // ── Regression: STAK-mode property checks still produce a single bool
-
-    #[tokio::test]
-    async fn stak_lt_monotonic_sequence_is_true() {
-        let interp = run("1 2 3 5 8 5 .. LT").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_lt_non_monotonic_sequence_is_false() {
-        let interp = run("1 3 2 4 4 .. LT").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_gte_non_increasing_sequence_is_true() {
-        let interp = run("5 5 3 1 0 5 .. GTE").await;
-        assert!(bool_of(&interp));
-    }
 
     // ── NIL projection contract for the Undecidable case ─────────────────
 
@@ -967,30 +692,6 @@ mod phase_seven_eq_budget_tests {
 
     // ── STAK-mode regression ─────────────────────────────────────────────
 
-    #[tokio::test]
-    async fn stak_eq_all_equal_is_true() {
-        let interp = run("2/4 1/2 4/8 3 .. EQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_eq_with_one_distinct_is_false() {
-        let interp = run("1/2 1/2 2/3 3 .. EQ").await;
-        assert!(!bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_neq_all_adjacent_unequal_is_true() {
-        let interp = run("1 2 3 4 4 .. NEQ").await;
-        assert!(bool_of(&interp));
-    }
-
-    #[tokio::test]
-    async fn stak_neq_with_adjacent_duplicate_is_false() {
-        let interp = run("1 2 2 3 4 .. NEQ").await;
-        assert!(!bool_of(&interp));
-    }
-
     // ── NIL passthrough is unchanged ─────────────────────────────────────
 
     #[tokio::test]
@@ -1057,1064 +758,5 @@ mod phase_seven_eq_budget_tests {
         let absence = v.absence_metadata().expect("nil carries absence");
         assert_eq!(absence.reason, Some(NilReason::Undecidable));
         assert_eq!(absence.origin, AbsenceOrigin::ComparisonBudget);
-    }
-}
-
-/// SPEC §7.4.2 — `COMPARE-WITHIN` and the §4.5.0 `agreedPrefix` diagnosis.
-///
-/// `COMPARE-WITHIN` ( `[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]` )
-/// makes the partial-quotient budget a first-class, user-controlled
-/// parameter. The decided result is the exact sign of `a − b`; the
-/// budget-undecided result is the logical `Unknown` (U) carrying
-/// `diagnosis.agreedPrefix`, the number of leading partial quotients that
-/// matched before the budget was exhausted.
-#[cfg(test)]
-mod compare_within_tests {
-    use crate::interpreter::Interpreter;
-    use crate::types::exact::{ExactCmp, ExactReal, Water};
-    use crate::types::fraction::Fraction;
-    use num_bigint::BigInt;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn rational(n: i64, d: i64) -> ExactReal {
-        ExactReal::Rational(Fraction::new(BigInt::from(n), BigInt::from(d)))
-    }
-
-    // ── Unit level: Tier ≤ 1 comparison is water-independent ─────────────
-
-    #[test]
-    fn cmp_within_decides_rationals_regardless_of_water() {
-        // Tier ≤ 1 pairs decide exactly whatever the water budget is —
-        // even the minimum. The retired CF engine could report Undecided
-        // here; the tiered comparison cannot.
-        for water in [1u64, 2, 256] {
-            assert_eq!(
-                rational(1, 2).cmp_within(&rational(1, 3), Water(water)),
-                ExactCmp::Decided(std::cmp::Ordering::Greater)
-            );
-            assert_eq!(
-                rational(1, 2).cmp_within(&rational(2, 4), Water(water)),
-                ExactCmp::Decided(std::cmp::Ordering::Equal)
-            );
-        }
-    }
-
-    // ── Source level: decided signs ─────────────────────────────────────
-
-    #[tokio::test]
-    async fn compare_within_yields_minus_one_when_less() {
-        let interp = run("1 2 16 COMPARE-WITHIN").await;
-        assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
-    }
-
-    #[tokio::test]
-    async fn compare_within_yields_zero_when_equal() {
-        let interp = run("2 2 16 COMPARE-WITHIN").await;
-        assert_eq!(format!("{}", interp.get_stack()[0]), "0/1");
-    }
-
-    #[tokio::test]
-    async fn compare_within_yields_one_when_greater() {
-        let interp = run("2 1 16 COMPARE-WITHIN").await;
-        assert_eq!(format!("{}", interp.get_stack()[0]), "1/1");
-    }
-
-    #[tokio::test]
-    async fn compare_within_finite_decides_even_at_budget_one() {
-        // Two finite rationals differ at a bounded index, so they decide
-        // regardless of how small the budget is (SPEC §7.4.2).
-        let interp = run("1/3 1/2 1 COMPARE-WITHIN").await;
-        assert_eq!(format!("{}", interp.get_stack()[0]), "-1/1");
-    }
-
-    // ── Source level: Tier ≤ 1 totality; Tier 2 starvation → Unknown ────
-
-    #[tokio::test]
-    async fn compare_within_composed_algebraic_operands_decide_exactly() {
-        // (√2+1) − (√2+1) demotes to the exact rational 0, so comparing it
-        // against 0 decides 0 regardless of the budget: comparison is
-        // total over Tier ≤ 1 (SPEC §7.4.2).
-        let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 8 COMPARE-WITHIN").await;
-        let v = &interp.get_stack()[0];
-        assert_eq!(format!("{v}"), "0/1", "equal Tier ≤ 1 operands decide 0");
-    }
-
-    #[tokio::test]
-    async fn compare_within_tier2_starves_to_unknown_with_prefix() {
-        // A Tier 2 observation (type-level starvation witness; no word
-        // constructs one yet) cannot be separated from 0 within the 8-step
-        // water budget → logical Unknown (U) carrying agreedPrefix.
-        use crate::types::exact::{Computable, ExactReal};
-        let mut interp = Interpreter::new();
-        interp
-            .stack
-            .push(crate::types::Value::from_exact_real(ExactReal::Computable(
-                Computable::vanishing(),
-            )));
-        interp.execute("0 8 COMPARE-WITHIN").await.unwrap();
-        let v = &interp.get_stack()[0];
-        assert!(v.is_unknown(), "a starved Tier 2 comparison must be U");
-        assert_eq!(v.truth_value(), Some("unknown"));
-
-        // The Unknown result carries the machine-readable agreedPrefix on its
-        // own diagnostic carrier (CS4: U is `ValueData::Unknown`, not a NIL
-        // node), surfaced through `nil_diagnosis()`.
-        let diagnosis = v
-            .nil_diagnosis()
-            .expect("COMPARE-WITHIN U carries a diagnosis");
-        let prefix = diagnosis
-            .agreed_prefix
-            .expect("diagnosis carries agreedPrefix");
-        assert!(
-            prefix <= 8,
-            "agreedPrefix must not exceed the consumed budget, got {prefix}"
-        );
-    }
-
-    // ── Source level: NIL passthrough (SPEC §7.12) ──────────────────────
-
-    #[tokio::test]
-    async fn compare_within_nil_left_passes_nil_through() {
-        let interp = run("NIL 1 8 COMPARE-WITHIN").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    #[tokio::test]
-    async fn compare_within_nil_right_passes_nil_through() {
-        let interp = run("1 NIL 8 COMPARE-WITHIN").await;
-        assert!(interp.get_stack()[0].is_nil());
-    }
-
-    // ── Source level: malformed budget / operand → error (not U) ────────
-
-    #[tokio::test]
-    async fn compare_within_zero_budget_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("1 2 0 COMPARE-WITHIN").await;
-        assert!(result.is_err(), "zero budget is malformed use");
-    }
-
-    #[tokio::test]
-    async fn compare_within_negative_budget_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("1 2 -4 COMPARE-WITHIN").await;
-        assert!(result.is_err(), "negative budget is malformed use");
-    }
-
-    #[tokio::test]
-    async fn compare_within_non_numeric_operand_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("{ 1 } 2 8 COMPARE-WITHIN").await;
-        assert!(result.is_err(), "non-numeric operand is malformed use");
-    }
-}
-
-/// Cost-model observability (SPECIFICATION.html Cost Model section): the
-/// RuntimeMetrics comparison-budget counters make "when is the budget
-/// consumed?" observable. Over the admitted domain the bare relations spend
-/// nothing; only COMPARE-WITHIN streams partial quotients under a budget.
-#[cfg(test)]
-mod compare_within_metrics_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    #[tokio::test]
-    async fn bare_relation_over_admitted_domain_spends_no_budget() {
-        // Square roots are in the admitted domain D: the six relations decide
-        // them exactly via the multiquadratic normal form, never touching
-        // COMPARE-WITHIN's streamed budget path.
-        let m = run("'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ")
-            .await
-            .runtime_metrics();
-        assert_eq!(m.compare_within_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
-    }
-
-    #[tokio::test]
-    async fn compare_within_rational_counts_but_spends_no_budget() {
-        // Both operands rational: COMPARE-WITHIN decides via the exact
-        // Fraction order, so it counts as an invocation but takes no lazy /
-        // budget-spending path.
-        let m = run("1 2 16 COMPARE-WITHIN").await.runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
-    }
-
-    #[tokio::test]
-    async fn compare_within_composed_algebraic_spends_no_budget() {
-        // Two equal composed Tier 1 operands (√2+1 vs √2+1) decide exactly:
-        // comparison is total over Tier ≤ 1, so the invocation counts but
-        // no refinement budget is spent and no U is produced.
-        let m = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN")
-            .await
-            .runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 0);
-        assert_eq!(m.compare_within_unknown_count, 0);
-        assert_eq!(m.compare_within_budget_terms_consumed, 0);
-    }
-
-    #[tokio::test]
-    async fn compare_within_tier2_spends_budget_and_is_unknown() {
-        // A Tier 2 observation (no vocabulary word constructs one yet) is
-        // the refinement-capable operand: its comparison against 0 starves
-        // within the 8-step budget, records the lazy path, the U outcome,
-        // and the refinement steps consumed.
-        use crate::types::exact::{Computable, ExactReal};
-        let mut interp = Interpreter::new();
-        interp
-            .stack
-            .push(crate::types::Value::from_exact_real(ExactReal::Computable(
-                Computable::vanishing(),
-            )));
-        interp.execute("0 8 COMPARE-WITHIN").await.unwrap();
-        let m = interp.runtime_metrics();
-        assert_eq!(m.compare_within_count, 1);
-        assert_eq!(m.compare_within_lazy_count, 1);
-        assert_eq!(m.compare_within_unknown_count, 1);
-        assert!(
-            m.compare_within_budget_terms_consumed > 0
-                && m.compare_within_budget_terms_consumed <= 8,
-            "budget terms consumed must be in (0, 8], got {}",
-            m.compare_within_budget_terms_consumed
-        );
-    }
-}
-
-#[cfg(test)]
-mod ragged_broadcast_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn eval(code: &str) -> String {
-        let mut interp = Interpreter::new();
-        interp.execute(code).await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "expected single result for: {code}");
-        format!("{}", stack[0])
-    }
-
-    #[tokio::test]
-    async fn test_scalar_mul_over_mixed_nested_vector() {
-        let result = eval("[ 10 [ 1 2 3 ] 10 ] 10 *").await;
-        assert_eq!(result, "[ 100/1 [ 10/1 20/1 30/1 ] 100/1 ]");
-    }
-
-    #[tokio::test]
-    async fn test_scalar_mul_left_operand() {
-        let result = eval("10 [ 10 [ 1 2 3 ] 10 ] *").await;
-        assert_eq!(result, "[ 100/1 [ 10/1 20/1 30/1 ] 100/1 ]");
-    }
-
-    #[tokio::test]
-    async fn test_scalar_add_over_mixed_nested_vector() {
-        let result = eval("[ 1 [ 2 3 ] 4 ] 10 +").await;
-        assert_eq!(result, "[ 11/1 [ 12/1 13/1 ] 14/1 ]");
-    }
-
-    #[tokio::test]
-    async fn test_deeply_nested_ragged() {
-        let result = eval("[ 1 [ 2 [ 3 4 ] ] ] 2 *").await;
-        assert_eq!(result, "[ 2/1 [ 4/1 [ 6/1 8/1 ] ] ]");
-    }
-
-    #[tokio::test]
-    async fn test_elementwise_ragged_same_structure() {
-        let result = eval("[ 1 [ 2 3 ] ] [ 10 [ 20 30 ] ] *").await;
-        assert_eq!(result, "[ 10/1 [ 40/1 90/1 ] ]");
-    }
-
-    #[tokio::test]
-    async fn test_ragged_length_mismatch_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[ 1 [ 2 3 ] ] [ 10 [ 20 30 40 ] ] *").await;
-        assert!(result.is_err(), "mismatched nested lengths should error");
-    }
-
-    #[tokio::test]
-    async fn test_regular_nested_still_works() {
-        let result = eval("[ [ 1 2 ] [ 3 4 ] ] 10 *").await;
-        assert_eq!(result, "[ [ 10/1 20/1 ] [ 30/1 40/1 ] ]");
-    }
-
-    #[tokio::test]
-    async fn test_singleton_vector_sibling_preserved() {
-        let result = eval("[ [ 1 ] 2 ] 10 *").await;
-        assert_eq!(result, "[ [ 10/1 ] 20/1 ]");
-    }
-}
-
-#[cfg(test)]
-mod ragged_unary_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn eval(code: &str) -> String {
-        let mut interp = Interpreter::new();
-        interp.execute(code).await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1, "expected single result for: {code}");
-        format!("{}", stack[0])
-    }
-
-    #[tokio::test]
-    async fn test_floor_over_mixed_nested_vector() {
-        let result = eval("[ 7/2 [ 5/2 9/4 ] 3/2 ] FLOOR").await;
-        assert_eq!(result, "[ 3/1 [ 2/1 2/1 ] 1/1 ]");
-    }
-
-    #[tokio::test]
-    async fn test_not_over_mixed_nested_vector() {
-        let result = eval("[ 0 [ 1 0 ] 5 ] NOT").await;
-        assert_eq!(result, "[ 1/1 [ 0/1 1/1 ] 0/1 ]");
-    }
-
-    #[tokio::test]
-    async fn test_mod_over_mixed_nested_vector() {
-        let result = eval("[ 10 [ 7 8 ] 9 ] 3 %").await;
-        assert_eq!(result, "[ 1/1 [ 1/1 2/1 ] 0/1 ]");
-    }
-}
-
-#[cfg(test)]
-mod ragged_equality_tests {
-    use crate::types::Value;
-
-    #[test]
-    fn ragged_vector_not_equal_to_dense_tensor() {
-        // Dense tensor [1 2] must not equal ragged nested vector [[1] 2].
-        let dense = Value::from_tensor(vec![1i64.into(), 2i64.into()], vec![2]);
-        let ragged = Value::from_children(vec![
-            Value::from_children(vec![Value::from_int(1)]),
-            Value::from_int(2),
-        ]);
-        assert_ne!(dense, ragged);
-        assert_ne!(ragged, dense);
-    }
-
-    #[test]
-    fn matching_nested_vector_equals_dense_tensor() {
-        let dense = Value::from_tensor(
-            vec![1i64.into(), 2i64.into(), 3i64.into(), 4i64.into()],
-            vec![2, 2],
-        );
-        let nested = Value::from_children(vec![
-            Value::from_children(vec![Value::from_int(1), Value::from_int(2)]),
-            Value::from_children(vec![Value::from_int(3), Value::from_int(4)]),
-        ]);
-        assert_eq!(dense, nested);
-    }
-}
-
-#[cfg(test)]
-mod exact_scalar_tests {
-    use crate::interpreter::Interpreter;
-    use crate::types::fraction::Fraction;
-    use crate::types::ValueData;
-    use num_bigint::BigInt;
-
-    #[tokio::test]
-    async fn sqrt_of_perfect_square_is_exact_rational() {
-        // 4 MATH@SQRT = 2/1 exactly (Fraction fast path, not ExactScalar)
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 4 SQRT").await.unwrap();
-        let f = interp.get_stack()[0]
-            .as_scalar()
-            .expect("SQRT(4) must be exact rational scalar");
-        assert_eq!(*f, Fraction::new(BigInt::from(2), BigInt::from(1)));
-    }
-
-    #[tokio::test]
-    async fn sqrt_of_irrational_produces_exact_scalar() {
-        // 2 MATH@SQRT → an irrational ExactScalar (Tier 1 algebraic)
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT").await.unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(
-            matches!(&val.data, ValueData::ExactScalar(er)
-                if !er.is_rational()),
-            "SQRT(2) must be an irrational ExactScalar, got: {val}"
-        );
-    }
-
-    #[tokio::test]
-    async fn sqrt_of_irrational_compares_equal_to_itself() {
-        // Push √2 twice; EQ should return TRUE via CF data equality
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT 2 SQRT EQ")
-            .await
-            .unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(val.is_truthy(), "√2 == √2 must be TRUE, got: {val}");
-    }
-
-    #[tokio::test]
-    async fn sqrt_of_irrational_lt_comparison_correct() {
-        // √2 ≈ 1.414 < 2
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT 2 LT").await.unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(val.is_truthy(), "√2 < 2 must be TRUE, got: {val}");
-    }
-
-    #[tokio::test]
-    async fn sqrt_squared_via_mul_returns_exact_scalar() {
-        // √2 × √2 = √4 = 2 exactly: the closed-form √a·√b = √(a·b)
-        // simplification collapses the product to the rational 2 instead of
-        // building a bihom that would exhaust into an empty CF (the historical
-        // "silent NIL" bug). The result must be a non-nil scalar equal to 2.
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 SQRT 2 SQRT *")
-            .await
-            .unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(
-            val.is_scalar() && !val.is_nil(),
-            "√2 × √2 must be a non-nil scalar, got: {val}"
-        );
-        let display = format!("{val}");
-        assert_eq!(display, "2/1", "√2 × √2 must render as the exact integer 2");
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_add_rational_produces_result() {
-        // √2 + 1 → irrational result (ExactScalar)
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT 1 +").await.unwrap();
-        let val = &interp.get_stack()[0];
-        // Result is a Gosper Möbius transform — an ExactScalar
-        assert!(
-            val.is_scalar() && !val.is_nil(),
-            "√2 + 1 must be a non-nil scalar, got: {val}"
-        );
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_floor_is_exact_rational() {
-        // floor(√2) = 1 exactly
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT FLOOR").await.unwrap();
-        let val = &interp.get_stack()[0];
-        let f = val.as_scalar().expect("floor(√2) must be exact rational");
-        assert_eq!(f.to_i64(), Some(1), "floor(√2) must equal 1, got {f}");
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_ceil_is_exact_rational() {
-        // ceil(√2) = 2 exactly
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT CEIL").await.unwrap();
-        let val = &interp.get_stack()[0];
-        let f = val.as_scalar().expect("ceil(√2) must be exact rational");
-        assert_eq!(f.to_i64(), Some(2), "ceil(√2) must equal 2, got {f}");
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_round_is_exact_rational() {
-        // round(√2) = 1 (√2 ≈ 1.414 → nearest integer is 1)
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT ROUND").await.unwrap();
-        let val = &interp.get_stack()[0];
-        let f = val.as_scalar().expect("round(√2) must be exact rational");
-        assert_eq!(f.to_i64(), Some(1), "round(√2) must equal 1, got {f}");
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_floor_sqrt3_is_exact_rational() {
-        // floor(√3) = 1 exactly
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 3 SQRT FLOOR").await.unwrap();
-        let val = &interp.get_stack()[0];
-        let f = val.as_scalar().expect("floor(√3) must be exact rational");
-        assert_eq!(f.to_i64(), Some(1), "floor(√3) must equal 1, got {f}");
-    }
-
-    #[tokio::test]
-    async fn exact_scalar_mod_rational_is_exact() {
-        // √2 mod 1 = √2 - 1 (irrational, stays ExactScalar)
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT 1 MOD").await.unwrap();
-        let val = &interp.get_stack()[0];
-        assert!(
-            val.is_scalar() && !val.is_nil(),
-            "√2 mod 1 must be a non-nil scalar, got: {val}"
-        );
-        // Result should be less than 1
-        let mut interp2 = Interpreter::new();
-        interp2
-            .execute("'math' IMPORT 2 SQRT 1 MOD 1 <")
-            .await
-            .unwrap();
-        let cmp = &interp2.get_stack()[0];
-        assert!(cmp.as_truth() == Some(true), "(√2 mod 1) < 1 must be TRUE");
-    }
-}
-
-#[cfg(test)]
-mod continued_fraction_role_tests {
-    use crate::interpreter::Interpreter;
-    use crate::types::display::{format_as_continued_fraction, format_with_hint};
-    use crate::types::Interpretation;
-
-    // `>CF` on a rational: 5/2 = [2; 2] -> "( 2 ( 2 ) )".
-    #[tokio::test]
-    async fn to_cf_rational_nested_form() {
-        let mut interp = Interpreter::new();
-        interp.execute("5/2 >CF").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let hints = interp.collect_stack_hints();
-        assert_eq!(hints.last(), Some(&Interpretation::ContinuedFraction));
-        let s = format_with_hint(&stack[0], Interpretation::ContinuedFraction);
-        assert_eq!(s, "( 2 ( 2 ) )");
-    }
-
-    // `>CF` on √2 = [1; 2,2,2,...] -> lazy, truncated.
-    #[tokio::test]
-    async fn to_cf_sqrt2_truncated_form() {
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT 2 SQRT >CF").await.unwrap();
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 1);
-        let s = format_as_continued_fraction(&stack[0]);
-        assert!(s.starts_with("( 1"), "expected '( 1' prefix, got {s:?}");
-        assert!(
-            s.contains("( 1 ( 2 ( 2 "),
-            "expected √2 expansion, got {s:?}"
-        );
-        assert!(s.contains("...)"), "expected truncation marker, got {s:?}");
-        let opens = s.matches('(').count();
-        let closes = s.matches(')').count();
-        assert_eq!(opens, closes, "unbalanced parens in {s:?}");
-    }
-
-    // `>CF` only retags; the underlying value is byte-for-byte identical to
-    // an untagged √2 (same structural rendering, no data mutation).
-    #[tokio::test]
-    async fn to_cf_preserves_value() {
-        let mut tagged = Interpreter::new();
-        tagged.execute("'math' IMPORT 2 SQRT >CF").await.unwrap();
-        let mut plain = Interpreter::new();
-        plain.execute("'math' IMPORT 2 SQRT").await.unwrap();
-
-        let tagged_stack = tagged.get_stack();
-        let plain_stack = plain.get_stack();
-        assert_eq!(tagged_stack.len(), 1);
-        assert_eq!(plain_stack.len(), 1);
-
-        // The retagged value's underlying data renders identically to the
-        // untagged √2 under the structural (RawNumber) role.
-        assert_eq!(
-            format_with_hint(&tagged_stack[0], Interpretation::RawNumber),
-            format_with_hint(&plain_stack[0], Interpretation::RawNumber)
-        );
-    }
-}
-
-/// SPEC §7.4.3 — propagation of the logical `Unknown` (U) through the
-/// comparison-dependent words `MIN`, `MAX`, `SORT`, and `COND`. Comparison
-/// is total and exact over the admitted domain \(D\) (SPEC §4.2.7), so a
-/// current-Coreword operand can no longer make these words emit U; the
-/// undecidable cases below use a synthetic lazy value outside \(D\)'s
-/// normal-form reach as the stand-in for the future lazy domain of
-/// SPEC §7.4.1.
-#[cfg(test)]
-mod u_propagation_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn top(interp: &Interpreter) -> &crate::types::Value {
-        interp.get_stack().last().expect("non-empty stack")
-    }
-
-    /// A synthetic value outside the decidable Tier ≤ 1 domain: a Tier 2
-    /// observation process whose enclosures never separate from zero
-    /// (the canonical starvation witness). No vocabulary word constructs
-    /// Tier 2 yet, so it is pushed at the type level — exactly the shape
-    /// §7.4.3's U-propagation contract governs.
-    fn out_of_domain_lazy_value() -> crate::types::Value {
-        use crate::types::exact::{Computable, ExactReal};
-        crate::types::Value::from_exact_real(ExactReal::Computable(Computable::vanishing()))
-    }
-
-    // ── MIN / MAX ────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn min_selects_smaller_when_decided() {
-        let interp = run("'math' IMPORT 3 5 MIN").await;
-        assert_eq!(format!("{}", top(&interp)), "3/1");
-    }
-
-    #[tokio::test]
-    async fn max_selects_larger_when_decided() {
-        let interp = run("'math' IMPORT 3 5 MAX").await;
-        assert_eq!(format!("{}", top(&interp)), "5/1");
-    }
-
-    #[tokio::test]
-    async fn min_on_undecidable_yields_unknown_with_prefix() {
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT").await.unwrap();
-        interp.stack.push(out_of_domain_lazy_value());
-        interp.execute("0 MIN").await.unwrap();
-        let v = top(&interp);
-        assert!(
-            v.is_unknown(),
-            "MIN of an undecidable pair must be U, got {v}"
-        );
-        assert_eq!(v.truth_value(), Some("unknown"));
-        let diag = v.nil_diagnosis().expect("U carries a diagnosis");
-        assert!(
-            diag.agreed_prefix.is_some(),
-            "MIN U must carry agreedPrefix"
-        );
-    }
-
-    #[tokio::test]
-    async fn max_on_undecidable_yields_unknown() {
-        let mut interp = Interpreter::new();
-        interp.execute("'math' IMPORT").await.unwrap();
-        interp.stack.push(out_of_domain_lazy_value());
-        interp.execute("0 MAX").await.unwrap();
-        assert!(top(&interp).is_unknown());
-    }
-
-    #[tokio::test]
-    async fn min_with_nil_operand_passes_nil_through() {
-        let interp = run("'math' IMPORT NIL 3 MIN").await;
-        assert!(top(&interp).is_nil() && !top(&interp).is_unknown());
-    }
-
-    // ── SORT ─────────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn sort_orders_rationals_ascending() {
-        let interp = run("'algo' IMPORT [ 3 1 2 ] SORT").await;
-        assert_eq!(format!("{}", top(&interp)), "[ 1/1 2/1 3/1 ]");
-    }
-
-    #[tokio::test]
-    async fn sort_stack_mode_orders_ascending() {
-        let interp = run("'algo' IMPORT 3 1 2 .. SORT").await;
-        let s: Vec<String> = interp
-            .get_stack()
-            .iter()
-            .map(|v| format!("{}", v))
-            .collect();
-        assert_eq!(s, vec!["1/1", "2/1", "3/1"]);
-    }
-
-    #[tokio::test]
-    async fn sort_with_undecidable_pair_yields_unknown_not_partial() {
-        // Stack-mode SORT over an out-of-domain lazy value and 0: the
-        // undecidable pair makes the whole order unestablished ⇒ U.
-        let mut interp = Interpreter::new();
-        interp.execute("'algo' IMPORT 'math' IMPORT").await.unwrap();
-        interp.stack.push(out_of_domain_lazy_value());
-        interp.execute("0 .. SORT").await.unwrap();
-        let v = top(&interp);
-        assert!(
-            v.is_unknown(),
-            "SORT with an undecidable pair must be U, got {v}"
-        );
-        let diag = v.nil_diagnosis().expect("U carries a diagnosis");
-        assert!(
-            diag.agreed_prefix.is_some(),
-            "SORT U must carry agreedPrefix"
-        );
-    }
-
-    // ── COND ─────────────────────────────────────────────────────────────
-    //
-    // Syntax: `[ value ] { guard | body } { IDLE | body } COND`. The guard is
-    // evaluated with `value` on the stack; `[ 0 ] =` tests `value == 0`. A
-    // Tier 2 observation (pushed at the type level — no word constructs one)
-    // compares Unknown against 0, driving the U-guard rows.
-
-    fn tier2_value() -> crate::types::Value {
-        use crate::types::exact::{Computable, ExactReal};
-        crate::types::Value::from_exact_real(ExactReal::Computable(Computable::vanishing()))
-    }
-
-    #[tokio::test]
-    async fn cond_fires_clause_with_definite_true_guard() {
-        let interp = run("[ 0 ]\n{ [ 0 ] = | 'zero' }\n{ IDLE | 'other' }\nCOND").await;
-        assert_eq!(format!("{}", top(&interp)), "'zero'");
-    }
-
-    #[tokio::test]
-    async fn cond_u_guard_does_not_fire_falls_through_to_next_clause() {
-        // First clause guard reduces to U (a Tier 2 value == 0 is Unknown);
-        // it must NOT fire. The second guard `TRUE` is value-independent
-        // and definitely fires.
-        let mut interp = Interpreter::new();
-        interp.stack.push(tier2_value());
-        interp
-            .execute("{ [ 0 ] = | 'fired-on-U' }\n{ TRUE | 'second' }\n{ IDLE | 'else' }\nCOND")
-            .await
-            .unwrap();
-        assert_eq!(
-            format!("{}", top(&interp)),
-            "'second'",
-            "U guard must fall through to the next clause, not fire or error"
-        );
-    }
-
-    #[tokio::test]
-    async fn cond_u_guard_then_else_clause() {
-        // The only non-else guard is U ⇒ does not fire ⇒ IDLE/else runs.
-        let mut interp = Interpreter::new();
-        interp.stack.push(tier2_value());
-        interp
-            .execute("{ [ 0 ] = | 'fired-on-U' }\n{ IDLE | 'else' }\nCOND")
-            .await
-            .unwrap();
-        assert_eq!(format!("{}", top(&interp)), "'else'");
-    }
-
-    #[tokio::test]
-    async fn cond_u_guard_with_no_match_is_cond_exhausted() {
-        // U guard does not fire and there is no else clause ⇒ CondExhausted.
-        let mut interp = Interpreter::new();
-        interp.stack.push(tier2_value());
-        let result = interp.execute("{ [ 0 ] = | 'fired-on-U' }\nCOND").await;
-        assert!(
-            result.is_err(),
-            "a U-only COND with no else clause must raise CondExhausted"
-        );
-    }
-}
-
-/// `QUANTIZE` (SPEC §7.13 draft; docs/dev/fintech-value-integrity-design.md):
-/// banker's-rounding quantization to a rational grid, emitting the exact
-/// residual so `q + r == x`.
-#[cfg(test)]
-mod quantize_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    /// The whole stack rendered top-to-bottom-preserving, space-joined — the
-    /// same shape the CLI prints after `stack:`.
-    fn stack_str(interp: &Interpreter) -> String {
-        interp
-            .get_stack()
-            .iter()
-            .map(|v| format!("{}", v))
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
-    #[tokio::test]
-    async fn quantizes_to_cents_with_exact_residual() {
-        // 100/3 to the 1/100 grid: q = 3333/100, r = 1/300, and q + r = 100/3.
-        let interp = run("100/3 1/100 QUANTIZE").await;
-        assert_eq!(stack_str(&interp), "3333/100 1/300");
-    }
-
-    #[tokio::test]
-    async fn residual_reconstructs_the_input_exactly() {
-        // Summing q and r must return the original value with no loss.
-        let interp = run("100/7 1/100 QUANTIZE +").await;
-        assert_eq!(stack_str(&interp), "100/7");
-    }
-
-    #[tokio::test]
-    async fn ties_round_to_even_not_away_from_zero() {
-        // 2.5 -> 2 (even), 3.5 -> 4 (even), 1.5 -> 2 (even). This is the
-        // property that distinguishes QUANTIZE from ROUND (half-away-from-zero).
-        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
-        assert_eq!(stack_str(&run("7/2 1 QUANTIZE").await), "4/1 -1/2");
-        assert_eq!(stack_str(&run("3/2 1 QUANTIZE").await), "2/1 -1/2");
-    }
-
-    #[tokio::test]
-    async fn differs_from_round_on_a_tie() {
-        // ROUND breaks the 5/2 tie away from zero (3); QUANTIZE breaks it to
-        // even (2). Same input, deliberately different, documented contrast.
-        assert_eq!(stack_str(&run("5/2 ROUND").await), "3/1");
-        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
-    }
-
-    #[tokio::test]
-    async fn negative_ties_also_round_to_even() {
-        // -2.5 -> -2 (even), residual -1/2.
-        assert_eq!(stack_str(&run("-5/2 1 QUANTIZE").await), "-2/1 -1/2");
-    }
-
-    #[tokio::test]
-    async fn nil_value_passes_through_to_both_outputs() {
-        // A bubble in x flows through to q and r (SPEC §7.12); the step is a
-        // valid positive rational, so no error is raised.
-        let interp = run("1 0 / 1/100 QUANTIZE").await;
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 2, "got {}", stack_str(&interp));
-        assert!(
-            stack[0].is_nil() && stack[1].is_nil(),
-            "got {}",
-            stack_str(&interp)
-        );
-    }
-
-    #[tokio::test]
-    async fn irrational_value_projects_to_undecidable_bubbles() {
-        // sqrt(2) cannot pick a nearest multiple within the comparison budget,
-        // so both outputs project to NIL rather than guess (SPEC §7.4.1).
-        let interp = run("'math' IMPORT 2 SQRT 1/100 QUANTIZE").await;
-        let stack = interp.get_stack();
-        assert_eq!(stack.len(), 2, "got {}", stack_str(&interp));
-        assert!(
-            stack[0].is_nil() && stack[1].is_nil(),
-            "got {}",
-            stack_str(&interp)
-        );
-    }
-
-    #[tokio::test]
-    async fn zero_step_is_a_channel_error() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1/2 0 QUANTIZE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn negative_step_is_a_channel_error() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1/2 -1/100 QUANTIZE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn stack_mode_is_unsupported() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("100/3 1/100 .. QUANTIZE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn keep_mode_retains_both_operands() {
-        // Under KEEP the value and step are retained (bifurcation, SPEC §13.2)
-        // in addition to the two outputs.
-        let interp = run("100/3 1/100 ,, QUANTIZE").await;
-        assert_eq!(stack_str(&interp), "100/3 1/100 3333/100 1/300");
-    }
-
-    // === Rounding-mode family (SPEC §7.13) ===
-
-    #[tokio::test]
-    async fn half_away_breaks_ties_away_from_zero() {
-        // The grid generalisation of ROUND: 5/2 -> 3 (not 2 as half-even gives).
-        assert_eq!(
-            stack_str(&run("5/2 1 QUANTIZE-HALF-AWAY").await),
-            "3/1 -1/2"
-        );
-        assert_eq!(stack_str(&run("5/2 1 QUANTIZE").await), "2/1 1/2");
-    }
-
-    #[tokio::test]
-    async fn floor_rounds_toward_negative_infinity() {
-        assert_eq!(
-            stack_str(&run("100/3 1/100 QUANTIZE-FLOOR").await),
-            "3333/100 1/300"
-        );
-        // Negative: toward -inf steps down, away from zero.
-        assert_eq!(
-            stack_str(&run("-100/3 1/100 QUANTIZE-FLOOR").await),
-            "-1667/50 1/150"
-        );
-    }
-
-    #[tokio::test]
-    async fn ceil_rounds_toward_positive_infinity() {
-        assert_eq!(
-            stack_str(&run("100/3 1/100 QUANTIZE-CEIL").await),
-            "1667/50 -1/150"
-        );
-    }
-
-    #[tokio::test]
-    async fn trunc_rounds_toward_zero_differing_from_floor_on_negatives() {
-        // TRUNC(-100/3) -> -3333/100 (toward zero), whereas FLOOR gives
-        // -1667/50 (toward -inf); the two modes are genuinely distinct.
-        assert_eq!(
-            stack_str(&run("-100/3 1/100 QUANTIZE-TRUNC").await),
-            "-3333/100 -1/300"
-        );
-        assert_eq!(
-            stack_str(&run("-100/3 1/100 QUANTIZE-FLOOR").await),
-            "-1667/50 1/150"
-        );
-    }
-
-    #[tokio::test]
-    async fn every_family_word_preserves_the_residual_identity() {
-        // q + r reconstructs x under every mode.
-        for word in [
-            "QUANTIZE",
-            "QUANTIZE-HALF-AWAY",
-            "QUANTIZE-FLOOR",
-            "QUANTIZE-CEIL",
-            "QUANTIZE-TRUNC",
-        ] {
-            let interp = run(&format!("100/7 1/100 {} +", word)).await;
-            assert_eq!(stack_str(&interp), "100/7", "{} broke q + r = x", word);
-        }
-    }
-
-    #[tokio::test]
-    async fn family_words_reject_a_non_positive_step() {
-        for word in [
-            "QUANTIZE-HALF-AWAY",
-            "QUANTIZE-FLOOR",
-            "QUANTIZE-CEIL",
-            "QUANTIZE-TRUNC",
-        ] {
-            let mut interp = Interpreter::new();
-            assert!(
-                interp.execute(&format!("1/2 0 {}", word)).await.is_err(),
-                "{} accepted a zero step",
-                word
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn family_words_pass_nil_through_to_both_outputs() {
-        for word in [
-            "QUANTIZE-HALF-AWAY",
-            "QUANTIZE-FLOOR",
-            "QUANTIZE-CEIL",
-            "QUANTIZE-TRUNC",
-        ] {
-            let interp = run(&format!("1 0 / 1/100 {}", word)).await;
-            let stack = interp.get_stack();
-            assert_eq!(stack.len(), 2, "{}", word);
-            assert!(stack[0].is_nil() && stack[1].is_nil(), "{}", word);
-        }
-    }
-
-    #[tokio::test]
-    async fn half_away_handles_i64_min_without_overflow() {
-        // Regression: a value normalizing to Small(i64::MIN, d) reached
-        // Fraction::round()'s i64::abs() and panicked in debug. The nearest
-        // multiple must be returned with the residual identity intact.
-        let interp = run("-9223372036854775808/3 1 QUANTIZE-HALF-AWAY").await;
-        assert_eq!(stack_str(&interp), "-3074457345618258603/1 1/3");
-        // q + r reconstructs x exactly.
-        let sum = run("-9223372036854775808/3 1 QUANTIZE-HALF-AWAY +").await;
-        assert_eq!(stack_str(&sum), "-9223372036854775808/3");
-    }
-}
-
-/// `CONSERVE` (SPEC §13.3 draft; docs/dev/fintech-value-integrity-design.md):
-/// the value-conservation guard — asserts a vector of parts sums exactly to a
-/// declared total, passing the parts through or failing loudly.
-#[cfg(test)]
-mod conserve_tests {
-    use crate::interpreter::Interpreter;
-
-    async fn run(source: &str) -> Interpreter {
-        let mut interp = Interpreter::new();
-        interp.execute(source).await.unwrap();
-        interp
-    }
-
-    fn stack_str(interp: &Interpreter) -> String {
-        interp
-            .get_stack()
-            .iter()
-            .map(|v| format!("{}", v))
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
-    #[tokio::test]
-    async fn passes_parts_through_when_they_sum_to_the_total() {
-        let interp = run("100 [ 3333/100 6667/100 ] CONSERVE").await;
-        assert_eq!(stack_str(&interp), "[ 3333/100 6667/100 ]");
-    }
-
-    #[tokio::test]
-    async fn passes_integer_parts() {
-        let interp = run("10 [ 1 2 3 4 ] CONSERVE").await;
-        assert_eq!(stack_str(&interp), "[ 1/1 2/1 3/1 4/1 ]");
-    }
-
-    #[tokio::test]
-    async fn quantized_shares_plus_residual_reconcile_to_the_total() {
-        // The QUANTIZE outputs of 100/3 to cents (3333/100 and 1/300) sum back
-        // to the exact total, so CONSERVE lets them through — QUANTIZE ①
-        // pairing with CONSERVE ② to make an allocation penny-perfect.
-        let interp = run("100/3 [ 3333/100 1/300 ] CONSERVE").await;
-        assert_eq!(stack_str(&interp), "[ 3333/100 1/300 ]");
-    }
-
-    #[tokio::test]
-    async fn violation_fails_loudly() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("100 [ 50 51 ] CONSERVE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn nil_total_is_rejected() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("1 0 / [ 1 2 ] CONSERVE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn nil_part_is_rejected() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("5 [ 2 1 0 / 3 ] CONSERVE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn non_vector_parts_is_rejected() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("6 5 CONSERVE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn stack_mode_is_unsupported() {
-        let mut interp = Interpreter::new();
-        assert!(interp.execute("10 [ 1 2 3 4 ] .. CONSERVE").await.is_err());
-    }
-
-    #[tokio::test]
-    async fn keep_mode_retains_total_and_parts() {
-        // Under KEEP the total and parts are retained (bifurcation, SPEC §13.2)
-        // in addition to the passed-through parts.
-        let interp = run("10 [ 1 2 3 4 ] ,, CONSERVE").await;
-        assert_eq!(
-            stack_str(&interp),
-            "10/1 [ 1/1 2/1 3/1 4/1 ] [ 1/1 2/1 3/1 4/1 ]"
-        );
-    }
-
-    #[tokio::test]
-    async fn exact_irrational_parts_are_decided_not_bubbled() {
-        // A single exact-real part equal to the total passes (the comparison is
-        // decidable), rather than being reported undecidable.
-        let interp = run("'math' IMPORT 2 SQRT [ 2 ] { SQRT } MAP CONSERVE").await;
-        assert_eq!(interp.get_stack().len(), 1);
-        assert!(interp.get_stack()[0].is_vector());
     }
 }

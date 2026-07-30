@@ -1,11 +1,10 @@
 use crate::error::{AjisaiError, NilReason, Result};
-use crate::interpreter::interval_ops::{interval_to_value, value_to_interval};
 use crate::interpreter::simd_ops;
 use crate::interpreter::tensor_ops::apply_binary_broadcast_with_metrics;
 use crate::interpreter::value_extraction_helpers::{
-    extract_count_from_value, extract_operands, nil_passthrough_binary, push_result,
+    extract_operands, nil_passthrough_binary, push_result,
 };
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
@@ -57,29 +56,6 @@ fn division_by_zero_bubble() -> Value {
     Value::bubble_with_reason(NilReason::DivisionByZero, Recoverability::Recoverable)
 }
 
-fn push_interval_schema_result(
-    interp: &mut Interpreter,
-    schema: ExactArithmeticSchema,
-    a: &Value,
-    b: &Value,
-) -> Result<bool> {
-    let (Some(ai), Some(bi)) = (value_to_interval(a), value_to_interval(b)) else {
-        return Ok(false);
-    };
-    consume_stacktop_binary(interp);
-    match schema {
-        ExactArithmeticSchema::Add => interp.stack.push(interval_to_value(ai.add(&bi))),
-        ExactArithmeticSchema::Sub => interp.stack.push(interval_to_value(ai.sub(&bi))),
-        ExactArithmeticSchema::Mul => interp.stack.push(interval_to_value(ai.mul(&bi))),
-        ExactArithmeticSchema::Div => match ai.div(&bi) {
-            Ok(result) => interp.stack.push(interval_to_value(result)),
-            Err(AjisaiError::DivisionByZero) => interp.stack.push(division_by_zero_bubble()),
-            Err(error) => return Err(error),
-        },
-    }
-    Ok(true)
-}
-
 /// Returns `(result, parallel_used)` where `parallel_used` is `true` only when
 /// the native multi-core kernel actually fired for this operation.
 fn simd_schema_candidate(
@@ -105,19 +81,9 @@ fn push_simd_schema_result(
     a: &Value,
     b: &Value,
 ) -> bool {
-    let Some((result, parallel_used)) = simd_schema_candidate(schema, a, b) else {
+    let Some((result, _parallel_used)) = simd_schema_candidate(schema, a, b) else {
         return false;
     };
-    interp.runtime_metrics.vtu_simd_kernel_use_count = interp
-        .runtime_metrics
-        .vtu_simd_kernel_use_count
-        .saturating_add(1);
-    if parallel_used {
-        interp.runtime_metrics.vtu_parallel_kernel_use_count = interp
-            .runtime_metrics
-            .vtu_parallel_kernel_use_count
-            .saturating_add(1);
-    }
     consume_stacktop_binary(interp);
     interp.stack.push(result);
     true
@@ -178,7 +144,7 @@ fn push_exact_real_schema_result(
 }
 
 fn stacktop_pair(interp: &Interpreter) -> Option<(Value, Value)> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop || interp.stack.len() < 2 {
+    if interp.stack.len() < 2 {
         return None;
     }
     let stack_len = interp.stack.len();
@@ -259,10 +225,7 @@ fn push_scalar_fastpath_result(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
 ) -> Result<bool> {
-    if !interp.scalar_fastpath_enabled
-        || interp.operation_target_mode != OperationTargetMode::StackTop
-        || interp.stack.len() < 2
-    {
+    if !interp.scalar_fastpath_enabled || interp.stack.len() < 2 {
         return Ok(false);
     }
 
@@ -294,35 +257,11 @@ fn push_scalar_fastpath_result(
     Ok(true)
 }
 
-/// Shape-IC entry points (see `shape_ic.rs`): attempt exactly the D1 scalar
-/// fast path for one arithmetic word, completing the operation when the
-/// operands qualify. Behaviorally identical to entering the corresponding
-/// `op_*` and exiting through `push_scalar_fastpath_result`, because that
-/// fast path only accepts operands the preceding NIL-passthrough check would
-/// have ignored anyway.
-pub(crate) fn scalar_fastpath_add(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Add)
-}
-
-pub(crate) fn scalar_fastpath_sub(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Sub)
-}
-
-pub(crate) fn scalar_fastpath_mul(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Mul)
-}
-
-pub(crate) fn scalar_fastpath_div(interp: &mut Interpreter) -> Result<bool> {
-    push_scalar_fastpath_result(interp, ExactArithmeticSchema::Div)
-}
-
 fn apply_exact_arithmetic_schema(
     interp: &mut Interpreter,
     schema: ExactArithmeticSchema,
 ) -> Result<()> {
-    if interp.operation_target_mode == OperationTargetMode::StackTop
-        && nil_passthrough_binary(interp)
-    {
+    if nil_passthrough_binary(interp) {
         return Ok(());
     }
 
@@ -331,9 +270,6 @@ fn apply_exact_arithmetic_schema(
     }
 
     if let Some((a, b)) = stacktop_pair(interp) {
-        if push_interval_schema_result(interp, schema, &a, &b)? {
-            return Ok(());
-        }
         if push_simd_schema_result(interp, schema, &a, &b) {
             return Ok(());
         }
@@ -355,9 +291,7 @@ fn apply_exact_arithmetic_schema(
         }
     }
 
-    if matches!(schema, ExactArithmeticSchema::Div)
-        && interp.operation_target_mode == OperationTargetMode::StackTop
-    {
+    if matches!(schema, ExactArithmeticSchema::Div) {
         let stack_len = interp.stack.len();
         if stack_len >= 2 {
             let left_hint = interp.stack.role_at(stack_len - 2);
@@ -411,12 +345,8 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
         ValueData::Vector(_) => None,
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
-        ValueData::Nil | ValueData::Unknown(_) => None,
-        ValueData::Record { .. } => None,
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        ValueData::Nil => None,
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -438,9 +368,7 @@ fn extract_exact_real_from_value(val: &Value) -> Option<ExactReal> {
 fn value_contains_exact_scalar(val: &Value) -> bool {
     match &val.data {
         ValueData::ExactScalar(_) => true,
-        ValueData::Vector(items) | ValueData::Record { pairs: items, .. } => {
-            items.iter().any(value_contains_exact_scalar)
-        }
+        ValueData::Vector(items) => items.iter().any(value_contains_exact_scalar),
         // Dense tensors only hold rational `Fraction` lanes; they can never
         // contain an `ExactScalar`.
         _ => false,
@@ -559,9 +487,6 @@ fn push_exact_real_broadcast_result(
     a: &Value,
     b: &Value,
 ) -> Result<bool> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Ok(false);
-    }
     if a.is_nil() || b.is_nil() {
         return Ok(false);
     }
@@ -576,14 +501,9 @@ fn push_exact_real_broadcast_result(
     // this shape, lane for lane.
     let result = if let Some((a_lanes, b_lanes)) = exact_flat_leaf_lanes(a, b) {
         let n = a_lanes.len();
-        let lanes: Vec<Option<ExactReal>> =
-            crate::interpreter::parallel::compute_bound_map(n, |i| {
-                schema.exact_real(&a_lanes[i], &b_lanes[i])
-            });
-        interp.runtime_metrics.exact_real_parallel_broadcast_count = interp
-            .runtime_metrics
-            .exact_real_parallel_broadcast_count
-            .saturating_add(1);
+        let lanes: Vec<Option<ExactReal>> = (0..n)
+            .map(|i| schema.exact_real(&a_lanes[i], &b_lanes[i]))
+            .collect();
         let children: Vec<Value> = lanes
             .into_iter()
             .map(|lane| match lane {
@@ -598,12 +518,6 @@ fn push_exact_real_broadcast_result(
     consume_stacktop_binary(interp);
     push_result(interp, result);
     Ok(true)
-}
-
-fn is_scalar_value(val: &Value) -> bool {
-    matches!(&val.data, ValueData::Scalar(_) | ValueData::ExactScalar(_))
-        || matches!(&val.data, ValueData::Vector(c) if c.len() == 1 && extract_scalar_from_value(&c[0]).is_some())
-        || matches!(&val.data, ValueData::Tensor { data, .. } if data.len() == 1)
 }
 
 fn sparse_mul_candidate(a: &Value, b: &Value) -> Option<Value> {
@@ -671,81 +585,29 @@ where
 {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let operands = extract_operands(interp, 2)?;
-            let a_val = &operands[0];
-            let b_val = &operands[1];
+    let operands = extract_operands(interp, 2)?;
+    let a_val = &operands[0];
+    let b_val = &operands[1];
 
-            let result = match apply_binary_broadcast_with_metrics(
-                a_val,
-                b_val,
-                op,
-                Some(&mut interp.runtime_metrics),
-            ) {
-                Ok(r) => r,
-                Err(e) => {
-                    if !is_keep_mode {
-                        for val in operands {
-                            interp.stack.push(val);
-                        }
-                    }
-                    return Err(e);
+    let result = match apply_binary_broadcast_with_metrics(
+        a_val,
+        b_val,
+        op,
+        Some(&mut interp.runtime_metrics),
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            if !is_keep_mode {
+                for val in operands {
+                    interp.stack.push(val);
                 }
-            };
-
-            push_result(interp, result);
+            }
+            return Err(e);
         }
+    };
 
-        OperationTargetMode::Stack => {
-            let count_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count = extract_count_from_value(&count_val)?;
+    push_result(interp, result);
 
-            if count == 0 || count == 1 {
-                interp.stack.push(count_val);
-                return Ok(());
-            }
-
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
-
-            let items: Vec<Value> = if is_keep_mode {
-                let stack_len = interp.stack.len();
-                interp.stack.as_slice()[stack_len - count..].to_vec()
-            } else {
-                interp
-                    .stack
-                    .drain(interp.stack.len() - count..)
-                    .collect::<Vec<Value>>()
-            };
-
-            if items.iter().any(|v| v.is_nil()) {
-                push_result(interp, Value::nil());
-                return Ok(());
-            }
-
-            if items.iter().any(|v| !is_scalar_value(v)) {
-                if !is_keep_mode {
-                    interp.stack.extend(items);
-                }
-                interp.stack.push(count_val);
-                return Err(AjisaiError::from("+: expected scalar values in Stack mode"));
-            }
-
-            let first_scalar: Fraction = extract_scalar_from_value(&items[0]).unwrap();
-            let mut acc = first_scalar.clone();
-
-            for item in items.iter().skip(1) {
-                if let Some(f) = extract_scalar_from_value(item) {
-                    acc = op(&acc, &f)?;
-                }
-            }
-
-            push_result(interp, Value::from_fraction(acc));
-        }
-    }
     Ok(())
 }
 

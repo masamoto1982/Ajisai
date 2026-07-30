@@ -74,8 +74,8 @@ export interface AjisaiInterpreter {
     // Host-side runtime safety control, not a language semantic; the wasm
     // side ignores non-positive values and defaults to 100,000.
     set_max_execution_steps(steps: number): void;
-    // Only exported by wasm bundles built with the opt-in `elastic-engine`
-    // cargo feature; the default (trusted core) bundle omits it.
+    // Pinned by HostProtocolV1, so the method stays; always empty now that
+    // there is a single execution path with nothing to trace.
     collect_hedged_trace?(): string[];
     // Cost-model counters (SPECIFICATION.html §4.8): observational only,
     // session-cumulative, reset with the interpreter. Optional so the GUI
@@ -204,7 +204,6 @@ export interface ExecuteResult {
     stackSnapshot?: string;
     userWords?: UserWord[];
     importedModules?: string[];
-    hedgedTrace?: string[];
     hedgedWinner?: string;
     hedgedFallbackReason?: string;
     hedgedCancelled?: string[];

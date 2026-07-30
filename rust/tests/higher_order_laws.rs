@@ -73,7 +73,7 @@ proptest! {
     fn map_identity(xs in vec_ne()) {
         let v = vlit(&xs);
         assert_law("map-id-empty-block", &format!("{v} {{ }} MAP"), &v);
-        assert_law("map-id-dot-block", &format!("{v} {{ . }} MAP"), &v);
+        assert_law("map-id-dot-block", &format!("{v} {{ }} MAP"), &v);
     }
 
     /// Map fusion `MAP g ∘ MAP f = MAP (g∘f)` (functoriality of the lift).
@@ -116,12 +116,6 @@ proptest! {
     fn exec_is_inline(a in small(), b in small()) {
         assert_law("exec-inline", &format!("{a} {b} {{ ADD }} EXEC"), &format!("{a} {b} ADD"));
     }
-
-    /// `EVAL` of source text reflects the meaning function: `⟦EVAL(STR p)⟧ = ⟦p⟧`.
-    #[test]
-    fn eval_reflects_meaning(a in small(), b in small()) {
-        assert_law("eval-reflection", &format!("'{a} {b} ADD' EVAL"), &format!("{a} {b} ADD"));
-    }
 }
 
 // ── FILTER restriction laws (fixed vectors avoid empty→NIL results) ──
@@ -149,23 +143,6 @@ fn filter_predicates_commute() {
 }
 
 // ── ANY / ALL De Morgan duality: ALL p ≡ ¬ ANY ¬p ──
-
-#[test]
-fn any_is_count_positive_projection() {
-    let cases = [
-        ("[ 1 2 3 4 5 ]", "2 >"),
-        ("[ 1 2 3 ]", "5 >"),
-        ("[ -1 0 1 ]", "0 >"),
-    ];
-    for (v, p) in cases {
-        assert_law(
-            &format!("any-count-positive[{v};{p}]"),
-            &format!("{v} {{ {p} }} ANY"),
-            &format!("{v} {{ {p} }} COUNT [ 0 ] GT"),
-        );
-    }
-}
-
 #[test]
 fn all_any_de_morgan() {
     let cases = [
@@ -184,42 +161,7 @@ fn all_any_de_morgan() {
 }
 
 // ── SCAN exposes the catamorphism's intermediate accumulators ──
-
-#[test]
-fn scan_yields_prefix_sums() {
-    assert_law(
-        "scan-prefix-sums",
-        "[ 1 2 3 4 ] 0 { ADD } SCAN",
-        "[ 1 3 6 10 ]",
-    );
-}
-
 // ── COND is K3-honest: a U guard does not fire (§7.4.3) ──
 //
 // A guard reducing to `unknown` (an undecidable CF comparison) must fall
 // through exactly like a `false` guard, while a definite `true` fires.
-
-#[test]
-fn cond_u_guard_does_not_fire() {
-    // The bare relations are total over the admitted domain (SPEC §4.2.7),
-    // so the U guard is produced through the explicit-budget COMPARE-WITHIN
-    // (§7.4.2): equal composed operands never diverge within the budget.
-    let u_guard = "{ 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN }";
-    let prog = |guard: &str| {
-        format!("'MATH' IMPORT [ 1 ] {guard} {{ 'fired' }} {{ IDLE }} {{ 'else' }} COND")
-    };
-    // U guard falls through to the else clause, identically to a FALSE guard.
-    assert_law("cond-u-like-false", &prog(u_guard), &prog("{ FALSE }"));
-    // And the else branch is what actually runs (not the guarded body).
-    assert_eq!(
-        eval(&prog(u_guard)),
-        eval("'else'"),
-        "U guard should reach else"
-    );
-    // A definite TRUE guard, by contrast, fires its body.
-    assert_eq!(
-        eval(&prog("{ TRUE }")),
-        eval("'fired'"),
-        "TRUE guard should fire"
-    );
-}

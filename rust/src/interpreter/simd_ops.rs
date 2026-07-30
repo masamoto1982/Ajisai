@@ -51,12 +51,8 @@ pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
         ValueData::Boolean(_)
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
-        | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::Unknown(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -130,12 +126,8 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
         | ValueData::ExactScalar(_)
         | ValueData::Vector(_)
         | ValueData::Tensor { .. }
-        | ValueData::Record { .. }
         | ValueData::Nil
-        | ValueData::Unknown(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -151,13 +143,8 @@ fn apply_simd_binary(
     if va.len() != vb.len() {
         return None;
     }
-    let (result, parallel) = crate::interpreter::parallel::elementwise_binary_checked(
-        word,
-        va.as_ref(),
-        vb.as_ref(),
-        op,
-        lane,
-    );
+    let (result, parallel) =
+        sequential_elementwise_binary_checked(word, va.as_ref(), vb.as_ref(), op, lane);
     // `None` => a lane overflowed `i64`; decline so the caller recomputes on
     // the exact path (Same Result). Otherwise emit the SoA tensor result.
     Some((create_value_from_integer_vector(result?), parallel))
@@ -308,51 +295,7 @@ mod wasm_impl {
 // Scalar fallback: native builds, and any wasm build without `simd128`
 // (now the baseline). Same observable result as the intrinsics path.
 #[cfg(all(test, not(all(target_arch = "wasm32", target_feature = "simd128"))))]
-mod wasm_impl {
-    #[inline]
-    pub fn simd_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x + y)
-            .collect::<Vec<i64>>()
-    }
-
-    #[inline]
-    pub fn simd_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x - y)
-            .collect::<Vec<i64>>()
-    }
-
-    #[inline]
-    pub fn simd_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| x * y)
-            .collect::<Vec<i64>>()
-    }
-}
-
-// Wrapping (non-overflow-checked) SIMD lane kernels. The production integer
-// path is now overflow-checked (see `checked_lane_*` and the speculative
-// lowering in `apply_simd_*`), so these wrapping kernels survive only as the
-// element-wise reference the `interpreter::parallel` bit-identity proptests
-// compare the multi-core kernel against. They are therefore test-only.
-#[cfg(test)]
-pub fn lane_add(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_add(a, b)
-}
-
-#[cfg(test)]
-pub fn lane_sub(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_sub(a, b)
-}
-
-#[cfg(test)]
-pub fn lane_mul(a: &[i64], b: &[i64]) -> Vec<i64> {
-    wasm_impl::simd_mul(a, b)
-}
+mod wasm_impl {}
 
 /// Returns `(result, parallel_used)`; `parallel_used` is `true` only when the
 /// multi-core kernel actually fired (observational metric only).
@@ -368,10 +311,37 @@ pub fn apply_simd_mul(a: &Value, b: &Value) -> Option<(Value, bool)> {
     apply_simd_binary("*", a, b, |x, y| x.checked_mul(y), checked_lane_mul)
 }
 
+/// Apply an element-wise checked op over two equal-length lanes.
+///
+/// The native data-parallel dispatch this used to route through is gone, so the
+/// lane kernel is the only path. The `bool` in the return keeps the callers'
+/// shape and is always `false`: no parallel kernel fires.
+fn sequential_elementwise_binary_checked(
+    _word: &str,
+    a: &[i64],
+    b: &[i64],
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], &[i64]) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    (lane(a, b), false)
+}
+
+/// Apply an element-wise checked op between a lane and a broadcast scalar.
+/// Same contract as [`sequential_elementwise_binary_checked`].
+fn sequential_elementwise_scalar_checked(
+    _word: &str,
+    a: &[i64],
+    scalar: i64,
+    _op: fn(i64, i64) -> Option<i64>,
+    lane: fn(&[i64], i64) -> Option<Vec<i64>>,
+) -> (Option<Vec<i64>>, bool) {
+    (lane(a, scalar), false)
+}
+
 pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+    let (result, parallel) = sequential_elementwise_scalar_checked(
         "+",
         va.as_ref(),
         scalar,
@@ -384,7 +354,7 @@ pub fn apply_simd_scalar_add(vec_val: &Value, scalar_val: &Value) -> Option<(Val
 pub fn apply_simd_scalar_mul(vec_val: &Value, scalar_val: &Value) -> Option<(Value, bool)> {
     let va: Cow<'_, [i64]> = extract_integer_lane(vec_val)?;
     let scalar: i64 = extract_integer_scalar(scalar_val)?;
-    let (result, parallel) = crate::interpreter::parallel::elementwise_scalar_checked(
+    let (result, parallel) = sequential_elementwise_scalar_checked(
         "*",
         va.as_ref(),
         scalar,

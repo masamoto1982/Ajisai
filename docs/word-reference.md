@@ -3,13 +3,13 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **194 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
+Canonical inventory: **69 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
 
 ## `TRUE`
 
 Push the boolean TRUE onto the stack.
 
-- **Family:** `kleeneTruth`
+- **Family:** `booleanLogic`
 - **Stack:** 0 input(s) → 1 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
@@ -21,7 +21,7 @@ Push the boolean TRUE onto the stack.
 
 Push the boolean FALSE onto the stack.
 
-- **Family:** `kleeneTruth`
+- **Family:** `booleanLogic`
 - **Stack:** 0 input(s) → 1 output(s); `none` consumption
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
@@ -29,103 +29,45 @@ Push the boolean FALSE onto the stack.
 - **Clauses:** `LANG.VALUES.TRUTH`
 - **Syntax:** `FALSE`
 
-## `NIL`
+## `AND`
 
-Push the NIL value onto the stack.
+Logical AND. A NIL operand passes through.
 
-- **Family:** `nilObservation`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `NIL`
-
-## `NIL?`
-
-Test whether the top value is an operational NIL (absent).
-
-- **Family:** `nilObservation`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL?`
-
-## `NIL-REASON`
-
-Read the direct reason of an operational NIL as a protocol-string Text.
-
-- **Family:** `nilObservation`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-REASON`
-
-## `NIL-ORIGIN`
-
-Read the origin of an operational NIL as a protocol-string Text.
-
-- **Family:** `nilObservation`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-ORIGIN`
-
-## `NIL-RECOVERABLE?`
-
-Read the recoverability of an operational NIL as a protocol-string Text.
-
-- **Family:** `nilObservation`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-RECOVERABLE?`
-
-## `NIL-DIAGNOSIS`
-
-Read the three-layer debug diagnosis of an operational NIL as a Record.
-
-- **Family:** `nilObservation`
-- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `1 0 / NIL-DIAGNOSIS`
-
-## `BOOL`
-
-Convert a value to a boolean by truthiness.
-
-- **Family:** `kleeneTruth`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`
-- **Syntax:** `1 BOOL`
-- **ERROR conditions:** `unsupportedValueKind`
-
-## `COMPARE-WITHIN`
-
-Three-way compare two values within an explicit observation budget.
-
-- **Family:** `comparison`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **Family:** `booleanLogic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `1/3 1/2 64 COMPARE-WITHIN`
-- **ERROR conditions:** `invalidBudget`, `unsupportedComparison`, `shapeMismatch`
+- **Clauses:** `LANG.VALUES.TRUTH`
+- **Syntax:** `TRUE TRUE &`
+- **Aliases:** `&`
+- **ERROR conditions:** `nonTruthValue`
+
+## `OR`
+
+Logical OR. A NIL operand passes through.
+
+- **Family:** `booleanLogic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.TRUTH`
+- **Syntax:** `TRUE FALSE OR`
+- **ERROR conditions:** `nonTruthValue`
+
+## `NOT`
+
+Logical negation. A NIL operand passes through.
+
+- **Family:** `booleanLogic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.TRUTH`
+- **Syntax:** `TRUE NOT`
+- **ERROR conditions:** `nonTruthValue`
 
 ## `EQ`
 
@@ -136,9 +78,23 @@ Test equality of two values.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 1 =`
 - **Aliases:** `=`
+- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
+
+## `NEQ`
+
+Test inequality of two values.
+
+- **Family:** `comparison`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Syntax:** `1 2 <>`
+- **Aliases:** `<>`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
 
 ## `LT`
@@ -150,7 +106,7 @@ Test less-than comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 2 <`
 - **Aliases:** `<`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -164,7 +120,7 @@ Test less-than-or-equal comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 1 <=`
 - **Aliases:** `<=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -178,7 +134,7 @@ Test greater-than comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `2 1 >`
 - **Aliases:** `>`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -192,656 +148,16 @@ Test greater-than-or-equal comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
 - **Syntax:** `1 1 >=`
 - **Aliases:** `>=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
-## `NEQ`
-
-Test inequality of two values.
-
-- **Family:** `comparison`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`
-- **Syntax:** `1 2 <>`
-- **Aliases:** `<>`
-- **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
-
-## `AND`
-
-Logical AND with three-valued (Kleene) NIL handling.
-
-- **Family:** `kleeneTruth`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `truthUnknownNotNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`
-- **Syntax:** `TRUE TRUE &`
-- **Aliases:** `&`
-- **ERROR conditions:** `nonTruthValue`
-
-## `OR`
-
-Logical OR with three-valued (Kleene) NIL handling.
-
-- **Family:** `kleeneTruth`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `truthUnknownNotNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`
-- **Syntax:** `TRUE FALSE OR`
-- **ERROR conditions:** `nonTruthValue`
-
-## `NOT`
-
-Logical negation.
-
-- **Family:** `kleeneTruth`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `truthUnknownNotNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`
-- **Syntax:** `TRUE NOT`
-- **ERROR conditions:** `nonTruthValue`
-
-## `VENT`
-
-Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
-
-- **Family:** `nilRecovery`
-- **Stack:** control input(s) → control output(s); `conditional` consumption
-- **NIL policy:** `inspectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
-- **Syntax:** `NIL ^ [ 0 ]`
-- **Aliases:** `^`
-- **ERROR conditions:** `missingFollowingSourceUnit`
-
-## `TOP`
-
-Set the operation target mode to the top of the stack.
-
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MODIFIERS.AXES`, `LANG.MODIFIERS.APPLICATION`
-- **Syntax:** `. +`
-- **Aliases:** `.`
-
-## `STAK`
-
-Set the operation target mode to the whole stack.
-
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MODIFIERS.AXES`, `LANG.MODIFIERS.APPLICATION`
-- **Syntax:** `.. +`
-- **Aliases:** `..`
-
-## `EAT`
-
-Set the consumption mode to consume operands.
-
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MODIFIERS.AXES`, `LANG.MODIFIERS.APPLICATION`
-- **Syntax:** `, +`
-- **Aliases:** `,`
-
-## `KEEP`
-
-Set the consumption mode to keep operands.
-
-- **Family:** `stackModifier`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MODIFIERS.AXES`, `LANG.MODIFIERS.APPLICATION`
-- **Syntax:** `,, +`
-- **Aliases:** `,,`
-
-## `IDLE`
-
-Pass control through unchanged (no-op).
-
-- **Family:** `control`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `IDLE`
-
-## `COND`
-
-Evaluate guard/body clauses in order, executing the first match.
-
-- **Family:** `control`
-- **Stack:** variable input(s) → variable output(s); `conditional` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `1 { TRUE } { 'y' } { IDLE } { 'n' } COND`
-- **ERROR conditions:** `invalidClauseShape`, `nonTruthGuard`
-
-## `FLOW`
-
-Pipeline visual marker (no-op).
-
-- **Family:** `control`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] ~ { [ 2 ] * } MAP`
-- **Aliases:** `~`
-
-## `FORC`
-
-Force destructive dictionary operations to apply.
-
-- **Family:** `control`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `! 'WORD' DEL`
-- **Aliases:** `!`
-
-## `EXEC`
-
-Execute a vector as Ajisai code.
-
-- **Family:** `control`
-- **Stack:** 1 input(s) → variable output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 + ] EXEC`
-- **ERROR conditions:** `nonCodeVector`, `nestedExecutionError`
-
-## `CONSERVE`
-
-Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.
-
-- **Family:** `control`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `100 [ 3333/100 6667/100 ] CONSERVE`
-- **ERROR conditions:** `nonScalarParts`, `conservationViolation`
-
-## `EVAL`
-
-Parse a string as Ajisai source code and execute it.
-
-- **Family:** `control`
-- **Stack:** 1 input(s) → variable output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `'1 2 +' EVAL`
-- **ERROR conditions:** `nonText`, `parseError`, `nestedExecutionError`
-
-## `OR-ELSE`
-
-Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.
-
-- **Family:** `control`
-- **Stack:** 2 input(s) → variable output(s); `conditional` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.MACHINE.ORDER`
-- **Syntax:** `1 0 / { 0 } OR-ELSE`
-- **ERROR conditions:** `fallbackNotCodeBlock`
-
-## `DEF`
-
-Define a user word from a body and a name.
-
-- **Family:** `dictionaryMutation`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `{ 2 * } 'DOUBLE' DEF`
-- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`
-
-## `DEL`
-
-Delete a user word from the dictionary.
-
-- **Family:** `dictionaryMutation`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `{ [ 1 ] } 'W' DEF 'W' DEL`
-- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`
-
-## `LOOKUP`
-
-Display the documentation for a named word.
-
-- **Family:** `dictionaryMutation`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `observational` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MUTATION`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `'ADD' ?`
-- **Aliases:** `?`
-- **ERROR conditions:** `invalidName`, `wordNotFound`
-
-## `IMPORT`
-
-Load all public words of a module into the dictionary.
-
-- **Family:** `moduleResolution`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MODULES`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `'IO' IMPORT`
-- **ERROR conditions:** `invalidModule`, `unknownPublicWord`, `dependencyConflict`
-
-## `IMPORT-ONLY`
-
-Load only the listed public words of a module.
-
-- **Family:** `moduleResolution`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MODULES`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `'json' [ 'parse' ] IMPORT-ONLY`
-- **ERROR conditions:** `invalidModule`, `unknownPublicWord`, `dependencyConflict`
-
-## `UNIMPORT`
-
-Hide unused imported words from a module while keeping words referenced by user definitions.
-
-- **Family:** `moduleResolution`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MODULES`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `'IO' UNIMPORT`
-- **ERROR conditions:** `invalidModule`, `unknownPublicWord`, `dependencyConflict`
-
-## `UNIMPORT-ONLY`
-
-Hide only the listed imported module words.
-
-- **Family:** `moduleResolution`
-- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.DICTIONARY.MODULES`, `LANG.DICTIONARY.RESOLUTION`
-- **Syntax:** `'json' [ 'parse' ] UNIMPORT-ONLY`
-- **ERROR conditions:** `invalidModule`, `unknownPublicWord`, `dependencyConflict`
-
-## `GET`
-
-Extract one element of a vector by index.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: indexOutOfBounds → indexOutOfBounds
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 10 20 30 ] [ 0 ] GET`
-- **ERROR conditions:** `nonVector`, `invalidIndex`
-
-## `INSERT`
-
-Insert a value at a given index in a vector.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 3 ] [ 1 2 ] INSERT`
-- **ERROR conditions:** `nonVector`, `invalidIndexPair`
-
-## `REPLACE`
-
-Replace an element of a vector at a given index.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 ] [ 0 9 ] REPLACE`
-- **ERROR conditions:** `nonVector`, `invalidIndexPair`, `indexOutOfBounds`
-
-## `REMOVE`
-
-Remove an element from a vector at a given index.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] REMOVE`
-- **ERROR conditions:** `nonVector`, `invalidIndex`, `indexOutOfBounds`
-
-## `LENGTH`
-
-Return the number of elements in a vector.
-
-- **Family:** `collectionShape`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 ] LENGTH`
-- **ERROR conditions:** `nonVector`
-
-## `TAKE`
-
-Take the first N or last -N elements of a vector.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
-- **ERROR conditions:** `nonVector`, `invalidCount`
-
-## `SPLIT`
-
-Split a vector into chunks at the specified sizes.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → variable output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 4 ] [ 2 2 ] SPLIT`
-- **ERROR conditions:** `nonVector`, `invalidSizes`
-
-## `CONCAT`
-
-Flatten and concatenate two vectors.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 ] [ 3 4 ] CONCAT`
-- **ERROR conditions:** `nonVector`
-
-## `REVERSE`
-
-Reverse the order of vector elements.
-
-- **Family:** `collectionShape`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 ] REVERSE`
-- **ERROR conditions:** `nonVector`
-
-## `REORDER`
-
-Reorder vector elements according to an index permutation.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER`
-- **ERROR conditions:** `nonVector`, `invalidPermutation`
-
-## `COLLECT`
-
-Collect N items off the stack into a new vector.
-
-- **Family:** `collectionShape`
-- **Stack:** variable input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `1 2 3 3 COLLECT`
-- **ERROR conditions:** `invalidCount`, `stackUnderflow`
-
-## `SHAPE`
-
-Return a vector describing the dimensions of a value.
-
-- **Family:** `collectionShape`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 ] SHAPE`
-- **ERROR conditions:** `unsupportedValueKind`
-
-## `RANK`
-
-Return the number of dimensions of a value.
-
-- **Family:** `collectionShape`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ [ 1 2 ] ] RANK`
-- **ERROR conditions:** `unsupportedValueKind`
-
-## `RESHAPE`
-
-Reshape a vector to a target shape with the same total length.
-
-- **Family:** `collectionShape`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ 1 2 3 4 ] [ 2 2 ] RESHAPE`
-- **ERROR conditions:** `nonVector`, `shapeMismatch`
-
-## `TRANSPOSE`
-
-Transpose the axes of a tensor.
-
-- **Family:** `collectionShape`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`
-- **Syntax:** `[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE`
-- **ERROR conditions:** `nonTensor`, `raggedShape`
-
-## `RANGE`
-
-Generate a numeric sequence from a [start, end] pair.
-
-- **Family:** `generativeCollection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`, `LANG.COLLECTIONS.BUDGET`
-- **Syntax:** `[ 0 5 ] RANGE`
-- **ERROR conditions:** `invalidRange`
-
-## `FILL`
-
-Fill a target shape with a constant value.
-
-- **Family:** `generativeCollection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.SHAPE`, `LANG.COLLECTIONS.BUDGET`
-- **Syntax:** `[ 2 2 0 ] FILL`
-- **ERROR conditions:** `invalidShape`
-
-## `MAP`
-
-Apply a code block to each element of a vector.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] * } MAP`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `FILTER`
-
-Keep only the elements for which a predicate block returns TRUE.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } FILTER`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `FOLD`
-
-Reduce a vector to a single value using an initial accumulator and combiner block.
-
-- **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] { + } FOLD`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `UNFOLD`
-
-Generate a sequence by repeatedly applying a state transition.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 ] { ... COND } UNFOLD`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `ANY`
-
-TRUE if at least one element satisfies the predicate.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } ANY`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `ALL`
-
-TRUE if every element satisfies the predicate.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `COUNT`
-
-Count the elements that satisfy the predicate.
-
-- **Family:** `higherOrder`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } COUNT`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
-
-## `SCAN`
-
-Return a vector of intermediate fold accumulators.
-
-- **Family:** `higherOrder`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `stateRelative`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.COLLECTIONS.HIGHER`, `LANG.MACHINE.ORDER`
-- **Syntax:** `[ 1 2 3 ] [ 0 ] { + } SCAN`
-- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `ADD`
 
 Add two numeric values, element-wise with broadcasting.
 
-- **Family:** `liftedBinaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
@@ -855,7 +171,7 @@ Add two numeric values, element-wise with broadcasting.
 
 Subtract two numeric values, element-wise with broadcasting.
 
-- **Family:** `liftedBinaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
@@ -869,7 +185,7 @@ Subtract two numeric values, element-wise with broadcasting.
 
 Multiply two numeric values, element-wise with broadcasting.
 
-- **Family:** `liftedBinaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
@@ -883,7 +199,7 @@ Multiply two numeric values, element-wise with broadcasting.
 
 Divide two numeric values exactly (fractional result).
 
-- **Family:** `liftedBinaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: divisorEqualsZero → divisionByZero
 - **Purity / determinism:** `pure` / `deterministic`
@@ -897,7 +213,7 @@ Divide two numeric values exactly (fractional result).
 
 Modulo (remainder) of two numeric values.
 
-- **Family:** `liftedBinaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
@@ -911,7 +227,7 @@ Modulo (remainder) of two numeric values.
 
 Round toward negative infinity.
 
-- **Family:** `liftedUnaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
@@ -924,7 +240,7 @@ Round toward negative infinity.
 
 Round toward positive infinity.
 
-- **Family:** `liftedUnaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
@@ -937,7 +253,7 @@ Round toward positive infinity.
 
 Round to nearest integer (half-up).
 
-- **Family:** `liftedUnaryExactArithmetic`
+- **Family:** `exactArithmetic`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthroughThenProject`; projection: integerProjectionUndecidable → undecidable
 - **Purity / determinism:** `pure` / `deterministic`
@@ -946,184 +262,380 @@ Round to nearest integer (half-up).
 - **Syntax:** `[ 5/2 ] ROUND`
 - **ERROR conditions:** `nonNumeric`, `shapeMismatch`
 
-## `QUANTIZE`
+## `ABS`
 
-Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.
+Absolute value of a number.
 
-- **Family:** `exactQuantization`
-- **Stack:** 2 input(s) → 2 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: operandUndecidable → undecidable
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `100/3 1/100 QUANTIZE`
-- **ERROR conditions:** `nonNumeric`, `nonPositiveStep`, `shapeMismatch`
+- **Syntax:** `-2 ABS`
+- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
 
-## `QUANTIZE-HALF-AWAY`
+## `NEG`
 
-Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.
+Numeric negation.
 
-- **Family:** `exactQuantization`
-- **Stack:** 2 input(s) → 2 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: operandUndecidable → undecidable
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `5/2 1 QUANTIZE-HALF-AWAY`
-- **ERROR conditions:** `nonNumeric`, `nonPositiveStep`, `shapeMismatch`
+- **Syntax:** `2 NEG`
+- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
 
-## `QUANTIZE-FLOOR`
+## `SIGN`
 
-Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.
+Sign of a number: -1, 0, or 1.
 
-- **Family:** `exactQuantization`
-- **Stack:** 2 input(s) → 2 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: operandUndecidable → undecidable
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `100/3 1/100 QUANTIZE-FLOOR`
-- **ERROR conditions:** `nonNumeric`, `nonPositiveStep`, `shapeMismatch`
+- **Syntax:** `-2 SIGN`
+- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
 
-## `QUANTIZE-CEIL`
+## `MIN`
 
-Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.
+Smaller of two numbers.
 
-- **Family:** `exactQuantization`
-- **Stack:** 2 input(s) → 2 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: operandUndecidable → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `100/3 1/100 QUANTIZE-CEIL`
-- **ERROR conditions:** `nonNumeric`, `nonPositiveStep`, `shapeMismatch`
-
-## `QUANTIZE-TRUNC`
-
-Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.
-
-- **Family:** `exactQuantization`
-- **Stack:** 2 input(s) → 2 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: operandUndecidable → undecidable
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `100/3 1/100 QUANTIZE-TRUNC`
-- **ERROR conditions:** `nonNumeric`, `nonPositiveStep`, `shapeMismatch`
-
-## `PRINT`
-
-Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.
-
-- **Family:** `hostedEffect`
-- **Stack:** 1 input(s) → 1 output(s); `retain` consumption
-- **NIL policy:** `preserveReason`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `console` / `consoleWrite`
-- **Clauses:** `LANG.EFFECTS.HOSTED`, `LANG.MACHINE.ORDER`
-- **Syntax:** `42 PRINT`
-
-## `SPAWN`
-
-Spawn an isolated child runtime from a code block.
-
-- **Family:** `childRuntime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } SPAWN`
-- **ERROR conditions:** `nonCodeBlock`
-
-## `AWAIT`
-
-Wait for a child runtime to finish and return its exit tuple.
-
-- **Family:** `childRuntime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } SPAWN AWAIT`
-- **ERROR conditions:** `nonChildHandle`
-
-## `STATUS`
-
-Read the current status of a child runtime.
-
-- **Family:** `childRuntime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } SPAWN STATUS`
-- **ERROR conditions:** `nonChildHandle`
-
-## `KILL`
-
-Forcibly terminate a child runtime.
-
-- **Family:** `childRuntime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } SPAWN KILL`
-- **ERROR conditions:** `nonChildHandle`
-
-## `MONITOR`
-
-Register a monitor on a child handle.
-
-- **Family:** `childRuntime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } SPAWN MONITOR`
-- **ERROR conditions:** `nonChildHandle`
-
-## `SUPERVISE`
-
-Run a code block under a one-for-one restart policy.
-
-- **Family:** `childRuntime`
+- **Family:** `exactArithmetic`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: restartPolicyExhausted → childFailed
-- **Purity / determinism:** `effectful` / `stateRelative`
-- **Capability / hosted effect:** `childRuntime` / `none`
-- **Clauses:** `LANG.EFFECTS.CHILD`, `LANG.MACHINE.ORDER`
-- **Syntax:** `{ 1 2 + } [ 3 ] SUPERVISE`
-- **ERROR conditions:** `nonCodeBlock`, `invalidRetryPolicy`
-
-## `>CF`
-
-Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).
-
-- **Family:** `conversion`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `preserveReason`; projection: none
+- **NIL policy:** `passthroughThenProject`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1/3 >CF`
-- **ERROR conditions:** `nonNumericScalar`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 2 MIN`
+- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+
+## `MAX`
+
+Larger of two numbers.
+
+- **Family:** `exactArithmetic`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthroughThenProject`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `1 2 MAX`
+- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
+
+## `SQRT`
+
+Exact square root of a non-negative rational. The result is carried in multiquadratic normal form and compares with no rounding. A negative radicand projects to NIL.
+
+- **Family:** `exactArithmetic`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: negativeScalar → domainMiss
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`, `LANG.FAILURE.TRICHOTOMY`
+- **Syntax:** `2 SQRT`
+- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`, `negativeInterval`
+
+## `GET`
+
+Extract one element of a vector by index.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: indexOutOfBounds → indexOutOfBounds
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 10 20 30 ] [ 0 ] GET`
+- **ERROR conditions:** `nonVector`, `invalidIndex`
+
+## `INSERT`
+
+Insert a value at a given index in a vector.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 3 ] [ 1 2 ] INSERT`
+- **ERROR conditions:** `nonVector`, `invalidIndexPair`
+
+## `REPLACE`
+
+Replace an element of a vector at a given index.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] [ 0 9 ] REPLACE`
+- **ERROR conditions:** `nonVector`, `invalidIndexPair`, `indexOutOfBounds`
+
+## `REMOVE`
+
+Remove an element from a vector at a given index.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] [ 0 ] REMOVE`
+- **ERROR conditions:** `nonVector`, `invalidIndex`, `indexOutOfBounds`
+
+## `LENGTH`
+
+Return the number of elements in a vector.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] LENGTH`
+- **ERROR conditions:** `nonVector`
+
+## `TAKE`
+
+Take the first N or last -N elements of a vector.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 4 5 ] [ 3 ] TAKE`
+- **ERROR conditions:** `nonVector`, `invalidCount`
+
+## `SPLIT`
+
+Split a vector into chunks at the specified sizes.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → variable output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 4 ] [ 2 2 ] SPLIT`
+- **ERROR conditions:** `nonVector`, `invalidSizes`
+
+## `CONCAT`
+
+Flatten and concatenate two vectors.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 ] [ 3 4 ] CONCAT`
+- **ERROR conditions:** `nonVector`
+
+## `REVERSE`
+
+Reverse the order of vector elements.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 3 ] REVERSE`
+- **ERROR conditions:** `nonVector`
+
+## `REORDER`
+
+Reorder vector elements according to an index permutation.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER`
+- **ERROR conditions:** `nonVector`, `invalidPermutation`
+
+## `COLLECT`
+
+Collect N items off the stack into a new vector.
+
+- **Family:** `collection`
+- **Stack:** variable input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `1 2 3 3 COLLECT`
+- **ERROR conditions:** `invalidCount`, `stackUnderflow`
+
+## `RANGE`
+
+Generate a numeric sequence from a [start, end] pair.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 0 5 ] RANGE`
+- **ERROR conditions:** `invalidRange`
+
+## `FILL`
+
+Fill a target shape with a constant value.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: materializationBudgetExceeded → spaceExhausted
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 2 2 0 ] FILL`
+- **ERROR conditions:** `invalidShape`
+
+## `SORT`
+
+Return a copy of a vector sorted in ascending order.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `passthrough`; projection: emptyVector → literal NIL
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 3 1 2 ] SORT`
+- **ERROR conditions:** `nonVector`, `nonComparableElement`
+
+## `UNIQUE`
+
+Return a copy of a vector with duplicates removed, preserving first-occurrence order.
+
+- **Family:** `collection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: emptyVector → literal NIL
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 1 ] UNIQUE`
+- **ERROR conditions:** `stackTargetMode`, `nonVector`
+
+## `CONTAINS`
+
+True if a vector contains an element equal to the given value.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 ] 2 CONTAINS`
+- **ERROR conditions:** `stackTargetMode`, `nonVector`
+
+## `INDEX-OF`
+
+Index of the first element equal to the value; Bubble/NIL if absent.
+
+- **Family:** `collection`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `createsNil`; projection: valueAbsent → missingField
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
+- **Syntax:** `[ 1 2 ] 2 INDEX-OF`
+- **ERROR conditions:** `stackTargetMode`, `nonVector`
+
+## `MAP`
+
+Apply a code block to each element of a vector.
+
+- **Family:** `higherOrder`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 1 2 3 ] { [ 2 ] * } MAP`
+- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+
+## `FILTER`
+
+Keep only the elements for which a predicate block returns TRUE.
+
+- **Family:** `higherOrder`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } FILTER`
+- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+
+## `FOLD`
+
+Reduce a vector to a single value using an initial accumulator and combiner block.
+
+- **Family:** `higherOrder`
+- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 1 2 3 ] [ 0 ] { + } FOLD`
+- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+
+## `ANY`
+
+TRUE if at least one element satisfies the predicate.
+
+- **Family:** `higherOrder`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } ANY`
+- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
+
+## `ALL`
+
+TRUE if every element satisfies the predicate.
+
+- **Family:** `higherOrder`
+- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.COLLECTIONS.HIGHER`
+- **Syntax:** `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL`
+- **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `CHARS`
 
 Split a string into a vector of one-character strings.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'hi' CHARS`
 - **ERROR conditions:** `nonText`
 
@@ -1131,12 +643,12 @@ Split a string into a vector of one-character strings.
 
 Join a vector of strings into a single string.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `[ 'h' 'i' ] JOIN`
 - **ERROR conditions:** `nonTextVector`, `nonTextElement`
 
@@ -1144,51 +656,25 @@ Join a vector of strings into a single string.
 
 Remove whitespace from both ends of a string.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'  hi  ' TRIM`
-- **ERROR conditions:** `nonText`
-
-## `TRIM-LEFT`
-
-Remove whitespace from the start of a string.
-
-- **Family:** `conversion`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'  hi' TRIM-LEFT`
-- **ERROR conditions:** `nonText`
-
-## `TRIM-RIGHT`
-
-Remove whitespace from the end of a string.
-
-- **Family:** `conversion`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'hi  ' TRIM-RIGHT`
 - **ERROR conditions:** `nonText`
 
 ## `TOKENIZE`
 
 Split a string into a vector of substrings using a separator.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'a,b,c' ',' TOKENIZE`
 - **ERROR conditions:** `nonText`, `nonTextSeparator`
 
@@ -1196,12 +682,12 @@ Split a string into a vector of substrings using a separator.
 
 Replace every occurrence of a substring with another.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 3 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'hello' 'l' 'L' SUBSTITUTE`
 - **ERROR conditions:** `nonText`
 
@@ -1209,12 +695,12 @@ Replace every occurrence of a substring with another.
 
 Test whether a string begins with the given prefix.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'hello' 'he' STARTS-WITH?`
 - **ERROR conditions:** `nonText`, `nonTextPrefix`
 
@@ -1222,12 +708,12 @@ Test whether a string begins with the given prefix.
 
 Test whether a string ends with the given suffix.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'hello' 'lo' ENDS-WITH?`
 - **ERROR conditions:** `nonText`, `nonTextSuffix`
 
@@ -1235,12 +721,12 @@ Test whether a string ends with the given suffix.
 
 Parse text as a number; Bubble/NIL on parse failure.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: parseFailure → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `'42' NUM`
 - **ERROR conditions:** `nonText`
 
@@ -1248,1267 +734,177 @@ Parse text as a number; Bubble/NIL on parse failure.
 
 Convert a value to its string representation.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `42 STR`
 
 ## `CHR`
 
 Convert a numeric character code to a single-character string.
 
-- **Family:** `conversion`
+- **Family:** `text`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
 - **NIL policy:** `createsNil`; projection: invalidCharacterCode → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
+- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.FAILURE.TRICHOTOMY`
 - **Syntax:** `65 CHR`
 - **ERROR conditions:** `nonNumeric`, `nonInteger`
 
-## `PRECOMPUTE`
+## `COND`
 
-Definition-time staging marker (not a macro).
+Evaluate guard/body clauses in order, executing the first match.
 
 - **Family:** `control`
 - **Stack:** variable input(s) → variable output(s); `conditional` consumption
 - **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `conditional` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.SOURCE.CODE`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `{ ... } PRECOMPUTE`
-- **ERROR conditions:** `outsideDefinition`, `nonCodeBlock`
-
-## `DATA@CSV-PARSE`
-
-Parse CSV text into a vector of Records (the first row is the header).
-
-- **Family:** `dataTable`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: malformedOrRaggedCsv → invalidEncoding
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'name,age\nAjisai,1' DATA@CSV-PARSE`
+- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
+- **Syntax:** `1 { TRUE } { 'y' } { IDLE } { 'n' } COND`
+- **ERROR conditions:** `invalidClauseShape`, `nonTruthGuard`
 
-## `DATA@CSV-STRINGIFY`
+## `EXEC`
 
-Render a vector of Records as CSV text sharing one column shape.
+Execute a vector as Ajisai code.
 
-- **Family:** `dataTable`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: nonRectangularRecordVector → invalidEncoding
+- **Family:** `control`
+- **Stack:** 1 input(s) → variable output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
+- **Syntax:** `[ 1 2 + ] EXEC`
+- **ERROR conditions:** `nonCodeVector`, `nestedExecutionError`
+
+## `NIL`
+
+Push the NIL value onto the stack.
+
+- **Family:** `absence`
+- **Stack:** 0 input(s) → 1 output(s); `none` consumption
+- **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ record... ] DATA@CSV-STRINGIFY`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
+- **Syntax:** `NIL`
 
-## `DATA@SELECT`
+## `NIL?`
 
-Project a table onto the named columns, in order.
+Test whether the top value is an operational NIL (absent).
 
-- **Family:** `dataTable`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: malformedTableOrColumns → invalidEncoding
+- **Family:** `absence`
+- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
+- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ record... ] [ 'name' ] DATA@SELECT`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
+- **Syntax:** `1 0 / NIL?`
 
-## `DATA@WHERE`
+## `NIL-REASON`
 
-Keep the rows whose predicate on a named column is true.
+Read the direct reason of an operational NIL as a protocol-string Text.
 
-- **Family:** `dataTable`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: malformedTableColumnOrPredicate → invalidEncoding
+- **Family:** `absence`
+- **Stack:** 1 input(s) → 2 output(s); `retain` consumption
+- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ record... ] 'age' { [ 0 ] > } DATA@WHERE`
-- **ERROR conditions:** `predicateEvaluationError`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
+- **Syntax:** `1 0 / NIL-REASON`
 
-## `DATA@GROUP`
+## `VENT`
 
-Group rows by a column into { key, rows } group records.
+Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback.
 
-- **Family:** `dataTable`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: malformedTableOrColumn → invalidEncoding
-- **Purity / determinism:** `pure` / `deterministic`
+- **Family:** `absence`
+- **Stack:** control input(s) → control output(s); `conditional` consumption
+- **NIL policy:** `inspectNil`; projection: none
+- **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ record... ] 'kind' DATA@GROUP`
+- **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
+- **Syntax:** `NIL ^ [ 0 ]`
+- **Aliases:** `^`
+- **ERROR conditions:** `missingFollowingSourceUnit`
 
-## `DATA@JOIN`
+## `EAT`
 
-Left-join two tables on a shared key column.
+Set the consumption mode to consume operands.
 
-- **Family:** `dataTable`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: malformedTableOrKey → invalidEncoding
-- **Purity / determinism:** `pure` / `deterministic`
+- **Family:** `stackModifier`
+- **Stack:** 0 input(s) → 0 output(s); `none` consumption
+- **NIL policy:** `preserveReason`; projection: none
+- **Purity / determinism:** `pure` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.COLLECTIONS`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ left... ] [ right... ] 'id' DATA@JOIN`
+- **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
+- **Syntax:** `, +`
+- **Aliases:** `,`
 
-## `JSON@PARSE`
+## `KEEP`
 
-Parse a JSON string into an Ajisai value.
+Set the consumption mode to keep operands.
 
-- **Family:** `jsonValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: invalidJsonEncoding → invalidEncoding
-- **Purity / determinism:** `pure` / `deterministic`
+- **Family:** `stackModifier`
+- **Stack:** 0 input(s) → 0 output(s); `none` consumption
+- **NIL policy:** `preserveReason`; projection: none
+- **Purity / determinism:** `pure` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `'{"x":1}' JSON@PARSE`
+- **Clauses:** `LANG.MODIFIERS.CONSUMPTION`
+- **Syntax:** `,, +`
+- **Aliases:** `,,`
 
-## `JSON@STRINGIFY`
+## `DEF`
 
-Serialise an Ajisai value to a JSON string.
+Define a user word from a body and a name.
 
-- **Family:** `jsonValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
+- **Family:** `dictionary`
+- **Stack:** 2 input(s) → 0 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `effectful` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 1 2 ] JSON@STRINGIFY`
+- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
+- **Syntax:** `{ 2 * } 'DOUBLE' DEF`
+- **ERROR conditions:** `invalidName`, `protectedWord`, `definitionConflict`
 
-## `JSON@GET`
+## `DEL`
 
-Look up a key in a JSON object.
+Delete a user word from the dictionary.
 
-- **Family:** `jsonValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: missingKeyOrNonObject → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record 'x' JSON@GET`
-
-## `JSON@KEYS`
-
-Return all keys of a JSON object as a vector.
-
-- **Family:** `jsonValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: nonObjectOrEmptyObject → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record JSON@KEYS`
-
-## `JSON@SET`
-
-Return a JSON object with the given key bound to the given value.
-
-- **Family:** `jsonValue`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record 'x' 1 JSON@SET`
-
-## `JSON@HAS`
-
-True if a JSON object contains the given key.
-
-- **Family:** `jsonValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record 'x' JSON@HAS`
-
-## `JSON@VALUES`
-
-Return all values of a JSON object as a vector.
-
-- **Family:** `jsonValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: nonObjectOrEmptyObject → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record JSON@VALUES`
-
-## `JSON@MERGE`
-
-Merge two JSON objects; right-hand keys win on conflict.
-
-- **Family:** `jsonValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `base overlay JSON@MERGE`
-
-## `JSON@DELETE`
-
-Return a JSON object with the given key removed.
-
-- **Family:** `jsonValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: nonObject → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.COLLECTIONS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `record 'x' JSON@DELETE`
-
-## `JSON@EXPORT`
-
-Export the top of the stack as a downloadable JSON file.
-
-- **Family:** `hostedEffect`
+- **Family:** `dictionary`
 - **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `jsonExport` / `jsonExport`
-- **Clauses:** `LANG.EFFECTS.HOSTED`, `LANG.MACHINE.ORDER`
-- **Syntax:** `value JSON@EXPORT`
+- **Purity / determinism:** `effectful` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
+- **Syntax:** `{ [ 1 ] } 'W' DEF 'W' DEL`
+- **ERROR conditions:** `invalidName`, `wordNotFound`, `protectedWord`
 
-## `IO@INPUT`
+## `LOOKUP`
 
-Read text from the host input buffer.
+Display the documentation for a named word.
 
-- **Family:** `observation`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `observational` / `hostRelative`
-- **Capability / hosted effect:** `effect` / `inputRead`
-- **Clauses:** `LANG.EFFECTS.HOSTED`, `LANG.MACHINE.ORDER`, `LANG.OBSERVATION.PROJECTIONS`
-- **Syntax:** `IO@INPUT`
+- **Family:** `dictionary`
+- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `observational` / `stateRelative`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.DICTIONARY.RESOLUTION`, `LANG.DICTIONARY.MUTATION`
+- **Syntax:** `'ADD' ?`
+- **Aliases:** `?`
+- **ERROR conditions:** `invalidName`, `wordNotFound`
 
-## `IO@OUTPUT`
+## `PRINT`
 
-Write a value to the host output buffer.
+Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.
 
-- **Family:** `hostedEffect`
+- **Family:** `output`
 - **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `effect` / `outputWrite`
-- **Clauses:** `LANG.EFFECTS.HOSTED`, `LANG.MACHINE.ORDER`, `LANG.OBSERVATION.PROJECTIONS`
-- **Syntax:** `value IO@OUTPUT`
-
-## `CRYPTO@CSPRNG`
-
-Generate cryptographically secure random rationals with the given denominator.
-
-- **Family:** `observation`
-- **Stack:** variable input(s) → 1 output(s); `conditional` consumption
-- **NIL policy:** `inspectNil`; projection: none
-- **Purity / determinism:** `observational` / `hostRelative`
-- **Capability / hosted effect:** `secureRandom` / `secureRandomRead`
-- **Clauses:** `LANG.EFFECTS.HOSTED`, `LANG.MACHINE.ORDER`, `LANG.OBSERVATION.PROJECTIONS`
-- **Syntax:** `[ denominator ] [ count ] CRYPTO@CSPRNG`
-- **ERROR conditions:** `stackTargetMode`, `countTooLarge`, `nonPositiveDenominator`, `hostEntropyFailure`
-
-## `CRYPTO@HASH`
-
-Compute a cryptographic hash of a value at a chosen bit width.
-
-- **Family:** `cryptoDigest`
-- **Stack:** variable input(s) → 1 output(s); `conditional` consumption
-- **NIL policy:** `consumeNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ bits ] value CRYPTO@HASH`
-- **ERROR conditions:** `stackTargetMode`, `missingValue`, `invalidBitWidth`
-
-## `ALGO@SORT`
-
-Return a copy of a vector sorted in ascending order.
-
-- **Family:** `algorithmCollection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: emptyVector → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 3 1 2 ] ALGO@SORT`
-- **ERROR conditions:** `nonVector`, `nonComparableElement`
-
-## `ALGO@UNIQUE`
-
-Return a copy of a vector with duplicates removed, preserving first-occurrence order.
-
-- **Family:** `algorithmCollection`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: emptyVector → literal NIL
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 1 2 1 ] ALGO@UNIQUE`
-- **ERROR conditions:** `stackTargetMode`, `nonVector`
-
-## `ALGO@CONTAINS`
-
-True if a vector contains an element equal to the given value.
-
-- **Family:** `algorithmCollection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 1 2 ] 2 ALGO@CONTAINS`
-- **ERROR conditions:** `stackTargetMode`, `nonVector`
-
-## `ALGO@INDEX-OF`
-
-Index of the first element equal to the value; Bubble/NIL if absent.
-
-- **Family:** `algorithmCollection`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: valueAbsent → missingField
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.COLLECTIONS.SHAPE`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `[ 1 2 ] 2 ALGO@INDEX-OF`
-- **ERROR conditions:** `stackTargetMode`, `nonVector`
-
-## `MATH@SQRT`
-
-Square root. Exact rational roots stay exact; otherwise returns a sound interval.
-
-- **Family:** `exactInterval`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: negativeScalar → domainMiss
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 MATH@SQRT`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`, `negativeInterval`
-
-## `MATH@SQRT-EPS`
-
-Square root with an explicit interval width bound eps.
-
-- **Family:** `exactInterval`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 1/100 MATH@SQRT-EPS`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`, `invalidEpsilon`, `negativeInterval`
-
-## `MATH@INTERVAL`
-
-Create a sound interval [ lo, hi ].
-
-- **Family:** `exactInterval`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 2 MATH@INTERVAL`
-- **ERROR conditions:** `stackTargetMode`, `nonScalarEndpoint`, `reversedBounds`
-
-## `MATH@LOWER`
-
-Lower endpoint of a number or interval.
-
-- **Family:** `exactInterval`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `interval MATH@LOWER`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`
-
-## `MATH@UPPER`
-
-Upper endpoint of a number or interval.
-
-- **Family:** `exactInterval`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `interval MATH@UPPER`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`
-
-## `MATH@WIDTH`
-
-Width of an interval (hi - lo).
-
-- **Family:** `exactInterval`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `interval MATH@WIDTH`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`
-
-## `MATH@IS-EXACT`
-
-True for an exact number or a degenerate (zero-width) interval.
-
-- **Family:** `exactInterval`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `value MATH@IS-EXACT`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericOrInterval`
-
-## `MATH@PI`
-
-Push the exact real pi as a refinable rational enclosure.
-
-- **Family:** `exactInterval`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `MATH@PI`
-- **ERROR conditions:** `stackTargetMode`
-
-## `MATH@ENCLOSE`
-
-Observe a value's rational enclosure within an explicit water budget.
-
-- **Family:** `exactInterval`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.ROLES`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `MATH@PI 64 MATH@ENCLOSE`
-- **ERROR conditions:** `stackTargetMode`, `nonPositiveOrNonIntegerBudget`, `nonObservableValue`
-
-## `MATH@ABS`
-
-Absolute value of a number.
-
-- **Family:** `exactMath`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `-2 MATH@ABS`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `MATH@NEG`
-
-Numeric negation.
-
-- **Family:** `exactMath`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 MATH@NEG`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `MATH@SIGN`
-
-Sign of a number: -1, 0, or 1.
-
-- **Family:** `exactMath`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `-2 MATH@SIGN`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `MATH@MIN`
-
-Smaller of two numbers.
-
-- **Family:** `exactMath`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 2 MATH@MIN`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `MATH@MAX`
-
-Larger of two numbers.
-
-- **Family:** `exactMath`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `1 2 MATH@MAX`
-- **ERROR conditions:** `stackTargetMode`, `nonNumeric`
-
-## `MATH@POW`
-
-Integer-exponent exact power: base^exp.
-
-- **Family:** `exactMath`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: zeroToNegativeExponent → divisionByZero
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `2 10 MATH@POW`
-- **ERROR conditions:** `stackTargetMode`, `nonNumericBase`, `nonIntegerExponent`, `exponentMagnitudeExceeded`
-
-## `MATH@GCD`
-
-Greatest common divisor of two integers.
-
-- **Family:** `exactMath`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `12 18 MATH@GCD`
-- **ERROR conditions:** `stackTargetMode`, `nonInteger`
-
-## `MATH@LCM`
-
-Least common multiple of two integers.
-
-- **Family:** `exactMath`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthroughThenProject`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.EXACT`, `LANG.VALUES.TRUTH`, `LANG.MACHINE.LIMITS`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `12 18 MATH@LCM`
-- **ERROR conditions:** `stackTargetMode`, `nonInteger`
-
-## `TIME@NOW`
-
-Return the current Unix timestamp.
-
-- **Family:** `calendarTime`
-- **Stack:** 0 input(s) → 1 output(s); `none` consumption
-- **NIL policy:** `passthrough`; projection: none
-- **Purity / determinism:** `observational` / `hostRelative`
-- **Capability / hosted effect:** `clock` / `clockRead`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `TIME@NOW`
-- **ERROR conditions:** `stackTargetMode`, `missingClockCapability`, `hostClockFailure`
-
-## `TIME@DATETIME`
-
-Render an instant as civil [ Y M D h m s ] at a UTC offset (hours).
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `timestamp 0 TIME@DATETIME`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@TIMESTAMP`
-
-Resolve a civil datetime to an instant at a UTC offset (hours).
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `datetime 0 TIME@TIMESTAMP`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@DATE`
-
-Extract the [ Y M D ] date portion of a datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `datetime TIME@DATE`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@TIME`
-
-Extract the [ h m s ] time-of-day from a datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `datetime TIME@TIME`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@YEAR`
-
-Return the year field of a date or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date TIME@YEAR`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@MONTH`
-
-Return the month field of a date or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date TIME@MONTH`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@DAY`
-
-Return the day field of a date or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date TIME@DAY`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@HOUR`
-
-Return the hour field of a time or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `time TIME@HOUR`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@MINUTE`
-
-Return the minute field of a time or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `time TIME@MINUTE`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@SECOND`
-
-Return the second field of a time or datetime.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `time TIME@SECOND`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@WEEKDAY`
-
-Return the ISO weekday of a date or datetime (Monday=1 .. Sunday=7).
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date TIME@WEEKDAY`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@ADD-DAYS`
-
-Shift a date or datetime by N whole days.
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date 1 TIME@ADD-DAYS`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@DIFF-DAYS`
-
-Whole-day difference (a - b) between two dates or datetimes.
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date-a date-b TIME@DIFF-DAYS`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@FORMAT`
-
-Render a date as YYYY-MM-DD or a datetime as YYYY-MM-DDThh:mm:ss.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date TIME@FORMAT`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@PARSE-ISO`
-
-Parse an ISO-8601 civil string into a datetime; Bubble/NIL if invalid.
-
-- **Family:** `calendarTime`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: invalidIsoEncoding → invalidEncoding
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `'2026-07-29' TIME@PARSE-ISO`
-- **ERROR conditions:** `nonText`
-
-## `TIME@ADD-MONTHS`
-
-Add N months to a date/datetime, clamping to the month end.
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date 1 TIME@ADD-MONTHS`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `TIME@ADD-YEARS`
-
-Add N years to a date/datetime, clamping Feb 29 in non-leap years.
-
-- **Family:** `calendarTime`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.ROLES`, `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `date 1 TIME@ADD-YEARS`
-- **ERROR conditions:** `stackTargetMode`, `invalidTemporalShapeOrRange`
-
-## `SERIAL@LIST-PORTS`
-
-Ask the host to enumerate available serial ports.
-
-- **Family:** `serialEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialQuery`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `SERIAL@LIST-PORTS`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@OPEN`
-
-Open a serial port by id; leaves the port handle on the stack.
-
-- **Family:** `serialEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `'port-id' SERIAL@OPEN`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@CONFIGURE`
-
-Set the baud rate of an open serial port.
-
-- **Family:** `serialEffect`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `handle 115200 SERIAL@CONFIGURE`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@WRITE`
-
-Write a byte vector to an open serial port.
-
-- **Family:** `serialEffect`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialWrite`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `handle [ 1 2 ] SERIAL@WRITE`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@READ`
-
-Drain received bytes from an open serial port; Bubble/NIL when none.
-
-- **Family:** `serialEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `createsNil`; projection: noDataOrDisconnected → noData, portDisconnected
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialRead`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `handle SERIAL@READ`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@FLUSH`
-
-Flush the outgoing buffer of an open serial port.
-
-- **Family:** `serialEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `handle SERIAL@FLUSH`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `SERIAL@CLOSE`
-
-Close an open serial port.
-
-- **Family:** `serialEffect`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `serial` / `serialControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `handle SERIAL@CLOSE`
-- **ERROR conditions:** `missingSerialCapability`, `invalidSerialArgument`, `hostSerialFailure`
-
-## `MUSIC@SEQ`
-
-Set the active playback mode to sequential.
-
-- **Family:** `musicEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `MUSIC@SEQ`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SIM`
-
-Set the active playback mode to simultaneous.
-
-- **Family:** `musicEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `MUSIC@SIM`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SLOT`
-
-Set the slot duration (in seconds) used by bare notes.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@SLOT`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@GAIN`
-
-Set the master output gain (0.0-1.0).
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@GAIN`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@GAIN-RESET`
-
-Reset the master gain to the default 1.0.
-
-- **Family:** `musicEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `MUSIC@GAIN-RESET`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@PAN`
-
-Set the stereo pan position (-1.0 left .. 1.0 right).
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@PAN`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@PAN-RESET`
-
-Reset pan to center (0.0).
-
-- **Family:** `musicEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `MUSIC@PAN-RESET`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@FX-RESET`
-
-Reset all audio effects (gain, pan, envelope, waveform) to defaults.
-
-- **Family:** `musicEffect`
-- **Stack:** 0 input(s) → 0 output(s); `none` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `MUSIC@FX-RESET`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@PLAY`
-
-Play a music value (note, group, voice, ...).
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioOutput`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@PLAY`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SEQ-GROUP`
-
-Build an explicit sequential music group from a vector of notes.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@SEQ-GROUP`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@SIM-GROUP`
-
-Build an explicit simultaneous music group from a vector of notes.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@SIM-GROUP`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@CHORD`
-
-Build a chord (simultaneous group) from a vector of pitches or notes.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@CHORD`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@HZ`
-
-Build a music.pitch from a frequency in hertz.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@HZ`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@DUR`
-
-Build a music.duration from a number of seconds.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@DUR`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@NOTE`
-
-Combine a music.pitch and a music.duration into a music.note.
-
-- **Family:** `musicValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 arg2 MUSIC@NOTE`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@REST`
-
-Build a music.rest from a music.duration.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@REST`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@EDO`
-
-Build an equal-division-of-the-octave tuning.
-
-- **Family:** `musicValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 arg2 MUSIC@EDO`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@EDR`
-
-Build an equal-division-of-a-ratio tuning (non-octave).
-
-- **Family:** `musicValue`
-- **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 arg2 arg3 MUSIC@EDR`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@STEP`
-
-Resolve a tuning step into an exact music.pitch.
-
-- **Family:** `musicValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 arg2 MUSIC@STEP`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@VOICE`
-
-Build a music group with the role of a single melodic voice.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@VOICE`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@TRACK`
-
-Build a music group with the role of an instrument track.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@TRACK`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@MEASURE`
-
-Build a music group with the role of a measure (bar).
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@MEASURE`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@PHRASE`
-
-Build a music group with the role of a phrase.
-
-- **Family:** `musicValue`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 MUSIC@PHRASE`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@WITH-TUNING`
-
-Bind a tuning over a body so bare integers are read as tuning steps.
-
-- **Family:** `musicValue`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `pure` / `deterministic`
-- **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.DISJOINT`, `LANG.VALUES.ROLES`, `LANG.FAILURE.TRICHOTOMY`
-- **Syntax:** `arg1 arg2 MUSIC@WITH-TUNING`
-- **ERROR conditions:** `invalidMusicValue`
-
-## `MUSIC@EXPLAIN`
-
-Describe how MUSIC@PLAY would interpret a value, without playing it.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioOutput`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@EXPLAIN`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@ADSR`
-
-Set the ADSR envelope used by subsequent notes.
-
-- **Family:** `musicEffect`
-- **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 arg2 MUSIC@ADSR`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SINE`
-
-Select the sine waveform on a target.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@SINE`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SQUARE`
-
-Select the square waveform on a target.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@SQUARE`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@SAW`
-
-Select the sawtooth waveform on a target.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@SAW`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
-
-## `MUSIC@TRI`
-
-Select the triangle waveform on a target.
-
-- **Family:** `musicEffect`
-- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
-- **Purity / determinism:** `effectful` / `hostRelative`
-- **Capability / hosted effect:** `audio` / `audioControl`
-- **Clauses:** `LANG.MACHINE.ORDER`, `LANG.FAILURE.TRICHOTOMY`, `LANG.EFFECTS.HOSTED`
-- **Syntax:** `arg1 MUSIC@TRI`
-- **ERROR conditions:** `missingAudioCapability`, `invalidMusicValue`, `hostAudioFailure`
+- **Capability / hosted effect:** `console` / `consoleWrite`
+- **Clauses:** `LANG.EFFECTS.OUTPUT`, `LANG.MACHINE.ORDER`
+- **Syntax:** `42 PRINT`

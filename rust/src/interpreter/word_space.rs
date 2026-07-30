@@ -83,39 +83,35 @@ fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
         Add | Sub | Mul | Div => (Linear, true),
         // Comparisons and logic may produce elementwise results; O(input),
         // not audited as tight.
-        Eq | Lt | Le | Gt | Gte | Neq | CompareWithin | And | Or | Not => (Linear, false),
+        Eq | Lt | Le | Gt | Gte | Neq | And | Or | Not => (Linear, false),
         // Higher-order and dynamic-control words run caller-supplied bodies a
         // data-dependent number of times: no static bound.
-        Map | Filter | Fold | Unfold | Any | All | Count | Scan => (Unbounded, false),
-        Exec | Eval | OrElse | Cond | Precompute => (Unbounded, false),
+        Map | Filter | Fold | Any | All => (Unbounded, false),
+        Exec | Cond => (Unbounded, false),
         // Structure access/observation: shares persistent structure, O(1) new.
-        Get | Length | Shape | Rank => (Const, false),
-        NilCheck | NilReason | NilOrigin | NilRecoverable | NilDiagnosis => (Const, false),
-        True | False | Nil | Idle | Force => (Const, false),
+        Get | Length => (Const, false),
+        NilCheck | NilReason => (Const, false),
+        True | False | Nil | Force => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse => (Linear, true),
         Insert | Replace | Remove | Take | Split | Reorder | Collect => (Linear, false),
-        Reshape | Transpose => (Linear, false),
-        Conserve => (Linear, false),
         // The value-driven materializers: a numeric operand's *value* sets the
         // materialized length (Phase 3 gives these the runtime water level).
         Range | Fill => (Unbounded, true),
         // Rounding/number casts: output bounded by operand digit count.
         Floor | Ceil | Round | Mod => (Linear, false),
-        Quantize | QuantizeHalfAway | QuantizeFloor | QuantizeCeil | QuantizeTrunc => {
-            (Linear, false)
-        }
-        Str | Num | Bool | Chr | Chars | Tokenize | Trim | TrimLeft | TrimRight => (Linear, false),
+        Str | Num | Chr | Chars | Tokenize | Trim => (Linear, false),
         StartsWith | EndsWith => (Linear, false),
-        ToCf => (Linear, false),
         // Repetition can multiply sizes (pattern × replacement, k × separator).
         Substitute | Join => (Superlinear, false),
         // Dictionary/module registration copies bounded structure.
-        Def | Import | ImportOnly | Unimport | UnimportOnly => (Linear, false),
+        Def => (Linear, false),
         Del | Lookup => (Const, false),
         Print => (Linear, false),
-        // Child-runtime words: an AWAIT result is another program's output.
-        Spawn | Await | Status | Kill | Monitor | Supervise => (Unbounded, false),
+        // The Words promoted out of the deleted MATH and ALGO modules.
+        Abs | Neg | Sign | Min | Max | Sqrt => (Linear, false),
+        Sort | Unique => (Linear, true),
+        Contains | IndexOf => (Linear, false),
     }
 }
 

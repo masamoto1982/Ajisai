@@ -2,7 +2,6 @@ use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub type NodeId = u32;
@@ -19,13 +18,7 @@ pub enum NodeKind {
         data: Vec<Fraction>,
         shape: Vec<usize>,
     },
-    Record {
-        pairs: Vec<NodeId>,
-        shape: std::sync::Arc<crate::types::RecordShape>,
-    },
     CodeBlock(Vec<Token>),
-    ProcessHandle(u64),
-    SupervisorHandle(u64),
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -63,15 +56,6 @@ impl ValueArena {
         self.alloc_node(NodeKind::Tensor { data, shape }, hint)
     }
 
-    pub fn alloc_record(
-        &mut self,
-        pairs: Vec<NodeId>,
-        shape: std::sync::Arc<crate::types::RecordShape>,
-        hint: Interpretation,
-    ) -> NodeId {
-        self.alloc_node(NodeKind::Record { pairs, shape }, hint)
-    }
-
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
         let mut children = Vec::with_capacity(value.chars().count());
         for ch in value.chars() {
@@ -104,14 +88,11 @@ impl ValueArena {
     pub fn children(&self, id: NodeId) -> &[NodeId] {
         match self.kind(id) {
             NodeKind::Vector { children } => children.as_slice(),
-            NodeKind::Record { pairs, .. } => pairs.as_slice(),
             NodeKind::Tensor { .. }
             | NodeKind::Nil
             | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
-            | NodeKind::CodeBlock(_)
-            | NodeKind::ProcessHandle(_)
-            | NodeKind::SupervisorHandle(_) => &[],
+            | NodeKind::CodeBlock(_) => &[],
         }
     }
 }
@@ -127,7 +108,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             // via the current vocabulary (Tier ≤ 1 comparison is total, so no
             // word constructs U yet), so the gap is latent. Tracked for a
             // dedicated follow-up.
-            ValueData::Nil | ValueData::Unknown(_) => arena.alloc_nil(value.hint),
+            ValueData::Nil => arena.alloc_nil(value.hint),
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::ExactScalar(er) => {
@@ -150,21 +131,8 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             ValueData::Tensor { data, shape } => {
                 arena.alloc_tensor(data.to_fractions(), (**shape).clone(), value.hint)
             }
-            ValueData::Record { pairs, shape } => {
-                let pair_ids = pairs
-                    .iter()
-                    .map(|pair| alloc_recursive(pair, arena))
-                    .collect();
-                arena.alloc_record(pair_ids, shape.clone(), value.hint)
-            }
             ValueData::CodeBlock(tokens) => {
                 arena.alloc_node(NodeKind::CodeBlock(tokens.clone()), value.hint)
-            }
-            ValueData::ProcessHandle(id) => {
-                arena.alloc_node(NodeKind::ProcessHandle(*id), value.hint)
-            }
-            ValueData::SupervisorHandle(id) => {
-                arena.alloc_node(NodeKind::SupervisorHandle(*id), value.hint)
             }
         }
     }
@@ -217,32 +185,8 @@ pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
                 hint: arena.hint(id),
                 absence: None,
             },
-            NodeKind::Record { pairs, shape } => {
-                let values = pairs
-                    .iter()
-                    .map(|pair_id| rebuild_recursive(arena, *pair_id))
-                    .collect();
-                Value {
-                    data: ValueData::Record {
-                        pairs: Arc::new(values),
-                        shape: shape.clone(),
-                    },
-                    hint: arena.hint(id),
-                    absence: None,
-                }
-            }
             NodeKind::CodeBlock(tokens) => Value {
                 data: ValueData::CodeBlock(tokens.clone()),
-                hint: arena.hint(id),
-                absence: None,
-            },
-            NodeKind::ProcessHandle(handle_id) => Value {
-                data: ValueData::ProcessHandle(*handle_id),
-                hint: arena.hint(id),
-                absence: None,
-            },
-            NodeKind::SupervisorHandle(handle_id) => Value {
-                data: ValueData::SupervisorHandle(*handle_id),
                 hint: arena.hint(id),
                 absence: None,
             },
@@ -284,20 +228,14 @@ pub fn json_to_arena_node(arena: &mut ValueArena, json: JsonValue) -> Result<Nod
                 return Ok(arena.alloc_nil(Interpretation::Unassigned));
             }
             let mut pairs = Vec::with_capacity(map.len());
-            let mut index = HashMap::with_capacity(map.len());
             for (key, value) in map {
-                index.insert(key.clone(), pairs.len());
                 let key_id = arena.alloc_string(&key);
                 let value_id = json_to_arena_node(arena, value)?;
                 let pair_id =
                     arena.alloc_vector(vec![key_id, value_id], Interpretation::Unassigned);
                 pairs.push(pair_id);
             }
-            Ok(arena.alloc_record(
-                pairs,
-                crate::types::record_shape::intern_record_shape(index),
-                Interpretation::Unassigned,
-            ))
+            Ok(arena.alloc_vector(pairs, Interpretation::Unassigned))
         }
     }
 }
@@ -352,27 +290,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             JsonValue::Array(arr)
         }
         NodeKind::Tensor { data, shape } => tensor_to_json(arena.hint(root), data, shape),
-        NodeKind::Record { pairs, .. } => {
-            let mut map = serde_json::Map::new();
-            for pair_id in pairs {
-                let NodeKind::Vector { children } = arena.kind(*pair_id) else {
-                    continue;
-                };
-                if children.len() != 2 {
-                    continue;
-                }
-
-                let key = match arena_node_to_json(arena, children[0]) {
-                    JsonValue::String(s) => s,
-                    other => other.to_string(),
-                };
-                map.insert(key, arena_node_to_json(arena, children[1]));
-            }
-            JsonValue::Object(map)
-        }
-        NodeKind::CodeBlock(_) | NodeKind::ProcessHandle(_) | NodeKind::SupervisorHandle(_) => {
-            JsonValue::Null
-        }
+        NodeKind::CodeBlock(_) => JsonValue::Null,
     }
 }
 
@@ -450,16 +368,23 @@ mod tests {
     }
 
     #[test]
-    fn json_roundtrip_through_arena_node_keeps_primitives_and_objects() {
+    fn json_object_becomes_a_vector_of_key_value_pairs() {
+        // Records are gone from the value model, so a JSON object is modelled as
+        // a vector of `[ key value ]` pairs (LANG.VALUES.VECTOR). The mapping is
+        // therefore lossy in one direction by design: an object goes in, pairs
+        // come back.
         let json = serde_json::json!({
             "name": "Ajisai",
             "values": [1, 2, 3],
             "flag": true
         });
         let mut arena = ValueArena::new();
-        let root = json_to_arena_node(&mut arena, json.clone()).expect("json to arena");
+        let root = json_to_arena_node(&mut arena, json).expect("json to arena");
         let restored = arena_node_to_json(&arena, root);
-        assert_eq!(restored, json);
+        assert_eq!(
+            restored,
+            serde_json::json!([["flag", true], ["name", "Ajisai"], ["values", [1, 2, 3]]])
+        );
     }
 
     #[test]

@@ -75,11 +75,11 @@ proptest! {
         assert_law("case-mixed", &format!("{a} {b} Add"), &format!("{a} {b} ADD"));
     }
 
-    // ── TOP-EAT shorthand `;` ≡ `. ,` ≡ default (§3.9 Modifier sugar) ──
+    // ── EAT sugar `,` ≡ the default (LANG.MODIFIERS.CONSUMPTION) ──
     #[test]
-    fn top_eat_shorthand(a in small(), b in small()) {
-        assert_law("semicolon-dot-comma", &format!("{a} {b} ; ADD"), &format!("{a} {b} . , ADD"));
-        assert_law("semicolon-default",   &format!("{a} {b} ; ADD"), &format!("{a} {b} ADD"));
+    fn eat_shorthand_is_the_default(a in small(), b in small()) {
+        assert_law("comma-eat", &format!("{a} {b} , ADD"), &format!("{a} {b} EAT ADD"));
+        assert_law("comma-default", &format!("{a} {b} , ADD"), &format!("{a} {b} ADD"));
     }
 }
 
@@ -113,8 +113,8 @@ fn comparison_alias_decides_composed_equality_identically() {
     // identically. (This law formerly pinned the UNKNOWN diagnosis here;
     // with comparison total over D, UNKNOWN is confined to COMPARE-WITHIN,
     // which has no alias sugar to desugar.)
-    let lhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
-    let rhs = "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
+    let lhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 =";
+    let rhs = "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ";
     let alias = observed(lhs);
     let canonical = observed(rhs);
     assert_eq!(alias, canonical);

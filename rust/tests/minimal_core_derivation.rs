@@ -5,9 +5,9 @@
 //! `material` tier is derivable library that stays bound by the Minimal Core's
 //! propagation disciplines. This file is an executable *witness* of that
 //! derivability claim for one material word: it re-implements the `material`
-//! word `MATH@SIGN` (tier `material`, derived from `algebra.exact-real.budgeted-order`
+//! word `SIGN` (tier `material`, derived from `algebra.exact-real.budgeted-order`
 //! and `algebra.k3.domain`) as the user word `SIGN2`, written using **only**
-//! Minimal Core words, and asserts the two agree over `MATH@SIGN`'s domain.
+//! Minimal Core words, and asserts the two agree over `SIGN`'s domain.
 //!
 //! `SIGN2` uses exactly these words, all Minimal Core:
 //!   - `NIL?`   — identity tier (Bubble/NIL observation, §7.15)
@@ -16,7 +16,7 @@
 //!   - `NIL` and numeric literals — identity / sugar
 //!
 //! No `material`-tier word (no arithmetic, no vector word, no module word)
-//! appears in the definition, so a green run witnesses that `MATH@SIGN`'s
+//! appears in the definition, so a green run witnesses that `SIGN`'s
 //! observable contract is reconstructible from the Minimal Core alone.
 //!
 //! Scope. The equivalence is asserted over the admitted domain (§4.2.7): both
@@ -24,11 +24,11 @@
 //! plus NIL. Earlier this witness could only assert equivalence over rationals,
 //! because the two *diverged* on lazy irrationals — the derived `SIGN2` signed
 //! `2 SQRT` correctly (→ `1`) via Core comparison's admitted-domain totality
-//! (§7.4), while the built-in `MATH@SIGN` rejected the lazy operand with
+//! (§7.4), while the built-in `SIGN` rejected the lazy operand with
 //! `SIGN: expected a number`. That divergence was a finding this witness
 //! surfaced — the derivation acting as an oracle for the material word, exactly
 //! as the Python port surfaced specification gaps — and it has since been fixed:
-//! `MATH@SIGN` now decides its sign through the budgeted comparison against `0`
+//! `SIGN` now decides its sign through the budgeted comparison against `0`
 //! (§7.4.3), so the derivation and the built-in agree over the whole admitted
 //! domain. `minimal_core_sign_matches_builtin_on_lazy_irrationals` below guards
 //! that the two remain in agreement there.
@@ -76,13 +76,13 @@ fn derived(x: &str) -> String {
 
 /// Built-in side: the `material` word under witness.
 fn builtin(x: &str) -> String {
-    eval(&format!("'math' IMPORT {x} MATH@SIGN"))
+    eval(&format!("{x} SIGN"))
 }
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(128))]
 
-    /// Over the rational domain, the Minimal-Core `SIGN2` reproduces `MATH@SIGN`
+    /// Over the rational domain, the Minimal-Core `SIGN2` reproduces `SIGN`
     /// exactly. `num`/`den` covers integers (den=1), proper fractions, both
     /// signs, and zero (num=0). The input value is *constructed* with `/`
     /// (division builds the operand); `SIGN2` itself uses no arithmetic.
@@ -96,7 +96,7 @@ proptest! {
         let b = builtin(&x);
         prop_assert_eq!(
             &d, &b,
-            "SIGN2 (Minimal Core) and MATH@SIGN disagree on {}/{}: derived={}, builtin={}",
+            "SIGN2 (Minimal Core) and SIGN disagree on {}/{}: derived={}, builtin={}",
             num, den, d, b
         );
     }
@@ -104,15 +104,11 @@ proptest! {
 
 /// NIL propagation: both the derived word and the built-in pass a NIL operand
 /// through to NIL. `SIGN2` inherits this from the `NIL?` guard plus COND's
-/// non-firing on the remaining guards, matching `MATH@SIGN`'s NIL-passthrough.
+/// non-firing on the remaining guards, matching `SIGN`'s NIL-passthrough.
 #[test]
 fn minimal_core_sign_matches_builtin_on_nil() {
     let x = "1 0 /"; // divisionByZero → NIL
-    assert_eq!(
-        derived(x),
-        builtin(x),
-        "SIGN2 and MATH@SIGN disagree on NIL"
-    );
+    assert_eq!(derived(x), builtin(x), "SIGN2 and SIGN disagree on NIL");
     assert_eq!(derived(x), "NIL");
 }
 
@@ -129,17 +125,17 @@ fn minimal_core_sign_decided_spot_checks() {
         ("0 4 /", "0/1"),
     ] {
         assert_eq!(derived(x), want, "SIGN2({x})");
-        assert_eq!(builtin(x), want, "MATH@SIGN({x})");
+        assert_eq!(builtin(x), want, "SIGN({x})");
     }
 }
 
 /// Lazy-irrational agreement. Both the Minimal-Core `SIGN2` and the built-in
-/// `MATH@SIGN` sign lazy continued-fraction values through the budgeted
+/// `SIGN` sign lazy continued-fraction values through the budgeted
 /// comparison against `0` (§7.4.3), so they agree over the whole admitted
 /// domain — not only the rationals. This is the closed form of the oracle
 /// finding this witness first surfaced: the built-in used to reject these
 /// operands with `SIGN: expected a number` while the derivation handled them,
-/// and once `MATH@SIGN` was fixed the two became fully equivalent here too.
+/// and once `SIGN` was fixed the two became fully equivalent here too.
 /// Each operand needs the math module in scope to be *constructed*; `SIGN2`
 /// itself still uses only Minimal Core words.
 #[test]
@@ -150,9 +146,9 @@ fn minimal_core_sign_matches_builtin_on_lazy_irrationals() {
         ("2 SQRT 2 SQRT SUB", "0/1"), // √2 - √2 = 0
         ("3 SQRT 2 SQRT SUB", "1/1"), // √3 - √2 > 0
     ] {
-        let derived = eval(&format!("'math' IMPORT {SIGN2_DEF}{x} SIGN2"));
-        let builtin = eval(&format!("'math' IMPORT {x} MATH@SIGN"));
-        assert_eq!(derived, builtin, "SIGN2 vs MATH@SIGN on `{x}`");
+        let derived = eval(&format!("{SIGN2_DEF}{x} SIGN2"));
+        let builtin = eval(&format!("{x} SIGN"));
+        assert_eq!(derived, builtin, "SIGN2 vs SIGN on `{x}`");
         assert_eq!(derived, want, "SIGN2(`{x}`)");
     }
 }

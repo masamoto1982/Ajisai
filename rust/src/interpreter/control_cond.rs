@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::epoch::EpochSnapshot;
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::{Interpretation, Stack, Token, Value, ValueData};
 
 use super::compiled_plan::{execute_compiled_plan, CompiledPlan};
@@ -83,23 +83,6 @@ fn run_cond_core(
     // Hedged guard prefetch is part of the opt-in elastic engine; when it
     // handles the dispatch it returns from here so the greedy loop below is
     // exactly the code that runs in the default build.
-    #[cfg(feature = "elastic-engine")]
-    {
-        if is_hedged_cond_mode(interp) {
-            interp.push_hedged_trace("cond:prefetch-start");
-            if let Some(clause) =
-                evaluate_guard_hedged_prefetch(interp, clauses, &target_value, &mut else_clause)?
-            {
-                interp.push_hedged_trace("cond:winner-prefetched-guard");
-                return run_clause_body(interp, clause, &target_value, tail_context);
-            }
-            if let Some(clause) = else_clause {
-                return run_clause_body(interp, clause, &target_value, tail_context);
-            }
-            return Err(AjisaiError::CondExhausted);
-        }
-    }
-
     for clause in clauses {
         if is_idle_guard(&clause.guard) {
             else_clause = Some(clause);
@@ -250,7 +233,6 @@ fn evaluate_guard_isolated(
     // together, so cloning it captures the aligned `(value, role)` slots
     // directly — no snapshot type and no alignment assertion needed.
     let saved_stack = interp.stack.clone();
-    let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
     let saved_epoch: EpochSnapshot = interp.current_epoch_snapshot();
 
@@ -258,7 +240,6 @@ fn evaluate_guard_isolated(
     interp
         .stack
         .push_with_role(value.clone(), Interpretation::Unassigned);
-    interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
     // Guards are never tail position; run the compiled sub-plan when available,
@@ -271,13 +252,7 @@ fn evaluate_guard_isolated(
     };
     let guard_result_value: Option<Value> = interp.stack.pop();
 
-    restore_cond_eval_state(
-        interp,
-        saved_stack,
-        saved_target_mode,
-        saved_consumption_mode,
-        saved_epoch,
-    );
+    restore_cond_eval_state(interp, saved_stack, saved_consumption_mode, saved_epoch);
 
     execution_result?;
 
@@ -288,9 +263,6 @@ fn evaluate_guard_isolated(
     // an undecidable continued-fraction comparison — is not a definite
     // `true`, so its clause does not fire. Fall through to the next clause
     // exactly as for a `false` guard. U is neither an error nor a match.
-    if result_value.is_unknown() {
-        return Ok(false);
-    }
     // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
     // bare Boolean or one wrapped in a single-element vector; fall back to the
     // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.
@@ -345,92 +317,15 @@ fn evaluate_guard_greedy(
 fn restore_cond_eval_state(
     interp: &mut Interpreter,
     saved_stack: Stack,
-    saved_target_mode: OperationTargetMode,
     saved_consumption_mode: ConsumptionMode,
     saved_epoch: EpochSnapshot,
 ) {
     interp.stack = saved_stack;
-    interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
     interp.dictionary_epoch = saved_epoch.dictionary_epoch;
     interp.module_epoch = saved_epoch.module_epoch;
     interp.execution_epoch = saved_epoch.execution_epoch;
     interp.global_epoch = saved_epoch.global_epoch;
-}
-
-#[cfg(feature = "elastic-engine")]
-fn is_pure_cond_guard(guard_tokens: &[Token]) -> bool {
-    let mut symbols: Vec<String> = Vec::new();
-    for token in guard_tokens {
-        match token {
-            Token::Symbol(s) => symbols.push(s.to_string()),
-            Token::Number(_) | Token::String(_) => {}
-            Token::LineBreak => {}
-            _ => return false,
-        }
-    }
-    crate::elastic::can_hedge_cond_guard(&symbols)
-}
-
-#[cfg(feature = "elastic-engine")]
-fn is_hedged_cond_mode(interp: &Interpreter) -> bool {
-    matches!(
-        interp.elastic_mode(),
-        crate::elastic::ElasticMode::HedgedSafe | crate::elastic::ElasticMode::HedgedTrace
-    )
-}
-
-#[cfg(feature = "elastic-engine")]
-fn evaluate_guard_hedged_prefetch<'a>(
-    interp: &mut Interpreter,
-    clauses: &'a [CondClause],
-    target_value: &Value,
-    else_clause: &mut Option<&'a CondClause>,
-) -> Result<Option<&'a CondClause>> {
-    let mut prefetched: Vec<Option<Result<bool>>> = vec![None; clauses.len()];
-    let mut has_impure_guard = false;
-
-    for (idx, clause) in clauses.iter().enumerate() {
-        if is_idle_guard(&clause.guard) {
-            continue;
-        }
-        if is_pure_cond_guard(&clause.guard) {
-            interp.runtime_metrics.cond_guard_prefetch_count += 1;
-            prefetched[idx] = Some(evaluate_guard_isolated(
-                interp,
-                &clause.guard,
-                clause.guard_plan.as_deref(),
-                target_value,
-            ));
-        } else {
-            has_impure_guard = true;
-        }
-    }
-    if has_impure_guard {
-        interp.push_hedged_trace("cond:partial-prefetch-impure-guard-present");
-    }
-
-    for (idx, clause) in clauses.iter().enumerate() {
-        if is_idle_guard(&clause.guard) {
-            *else_clause = Some(clause);
-            continue;
-        }
-
-        let is_true = if let Some(result) = prefetched[idx].clone() {
-            result?
-        } else {
-            evaluate_guard_greedy(
-                interp,
-                &clause.guard,
-                clause.guard_plan.as_deref(),
-                target_value,
-            )?
-        };
-        if is_true {
-            return Ok(Some(clause));
-        }
-    }
-    Ok(None)
 }
 
 fn execute_cond_body(
@@ -441,14 +336,12 @@ fn execute_cond_body(
     tail_context: bool,
 ) -> Result<()> {
     let saved_stack = interp.stack.clone();
-    let saved_target_mode: OperationTargetMode = interp.operation_target_mode;
     let saved_consumption_mode: ConsumptionMode = interp.consumption_mode;
 
     interp.stack.clear();
     interp
         .stack
         .push_with_role(value.clone(), Interpretation::Unassigned);
-    interp.operation_target_mode = OperationTargetMode::StackTop;
     interp.consumption_mode = ConsumptionMode::Consume;
 
     // This clause body runs in the word's tail position iff the COND itself
@@ -473,7 +366,6 @@ fn execute_cond_body(
         };
 
     interp.stack = saved_stack;
-    interp.operation_target_mode = saved_target_mode;
     interp.consumption_mode = saved_consumption_mode;
 
     execution_result?;

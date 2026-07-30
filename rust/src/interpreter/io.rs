@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, HostCapability, HostEffect, Interpreter};
+use crate::interpreter::{ConsumptionMode, HostEffect, Interpreter};
 use crate::types::Value;
 use std::fmt::Write;
 
@@ -15,7 +15,7 @@ fn extract_value_for_print(interp: &mut Interpreter, keep_mode: bool) -> Result<
 }
 
 pub fn op_print(interp: &mut Interpreter) -> Result<()> {
-    interp.run_hosted_effect_schema("PRINT", HostCapability::Effect, |interp| {
+    interp.run_effect_schema(|interp| {
         let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
         let val = extract_value_for_print(interp, is_keep_mode)?;
         // PRINT is an output boundary: a Text-role value is emitted as its raw

@@ -34,33 +34,6 @@ async fn print_dependency_makes_user_word_effectful() {
     assert_eq!(contract.purity, ContractPurity::Effectful);
     assert!(contract.capabilities.contains(Capabilities::IO));
 }
-
-#[tokio::test]
-async fn now_dependency_makes_user_word_observable_and_nondeterministic() {
-    let contract = contract_for("'time' IMPORT { NOW } 'STAMP' DEF", "STAMP").await;
-    assert_eq!(contract.purity, ContractPurity::Observable);
-    assert_eq!(contract.determinism, ContractDeterminism::NonDeterministic);
-    assert!(contract.capabilities.contains(Capabilities::TIME));
-}
-
-#[tokio::test]
-async fn nil_and_unknown_sources_are_not_conflated() {
-    let nil_contract = contract_for("{ DIV } 'SAFE_DIV' DEF", "SAFE_DIV").await;
-    assert_eq!(nil_contract.nil_behavior, NilBehavior::MayCreate);
-    assert_eq!(nil_contract.unknown_behavior, UnknownBehavior::NeverCreates);
-
-    let unknown_contract = contract_for("{ COMPARE-WITHIN } 'CMP' DEF", "CMP").await;
-    assert_eq!(unknown_contract.nil_behavior, NilBehavior::Propagates);
-    assert_eq!(
-        unknown_contract.unknown_behavior,
-        UnknownBehavior::MayCreate
-    );
-    assert_eq!(
-        unknown_contract.water_sensitivity,
-        WaterSensitivity::WaterSensitive
-    );
-}
-
 #[tokio::test]
 async fn dependency_chains_widen_monotonically() {
     let pure = contract_for(
@@ -123,7 +96,11 @@ async fn different_content_does_not_share_contract_cache_entry() {
 }
 
 #[tokio::test]
-async fn del_invalidates_dependency_contract_to_conservative() {
+async fn del_refuses_while_a_dependent_would_be_left_dangling() {
+    // A word's inferred contract cannot go stale by losing a dependency: DEL
+    // fails with ERROR while any definition still depends on the target
+    // (LANG.DICTIONARY.MUTATION), so there is no force path to a dangling
+    // reference.
     let mut interp = Interpreter::new();
     interp
         .execute("{ DIV } 'DEP' DEF { DEP } 'USE' DEF")
@@ -132,27 +109,11 @@ async fn del_invalidates_dependency_contract_to_conservative() {
     let before = interp.infer_word_contract("USE").unwrap();
     assert_eq!(before.nil_behavior, NilBehavior::MayCreate);
 
-    interp.execute("! 'DEP' DEL").await.unwrap();
-    let after = interp.infer_word_contract("USE").unwrap();
-    assert_eq!(after.confidence, ContractConfidence::Conservative);
-    assert_eq!(after.flow, ContractFlow::Dynamic);
-}
-
-#[tokio::test]
-async fn import_and_unimport_invalidate_contract_cache_without_changing_existing_dependency() {
-    let mut interp = Interpreter::new();
     interp
-        .execute("'json' IMPORT { PARSE } 'WRAP' DEF")
+        .execute("'DEP' DEL")
         .await
-        .unwrap();
-    let imported = interp.infer_word_contract("WRAP").unwrap();
-    assert_eq!(imported.purity, ContractPurity::Pure);
-    assert!(interp.word_contract_cache_len() > 0);
+        .expect_err("DEL must refuse while USE still depends on DEP");
 
-    interp.execute("'json' UNIMPORT").await.unwrap();
-    assert_eq!(interp.word_contract_cache_len(), 0);
-
-    let after_unimport = interp.infer_word_contract("WRAP").unwrap();
-    assert_eq!(after_unimport.purity, ContractPurity::Pure);
-    assert_eq!(after_unimport.cache_key, imported.cache_key);
+    let after = interp.infer_word_contract("USE").unwrap();
+    assert_eq!(after.nil_behavior, NilBehavior::MayCreate);
 }

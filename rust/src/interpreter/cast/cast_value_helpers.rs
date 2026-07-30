@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Stack, Value, ValueData};
+use crate::types::{Interpretation, Value, ValueData};
 
 pub(crate) fn is_string_value(val: &Value) -> bool {
     is_string_value_with_hint(val, Interpretation::Unassigned)
@@ -39,12 +39,8 @@ pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bo
         }
         ValueData::Scalar(_) => return false,
         ValueData::ExactScalar(_) => return false,
-        ValueData::Nil | ValueData::Unknown(_) => return false,
-        ValueData::Record { .. } => return false,
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => return false,
+        ValueData::Nil => return false,
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => return false,
     };
     children.iter().all(check_char_scalar)
 }
@@ -55,12 +51,8 @@ fn check_char_scalar(child: &Value) -> bool {
         ValueData::ExactScalar(_) => return false,
         ValueData::Vector(_) => return false,
         ValueData::Tensor { .. } => return false,
-        ValueData::Nil | ValueData::Unknown(_) => return false,
-        ValueData::Record { .. } => return false,
-        ValueData::Boolean(_)
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => return false,
+        ValueData::Nil => return false,
+        ValueData::Boolean(_) | ValueData::CodeBlock(_) => return false,
     };
     let n: i64 = match f.to_i64() {
         Some(n) if (0..=0x10FFFF).contains(&n) => n,
@@ -91,71 +83,31 @@ pub(crate) fn apply_unary_cast(
 ) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let hint: Interpretation = interp.stack.last_role();
-            let value: Value = if is_keep_mode {
-                interp
-                    .stack
-                    .last()
-                    .cloned()
-                    .ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
+    let hint: Interpretation = interp.stack.last_role();
+    let value: Value = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
-            match convert(&value, hint) {
-                Ok(result) => {
-                    // A unary cast is value-preserving on the semantic plane: the
-                    // slot keeps its prior plane role (e.g. `>CF` retagging).
-                    // Core casts that do change the role (STR/NUM/…) are re-tagged
-                    // afterward by `apply_word_hint_override`.
-                    interp.stack.push_with_role(result, hint);
-                    Ok(())
-                }
-                Err(error) => {
-                    if !is_keep_mode {
-                        interp.stack.push_with_role(value, hint);
-                    }
-                    Err(error)
-                }
-            }
+    match convert(&value, hint) {
+        Ok(result) => {
+            // A unary cast is value-preserving on the semantic plane: the
+            // slot keeps its prior plane role (e.g. `>CF` retagging).
+            // Core casts that do change the role (STR/NUM/…) are re-tagged
+            // afterward by `apply_word_hint_override`.
+            interp.stack.push_with_role(result, hint);
+            Ok(())
         }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Err(AjisaiError::StackUnderflow);
+        Err(error) => {
+            if !is_keep_mode {
+                interp.stack.push_with_role(value, hint);
             }
-
-            // Roles are captured before any drain so a value-preserving cast can
-            // carry each slot's prior plane role onto its converted value.
-            let hints: Vec<Interpretation> = interp.stack.roles().to_vec();
-            if is_keep_mode {
-                let originals: Vec<Value> = interp.stack.to_vec();
-                let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
-                for (idx, value) in originals.iter().enumerate() {
-                    converted.push(convert(value, hints[idx])?);
-                }
-                for (idx, result) in converted.into_iter().enumerate() {
-                    interp.stack.push_with_role(result, hints[idx]);
-                }
-                Ok(())
-            } else {
-                let originals: Vec<Value> = interp.stack.drain(..).collect();
-                let mut converted: Vec<Value> = Vec::with_capacity(originals.len());
-
-                for (idx, value) in originals.iter().enumerate() {
-                    match convert(value, hints[idx]) {
-                        Ok(result) => converted.push(result),
-                        Err(error) => {
-                            interp.stack = Stack::from_values_and_roles(originals, hints);
-                            return Err(error);
-                        }
-                    }
-                }
-
-                interp.stack = Stack::from_values_and_roles(converted, hints);
-                Ok(())
-            }
+            Err(error)
         }
     }
 }
@@ -219,7 +171,6 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
             ValueData::Nil => vec!["NIL".to_string()],
             // CS4 PR-2: casting U to a string yields `UNKNOWN` (matching its
             // display and the Boolean `TRUE`/`FALSE` precedent), never `NIL`.
-            ValueData::Unknown(_) => vec!["UNKNOWN".to_string()],
             ValueData::Boolean(b) => vec![if *b { "TRUE" } else { "FALSE" }.to_string()],
             ValueData::Scalar(f) => vec![format_fraction_to_string(f)],
             ValueData::ExactScalar(er) => {
@@ -229,16 +180,11 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
                     None => vec!["NIL".to_string()],
                 }
             }
-            ValueData::Vector(children)
-            | ValueData::Record {
-                pairs: children, ..
-            } => children.iter().flat_map(collect_fractions).collect(),
+            ValueData::Vector(children) => children.iter().flat_map(collect_fractions).collect(),
             ValueData::Tensor { data, .. } => {
                 data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }
-            ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec!["<code>".to_string()],
+            ValueData::CodeBlock(_) => vec!["<code>".to_string()],
         }
     }
 

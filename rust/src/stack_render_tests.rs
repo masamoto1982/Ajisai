@@ -19,14 +19,6 @@ async fn render(code: &str) -> Vec<String> {
         .unwrap_or_else(|e| panic!("`{code}` unexpectedly errored: {e}"));
     render_stack(interp.get_stack())
 }
-
-#[tokio::test]
-async fn tocf_rational_renders_as_continued_fraction() {
-    // `>CF` re-tags the slot role to ContinuedFraction; the shared surface
-    // renders the canonical nested CF, identical to the CLI stack display.
-    assert_eq!(render("1/3 >CF").await, vec!["( 0 ( 3 ) )".to_string()]);
-}
-
 #[tokio::test]
 async fn arithmetic_result_keeps_raw_number_role() {
     assert_eq!(render("1 2 ADD").await, vec!["3/1".to_string()]);

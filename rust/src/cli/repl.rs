@@ -13,11 +13,10 @@
 //! surface syntax — they are not language words and never reach the interpreter.
 
 use std::io::{BufRead, Write};
-use std::sync::Arc;
 
 use crate::interpreter::{HostEffect, Interpreter};
 
-use super::{block_on, host, stack_display, Opts};
+use super::{block_on, stack_display, Opts};
 
 /// Outcome kind of evaluating one REPL line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,7 +80,7 @@ pub(crate) struct ReplSession {
 impl ReplSession {
     pub(crate) fn new() -> Self {
         Self {
-            interp: Interpreter::with_host(Arc::new(host::CliHostEnv)),
+            interp: Interpreter::new(),
         }
     }
 
@@ -98,9 +97,8 @@ impl ReplSession {
 
         let output: Vec<String> = self.interp.host_effects()[effects_before..]
             .iter()
-            .filter_map(|effect| match effect {
-                HostEffect::Print(payload) => Some(payload.clone()),
-                _ => None,
+            .map(|effect| match effect {
+                HostEffect::Print(payload) => payload.clone(),
             })
             .collect();
         let stack_display = stack_display(&self.interp);
@@ -271,12 +269,7 @@ mod tests {
         let mut err = Vec::new();
         let opts = Opts {
             json: true,
-            explain: false,
             contract: false,
-            receipt: false,
-            fmt_check: false,
-            fmt_write: false,
-            lang: super::super::Lang::Ja,
             step_limit: None,
         };
         run_repl(input, &mut out, &mut err, &opts).unwrap();

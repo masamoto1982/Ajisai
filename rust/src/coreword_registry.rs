@@ -1,6 +1,4 @@
 use crate::builtins::builtin_specs;
-use crate::interpreter::modules::module_word_metadata_entries;
-use crate::interpreter::HostCapability;
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
@@ -148,7 +146,6 @@ pub struct CorewordMetadata {
     /// profile free of host-boundary words.
     pub profile: WordProfile,
     /// Capability required when `profile == Hosted`; absent for Core words.
-    pub required_capability: Option<HostCapability>,
     /// Where the canonical implementation lives (Core or a specific module).
     pub canonical_home: CanonicalHome,
     /// Whether the word appears in the Core word listing view.
@@ -289,7 +286,7 @@ fn build_builtin_word_registry() -> Vec<CorewordMetadata> {
     for meta in registry.iter_mut() {
         apply_core_boundary_listings(meta);
     }
-    let mut module_entries = module_word_metadata_entries();
+    let mut module_entries = Vec::new();
     for meta in module_entries.iter_mut() {
         apply_module_to_core_listings(meta);
     }
@@ -520,15 +517,17 @@ impl std::hash::Hash for CanonicalHome {
     }
 }
 
-fn builtin_profile(name: &str) -> (WordProfile, Option<HostCapability>) {
-    match name {
-        "PRINT" => (WordProfile::Hosted, Some(HostCapability::Effect)),
-        _ => (WordProfile::Core, None),
+fn builtin_profile(name: &str) -> WordProfile {
+    // Output is the only effect, so PRINT is the only non-Core-profile Word.
+    if name == "PRINT" {
+        WordProfile::Hosted
+    } else {
+        WordProfile::Core
     }
 }
 
 fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> CorewordMetadata {
-    let (profile, required_capability) = builtin_profile(spec.name);
+    let profile = builtin_profile(spec.name);
     CorewordMetadata {
         name: spec.name.to_string(),
         category: spec.category.to_lowercase(),
@@ -541,75 +540,6 @@ fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> Coreword
         safety_level: spec.safety_level,
         mass: spec.mass,
         profile,
-        required_capability,
-        canonical_home: CanonicalHome::Core,
-        listed_in_core: true,
-        listed_in_modules: Vec::new(),
-        listed_in_categories: Vec::new(),
-    }
-}
-
-pub(crate) fn pure(name: &str, category: &str) -> CorewordMetadata {
-    CorewordMetadata {
-        name: name.to_string(),
-        category: category.to_lowercase(),
-        purity: WordPurity::Pure,
-        effects: vec![],
-        deterministic: true,
-        safe_preview: true,
-        partiality: Partiality::Total,
-        nil_policy: NilPolicy::Passthrough,
-        safety_level: SafetyLevel::A,
-        mass: mass_contract(name),
-        profile: WordProfile::Core,
-        required_capability: None,
-        canonical_home: CanonicalHome::Core,
-        listed_in_core: true,
-        listed_in_modules: Vec::new(),
-        listed_in_categories: Vec::new(),
-    }
-}
-
-pub(crate) fn observable(
-    name: &str,
-    category: &str,
-    effects: &[&str],
-    deterministic_override: Option<bool>,
-) -> CorewordMetadata {
-    CorewordMetadata {
-        name: name.to_string(),
-        category: category.to_lowercase(),
-        purity: WordPurity::Observable,
-        effects: effects.iter().map(|x| x.to_string()).collect(),
-        deterministic: deterministic_override.unwrap_or(false),
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::C,
-        mass: mass_contract(name),
-        profile: WordProfile::Core,
-        required_capability: None,
-        canonical_home: CanonicalHome::Core,
-        listed_in_core: true,
-        listed_in_modules: Vec::new(),
-        listed_in_categories: Vec::new(),
-    }
-}
-
-pub(crate) fn effectful(name: &str, category: &str, effects: &[&str]) -> CorewordMetadata {
-    CorewordMetadata {
-        name: name.to_string(),
-        category: category.to_lowercase(),
-        purity: WordPurity::Effectful,
-        effects: effects.iter().map(|x| x.to_string()).collect(),
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        mass: mass_contract(name),
-        profile: WordProfile::Core,
-        required_capability: None,
         canonical_home: CanonicalHome::Core,
         listed_in_core: true,
         listed_in_modules: Vec::new(),
@@ -628,12 +558,11 @@ mod tests {
     //! the full coreword-registry coverage subset.
 
     use super::{
-        collect_duplicate_entries, collect_namespace_overlapping_names, get_boundary_words,
-        get_builtin_word_metadata, get_builtin_word_registry, get_canonical_core_words,
-        get_canonical_module_words, get_core_listed_words, get_coreword_metadata,
-        get_hosted_profile_words, get_module_listed_words, is_listing_only_for_module,
-        is_safe_preview_word, CanonicalHome, NilPolicy, Partiality, SafetyLevel, WordProfile,
-        WordPurity,
+        collect_duplicate_entries, collect_namespace_overlapping_names, get_builtin_word_metadata,
+        get_builtin_word_registry, get_canonical_core_words, get_canonical_module_words,
+        get_core_listed_words, get_coreword_metadata, get_hosted_profile_words,
+        is_listing_only_for_module, is_safe_preview_word, CanonicalHome, NilPolicy, Partiality,
+        SafetyLevel, WordProfile, WordPurity,
     };
 
     #[test]
@@ -915,39 +844,6 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_contract_h_min_max_sort_project_undecidable_comparison() {
-        // SPEC §7.4.3 / §7.14: MIN, MAX, and SORT are total *by projection* —
-        // an undecidable governing comparison is projected onto the logical
-        // Unknown (U) rather than raising. They must therefore be Projecting,
-        // not the pure-class default Total, with Passthrough nil_policy (NIL
-        // takes priority over a U-producing comparison, §4.5.2) and safety A
-        // (Projecting words are total-by-projection, §7.14). This guards the
-        // contract_override in module_builtins from regressing to Total.
-        for name in &["MATH@MIN", "MATH@MAX", "ALGO@SORT"] {
-            let meta = get_coreword_metadata(name)
-                .unwrap_or_else(|| panic!("{} must be in registry", name));
-            assert_eq!(
-                meta.partiality,
-                Partiality::Projecting,
-                "{} must be Projecting (SPEC §7.4.3, §7.14)",
-                name
-            );
-            assert_eq!(
-                meta.nil_policy,
-                NilPolicy::Passthrough,
-                "{} must be Passthrough (SPEC §7.4.3)",
-                name
-            );
-            assert_eq!(
-                meta.safety_level,
-                SafetyLevel::A,
-                "{} stays SafetyLevel A (Projecting is total-by-projection, §7.14)",
-                name
-            );
-        }
-    }
-
-    #[test]
     fn aq_ver_contract_i_nil_diagnostic_accessors_consume_nil() {
         // SPEC §4.5.0 / §7.15: the five diagnostic absence accessors inspect a
         // NIL rather than propagate it, so their nil_policy is ConsumesNil (the
@@ -956,13 +852,7 @@ mod tests {
         // their mass contract is Dynamic (net +1, like the LENGTH/GET
         // inspection words of §7.1.1 — a Fixed contract would mis-model the
         // retained operand for the static depth analyzer).
-        for name in &[
-            "NIL?",
-            "NIL-REASON",
-            "NIL-ORIGIN",
-            "NIL-RECOVERABLE?",
-            "NIL-DIAGNOSIS",
-        ] {
+        for name in &["NIL?", "NIL-REASON"] {
             let meta = get_coreword_metadata(name)
                 .unwrap_or_else(|| panic!("{} must be in registry", name));
             assert_eq!(
@@ -1046,20 +936,6 @@ mod tests {
                 spec.mass,
                 "{}: mass_contract adapter must read BuiltinSpec.mass",
                 spec.name
-            );
-        }
-    }
-
-    #[test]
-    fn aq_ver_contract_d_runtime_handle_words_are_quarantined() {
-        for name in &["SPAWN", "AWAIT", "STATUS", "KILL", "MONITOR", "SUPERVISE"] {
-            let meta = get_coreword_metadata(name)
-                .unwrap_or_else(|| panic!("{} must be in registry", name));
-            assert_eq!(
-                meta.safety_level,
-                SafetyLevel::Quarantined,
-                "{} must be Quarantined",
-                name
             );
         }
     }
@@ -1162,101 +1038,6 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_listing_g_sort_is_canonical_algo_and_core_listed() {
-        let sort = get_builtin_word_metadata("SORT").expect("SORT must be in registry");
-        assert_eq!(
-            sort.canonical_home,
-            CanonicalHome::Module("ALGO".to_string())
-        );
-        assert!(sort.is_canonical_module());
-        assert!(sort.listed_in_core, "SORT must be core-listed");
-        assert!(sort.listed_in_modules.iter().any(|m| m == "ALGO"));
-        assert!(sort.is_boundary_word());
-    }
-
-    #[test]
-    fn aq_ver_listing_h_csprng_is_module_only() {
-        let csprng = get_builtin_word_metadata("CSPRNG").expect("CSPRNG must be in registry");
-        assert_eq!(
-            csprng.canonical_home,
-            CanonicalHome::Module("CRYPTO".to_string())
-        );
-        assert!(!csprng.listed_in_core, "CSPRNG must not be core-listed");
-        assert_eq!(csprng.listed_in_modules, vec!["CRYPTO".to_string()]);
-        assert!(csprng.listed_in_categories.is_empty());
-        assert!(!csprng.is_boundary_word());
-    }
-
-    #[test]
-    fn aq_ver_listing_i_import_is_core_only() {
-        for name in &["IMPORT", "IMPORT-ONLY"] {
-            let meta = get_builtin_word_metadata(name)
-                .unwrap_or_else(|| panic!("{} must be in registry", name));
-            assert_eq!(
-                meta.canonical_home,
-                CanonicalHome::Core,
-                "{} must be canonical core",
-                name
-            );
-            assert!(meta.listed_in_core, "{} must be core-listed", name);
-            assert!(
-                meta.listed_in_modules.is_empty(),
-                "{} must not be module-listed",
-                name
-            );
-            assert!(
-                meta.listed_in_categories.is_empty(),
-                "{} must not be category-listed",
-                name
-            );
-        }
-    }
-
-    #[test]
-    fn aq_ver_listing_j_known_boundary_words_classified() {
-        let expected = [
-            "PRINT",
-            "STR",
-            "NUM",
-            "BOOL",
-            "CHR",
-            "CHARS",
-            "JOIN",
-            "MOD",
-            "FLOOR",
-            "CEIL",
-            "ROUND",
-            "QUANTIZE",
-            "QUANTIZE-HALF-AWAY",
-            "QUANTIZE-FLOOR",
-            "QUANTIZE-CEIL",
-            "QUANTIZE-TRUNC",
-            "SHAPE",
-            "RANK",
-            "RESHAPE",
-            "TRANSPOSE",
-            "FILL",
-            "SPAWN",
-            "AWAIT",
-            "STATUS",
-            "KILL",
-            "MONITOR",
-            "SUPERVISE",
-            "SORT",
-        ];
-        let boundary_names: Vec<String> =
-            get_boundary_words().into_iter().map(|w| w.name).collect();
-        for name in expected {
-            assert!(
-                boundary_names.iter().any(|n| n == name),
-                "{} must be classified as a boundary word (got: {:?})",
-                name,
-                boundary_names
-            );
-        }
-    }
-
-    #[test]
     fn aq_ver_listing_k_core_view_includes_core_listed_only() {
         for word in get_core_listed_words() {
             assert!(
@@ -1265,28 +1046,6 @@ mod tests {
                 word.name
             );
         }
-    }
-
-    #[test]
-    fn aq_ver_listing_l_module_view_includes_canonical_and_boundary() {
-        let io_view: Vec<String> = get_module_listed_words("IO")
-            .into_iter()
-            .map(|w| w.name)
-            .collect();
-        assert!(
-            io_view.iter().any(|n| n == "PRINT"),
-            "IO view must include the boundary word PRINT (got: {:?})",
-            io_view
-        );
-        let algo_view: Vec<String> = get_module_listed_words("ALGO")
-            .into_iter()
-            .map(|w| w.name)
-            .collect();
-        assert!(
-            algo_view.iter().any(|n| n == "SORT"),
-            "ALGO view must include canonical SORT (got: {:?})",
-            algo_view
-        );
     }
 
     #[test]
@@ -1302,36 +1061,26 @@ mod tests {
     }
 
     #[test]
-    fn aq_ver_profile_a_hosted_words_declare_capabilities() {
+    fn aq_ver_profile_a_print_is_the_only_hosted_word() {
+        // Output is the only effect (LANG.EFFECTS.OUTPUT), so PRINT is the only
+        // Word outside the Core profile.
         let hosted = get_hosted_profile_words();
-        assert!(
-            hosted.iter().any(|w| w.name == "NOW"),
-            "TIME@NOW must be classified as Hosted"
+        assert_eq!(
+            hosted.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(),
+            vec!["PRINT"],
+            "PRINT must be the only Hosted-profile Word"
         );
-        assert!(
-            hosted.iter().any(|w| w.name == "CSPRNG"),
-            "CRYPTO@CSPRNG must be classified as Hosted"
-        );
-        for word in hosted {
-            assert_eq!(word.profile, WordProfile::Hosted);
-            assert!(
-                word.required_capability.is_some(),
-                "{} Hosted words must declare a required capability",
-                word.name
-            );
-        }
     }
 
     #[test]
-    fn aq_ver_profile_b_core_profile_excludes_host_capabilities() {
+    fn aq_ver_profile_b_core_profile_excludes_print() {
         for word in get_builtin_word_registry()
             .iter()
             .filter(|word| word.profile == WordProfile::Core)
         {
-            assert!(
-                word.required_capability.is_none(),
-                "{} Core-profile words must not require host capability metadata",
-                word.name
+            assert_ne!(
+                word.name, "PRINT",
+                "PRINT is the effectful Word and must not be Core-profile"
             );
         }
     }

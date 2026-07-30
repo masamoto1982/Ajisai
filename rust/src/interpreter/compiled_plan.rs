@@ -6,7 +6,7 @@ use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Token, Value, WordDefinition};
 
 use super::compiled_call::{execute_compiled_call, CompiledCall};
-use super::{modules, ConsumptionMode, EpochSnapshot, Interpreter, OperationTargetMode};
+use super::{ConsumptionMode, EpochSnapshot, Interpreter};
 
 /// Schema version of the `CompiledPlan` lowering. Bump whenever the set of
 /// `CompiledOp` variants or their semantics change in a way that makes an
@@ -36,8 +36,6 @@ pub enum CompiledOp {
     /// forcing them onto the interpreter via `FallbackToken`.
     PushVectorLiteral(Value, Interpretation),
     PushCodeBlock(Vec<Token>),
-    SetTargetModeStackTop,
-    SetTargetModeStack,
     SetConsumptionConsume,
     SetConsumptionKeep,
     CallBuiltin(Arc<CompiledCall>),
@@ -69,8 +67,6 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
-        "TOP" => CompiledOp::SetTargetModeStackTop,
-        "STAK" => CompiledOp::SetTargetModeStack,
         "EAT" => CompiledOp::SetConsumptionConsume,
         "KEEP" => CompiledOp::SetConsumptionKeep,
         "TRUE" => CompiledOp::PushLiteral(Value::from_bool(true)),
@@ -385,8 +381,8 @@ fn lower_cond_dispatch(lines: &mut [CompiledLine], interp: &Interpreter) {
     }
 }
 
-fn post_call_cleanup(interp: &mut Interpreter, name: &str) {
-    if !modules::is_mode_preserving_word(name) {
+fn post_call_cleanup(interp: &mut Interpreter, _name: &str) {
+    if true {
         interp.reset_execution_modes();
     }
 }
@@ -470,12 +466,6 @@ fn execute_compiled_line(
                     Value::from_code_block(tokens.clone()),
                     Interpretation::Unassigned,
                 );
-            }
-            CompiledOp::SetTargetModeStackTop => {
-                interp.update_operation_target_mode(OperationTargetMode::StackTop)
-            }
-            CompiledOp::SetTargetModeStack => {
-                interp.update_operation_target_mode(OperationTargetMode::Stack)
             }
             CompiledOp::SetConsumptionConsume => {
                 interp.update_consumption_mode(ConsumptionMode::Consume)

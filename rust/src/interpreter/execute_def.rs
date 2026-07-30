@@ -1,6 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
-use crate::interpreter::{Interpreter, OperationTargetMode, WordDefinition};
+use crate::interpreter::{Interpreter, WordDefinition};
 use crate::types::{Capabilities, ExecutionLine, Stability, Tier, Token, ValueData};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -39,13 +39,6 @@ fn code_block_tokens_to_source(tokens: &[Token]) -> String {
 /// data arrays are intentionally not accepted here; that path is reserved for
 /// the future `>CODE` conversion word.
 pub fn op_def(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "DEF".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
@@ -130,7 +123,7 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         }
     }
 
-    let staged_tokens = crate::interpreter::comptime::precompute_definition_tokens(interp, tokens)?;
+    let staged_tokens = tokens.to_vec();
     let lines = parse_definition_body(&staged_tokens)?;
 
     // Content store (Section 8.6): share one stored body across textually

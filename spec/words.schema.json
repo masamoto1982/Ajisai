@@ -45,12 +45,11 @@
       "required": ["name", "aliases", "family", "stack", "consumption", "nilPolicy", "projection", "errorWhen", "purity", "determinism", "capability", "effects", "hostedEffect", "interpretationRole", "clauses", "documentation", "executorKey"],
       "properties": {
         "name": { "type": "string", "pattern": "^(?:[A-Z][A-Z0-9@?-]*(?:@[A-Z][A-Z0-9@?-]*)?|>[A-Z][A-Z0-9@?-]*)$" },
-        "module": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" },
         "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-        "family": { "enum": ["nilObservation", "nilRecovery", "kleeneTruth", "comparison", "stackModifier", "control", "dictionaryMutation", "moduleResolution", "collectionShape", "generativeCollection", "higherOrder", "liftedBinaryExactArithmetic", "liftedUnaryExactArithmetic", "exactQuantization", "hostedEffect", "childRuntime", "conversion", "dataTable", "jsonValue", "observation", "cryptoDigest", "algorithmCollection", "exactInterval", "exactMath", "calendarTime", "serialEffect", "musicValue", "musicEffect"] },
+        "family": { "enum": ["booleanLogic", "comparison", "exactArithmetic", "collection", "higherOrder", "text", "control", "absence", "stackModifier", "dictionary", "output"] },
         "stack": { "type": "object", "required": ["inputs", "outputs"], "properties": { "inputs": { "$ref": "#/$defs/arity" }, "outputs": { "$ref": "#/$defs/arity" } }, "additionalProperties": false },
         "consumption": { "enum": ["none", "eat", "retain", "conditional"] },
-        "nilPolicy": { "enum": ["preserveReason", "consumeNil", "rejectNil", "passthrough", "truthUnknownNotNil", "inspectNil", "createsNil", "passthroughThenProject"] },
+        "nilPolicy": { "enum": ["preserveReason", "consumeNil", "rejectNil", "passthrough", "inspectNil", "createsNil", "passthroughThenProject"] },
         "projection": { "$ref": "#/$defs/projection" },
         "errorWhen": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
         "purity": { "enum": ["pure", "conditional", "observational", "effectful"] },
@@ -58,7 +57,7 @@
         "capability": { "type": "string", "minLength": 1 },
         "effects": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
         "hostedEffect": { "type": "string", "minLength": 1 },
-        "interpretationRole": { "type": "string", "minLength": 1 },
+        "interpretationRole": { "enum": ["scalar", "text", "truthValue", "vector", "nil", "unassigned"] },
         "clauses": { "type": "array", "items": { "type": "string", "pattern": "^LANG\\." }, "minItems": 1, "uniqueItems": true },
         "documentation": { "$ref": "#/$defs/documentation" },
         "executorKey": { "type": "string", "pattern": "^(?:[A-Z][A-Za-z0-9]*|[a-z][a-z0-9_]*::[a-z][a-z0-9_]*)$" }

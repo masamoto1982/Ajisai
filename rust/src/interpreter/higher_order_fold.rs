@@ -1,15 +1,13 @@
-use super::higher_order::{
-    execute_executable_code, execute_hedged_fold_kernel, extract_executable_code, ExecutableCode,
-};
+use super::higher_order::{execute_executable_code, extract_executable_code, ExecutableCode};
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_count_from_value, is_vector_value};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::value_extraction_helpers::is_vector_value;
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
 use crate::types::Value;
 
 pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> =
+    let _plain_tokens: Option<Vec<crate::types::Token>> =
         code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
@@ -29,207 +27,90 @@ pub fn op_fold(interp: &mut Interpreter) -> Result<()> {
 
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let target_val: Value = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(init_val.clone());
-                    interp.stack.push(code_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(init_val.clone());
-                    interp.stack.push(code_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
+    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target_val: Value = if is_keep_mode {
+        interp.stack.last().cloned().ok_or_else(|| {
+            interp.stack.push(init_val.clone());
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    } else {
+        interp.stack.pop().ok_or_else(|| {
+            interp.stack.push(init_val.clone());
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    };
 
-            if target_val.is_nil() {
-                interp.stack.push(init_val);
-                return Ok(());
-            }
+    if target_val.is_nil() {
+        interp.stack.push(init_val);
+        return Ok(());
+    }
 
-            if !is_vector_value(&target_val) {
-                if !is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(init_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::create_structure_error(
-                    "vector",
-                    "other format",
-                ));
-            }
-
-            let n_elements: usize = target_val.len();
-            if n_elements == 0 {
-                interp.stack.push(init_val);
-                return Ok(());
-            }
-
-            // VTU Phase III bulk fast path: 1-D dense Tensor + fast binary
-            // fold kernel + scalar/Tensor[1] init → fold over Fractions
-            // directly. Disabled in hedged modes so the race observes events.
-            if let ExecutableCode::QuantizedBlock(qb) = &executable {
-                if !crate::interpreter::higher_order::hedged_mode_active(interp) {
-                    if let Some(result) =
-                        crate::interpreter::higher_order::try_bulk_quantized_fold_pub(
-                            interp,
-                            qb,
-                            &init_val,
-                            &target_val,
-                        )
-                    {
-                        if is_keep_mode {
-                            interp.stack.push(target_val);
-                        }
-                        interp.stack.push(result);
-                        return Ok(());
-                    }
-                }
-            }
-
-            let mut accumulator: Value = init_val;
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut error: Option<AjisaiError> = None;
-            for i in 0..n_elements {
-                let elem: Value = target_val
-                    .child(i)
-                    .expect("FOLD: child index in 0..len must be valid");
-                match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_hedged_fold_kernel(
-                            interp,
-                            "FOLD",
-                            qb,
-                            plain_tokens.as_deref(),
-                            accumulator.clone(),
-                            elem,
-                        ) {
-                            Ok(result) => {
-                                accumulator = result;
-                            }
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        }
-                    }
-                    _ => {
-                        interp.stack.clear();
-                        interp.stack.push(accumulator.clone());
-                        interp.stack.push(elem);
-                        match execute_executable_code(interp, &executable) {
-                            Ok(_) => match interp.stack.pop() {
-                                Some(result) => {
-                                    accumulator = result;
-                                }
-                                None => {
-                                    error = Some(AjisaiError::from(
-                                        "FOLD: expected return value, got empty stack",
-                                    ));
-                                    break;
-                                }
-                            },
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-
-            if let Some(e) = error {
-                if !is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(accumulator);
-                interp.stack.push(code_val);
-                return Err(e);
-            }
-
-            interp.stack.push(accumulator);
-            Ok(())
+    if !is_vector_value(&target_val) {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
         }
-        OperationTargetMode::Stack => {
-            let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count: usize = extract_count_from_value(&count_val)?;
+        interp.stack.push(init_val);
+        interp.stack.push(code_val);
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                interp.stack.push(init_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
+    let n_elements: usize = target_val.len();
+    if n_elements == 0 {
+        interp.stack.push(init_val);
+        return Ok(());
+    }
 
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let mut accumulator: Value = init_val;
+    let mut saved_stack: Stack = Stack::new();
+    std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let saved_no_change_check: bool = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
 
-            let mut accumulator: Value = init_val;
-
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            for item in targets {
-                let fold_res = match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => execute_hedged_fold_kernel(
-                        interp,
-                        "FOLD",
-                        qb,
-                        plain_tokens.as_deref(),
-                        accumulator,
-                        item,
-                    ),
-                    _ => {
-                        interp.stack.clear();
-                        interp.stack.push(accumulator);
-                        interp.stack.push(item);
-                        execute_executable_code(interp, &executable).and_then(|_| {
-                            interp.stack.pop().ok_or_else(|| {
-                                AjisaiError::from("FOLD: expected return value, got empty stack")
-                            })
-                        })
-                    }
-                };
-
-                match fold_res {
-                    Ok(result) => {
-                        accumulator = result;
-                    }
-                    Err(e) => {
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = saved_stack;
-                        return Err(e);
-                    }
+    let mut error: Option<AjisaiError> = None;
+    for i in 0..n_elements {
+        let elem: Value = target_val
+            .child(i)
+            .expect("FOLD: child index in 0..len must be valid");
+        interp.stack.clear();
+        interp.stack.push(accumulator.clone());
+        interp.stack.push(elem);
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => match interp.stack.pop() {
+                Some(result) => {
+                    accumulator = result;
                 }
+                None => {
+                    error = Some(AjisaiError::from(
+                        "FOLD: expected return value, got empty stack",
+                    ));
+                    break;
+                }
+            },
+            Err(e) => {
+                error = Some(e);
+                break;
             }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-            interp.stack.push(accumulator);
-            Ok(())
         }
     }
+    interp.disable_no_change_check = saved_no_change_check;
+    interp.stack = saved_stack;
+
+    if let Some(e) = error {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
+        interp.stack.push(accumulator);
+        interp.stack.push(code_val);
+        return Err(e);
+    }
+
+    interp.stack.push(accumulator);
+    Ok(())
 }
 
 pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
@@ -252,190 +133,88 @@ pub fn op_unfold(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let init_state: Value = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(code_val.clone());
-                AjisaiError::StackUnderflow
-            })?;
+    let init_state: Value = interp.stack.pop().ok_or_else(|| {
+        interp.stack.push(code_val.clone());
+        AjisaiError::StackUnderflow
+    })?;
 
-            let mut state: Value = init_state.clone();
-            let mut results: Vec<Value> = Vec::new();
+    let mut state: Value = init_state.clone();
+    let mut results: Vec<Value> = Vec::new();
 
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let mut saved_stack: Stack = Stack::new();
+    std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let saved_no_change_check: bool = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
 
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut iteration_count: usize = 0;
-            loop {
-                if iteration_count >= MAX_ITERATIONS {
-                    interp.operation_target_mode = saved_target;
-                    interp.disable_no_change_check = saved_no_change_check;
-                    interp.stack = saved_stack;
-                    interp.stack.push(init_state);
-                    interp.stack.push(code_val);
-                    return Err(AjisaiError::from(
-                        "UNFOLD: expected termination, got 10000 iterations without NIL",
-                    ));
-                }
-                iteration_count += 1;
-
-                interp.stack.clear();
-                interp.stack.push(state.clone());
-
-                if let Err(e) = execute_executable_code(interp, &executable) {
-                    interp.operation_target_mode = saved_target;
-                    interp.disable_no_change_check = saved_no_change_check;
-                    interp.stack = saved_stack;
-                    interp.stack.push(init_state);
-                    interp.stack.push(code_val);
-                    return Err(e);
-                }
-
-                let result: Value = interp.stack.pop().ok_or_else(|| {
-                    interp.operation_target_mode = saved_target;
-                    interp.disable_no_change_check = saved_no_change_check;
-                    AjisaiError::from("UNFOLD: expected return value, got empty stack")
-                })?;
-                let _input: Option<Value> = interp.stack.pop();
-
-                let unwrapped: Value = result;
-
-                if unwrapped.is_nil() {
-                    break;
-                }
-
-                if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                    let yielded = unwrapped.child(0).expect("len==2 implies child(0) exists");
-                    results.push(yielded);
-
-                    let next_state = unwrapped.child(1).expect("len==2 implies child(1) exists");
-                    if next_state.is_nil() {
-                        break;
-                    }
-
-                    state = Value::from_vector(vec![next_state]);
-                    continue;
-                }
-
-                interp.operation_target_mode = saved_target;
-                interp.disable_no_change_check = saved_no_change_check;
-                interp.stack = saved_stack;
-                interp.stack.push(init_state);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::from(
-                    "UNFOLD: expected [element, next_state] or NIL, got other format",
-                ));
-            }
-
-            interp.operation_target_mode = saved_target;
+    let mut iteration_count: usize = 0;
+    loop {
+        if iteration_count >= MAX_ITERATIONS {
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = saved_stack;
-            if results.is_empty() {
-                interp.stack.push(Value::nil());
-            } else {
-                interp.stack.push(Value::from_vector(results));
-            }
-            Ok(())
+            interp.stack.push(init_state);
+            interp.stack.push(code_val);
+            return Err(AjisaiError::from(
+                "UNFOLD: expected termination, got 10000 iterations without NIL",
+            ));
         }
-        OperationTargetMode::Stack => {
-            let init_state: Value = interp.stack.pop().ok_or_else(|| {
-                interp.stack.push(code_val.clone());
-                AjisaiError::StackUnderflow
-            })?;
+        iteration_count += 1;
 
-            let mut state: Value = init_state.clone();
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
+        interp.stack.clear();
+        interp.stack.push(state.clone());
 
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut results: Vec<Value> = Vec::new();
-            let mut iteration_count: usize = 0;
-
-            loop {
-                if iteration_count >= MAX_ITERATIONS {
-                    interp.operation_target_mode = saved_target;
-                    interp.disable_no_change_check = saved_no_change_check;
-                    interp.stack = saved_stack;
-                    interp.stack.push(init_state);
-                    interp.stack.push(code_val);
-                    return Err(AjisaiError::from(
-                        "UNFOLD: expected termination, got 10000 iterations without NIL",
-                    ));
-                }
-                iteration_count += 1;
-
-                interp.stack.clear();
-                interp.stack.push(state.clone());
-
-                match execute_executable_code(interp, &executable) {
-                    Ok(_) => {
-                        let result: Value = interp.stack.pop().ok_or_else(|| {
-                            AjisaiError::from("UNFOLD: expected return value, got empty stack")
-                        })?;
-                        let _input: Option<Value> = interp.stack.pop();
-
-                        let unwrapped: Value = result;
-
-                        if unwrapped.is_nil() {
-                            break;
-                        }
-
-                        if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
-                            let yielded =
-                                unwrapped.child(0).expect("len==2 implies child(0) exists");
-                            results.push(yielded);
-
-                            let next_state =
-                                unwrapped.child(1).expect("len==2 implies child(1) exists");
-                            if next_state.is_nil() {
-                                break;
-                            }
-
-                            state = Value::from_vector(vec![next_state]);
-                            continue;
-                        }
-
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = saved_stack;
-                        interp.stack.push(init_state);
-                        interp.stack.push(code_val);
-                        return Err(AjisaiError::from(
-                            "UNFOLD: expected [element, next_state] or NIL, got other format",
-                        ));
-                    }
-                    Err(e) => {
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = saved_stack;
-                        interp.stack.push(init_state);
-                        interp.stack.push(code_val);
-                        return Err(e);
-                    }
-                }
-            }
-
-            interp.operation_target_mode = saved_target;
+        if let Err(e) = execute_executable_code(interp, &executable) {
             interp.disable_no_change_check = saved_no_change_check;
             interp.stack = saved_stack;
-            interp.stack.extend(results);
-            Ok(())
+            interp.stack.push(init_state);
+            interp.stack.push(code_val);
+            return Err(e);
         }
+
+        let result: Value = interp.stack.pop().ok_or_else(|| {
+            interp.disable_no_change_check = saved_no_change_check;
+            AjisaiError::from("UNFOLD: expected return value, got empty stack")
+        })?;
+        let _input: Option<Value> = interp.stack.pop();
+
+        let unwrapped: Value = result;
+
+        if unwrapped.is_nil() {
+            break;
+        }
+
+        if is_vector_value(&unwrapped) && unwrapped.len() == 2 {
+            let yielded = unwrapped.child(0).expect("len==2 implies child(0) exists");
+            results.push(yielded);
+
+            let next_state = unwrapped.child(1).expect("len==2 implies child(1) exists");
+            if next_state.is_nil() {
+                break;
+            }
+
+            state = Value::from_vector(vec![next_state]);
+            continue;
+        }
+        interp.disable_no_change_check = saved_no_change_check;
+        interp.stack = saved_stack;
+        interp.stack.push(init_state);
+        interp.stack.push(code_val);
+        return Err(AjisaiError::from(
+            "UNFOLD: expected [element, next_state] or NIL, got other format",
+        ));
     }
+    interp.disable_no_change_check = saved_no_change_check;
+    interp.stack = saved_stack;
+    if results.is_empty() {
+        interp.stack.push(Value::nil());
+    } else {
+        interp.stack.push(Value::from_vector(results));
+    }
+    Ok(())
 }
 
 pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let plain_tokens: Option<Vec<crate::types::Token>> =
+    let _plain_tokens: Option<Vec<crate::types::Token>> =
         code_val.as_code_block().map(|t| t.to_vec());
 
     let executable: ExecutableCode = match extract_executable_code(interp, &code_val) {
@@ -455,210 +234,98 @@ pub fn op_scan(interp: &mut Interpreter) -> Result<()> {
 
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let target_val: Value = if is_keep_mode {
-                interp.stack.last().cloned().ok_or_else(|| {
-                    interp.stack.push(init_val.clone());
-                    interp.stack.push(code_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            } else {
-                interp.stack.pop().ok_or_else(|| {
-                    interp.stack.push(init_val.clone());
-                    interp.stack.push(code_val.clone());
-                    AjisaiError::StackUnderflow
-                })?
-            };
+    let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
+    let target_val: Value = if is_keep_mode {
+        interp.stack.last().cloned().ok_or_else(|| {
+            interp.stack.push(init_val.clone());
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    } else {
+        interp.stack.pop().ok_or_else(|| {
+            interp.stack.push(init_val.clone());
+            interp.stack.push(code_val.clone());
+            AjisaiError::StackUnderflow
+        })?
+    };
 
-            if target_val.is_nil() {
-                interp.stack.push(Value::nil());
-                return Ok(());
-            }
+    if target_val.is_nil() {
+        interp.stack.push(Value::nil());
+        return Ok(());
+    }
 
-            if !is_vector_value(&target_val) {
-                if !is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(init_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::create_structure_error(
-                    "vector",
-                    "other format",
-                ));
-            }
-
-            let mut accumulator: Value = init_val;
-            let mut results: Vec<Value> = Vec::with_capacity(target_val.len());
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            let mut error: Option<AjisaiError> = None;
-            for i in 0..target_val.len() {
-                let elem: Value = target_val
-                    .child(i)
-                    .expect("SCAN: child index in 0..len must be valid");
-                match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => {
-                        match execute_hedged_fold_kernel(
-                            interp,
-                            "SCAN",
-                            qb,
-                            plain_tokens.as_deref(),
-                            accumulator.clone(),
-                            elem,
-                        ) {
-                            Ok(result) => {
-                                accumulator = result;
-                                results.push(accumulator.clone());
-                            }
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        }
-                    }
-                    _ => {
-                        interp.stack.clear();
-                        interp.stack.push(accumulator.clone());
-                        interp.stack.push(elem);
-                        match execute_executable_code(interp, &executable) {
-                            Ok(_) => match interp.stack.pop() {
-                                Some(result) => {
-                                    accumulator = result;
-                                    results.push(accumulator.clone());
-                                }
-                                None => {
-                                    error = Some(AjisaiError::from(
-                                        "SCAN: expected return value, got empty stack",
-                                    ));
-                                    break;
-                                }
-                            },
-                            Err(e) => {
-                                error = Some(e);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-
-            if let Some(e) = error {
-                if !is_keep_mode {
-                    interp.stack.push(target_val);
-                }
-                interp.stack.push(accumulator);
-                interp.stack.push(code_val);
-                return Err(e);
-            }
-
-            if results.is_empty() {
-                interp.stack.push(Value::nil());
-            } else {
-                let flattened: Vec<Value> = results
-                    .into_iter()
-                    .map(|v| {
-                        if is_vector_value(&v) && v.len() == 1 {
-                            v.child(0).expect("len==1 implies child(0) exists")
-                        } else {
-                            v
-                        }
-                    })
-                    .collect();
-                interp.stack.push(Value::from_vector(flattened));
-            }
-            Ok(())
+    if !is_vector_value(&target_val) {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
         }
-        OperationTargetMode::Stack => {
-            let init_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-            let count: usize = extract_count_from_value(&count_val)?;
+        interp.stack.push(init_val);
+        interp.stack.push(code_val);
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
+    }
 
-            if interp.stack.len() < count {
-                interp.stack.push(count_val);
-                interp.stack.push(init_val);
-                interp.stack.push(code_val);
-                return Err(AjisaiError::StackUnderflow);
-            }
+    let mut accumulator: Value = init_val;
+    let mut results: Vec<Value> = Vec::with_capacity(target_val.len());
+    let mut saved_stack: Stack = Stack::new();
+    std::mem::swap(&mut interp.stack, &mut saved_stack);
+    let saved_no_change_check: bool = interp.disable_no_change_check;
+    interp.disable_no_change_check = true;
 
-            let targets: Vec<Value> = interp.stack.drain(interp.stack.len() - count..).collect();
-            let mut saved_stack: Stack = Stack::new();
-            std::mem::swap(&mut interp.stack, &mut saved_stack);
-
-            let mut accumulator: Value = init_val;
-            let mut results: Vec<Value> = Vec::with_capacity(targets.len());
-
-            let saved_target: OperationTargetMode = interp.operation_target_mode;
-            let saved_no_change_check: bool = interp.disable_no_change_check;
-            interp.operation_target_mode = OperationTargetMode::StackTop;
-            interp.disable_no_change_check = true;
-
-            for item in targets {
-                let fold_res = match &executable {
-                    ExecutableCode::QuantizedBlock(qb) => execute_hedged_fold_kernel(
-                        interp,
-                        "SCAN",
-                        qb,
-                        plain_tokens.as_deref(),
-                        accumulator,
-                        item,
-                    ),
-                    _ => {
-                        interp.stack.clear();
-                        interp.stack.push(accumulator);
-                        interp.stack.push(item);
-                        execute_executable_code(interp, &executable).and_then(|_| {
-                            interp.stack.pop().ok_or_else(|| {
-                                AjisaiError::from("SCAN: expected return value, got empty stack")
-                            })
-                        })
-                    }
-                };
-
-                match fold_res {
-                    Ok(result) => {
-                        accumulator = result;
-                        results.push(accumulator.clone());
-                    }
-                    Err(e) => {
-                        interp.operation_target_mode = saved_target;
-                        interp.disable_no_change_check = saved_no_change_check;
-                        interp.stack = saved_stack;
-                        return Err(e);
-                    }
+    let mut error: Option<AjisaiError> = None;
+    for i in 0..target_val.len() {
+        let elem: Value = target_val
+            .child(i)
+            .expect("SCAN: child index in 0..len must be valid");
+        interp.stack.clear();
+        interp.stack.push(accumulator.clone());
+        interp.stack.push(elem);
+        match execute_executable_code(interp, &executable) {
+            Ok(_) => match interp.stack.pop() {
+                Some(result) => {
+                    accumulator = result;
+                    results.push(accumulator.clone());
                 }
+                None => {
+                    error = Some(AjisaiError::from(
+                        "SCAN: expected return value, got empty stack",
+                    ));
+                    break;
+                }
+            },
+            Err(e) => {
+                error = Some(e);
+                break;
             }
-
-            interp.operation_target_mode = saved_target;
-            interp.disable_no_change_check = saved_no_change_check;
-            interp.stack = saved_stack;
-            if results.is_empty() {
-                interp.stack.push(Value::nil());
-            } else {
-                let flattened: Vec<Value> = results
-                    .into_iter()
-                    .map(|v| {
-                        if is_vector_value(&v) && v.len() == 1 {
-                            v.child(0).expect("len==1 implies child(0) exists")
-                        } else {
-                            v
-                        }
-                    })
-                    .collect();
-                interp.stack.push(Value::from_vector(flattened));
-            }
-            Ok(())
         }
     }
+    interp.disable_no_change_check = saved_no_change_check;
+    interp.stack = saved_stack;
+
+    if let Some(e) = error {
+        if !is_keep_mode {
+            interp.stack.push(target_val);
+        }
+        interp.stack.push(accumulator);
+        interp.stack.push(code_val);
+        return Err(e);
+    }
+
+    if results.is_empty() {
+        interp.stack.push(Value::nil());
+    } else {
+        let flattened: Vec<Value> = results
+            .into_iter()
+            .map(|v| {
+                if is_vector_value(&v) && v.len() == 1 {
+                    v.child(0).expect("len==1 implies child(0) exists")
+                } else {
+                    v
+                }
+            })
+            .collect();
+        interp.stack.push(Value::from_vector(flattened));
+    }
+    Ok(())
 }

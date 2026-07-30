@@ -32,17 +32,6 @@ fn compiled_plan_invalidates_on_dictionary_epoch_change() {
     interp.bump_dictionary_epoch();
     assert!(!is_plan_valid(&plan, &interp));
 }
-
-#[test]
-fn compiled_plan_invalidates_on_module_epoch_change() {
-    let mut interp = Interpreter::new();
-    let wd = test_word(vec![Token::Number("1".into())]);
-    let plan = compile_word_definition(&wd, &interp);
-    assert!(is_plan_valid(&plan, &interp));
-    interp.bump_module_epoch();
-    assert!(!is_plan_valid(&plan, &interp));
-}
-
 #[test]
 fn compile_collects_code_block_literal() {
     let interp = Interpreter::new();

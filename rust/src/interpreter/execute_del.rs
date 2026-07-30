@@ -1,15 +1,8 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
-use crate::interpreter::{Interpreter, OperationTargetMode};
+use crate::interpreter::Interpreter;
 
 pub fn op_del(interp: &mut Interpreter) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::ModeUnsupported {
-            word: "DEL".into(),
-            mode: "Stack".into(),
-        });
-    }
-
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     let name = extract_word_name_from_value(&val)?;
@@ -43,7 +36,7 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             return Ok(());
         }
 
-        if crate::interpreter::modules::is_known_module(&word_name) {
+        if false {
             interp.force_flag = false;
             return Err(AjisaiError::from(format!(
                 "Cannot delete module dictionary {}. Use '{}' UNIMPORT to hide imported module words.",

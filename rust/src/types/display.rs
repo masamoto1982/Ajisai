@@ -29,9 +29,6 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
     // The logical Unknown (U, SPEC §7.5) always renders as `UNKNOWN`,
     // regardless of the effective hint, so it is never shown as `NIL`.
     // Display-only and non-canonical (SPEC §12.2).
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     // An operational NIL (a bubble carrying absence metadata) always renders
     // as `NIL`, regardless of the effective hint. A positional hint can carry
     // a word's declared output role (e.g. CHR is declared to yield TEXT),
@@ -156,7 +153,6 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         // `is_unknown()` guards produce, and consistent with a Boolean
         // rendering `TRUE`/`FALSE` at any depth (SPEC §12.2). U is never shown
         // as `NIL`.
-        ValueData::Unknown(_) => "UNKNOWN".to_string(),
         // A definite boolean renders uniformly as TRUE/FALSE in every role
         // (SPEC §12.2), so the three-valued axis is observable consistently
         // whether the boolean came from a literal, a comparison, or a logic
@@ -164,7 +160,7 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::Scalar(f) => format_fraction(f),
         ValueData::ExactScalar(er) => format_exact_real(er),
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v) => {
             if v.is_empty() {
                 return "[ ]".to_string();
             }
@@ -192,8 +188,6 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
         }
         ValueData::Tensor { data, shape } => format_tensor_recursive(data, shape, depth),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -324,9 +318,6 @@ fn format_exact_real(er: &ExactReal) -> String {
 /// that are part of the content survive unchanged (`'T'ES'T'` prints as
 /// `T'ES'T`). Non-text values render exactly as they do on the stack.
 pub fn format_for_output(value: &Value) -> String {
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     if value.hint == Interpretation::Text {
         return format_text_content(&value.data);
     }
@@ -338,8 +329,6 @@ fn format_as_string(data: &ValueData) -> String {
         // These variants are not character data; they carry no surrounding
         // quotes in the stack projection either, so reuse their bare form.
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
         _ => format!("'{}'", format_text_content(data)),
     }
 }
@@ -350,7 +339,7 @@ fn format_as_string(data: &ValueData) -> String {
 /// `format_for_output` (which emits it bare for `PRINT`).
 fn format_text_content(data: &ValueData) -> String {
     match data {
-        ValueData::Nil | ValueData::Unknown(_) => String::new(),
+        ValueData::Nil => String::new(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         ValueData::ExactScalar(er) => format_exact_real(er),
         ValueData::Scalar(f) => {
@@ -363,7 +352,7 @@ fn format_text_content(data: &ValueData) -> String {
             }
             format_fraction(f)
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v
+        ValueData::Vector(v) => v
             .iter()
             .filter_map(|child| {
                 if let ValueData::Scalar(f) = &child.data {
@@ -392,8 +381,6 @@ fn format_text_content(data: &ValueData) -> String {
             })
             .collect(),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
@@ -401,13 +388,10 @@ fn format_text_content(data: &ValueData) -> String {
 /// The logical Unknown (U, SPEC §7.5) renders as `UNKNOWN`; an
 /// operational NIL stays `NIL`.
 fn boolean_element_label(child: &Value) -> &'static str {
-    if child.is_unknown() {
-        return "UNKNOWN";
-    }
     match &child.data {
         // U is handled by the `is_unknown()` guard above, so this arm is
         // unreachable; grouped with NIL only for exhaustiveness.
-        ValueData::Nil | ValueData::Unknown(_) => "NIL",
+        ValueData::Nil => "NIL",
         ValueData::Boolean(b) => {
             if *b {
                 "TRUE"
@@ -424,7 +408,7 @@ fn boolean_element_label(child: &Value) -> &'static str {
                 "TRUE"
             }
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v) => {
             if v.is_empty() {
                 "FALSE"
             } else {
@@ -440,20 +424,16 @@ fn boolean_element_label(child: &Value) -> &'static str {
         }
         ValueData::ExactScalar(_) => "TRUE",
         ValueData::CodeBlock(_) => "TRUE",
-        ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => "TRUE",
     }
 }
 
 fn format_as_boolean(value: &Value) -> String {
     // The logical Unknown is handled by `format_with_hint`, but guard
     // here too so the function is correct in isolation.
-    if value.is_unknown() {
-        return "UNKNOWN".to_string();
-    }
     match &value.data {
         // U is handled by the `is_unknown()` guard above; grouped with NIL
         // only for exhaustiveness.
-        ValueData::Nil | ValueData::Unknown(_) => "NIL".to_string(),
+        ValueData::Nil => "NIL".to_string(),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -466,7 +446,7 @@ fn format_as_boolean(value: &Value) -> String {
                 "TRUE".to_string()
             }
         }
-        ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+        ValueData::Vector(v) => {
             if v.is_empty() {
                 return "FALSE".to_string();
             }
@@ -493,23 +473,17 @@ fn format_as_boolean(value: &Value) -> String {
             format!("{{ {} }}", inner.join(" "))
         }
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
-        ValueData::Nil | ValueData::Unknown(_) => format_value_recursive(data, 0),
+        ValueData::Nil => format_value_recursive(data, 0),
         ValueData::Boolean(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
-        ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
-            format_value_recursive(data, 0)
-        }
+        ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),
         ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        ValueData::ProcessHandle(id) => format!("<process:{}>", id),
-        ValueData::SupervisorHandle(id) => format!("<supervisor:{}>", id),
     }
 }
 

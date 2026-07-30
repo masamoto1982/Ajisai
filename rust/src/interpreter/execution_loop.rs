@@ -5,7 +5,7 @@ use crate::types::{ExecutionLine, Interpretation, Token, Value};
 use super::debug_diagnosis::{DebugDiagnosis, ErrorPhase};
 use super::error_flow_trace::{ErrorFlowEvent, ErrorFlowEventKind};
 use super::value_extraction_helpers::create_number_value;
-use super::{modules, ConsumptionMode, Interpreter, OperationTargetMode};
+use super::{ConsumptionMode, Interpreter};
 
 /// Index just past the single *source unit* that begins at `start` in `tokens`:
 /// either one ordinary token, or one balanced `[ ]` / `{ }` group (nesting
@@ -291,6 +291,8 @@ impl Interpreter {
         Err(AjisaiError::from("Unclosed vector"))
     }
 
+    /// Synchronous single-line entry point used by the WASM step controller.
+    #[cfg(feature = "wasm")]
     pub(crate) fn execute_guard_structure_sync(&mut self, lines: &[ExecutionLine]) -> Result<()> {
         self.execute_guard_structure(lines)
     }
@@ -363,12 +365,6 @@ impl Interpreter {
                 Token::Symbol(s) => {
                     let canonical = crate::core_word_aliases::canonicalize_core_word_name(s);
                     match canonical.as_ref() {
-                        "STAK" => {
-                            self.update_operation_target_mode(OperationTargetMode::Stack);
-                        }
-                        "TOP" => {
-                            self.update_operation_target_mode(OperationTargetMode::StackTop);
-                        }
                         "KEEP" => {
                             self.update_consumption_mode(ConsumptionMode::Keep);
                         }
@@ -437,7 +433,7 @@ impl Interpreter {
                                     return Err(err);
                                 }
                             }
-                            if !modules::is_mode_preserving_word(upper.as_ref()) {
+                            if true {
                                 self.reset_execution_modes();
                             }
                         }

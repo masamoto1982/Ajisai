@@ -1,16 +1,10 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_operands, push_result};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
 use crate::types::{Interpretation, Value};
 
-fn require_stack_top(interp: &Interpreter, word: &str) -> Result<()> {
-    if interp.operation_target_mode != OperationTargetMode::StackTop {
-        return Err(AjisaiError::from(format!(
-            "{}: Stack mode is not supported",
-            word
-        )));
-    }
+fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
@@ -22,7 +16,7 @@ fn restore_operands(interp: &mut Interpreter, operands: Vec<Value>) {
 
 /// `vector -- vector`. Remove duplicate elements, keeping the first
 /// occurrence and preserving order. An empty result projects to NIL,
-/// matching `ALGO@SORT`.
+/// matching `SORT`.
 pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     require_stack_top(interp, "UNIQUE")?;
     let operands = extract_operands(interp, 1)?;

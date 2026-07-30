@@ -31,13 +31,13 @@ mod tests {
 
     #[tokio::test]
     async fn abs_of_negative_is_positive() {
-        assert_eq!(top_i64("'math' IMPORT -7 ABS").await, 7);
+        assert_eq!(top_i64("-7 ABS").await, 7);
     }
 
     #[tokio::test]
     async fn neg_flips_sign() {
-        assert_eq!(top_i64("'math' IMPORT 5 NEG").await, -5);
-        assert_eq!(top_i64("'math' IMPORT -3 NEG").await, 3);
+        assert_eq!(top_i64("5 NEG").await, -5);
+        assert_eq!(top_i64("-3 NEG").await, 3);
     }
 
     /// NEG computes the additive inverse directly on the exact-real
@@ -46,15 +46,9 @@ mod tests {
     #[tokio::test]
     async fn neg_handles_lazy_irrationals() {
         // NEG(√2) equals 0 - √2 (both -√2), compared exactly through EQ.
-        assert_eq!(
-            render_top("'math' IMPORT 2 SQRT NEG 0 2 SQRT SUB EQ").await,
-            "TRUE"
-        );
+        assert_eq!(render_top("2 SQRT NEG 0 2 SQRT SUB EQ").await, "TRUE");
         // Double negation returns √2.
-        assert_eq!(
-            render_top("'math' IMPORT 2 SQRT NEG NEG 2 SQRT EQ").await,
-            "TRUE"
-        );
+        assert_eq!(render_top("2 SQRT NEG NEG 2 SQRT EQ").await, "TRUE");
     }
 
     /// ABS decides the sign against 0 through the budgeted comparison
@@ -63,24 +57,18 @@ mod tests {
     #[tokio::test]
     async fn abs_handles_lazy_irrationals() {
         // |√2| = √2.
-        assert_eq!(
-            render_top("'math' IMPORT 2 SQRT ABS 2 SQRT EQ").await,
-            "TRUE"
-        );
+        assert_eq!(render_top("2 SQRT ABS 2 SQRT EQ").await, "TRUE");
         // |−√2| = √2, with −√2 built via 0 - √2.
-        assert_eq!(
-            render_top("'math' IMPORT 0 2 SQRT SUB ABS 2 SQRT EQ").await,
-            "TRUE"
-        );
+        assert_eq!(render_top("0 2 SQRT SUB ABS 2 SQRT EQ").await, "TRUE");
         // |√2 − √2| = 0 decides exactly.
-        assert_eq!(top_i64("'math' IMPORT 2 SQRT 2 SQRT SUB ABS").await, 0);
+        assert_eq!(top_i64("2 SQRT 2 SQRT SUB ABS").await, 0);
     }
 
     #[tokio::test]
     async fn sign_reports_three_values() {
-        assert_eq!(top_i64("'math' IMPORT -42 SIGN").await, -1);
-        assert_eq!(top_i64("'math' IMPORT 0 SIGN").await, 0);
-        assert_eq!(top_i64("'math' IMPORT 42 SIGN").await, 1);
+        assert_eq!(top_i64("-42 SIGN").await, -1);
+        assert_eq!(top_i64("0 SIGN").await, 0);
+        assert_eq!(top_i64("42 SIGN").await, 1);
     }
 
     /// SIGN decides the order against 0 through the budgeted comparison
@@ -88,13 +76,13 @@ mod tests {
     /// continued-fraction operands like `2 SQRT` — rather than only rationals.
     #[tokio::test]
     async fn sign_handles_lazy_irrationals() {
-        assert_eq!(top_i64("'math' IMPORT 2 SQRT SIGN").await, 1);
+        assert_eq!(top_i64("2 SQRT SIGN").await, 1);
         // -√2, built via 0 - √2.
-        assert_eq!(top_i64("'math' IMPORT 0 2 SQRT SUB SIGN").await, -1);
+        assert_eq!(top_i64("0 2 SQRT SUB SIGN").await, -1);
         // √2 - √2 = 0 decides exactly to sign 0.
-        assert_eq!(top_i64("'math' IMPORT 2 SQRT 2 SQRT SUB SIGN").await, 0);
+        assert_eq!(top_i64("2 SQRT 2 SQRT SUB SIGN").await, 0);
         // √3 > √2, so their difference signs positive.
-        assert_eq!(top_i64("'math' IMPORT 3 SQRT 2 SQRT SUB SIGN").await, 1);
+        assert_eq!(top_i64("3 SQRT 2 SQRT SUB SIGN").await, 1);
     }
 
     /// SIGN is NIL-passthrough: a NIL operand yields NIL, not a sign.
@@ -102,7 +90,7 @@ mod tests {
     async fn sign_passes_nil_through() {
         let mut interp = Interpreter::new();
         interp
-            .execute("'math' IMPORT 1 0 / SIGN")
+            .execute("1 0 / SIGN")
             .await
             .expect("program should succeed");
         assert_eq!(interp.stack.len(), 1);
@@ -115,19 +103,16 @@ mod tests {
 
     #[tokio::test]
     async fn min_and_max_pick_correctly() {
-        assert_eq!(top_i64("'math' IMPORT 3 8 MIN").await, 3);
-        assert_eq!(top_i64("'math' IMPORT 3 8 MAX").await, 8);
-        assert_eq!(top_i64("'math' IMPORT -2 -9 MIN").await, -9);
-        assert_eq!(top_i64("'math' IMPORT -2 -9 MAX").await, -2);
+        assert_eq!(top_i64("3 8 MIN").await, 3);
+        assert_eq!(top_i64("3 8 MAX").await, 8);
+        assert_eq!(top_i64("-2 -9 MIN").await, -9);
+        assert_eq!(top_i64("-2 -9 MAX").await, -2);
     }
 
     #[tokio::test]
     async fn abs_handles_fractions() {
         let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT -3/4 ABS")
-            .await
-            .expect("should succeed");
+        interp.execute("-3/4 ABS").await.expect("should succeed");
         let scalar = interp.stack[0].as_scalar().expect("scalar");
         assert_eq!(scalar.numerator().to_string(), "3");
         assert_eq!(scalar.denominator().to_string(), "4");
@@ -137,7 +122,7 @@ mod tests {
     async fn nil_passes_through_unary() {
         let mut interp = Interpreter::new();
         interp
-            .execute("'math' IMPORT NIL ABS")
+            .execute("NIL ABS")
             .await
             .expect("NIL passthrough should not error");
         assert_eq!(interp.stack.len(), 1);
@@ -148,7 +133,7 @@ mod tests {
     async fn nil_passes_through_binary() {
         let mut interp = Interpreter::new();
         interp
-            .execute("'math' IMPORT NIL 5 MIN")
+            .execute("NIL 5 MIN")
             .await
             .expect("NIL passthrough should not error");
         assert_eq!(interp.stack.len(), 1);
@@ -158,106 +143,17 @@ mod tests {
     #[tokio::test]
     async fn non_number_input_errors() {
         let mut interp = Interpreter::new();
-        let result = interp.execute("'math' IMPORT 'hello' ABS").await;
+        let result = interp.execute("'hello' ABS").await;
         assert!(
             result.is_err(),
             "ABS of text should be a malformed-use error"
         );
     }
-
-    #[tokio::test]
-    async fn stack_mode_is_rejected() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("'math' IMPORT 1 2 3 .. MAX").await;
-        assert!(result.is_err(), "MAX should reject Stack mode");
-        assert!(result.unwrap_err().to_string().contains("Stack mode"));
-    }
-
-    #[tokio::test]
-    async fn pow_positive_exponent() {
-        assert_eq!(top_i64("'math' IMPORT 2 10 POW").await, 1024);
-        assert_eq!(top_i64("'math' IMPORT 5 0 POW").await, 1);
-        assert_eq!(top_i64("'math' IMPORT -3 3 POW").await, -27);
-    }
-
-    #[tokio::test]
-    async fn pow_negative_exponent_is_reciprocal() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 2 -2 POW")
-            .await
-            .expect("should succeed");
-        let scalar = interp.stack[0].as_scalar().expect("scalar");
-        assert_eq!(scalar.numerator().to_string(), "1");
-        assert_eq!(scalar.denominator().to_string(), "4");
-    }
-
-    #[tokio::test]
-    async fn pow_zero_to_negative_is_bubble() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 0 -1 POW")
-            .await
-            .expect("0^negative should be a well-formed Bubble, not an error");
-        assert_eq!(interp.stack.len(), 1);
-        assert!(interp.stack[0].is_nil(), "0^negative should project to NIL");
-    }
-
-    #[tokio::test]
-    async fn pow_non_integer_exponent_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("'math' IMPORT 2 1/2 POW").await;
-        assert!(result.is_err(), "non-integer exponent is malformed use");
-    }
-
-    #[tokio::test]
-    async fn pow_huge_exponent_is_bounded() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("'math' IMPORT 2 2000000 POW").await;
-        assert!(result.is_err(), "exponent past the safety bound errors");
-    }
-
-    #[tokio::test]
-    async fn pow_nil_passes_through() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT NIL 2 POW")
-            .await
-            .expect("NIL passthrough should not error");
-        assert!(interp.stack[0].is_nil());
-    }
-
-    #[tokio::test]
-    async fn gcd_and_lcm_basic() {
-        assert_eq!(top_i64("'math' IMPORT 12 18 GCD").await, 6);
-        assert_eq!(top_i64("'math' IMPORT -12 18 GCD").await, 6);
-        assert_eq!(top_i64("'math' IMPORT 0 0 GCD").await, 0);
-        assert_eq!(top_i64("'math' IMPORT 4 6 LCM").await, 12);
-        assert_eq!(top_i64("'math' IMPORT 0 5 LCM").await, 0);
-    }
-
-    #[tokio::test]
-    async fn gcd_non_integer_errors() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("'math' IMPORT 3/2 6 GCD").await;
-        assert!(result.is_err(), "GCD of a non-integer is malformed use");
-    }
-
-    #[tokio::test]
-    async fn lcm_nil_passes_through() {
-        let mut interp = Interpreter::new();
-        interp
-            .execute("'math' IMPORT 4 NIL LCM")
-            .await
-            .expect("NIL passthrough should not error");
-        assert!(interp.stack[0].is_nil());
-    }
-
     #[tokio::test]
     async fn keep_mode_retains_operands() {
         let mut interp = Interpreter::new();
         interp
-            .execute("'math' IMPORT 3 8 ,, MIN")
+            .execute("3 8 ,, MIN")
             .await
             .expect("keep mode should succeed");
         assert_eq!(interp.stack.len(), 3, "operands retained plus result");

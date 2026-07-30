@@ -1,87 +1,40 @@
-//! WASM surface for cost-model observability (SPECIFICATION.html §4.8 Cost
-//! Model). Exposes the observational `RuntimeMetrics` counters that answer the
-//! cost-model questions — which values were fast, how much shape-aware data
-//! movement happened, and when the comparison budget was spent — to the
-//! Playground.
+//! WASM surface for the runtime's observational counters.
 //!
-//! These counters are proxies for cost, never part of value identity (SPEC
-//! §4.2.2 / §4.8): reading them changes no result, and no Coreword reads them.
+//! These counters are diagnostics, never part of value identity
+//! (LANG.AUTHORITY.FREEDOM): reading them changes no result, and no Word reads
+//! them.
 
 use super::{set_js_prop, AjisaiInterpreter};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 impl AjisaiInterpreter {
-    /// Cost-model counters for the Playground. Counts are session-cumulative
-    /// and reset with the interpreter. Observational only (SPEC §4.8).
+    /// Runtime counters for the Playground. Counts are session-cumulative and
+    /// reset with the interpreter. Observational only.
     #[wasm_bindgen]
     pub fn collect_runtime_metrics(&self) -> JsValue {
         let m = self.interpreter.runtime_metrics();
         let num = |v: u64| JsValue::from_f64(v as f64);
         let obj = js_sys::Object::new();
 
-        // Fast lane: small-rational scalar ops and dense tensor kernels.
         set_js_prop(&obj, "scalarFastpathCount", &num(m.scalar_fastpath_count));
         set_js_prop(
             &obj,
-            "bulkKernelUseCount",
-            &num(m.vtu_bulk_kernel_use_count),
+            "compiledPlanBuildCount",
+            &num(m.compiled_plan_build_count),
         );
         set_js_prop(
             &obj,
-            "simdKernelUseCount",
-            &num(m.vtu_simd_kernel_use_count),
-        );
-
-        // Data movement: dense<->nested round trips and sparse candidates.
-        set_js_prop(&obj, "tensorFlattenCount", &num(m.vtu_tensor_flatten_count));
-        set_js_prop(&obj, "tensorRebuildCount", &num(m.vtu_tensor_rebuild_count));
-        set_js_prop(
-            &obj,
-            "sparseCandidateCount",
-            &num(m.vtu_sparse_candidate_count),
-        );
-
-        // Comparison budget: only COMPARE-WITHIN spends it.
-        set_js_prop(&obj, "compareWithinCount", &num(m.compare_within_count));
-        set_js_prop(
-            &obj,
-            "compareWithinLazyCount",
-            &num(m.compare_within_lazy_count),
+            "compiledPlanCacheHitCount",
+            &num(m.compiled_plan_cache_hit_count),
         );
         set_js_prop(
             &obj,
-            "compareWithinUnknownCount",
-            &num(m.compare_within_unknown_count),
+            "compiledPlanCacheMissCount",
+            &num(m.compiled_plan_cache_miss_count),
         );
-        set_js_prop(
-            &obj,
-            "compareWithinBudgetTermsConsumed",
-            &num(m.compare_within_budget_terms_consumed),
-        );
-
-        // Cross-reset artifact cache (Phase 5): how often an unchanged word's
-        // compiled plan survived a session reset instead of being rebuilt.
-        set_js_prop(
-            &obj,
-            "artifactCacheBuildCount",
-            &num(m.artifact_cache_build_count),
-        );
-        set_js_prop(
-            &obj,
-            "artifactCacheHitCount",
-            &num(m.artifact_cache_hit_count),
-        );
-        set_js_prop(
-            &obj,
-            "artifactCacheMissCount",
-            &num(m.artifact_cache_miss_count),
-        );
-        set_js_prop(
-            &obj,
-            "artifactCacheEvictionCount",
-            &num(m.artifact_cache_eviction_count),
-        );
+        set_js_prop(&obj, "tailCallJumpCount", &num(m.tail_call_jump_count));
+        set_js_prop(&obj, "executionSteps", &num(m.execution_steps));
 
         obj.into()
     }

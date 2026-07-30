@@ -8,9 +8,6 @@
 //! (`diagnosis_to_js` / `value_to_protocol`); no new diagnostic concepts are
 //! introduced here.
 
-use super::clarify::{self, Clarification};
-use super::explain::{Explanation, Lang};
-use super::plan_check::PlanCheck;
 use crate::interpreter::debug_diagnosis::{AiDiagnosticPayload, DebugDiagnosis};
 use crate::interpreter::error_flow_trace::ErrorFlowEvent;
 use crate::interpreter::{Interpreter, RuntimeMetrics};
@@ -40,23 +37,11 @@ pub(crate) struct Report {
     pub ai_diagnostic: Option<AiDiagnosticPayload>,
     pub error_flow_trace: Vec<ErrorFlowEvent>,
     pub runtime_metrics: RuntimeMetrics,
-    /// Plain-language projection of the diagnosis (`--explain`). `None` unless
-    /// the user opted in; additive field, see the CLI output contract.
-    pub explanation: Option<Explanation>,
-    /// Light contract / flow-mass check (`check --contract`). `None` unless the
-    /// user opted in; additive field, see the CLI output contract.
-    pub plan_check: Option<PlanCheck>,
-    /// Opt-in per-word contract declarations checked against inference
+    /// Per-word contract declarations checked against inference
     /// (`check --contract`, P2). `None` unless the user opted in; additive
     /// field. Prebuilt JSON so `report` stays decoupled from the declaration
     /// types.
     pub contract_decls: Option<Json>,
-    /// Execution receipt (`run --receipt`, Phase 6). `None` unless the user
-    /// opted in; additive field. Prebuilt JSON so `report` stays decoupled from
-    /// the receipt assembly.
-    pub receipt: Option<Json>,
-    /// Language for rendering `plan_check` findings.
-    pub lang: Lang,
 }
 
 impl Report {
@@ -76,74 +61,9 @@ impl Report {
                 .collect::<Vec<_>>(),
             "aiDiagnostic": self.ai_diagnostic.as_ref().map(ai_payload_json),
             "runtimeMetrics": runtime_metrics_json(&self.runtime_metrics),
-            "explanation": self.explanation.as_ref().map(explanation_json),
-            "planCheck": self.plan_check.as_ref().map(|check| plan_check_json(check, self.lang)),
             "contractDecls": self.contract_decls,
-            "receipt": self.receipt,
         })
     }
-}
-
-/// JSON rendering of the light contract check (`super::plan_check`). Structured
-/// mass numbers and NIL-flow word lists, plus the plain-language `findings`.
-fn plan_check_json(check: &PlanCheck, lang: Lang) -> Json {
-    let findings: Vec<Json> = check
-        .findings(lang)
-        .into_iter()
-        .map(|finding| {
-            json!({
-                "severity": finding.severity.as_str(),
-                "message": finding.message,
-            })
-        })
-        .collect();
-    json!({
-        "overConsumes": check.over_consumes,
-        "minDepth": check.min_depth,
-        "netMass": check.net_mass,
-        "massKnown": check.mass_known,
-        "mayBubble": check.may_bubble,
-        "hasFallback": check.has_fallback,
-        "rejectsNil": check.rejects_nil,
-        "unguardedNil": check.unguarded_nil,
-        "rejectsNilFlows": check.rejects_nil_flows,
-        "findings": findings,
-        "clarifications": clarifications_json(&clarify::from_plan_check(check, lang)),
-    })
-}
-
-/// JSON rendering of approach-4 clarifying questions (`super::clarify`). Each
-/// choice carries the Ajisai sugar it resolves to (`apply`), or `null` for a
-/// "leave as is" choice.
-pub(crate) fn clarifications_json(clarifications: &[Clarification]) -> Json {
-    Json::Array(
-        clarifications
-            .iter()
-            .map(|clarification| {
-                let choices: Vec<Json> = clarification
-                    .choices
-                    .iter()
-                    .map(|choice| json!({ "label": choice.label, "apply": choice.apply }))
-                    .collect();
-                json!({
-                    "kind": clarification.kind.as_str(),
-                    "question": clarification.question,
-                    "choices": choices,
-                })
-            })
-            .collect(),
-    )
-}
-
-/// JSON rendering of the plain-language projection (`super::explain`). The
-/// L0 tier is `headline` + `nextStep`; `details` is the L2 repair checklist.
-fn explanation_json(explanation: &Explanation) -> Json {
-    json!({
-        "lang": explanation.lang.as_str(),
-        "headline": explanation.headline,
-        "nextStep": explanation.next_step,
-        "details": explanation.details,
-    })
 }
 
 pub(crate) fn stack_json(interp: &Interpreter) -> Json {
@@ -236,49 +156,20 @@ pub(crate) fn error_flow_event_json(event: &ErrorFlowEvent) -> Json {
 }
 
 pub(crate) fn runtime_metrics_json(metrics: &RuntimeMetrics) -> Json {
-    // The VTU observation counters (docs/dev/virtual-tensor-unit-design.md)
-    // plus the aggregate energyProxyScore (docs/quality/energy-proxy-score.md).
-    // Counter names and the score describe observed structural work; they are
-    // a proxy and never assert an energy outcome in joules.
-    let proxy = crate::interpreter::energy_proxy::energy_proxy_report(metrics);
+    // Diagnostics only: these counters describe work the runtime was observed
+    // to do. Reading them changes no result, and no Word reads them.
     json!({
-        "vtu": {
-            "tensorFlattenCount": metrics.vtu_tensor_flatten_count,
-            "tensorFlattenedElements": metrics.vtu_tensor_flattened_elements,
-            "tensorRebuildCount": metrics.vtu_tensor_rebuild_count,
-            "tensorRebuiltElements": metrics.vtu_tensor_rebuilt_elements,
-            "broadcastCount": metrics.vtu_broadcast_count,
-            "unaryFlatCount": metrics.vtu_unary_flat_count,
-            "allocatedElements": metrics.vtu_allocated_elements,
-            "sameShapeElementwiseCount": metrics.vtu_same_shape_elementwise_count,
-            "projectedBroadcastCount": metrics.vtu_projected_broadcast_count,
-            "simdKernelUseCount": metrics.vtu_simd_kernel_use_count,
-            "sparseCandidateCount": metrics.vtu_sparse_candidate_count,
-            "sparseCandidateElements": metrics.vtu_sparse_candidate_elements,
-            "sparseCandidateNonzeroElements": metrics.vtu_sparse_candidate_nonzero_elements,
-            "sparseSkippableZeroElements": metrics.vtu_sparse_skippable_zero_elements,
-            "candidateBlockCount": metrics.vtu_candidate_block_count,
-            "rejectedBlockCount": metrics.vtu_rejected_block_count,
-            "fusionCandidateCount": metrics.vtu_fusion_candidate_count,
-            "bulkKernelUseCount": metrics.vtu_bulk_kernel_use_count,
-            // Aggregate structural-cost proxy. Not joules; comparable only
-            // within one proxyVersion. See docs/quality/energy-proxy-score.md.
-            "energyProxyScore": proxy.score,
-            "proxyVersion": proxy.proxy_version,
-            "suggestions": proxy.suggestions,
-        },
-        // Cost-model observability (SPECIFICATION.html Cost Model section).
-        // Small-rational scalar-scalar operations that took the D1 fast lane.
+        "compiledPlanBuildCount": metrics.compiled_plan_build_count,
+        "compiledPlanCacheHitCount": metrics.compiled_plan_cache_hit_count,
+        "compiledPlanCacheMissCount": metrics.compiled_plan_cache_miss_count,
+        "condDispatchFastCount": metrics.cond_dispatch_fast_count,
+        "condClauseCompiledCount": metrics.cond_clause_compiled_count,
         "scalarFastpathCount": metrics.scalar_fastpath_count,
-        // When is the comparison budget consumed? Over the admitted domain the
-        // bare relations decide exactly and spend nothing; COMPARE-WITHIN is
-        // the one Coreword that streams partial quotients under a budget.
-        "comparison": {
-            "compareWithinCount": metrics.compare_within_count,
-            "compareWithinLazyCount": metrics.compare_within_lazy_count,
-            "compareWithinUnknownCount": metrics.compare_within_unknown_count,
-            "compareWithinBudgetTermsConsumed": metrics.compare_within_budget_terms_consumed,
-        },
+        "resolveCacheHitCount": metrics.resolve_cache_hit_count,
+        "resolveCacheMissCount": metrics.resolve_cache_miss_count,
+        "resolveCacheInvalidationCount": metrics.resolve_cache_invalidation_count,
+        "tailCallJumpCount": metrics.tail_call_jump_count,
+        "executionSteps": metrics.execution_steps,
     })
 }
 
@@ -306,7 +197,6 @@ fn protocol_node_json(node: &ProtocolNode) -> Json {
             denominator,
         } => json!({ "numerator": numerator, "denominator": denominator }),
         ProtocolValue::Children(kids) => Json::Array(kids.iter().map(protocol_node_json).collect()),
-        ProtocolValue::Handle(id) => json!(id),
     };
     obj.insert("value".into(), value);
     Json::Object(obj)

@@ -25,7 +25,7 @@ async fn run_ok(code: &str) -> Vec<Value> {
 /// guarantee: the ExactScalar block is now reachable before broadcast.
 #[tokio::test]
 async fn sqrt2_div_rational_is_exact_not_error() {
-    let stack = run_ok("'math' IMPORT 2 MATH@SQRT 2 /").await;
+    let stack = run_ok("2 SQRT 2 /").await;
     assert_eq!(stack.len(), 1);
     let top = &stack[0];
     assert!(
@@ -46,7 +46,7 @@ async fn sqrt2_div_rational_is_exact_not_error() {
 /// this test pins.
 #[tokio::test]
 async fn sqrt2_div_sqrt2_is_exact() {
-    let stack = run_ok("'math' IMPORT 2 MATH@SQRT 2 MATH@SQRT /").await;
+    let stack = run_ok("2 SQRT 2 SQRT /").await;
     assert_eq!(stack.len(), 1);
     let top = &stack[0];
     assert!(
@@ -62,7 +62,7 @@ async fn sqrt2_div_sqrt2_is_exact() {
 /// `√2 0 /` is a recoverable DivisionByZero Bubble, not a hard error.
 #[tokio::test]
 async fn sqrt2_div_zero_is_division_by_zero_bubble() {
-    let stack = run_ok("'math' IMPORT 2 MATH@SQRT 0 /").await;
+    let stack = run_ok("2 SQRT 0 /").await;
     assert_eq!(stack.len(), 1);
     let top = &stack[0];
     assert!(top.is_nil(), "√2 0 / must be a Bubble/NIL, got {top:?}");

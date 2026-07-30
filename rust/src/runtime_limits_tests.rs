@@ -188,7 +188,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("'math' IMPORT 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+            .execute("2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
             .await
             .expect_err("a 4-term product past a 3-term ceiling must error");
         assert!(
@@ -205,7 +205,7 @@ mod runtime_limits_tests {
         let mut interp = Interpreter::new();
         assert!(
             interp
-                .execute("'math' IMPORT 2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
+                .execute("2 SQRT 3 SQRT + 5 SQRT 7 SQRT + *")
                 .await
                 .is_ok(),
             "a 4-term algebraic product is ordinary work under default limits"
@@ -224,7 +224,7 @@ mod runtime_limits_tests {
             ..RuntimeLimits::default()
         });
         let err = interp
-            .execute("'math' IMPORT 2 SQRT 3 SQRT +")
+            .execute("2 SQRT 3 SQRT +")
             .await
             .expect_err("exact work past the meter must error");
         assert!(
@@ -246,14 +246,8 @@ mod runtime_limits_tests {
         assert!(interp2.execute("123456789 2 *").await.is_ok());
         // Ordinary exact arithmetic (√2·√2 = 2, √2+√3) is untouched.
         let mut interp3 = Interpreter::new();
-        assert!(interp3
-            .execute("'math' IMPORT 2 SQRT 2 SQRT *")
-            .await
-            .is_ok());
+        assert!(interp3.execute("2 SQRT 2 SQRT *").await.is_ok());
         let mut interp4 = Interpreter::new();
-        assert!(interp4
-            .execute("'math' IMPORT 2 SQRT 3 SQRT +")
-            .await
-            .is_ok());
+        assert!(interp4.execute("2 SQRT 3 SQRT +").await.is_ok());
     }
 }

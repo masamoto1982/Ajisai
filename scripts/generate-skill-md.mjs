@@ -109,10 +109,6 @@ function buildWordTable() {
       if (!contract) fail(`no contract found for coreword ${entry.surface}`);
       const syntax = contract.documentation.syntax ? ` — e.g. \`${contract.documentation.syntax}\`` : '';
       rows.push(`| \`${entry.surface}\` | ${entry.category} | ${contract.documentation.summary}${syntax} |`);
-    } else if (entry.kind === 'moduleword') {
-      const contract = contracts.get(entry.canonical);
-      if (!contract) fail(`no contract found for moduleword ${entry.surface}`);
-      rows.push(`| \`${entry.surface}\` | ${entry.category} (module) | ${contract.documentation.summary} — needs \`'${entry.module}' IMPORT\` (or call as \`${entry.surface}\`) |`);
     } else if (entry.canonical && entry.canonical !== 'RESERVED-BEGIN') {
       rows.push(`| \`${entry.surface.replace(/\|/g, '\\|')}\` | ${entry.kind.replace(/_/g, ' ')} | shorthand for \`${entry.canonical.replace(/\|/g, '\\|')}\` |`);
     }
@@ -134,11 +130,10 @@ const canonicalExamples = [
   { title: 'Range: one vector [ start end ] (inclusive)', code: '[ 0 5 ] RANGE' },
   { title: 'Range with step: [ start end step ]', code: '[ 0 10 2 ] RANGE' },
   { title: 'Fill a tensor: [ shape... value ]', code: '[ 2 2 7 ] FILL' },
-  { title: 'Reshape', code: '[ 1 2 3 4 5 6 ] [ 2 3 ] RESHAPE' },
   { title: 'MAP with a { } code block', code: '[ 0 4 ] RANGE { [ 2 ] * } MAP' },
   { title: 'FILTER keeps matching elements', code: '[ 0 10 ] RANGE { [ 5 ] > } FILTER' },
   { title: 'FOLD needs an explicit initial value', code: '[ 1 2 3 ] [ 0 ] { + } FOLD' },
-  { title: 'ANY / ALL / COUNT take predicate blocks', code: '[ 1 2 3 ] { [ 1 ] > } ANY' },
+  { title: 'ANY / ALL take predicate blocks', code: '[ 1 2 3 ] { [ 1 ] > } ANY' },
   { title: 'Define a user word: { body } then name, then DEF', code: "{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM" },
   {
     title: 'COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)',
@@ -147,7 +142,8 @@ const canonicalExamples = [
   { title: 'Strings are bare \'...\' literals; CHARS/JOIN convert', code: "'hello' CHARS REVERSE JOIN" },
   { title: 'Cast a string to an exact number', code: "'42' NUM" },
   { title: 'PRINT pops and emits to output (not the stack)', code: '[ 1 2 3 ] PRINT' },
-  { title: 'Module words need IMPORT first', code: "'ALGO' IMPORT [ 3 1 2 ] SORT" },
+  { title: 'Sorting is a plain Core word', code: '[ 3 1 2 ] SORT' },
+  { title: 'Exact square root takes a bare scalar', code: '2 SQRT' },
   { title: 'KEEP modifier `,,` makes the next word non-consuming', code: '[ 5 ] ,, PRINT' },
 ];
 
@@ -203,12 +199,12 @@ const forbiddenPatterns = [
   {
     pattern: 'DUP / SWAP / DROP / OVER / ROT',
     code: 'DUP',
-    why: 'Forth-style stack shufflers do not exist. Use the modifiers instead: `,,` (KEEP: next word does not consume), `..` (STAK: next word applies to the whole stack).',
+    why: 'Forth-style stack shufflers do not exist. Use the one modifier axis instead: `,,` (KEEP: the next word does not consume its operands), `,` (EAT, the default).',
   },
   {
     pattern: 'IF / ELSE / THEN / WHILE',
     code: '[ 1 ] IF',
-    why: 'No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD / UNFOLD or recursive user words.',
+    why: 'No structured keywords. Branch with COND guard/body pairs; iterate with MAP / FILTER / FOLD or recursive user words.',
   },
   {
     pattern: 'Parentheses ( )',
@@ -284,18 +280,17 @@ function verifiedNilSection() {
   return { reason: event.absence.reason, fallbackStack: fallback.stackDisplay[0] };
 }
 
-function verifiedUnknownSection() {
-  // Comparison is decidable for everything the current vocabulary can
-  // construct: even under a tiny explicit budget, an algebraic pair decides.
-  const json = expectOk("'MATH' IMPORT\n2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN");
-  if (json.stackDisplay.join(' ') !== '0/1') fail('algebraic COMPARE-WITHIN must decide 0 regardless of budget');
+function verifiedExactnessSection() {
+  // Comparison over the exact domain is total: values built through different
+  // histories compare equal when they denote the same real.
+  const json = expectOk('8 SQRT 2 SQRT 2 SQRT + =');
+  if (json.stackDisplay.join(' ') !== 'TRUE') fail('sqrt(8) must equal sqrt(2)+sqrt(2)');
   return { decided: json.stackDisplay.join(' ') };
 }
 
 function verifyExamplesFresh() {
   const dir = resolve(repoRoot, 'examples');
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.ajisai')).sort()) {
-    if (file.includes('music')) continue; // audio host capability is absent in the CLI
     const proc = spawnSync(ajisaiBin, ['run', join(dir, file)], { encoding: 'utf8' });
     if (proc.status !== 0) fail(`examples/${file} no longer runs; fix it before regenerating SKILL.md`);
   }
@@ -308,7 +303,7 @@ function verifyExamplesFresh() {
 function buildSkillMd() {
   verifyExamplesFresh();
   const nil = verifiedNilSection();
-  const unknown = verifiedUnknownSection();
+  const exactness = verifiedExactnessSection();
   const wordRows = buildWordTable();
 
   return `<!-- GENERATED FILE — do not edit by hand.
@@ -339,19 +334,19 @@ Read the JSON in this order (contract: docs/dev/agent-cli-output-contract.md):
 
 - Postfix, stack-based. Operands first, word last: \`[ 1 ] [ 2 ] +\`.
 - Numbers are **exact rationals** (\`1/3\`, \`3.14\` → 157/50). No floats. Display shows \`3/1\` for 3.
-- Data lives in vectors: \`[ 1 2 3 ]\`. Nest for tensors: \`[ [ 1 2 ] [ 3 4 ] ]\`. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar.
+- Data lives in vectors: \`[ 1 2 3 ]\`. Vectors nest for ragged and grouped data. A lone number like \`42\` is allowed but \`[ 42 ]\` is the idiomatic scalar.
 - Strings: \`'single quotes'\` (a codepoint vector with text role). Booleans: \`TRUE\` / \`FALSE\`. Absence: \`NIL\`.
 - Code blocks: \`{ ... }\` — quoted programs passed to MAP / FILTER / FOLD / COND / DEF.
 - User word: \`{ body } 'NAME' DEF\` then call \`NAME\`. Words are case-insensitive (canonicalized to upper case).
 - Comments: \`#\` to end of line.
-- Modifiers prefix the *next word only*: \`,,\` (KEEP: don't consume operands), \`..\` (STAK: apply to whole stack), \`,\` (EAT, default), \`.\` (TOP, default).
+- One modifier axis, prefixing the *next word only*: \`,,\` (KEEP: don't consume operands) and \`,\` (EAT, the default).
 - One word does one thing to the stack; there are **no** DUP/SWAP-style shufflers (§8).
 
 ## 3. Control and iteration
 
 - Branch: \`value { guard } { body } { guard } { body } ... COND\`. Guards see the value (it stays for each guard) and must leave TRUE/FALSE; use \`{ TRUE }\` as the final else-guard. The value remains on the stack after COND.
-- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` / \`SCAN\` / \`UNFOLD\` with \`{ }\` blocks (examples in §6). \`FOLD\` requires an explicit \`[ init ]\`.
-- Predicates: \`ANY\` / \`ALL\` / \`COUNT\` with a \`{ predicate }\` block.
+- Iterate data, not counters: \`MAP\` / \`FILTER\` / \`FOLD\` with \`{ }\` blocks (examples in §6). \`FOLD\` requires an explicit \`[ init ]\`.
+- Predicates: \`ANY\` / \`ALL\` with a \`{ predicate }\` block.
 - Recursion is allowed in user words (execution-step and depth limits apply; exceeding them is a diagnosed error, not a hang).
 
 ## 4. NIL — absence is a value, not an exception
@@ -364,23 +359,20 @@ value itself carries \`semantics.absence.reason\` on the stack.
 - Provide a fallback with \`^\`: \`[ 1 ] [ 0 ] DIV ^ [ 99 ]\` → stack \`${nil.fallbackStack}\`.
 - NIL flows through later operations (bubble rule); check for it where it matters instead of letting it propagate to the end.
 
-## 5. UNKNOWN — the third truth value
+## 5. Exactness — comparison always decides
 
-Every comparison of values the current vocabulary can construct — rationals
-and \`SQRT\`-built algebraic values — is *decidable*, whatever budget is named:
+Numbers are exact rationals, closed under \`SQRT\`. Arithmetic never rounds,
+coefficients are arbitrary-precision, and **every comparison of two scalars
+decides**: there is no budget, no refinement limit, and no undecided outcome.
 
 \`\`\`ajisai
-'MATH' IMPORT
-2 SQRT 8 SQRT 2 DIV 3 COMPARE-WITHIN   # √2 vs √8/2, budget 3
+8 SQRT 2 SQRT 2 SQRT + =   # √8 vs √2+√2
 \`\`\`
 
-→ stack \`${unknown.decided}\` (exit 0): √2 equals √8/2 exactly, decided with no
-budget consumed. The logical \`UNKNOWN\` — serialized as
-\`{ "type": "truthValue", "value": "unknown" }\` with a
-\`semantics.absence.diagnosis.agreedPrefix\` refinement count — is reserved for
-future general computable reals whose observation can exhaust its budget; it
-is not an error and not NIL, and AND/OR/NOT follow Kleene three-valued logic
-over it.
+→ stack \`${exactness.decided}\` (exit 0). Values built through different
+histories are the same value when they denote the same real. Truth is
+two-valued: \`TRUE\` and \`FALSE\`, nothing else. An operation that cannot
+produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 6. Canonical examples (all verified by the generator)
 
@@ -396,9 +388,9 @@ ${renderForbiddenPatterns()}
 
 ## 9. Word quick reference
 
-Generated from \`docs/word-manifest.json\` — the complete inventory. A word
-absent here does not exist. Module words need \`'MODULE' IMPORT\` once per
-program (then the short name works), or can be called fully qualified.
+Generated from \`docs/word-manifest.json\` — the complete inventory: 69
+canonical Words in one flat Core dictionary. A word absent here does not
+exist. There is no module system and nothing to import.
 
 | word | category | summary |
 |---|---|---|

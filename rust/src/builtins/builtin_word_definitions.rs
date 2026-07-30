@@ -1,7 +1,6 @@
 use crate::coreword_registry::{
     ExecutionForm, MassContract, NilPolicy, Partiality, SafetyLevel, WordPurity,
 };
-use crate::elastic::purity_table::EvalCost;
 
 use super::builtin_word_types::BuiltinExecutorKey;
 
@@ -22,11 +21,6 @@ pub struct BuiltinSpec {
     /// Static flow-mass contract (SPEC §13.1). This is the canonical
     /// per-builtin source consumed by the Coreword registry and analyzers.
     pub mass: MassContract,
-    /// Static cost bucket used by optimization planners; authored here so
-    /// Elastic purity metadata does not keep a parallel builtin table.
-    pub eval_cost: EvalCost,
-    /// Whether this word is order-sensitive even when it is otherwise pure.
-    pub order_sensitive: bool,
 
     // Layer 2 (LOOKUP) fields. Four-section template:
     //   Category / Summary / Role / Stack Effect
@@ -64,8 +58,6 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     hover_syntax: "",
     executor_key: None,
     mass: MassContract::Dynamic,
-    eval_cost: EvalCost::Trivial,
-    order_sensitive: false,
     summary: "",
     role: "",
     stack_effect: "",
@@ -81,33 +73,7 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
 };
 
 const BUILTIN_SPECS: &[BuiltinSpec] = &[
-    // === Modifiers ===
-    BuiltinSpec {
 
-        name: "TOP",
-        category: "modifier",
-        hover_summary: "TOP — apply operation to stack top",
-        hover_syntax: ". +",
-        summary: "Set the operation target mode to the top of the stack.",
-        role: "Modifier that scopes the next word's effect to the topmost stack entry.",
-
-        stack_effect: "no values popped or pushed",
-        nil_policy: NilPolicy::PreservesReason,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "STAK",
-        category: "modifier",
-        hover_summary: "STAK — apply operation to whole stack",
-        hover_syntax: ".. +",
-        summary: "Set the operation target mode to the whole stack.",
-        role: "Modifier that scopes the next word's effect across all stack entries.",
-
-        stack_effect: "no values popped or pushed",
-        nil_policy: NilPolicy::PreservesReason,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "EAT",
@@ -142,7 +108,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "GET — extract element at index",
         hover_syntax: "[ 10 20 30 ] [ 0 ] GET",
         executor_key: Some(BuiltinExecutorKey::Get),
-        eval_cost: EvalCost::Light,
         summary: "Extract one element of a vector by index.",
         role: "Random access into vectors and tensors.",
 
@@ -159,7 +124,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "INSERT — insert element at index",
         hover_syntax: "[ 1 3 ] [ 1 2 ] INSERT",
         executor_key: Some(BuiltinExecutorKey::Insert),
-        eval_cost: EvalCost::Light,
         summary: "Insert a value at a given index in a vector.",
         role: "Extends a vector by inserting an element at the indicated position.",
 
@@ -176,7 +140,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REPLACE — replace element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 9 ] REPLACE",
         executor_key: Some(BuiltinExecutorKey::Replace),
-        eval_cost: EvalCost::Light,
         summary: "Replace an element of a vector at a given index.",
         role: "In-place style update of a vector element.",
 
@@ -193,7 +156,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REMOVE — remove element at index",
         hover_syntax: "[ 1 2 3 ] [ 0 ] REMOVE",
         executor_key: Some(BuiltinExecutorKey::Remove),
-        eval_cost: EvalCost::Light,
         summary: "Remove an element from a vector at a given index.",
         role: "Shrinks a vector by deleting one element.",
 
@@ -210,7 +172,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "LENGTH — return element count",
         hover_syntax: "[ 1 2 3 ] LENGTH",
         executor_key: Some(BuiltinExecutorKey::Length),
-        eval_cost: EvalCost::Light,
         summary: "Return the number of elements in a vector.",
         role: "Vector primitive: Return the number of elements in a vector.",
 
@@ -227,7 +188,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TAKE — take N elements from start or end",
         hover_syntax: "[ 1 2 3 4 5 ] [ 3 ] TAKE",
         executor_key: Some(BuiltinExecutorKey::Take),
-        eval_cost: EvalCost::Light,
         summary: "Take the first N or last -N elements of a vector.",
         role: "Vector primitive: Take the first N or last -N elements of a vector.",
 
@@ -244,7 +204,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SPLIT — split vector at sizes",
         hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] SPLIT",
         executor_key: Some(BuiltinExecutorKey::Split),
-        eval_cost: EvalCost::Light,
         summary: "Split a vector into chunks at the specified sizes.",
         role: "Vector primitive: Split a vector into chunks at the specified sizes.",
 
@@ -261,7 +220,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CONCAT — flatten and concatenate vectors",
         hover_syntax: "[ 1 2 ] [ 3 4 ] CONCAT",
         executor_key: Some(BuiltinExecutorKey::Concat),
-        eval_cost: EvalCost::Light,
         summary: "Flatten and concatenate two vectors.",
         role: "Vector primitive: Flatten and concatenate two vectors.",
 
@@ -278,7 +236,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REVERSE — reverse element order",
         hover_syntax: "[ 1 2 3 ] REVERSE",
         executor_key: Some(BuiltinExecutorKey::Reverse),
-        eval_cost: EvalCost::Light,
         summary: "Reverse the order of vector elements.",
         role: "Vector primitive: Reverse the order of vector elements.",
 
@@ -295,7 +252,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "RANGE — generate numeric sequence",
         hover_syntax: "[ 0 5 ] RANGE",
         executor_key: Some(BuiltinExecutorKey::Range),
-        eval_cost: EvalCost::Light,
         summary: "Generate a numeric sequence from a [start, end] pair.",
         role: "Vector primitive: Generate a numeric sequence from a [start, end] pair.",
 
@@ -316,7 +272,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "REORDER — reorder by index list",
         hover_syntax: "[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER",
         executor_key: Some(BuiltinExecutorKey::Reorder),
-        eval_cost: EvalCost::Light,
         summary: "Reorder vector elements according to an index permutation.",
         role: "Vector primitive: Reorder vector elements according to an index permutation.",
 
@@ -333,7 +288,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "COLLECT — collect N items into vector",
         hover_syntax: "1 2 3 3 COLLECT",
         executor_key: Some(BuiltinExecutorKey::Collect),
-        eval_cost: EvalCost::Light,
         summary: "Collect N items off the stack into a new vector.",
         role: "Vector primitive: Collect N items off the stack into a new vector.",
 
@@ -402,7 +356,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NIL? — test whether a value is absent",
         hover_syntax: "1 0 / NIL?",
         executor_key: Some(BuiltinExecutorKey::NilCheck),
-        eval_cost: EvalCost::Light,
         summary: "Test whether the top value is an operational NIL (absent).",
         role: "Diagnostic predicate: TRUE when the retained value is absent, FALSE otherwise. Never branches on the reason (SPEC §4.5.0).",
 
@@ -417,7 +370,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NIL-REASON — read the NIL reason protocol string",
         hover_syntax: "1 0 / NIL-REASON",
         executor_key: Some(BuiltinExecutorKey::NilReason),
-        eval_cost: EvalCost::Light,
         summary: "Read the direct reason of an operational NIL as a protocol-string Text.",
         role: "Diagnostic accessor: the lowerCamelCase reason protocol string (SPEC §4.5.0), or NIL when there is no reason or the value is not an operational NIL.",
 
@@ -425,66 +377,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         nil_policy: NilPolicy::ConsumesNil,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "NIL-ORIGIN",
-        category: "absence",
-        hover_summary: "NIL-ORIGIN — read the NIL origin protocol string",
-        hover_syntax: "1 0 / NIL-ORIGIN",
-        executor_key: Some(BuiltinExecutorKey::NilOrigin),
-        eval_cost: EvalCost::Light,
-        summary: "Read the origin of an operational NIL as a protocol-string Text.",
-        role: "Diagnostic accessor: the lowerCamelCase origin protocol string (a required field, so always Text for an operational NIL), or NIL when the value is not an operational NIL (SPEC §4.5.0).",
-
-        stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
-        nil_policy: NilPolicy::ConsumesNil,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "NIL-RECOVERABLE?",
-        category: "absence",
-        hover_summary: "NIL-RECOVERABLE? — read the NIL recoverability protocol string",
-        hover_syntax: "1 0 / NIL-RECOVERABLE?",
-        executor_key: Some(BuiltinExecutorKey::NilRecoverable),
-        eval_cost: EvalCost::Light,
-        summary: "Read the recoverability of an operational NIL as a protocol-string Text.",
-        role: "Diagnostic accessor: the lowerCamelCase recoverability protocol string (a required four-valued field, so returned as Text to stay consistent with SPEC §4.5.0, not as a two-valued boolean), or NIL when the value is not an operational NIL.",
-
-        stack_effect: "[ x ] -> [ x ] [ text|NIL ]",
-        nil_policy: NilPolicy::ConsumesNil,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "NIL-DIAGNOSIS",
-        category: "absence",
-        hover_summary: "NIL-DIAGNOSIS — read the three-layer NIL diagnosis record",
-        hover_syntax: "1 0 / NIL-DIAGNOSIS",
-        executor_key: Some(BuiltinExecutorKey::NilDiagnosis),
-        eval_cost: EvalCost::Light,
-        summary: "Read the three-layer debug diagnosis of an operational NIL as a Record.",
-        role: "Diagnostic accessor: the structured diagnosis object (SPEC §4.5.0) as a Record, or NIL when there is no diagnosis or the value is not an operational NIL.",
-
-        stack_effect: "[ x ] -> [ x ] [ record|NIL ]",
-        nil_policy: NilPolicy::ConsumesNil,
-        ..SPEC_DEFAULT
-        },
-
-    // === Cast ===
-    BuiltinSpec {
-
-        name: ">CF",
-        category: "conversion",
-        hover_summary: ">CF — tag value for continued-fraction serialization",
-        hover_syntax: "1/3 >CF",
-        executor_key: Some(BuiltinExecutorKey::ToCf),
-        eval_cost: EvalCost::Light,
-        summary: "Tag a numeric scalar for canonical continued-fraction serialization (SPEC 12.2).",
-        role: "Conversion modifier: request the ContinuedFraction display/serialization role.",
-        stack_effect: "[ x ] -> [ x ]",
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "CHARS",
@@ -492,7 +385,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CHARS — split string into characters",
         hover_syntax: "'hi' CHARS",
         executor_key: Some(BuiltinExecutorKey::Chars),
-        eval_cost: EvalCost::Light,
         summary: "Split a string into a vector of one-character strings.",
         role: "Cast primitive: Split a string into a vector of one-character strings.",
 
@@ -509,7 +401,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "JOIN — join characters into string",
         hover_syntax: "[ 'h' 'i' ] JOIN",
         executor_key: Some(BuiltinExecutorKey::Join),
-        eval_cost: EvalCost::Light,
         summary: "Join a vector of strings into a single string.",
         role: "Cast primitive: Join a vector of strings into a single string.",
 
@@ -526,7 +417,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TRIM — strip leading and trailing whitespace",
         hover_syntax: "'  hi  ' TRIM",
         executor_key: Some(BuiltinExecutorKey::Trim),
-        eval_cost: EvalCost::Light,
         summary: "Remove whitespace from both ends of a string.",
         role: "Cast primitive: Remove whitespace from both ends of a string.",
 
@@ -536,40 +426,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "TRIM-LEFT",
-        category: "cast",
-        hover_summary: "TRIM-LEFT — strip leading whitespace",
-        hover_syntax: "'  hi' TRIM-LEFT",
-        executor_key: Some(BuiltinExecutorKey::TrimLeft),
-        eval_cost: EvalCost::Light,
-        summary: "Remove whitespace from the start of a string.",
-        role: "Cast primitive: Remove whitespace from the start of a string.",
-
-        stack_effect: "[ str ] -> [ str' ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "TRIM-RIGHT",
-        category: "cast",
-        hover_summary: "TRIM-RIGHT — strip trailing whitespace",
-        hover_syntax: "'hi  ' TRIM-RIGHT",
-        executor_key: Some(BuiltinExecutorKey::TrimRight),
-        eval_cost: EvalCost::Light,
-        summary: "Remove whitespace from the end of a string.",
-        role: "Cast primitive: Remove whitespace from the end of a string.",
-
-        stack_effect: "[ str ] -> [ str' ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "TOKENIZE",
@@ -577,7 +434,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "TOKENIZE — split string by separator",
         hover_syntax: "'a,b,c' ',' TOKENIZE",
         executor_key: Some(BuiltinExecutorKey::Tokenize),
-        eval_cost: EvalCost::Light,
         summary: "Split a string into a vector of substrings using a separator.",
         role: "Cast primitive: Split a string into a vector of substrings using a separator.",
 
@@ -594,7 +450,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "SUBSTITUTE — replace substring occurrences",
         hover_syntax: "'hello' 'l' 'L' SUBSTITUTE",
         executor_key: Some(BuiltinExecutorKey::Substitute),
-        eval_cost: EvalCost::Light,
         summary: "Replace every occurrence of a substring with another.",
         role: "Cast primitive: Replace every occurrence of a substring with another.",
 
@@ -611,7 +466,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "STARTS-WITH? — prefix predicate",
         hover_syntax: "'hello' 'he' STARTS-WITH?",
         executor_key: Some(BuiltinExecutorKey::StartsWith),
-        eval_cost: EvalCost::Light,
         summary: "Test whether a string begins with the given prefix.",
         role: "Cast primitive: Test whether a string begins with the given prefix.",
 
@@ -628,7 +482,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ENDS-WITH? — suffix predicate",
         hover_syntax: "'hello' 'lo' ENDS-WITH?",
         executor_key: Some(BuiltinExecutorKey::EndsWith),
-        eval_cost: EvalCost::Light,
         summary: "Test whether a string ends with the given suffix.",
         role: "Cast primitive: Test whether a string ends with the given suffix.",
 
@@ -645,7 +498,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NUM — parse to number",
         hover_syntax: "'42' NUM",
         executor_key: Some(BuiltinExecutorKey::Num),
-        eval_cost: EvalCost::Light,
         summary: "Parse text as a number; Bubble/NIL on parse failure.",
         role: "Cast primitive: Parse text as a number; Bubble/NIL on parse failure.",
 
@@ -663,7 +515,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "STR — convert to string",
         hover_syntax: "42 STR",
         executor_key: Some(BuiltinExecutorKey::Str),
-        eval_cost: EvalCost::Light,
         summary: "Convert a value to its string representation.",
         role: "Cast primitive: Convert a value to its string representation.",
 
@@ -673,24 +524,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "BOOL",
-        mass: MassContract::Fixed { consumes: 1, produces: 1 },
-        category: "cast",
-        hover_summary: "BOOL — convert to boolean",
-        hover_syntax: "1 BOOL",
-        executor_key: Some(BuiltinExecutorKey::Bool),
-        eval_cost: EvalCost::Light,
-        summary: "Convert a value to a boolean by truthiness.",
-        role: "Cast primitive: Convert a value to a boolean by truthiness.",
-
-        stack_effect: "[ x ] -> [ TRUE | FALSE ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "CHR",
@@ -698,7 +532,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "CHR — make a character",
         hover_syntax: "65 CHR",
         executor_key: Some(BuiltinExecutorKey::Chr),
-        eval_cost: EvalCost::Light,
         summary:
             "Convert a numeric character code to a single-character string.",
         role: "Cast primitive: Convert a numeric character code to a single-character string.",
@@ -773,22 +606,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "COMPARE-WITHIN",
-        category: "comparison",
-        hover_summary: "COMPARE-WITHIN — three-way compare within a budget",
-        hover_syntax: "1/3 1/2 64 COMPARE-WITHIN",
-        executor_key: Some(BuiltinExecutorKey::CompareWithin),
-        summary: "Three-way compare two values within an explicit observation budget.",
-        role: "Comparison primitive: yield -1, 0, 1, or UNKNOWN within a budget.",
-
-        stack_effect: "[ a ] [ b ] [ budget ] -> [ -1 | 0 | 1 | UNKNOWN ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::Passthrough,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "EQ",
@@ -901,7 +719,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "AND — logical AND",
         hover_syntax: "TRUE TRUE &",
         executor_key: Some(BuiltinExecutorKey::And),
-        summary: "Logical AND with three-valued (Kleene) NIL handling.",
+        summary: "Logical AND. A NIL operand passes through.",
         role: "Logic primitive: Logical AND with three-valued (Kleene) NIL handling.",
 
         stack_effect: "[ a ] [ b ] -> [ a AND b ]",
@@ -915,7 +733,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "OR — logical OR",
         hover_syntax: "TRUE FALSE OR",
         executor_key: Some(BuiltinExecutorKey::Or),
-        summary: "Logical OR with three-valued (Kleene) NIL handling.",
+        summary: "Logical OR. A NIL operand passes through.",
         role: "Logic primitive: Logical OR with three-valued (Kleene) NIL handling.",
 
         stack_effect: "[ a ] [ b ] -> [ a OR b ]",
@@ -929,26 +747,10 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "NOT — logical negation",
         hover_syntax: "TRUE NOT",
         executor_key: Some(BuiltinExecutorKey::Not),
-        summary: "Logical negation.",
+        summary: "Logical negation. A NIL operand passes through.",
         role: "Logic primitive: Logical negation.",
 
         stack_effect: "[ a ] -> [ NOT a ]",
-        ..SPEC_DEFAULT
-        },
-
-    // === Control ===
-    BuiltinSpec {
-
-        name: "IDLE",
-        category: "control",
-        hover_summary: "IDLE — pass through unchanged",
-        hover_syntax: "IDLE",
-        executor_key: Some(BuiltinExecutorKey::Idle),
-        summary: "Pass control through unchanged (no-op).",
-        role: "Placeholder body in conditional clauses; matches the\nalways-true branch.",
-
-        stack_effect: "no values popped or pushed",
-        nil_policy: NilPolicy::PreservesReason,
         ..SPEC_DEFAULT
         },
     BuiltinSpec {
@@ -958,7 +760,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "COND — evaluate guard/body clauses",
         hover_syntax: "1 { TRUE } { 'y' } { IDLE } { 'n' } COND",
         executor_key: Some(BuiltinExecutorKey::Cond),
-        eval_cost: EvalCost::Heavy,
         summary:
             "Evaluate guard/body clauses in order, executing the first match.",
         role: "General conditional dispatch with first-match semantics.",
@@ -968,26 +769,10 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
-        },
-
-    // === FLOW (pipeline) / VENT (coalescing) — lazy control directives (§6.4) ===
-    // Both are emitted by the tokenizer as dedicated control tokens (`~`/`FLOW`
+        },    // Both are emitted by the tokenizer as dedicated control tokens (`~`/`FLOW`
     // -> Pipeline, `^`/`VENT` -> NilCoalesce), not dispatched as stack-consuming
     // words; `execution_form` records that so the contract is machine-checkable.
-    BuiltinSpec {
 
-        name: "FLOW",
-        category: "control-directive",
-        hover_summary: "FLOW — pipeline marker",
-        hover_syntax: "[ 1 2 3 ] ~ { [ 2 ] * } MAP",
-        summary: "Pipeline visual marker (no-op).",
-        role: "No-op control directive: a positional separator with no runtime\neffect; helps visually anchor pipelines. Popped and pushed nothing.",
-
-        stack_effect: "no values popped or pushed",
-        nil_policy: NilPolicy::PreservesReason,
-        execution_form: ExecutionForm::NoOpControlDirective,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "VENT",
@@ -1020,7 +805,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "MAP — apply block to each element",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] * } MAP",
         executor_key: Some(BuiltinExecutorKey::Map),
-        eval_cost: EvalCost::Medium,
         summary: "Apply a code block to each element of a vector.",
         role: "Higher-order primitive: Apply a code block to each element of a vector.",
 
@@ -1037,7 +821,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FILTER — keep elements matching predicate",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } FILTER",
         executor_key: Some(BuiltinExecutorKey::Filter),
-        eval_cost: EvalCost::Medium,
         summary:
             "Keep only the elements for which a predicate block returns TRUE.",
         role: "Higher-order primitive: Keep only the elements for which a predicate block returns TRUE.",
@@ -1055,8 +838,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FOLD — reduce with initial value",
         hover_syntax: "[ 1 2 3 ] [ 0 ] { + } FOLD",
         executor_key: Some(BuiltinExecutorKey::Fold),
-        eval_cost: EvalCost::Medium,
-        order_sensitive: true,
         summary:
             "Reduce a vector to a single value using an initial accumulator and combiner block.",
         role: "Higher-order primitive: Reduce a vector to a single value using an initial accumulator and combiner block.",
@@ -1067,25 +848,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "UNFOLD",
-        category: "higher-order",
-        hover_summary: "UNFOLD — generate from state transition",
-        hover_syntax: "[ 1 ] { ... COND } UNFOLD",
-        executor_key: Some(BuiltinExecutorKey::Unfold),
-        eval_cost: EvalCost::Medium,
-        order_sensitive: true,
-        summary:
-            "Generate a sequence by repeatedly applying a state transition.",
-        role: "Higher-order primitive: Generate a sequence by repeatedly applying a state transition.",
-
-        stack_effect: "[ state ] { step } -> [ seq ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "ANY",
@@ -1093,7 +856,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ANY — true if any element matches",
         hover_syntax: "[ 1 2 3 ] { [ 2 ] = } ANY",
         executor_key: Some(BuiltinExecutorKey::Any),
-        eval_cost: EvalCost::Medium,
         summary: "TRUE if at least one element satisfies the predicate.",
         role: "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
 
@@ -1110,46 +872,10 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "ALL — true if all elements match",
         hover_syntax: "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
         executor_key: Some(BuiltinExecutorKey::All),
-        eval_cost: EvalCost::Medium,
         summary: "TRUE if every element satisfies the predicate.",
         role: "Higher-order primitive: TRUE if every element satisfies the predicate.",
 
         stack_effect: "[ vec ] { pred } -> [ TRUE | FALSE ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "COUNT",
-        category: "higher-order",
-        hover_summary: "COUNT — count matching elements",
-        hover_syntax: "[ 1 2 3 ] { [ 2 ] = } COUNT",
-        executor_key: Some(BuiltinExecutorKey::Count),
-        eval_cost: EvalCost::Medium,
-        summary: "Count the elements that satisfy the predicate.",
-        role: "Higher-order primitive: Count the elements that satisfy the predicate.",
-
-        stack_effect: "[ vec ] { pred } -> [ n ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "SCAN",
-        category: "higher-order",
-        hover_summary: "SCAN — return intermediate fold results",
-        hover_syntax: "[ 1 2 3 ] [ 0 ] { + } SCAN",
-        executor_key: Some(BuiltinExecutorKey::Scan),
-        eval_cost: EvalCost::Medium,
-        order_sensitive: true,
-        summary: "Return a vector of intermediate fold accumulators.",
-        role: "Higher-order primitive: Return a vector of intermediate fold accumulators.",
-
-        stack_effect: "[ vec ] [ init ] { combine } -> [ acc-history ]",
         partiality: Partiality::Partial,
         nil_policy: NilPolicy::RejectsNil,
         safety_level: SafetyLevel::B,
@@ -1164,12 +890,10 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "PRINT — output value to display",
         hover_syntax: "42 PRINT",
         executor_key: Some(BuiltinExecutorKey::Print),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        summary: "Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.",
         role: "Io primitive: output the top stack value at the output boundary, where a string is emitted as its raw character content (the stack's surrounding quotes are a display affordance only).",
 
-        stack_effect: "[ x ] -> [ x ]",
+        stack_effect: "[ x ] -> [ ]",
         stability: "experimental",
         purity: WordPurity::Effectful,
         effects: &["console-write"],
@@ -1180,27 +904,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::D,
         ..SPEC_DEFAULT
         },
-
-    // === Dictionary ===
-    BuiltinSpec {
-
-        name: "PRECOMPUTE",
-        category: "Control / Staging",
-        hover_summary: "PRECOMPUTE — definition-time precompute marker",
-        hover_syntax: "{ ... } PRECOMPUTE",
-        executor_key: Some(BuiltinExecutorKey::Precompute),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Definition-time staging marker (not a macro).",
-        role: "Definition-time only",
-
-        stack_effect: "[ { body } ] -> [ value... ]  (definition-time only)",
-        stability: "stable",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "DEF",
@@ -1208,8 +911,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "DEF — define user word",
         hover_syntax: "{ 2 * } 'DOUBLE' DEF",
         executor_key: Some(BuiltinExecutorKey::Def),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Define a user word from a body and a name.",
         role: "Dictionary primitive: Define a user word from a body and a name.",
 
@@ -1231,8 +932,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "DEL — delete user word",
         hover_syntax: "{ [ 1 ] } 'W' DEF 'W' DEL",
         executor_key: Some(BuiltinExecutorKey::Del),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Delete a user word from the dictionary.",
         role: "Dictionary primitive: Delete a user word from the dictionary.",
 
@@ -1254,8 +953,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "LOOKUP — show word documentation",
         hover_syntax: "'ADD' ?",
         executor_key: Some(BuiltinExecutorKey::Lookup),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
         summary: "Display the documentation for a named word.",
         role: "Provides word-level guidance from inside Ajisai.",
 
@@ -1269,100 +966,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::C,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "FORC",
-        category: "control",
-        hover_summary: "FORC — force destructive operation",
-        hover_syntax: "! 'WORD' DEL",
-        executor_key: Some(BuiltinExecutorKey::Force),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Force destructive dictionary operations to apply.",
-        role: "Modifier that authorizes destructive dictionary words such as\nDEL on protected entries.",
-
-        stack_effect: "no values popped or pushed",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["interpreter-mode-write"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-
-    // === Tensor ===
-    BuiltinSpec {
-
-        name: "SHAPE",
-        category: "tensor",
-        hover_summary: "SHAPE — return vector shape",
-        hover_syntax: "[ 1 2 3 ] SHAPE",
-        executor_key: Some(BuiltinExecutorKey::Shape),
-        eval_cost: EvalCost::Light,
-        summary: "Return a vector describing the dimensions of a value.",
-        role: "Tensor primitive: Return a vector describing the dimensions of a value.",
-
-        stack_effect: "[ vec ] -> [ shape ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "RANK",
-        category: "tensor",
-        hover_summary: "RANK — return number of dimensions",
-        hover_syntax: "[ [ 1 2 ] ] RANK",
-        executor_key: Some(BuiltinExecutorKey::Rank),
-        eval_cost: EvalCost::Light,
-        summary: "Return the number of dimensions of a value.",
-        role: "Tensor primitive: Return the number of dimensions of a value.",
-
-        stack_effect: "[ vec ] -> [ rank ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "RESHAPE",
-        category: "tensor",
-        hover_summary: "RESHAPE — reshape to specified shape",
-        hover_syntax: "[ 1 2 3 4 ] [ 2 2 ] RESHAPE",
-        executor_key: Some(BuiltinExecutorKey::Reshape),
-        eval_cost: EvalCost::Light,
-        summary:
-            "Reshape a vector to a target shape with the same total length.",
-        role: "Tensor primitive: Reshape a vector to a target shape with the same total length.",
-
-        stack_effect: "[ vec ] [ shape ] -> [ vec' ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "TRANSPOSE",
-        category: "tensor",
-        hover_summary: "TRANSPOSE — transpose vector axes",
-        hover_syntax: "[ [ 1 2 ] [ 3 4 ] ] TRANSPOSE",
-        executor_key: Some(BuiltinExecutorKey::Transpose),
-        eval_cost: EvalCost::Light,
-        summary: "Transpose the axes of a tensor.",
-        role: "Tensor primitive: Transpose the axes of a tensor.",
-
-        stack_effect: "[ matrix ] -> [ transposed ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
     BuiltinSpec {
 
         name: "FILL",
@@ -1370,7 +974,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "FILL — fill shape with value",
         hover_syntax: "[ 2 2 0 ] FILL",
         executor_key: Some(BuiltinExecutorKey::Fill),
-        eval_cost: EvalCost::Light,
         summary: "Fill a target shape with a constant value.",
         role: "Tensor primitive: Fill a target shape with a constant value.",
 
@@ -1453,91 +1056,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
-
-        name: "QUANTIZE",
-        mass: MassContract::Fixed { consumes: 2, produces: 2 },
-        category: "arithmetic",
-        hover_summary: "QUANTIZE — round to a rational grid, keeping the residual",
-        hover_syntax: "100/3 1/100 QUANTIZE",
-        executor_key: Some(BuiltinExecutorKey::Quantize),
-        summary: "Quantize to a positive rational step (banker's rounding), pushing the quantized value and the exact residual.",
-        role: "Arithmetic primitive: banker's-rounding quantization to a rational grid, emitting the exact residual so q + r = x.",
-
-        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "QUANTIZE-HALF-AWAY",
-        mass: MassContract::Fixed { consumes: 2, produces: 2 },
-        category: "arithmetic",
-        hover_summary: "QUANTIZE-HALF-AWAY — quantize, ties away from zero",
-        hover_syntax: "5/2 1 QUANTIZE-HALF-AWAY",
-        executor_key: Some(BuiltinExecutorKey::QuantizeHalfAway),
-        summary: "Quantize to a rational grid rounding to nearest with ties away from zero (the ROUND rule), pushing the value and residual.",
-        role: "Arithmetic primitive: grid quantization, nearest with ties away from zero; emits the exact residual so q + r = x.",
-
-        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "QUANTIZE-FLOOR",
-        mass: MassContract::Fixed { consumes: 2, produces: 2 },
-        category: "arithmetic",
-        hover_summary: "QUANTIZE-FLOOR — quantize toward negative infinity",
-        hover_syntax: "100/3 1/100 QUANTIZE-FLOOR",
-        executor_key: Some(BuiltinExecutorKey::QuantizeFloor),
-        summary: "Quantize to a rational grid rounding toward negative infinity (the FLOOR rule), pushing the value and residual.",
-        role: "Arithmetic primitive: grid quantization toward negative infinity; emits the exact residual so q + r = x.",
-
-        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "QUANTIZE-CEIL",
-        mass: MassContract::Fixed { consumes: 2, produces: 2 },
-        category: "arithmetic",
-        hover_summary: "QUANTIZE-CEIL — quantize toward positive infinity",
-        hover_syntax: "100/3 1/100 QUANTIZE-CEIL",
-        executor_key: Some(BuiltinExecutorKey::QuantizeCeil),
-        summary: "Quantize to a rational grid rounding toward positive infinity (the CEIL rule), pushing the value and residual.",
-        role: "Arithmetic primitive: grid quantization toward positive infinity; emits the exact residual so q + r = x.",
-
-        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "QUANTIZE-TRUNC",
-        mass: MassContract::Fixed { consumes: 2, produces: 2 },
-        category: "arithmetic",
-        hover_summary: "QUANTIZE-TRUNC — quantize toward zero",
-        hover_syntax: "100/3 1/100 QUANTIZE-TRUNC",
-        executor_key: Some(BuiltinExecutorKey::QuantizeTrunc),
-        summary: "Quantize to a rational grid rounding toward zero (truncation), pushing the value and residual.",
-        role: "Arithmetic primitive: grid quantization toward zero (truncation); emits the exact residual so q + r = x.",
-
-        stack_effect: "[ x ] [ step ] -> [ q ] [ r ]",
-        partiality: Partiality::Projecting,
-        nil_policy: NilPolicy::CreatesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
 
     // === Code execution ===
     BuiltinSpec {
@@ -1547,7 +1065,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         hover_summary: "EXEC — execute vector as code",
         hover_syntax: "[ 1 2 + ] EXEC",
         executor_key: Some(BuiltinExecutorKey::Exec),
-        eval_cost: EvalCost::Heavy,
         summary: "Execute a vector as Ajisai code.",
         role: "Control primitive: Execute a vector as Ajisai code.",
 
@@ -1557,299 +1074,133 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
-    BuiltinSpec {
 
-        name: "CONSERVE",
+    // === Exact math ===
+    BuiltinSpec {
+        name: "SQRT",
+        category: "math",
+        hover_summary: "SQRT — exact square root",
+        hover_syntax: "2 SQRT",
+        executor_key: Some(BuiltinExecutorKey::Sqrt),
+        summary: "Exact square root of a non-negative rational.",
+        role: "The only Word that leaves the rationals: it produces the multiquadratic \u{221a}d.",
+        stack_effect: "[ x ] -> [ sqrt(x) ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
+        safety_level: SafetyLevel::B,
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "ABS",
+        category: "math",
+        hover_summary: "Absolute value of a number.",
+        hover_syntax: "-2 ABS",
+        executor_key: Some(BuiltinExecutorKey::Abs),
+        summary: "Absolute value of a number.",
+        role: "Magnitude without sign.",
+        stack_effect: "[ x ] -> [ |x| ]",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "NEG",
+        category: "math",
+        hover_summary: "Numeric negation.",
+        hover_syntax: "2 NEG",
+        executor_key: Some(BuiltinExecutorKey::Neg),
+        summary: "Numeric negation.",
+        role: "Additive inverse.",
+        stack_effect: "[ x ] -> [ -x ]",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "SIGN",
+        category: "math",
+        hover_summary: "Sign of a number: -1, 0, or 1.",
+        hover_syntax: "-2 SIGN",
+        executor_key: Some(BuiltinExecutorKey::Sign),
+        summary: "Sign of a number: -1, 0, or 1.",
+        role: "Direction without magnitude.",
+        stack_effect: "[ x ] -> [ sign ]",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "MIN",
+        category: "math",
+        hover_summary: "Smaller of two numbers.",
+        hover_syntax: "1 2 MIN",
+        executor_key: Some(BuiltinExecutorKey::Min),
+        summary: "Smaller of two numbers.",
+        role: "Comparison-selected operand; comparison is total, so it always decides.",
+        stack_effect: "[ a ] [ b ] -> [ min ]",
         mass: MassContract::Fixed { consumes: 2, produces: 1 },
-        category: "control",
-        hover_summary: "CONSERVE — assert parts sum exactly to a total",
-        hover_syntax: "100 [ 3333/100 6667/100 ] CONSERVE",
-        executor_key: Some(BuiltinExecutorKey::Conserve),
-        eval_cost: EvalCost::Light,
-        summary: "Assert that a vector of scalar parts sums exactly to a total, passing the parts through or failing loudly.",
-        role: "Control primitive: value-conservation guard; passes the parts through iff their exact sum equals the total, else raises.",
-
-        stack_effect: "[ total ] [ parts ] -> [ parts ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "MAX",
+        category: "math",
+        hover_summary: "Larger of two numbers.",
+        hover_syntax: "1 2 MAX",
+        executor_key: Some(BuiltinExecutorKey::Max),
+        summary: "Larger of two numbers.",
+        role: "Comparison-selected operand; comparison is total, so it always decides.",
+        stack_effect: "[ a ] [ b ] -> [ max ]",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    // === Ordering and search ===
+    BuiltinSpec {
+        name: "SORT",
+        category: "vector",
+        hover_summary: "Return a copy of a vector sorted in ascending order.",
+        hover_syntax: "[ 3 1 2 ] SORT",
+        executor_key: Some(BuiltinExecutorKey::Sort),
+        summary: "Return a copy of a vector sorted in ascending order.",
+        role: "Total ordering over exact scalars.",
+        stack_effect: "[ vec ] -> [ sorted ]",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "UNIQUE",
+        category: "vector",
+        hover_summary: "UNIQUE — remove duplicates, keeping first-occurrence order",
+        hover_syntax: "[ 1 2 1 ] UNIQUE",
+        executor_key: Some(BuiltinExecutorKey::Unique),
+        summary: "Return a copy of a vector with duplicates removed, preserving first-occurrence order.",
+        role: "Set-like reduction that preserves order.",
+        stack_effect: "[ vec ] -> [ vec ]",
+        mass: MassContract::Fixed { consumes: 1, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "CONTAINS",
+        category: "vector",
+        hover_summary: "True if a vector contains an element equal to the given value.",
+        hover_syntax: "[ 1 2 ] 2 CONTAINS",
+        executor_key: Some(BuiltinExecutorKey::Contains),
+        summary: "True if a vector contains an element equal to the given value.",
+        role: "Membership as a definite truth value.",
+        stack_effect: "[ vec ] [ x ] -> [ bool ]",
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
+        ..SPEC_DEFAULT
+        },
+    BuiltinSpec {
+        name: "INDEX-OF",
+        category: "vector",
+        hover_summary: "Index of the first element equal to the value; Bubble/NIL if absent.",
+        hover_syntax: "[ 1 2 ] 2 INDEX-OF",
+        executor_key: Some(BuiltinExecutorKey::IndexOf),
+        summary: "Index of the first element equal to the value; Bubble/NIL if absent.",
+        role: "Search that projects to NIL when the value is absent.",
+        stack_effect: "[ vec ] [ x ] -> [ idx ]",
+        partiality: Partiality::Projecting,
+        nil_policy: NilPolicy::CreatesNil,
         safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "EVAL",
-        category: "control",
-        hover_summary: "EVAL — parse and execute string",
-        hover_syntax: "'1 2 +' EVAL",
-        executor_key: Some(BuiltinExecutorKey::Eval),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Parse a string as Ajisai source code and execute it.",
-        role: "Control primitive: Parse a string as Ajisai source code and execute it.",
-
-        stack_effect: "[ str ] -> [ result... ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["code-execution"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "OR-ELSE",
-        category: "control",
-        hover_summary: "OR-ELSE — value-based NIL fallback with a block",
-        hover_syntax: "1 0 / { 0 } OR-ELSE",
-        executor_key: Some(BuiltinExecutorKey::OrElse),
-        eval_cost: EvalCost::Light,
-        order_sensitive: true,
-        summary: "Keep the candidate when it is not NIL; otherwise run the { ... } block as the fallback.",
-        role: "Control primitive: value-based counterpart to VENT (^). The fallback is an explicit { ... } block, so it is invariant under whitespace and grouping; the block runs only on a genuine NIL (U passes through).",
-
-        stack_effect: "[ candidate ] [ { fallback } ] -> [ candidate | fallback-result... ]",
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::ConsumesNil,
-        safety_level: SafetyLevel::B,
-        ..SPEC_DEFAULT
-        },
-
-    // === Module ops ===
-    BuiltinSpec {
-
-        name: "IMPORT",
-        category: "module",
-        hover_summary: "IMPORT — load module",
-        hover_syntax: "'IO' IMPORT",
-        executor_key: Some(BuiltinExecutorKey::Import),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Load all public words of a module into the dictionary.",
-        role: "Module primitive: Load all public words of a module into the dictionary.",
-
-        stack_effect: "[ name ] -> []",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["dictionary-import"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "IMPORT-ONLY",
-        category: "module",
-        hover_summary: "IMPORT-ONLY — import selected words",
-        hover_syntax: "'json' [ 'parse' ] IMPORT-ONLY",
-        executor_key: Some(BuiltinExecutorKey::ImportOnly),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Load only the listed public words of a module.",
-        role: "Module primitive: Load only the listed public words of a module.",
-
-        stack_effect: "[ name ] [ words ] -> []",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["dictionary-import-only"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-
-    BuiltinSpec {
-
-        name: "UNIMPORT",
-        category: "module",
-        hover_summary: "UNIMPORT — hide imported module words",
-        hover_syntax: "'IO' UNIMPORT",
-        executor_key: Some(BuiltinExecutorKey::Unimport),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Hide unused imported words from a module while keeping words referenced by user definitions.",
-        role: "Module primitive: Hide unused imported words from a module while keeping words referenced by user definitions.",
-
-        stack_effect: "[ name ] -> []",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["dictionary-unimport"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "UNIMPORT-ONLY",
-        category: "module",
-        hover_summary: "UNIMPORT-ONLY — hide selected module words",
-        hover_syntax: "'json' [ 'parse' ] UNIMPORT-ONLY",
-        executor_key: Some(BuiltinExecutorKey::UnimportOnly),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Hide only the listed imported module words.",
-        role: "Module primitive: Hide only the listed imported module words.",
-
-        stack_effect: "[ name ] [ words ] -> []",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["dictionary-unimport-only"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::D,
-        ..SPEC_DEFAULT
-        },
-
-    // === Runtime / parallel ===
-    BuiltinSpec {
-
-        name: "SPAWN",
-        category: "control",
-        hover_summary: "SPAWN — spawn isolated child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN",
-        executor_key: Some(BuiltinExecutorKey::Spawn),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Spawn an isolated child runtime from a code block.",
-        role: "Control primitive: Spawn an isolated child runtime from a code block.",
-
-        stack_effect: "{ body } -> [ handle ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "AWAIT",
-        category: "control",
-        hover_summary: "AWAIT — wait for child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN AWAIT",
-        executor_key: Some(BuiltinExecutorKey::Await),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary:
-            "Wait for a child runtime to finish and return its exit tuple.",
-        role: "Control primitive: Wait for a child runtime to finish and return its exit tuple.",
-
-        stack_effect: "[ handle ] -> [ exit-tuple ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "STATUS",
-        category: "control",
-        hover_summary: "STATUS — read child status",
-        hover_syntax: "{ 1 2 + } SPAWN STATUS",
-        executor_key: Some(BuiltinExecutorKey::Status),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Read the current status of a child runtime.",
-        role: "Control primitive: Read the current status of a child runtime.",
-
-        stack_effect: "[ handle ] -> [ status ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "KILL",
-        category: "control",
-        hover_summary: "KILL — terminate child runtime",
-        hover_syntax: "{ 1 2 + } SPAWN KILL",
-        executor_key: Some(BuiltinExecutorKey::Kill),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Forcibly terminate a child runtime.",
-        role: "Control primitive: Forcibly terminate a child runtime.",
-
-        stack_effect: "[ handle ] -> [ 'killed' ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "MONITOR",
-        category: "control",
-        hover_summary: "MONITOR — register monitor on child",
-        hover_syntax: "{ 1 2 + } SPAWN MONITOR",
-        executor_key: Some(BuiltinExecutorKey::Monitor),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Register a monitor on a child handle.",
-        role: "Control primitive: Register a monitor on a child handle.",
-
-        stack_effect: "[ handle ] -> [ handle ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
-        ..SPEC_DEFAULT
-        },
-    BuiltinSpec {
-
-        name: "SUPERVISE",
-        category: "control",
-        hover_summary: "SUPERVISE — run under restart policy",
-        hover_syntax: "{ 1 2 + } [ 3 ] SUPERVISE",
-        executor_key: Some(BuiltinExecutorKey::Supervise),
-        eval_cost: EvalCost::Heavy,
-        order_sensitive: true,
-        summary: "Run a code block under a one-for-one restart policy.",
-        role: "Control primitive: Run a code block under a one-for-one restart policy.",
-
-        stack_effect: "{ body } [ retries ] -> [ result | NIL ]",
-        stability: "experimental",
-        purity: WordPurity::Effectful,
-        effects: &["runtime-control"],
-        deterministic: false,
-        safe_preview: false,
-        partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
-        safety_level: SafetyLevel::Quarantined,
+        mass: MassContract::Fixed { consumes: 2, produces: 1 },
         ..SPEC_DEFAULT
         },
 ];
@@ -1898,8 +1249,8 @@ mod tests {
     #[test]
     fn builtin_specs_contain_canonical_core_words() {
         let required = [
-            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "TOP",
-            "STAK", "EAT", "KEEP", "FORC", "LOOKUP", "FLOW", "VENT",
+            "ADD", "SUB", "MUL", "DIV", "MOD", "EQ", "NEQ", "LT", "LTE", "GT", "GTE", "EAT",
+            "KEEP", "LOOKUP", "VENT", "SQRT", "SORT",
         ];
 
         for name in required {

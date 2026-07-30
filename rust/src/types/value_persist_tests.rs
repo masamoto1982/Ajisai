@@ -6,7 +6,6 @@
 
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
-use crate::types::record_shape::record_shape_from_ordered_keys;
 use crate::types::value_persist::{decode_stack, encode_stack};
 use crate::types::{Interpretation, Token, Value, ValueData};
 use num_bigint::BigInt;
@@ -80,33 +79,12 @@ fn exact_algebraic_with_rational_part_round_trips() {
     let value = Value::from_exact_real(one.add(&root2));
     assert_value_roundtrip(value);
 }
-
-#[test]
-fn scalars_booleans_and_absence_values_round_trip() {
-    assert_value_roundtrip(Value::from_int(42));
-    assert_value_roundtrip(Value::from_fraction(Fraction::new(
-        BigInt::from(22),
-        BigInt::from(7),
-    )));
-    assert_value_roundtrip(Value::from_bool(true));
-    assert_value_roundtrip(Value::from_bool(false));
-    assert_value_roundtrip(Value::nil());
-    assert_value_roundtrip(Value::unknown());
-}
-
 #[test]
 fn big_integer_scalar_round_trips() {
     // Beyond i64 range: the codec must not narrow through i64.
     let big = BigInt::from_str("340282366920938463463374607431768211457").unwrap();
     assert_value_roundtrip(Value::from_fraction(Fraction::new(big, BigInt::one())));
 }
-
-#[test]
-fn handles_round_trip() {
-    assert_value_roundtrip(Value::from_process_handle(7));
-    assert_value_roundtrip(Value::from_supervisor_handle(9));
-}
-
 #[test]
 fn nested_vector_round_trips() {
     let value = Value::from_vector(vec![
@@ -128,21 +106,6 @@ fn tensor_with_nil_lane_round_trips() {
     }
     assert_value_roundtrip(tensor);
 }
-
-#[test]
-fn record_round_trips_keys_and_values() {
-    let shape = record_shape_from_ordered_keys(["name".to_string(), "age".to_string()]);
-    let value = Value {
-        data: ValueData::Record {
-            pairs: Arc::new(vec![sqrt(2), Value::from_int(30)]),
-            shape,
-        },
-        hint: Interpretation::Unassigned,
-        absence: None,
-    };
-    assert_value_roundtrip(value);
-}
-
 #[test]
 fn hint_role_is_preserved_across_the_stack_boundary() {
     // The value's own hint and the stack-position role are independent

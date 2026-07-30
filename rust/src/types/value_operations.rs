@@ -1,5 +1,4 @@
 use super::fraction::Fraction;
-use super::interval::Interval;
 use super::{DenseTensor, Interpretation, Token, Value, ValueData};
 use crate::error::NilReason;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
@@ -78,46 +77,8 @@ impl Value {
     /// no NIL call site can absorb it. Detect it with [`is_unknown`], never by
     /// matching the storage representation.
     #[inline]
-    pub fn unknown() -> Self {
-        Self {
-            data: ValueData::Unknown(None),
-            hint: Interpretation::TruthValue,
-            absence: None,
-        }
-    }
-
-    /// The logical truth value `Unknown` (U) carrying the CF-comparison
-    /// agreed-prefix diagnosis (SPEC §4.5.0 / §7.4.1). Identical to
-    /// [`unknown`] except that U's own diagnostic carrier records a
-    /// `DebugDiagnosis` whose `agreed_prefix` is surfaced as
-    /// `diagnosis.agreedPrefix`. `word` names the comparison Coreword that
-    /// produced U (e.g. `"COMPARE-WITHIN"`, `"LT"`).
-    pub fn unknown_with_agreed_prefix(word: Option<&str>, agreed_prefix: usize) -> Self {
-        Self {
-            data: ValueData::Unknown(Some(Box::new(DebugDiagnosis::comparison_unknown(
-                word,
-                agreed_prefix,
-            )))),
-            hint: Interpretation::TruthValue,
-            absence: None,
-        }
-    }
-
-    /// Whether this value is the logical truth value `Unknown` (U).
-    ///
-    /// This is the single canonical predicate for U. It keys off the
-    /// dedicated [`ValueData::Unknown`] variant, so the U/NIL distinction is
-    /// a type invariant. All call sites must use this instead of matching the
-    /// storage representation.
-    #[inline]
-    pub fn is_unknown(&self) -> bool {
-        matches!(self.data, ValueData::Unknown(_))
-    }
-
-    /// Whether this value carries the `TruthValue` interpretation role
-    /// (true, false, or unknown). Used at observation boundaries to attach
-    /// the `truthValue` axis and the `truthValued` capability.
-    #[inline]
+    /// Whether this value carries the `TruthValue` interpretation role. Used at
+    /// observation boundaries to attach the `truthValue` axis.
     pub fn is_truth_value(&self) -> bool {
         self.hint == Interpretation::TruthValue
     }
@@ -135,9 +96,6 @@ impl Value {
     /// must read this axis rather than the internal NIL representation or
     /// display text.
     pub fn truth_value_for_role(&self, effective: Interpretation) -> Option<&'static str> {
-        if self.is_unknown() {
-            return Some("unknown");
-        }
         // A Boolean is intrinsically truth-valued: it reports its truth on the
         // axis regardless of the effective role, because its data identity —
         // not a semantic-plane role — carries the truth.
@@ -226,13 +184,6 @@ impl Value {
 
     #[inline]
     pub fn nil_diagnosis(&self) -> Option<&DebugDiagnosis> {
-        // The logical Unknown (U) carries its comparison diagnosis on its own
-        // variant, not in NIL's absence metadata. Surface it here so the
-        // `agreedPrefix` accessors keep working for U without U ever holding
-        // an operational NIL reason.
-        if let ValueData::Unknown(diagnosis) = &self.data {
-            return diagnosis.as_deref();
-        }
         self.absence
             .as_ref()
             .and_then(|absence| absence.diagnosis.as_ref())
@@ -359,33 +310,8 @@ impl Value {
         Self::from_fraction(f)
     }
 
-    #[inline]
-    pub fn from_interval(interval: Interval) -> Self {
-        Self {
-            data: ValueData::Vector(Arc::new(vec![
-                Value::from_fraction(interval.lo),
-                Value::from_fraction(interval.hi),
-            ])),
-            hint: Interpretation::Interval,
-            absence: None,
-        }
-    }
-
-    #[inline]
-    pub fn from_datetime(f: Fraction) -> Self {
-        Self {
-            data: ValueData::Scalar(f),
-            hint: Interpretation::Timestamp,
-            absence: None,
-        }
-    }
-
     /// NIL test: `true` only for the operational absence node
-    /// ([`ValueData::Nil`], the Bubble). The logical Unknown (U) is a
-    /// separate [`ValueData::Unknown`] variant and is **not** NIL
-    /// (`unknown().is_nil() == false`), so the U/NIL firewall (SPEC §7.5 /
-    /// §2.3) is now guaranteed by the type rather than by a predicate
-    /// convention.
+    /// ([`ValueData::Nil`], the Bubble).
     #[inline]
     pub fn is_nil(&self) -> bool {
         matches!(self.data, ValueData::Nil)
@@ -419,17 +345,13 @@ impl Value {
             ValueData::Boolean(_) => SemanticKind::Number,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
-            ValueData::Record { .. } => SemanticKind::Record,
             // CS4 PR-2: U is a truth value, not an operational absence. Like a
             // definite Boolean it reports `number` on the coarse `semanticKind`
             // axis (for protocol stability — its distinctness lives in the
             // `truthValue` axis and value identity, SPEC §2.3), never
             // `absence`.
-            ValueData::Unknown(_) => SemanticKind::Number,
             ValueData::Nil => SemanticKind::Absence,
             ValueData::CodeBlock(_) => SemanticKind::Code,
-            ValueData::ProcessHandle(_) => SemanticKind::Process,
-            ValueData::SupervisorHandle(_) => SemanticKind::Supervisor,
         }
     }
 
@@ -440,13 +362,10 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
-            ValueData::Record { .. } => ValueShape::Record,
             // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
             // an absence.
-            ValueData::Unknown(_) => ValueShape::Scalar,
             ValueData::Nil => ValueShape::Absence,
             ValueData::CodeBlock(_) => ValueShape::CodeBlock,
-            ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => ValueShape::Handle,
         }
     }
 
@@ -466,7 +385,7 @@ impl Value {
                 capabilities.push(Capability::Numeric);
                 capabilities.push(Capability::ExactNumeric);
             }
-            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
+            ValueData::Vector(_) | ValueData::Tensor { .. } => {
                 capabilities.push(Capability::Iterable);
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
@@ -477,10 +396,6 @@ impl Value {
             // firewall that keeps U from being absorbed as an operational NIL
             // (SPEC §2.3 / §7.5). It gains `truthValued` below via
             // `is_truth_value`.
-            ValueData::Unknown(_) => {
-                capabilities.push(Capability::Diagnosable);
-                capabilities.push(Capability::AiExplainable);
-            }
             ValueData::Nil => {
                 capabilities.push(Capability::NilPassthrough);
                 capabilities.push(Capability::Diagnosable);
@@ -489,7 +404,6 @@ impl Value {
             ValueData::CodeBlock(_) => capabilities.push(Capability::Callable),
             // A boolean's only extra capability is `truthValued`, added below.
             ValueData::Boolean(_) => {}
-            ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => {}
         }
         // Truth-valued values (true / false / unknown) advertise the
         // `truthValued` capability so consumers know to read the
@@ -521,10 +435,7 @@ impl Value {
 
     #[inline]
     pub fn is_vector(&self) -> bool {
-        matches!(
-            self.data,
-            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. }
-        )
+        matches!(self.data, ValueData::Vector(_) | ValueData::Tensor { .. })
     }
 
     #[inline]
@@ -556,9 +467,7 @@ impl Value {
     /// materializing per-element `Value`s.
     pub fn as_vector_view(&self) -> Option<std::borrow::Cow<'_, [Value]>> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Some(std::borrow::Cow::Borrowed(v.as_slice()))
-            }
+            ValueData::Vector(v) => Some(std::borrow::Cow::Borrowed(v.as_slice())),
             ValueData::Tensor { data, shape } => Some(std::borrow::Cow::Owned(
                 tensor_to_nested_values(data, shape),
             )),
@@ -566,10 +475,7 @@ impl Value {
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -600,18 +506,12 @@ impl Value {
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
             ValueData::Boolean(_) => true,
-            ValueData::Scalar(_)
-            | ValueData::ExactScalar(_)
-            | ValueData::Nil
-            | ValueData::Unknown(_) => true,
+            ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
                 Arc::strong_count(data) == 1 && Arc::strong_count(shape) == 1
             }
-            ValueData::Record { pairs, .. } => Arc::strong_count(pairs) == 1,
-            ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => false,
+            ValueData::CodeBlock(_) => false,
         }
     }
 
@@ -624,20 +524,16 @@ impl Value {
             // conservatively collapses to `false` — the same result as NIL,
             // hence the shared arm. Control words that must honour the third
             // value branch on `is_unknown()` first (e.g. COND), never here.
-            ValueData::Nil | ValueData::Unknown(_) => false,
+            ValueData::Nil => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
             // irrationals; Gosper nodes conservatively report truthy.
             ValueData::ExactScalar(_) => true,
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                !v.is_empty() && !v.iter().all(|c| !c.is_truthy())
-            }
+            ValueData::Vector(v) => !v.is_empty() && !v.iter().all(|c| !c.is_truthy()),
             ValueData::Tensor { data, .. } => {
                 !data.is_empty() && !data.iter().all(|f| f.is_zero() || f.is_nil())
             }
-            ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => true,
+            ValueData::CodeBlock(_) => true,
         }
     }
 
@@ -648,10 +544,9 @@ impl Value {
             // CS4 PR-2: U is a single scalar truth value, so it has length 1
             // like a Boolean (not 0 like an absence). It is not indexable —
             // `get_child`/`child` return `None`, exactly as for a Boolean.
-            ValueData::Unknown(_) => 1,
             ValueData::Boolean(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.len(),
+            ValueData::Vector(v) => v.len(),
             ValueData::Tensor { data, shape } => {
                 if shape.is_empty() {
                     data.len()
@@ -660,7 +555,6 @@ impl Value {
                 }
             }
             ValueData::CodeBlock(tokens) => tokens.len(),
-            ValueData::ProcessHandle(_) | ValueData::SupervisorHandle(_) => 1,
         }
     }
 
@@ -671,17 +565,14 @@ impl Value {
 
     pub fn get_child(&self, index: usize) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index),
+            ValueData::Vector(v) => v.get(index),
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self),
             ValueData::Boolean(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -695,17 +586,14 @@ impl Value {
     /// to operate on `Record` or already-nested `Vector` payloads.
     pub fn child(&self, index: usize) -> Option<Value> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.get(index).cloned(),
+            ValueData::Vector(v) => v.get(index).cloned(),
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self.clone()),
             ValueData::Tensor { data, shape } => tensor_child(data, shape, index),
             ValueData::Boolean(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -714,18 +602,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                Arc::make_mut(v).get_mut(index)
-            }
+            ValueData::Vector(v) => Arc::make_mut(v).get_mut(index),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -737,14 +620,11 @@ impl Value {
     #[inline]
     pub fn last(&self) -> Option<&Value> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => v.last(),
+            ValueData::Vector(v) => v.last(),
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
-            ValueData::Nil | ValueData::Unknown(_) => None,
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            ValueData::Nil => None,
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -764,7 +644,7 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+            ValueData::Vector(v) => {
                 Arc::make_mut(v).push(child);
             }
             ValueData::Nil => {
@@ -781,12 +661,7 @@ impl Value {
             // CS4 PR-2: pushing into U is a no-op, like a Boolean — U is a
             // scalar truth value, not an empty container to be seeded into a
             // vector (that NIL affordance does not apply to a definite datum).
-            ValueData::Boolean(_)
-            | ValueData::Unknown(_)
-            | ValueData::Tensor { .. }
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => {}
+            ValueData::Boolean(_) | ValueData::Tensor { .. } | ValueData::CodeBlock(_) => {}
         }
     }
 
@@ -795,16 +670,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v).pop(),
+            ValueData::Vector(v) => Arc::make_mut(v).pop(),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -813,16 +685,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
+            ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => return,
+            | ValueData::CodeBlock(_) => return,
         };
         if index <= v.len() {
             v.insert(index, child);
@@ -834,16 +703,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
+            ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => return None,
+            | ValueData::CodeBlock(_) => return None,
         };
         if index < v.len() {
             Some(v.remove(index))
@@ -857,16 +723,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         let v: &mut Vec<Value> = match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Arc::make_mut(v),
+            ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => return None,
+            | ValueData::CodeBlock(_) => return None,
         };
         if index < v.len() {
             Some(std::mem::replace(&mut v[index], child))
@@ -883,12 +746,8 @@ impl Value {
             | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
-            | ValueData::Record { .. }
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -900,12 +759,8 @@ impl Value {
             | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
-            | ValueData::Record { .. }
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -922,16 +777,13 @@ impl Value {
     #[inline]
     pub fn as_vector(&self) -> Option<&Vec<Value>> {
         match &self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(v),
+            ValueData::Vector(v) => Some(v),
             ValueData::Tensor { .. } => None,
             ValueData::Boolean(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -941,16 +793,13 @@ impl Value {
             self.hydrate_tensor_to_vector();
         }
         match &mut self.data {
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => Some(Arc::make_mut(v)),
+            ValueData::Vector(v) => Some(Arc::make_mut(v)),
             ValueData::Boolean(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => None,
+            | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -971,7 +820,7 @@ impl Value {
                 }
                 // non-rational ExactScalars are not representable as a single Fraction
             }
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+            ValueData::Vector(v) => {
                 for child in v.iter() {
                     child.collect_fractions_flat_into(buf);
                 }
@@ -983,11 +832,7 @@ impl Value {
             // to no fraction lane, like a Boolean (NIL flattens to a nil
             // lane). Kept in lock-step with `count_fractions` below so buffer
             // sizing stays exact.
-            ValueData::Boolean(_)
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => {}
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => {}
         }
     }
 
@@ -995,26 +840,20 @@ impl Value {
         match &self.data {
             ValueData::Nil => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
-                v.iter().map(|c| c.count_fractions()).sum()
-            }
+            ValueData::Vector(v) => v.iter().map(|c| c.count_fractions()).sum(),
             ValueData::Tensor { data, .. } => data.len(),
             // CS4 PR-2: U contributes no fraction lane (see
             // `collect_fractions_flat_into`), matching a Boolean.
-            ValueData::Boolean(_)
-            | ValueData::Unknown(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => 0,
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => 0,
         }
     }
 
     pub fn shape(&self) -> Vec<usize> {
         match &self.data {
             // U and NIL are both rank-0 (empty shape), like a Boolean/Scalar.
-            ValueData::Nil | ValueData::Unknown(_) => vec![],
+            ValueData::Nil => vec![],
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => vec![],
-            ValueData::Vector(v) | ValueData::Record { pairs: v, .. } => {
+            ValueData::Vector(v) => {
                 if v.is_empty() {
                     vec![0]
                 } else {
@@ -1030,10 +869,7 @@ impl Value {
                 }
             }
             ValueData::Tensor { shape, .. } => (**shape).clone(),
-            ValueData::Boolean(_)
-            | ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => vec![],
+            ValueData::Boolean(_) | ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -1058,42 +894,15 @@ impl Value {
         }
     }
 
-    pub fn from_process_handle(id: u64) -> Self {
-        Self {
-            data: ValueData::ProcessHandle(id),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
-
-    pub fn as_process_handle(&self) -> Option<u64> {
-        match self.data {
-            ValueData::ProcessHandle(id) => Some(id),
-            _ => None,
-        }
-    }
-
-    pub fn from_supervisor_handle(id: u64) -> Self {
-        Self {
-            data: ValueData::SupervisorHandle(id),
-            hint: Interpretation::Unassigned,
-            absence: None,
-        }
-    }
-
     pub fn resolve_default_hint(&self) -> Interpretation {
         match &self.data {
             ValueData::Nil => Interpretation::Nil,
             // CS4 PR-2: U's role is `TruthValue`, like a Boolean — its default
             // rendering role must not fall back to `Nil`.
-            ValueData::Unknown(_) | ValueData::Boolean(_) => Interpretation::TruthValue,
+            ValueData::Boolean(_) => Interpretation::TruthValue,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
-            ValueData::Vector(_) | ValueData::Tensor { .. } | ValueData::Record { .. } => {
-                Interpretation::Unassigned
-            }
-            ValueData::CodeBlock(_)
-            | ValueData::ProcessHandle(_)
-            | ValueData::SupervisorHandle(_) => Interpretation::Unassigned,
+            ValueData::Vector(_) | ValueData::Tensor { .. } => Interpretation::Unassigned,
+            ValueData::CodeBlock(_) => Interpretation::Unassigned,
         }
     }
 
@@ -1245,13 +1054,7 @@ fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
         ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
         ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
-        ValueData::Boolean(_)
-        | ValueData::Nil
-        | ValueData::Unknown(_)
-        | ValueData::Record { .. }
-        | ValueData::CodeBlock(_)
-        | ValueData::ProcessHandle(_)
-        | ValueData::SupervisorHandle(_) => None,
+        ValueData::Boolean(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
     }
 }
 
@@ -1282,7 +1085,6 @@ fn tensor_fractions_to_nested_values(data: &[Fraction], shape: &[usize]) -> Vec<
 
 /// Materialize a dense Tensor (`data` + `shape`) as a tree of nested `Value`s.
 /// Used by mutating helpers that need a uniform `Vec<Value>` representation,
-/// and by display fallbacks.
 pub(super) fn tensor_to_nested_values(data: &DenseTensor, shape: &[usize]) -> Vec<Value> {
     fn build(data: &DenseTensor, shape: &[usize], offset: usize) -> Vec<Value> {
         if shape.is_empty() || shape.len() == 1 {
@@ -1308,7 +1110,7 @@ pub(super) fn tensor_to_nested_values(data: &DenseTensor, shape: &[usize]) -> Ve
 }
 
 #[cfg(test)]
-mod vtu_tensor_tests {
+mod tensor_boundary_tests {
     use super::*;
 
     #[test]

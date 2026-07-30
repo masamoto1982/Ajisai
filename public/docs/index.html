@@ -461,7 +461,7 @@
                     <p><strong>The Reference is for using Ajisai.</strong> If you are implementing or porting the language, the single design authority is the <a href="../SPECIFICATION.html">Specification</a>; this page is derived from it for learners and day-to-day users.</p>
                     <h3>How to read the examples</h3>
                     <p>The <strong>Expected value</strong> column shows the final stack exactly as the language renders it, value by value. Two display conventions matter from the start:</p>
-                    <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code> and <code>UNKNOWN</code>; the absence of a value displays as <code>NIL</code>.</p>
+                    <p>Numbers display as exact fractions in <code>numerator/denominator</code> form — the integer three renders as <code>3/1</code>. Truth values display as <code>TRUE</code> and <code>FALSE</code>; the absence of a value displays as <code>NIL</code>.</p>
                     <p>In the text of this reference, anything with a gray background is an Ajisai token. Every symbol token defined by Ajisai is a word in disguise — <code>+</code> is <code>ADD</code> and <code>,,</code> is <code>KEEP</code> — so the gray background is the signal that a mark belongs to the program, not to the prose.</p>
                 </section>
 
@@ -615,7 +615,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 9 SQRT</code></td>
+                                    <td><code>9 SQRT</code></td>
                                     <td><code>3/1</code></td>
                                     <td class="notes">A perfect-square root is the exact rational answer.</td>
                                 </tr>
@@ -634,7 +634,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 2 LT</code></td>
+                                    <td><code>2 SQRT 2 LT</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">An irrational like \(\sqrt{2}\) is a lazy continued fraction; comparisons against it are computed exactly.</td>
                                 </tr>
@@ -657,8 +657,6 @@
                                 <tr><th>Canonical</th><th>Sugar</th><th>Effect</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>TOP</code></td><td><code>.</code></td><td class="notes">Operate on the top value(s) of the stack (default).</td></tr>
-                                <tr><td><code>STAK</code></td><td><code>..</code></td><td class="notes">Fold the operation across many stack values; the count on top of the stack says how many.</td></tr>
                                 <tr><td><code>EAT</code></td><td><code>,</code></td><td class="notes">Consume the operands (default).</td></tr>
                                 <tr><td><code>KEEP</code></td><td><code>,,</code></td><td class="notes">Retain the operands and push the result as well.</td></tr>
                             </tbody>
@@ -694,44 +692,6 @@
                                     <td><code>3 4 KEEP ADD</code></td>
                                     <td><code>3/1 4/1 7/1</code></td>
                                     <td class="notes"><code>KEEP</code> (<code>,,</code>) retains the operands; the result is pushed on top.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 2 3 3 STAK ADD</code></td>
-                                    <td><code>6/1</code></td>
-                                    <td class="notes"><code>STAK</code> (<code>..</code>) folds <code>ADD</code> across the three values below the count.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1 2 3 3 STAK KEEP ADD</code></td>
-                                    <td><code>1/1 2/1 3/1 6/1</code></td>
-                                    <td class="notes">Modifiers combine: fold across the stack and keep the operands too.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -883,7 +843,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 2 SQRT SUB 0 EQ</code></td>
+                                    <td><code>2 SQRT 2 SQRT SUB 0 EQ</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">\(\sqrt{2} - \sqrt{2}\) is exactly 0. Square roots and their sums, differences, products, and quotients are compared exactly, so the six relations decide them without a budget.</td>
                                 </tr>
@@ -894,50 +854,12 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>5 3 10 COMPARE-WITHIN</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">Three-way compare with an explicit budget: the sign of \(a - b\), or <code>UNKNOWN</code> if undecided within the budget.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</code></td>
-                                    <td><code>UNKNOWN</code></td>
-                                    <td class="notes">Two equal lazy values never diverge, so a small explicit budget runs out and returns the third truth value. <code>COMPARE-WITHIN</code> is the one word today that can produce <code>UNKNOWN</code>.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">The six relations decide exactly over every value the current words can build — rationals and square roots alike — so they never return <code>UNKNOWN</code>. The budget lives behind <code>COMPARE-WITHIN</code>, which lets you name a partial-quotient depth and returns <code>UNKNOWN</code> — a logical truth value, distinct from <code>NIL</code> — when two lazy values do not diverge within it. A general <code>UNKNOWN</code> from the bare relations is reserved for exact lazy values that only future words will introduce.</p>
+                    <p class="ref-note">The six relations decide exactly over every value the words can build — rationals and square roots alike — so a comparison always answers <code>TRUE</code> or <code>FALSE</code>. There is no budget to run out of and no undecided outcome.</p>
                 </section>
 
                 <section id="logic" class="ref-page">
-                    <h2>Three-Valued Logic</h2>
-                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> implement strong Kleene three-valued logic over true, false, and unknown. The absorbing cases are exact: false absorbs <code>AND</code>, true absorbs <code>OR</code>; unknown propagates everywhere else.</p>
+                    <h2>Logic</h2>
+                    <p><code>AND</code> (<code>&amp;</code>) and <code>OR</code> and <code>NOT</code> are the ordinary Boolean operations over <code>TRUE</code> and <code>FALSE</code>. There is no third truth value: every comparison decides, so logic never has to represent "undecided". An absent operand passes through rather than being absorbed — <code>NIL</code> in, <code>NIL</code> out — so a bubble stays visible instead of being swallowed by a definite operand.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1003,9 +925,9 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN TRUE AND</code></td>
-                                    <td><code>UNKNOWN</code></td>
-                                    <td class="notes">A budget-exhausted <code>COMPARE-WITHIN</code> yields unknown, which flows through the Kleene tables: true AND unknown is unknown.</td>
+                                    <td><code>1 0 DIV TRUE AND</code></td>
+                                    <td><code>NIL</code></td>
+                                    <td class="notes">The left operand bubbled, so the absence flows to the result instead of being absorbed. Recover it with <code>^</code> where it matters.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1299,7 +1221,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>'algo' IMPORT [ 3 1 2 ] SORT</code></td>
+                                    <td><code>[ 3 1 2 ] SORT</code></td>
                                     <td><code>[ 1/1 2/1 3/1 ]</code></td>
                                     <td class="notes">Ascending sort. <code>SORT</code> is owned by the <code>ALGO</code> module.</td>
                                 </tr>
@@ -1310,45 +1232,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] SHAPE</code></td>
-                                    <td><code>[ 2/1 2/1 ]</code></td>
-                                    <td class="notes">The size of each dimension of a nested vector.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ [ 1 2 ] [ 3 4 ] ] RANK</code></td>
-                                    <td><code>2/1</code></td>
-                                    <td class="notes">The number of dimensions.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">Further structural words: <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code> <code>SPLIT</code> <code>REORDER</code> <code>COLLECT</code> <code>RESHAPE</code> <code>TRANSPOSE</code> <code>FILL</code>.</p>
+                    <p class="ref-note">Further structural words: <code>INSERT</code> <code>REPLACE</code> <code>REMOVE</code> <code>SPLIT</code> <code>REORDER</code> <code>COLLECT</code> <code>FILL</code>.</p>
                 </section>
 
                 <section id="higher-order" class="ref-page">
@@ -1438,44 +1322,6 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ 1 2 3 4 ] [ 0 ] '+' SCAN</code></td>
-                                    <td><code>[ 1/1 3/1 6/1 10/1 ]</code></td>
-                                    <td class="notes">Like <code>FOLD</code>, but keeps every intermediate accumulator (running totals).</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 4 5 ] { [ 2 ] MOD [ 0 ] = } COUNT</code></td>
-                                    <td><code>[ 2/1 ]</code></td>
-                                    <td class="notes">Count the elements satisfying the predicate.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
                                     <td><code>[ 1 3 5 8 ] { [ 2 ] MOD [ 0 ] = } ANY</code></td>
                                     <td><code>TRUE</code></td>
                                     <td class="notes">True if at least one element satisfies the predicate; short-circuits.</td>
@@ -1506,12 +1352,12 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note"><code>UNFOLD</code> generates a sequence from a seed and a generator block; <code>EXEC</code> runs a block; <code>EVAL</code> runs a string as code.</p>
+                    <p class="ref-note"><code>EXEC</code> runs a code block taken from the stack.</p>
                 </section>
 
                 <section id="cond" class="ref-page">
                     <h2>Conditionals</h2>
-                    <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is definitely true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>IDLE</code> (a no-op) makes an always-true else guard.</p>
+                    <p><code>COND</code> evaluates guard-and-body clauses in order and executes the body of the first guard that is true. In the clause form, <code>|</code> separates the guard from the body and each clause occupies exactly one line; <code>TRUE</code> makes an always-true else guard.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1523,7 +1369,7 @@
                                     <td><code>[ 0 ]
 { [ 0 ] &lt; | 'negative' }
 { [ 0 ] = | 'zero' }
-{ IDLE | 'positive' }
+{ TRUE | 'positive' }
 COND</code></td>
                                     <td><code>'zero'</code></td>
                                     <td class="notes">Clause form: guard left of <code>|</code>, body right; one clause per line.</td>
@@ -1543,7 +1389,7 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { IDLE } { 'positive' } COND</code></td>
+                                    <td><code>[ -5 ] { [ 0 ] &lt; } { 'negative' } { TRUE } { 'positive' } COND</code></td>
                                     <td><code>'negative'</code></td>
                                     <td class="notes">Pair form: alternating guard and body blocks.</td>
                                 </tr>
@@ -1554,7 +1400,7 @@ COND</code></td>
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">A guard that evaluates to <code>UNKNOWN</code> does <em>not</em> fire its clause; evaluation falls through as if it were false. If no clause matches and there is no else clause, <code>COND</code> raises an error.</p>
+                    <p class="ref-note">Every guard decides, so a clause either fires or does not. If no clause matches and there is no else clause, <code>COND</code> raises an error.</p>
                 </section>
 
                 <section id="strings" class="ref-page">
@@ -1665,7 +1511,7 @@ COND</code></td>
                                 <tr>
                                     <td><code>'  hi  ' TRIM</code></td>
                                     <td><code>'hi'</code></td>
-                                    <td class="notes">Strip whitespace from both ends; <code>TRIM-LEFT</code> and <code>TRIM-RIGHT</code> take one side.</td>
+                                    <td class="notes">Strip whitespace from both ends.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1759,7 +1605,7 @@ COND</code></td>
                         </div>
                     </div>
                     <h3>Managing words</h3>
-                    <p><code>DEL</code> deletes a user word by quoted name. Dependencies are tracked: redefining or deleting a word that other words depend on requires the force modifier <code>FORC</code> (<code>!</code>). Built-in words can never be redefined or deleted. <code>LOOKUP</code> (<code>?</code>) shows the definition of a word — for a user word it returns the original source for editing.</p>
+                    <p><code>DEL</code> deletes a user word by quoted name. Dependencies are tracked: a word that other words depend on cannot be deleted at all, so a dangling reference is impossible — delete the dependents first.</p>
                     <p class="ref-note">Word names are case-insensitive (<code>add10</code> and <code>ADD10</code> are the same word) and conventionally follow an action-object style such as <code>APPLY-GAIN</code>. How a name is matched to a definition is the subject of <a href="#dictionaries">Dictionaries and Word Identity</a>.</p>
                 </section>
 
@@ -1810,91 +1656,7 @@ COND</code></td>
                     <p class="ref-note">Because identity is content-addressed, an imported group behaves identically in every environment, regardless of which other dictionaries or modules happen to be loaded.</p>
                 </section>
 
-                <section id="modules" class="ref-page">
-                    <h2>Modules</h2>
-                    <p>Module words become visible with <code>IMPORT</code>: the quoted module name is case-insensitive. <code>IMPORT-ONLY</code> brings in selected words; <code>UNIMPORT</code> and <code>UNIMPORT-ONLY</code> hide them again without deleting anything.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'math' IMPORT 9 SQRT</code></td>
-                                    <td><code>3/1</code></td>
-                                    <td class="notes">After <code>IMPORT</code>, the module's words resolve as bare names.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'algo' IMPORT [ 3 1 2 ] SORT</code></td>
-                                    <td><code>[ 1/1 2/1 3/1 ]</code></td>
-                                    <td class="notes"><code>SORT</code> is canonically an <code>ALGO</code> word.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <h3>Available modules</h3>
-                    <div class="ref-table-wrap word-table">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Module</th><th>Purpose</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><code>MATH</code></td><td class="notes">Square root, exact-rational interval arithmetic, and scalar utilities</td></tr>
-                                <tr><td><code>ALGO</code></td><td class="notes">Sorting and other deterministic algorithms</td></tr>
-                                <tr><td><code>JSON</code></td><td class="notes">JSON parsing, generation, and manipulation</td></tr>
-                                <tr><td><code>IO</code></td><td class="notes">Standard input/output</td></tr>
-                                <tr><td><code>TIME</code></td><td class="notes">Exact, timezone-free date and time values</td></tr>
-                                <tr><td><code>CRYPTO</code></td><td class="notes">Cryptographically secure random and hash</td></tr>
-                                <tr><td><code>MUSIC</code></td><td class="notes">Audio sequencing and synthesis</td></tr>
-                                <tr><td><code>SERIAL</code></td><td class="notes">Host-mediated serial port access</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
 
-                <section id="pipeline" class="ref-page">
-                    <h2>Pipelines</h2>
-                    <p><code>FLOW</code> (<code>~</code>) is a purely visual pipeline marker — it has no runtime effect. Use it to punctuate the stages of a dataflow so a long line reads as a pipeline.</p>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>[ 1 2 3 ] ~ REVERSE</code></td>
-                                    <td><code>[ 3/1 2/1 1/1 ]</code></td>
-                                    <td class="notes">Identical to the same code without <code>~</code>.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">A typical shape: compute ~ transform ~ compare, with a single <code>VENT</code> (<code>^</code>) fallback at the end of the line to absorb any bubble produced along the way.</p>
-                </section>
 
                 <section id="output" class="ref-page">
                     <h2>Output</h2>
@@ -1970,7 +1732,6 @@ COND</code></td>
                         <tbody>
                             <tr><td>Value equivalence</td><td>Are these the same mathematical value?</td><td>This is what comparison words use.</td></tr>
                             <tr><td>Structural identity</td><td>Are they stored the same way internally?</td><td>Not user-observable; implementations may optimize representation.</td></tr>
-                            <tr><td>Budgeted observation</td><td>Can this equality or ordering question be decided now?</td><td>If a future lazy value cannot be decided within budget, Ajisai says <code>UNKNOWN</code> instead of guessing.</td></tr>
                             <tr><td>Display equivalence</td><td>Do two rendered strings look the same?</td><td>Display helps humans, but it is not the proof of equality.</td></tr>
                             <tr><td>Conformance equivalence</td><td>Do implementations produce the same observable results?</td><td>This is how ports show they are the same Ajisai language.</td></tr>
                         </tbody>
@@ -1979,139 +1740,6 @@ COND</code></td>
                     <p>For current algebraic Ajisai values, comparison is exact and total. Users do not choose an equality mode: they use the existing words, and Ajisai keeps representation details and display roles out of the value model.</p>
                 </section>
 
-                <section id="cost-model" class="ref-page">
-                    <h2>Cost Model</h2>
-                    <p>Ajisai never rounds, yet most everyday numbers still run on a <strong>fast lane</strong>. This page is the <em>cost model</em>: which values are fast, what pushes a value onto a slower representation, and when a comparison can cost extra. It is practical guidance for reasoning about speed — the internal representation of a value is never observable, and nothing here changes what a program returns. For canonical behavior, the Specification is the authority (§4.2, §4.2.7, §4.3.1, §7.4).</p>
-
-                    <h3>The fast lane is small rationals</h3>
-                    <p>A scalar whose numerator and denominator both fit a machine integer is stored as a compact reduced fraction and runs at close to integer speed. Everything stays exact; larger or lazy values simply take a representation whose cost grows with what they hold.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Value</th><th>Representation</th><th>Cost</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Small rational (numerator and denominator fit a machine integer)</td><td class="notes">Compact reduced fraction — the fast lane.</td><td class="notes">Fixed, near integer speed.</td></tr>
-                            <tr><td>Big rational (needs arbitrary-precision integers)</td><td class="notes">Big-integer fraction.</td><td class="notes">Exact; grows with the number of digits.</td></tr>
-                            <tr><td>Square root or other algebraic irrational</td><td class="notes">Exact algebraic normal form (Tier 1).</td><td class="notes">Exact; comparisons and integer parts are decided algebraically, and a continued-fraction display is paid per derived term.</td></tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <p class="ref-note">Illustration, not a promise: on one countdown-loop benchmark the small-rational fast path ran about 1.21× faster than the general path. The cost model gives you the <em>direction</em> and the <em>triggers</em>, not a guaranteed ratio.</p>
-
-                    <h3>What moves a value off the fast lane</h3>
-                    <p>A value leaves the fast lane when it can no longer be a small rational. Each of these keeps the value exact — it only changes how the value is stored, and therefore how much it costs.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>You do this</th><th>The value becomes</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>A result grows past the machine-integer range</td><td class="notes">A big-integer rational — still exact, cost scales with digits.</td></tr>
-                            <tr><td><code>SQRT</code> of a value that is not a perfect square</td><td class="notes">A lazy continued fraction.</td></tr>
-                            <tr><td>Arithmetic that mixes a lazy value in</td><td class="notes">A lazy result — laziness is contagious.</td></tr>
-                            <tr><td>A vector element becomes <code>NIL</code></td><td class="notes"><strong>No change of representation</strong> — a dense vector marks the lane empty instead of rebuilding itself.</td></tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>1000000000000 1000000000000 *</code></td>
-                                    <td><code>1000000000000000000000000/1</code></td>
-                                    <td class="notes">The product outgrows a machine integer, so it promotes to a big-integer rational — exact, never a float.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-
-                    <h3>Vectors: dense or nested</h3>
-                    <p>A vector is stored one of two ways, chosen when it is built. The choice is invisible to your program — the same words, the same results — but it decides the speed of bulk numeric work.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>Class</th><th>When you get it</th><th>Cost</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Dense</td><td class="notes">Every element is a small rational and the shape is rectangular.</td><td class="notes">Packed buffers, SIMD-friendly, fast element-wise.</td></tr>
-                            <tr><td>Nested</td><td class="notes">Mixed element types, ragged rows, or big / irrational elements.</td><td class="notes">Handled element by element.</td></tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <p class="ref-note">To keep a numeric vector on the fast (dense) path, build it from uniform small rationals with an even shape. A single irrational or oversized element, or a ragged row, makes the whole vector nested.</p>
-
-                    <h3>When a comparison costs extra</h3>
-                    <p>Every comparison you can write today <strong>decides exactly</strong> — the six relations never return <code>UNKNOWN</code> for any value the current words can build. What changes is how much work deciding takes. Comparing two small rationals is a single integer comparison. Comparing exact irrationals (a square root, or a sum like \(\sqrt2 + \sqrt3\)) is still exact and total, but it is settled through algebraic normal-form work rather than one cheap step, so it costs more.</p>
-                    <div class="ref-table-wrap">
-                    <table class="ref-table">
-                        <thead>
-                            <tr><th>What you compare</th><th>Cost, and can it be <code>UNKNOWN</code>?</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Small rationals</td><td class="notes">Cheapest — a direct comparison. Always decides.</td></tr>
-                            <tr><td>Exact irrationals (square roots and their sums, differences, products, quotients)</td><td class="notes">Decides exactly and totally, at algebraic-normal-form cost. Never <code>UNKNOWN</code>.</td></tr>
-                            <tr><td>Via <code>COMPARE-WITHIN</code> with a small depth</td><td class="notes">You name the partial-quotient depth; two equal lazy values can exhaust it and return <code>UNKNOWN</code>. This is the one window onto the budget.</td></tr>
-                        </tbody>
-                    </table>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>5 3 10 COMPARE-WITHIN</code></td>
-                                    <td><code>1/1</code></td>
-                                    <td class="notes">Three-way compare within an explicit budget: the sign of \(a - b\).</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <div class="sample">
-                        <div class="ref-table-wrap">
-                        <table class="ref-table">
-                            <thead>
-                                <tr><th>Sample code</th><th>Expected value</th><th>Notes</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><code>'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD 8 COMPARE-WITHIN</code></td>
-                                    <td><code>UNKNOWN</code></td>
-                                    <td class="notes">Two equal lazy values never diverge, so a small explicit budget runs out — the only way to see <code>UNKNOWN</code> from today's words.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
-                    </div>
-                    <p class="ref-note">The budget is measured in enclosure-refinement steps (water). No comparison spends it on any value you can construct today — <code>COMPARE-WITHIN</code> included, whatever budget you name; the <code>UNKNOWN</code> outcome is reserved for the general computable reals that only future words will introduce.</p>
-
-                    <h3>Rules of thumb</h3>
-                    <ul>
-                        <li>Keep hot numeric data as small rationals to stay on the fast lane and, for vectors, on the dense path.</li>
-                        <li>Expect square roots and other irrational values to cost more than small rationals: comparisons and integer parts settle through exact algebraic work on the normal form, and a continued-fraction display derives only as many terms as it shows.</li>
-                        <li>Big integers stay exact; if you are near the machine-integer edge, that is where the cost changes, not the meaning.</li>
-                        <li>Reach for <code>COMPARE-WITHIN</code> when you want a bounded, explicit answer instead of the implicit budget.</li>
-                    </ul>
-                    <p class="ref-note">None of this is a semantic guarantee. Representations, and the exact point at which a value leaves the fast lane, are implementation detail; the Specification (§4.2, §4.3.1, §7.4) defines what is observable.</p>
-                </section>
             </article>
 
             <nav class="ref-nav" aria-label="Index">
@@ -2124,7 +1752,7 @@ COND</code></td>
                     <li><a href="#stack">Stack and Modifiers</a></li>
                     <li><a href="#arithmetic">Arithmetic</a></li>
                     <li><a href="#comparison">Comparison and Truth Values</a></li>
-                    <li><a href="#logic">Three-Valued Logic</a></li>
+                    <li><a href="#logic">Logic</a></li>
                     <li><a href="#nil">NIL and the Bubble Rule</a></li>
                     <li><a href="#vector-ops">Vector Operations</a></li>
                     <li><a href="#higher-order">Higher-Order Words</a></li>
@@ -2132,10 +1760,7 @@ COND</code></td>
                     <li><a href="#strings">Strings</a></li>
                     <li><a href="#define">Defining Words</a></li>
                     <li><a href="#dictionaries">Dictionaries and Word Identity</a></li>
-                    <li><a href="#modules">Modules</a></li>
-                    <li><a href="#pipeline">Pipelines</a></li>
                     <li><a href="#output">Output</a></li>
-                    <li><a href="#cost-model">Cost Model</a></li>
                 </ul>
             </nav>
         </main>

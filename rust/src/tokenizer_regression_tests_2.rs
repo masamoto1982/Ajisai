@@ -342,16 +342,6 @@ mod tokenizer_regression_tests_2 {
             "internal line break must be preserved as a statement separator"
         );
     }
-
-    #[test]
-    fn test_multiple_dollar_clauses_in_single_line_error() {
-        let result = tokenize("{ [ 0 ] < | 'negative' } { IDLE | 'positive' }");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("COND: | clauses must be written one clause per line"));
-    }
-
     #[test]
     fn test_close_paren_rejected_after_brace() {
         let result = tokenize("{ [ 2 ] * )");

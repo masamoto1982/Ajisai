@@ -22,10 +22,10 @@
   "algebra_primitives": [
     {
       "id": "algebra.k3.domain",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "domain",
-      "description": "Kleene three-valued truth domain {T,F,U}; a direct-sum component of V, disjoint from numbers.",
+      "description": "Boolean truth domain {T,F}; a direct-sum component of V, disjoint from numbers.",
       "admission_reason": "Accepted as the shared k3-truth schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
       "introduced_by": [
         "TRUE",
@@ -67,7 +67,7 @@
     },
     {
       "id": "algebra.k3.meet",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "operation",
       "description": "Strong Kleene meet (greatest lower bound) on K3; the algebraic primitive AND derives from.",
@@ -82,7 +82,7 @@
     },
     {
       "id": "algebra.k3.join",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "operation",
       "description": "Strong Kleene join (least upper bound) on K3; the algebraic primitive OR derives from.",
@@ -97,7 +97,7 @@
     },
     {
       "id": "algebra.k3.involution",
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "kind": "operation",
       "description": "Order-reversing involution on K3 fixing U; the algebraic primitive NOT derives from.",
@@ -525,36 +525,6 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.modifier.region.stack",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Region selection over the whole operand stack; one axis of the modifier combinator.",
-      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "STAK"
-      ],
-      "can_derive": [
-        "STAK"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.modifier.region.top",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Region selection over the top stack item; one axis of the modifier combinator.",
-      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "TOP"
-      ],
-      "can_derive": [
-        "TOP"
-      ],
-      "status": "accepted"
-    },
-    {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
       "core_tier": "flow",
@@ -617,23 +587,6 @@
         "MONITOR",
         "SPAWN/AWAIT",
         "JSON@SET"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.state-transformer.identity",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Identity state transformer over Sigma = Stack x Dict x Eff; IDLE and no-op sugar derive from it.",
-      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "FLOW",
-        "IDLE"
-      ],
-      "can_derive": [
-        "FLOW",
-        "IDLE"
       ],
       "status": "accepted"
     },
@@ -710,44 +663,6 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.eff.append",
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Append into the free-monoid effect log Eff, the third component of Sigma.",
-      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "NOW",
-        "RANDOM",
-        "SERIAL-*",
-        "PRINT",
-        "JSON@EXPORT",
-        "IO@OUTPUT",
-        "MUSIC@SLOT",
-        "MUSIC@GAIN",
-        "MUSIC@GAIN-RESET",
-        "MUSIC@PAN",
-        "MUSIC@PAN-RESET",
-        "MUSIC@FX-RESET"
-      ],
-      "can_derive": [
-        "NOW",
-        "RANDOM",
-        "SERIAL-*",
-        "PRINT",
-        "JSON@EXPORT",
-        "IO@OUTPUT",
-        "MUSIC@SLOT",
-        "MUSIC@GAIN",
-        "MUSIC@GAIN-RESET",
-        "MUSIC@PAN",
-        "MUSIC@PAN-RESET",
-        "MUSIC@FX-RESET",
-        "MUSIC@PLAY"
-      ],
-      "status": "accepted"
-    },
-    {
       "id": "algebra.observation.structured-diagnostic",
       "algebraic_family": "observation",
       "core_tier": "identity",
@@ -765,86 +680,6 @@
         "LOOKUP",
         "IO@INPUT",
         "MUSIC@EXPLAIN"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.observation.digest",
-      "algebraic_family": "observation",
-      "core_tier": "material",
-      "kind": "operation",
-      "description": "Deterministic digest observation over canonical serialized values; pure CRYPTO@HASH derives from it without a host read effect.",
-      "admission_reason": "Accepted as the shared observation schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "CRYPTO@HASH"
-      ],
-      "can_derive": [
-        "CRYPTO@HASH"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "capability.check",
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "kind": "capability",
-      "description": "Capability gate guarding a hosted effect; failure is a structured diagnostic, not a Core value.",
-      "admission_reason": "Accepted as the shared hosted-effect schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "NOW",
-        "RANDOM",
-        "SERIAL-*",
-        "missing capability",
-        "PRINT",
-        "JSON@EXPORT",
-        "IO@INPUT",
-        "IO@OUTPUT",
-        "MUSIC@SLOT",
-        "MUSIC@GAIN",
-        "MUSIC@GAIN-RESET",
-        "MUSIC@PAN"
-      ],
-      "can_derive": [
-        "NOW",
-        "RANDOM",
-        "SERIAL-*",
-        "missing capability",
-        "PRINT",
-        "JSON@EXPORT",
-        "IO@INPUT",
-        "IO@OUTPUT",
-        "MUSIC@SLOT",
-        "MUSIC@GAIN",
-        "MUSIC@GAIN-RESET",
-        "MUSIC@PAN",
-        "MUSIC@PAN-RESET",
-        "MUSIC@FX-RESET",
-        "MUSIC@PLAY"
-      ],
-      "status": "accepted"
-    },
-    {
-      "id": "algebra.handle.domain",
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "kind": "domain",
-      "description": "Child-runtime/supervisor handle value domain; currently Exploratory, outside the Core contract.",
-      "admission_reason": "Accepted as the shared state-transformer schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "SPAWN",
-        "AWAIT",
-        "STATUS",
-        "KILL",
-        "MONITOR",
-        "SPAWN/AWAIT"
-      ],
-      "can_derive": [
-        "SPAWN",
-        "AWAIT",
-        "STATUS",
-        "KILL",
-        "MONITOR",
-        "SPAWN/AWAIT"
       ],
       "status": "accepted"
     }
@@ -876,7 +711,7 @@
       "derived_from": [
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity"
     },
     {
@@ -905,7 +740,7 @@
       "derived_from": [
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity"
     },
     {
@@ -1001,90 +836,6 @@
       "core_tier": "identity"
     },
     {
-      "id": "core.nil-origin",
-      "kind": "coreword",
-      "surface": "NIL-ORIGIN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.15"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/nil_diagnostics_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-nil-origin-literal"
-      ],
-      "status": "Formalized",
-      "notes": "Reads the required origin protocol string of an operational NIL as Text; retains the inspected value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity"
-    },
-    {
-      "id": "core.nil-recoverable",
-      "kind": "coreword",
-      "surface": "NIL-RECOVERABLE?",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.15"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/nil_diagnostics_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-nil-recoverable-division-by-zero"
-      ],
-      "status": "Formalized",
-      "notes": "Reads the required four-valued recoverability protocol string of an operational NIL as Text (not a two-valued boolean, per §4.5.0); retains the inspected value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity"
-    },
-    {
-      "id": "core.nil-diagnosis",
-      "kind": "coreword",
-      "surface": "NIL-DIAGNOSIS",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.5.0",
-        "SPECIFICATION.html §7.15"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §5"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/nil_diagnostics_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-nil-diagnosis-absent-is-nil"
-      ],
-      "status": "Formalized",
-      "notes": "Reads the optional three-layer diagnosis of an operational NIL as a Record whose fields are §4.5.0 protocol strings; retains the inspected value; NIL when no diagnosis is attached.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity"
-    },
-    {
       "id": "core.and",
       "kind": "coreword",
       "surface": "AND",
@@ -1108,7 +859,7 @@
       "derived_from": [
         "algebra.k3.meet"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "logic_kleene.meet_k3 via compute_k3_binary_value/fold_k3_values"
     },
@@ -1136,7 +887,7 @@
       "derived_from": [
         "algebra.k3.join"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "logic_kleene.join_k3 via compute_k3_binary_value/fold_k3_values"
     },
@@ -1164,7 +915,7 @@
       "derived_from": [
         "algebra.k3.involution"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "logic_kleene.involution_k3 via compute_inverted_value"
     },
@@ -1429,165 +1180,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.quantize",
-      "kind": "coreword",
-      "surface": "QUANTIZE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2.6",
-        "SPECIFICATION.html §7.13"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2",
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "QUANTIZE — banker's-rounding (ties-to-even) quantization of an exact value to a positive rational grid, emitting the exact residual r so that q + r = x with no loss (canonical SPECIFICATION.html §7.13; design docs/dev/fintech-value-integrity-design.md). FLOOR/CEIL/ROUND are its step=1 special cases. Projecting failures create NIL/Bubble observations (an irrational operand projects to an Undecidable bubble). Status Sketched pending a dedicated entry in the mathematical formalization doc.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.quantize-half-away",
-      "kind": "coreword",
-      "surface": "QUANTIZE-HALF-AWAY",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.13"
-      ],
-      "formalization_sections": [
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "QUANTIZE-HALF-AWAY — QUANTIZE-family grid quantization rounding to nearest with ties away from zero (the grid generalisation of ROUND), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.quantize-floor",
-      "kind": "coreword",
-      "surface": "QUANTIZE-FLOOR",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.13"
-      ],
-      "formalization_sections": [
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "QUANTIZE-FLOOR — QUANTIZE-family grid quantization toward negative infinity (the grid generalisation of FLOOR), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.quantize-ceil",
-      "kind": "coreword",
-      "surface": "QUANTIZE-CEIL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.13"
-      ],
-      "formalization_sections": [
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "QUANTIZE-CEIL — QUANTIZE-family grid quantization toward positive infinity (the grid generalisation of CEIL), emitting the exact residual so q + r = x. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.quantize-trunc",
-      "kind": "coreword",
-      "surface": "QUANTIZE-TRUNC",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.13"
-      ],
-      "formalization_sections": [
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "QUANTIZE-TRUNC — QUANTIZE-family grid quantization toward zero (truncation), emitting the exact residual so q + r = x. Distinct from QUANTIZE-FLOOR on negative values. Projecting; irrational operands project to an Undecidable bubble. Status Sketched pending a mathematical-formalization entry.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.conserve",
-      "kind": "coreword",
-      "surface": "CONSERVE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7",
-        "SPECIFICATION.html §13.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/fintech-value-integrity-design.md"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "CONSERVE — value-conservation guard: asserts the exact sum of a scalar parts vector equals a declared total, passing the parts through iff the equality is proven and failing loudly (channel error) on violation or an undecidable comparison (canonical SPECIFICATION.html §13.3; design docs/dev/fintech-value-integrity-design.md). The value-mass complement to the static flow-mass conservation of §13.1, and the enforcement half of penny-perfect allocation alongside QUANTIZE's residual. Rejects NIL operands. Status Sketched pending a mathematical-formalization entry.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
       "id": "core.comparison",
       "kind": "semantic-area",
       "surface": "EQ/LT/GT",
@@ -1605,10 +1197,7 @@
       "conformance_cases": [
         "core-decided-comparison-true",
         "core-decided-comparison-false",
-        "core-boolean-is-not-a-number",
-        "core-sqrt2-eq-sqrt2",
-        "core-sqrt2-not-less-than-one",
-        "core-sqrt2-less-than-two"
+        "core-boolean-is-not-a-number"
       ],
       "status": "Formalized",
       "notes": "Decided comparisons produce Boolean observations; budgeted equality can produce UNKNOWN.",
@@ -1640,8 +1229,7 @@
       "conformance_cases": [
         "core-decided-comparison-true",
         "core-decided-comparison-false",
-        "core-boolean-is-not-a-number",
-        "core-sqrt2-eq-sqrt2"
+        "core-boolean-is-not-a-number"
       ],
       "status": "Formalized",
       "notes": "Budgeted exact-real equality projected into the K3 truth domain; NIL operands pass through unchanged.",
@@ -1702,10 +1290,7 @@
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
       ],
-      "conformance_cases": [
-        "core-sqrt2-not-less-than-one",
-        "core-sqrt2-less-than-two"
-      ],
+      "conformance_cases": [],
       "status": "Formalized",
       "notes": "Budgeted exact-real strict less-than projected into the K3 truth domain; undecidable comparisons yield UNKNOWN.",
       "semantic_role": "Derived",
@@ -1810,40 +1395,9 @@
       "implementation_schema": "ordering_schema(Ge) via apply_ordering_schema"
     },
     {
-      "id": "core.compare-within",
-      "kind": "coreword",
-      "surface": "COMPARE-WITHIN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.4.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.3"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [
-        "core-compare-within-gt",
-        "core-compare-within-lt",
-        "core-compare-within-eq"
-      ],
-      "status": "Formalized",
-      "notes": "Surface exposure of the explicit budgeted-order primitive: returns -1/0/1 for decided order or UNKNOWN with agreedPrefix on budget exhaustion.",
-      "semantic_role": "Primitive",
-      "primitive": true,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity",
-      "implementation_schema": "explicit_budgeted_order via op_compare_within"
-    },
-    {
       "id": "core.exact-real.sqrt",
-      "kind": "moduleword",
-      "surface": "'math' IMPORT SQRT",
+      "kind": "coreword",
+      "surface": "SQRT",
       "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2.3",
@@ -1856,11 +1410,7 @@
       "law_tests": [
         "rust/src/types/exact/algebraic_tests.rs"
       ],
-      "conformance_cases": [
-        "core-sqrt2-continued-fraction",
-        "core-sqrt2-plus-one-continued-fraction",
-        "core-sqrt2-plus-sqrt2-gosper"
-      ],
+      "conformance_cases": [],
       "status": "Formalized",
       "notes": "Irrational observations are canonical continued fractions, never sqrt(...) Debug-style wrappers or ~ rational approximations.",
       "semantic_role": "Derived",
@@ -1885,12 +1435,10 @@
         "docs/dev/ajisai-mathematical-formalization.md §6"
       ],
       "law_tests": [
-        "rust/tests/contract_modifier_laws.rs",
-        "rust/tests/mass_conservation_laws.rs"
+        "rust/tests/contract_modifier_laws.rs"
       ],
       "conformance_cases": [
-        "core-keep-modifier",
-        "core-stak-keep-add"
+        "core-keep-modifier"
       ],
       "status": "Formalized",
       "notes": "Consumption modifier that preserves operands and pushes the result.",
@@ -1898,64 +1446,6 @@
       "primitive": false,
       "derived_from": [
         "algebra.modifier.consumption.keep",
-        "algebra.state-transformer.combinator"
-      ],
-      "algebraic_family": "modifier",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.modifier.stak",
-      "kind": "modifier",
-      "surface": "STAK",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6",
-        "SPECIFICATION.html §13"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §6"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs",
-        "rust/tests/mass_conservation_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-stak-add",
-        "core-stak-keep-add"
-      ],
-      "status": "Formalized",
-      "notes": "Region modifier selecting the whole operand stack; conformance guards the previous underflow regression.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.modifier.region.stack",
-        "algebra.state-transformer.combinator"
-      ],
-      "algebraic_family": "modifier",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.top",
-      "kind": "coreword",
-      "surface": "TOP",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6.3",
-        "SPECIFICATION.html §7.0"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Top-of-stack region modifier; selects the singleton top region for the next state-transformer word.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.modifier.region.top",
         "algebra.state-transformer.combinator"
       ],
       "algebraic_family": "modifier",
@@ -1989,32 +1479,6 @@
       "core_tier": "flow"
     },
     {
-      "id": "core.flow",
-      "kind": "coreword",
-      "surface": "FLOW",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6.4",
-        "SPECIFICATION.html §7.0"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "No-op pipeline marker; observationally the identity state transformer.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.identity"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
-    },
-    {
       "id": "core.vent",
       "kind": "coreword",
       "surface": "VENT",
@@ -2042,58 +1506,6 @@
       ],
       "algebraic_family": "bubble",
       "core_tier": "identity"
-    },
-    {
-      "id": "core.or-else",
-      "kind": "coreword",
-      "surface": "OR-ELSE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6.4",
-        "SPECIFICATION.html §7.12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/control_or_else_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Value-based, block-taking NIL-coalescing handler; the explicit counterpart to VENT (^). Consumes a candidate and a { ... } fallback block: keeps the candidate when non-NIL (U passes through), otherwise runs the block. Unlike VENT it is a stack-consuming word, so its fallback is a whole block and is invariant under lexical grouping.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.bubble.handler",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "bubble",
-      "core_tier": "identity"
-    },
-    {
-      "id": "core.idle",
-      "kind": "coreword",
-      "surface": "IDLE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Identity control word over the interpreter state transformer.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.identity"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
     },
     {
       "id": "core.cond",
@@ -2141,32 +1553,6 @@
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.eval",
-      "kind": "coreword",
-      "surface": "EVAL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses source text and reflects the resulting program into state-transformer composition.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
@@ -2260,33 +1646,6 @@
       "implementation_schema": "traversal_scheme(fold) -> block_application -> accumulator_policy"
     },
     {
-      "id": "core.unfold",
-      "kind": "coreword",
-      "surface": "UNFOLD",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Anamorphism that generates an indexed sequence by repeatedly applying a state transition.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "implementation_schema": "state_seed -> block_application -> sequence_generation_policy"
-    },
-    {
       "id": "core.any",
       "kind": "coreword",
       "surface": "ANY",
@@ -2309,7 +1668,7 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "predicate_fold(exists) via traversal_scheme + K3 projection"
     },
@@ -2336,64 +1695,9 @@
         "algebra.structure-lift.indexed-sequence",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "identity",
       "implementation_schema": "predicate_fold(forall) via traversal_scheme + K3 projection"
-    },
-    {
-      "id": "core.count",
-      "kind": "coreword",
-      "surface": "COUNT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Counting fold over the predicate-satisfying elements of an indexed sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.k3.domain",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material",
-      "implementation_schema": "predicate_fold(count) via traversal_scheme + exact count projection"
-    },
-    {
-      "id": "core.scan",
-      "kind": "coreword",
-      "surface": "SCAN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/higher_order_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Prefix-catamorphism exposing intermediate accumulator states over an indexed sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow",
-      "implementation_schema": "traversal_scheme(scan) -> block_application -> prefix_accumulator_policy"
     },
     {
       "id": "hosted.clock.deterministic",
@@ -2407,20 +1711,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [
-        "rust/tests/effect_observation_laws.rs"
-      ],
-      "conformance_cases": [
-        "hosted-now-deterministic"
-      ],
+      "law_tests": [],
+      "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "Clock reads are hosted capabilities with deterministic conformance host observations.",
       "semantic_role": "HostedEffect",
       "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check"
-      ],
+      "derived_from": [],
       "algebraic_family": "hosted-effect",
       "core_tier": "material",
       "capability": "time.read",
@@ -2439,21 +1736,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [
-        "rust/tests/effect_observation_laws.rs"
-      ],
-      "conformance_cases": [
-        "hosted-csprng-deterministic",
-        "hosted-csprng-missing-capability"
-      ],
+      "law_tests": [],
+      "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "CSPRNG observations are host-provided and capability-gated.",
       "semantic_role": "HostedEffect",
       "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check"
-      ],
+      "derived_from": [],
       "algebraic_family": "hosted-effect",
       "core_tier": "material",
       "capability": "crypto.random",
@@ -2472,22 +1761,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [
-        "rust/tests/effect_observation_laws.rs"
-      ],
-      "conformance_cases": [
-        "hosted-serial-missing-capability",
-        "hosted-serial-list-ports",
-        "hosted-serial-open-then-write"
-      ],
+      "law_tests": [],
+      "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "Serial effects are outside Core but have protocol-level observation contracts.",
       "semantic_role": "HostedEffect",
       "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check"
-      ],
+      "derived_from": [],
       "algebraic_family": "hosted-effect",
       "core_tier": "material",
       "capability": "serial.port",
@@ -2505,19 +1785,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [
-        "rust/tests/effect_observation_laws.rs"
-      ],
-      "conformance_cases": [
-        "hosted-csprng-missing-capability",
-        "hosted-serial-missing-capability"
-      ],
+      "law_tests": [],
+      "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "Capability failures are structured diagnostics, not leaked Rust error variants.",
       "semantic_role": "HostedEffect",
       "primitive": false,
       "derived_from": [
-        "capability.check",
         "algebra.observation.structured-diagnostic"
       ],
       "algebraic_family": "hosted-effect",
@@ -2545,9 +1819,7 @@
         "core-vector-self-evaluates",
         "core-nesting-preserved",
         "core-vector-scalar-broadcast-add",
-        "core-vector-singleton-broadcast-mul",
-        "core-shape",
-        "core-rank"
+        "core-vector-singleton-broadcast-mul"
       ],
       "status": "Formalized",
       "notes": "Structural vector and tensor observations, including shape/rank and broadcast arithmetic.",
@@ -2889,118 +2161,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.shape",
-      "kind": "coreword",
-      "surface": "SHAPE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-shape"
-      ],
-      "status": "Formalized",
-      "notes": "Shape observation for a tensor/indexed sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.structure-lift.reshape-group"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.rank",
-      "kind": "coreword",
-      "surface": "RANK",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [
-        "core-rank"
-      ],
-      "status": "Formalized",
-      "notes": "Rank observation: the dimension count of a tensor/indexed sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.structure-lift.reshape-group"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.reshape",
-      "kind": "coreword",
-      "surface": "RESHAPE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Reshape-group action that changes tensor shape without changing element order or count.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.structure-lift.reshape-group"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.transpose",
-      "kind": "coreword",
-      "surface": "TRANSPOSE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Axis-swap action in the tensor reshape group; 2-D transpose is an involution.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.structure-lift.reshape-group"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
       "id": "core.fill",
       "kind": "coreword",
       "surface": "FILL",
@@ -3038,9 +2198,7 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-octies"
       ],
-      "law_tests": [
-        "rust/tests/record_laws.rs"
-      ],
+      "law_tests": [],
       "conformance_cases": [],
       "status": "Sketched",
       "notes": "Record laws exist, but conformance still needs representative record observations before marking Formalized here.",
@@ -3076,31 +2234,6 @@
       ],
       "algebraic_family": "exact-scalar",
       "core_tier": "material"
-    },
-    {
-      "id": "core.cf",
-      "kind": "coreword",
-      "surface": ">CF",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §12.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/arithmetic_operation_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Display-role retagging into canonical continued-fraction serialization; it preserves the underlying exact value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "identity"
     },
     {
       "id": "core.chars",
@@ -3172,58 +2305,6 @@
       "conformance_cases": [],
       "status": "Formalized",
       "notes": "Whitespace-normalization endomorphism over codepoint sequences; idempotent at fixed points.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.trim-left",
-      "kind": "coreword",
-      "surface": "TRIM-LEFT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Left-sided whitespace-normalization endomorphism over codepoint sequences.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.trim-right",
-      "kind": "coreword",
-      "surface": "TRIM-RIGHT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Right-sided whitespace-normalization endomorphism over codepoint sequences.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -3393,33 +2474,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.bool",
-      "kind": "coreword",
-      "surface": "BOOL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses or projects a value into the K3 truth domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "k3-truth",
-      "core_tier": "identity"
-    },
-    {
       "id": "core.chr",
       "kind": "coreword",
       "surface": "CHR",
@@ -3464,9 +2518,7 @@
         "rust/tests/naming_resolution_laws.rs"
       ],
       "conformance_cases": [
-        "core-user-definition-resolved",
-        "core-sort-imported",
-        "core-sqrt2-continued-fraction"
+        "core-user-definition-resolved"
       ],
       "status": "Formalized",
       "notes": "User dictionaries and module imports are deterministic name-resolution observations.",
@@ -3492,17 +2544,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [
-        "rust/tests/effect_observation_laws.rs"
-      ],
+      "law_tests": [],
       "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "PRINT is the outbound rendering boundary: it renders the consumed value and appends a host effect after capability gating.",
       "semantic_role": "HostedEffect",
       "primitive": false,
       "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
         "algebra.exact-scalar.codepoint-sequence"
       ],
       "algebraic_family": "hosted-effect",
@@ -3510,33 +2558,6 @@
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "core.precompute",
-      "kind": "coreword",
-      "surface": "PRECOMPUTE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §8.2",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/interpreter_definition_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Definition-time staging composes the block transformer into dictionary installation while preserving the resulting user-word observation.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.composition",
-        "algebra.dictionary.finite-partial-map"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "flow"
     },
     {
       "id": "core.del",
@@ -3593,323 +2614,6 @@
       "core_tier": "identity"
     },
     {
-      "id": "core.forc",
-      "kind": "coreword",
-      "surface": "FORC",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.8",
-        "SPECIFICATION.html §8.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "FORC is the dependency-graph override modifier consumed by protected destructive dictionary transitions such as redefining or deleting referenced user words.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.modifier.consumption.eat",
-        "algebra.dictionary.finite-partial-map"
-      ],
-      "algebraic_family": "modifier",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.import-only",
-      "kind": "coreword",
-      "surface": "IMPORT-ONLY",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.14",
-        "SPECIFICATION.html §9.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "IMPORT-ONLY is the selective visibility operator on module dictionaries: it exposes exactly selected Module Words and treats Core-listed boundary selectors as no-ops.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.unimport",
-      "kind": "coreword",
-      "surface": "UNIMPORT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.14",
-        "SPECIFICATION.html §9.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "UNIMPORT shrinks a module visibility set while preserving referenced module words, acting as the inverse of full import when no references pin the module.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.unimport-only",
-      "kind": "coreword",
-      "surface": "UNIMPORT-ONLY",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.14",
-        "SPECIFICATION.html §9.2"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
-      ],
-      "law_tests": [
-        "rust/tests/naming_resolution_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "UNIMPORT-ONLY hides selected Module Words and rejects selectors pinned by user-word dependencies.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.spawn",
-      "kind": "coreword",
-      "surface": "SPAWN",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "reason": "SPAWN creates an isolated child-runtime handle; its observation contract is modeled, but the quarantined runtime-control API is not Core-portable yet.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "core.await",
-      "kind": "coreword",
-      "surface": "AWAIT",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.4"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "reason": "AWAIT projects a child handle to the observed [status result-stack] tuple under the child-runtime observation contract.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "core.status",
-      "kind": "coreword",
-      "surface": "STATUS",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.5"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "material",
-      "reason": "STATUS observes the current child-runtime state as text without awaiting completion; it remains in the quarantined runtime-control family.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "core.kill",
-      "kind": "coreword",
-      "surface": "KILL",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.6"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "reason": "KILL transitions a child handle into the killed state under the modeled runtime-control contract.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "core.monitor",
-      "kind": "coreword",
-      "surface": "MONITOR",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "reason": "MONITOR registers observation of a child handle while preserving the handle-shaped observation surface; the API remains exploratory/quarantined.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "core.supervise",
-      "kind": "coreword",
-      "surface": "SUPERVISE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §10.7"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-septies"
-      ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "SUPERVISE runs a child group under a one-for-one restart policy, producing a supervisor handle over the supervised children; the API remains exploratory/quarantined.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.handle.domain",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material",
-      "reason": "SUPERVISE runs a child group under a one-for-one restart policy, producing a supervisor handle over the supervised children; the API remains exploratory/quarantined.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
       "id": "exploratory.child-runtime",
       "kind": "semantic-area",
       "surface": "SPAWN/AWAIT",
@@ -3921,16 +2625,13 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-septies"
       ],
-      "law_tests": [
-        "rust/tests/child_runtime_laws.rs"
-      ],
+      "law_tests": [],
       "conformance_cases": [],
       "status": "Exploratory",
       "notes": "Child-runtime semantics are modeled but not yet part of the Core portability contract.",
       "semantic_role": "Exploratory",
       "primitive": false,
       "derived_from": [
-        "algebra.handle.domain",
         "algebra.state-transformer.composition"
       ],
       "algebraic_family": "state-transformer",
@@ -3945,971 +2646,10 @@
       "review_gate": "before-core-stabilization"
     },
     {
-      "id": "module.json.parse",
-      "kind": "moduleword",
-      "surface": "JSON@PARSE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses JSON text into Ajisai record/vector/scalar values, projecting malformed input to Bubble/NIL.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.stringify",
-      "kind": "moduleword",
-      "surface": "JSON@STRINGIFY",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Serializes Ajisai values through canonical JSON text observation.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.dictionary.finite-partial-map"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.csv-parse",
-      "kind": "moduleword",
-      "surface": "DATA@CSV-PARSE",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Parses CSV text into a vector of Records (first row = header); a ragged row or unterminated quote projects to Bubble/NIL. Experimental DATA module, Phase 8C unit 1.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.csv-stringify",
-      "kind": "moduleword",
-      "surface": "DATA@CSV-STRINGIFY",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Renders a vector of Records sharing one column shape as CSV text; a non-table or shape-mismatched input projects to Bubble/NIL. Experimental DATA module, Phase 8C unit 1.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.select",
-      "kind": "moduleword",
-      "surface": "DATA@SELECT",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Projects a table (vector of Records) onto named columns; an absent column yields a NIL (MissingField) cell so the result stays rectangular. Experimental DATA module, Phase 8C unit 2.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.where",
-      "kind": "moduleword",
-      "surface": "DATA@WHERE",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Keeps table rows whose predicate on a named column is definitely true; a false, UNKNOWN, or NIL (missing column) result drops the row. Experimental DATA module, Phase 8C unit 2.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.k3.domain",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.group",
-      "kind": "moduleword",
-      "surface": "DATA@GROUP",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Groups table rows by a column into { key, rows } group records in first-appearance order; an absent column keeps its NIL (MissingField) reason on the group key. Experimental DATA module, Phase 8C unit 3.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.data.join",
-      "kind": "moduleword",
-      "surface": "DATA@JOIN",
-      "classification": "Module",
-      "spec_sections": [],
-      "formalization_sections": [],
-      "law_tests": [
-        "rust/src/interpreter/data_ops/tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Sketched",
-      "notes": "Left/lookup join of two tables on a shared key column; a left row with no matching right row (or an absent key) fills the added columns with NIL (MissingField) cells — the 'join key does not exist' reason, the same reason ALGO@INDEX-OF uses for a search miss. Experimental DATA module, Phase 8C unit 4.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.dictionary.lookup",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.get",
-      "kind": "moduleword",
-      "surface": "JSON@GET",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Looks up a record/object key and projects absent keys through the Bubble/NIL domain.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.keys",
-      "kind": "moduleword",
-      "surface": "JSON@KEYS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects an object domain to its insertion-ordered key sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.set",
-      "kind": "moduleword",
-      "surface": "JSON@SET",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Returns a pointwise-updated record/object map while preserving the finite-map domain model.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.has",
-      "kind": "moduleword",
-      "surface": "JSON@HAS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Observes membership of a key in a record/object map as a K3 truth value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.lookup",
-        "algebra.dictionary.finite-partial-map",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.values",
-      "kind": "moduleword",
-      "surface": "JSON@VALUES",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects an object codomain to its insertion-ordered value sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.merge",
-      "kind": "moduleword",
-      "surface": "JSON@MERGE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Combines two finite object maps with right-hand keys taking precedence on conflict.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.delete",
-      "kind": "moduleword",
-      "surface": "JSON@DELETE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs",
-        "rust/tests/record_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Removes a key from a finite object map without mutating module dictionaries.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "dictionary",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.json.export",
-      "kind": "moduleword",
-      "surface": "JSON@EXPORT",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Exports a JSON serialization through a host file-write boundary, gated by host IO capability.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "serialization.export",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.io.input",
-      "kind": "moduleword",
-      "surface": "IO@INPUT",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Reads text from the host input buffer; the value observation is capability-gated host input.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "capability.check",
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.observation.structured-diagnostic"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "io.read",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.io.output",
-      "kind": "moduleword",
-      "surface": "IO@OUTPUT",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
-      "law_tests": [
-        "rust/src/json_io_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Writes a rendered value to the host output buffer as an outbound IO effect.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "io.write",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.time.datetime",
-      "kind": "moduleword",
-      "surface": "TIME@DATETIME",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Renders an instant/offset pair to a civil datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.timestamp",
-      "kind": "moduleword",
-      "surface": "TIME@TIMESTAMP",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Resolves a civil datetime tuple and UTC offset to an instant scalar.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.date",
-      "kind": "moduleword",
-      "surface": "TIME@DATE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects a civil datetime tuple to its date tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.time",
-      "kind": "moduleword",
-      "surface": "TIME@TIME",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects a civil datetime tuple to its time-of-day tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.year",
-      "kind": "moduleword",
-      "surface": "TIME@YEAR",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the year component from a date/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.month",
-      "kind": "moduleword",
-      "surface": "TIME@MONTH",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the month component from a date/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.day",
-      "kind": "moduleword",
-      "surface": "TIME@DAY",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the day component from a date/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.hour",
-      "kind": "moduleword",
-      "surface": "TIME@HOUR",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the hour component from a time/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.minute",
-      "kind": "moduleword",
-      "surface": "TIME@MINUTE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the minute component from a time/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.second",
-      "kind": "moduleword",
-      "surface": "TIME@SECOND",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the second component from a time/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.weekday",
-      "kind": "moduleword",
-      "surface": "TIME@WEEKDAY",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Computes the ISO weekday scalar from a date/datetime tuple.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.add-days",
-      "kind": "moduleword",
-      "surface": "TIME@ADD-DAYS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Shifts a date/datetime tuple by an exact whole-day scalar.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.diff-days",
-      "kind": "moduleword",
-      "surface": "TIME@DIFF-DAYS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Computes an exact whole-day difference between date/datetime tuples.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.format",
-      "kind": "moduleword",
-      "surface": "TIME@FORMAT",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Formats a date/datetime tuple as ISO-8601 text.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.parse-iso",
-      "kind": "moduleword",
-      "surface": "TIME@PARSE-ISO",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Parses ISO-8601 civil text into a datetime tuple, projecting invalid input to Bubble/NIL.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.add-months",
-      "kind": "moduleword",
-      "surface": "TIME@ADD-MONTHS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Shifts a date/datetime tuple by exact whole months with month-end clamping.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.time.add-years",
-      "kind": "moduleword",
-      "surface": "TIME@ADD-YEARS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/datetime_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Shifts a date/datetime tuple by exact whole years with leap-day clamping.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.gosper"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.crypto.hash",
-      "kind": "moduleword",
-      "surface": "CRYPTO@HASH",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/hash_tests.rs",
-        "rust/tests/effect_observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Computes a deterministic digest of the canonical serialized stack value; unlike CSPRNG it is pure and has no host read effect.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.observation.digest",
-        "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "material"
-    },
-    {
       "id": "module.algo.sort",
-      "kind": "moduleword",
-      "surface": "ALGO@SORT",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "SORT",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §7.4.3",
         "SPECIFICATION.html §9.1"
@@ -4937,9 +2677,9 @@
     },
     {
       "id": "module.algo.unique",
-      "kind": "moduleword",
-      "surface": "ALGO@UNIQUE",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "UNIQUE",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.1"
       ],
@@ -4964,9 +2704,9 @@
     },
     {
       "id": "module.algo.contains",
-      "kind": "moduleword",
-      "surface": "ALGO@CONTAINS",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "CONTAINS",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.1"
       ],
@@ -4986,14 +2726,14 @@
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
       ],
-      "algebraic_family": "k3-truth",
+      "algebraic_family": "boolean-truth",
       "core_tier": "material"
     },
     {
       "id": "module.algo.index-of",
-      "kind": "moduleword",
-      "surface": "ALGO@INDEX-OF",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "INDEX-OF",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §9.1"
       ],
@@ -5017,184 +2757,10 @@
       "core_tier": "material"
     },
     {
-      "id": "module.math.sqrt-eps",
-      "kind": "moduleword",
-      "surface": "MATH@SQRT-EPS",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Computes a square-root interval with an explicit exact width budget.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.interval",
-      "kind": "moduleword",
-      "surface": "MATH@INTERVAL",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Constructs an exact rational interval [lower, upper].",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.lower",
-      "kind": "moduleword",
-      "surface": "MATH@LOWER",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the lower endpoint of an exact number or interval.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.upper",
-      "kind": "moduleword",
-      "surface": "MATH@UPPER",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects the upper endpoint of an exact number or interval.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.width",
-      "kind": "moduleword",
-      "surface": "MATH@WIDTH",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Computes interval width as upper minus lower.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.gosper",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.is-exact",
-      "kind": "moduleword",
-      "surface": "MATH@IS-EXACT",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Observes whether a number/interval denotes a degenerate exact value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "k3-truth",
-      "core_tier": "material"
-    },
-    {
       "id": "module.math.abs",
-      "kind": "moduleword",
-      "surface": "MATH@ABS",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "ABS",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
@@ -5221,9 +2787,9 @@
     },
     {
       "id": "module.math.neg",
-      "kind": "moduleword",
-      "surface": "MATH@NEG",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "NEG",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
@@ -5249,9 +2815,9 @@
     },
     {
       "id": "module.math.sign",
-      "kind": "moduleword",
-      "surface": "MATH@SIGN",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "SIGN",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
@@ -5278,9 +2844,9 @@
     },
     {
       "id": "module.math.min",
-      "kind": "moduleword",
-      "surface": "MATH@MIN",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "MIN",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
@@ -5307,9 +2873,9 @@
     },
     {
       "id": "module.math.max",
-      "kind": "moduleword",
-      "surface": "MATH@MAX",
-      "classification": "Module",
+      "kind": "coreword",
+      "surface": "MAX",
+      "classification": "Core",
       "spec_sections": [
         "SPECIFICATION.html §4.2",
         "SPECIFICATION.html §9.1"
@@ -5330,151 +2896,6 @@
       "derived_from": [
         "algebra.exact-real.budgeted-order",
         "algebra.k3.domain"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.pow",
-      "kind": "moduleword",
-      "surface": "MATH@POW",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Integer-exponent exact power over continued-fraction/rational values.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.gosper",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.gcd",
-      "kind": "moduleword",
-      "surface": "MATH@GCD",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Greatest common divisor on exact integer inputs, with domain failures projected through Bubble/NIL.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.lcm",
-      "kind": "moduleword",
-      "surface": "MATH@LCM",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Least common multiple on exact integer inputs, with domain failures projected through Bubble/NIL.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.pi",
-      "kind": "moduleword",
-      "surface": "MATH@PI",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/tier2_vocabulary_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Pushes pi as a Tier 2 computable real: a rigorous, nested, rational enclosure whose order is observed within a water budget.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.exact-real.budgeted-order"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.math.enclose",
-      "kind": "moduleword",
-      "surface": "MATH@ENCLOSE",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/tier2_vocabulary_tests.rs",
-        "rust/tests/observation_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Observes a value's rational enclosure after spending an explicit water budget, returning a sound [lower, upper] interval without exposing the tier.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.exact-real.budgeted-order"
       ],
       "algebraic_family": "exact-arithmetic",
       "core_tier": "material"
@@ -5630,56 +3051,6 @@
       "desugars_to": "END-BLOCK"
     },
     {
-      "id": "surface.semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Modifier shorthand equivalent to `. ,` / TOP EAT under the desugar laws.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": ". ,"
-    },
-    {
-      "id": "surface.semicolon-semicolon",
-      "kind": "modifier_sugar",
-      "surface": ";;",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs",
-        "rust/src/surface_forms.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Modifier shorthand equivalent to `.. ,,` / STAK KEEP under the desugar laws.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": ".. ,,"
-    },
-    {
       "id": "surface.left-paren",
       "kind": "reserved_marker",
       "surface": "(",
@@ -5703,1089 +3074,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "RESERVED-BEGIN"
-    },
-    {
-      "id": "module.music.seq",
-      "kind": "moduleword",
-      "surface": "MUSIC@SEQ",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Sets the interpreter music play mode to sequential; the later PLAY boundary observes that mode when constructing audio output.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.music.sim",
-      "kind": "moduleword",
-      "surface": "MUSIC@SIM",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Sets the interpreter music play mode to simultaneous; the later PLAY boundary observes that mode when constructing audio output.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.state-transformer.composition"
-      ],
-      "algebraic_family": "state-transformer",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.music.slot",
-      "kind": "moduleword",
-      "surface": "MUSIC@SLOT",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Sets the host-observed slot-duration configuration after checking the audio capability and validating a positive exact scalar.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.gain",
-      "kind": "moduleword",
-      "surface": "MUSIC@GAIN",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Emits a host audio gain effect after scalar extraction and clamping to the portable gain interval.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.gain-reset",
-      "kind": "moduleword",
-      "surface": "MUSIC@GAIN-RESET",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Emits the host audio effect that restores gain to the default value.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.pan",
-      "kind": "moduleword",
-      "surface": "MUSIC@PAN",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Emits a host audio pan effect after scalar extraction and clamping to the portable pan interval.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.pan-reset",
-      "kind": "moduleword",
-      "surface": "MUSIC@PAN-RESET",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Emits the host audio effect that restores pan to center.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.fx-reset",
-      "kind": "moduleword",
-      "surface": "MUSIC@FX-RESET",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Emits the host audio effect that resets gain and pan controls to their defaults.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.play",
-      "kind": "moduleword",
-      "surface": "MUSIC@PLAY",
-      "classification": "HostedEffect",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "HostedEffect",
-      "notes": "Renders music values into an AUDIO host command; sequencing, grouping, rests, and warnings are observed only at this hosted boundary.",
-      "semantic_role": "HostedEffect",
-      "primitive": false,
-      "derived_from": [
-        "algebra.eff.append",
-        "capability.check",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "hosted-effect",
-      "core_tier": "material",
-      "capability": "audio.output",
-      "effect_schema": "hosted-effect.capability-request-eff-observation",
-      "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
-    },
-    {
-      "id": "module.music.seq-group",
-      "kind": "moduleword",
-      "surface": "MUSIC@SEQ-GROUP",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds an explicit sequential music group from an indexed sequence of child music values.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds an explicit sequential music group from an indexed sequence of child music values.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.sim-group",
-      "kind": "moduleword",
-      "surface": "MUSIC@SIM-GROUP",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds an explicit simultaneous music group from an indexed sequence of child music values.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.chord",
-      "kind": "moduleword",
-      "surface": "MUSIC@CHORD",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds a simultaneous chord group from an indexed sequence of pitch/duration values.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.hz",
-      "kind": "moduleword",
-      "surface": "MUSIC@HZ",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Wraps a positive exact scalar frequency into an explicit music.pitch record.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.dur",
-      "kind": "moduleword",
-      "surface": "MUSIC@DUR",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Wraps a positive exact scalar duration into an explicit music.duration record.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Wraps a positive exact scalar duration into an explicit music.duration record.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.note",
-      "kind": "moduleword",
-      "surface": "MUSIC@NOTE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Combines a music.pitch and music.duration record into a music.note record.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Combines a music.pitch and music.duration record into a music.note record.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.rest",
-      "kind": "moduleword",
-      "surface": "MUSIC@REST",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds a music.rest record from a music.duration record.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds a music.rest record from a music.duration record.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.edo",
-      "kind": "moduleword",
-      "surface": "MUSIC@EDO",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds an equal-division-of-octave tuning record from reference frequency and division count.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.edr",
-      "kind": "moduleword",
-      "surface": "MUSIC@EDR",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds an equal-division-of-ratio tuning record from reference frequency, equave ratio, and division count.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.step",
-      "kind": "moduleword",
-      "surface": "MUSIC@STEP",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Resolves a step index within a tuning record into a derived music.pitch record.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Resolves a step index within a tuning record into a derived music.pitch record.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.voice",
-      "kind": "moduleword",
-      "surface": "MUSIC@VOICE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Tags a music group with the role of a single melodic voice.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Tags a music group with the role of a single melodic voice.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.track",
-      "kind": "moduleword",
-      "surface": "MUSIC@TRACK",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Tags a music group with the role of an instrument track.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Tags a music group with the role of an instrument track.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.measure",
-      "kind": "moduleword",
-      "surface": "MUSIC@MEASURE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Tags a music group with the role of a measure/bar.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Tags a music group with the role of a measure/bar.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.phrase",
-      "kind": "moduleword",
-      "surface": "MUSIC@PHRASE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Tags a music group with the role of a phrase.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Tags a music group with the role of a phrase.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.with-tuning",
-      "kind": "moduleword",
-      "surface": "MUSIC@WITH-TUNING",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Builds a scoped music value that interprets bare integer body values through the supplied tuning at PLAY time.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.adsr",
-      "kind": "moduleword",
-      "surface": "MUSIC@ADSR",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Validates an ADSR envelope vector for a music target; treated as experimental music-structure annotation until the audio algebra is canonicalized.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.sine",
-      "kind": "moduleword",
-      "surface": "MUSIC@SINE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Annotates or validates a vector target for sine waveform playback; experimental music-structure sugar, not Core.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.square",
-      "kind": "moduleword",
-      "surface": "MUSIC@SQUARE",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Annotates or validates a vector target for square waveform playback; experimental music-structure sugar, not Core.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.saw",
-      "kind": "moduleword",
-      "surface": "MUSIC@SAW",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Annotates or validates a vector target for sawtooth waveform playback; experimental music-structure sugar, not Core.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.tri",
-      "kind": "moduleword",
-      "surface": "MUSIC@TRI",
-      "classification": "Exploratory",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_unit_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Exploratory",
-      "notes": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
-      "semantic_role": "Exploratory",
-      "primitive": false,
-      "derived_from": [
-        "algebra.dictionary.finite-partial-map",
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.continued-fraction"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material",
-      "reason": "Annotates or validates a vector target for triangle waveform playback; experimental music-structure sugar, not Core.",
-      "exit_options": [
-        "Derived",
-        "HostedEffect",
-        "Extension",
-        "Remove"
-      ],
-      "review_gate": "before-core-stabilization"
-    },
-    {
-      "id": "module.music.explain",
-      "kind": "moduleword",
-      "surface": "MUSIC@EXPLAIN",
-      "classification": "Module",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1",
-        "SPECIFICATION.html §11"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-sexies",
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/audio/audio_effect_tests.rs",
-        "rust/src/interpreter/audio/audio_integration_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Produces a structured textual explanation of how MUSIC@PLAY would interpret the value while preserving the stack value.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.observation.structured-diagnostic",
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "observation",
-      "core_tier": "material"
     },
     {
       "id": "alias.plus",
@@ -7028,30 +3316,6 @@
       "desugars_to": "NEQ"
     },
     {
-      "id": "alias.bang",
-      "kind": "symbol_alias",
-      "surface": "!",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for FORC; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "FORC"
-    },
-    {
       "id": "alias.ampersand",
       "kind": "symbol_alias",
       "surface": "&",
@@ -7074,54 +3338,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "AND"
-    },
-    {
-      "id": "alias.dot",
-      "kind": "syntax_sugar",
-      "surface": ".",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for TOP; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "TOP"
-    },
-    {
-      "id": "alias.dot-dot",
-      "kind": "syntax_sugar",
-      "surface": "..",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for STAK; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "STAK"
     },
     {
       "id": "alias.comma",
@@ -7216,30 +3432,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "LOOKUP"
-    },
-    {
-      "id": "alias.tilde",
-      "kind": "syntax_sugar",
-      "surface": "~",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for FLOW; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "FLOW"
     }
   ],
   "unclassified_allowlist": []

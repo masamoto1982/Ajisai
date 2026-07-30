@@ -7,11 +7,8 @@
 //! decisions (`is_operational_nil` and reason `Some`/`None`).
 
 use crate::error::NilReason;
-use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
-use crate::semantic::{AbsenceOrigin, Recoverability};
-use crate::types::{Value, ValueData};
 
 async fn run(code: &str) -> Interpreter {
     let mut interp = Interpreter::new();
@@ -46,18 +43,6 @@ fn top_is_true(interp: &Interpreter) -> bool {
         .and_then(|v| v.as_truth())
         .unwrap_or(false)
 }
-
-fn record_field_string(record: &Value, key: &str) -> Option<String> {
-    let ValueData::Record { pairs, shape } = &record.data else {
-        return None;
-    };
-    let pos = shape.slot(key)?;
-    let ValueData::Vector(kv) = &pairs.get(pos)?.data else {
-        return None;
-    };
-    value_as_string(kv.get(1)?)
-}
-
 // ── NIL? ──────────────────────────────────────────────────────────────────
 
 #[tokio::test]
@@ -88,7 +73,7 @@ async fn nil_check_is_false_for_present_value() {
 #[tokio::test]
 async fn nil_check_is_false_for_logical_unknown() {
     // ((√2+1) − (√2+1)) == 0 is undecidable within the budget, so EQ yields U.
-    let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL?").await;
+    let interp = run("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL?").await;
     assert_eq!(
         interp.get_stack()[1].as_truth(),
         Some(false),
@@ -155,184 +140,18 @@ async fn nil_reason_is_nil_for_present_value() {
 /// NIL only — reports nothing for U.
 #[tokio::test]
 async fn nil_reason_does_not_leak_for_unknown() {
-    let interp = run("'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL-REASON").await;
+    let interp = run("2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ NIL-REASON").await;
     assert!(
         top_is_nil(&interp),
         "NIL-REASON on U must be NIL, never a reason string"
     );
 }
-
-// ── NIL-ORIGIN ──────────────────────────────────────────────────────────────
-
-#[tokio::test]
-async fn nil_origin_reports_division_by_zero_for_division() {
-    // The origin is derived from the reason, so it agrees with NIL-REASON
-    // rather than reporting the generic `executionFailure` that the old
-    // hand-written argument at the `DIV` call site produced.
-    let interp = run("1 0 / NIL-ORIGIN").await;
-    assert_eq!(top_text(&interp).as_deref(), Some("divisionByZero"));
-}
-
-/// Every NIL that carries a reason reports an origin derived from it. This is
-/// the regression guard for the two-derivations defect: `DIV`, `POW` by a
-/// negative exponent of zero, and `INDEX-OF` each used to name an origin at the
-/// call site and each named the wrong one.
-#[tokio::test]
-async fn nil_origin_agrees_with_nil_reason_across_construction_paths() {
-    for source in [
-        "1 0 /",
-        "'MATH' IMPORT\n0 -1 POW",
-        "'MATH' IMPORT\n-1 SQRT",
-        "'ALGO' IMPORT\n[ 1 2 ] 9 INDEX-OF",
-    ] {
-        let reason = run(&format!("{source} NIL-REASON")).await;
-        let origin = run(&format!("{source} NIL-ORIGIN")).await;
-        assert_eq!(
-            top_text(&reason).as_deref(),
-            top_text(&origin).as_deref(),
-            "reason and origin disagree for `{source}`"
-        );
-    }
-}
-
-#[tokio::test]
-async fn nil_origin_reports_literal_for_literal_nil() {
-    let interp = run("NIL NIL-ORIGIN").await;
-    assert_eq!(
-        top_text(&interp).as_deref(),
-        Some("literal"),
-        "origin is a required field, present even on a reasonless literal NIL"
-    );
-}
-
-#[tokio::test]
-async fn nil_origin_is_nil_for_present_value() {
-    let interp = run("5 NIL-ORIGIN").await;
-    assert!(top_is_nil(&interp));
-}
-
-// ── NIL-RECOVERABLE? ────────────────────────────────────────────────────────
-
-#[tokio::test]
-async fn nil_recoverable_reports_protocol_string() {
-    let interp = run("1 0 / NIL-RECOVERABLE?").await;
-    assert_eq!(
-        top_text(&interp).as_deref(),
-        Some("recoverable"),
-        "recoverability is a four-valued protocol string, returned as Text (SPEC §4.5.0)"
-    );
-}
-
-#[tokio::test]
-async fn nil_recoverable_reports_unknown_for_literal_nil() {
-    let interp = run("NIL NIL-RECOVERABLE?").await;
-    assert_eq!(top_text(&interp).as_deref(), Some("unknown"));
-}
-
-#[tokio::test]
-async fn nil_recoverable_is_nil_for_present_value() {
-    let interp = run("5 NIL-RECOVERABLE?").await;
-    assert!(top_is_nil(&interp));
-}
-
 // ── Domain miss (SPEC §5: "SQRT of a negative rational is a well-formed
 //    domain miss") ────────────────────────────────────────────────────────────
-
-/// All three diagnostic axes at once, because the defect this replaces polluted
-/// all three: `SQRT` of a negative reported `divisionByZero` as its reason,
-/// inherited that as its origin, and left recoverability at `unknown` — three
-/// wrong answers about an event whose classification the specification names.
-#[tokio::test]
-async fn negative_sqrt_reports_a_domain_miss_on_every_axis() {
-    let reason = run("'MATH' IMPORT\n-1 SQRT NIL-REASON").await;
-    assert_eq!(top_text(&reason).as_deref(), Some("domainMiss"));
-
-    let origin = run("'MATH' IMPORT\n-1 SQRT NIL-ORIGIN").await;
-    assert_eq!(top_text(&origin).as_deref(), Some("domainMiss"));
-
-    let recoverable = run("'MATH' IMPORT\n-1 SQRT NIL-RECOVERABLE?").await;
-    assert_eq!(
-        top_text(&recoverable).as_deref(),
-        Some("recoverable"),
-        "a domain miss is resolved by a different input, so it is not `unknown`"
-    );
-}
-
 /// Division by zero keeps its own reason. The domain-miss variant is a new
 /// classification, not a rename of an existing one.
 #[tokio::test]
 async fn division_by_zero_is_untouched_by_the_domain_miss_split() {
     let interp = run("1 0 DIV NIL-REASON").await;
     assert_eq!(top_text(&interp).as_deref(), Some("divisionByZero"));
-}
-
-/// A non-negative radicand still produces a value, so no diagnostic axis fires.
-#[tokio::test]
-async fn a_non_negative_radicand_is_not_a_domain_miss() {
-    let interp = run("'MATH' IMPORT\n4 SQRT NIL?").await;
-    assert!(
-        !top_is_true(&interp),
-        "SQRT inside its domain must not produce a NIL"
-    );
-}
-
-// ── NIL-DIAGNOSIS ───────────────────────────────────────────────────────────
-
-#[tokio::test]
-async fn nil_diagnosis_is_nil_when_no_diagnosis_attached() {
-    // DIV records its diagnosis in the error-flow trace, not on the value's
-    // absence metadata, so NIL-DIAGNOSIS yields NIL here.
-    let interp = run("1 0 / NIL-DIAGNOSIS").await;
-    assert!(top_is_nil(&interp));
-}
-
-#[tokio::test]
-async fn nil_diagnosis_is_nil_for_present_value() {
-    let interp = run("5 NIL-DIAGNOSIS").await;
-    assert!(top_is_nil(&interp));
-}
-
-/// When an operational NIL does carry a `diagnosis`, `NIL-DIAGNOSIS` returns it
-/// as a Record whose fields are the §4.5.0 protocol strings (not Debug names).
-#[tokio::test]
-async fn nil_diagnosis_returns_record_with_protocol_string_fields() {
-    let diagnosis = DebugDiagnosis::comparison_unknown(Some("LT"), 3);
-    let bubble = Value::nil_from_diagnosis(
-        NilReason::DivisionByZero,
-        AbsenceOrigin::ExecutionFailure,
-        Recoverability::Recoverable,
-        diagnosis,
-    );
-    let mut interp = Interpreter::new();
-    interp.stack.push(bubble);
-    interp
-        .execute("NIL-DIAGNOSIS")
-        .await
-        .expect("NIL-DIAGNOSIS must not raise");
-
-    let stack = interp.get_stack();
-    assert_eq!(stack.len(), 2, "NIL-DIAGNOSIS retains the inspected value");
-    let record = &stack[1];
-    assert!(
-        matches!(record.data, ValueData::Record { .. }),
-        "diagnosis is a Record"
-    );
-    assert_eq!(
-        record_field_string(record, "when").as_deref(),
-        Some("executeWord"),
-        "when must be the protocol string, not the Debug name ExecuteWord"
-    );
-    assert_eq!(
-        record_field_string(record, "why").as_deref(),
-        Some("nilFlow"),
-        "why is a lowerCamelCase protocol string, not the Debug name NilFlow"
-    );
-    // agreedPrefix is carried through as a machine-readable integer.
-    let ValueData::Record { shape, .. } = &record.data else {
-        panic!("record");
-    };
-    assert!(
-        shape.contains_key("agreedPrefix"),
-        "a CF-comparison diagnosis surfaces agreedPrefix"
-    );
 }

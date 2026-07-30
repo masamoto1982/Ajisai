@@ -53,19 +53,6 @@ async fn test_range_single_element() {
 }
 
 #[tokio::test]
-async fn test_range_stack_mode() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 0 5 ] .. RANGE").await;
-    assert!(
-        result.is_ok(),
-        "RANGE stack mode should succeed: {:?}",
-        result
-    );
-    assert_eq!(interp.stack.len(), 1);
-}
-
-#[tokio::test]
 async fn test_range_error_step_zero_restores_stack_stacktop() {
     let mut interp = Interpreter::new();
 
@@ -162,34 +149,6 @@ async fn test_reorder_partial_selection() {
 
     let val = &interp.stack[0];
     assert_eq!(val.shape(), vec![1], "Result should have 1 element");
-}
-
-#[tokio::test]
-async fn test_reorder_stack_mode_swap() {
-    let mut interp = Interpreter::new();
-
-    let result = interp.execute("[ 10 ] [ 20 ] [ 1 0 ] .. REORDER").await;
-    assert!(
-        result.is_ok(),
-        "REORDER stack mode SWAP should succeed: {:?}",
-        result
-    );
-    assert_eq!(interp.stack.len(), 2, "Stack should have 2 elements");
-}
-
-#[tokio::test]
-async fn test_reorder_stack_mode_rot() {
-    let mut interp = Interpreter::new();
-
-    let result = interp
-        .execute("[ 10 ] [ 20 ] [ 30 ] [ 1 2 0 ] .. REORDER")
-        .await;
-    assert!(
-        result.is_ok(),
-        "REORDER stack mode ROT should succeed: {:?}",
-        result
-    );
-    assert_eq!(interp.stack.len(), 3, "Stack should have 3 elements");
 }
 
 #[tokio::test]

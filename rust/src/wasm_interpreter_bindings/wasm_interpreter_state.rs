@@ -3,7 +3,6 @@ use super::wasm_value_conversion::{
 };
 use super::{set_js_prop, AjisaiInterpreter};
 use crate::builtins;
-use crate::elastic::ElasticMode;
 use crate::interpreter;
 use crate::interpreter::debug_diagnosis::DebugDiagnosis;
 use crate::tokenizer;
@@ -180,18 +179,7 @@ impl AjisaiInterpreter {
             if word.is_canonical_core() {
                 continue;
             }
-            // Boundary word whose canonical home is a module. Pull the
-            // user-facing description from the owning module spec; module
-            // canonical metadata does not carry syntax, so leave it blank.
-            let module_name = match word.canonical_module() {
-                Some(m) => m.to_string(),
-                None => continue,
-            };
-            let description =
-                interpreter::modules::module_word_description(&module_name, &word.name)
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| word.category.clone());
-            entries.push((word.name.clone(), description, String::new()));
+            continue;
         }
 
         to_value(&entries).unwrap_or(JsValue::NULL)
@@ -232,9 +220,7 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_available_modules(&self) -> JsValue {
         let arr = js_sys::Array::new();
-        for name in interpreter::modules::available_module_names() {
-            arr.push(&JsValue::from_str(name));
-        }
+        // Modules are gone from the language; the catalog is empty.
         arr.into()
     }
 
@@ -243,28 +229,9 @@ impl AjisaiInterpreter {
     /// `imported` reflects the live import table so the GUI can render active
     /// words normally and inactive words greyed-out within the same sheet.
     #[wasm_bindgen]
-    pub fn collect_module_catalog_words_info(&self, module_name: &str) -> JsValue {
-        let upper = module_name.to_uppercase();
-        let arr = js_sys::Array::new();
-        let Some(catalog) = interpreter::modules::module_catalog_words(&upper) else {
-            return arr.into();
-        };
-        let imported = self.interpreter.import_table.modules.get(&upper);
-        for word in catalog {
-            let short_upper = word.short_name.to_uppercase();
-            let is_imported = imported.map_or(false, |entry| {
-                if entry.import_all_public {
-                    return true;
-                }
-                entry.imported_words.contains(&short_upper)
-            });
-            let item = js_sys::Array::new();
-            item.push(&JsValue::from_str(word.short_name));
-            item.push(&JsValue::from_str(word.description));
-            item.push(&is_imported.into());
-            arr.push(&item);
-        }
-        arr.into()
+    pub fn collect_module_catalog_words_info(&self, _module_name: &str) -> JsValue {
+        // Modules are gone from the language; every catalog is empty.
+        js_sys::Array::new().into()
     }
 
     /// Detailed import state for persistence. Tuple shape:
@@ -303,13 +270,6 @@ impl AjisaiInterpreter {
             let import_all_public = entry.get(1).as_bool().unwrap_or(false);
             let words = js_string_array(&entry.get(2));
             let samples = js_string_array(&entry.get(3));
-            interpreter::modules::restore_import_entry(
-                &mut self.interpreter,
-                &module,
-                import_all_public,
-                words,
-                samples,
-            );
         }
     }
 
@@ -371,9 +331,7 @@ impl AjisaiInterpreter {
     pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
         let arr = js_sys::Array::from(&modules_js);
         for i in 0..arr.length() {
-            if let Some(name) = arr.get(i).as_string() {
-                interpreter::modules::restore_module(&mut self.interpreter, &name);
-            }
+            if let Some(name) = arr.get(i).as_string() {}
         }
     }
 
@@ -443,52 +401,39 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn update_input_buffer(&mut self, text: String) {
-        self.interpreter.input_buffer = text;
-    }
+    pub fn update_input_buffer(&mut self, _text: String) {}
 
     /// Inject the host-received bytes for a serial port (Section 9.4). Replaces
     /// any buffer previously set for this port id and clears the port's
     /// disconnected flag. `SERIAL@READ` drains this buffer.
     #[wasm_bindgen]
-    pub fn update_serial_inbox(&mut self, port_id: String, bytes: Vec<u8>) {
-        self.interpreter.serial_disconnected.remove(&port_id);
-        self.interpreter.serial_inbox.insert(port_id, bytes);
-    }
+    pub fn update_serial_inbox(&mut self, _port_id: String, _bytes: Vec<u8>) {}
 
     /// Mark a serial port as disconnected by the host. Once its inbox is empty,
     /// `SERIAL@READ` projects `NilReason::PortDisconnected`.
     #[wasm_bindgen]
-    pub fn mark_serial_disconnected(&mut self, port_id: String) {
-        self.interpreter.serial_disconnected.insert(port_id);
-    }
+    pub fn mark_serial_disconnected(&mut self, _port_id: String) {}
 
     /// Clear all injected serial receive buffers and disconnected flags.
     #[wasm_bindgen]
-    pub fn clear_serial_inboxes(&mut self) {
-        self.interpreter.serial_inbox.clear();
-        self.interpreter.serial_disconnected.clear();
-    }
+    pub fn clear_serial_inboxes(&mut self) {}
 
     #[wasm_bindgen]
     pub fn extract_io_output_buffer(&self) -> String {
-        self.interpreter.io_output_buffer.clone()
+        String::new()
     }
 
     #[wasm_bindgen]
-    pub fn clear_io_output_buffer(&mut self) {
-        self.interpreter.io_output_buffer.clear();
-    }
+    pub fn clear_io_output_buffer(&mut self) {}
 
+    /// Execution mode is no longer selectable: there is exactly one execution
+    /// path. Kept as a stable no-op so the GUI's control keeps its shape.
     #[wasm_bindgen]
-    pub fn set_execution_mode(&mut self, mode: &str) {
-        self.interpreter
-            .set_elastic_mode(ElasticMode::from_str(mode));
-    }
+    pub fn set_execution_mode(&mut self, _mode: &str) {}
 
     #[wasm_bindgen]
     pub fn get_execution_mode(&self) -> String {
-        self.interpreter.elastic_mode().as_str().to_string()
+        "greedy".to_string()
     }
 
     /// Override the execution step budget (water level, SPEC §5.3) for
@@ -503,16 +448,12 @@ impl AjisaiInterpreter {
         }
     }
 
-    /// Only exported when the `elastic-engine` feature is compiled in; the
-    /// GUI already tolerates the `hedgedTrace` payload field being absent.
-    #[cfg(feature = "elastic-engine")]
+    /// HostProtocolV1 pins this method, so it stays as a stable no-op: the
+    /// hedged execution engine it reported on is gone, and there is one
+    /// execution path with nothing to trace.
     #[wasm_bindgen]
     pub fn collect_hedged_trace(&mut self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for item in self.interpreter.drain_hedged_trace() {
-            arr.push(&JsValue::from_str(&item));
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
     #[wasm_bindgen]

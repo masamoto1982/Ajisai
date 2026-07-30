@@ -67,10 +67,11 @@ proptest! {
 
     // ─────────────────── Monoid of state transformers (§2) ───────────────────
 
-    /// `IDLE` is the identity of program composition: `p IDLE ≡ p`.
+    /// The empty program is the identity of composition: `p ∘ ε ≡ p`. There is
+    /// no IDLE Word; the identity is the empty token sequence itself.
     #[test]
     fn monoid_identity(a in small()) {
-        assert_law("monoid-identity", &format!("{a} IDLE"), &format!("{a}"));
+        assert_law("monoid-identity", &format!("{a} "), &format!("{a}"));
     }
 
     // ─────────────────── Exact-rational field laws (§3, 𝔸) ───────────────────
@@ -192,7 +193,7 @@ fn truths() -> [(&'static str, &'static str); 3] {
     [
         ("T", "TRUE"),
         ("F", "FALSE"),
-        ("U", "'math' IMPORT 2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
+        ("U", "2 SQRT 1 ADD 2 SQRT 1 ADD SUB 0 EQ"),
     ]
 }
 

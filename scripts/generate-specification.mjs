@@ -4,8 +4,7 @@ const check = process.argv.includes('--check');
 const read = (path) => readFileSync(path, 'utf8');
 const fragments = new Map([
   ['presentation-profile', read('spec/gui-semantics.md')],
-  ['14-ai-first-implementation-rules', read('docs/dev/specification-implementation-rules.html')],
-  ['15-test-discipline', read('docs/quality/specification-test-discipline.html')],
+  ['12-ai-first-implementation-rules', read('docs/dev/specification-implementation-rules.html')],
 ]);
 
 let content = read('spec/language-semantics.md');

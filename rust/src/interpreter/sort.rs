@@ -1,7 +1,6 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
-use crate::interpreter::{ConsumptionMode, Interpreter, OperationTargetMode};
-use crate::types::Stack;
+use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Value;
 use std::cell::RefCell;
 
@@ -17,12 +16,12 @@ enum SortAttempt {
     /// Every required comparison decided; `perm` is the ascending permutation
     /// of the original indices.
     Ordered(Vec<usize>),
-    /// At least one required comparison was undecidable within the budget; the
-    /// sorted order as a whole is not established (SPEC §7.4.3: a partial order
-    /// is not a sort). Carries the agreed-prefix of the first undecidable pair.
-    Undecided(usize),
+    /// A required comparison could not be made because an element is outside
+    /// the exact domain. Comparison over that domain is total, so this is a
+    /// domain problem rather than an undecided ordering.
+    Undecided,
     /// An element was structurally non-comparable (non-numeric) — malformed use
-    /// (SPEC §11.2), distinct from the logical Unknown.
+    /// (LANG.FAILURE.ERROR).
     Malformed(AjisaiError),
 }
 
@@ -62,8 +61,8 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
     if let Some(e) = malformed.into_inner() {
         return SortAttempt::Malformed(e);
     }
-    if let Some(prefix) = undecided.into_inner() {
-        return SortAttempt::Undecided(prefix);
+    if undecided.into_inner().is_some() {
+        return SortAttempt::Undecided;
     }
     SortAttempt::Ordered(perm)
 }
@@ -71,84 +70,58 @@ fn try_sort_indices(items: &[Value]) -> SortAttempt {
 pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
-    match interp.operation_target_mode {
-        OperationTargetMode::StackTop => {
-            let val: Value = if is_keep_mode {
-                interp
-                    .stack
-                    .last()
-                    .cloned()
-                    .ok_or(AjisaiError::StackUnderflow)?
-            } else {
-                interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
-            };
+    let val: Value = if is_keep_mode {
+        interp
+            .stack
+            .last()
+            .cloned()
+            .ok_or(AjisaiError::StackUnderflow)?
+    } else {
+        interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
+    };
 
-            // VTU Phase III boundary helper: as_vector_view() borrows for
-            // Vector/Record and materializes once for Tensor, collapsing the
-            // old representation-juggling.
-            let children = match val.as_vector_view() {
-                Some(view) => view,
-                None => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    return Err(AjisaiError::create_structure_error(
-                        "SORT: expected vector, got non-vector value",
-                        "other format",
-                    ));
-                }
-            };
-
-            if children.is_empty() {
-                interp.stack.push(Value::nil());
-                return Ok(());
+    // VTU Phase III boundary helper: as_vector_view() borrows for
+    // Vector/Record and materializes once for Tensor, collapsing the
+    // old representation-juggling.
+    let children = match val.as_vector_view() {
+        Some(view) => view,
+        None => {
+            if !is_keep_mode {
+                interp.stack.push(val);
             }
-
-            match try_sort_indices(&children) {
-                SortAttempt::Ordered(perm) => {
-                    let sorted_v: Vec<Value> = reorder_values_by_permutation(&children, &perm);
-                    interp.stack.push(Value::from_vector(sorted_v));
-                    Ok(())
-                }
-                SortAttempt::Undecided(agreed_prefix) => {
-                    // SPEC §7.4.3: a single undecidable pair makes the whole
-                    // order unestablished — yield the logical Unknown (U),
-                    // never a partially-sorted vector.
-                    crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-                    Ok(())
-                }
-                SortAttempt::Malformed(e) => {
-                    if !is_keep_mode {
-                        interp.stack.push(val);
-                    }
-                    Err(e)
-                }
-            }
+            return Err(AjisaiError::create_structure_error(
+                "SORT: expected vector, got non-vector value",
+                "other format",
+            ));
         }
-        OperationTargetMode::Stack => {
-            if interp.stack.is_empty() {
-                return Ok(());
-            }
+    };
 
-            let items: Vec<Value> = interp.stack.to_vec();
-            match try_sort_indices(&items) {
-                SortAttempt::Ordered(perm) => {
-                    let sorted_stack: Vec<Value> = reorder_values_by_permutation(&items, &perm);
-                    if is_keep_mode {
-                        interp.stack.extend(sorted_stack);
-                    } else {
-                        interp.stack = Stack::from_values(sorted_stack);
-                    }
-                    Ok(())
-                }
-                SortAttempt::Undecided(agreed_prefix) => {
-                    // SPEC §7.4.3: the whole sorted order is unestablished;
-                    // leave the operands in place and push the logical Unknown.
-                    crate::interpreter::comparison::push_comparison_unknown(interp, agreed_prefix);
-                    Ok(())
-                }
-                SortAttempt::Malformed(e) => Err(e),
+    if children.is_empty() {
+        interp.stack.push(Value::nil());
+        return Ok(());
+    }
+
+    match try_sort_indices(&children) {
+        SortAttempt::Ordered(perm) => {
+            let sorted_v: Vec<Value> = reorder_values_by_permutation(&children, &perm);
+            interp.stack.push(Value::from_vector(sorted_v));
+            Ok(())
+        }
+        SortAttempt::Undecided => {
+            // Comparison over the exact domain is total (LANG.VALUES.EXACT),
+            // so an undecided pair means an operand outside that domain.
+            if !is_keep_mode {
+                interp.stack.push(val);
             }
+            Err(AjisaiError::from(
+                "SORT: element is outside the exact domain",
+            ))
+        }
+        SortAttempt::Malformed(e) => {
+            if !is_keep_mode {
+                interp.stack.push(val);
+            }
+            Err(e)
         }
     }
 }
@@ -166,7 +139,7 @@ mod tests {
     fn ordered(items: &[Value]) -> Vec<usize> {
         match try_sort_indices(items) {
             SortAttempt::Ordered(perm) => perm,
-            SortAttempt::Undecided(_) => panic!("expected decidable sort"),
+            SortAttempt::Undecided => panic!("expected decidable sort"),
             SortAttempt::Malformed(e) => panic!("unexpected malformed: {e}"),
         }
     }
