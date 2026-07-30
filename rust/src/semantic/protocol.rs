@@ -5,12 +5,8 @@ impl SemanticKind {
         match self {
             SemanticKind::Number => "number",
             SemanticKind::Collection => "collection",
-            SemanticKind::Record => "record",
             SemanticKind::Code => "code",
-            SemanticKind::Process => "process",
-            SemanticKind::Supervisor => "supervisor",
             SemanticKind::Absence => "absence",
-            SemanticKind::Unknown => "unknown",
         }
     }
 }
@@ -21,11 +17,8 @@ impl ValueShape {
             ValueShape::Scalar => "scalar",
             ValueShape::Vector => "vector",
             ValueShape::Tensor => "tensor",
-            ValueShape::Record => "record",
             ValueShape::CodeBlock => "codeBlock",
-            ValueShape::Handle => "handle",
             ValueShape::Absence => "absence",
-            ValueShape::Unknown => "unknown",
         }
     }
 }
@@ -44,8 +37,6 @@ impl Capability {
             Capability::Serializable => "serializable",
             Capability::Displayable => "displayable",
             Capability::UserEditable => "userEditable",
-            Capability::ModuleOwned => "moduleOwned",
-            Capability::CoreOwned => "coreOwned",
             Capability::AiExplainable => "aiExplainable",
             Capability::TruthValued => "truthValued",
         }
@@ -56,14 +47,8 @@ impl ValueOrigin {
     pub fn as_protocol_str(&self) -> &'static str {
         match self {
             ValueOrigin::Literal => "literal",
-            ValueOrigin::Computed => "computed",
-            ValueOrigin::CoreWord => "coreWord",
-            ValueOrigin::BuiltinWord => "builtinWord",
-            ValueOrigin::ModuleWord { .. } => "moduleWord",
-            ValueOrigin::UserWord => "userWord",
             ValueOrigin::NilPropagation => "nilPropagation",
             ValueOrigin::HostEnvironment => "hostEnvironment",
-            ValueOrigin::Optimizer => "optimizer",
             ValueOrigin::Unknown => "unknown",
         }
     }

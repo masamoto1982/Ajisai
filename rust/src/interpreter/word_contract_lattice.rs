@@ -2,7 +2,6 @@
 
 use super::word_contract::{
     ContractConfidence, ContractDeterminism, ContractPurity, NilBehavior, OrderSensitivity,
-    UnknownBehavior, WaterSensitivity,
 };
 
 pub(super) fn widen_purity(a: ContractPurity, b: ContractPurity) -> ContractPurity {
@@ -48,24 +47,6 @@ pub(super) fn widen_nil(a: NilBehavior, b: NilBehavior) -> NilBehavior {
         (ConsumesNil, _) | (_, ConsumesNil) => ConsumesNil,
         (Propagates, _) | (_, Propagates) => Propagates,
         _ => NeverCreates,
-    }
-}
-
-pub(super) fn widen_unknown(a: UnknownBehavior, b: UnknownBehavior) -> UnknownBehavior {
-    if matches!(a, UnknownBehavior::MayCreate) || matches!(b, UnknownBehavior::MayCreate) {
-        UnknownBehavior::MayCreate
-    } else {
-        UnknownBehavior::NeverCreates
-    }
-}
-
-pub(super) fn widen_water(a: WaterSensitivity, b: WaterSensitivity) -> WaterSensitivity {
-    if matches!(a, WaterSensitivity::WaterSensitive)
-        || matches!(b, WaterSensitivity::WaterSensitive)
-    {
-        WaterSensitivity::WaterSensitive
-    } else {
-        WaterSensitivity::NotWaterSensitive
     }
 }
 

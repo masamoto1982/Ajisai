@@ -300,6 +300,34 @@ rust/build.rs                        # spec/words.json → kernel/generated/*.rs
 `types/exact/*`（exact arithmetic）, tensor 最適化本体。これらは `VectorRepr`/`ScalarRepr`
 の private 実装として残す。
 
+### 10.1 Phase 9 実施記録（第1次削除）
+
+到達可能性を実測し、**到達不能なものだけ**を削除した。削除済み:
+
+| 削除対象 | 到達可能性の実測 |
+| --- | --- |
+| `TensorLaneId`, `NilReasonRegistry` | 定義のみ。参照 0 |
+| `SemanticRegistry`（`flow_hints`/`flow_extensions`）, `ValueExt` | `Interpreter` が構築するのみで read/write 0（フィールドの doc 自身が "no readers yet" と明記） |
+| `UnknownBehavior`, `widen_unknown` | `WordContract` に計算・格納されるが観測者 0。UNKNOWN は削減済み概念 |
+| `WaterSensitivity`, `widen_water` | 同上 |
+| `SemanticKind::{Record,Process,Supervisor,Unknown}` | 構築 0（`as_protocol_str` の arm のみ） |
+| `ValueShape::{Record,Handle,Unknown}` | 構築 0 |
+| `ValueOrigin::{Computed,CoreWord,BuiltinWord,ModuleWord,UserWord,Optimizer}` | 構築 0。`Value::origin` は Literal/NilPropagation/HostEnvironment/Unknown のみ返す |
+| `Capability::{ModuleOwned,CoreOwned}` | 構築 0。V1 golden にも現れない |
+
+削除できなかったもの（**まだ live**）とその理由:
+
+- `ValueData::Tensor` / `ExactScalar` / `Interpretation` / `Value.hint` / `Value.absence`,
+  `AbsenceMetadata` / `AbsenceOrigin` / `Recoverability`, module 系
+  （`module_vocabulary` / `ImportTable` / …）, `ValueShape::Tensor`。
+- 理由: Spine は runtime と**並存**しているだけで、まだ**置換されていない**。実行器・
+  `value_to_protocol`・V1 serializer は今も旧 `ValueData` 上で動作しており、これらの型は
+  live path から到達可能である。
+
+したがって次の削除には、Phase 4〜8 で作成・検証済みの Spine 経路を**実際に consumer へ
+配線する**作業（execute wrapper を dispatch へ、`Observation` を serializer へ、V2 producer を
+wasm へ）が先行する。§23 の原則どおり、**到達不能になってから削除する**。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）
