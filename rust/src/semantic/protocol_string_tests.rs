@@ -13,7 +13,11 @@ fn semantic_axes_use_lower_camel_case_protocol_strings() {
         Capability::NilPassthrough.as_protocol_str(),
         "nilPassthrough"
     );
-    assert_eq!(ValueOrigin::Computed.as_protocol_str(), "computed");
+    // A live origin: `Value::origin` still produces this one.
+    assert_eq!(
+        ValueOrigin::NilPropagation.as_protocol_str(),
+        "nilPropagation"
+    );
 }
 
 #[test]

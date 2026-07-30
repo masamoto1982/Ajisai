@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::types::{Interpretation, SemanticRegistry, Stack, Token, Value, WordDefinition};
+use crate::types::{Interpretation, Stack, Token, Value, WordDefinition};
 use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -209,13 +209,6 @@ pub struct Interpreter {
     pub(crate) module_epoch: u64,
     pub(crate) execution_epoch: u64,
 
-    /// Flow-plane scaffolding (value-id-keyed `flow_hints` / `flow_extensions`).
-    /// Top-level stack-position roles moved onto [`Stack`] in Phase 4, leaving
-    /// this registry with only the flow-plane fields, which have no readers yet
-    /// and are explicitly out of scope for the Phase 4 migration. Retained for
-    /// that future use; `dead_code` is expected until a reader lands.
-    #[allow(dead_code)]
-    pub(crate) semantic_registry: SemanticRegistry,
     pub(crate) monitor_notifications: Vec<Vec<Value>>,
     pub(crate) next_supervisor_id: u64,
 
@@ -350,7 +343,6 @@ impl Interpreter {
             dictionary_epoch: 0,
             module_epoch: 0,
             execution_epoch: 0,
-            semantic_registry: SemanticRegistry::new(),
             monitor_notifications: Vec::new(),
             next_supervisor_id: 1,
             runtime_metrics: RuntimeMetrics::default(),

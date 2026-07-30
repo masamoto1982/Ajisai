@@ -14,8 +14,7 @@ use crate::coreword_registry::{get_coreword_metadata, MassContract, NilPolicy, W
 use crate::types::{Capabilities, Token, WordDefinition};
 
 use super::word_contract_lattice::{
-    widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity, widen_unknown,
-    widen_water,
+    widen_confidence, widen_determinism, widen_nil, widen_order, widen_purity,
 };
 use super::word_space::{DepSpace, SpaceBound, SpaceClass, SpaceSim};
 use super::Interpreter;
@@ -35,8 +34,6 @@ pub struct WordContract {
     pub determinism: ContractDeterminism,
     pub order_sensitivity: OrderSensitivity,
     pub nil_behavior: NilBehavior,
-    pub unknown_behavior: UnknownBehavior,
-    pub water_sensitivity: WaterSensitivity,
     /// Sound upper bound on the word's space growth (Phase 2.2; `word_space`).
     pub space: SpaceClass,
     /// True when the bound is provably attained, licensing a declaration error.
@@ -80,18 +77,6 @@ pub enum NilBehavior {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UnknownBehavior {
-    NeverCreates,
-    MayCreate,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WaterSensitivity {
-    NotWaterSensitive,
-    WaterSensitive,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ContractConfidence {
     Complete,
     Conservative,
@@ -115,8 +100,6 @@ impl WordContract {
             determinism: ContractDeterminism::NonDeterministic,
             order_sensitivity: OrderSensitivity::OrderSensitive,
             nil_behavior: NilBehavior::MayCreate,
-            unknown_behavior: UnknownBehavior::MayCreate,
-            water_sensitivity: WaterSensitivity::WaterSensitive,
             space: SpaceClass::Unbounded,
             space_exact: false,
             confidence: ContractConfidence::Conservative,
@@ -142,8 +125,6 @@ impl WordContract {
             determinism: ContractDeterminism::Deterministic,
             order_sensitivity: OrderSensitivity::OrderIndependent,
             nil_behavior: NilBehavior::NeverCreates,
-            unknown_behavior: UnknownBehavior::NeverCreates,
-            water_sensitivity: WaterSensitivity::NotWaterSensitive,
             space: SpaceClass::Const,
             space_exact: true,
             confidence: ContractConfidence::Complete,
@@ -221,8 +202,6 @@ struct AccumulatedContract {
     determinism: ContractDeterminism,
     order_sensitivity: OrderSensitivity,
     nil_behavior: NilBehavior,
-    unknown_behavior: UnknownBehavior,
-    water_sensitivity: WaterSensitivity,
     confidence: ContractConfidence,
 }
 
@@ -236,8 +215,6 @@ impl AccumulatedContract {
             determinism: contract.determinism,
             order_sensitivity: contract.order_sensitivity,
             nil_behavior: contract.nil_behavior,
-            unknown_behavior: contract.unknown_behavior,
-            water_sensitivity: contract.water_sensitivity,
             confidence: contract.confidence,
         }
     }
@@ -253,8 +230,6 @@ impl AccumulatedContract {
         self.determinism = widen_determinism(self.determinism, other.determinism);
         self.order_sensitivity = widen_order(self.order_sensitivity, other.order_sensitivity);
         self.nil_behavior = widen_nil(self.nil_behavior, other.nil_behavior);
-        self.unknown_behavior = widen_unknown(self.unknown_behavior, other.unknown_behavior);
-        self.water_sensitivity = widen_water(self.water_sensitivity, other.water_sensitivity);
         self.confidence = widen_confidence(self.confidence, other.confidence);
     }
 }
@@ -276,16 +251,6 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         NilPolicy::ConsumesNil => NilBehavior::ConsumesNil,
     };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
-    let unknown_behavior = if name.eq_ignore_ascii_case("COMPARE-WITHIN") {
-        UnknownBehavior::MayCreate
-    } else {
-        UnknownBehavior::NeverCreates
-    };
-    let water_sensitivity = if name.eq_ignore_ascii_case("COMPARE-WITHIN") {
-        WaterSensitivity::WaterSensitive
-    } else {
-        WaterSensitivity::NotWaterSensitive
-    };
     WordContract {
         flow: meta.mass.into(),
         purity: meta.purity.into(),
@@ -298,8 +263,6 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         },
         order_sensitivity: OrderSensitivity::OrderIndependent,
         nil_behavior,
-        unknown_behavior,
-        water_sensitivity,
         space,
         space_exact,
         confidence: ContractConfidence::Complete,
@@ -440,8 +403,6 @@ impl Interpreter {
             determinism: acc.determinism,
             order_sensitivity: acc.order_sensitivity,
             nil_behavior: acc.nil_behavior,
-            unknown_behavior: acc.unknown_behavior,
-            water_sensitivity: acc.water_sensitivity,
             space,
             space_exact,
             confidence: acc.confidence,

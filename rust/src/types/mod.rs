@@ -21,11 +21,9 @@ mod value_protocol_tests;
 
 use self::fraction::Fraction;
 pub use self::stack::Stack;
-use crate::error::NilReason;
 use crate::semantic::AbsenceMetadata;
 use crate::types::exact::ExactReal;
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq)]
@@ -320,26 +318,6 @@ impl SparseTensor {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TensorLaneId {
-    pub tensor_id: u64,
-    pub lane: usize,
-}
-
-pub type NilReasonRegistry = HashMap<TensorLaneId, NilReason>;
-
-pub trait ValueExt: std::fmt::Debug + Send + 'static {
-    fn clone_box(&self) -> Box<dyn ValueExt>;
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
-impl Clone for Box<dyn ValueExt> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
 /// Semantic interpretation role assigned to a stack value. This is the
 /// meaning the runtime attaches to a value, not a formatting switch:
 /// rendering for humans and AI is derived from (data, role).
@@ -509,39 +487,6 @@ pub struct Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         self.data == other.data && self.hint == other.hint
-    }
-}
-
-/// Flow-plane semantic metadata that is keyed by value identity rather than by
-/// stack position. Top-level stack-position roles moved to [`Stack`] in Phase 4
-/// (single authority, SPEC §12); this registry retains only the value-id-keyed
-/// nested extensions, which are out of scope for that migration.
-pub struct SemanticRegistry {
-    pub flow_hints: HashMap<u64, Interpretation>,
-    pub flow_extensions: HashMap<u64, Box<dyn ValueExt>>,
-}
-
-impl std::fmt::Debug for SemanticRegistry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SemanticRegistry")
-            .field("flow_hints_len", &self.flow_hints.len())
-            .field("flow_extensions_len", &self.flow_extensions.len())
-            .finish()
-    }
-}
-
-impl Default for SemanticRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl SemanticRegistry {
-    pub fn new() -> Self {
-        SemanticRegistry {
-            flow_hints: HashMap::new(),
-            flow_extensions: HashMap::new(),
-        }
     }
 }
 
