@@ -169,11 +169,10 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
     ) -> Result<(Vec<Value>, usize, Interpretation)> {
-        self.collect_vector_with_depth(tokens, start_index, 1)
+        Self::collect_vector_with_depth(tokens, start_index, 1)
     }
 
     pub(crate) fn collect_vector_with_depth(
-        &mut self,
         tokens: &[Token],
         start_index: usize,
         depth: usize,
@@ -210,7 +209,7 @@ impl Interpreter {
                     //   -> value_to_arena が Value.hint をそのまま Node hint として採用
                     // これにより、ネスト深度に依存せず明示 hint を維持する。
                     let (nested_values, consumed, nested_hint) =
-                        self.collect_vector_with_depth(tokens, i, depth + 1)?;
+                        Self::collect_vector_with_depth(tokens, i, depth + 1)?;
                     if nested_values.is_empty() {
                         return Err(AjisaiError::from(
                             "Empty vector is not allowed. Use NIL for empty values.",

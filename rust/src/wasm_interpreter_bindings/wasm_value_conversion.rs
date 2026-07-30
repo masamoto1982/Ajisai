@@ -162,9 +162,6 @@ fn diagnosis_to_protocol_js(
     if let Some(word) = &diagnosis.where_.word {
         set_prop(&where_obj, "word", &word.clone().into());
     }
-    if let Some(module) = &diagnosis.where_.module {
-        set_prop(&where_obj, "module", &module.clone().into());
-    }
     if let Some(dictionary) = &diagnosis.where_.dictionary {
         set_prop(&where_obj, "dictionary", &dictionary.clone().into());
     }

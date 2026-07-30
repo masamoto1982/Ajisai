@@ -37,6 +37,12 @@ pub(crate) fn set_js_prop(obj: &js_sys::Object, key: &str, value: &JsValue) {
     js_sys::Reflect::set(obj, &JsValue::from_str(key), value).unwrap();
 }
 
+impl Default for AjisaiInterpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[wasm_bindgen]
 impl AjisaiInterpreter {
     #[wasm_bindgen(constructor)]

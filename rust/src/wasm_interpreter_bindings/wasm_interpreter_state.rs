@@ -10,17 +10,6 @@ use crate::types::arena::{arena_to_value, json_to_arena_node, ValueArena};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
-fn js_string_array(value: &JsValue) -> Vec<String> {
-    let arr = js_sys::Array::from(value);
-    let mut out = Vec::with_capacity(arr.length() as usize);
-    for i in 0..arr.length() {
-        if let Some(s) = arr.get(i).as_string() {
-            out.push(s);
-        }
-    }
-    out
-}
-
 fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     let obj = js_sys::Object::new();
 
@@ -36,9 +25,6 @@ fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     );
     if let Some(word) = &diagnosis.where_.word {
         set_js_prop(&where_obj, "word", &(word.clone().into()));
-    }
-    if let Some(module) = &diagnosis.where_.module {
-        set_js_prop(&where_obj, "module", &(module.clone().into()));
     }
     if let Some(dictionary) = &diagnosis.where_.dictionary {
         set_js_prop(&where_obj, "dictionary", &(dictionary.clone().into()));
@@ -90,7 +76,7 @@ impl AjisaiInterpreter {
                     .interpreter
                     .dependents
                     .get(&fq_name)
-                    .map_or(false, |deps| !deps.is_empty());
+                    .is_some_and(|deps| !deps.is_empty());
 
                 let item = js_sys::Array::new();
                 item.push(&dict_name.clone().into());
@@ -125,11 +111,7 @@ impl AjisaiInterpreter {
     }
 
     pub(crate) fn collect_imported_modules_array(&self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for name in self.interpreter.import_table.modules.keys() {
-            arr.push(&JsValue::from_str(name));
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
     pub(crate) fn collect_user_words_for_state(&self) -> JsValue {
@@ -158,29 +140,17 @@ impl AjisaiInterpreter {
         to_value(&builtins::collect_core_builtin_definitions()).unwrap_or(JsValue::NULL)
     }
 
-    /// Returns Core-listed words (canonical core + Canonical Module words
-    /// that are core-listed, e.g. SORT). This is the listing-based Core
-    /// view defined by the redesigned vocabulary system; bare module words
-    /// are surfaced for visibility only — invoking SORT bare still requires
-    /// `'ALGO' IMPORT` per current execution semantics.
+    /// Returns the canonical Core-listed words.
     ///
     /// Tuple shape: `(name, description, syntax)` — same as
     /// `collect_core_words_info` so the GUI can render either list with the
     /// same code path.
     #[wasm_bindgen]
     pub fn collect_core_listed_words_info(&self) -> JsValue {
-        let mut entries: Vec<(String, String, String)> =
-            builtins::collect_core_builtin_definitions()
-                .into_iter()
-                .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
-                .collect();
-
-        for word in crate::coreword_registry::get_core_listed_words() {
-            if word.is_canonical_core() {
-                continue;
-            }
-            continue;
-        }
+        let entries: Vec<(String, String, String)> = builtins::collect_core_builtin_definitions()
+            .into_iter()
+            .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
+            .collect();
 
         to_value(&entries).unwrap_or(JsValue::NULL)
     }
@@ -207,11 +177,7 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn collect_imported_modules(&self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for name in self.interpreter.import_table.modules.keys() {
-            arr.push(&JsValue::from_str(name));
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
     /// All importable module names, in specification order. Drives the GUI's
@@ -240,68 +206,18 @@ impl AjisaiInterpreter {
     /// `collect_imported_modules` (module names only) cannot represent.
     #[wasm_bindgen]
     pub fn collect_import_state(&self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for (name, entry) in &self.interpreter.import_table.modules {
-            let item = js_sys::Array::new();
-            item.push(&JsValue::from_str(name));
-            item.push(&entry.import_all_public.into());
-            let words = js_sys::Array::new();
-            for w in &entry.imported_words {
-                words.push(&JsValue::from_str(w));
-            }
-            item.push(&words.into());
-            item.push(&js_sys::Array::new().into());
-            arr.push(&item);
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
-    /// Restore a detailed import state previously captured by
-    /// `collect_import_state`. Reinstates partial imports exactly, unlike
-    /// `restore_imported_modules` which forces a full IMPORT per module.
+    /// Accept a legacy import-state snapshot. Modules are no longer runtime
+    /// vocabulary, so restoration intentionally has no effect.
     #[wasm_bindgen]
-    pub fn restore_import_state(&mut self, state_js: JsValue) {
-        let arr = js_sys::Array::from(&state_js);
-        for i in 0..arr.length() {
-            let entry = js_sys::Array::from(&arr.get(i));
-            let Some(module) = entry.get(0).as_string() else {
-                continue;
-            };
-            let import_all_public = entry.get(1).as_bool().unwrap_or(false);
-            let words = js_string_array(&entry.get(2));
-            let samples = js_string_array(&entry.get(3));
-        }
-    }
+    pub fn restore_import_state(&mut self, _state_js: JsValue) {}
 
     /// Tuple shape: `(name, description)`.
     #[wasm_bindgen]
-    pub fn collect_module_words_info(&self, module_name: &str) -> JsValue {
-        let upper = module_name.to_uppercase();
-        let arr = js_sys::Array::new();
-        let Some(imported) = self.interpreter.import_table.modules.get(&upper) else {
-            return arr.into();
-        };
-        if let Some(module_dict) = self.interpreter.module_vocabulary.get(&upper) {
-            for (name, def) in &module_dict.words {
-                let short_name = name
-                    .split_once('@')
-                    .map(|(_, short)| short)
-                    .unwrap_or(name.as_str());
-                if !imported.import_all_public && !imported.imported_words.contains(short_name) {
-                    continue;
-                }
-                let item = js_sys::Array::new();
-                item.push(&JsValue::from_str(name));
-                item.push(
-                    &def.description
-                        .clone()
-                        .map(JsValue::from)
-                        .unwrap_or(JsValue::NULL),
-                );
-                arr.push(&item);
-            }
-        }
-        arr.into()
+    pub fn collect_module_words_info(&self, _module_name: &str) -> JsValue {
+        js_sys::Array::new().into()
     }
 
     #[wasm_bindgen]
@@ -328,12 +244,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
-        let arr = js_sys::Array::from(&modules_js);
-        for i in 0..arr.length() {
-            if let Some(name) = arr.get(i).as_string() {}
-        }
-    }
+    pub fn restore_imported_modules(&mut self, _modules_js: JsValue) {}
 
     #[wasm_bindgen]
     pub fn lookup_word_definition(&self, name: &str) -> JsValue {
@@ -518,7 +429,7 @@ impl AjisaiInterpreter {
                     }
                     Err(e) => {
                         set_js_prop(&obj, "status", &("ERROR".into()));
-                        set_js_prop(&obj, "message", &(format!("{}", e).into()));
+                        set_js_prop(&obj, "message", &(e.to_string().into()));
                     }
                 }
             }

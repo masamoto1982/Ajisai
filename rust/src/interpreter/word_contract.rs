@@ -278,7 +278,7 @@ impl Interpreter {
     }
 
     pub(crate) fn clear_word_contract_cache(&mut self) {
-        self.module_state.remove(WORD_CONTRACT_CACHE_STATE_KEY);
+        self.runtime_scratch.remove(WORD_CONTRACT_CACHE_STATE_KEY);
     }
 
     #[cfg(test)]
@@ -288,13 +288,13 @@ impl Interpreter {
     }
 
     fn word_contract_cache_ref(&self) -> Option<&WordContractCache> {
-        self.module_state
+        self.runtime_scratch
             .get(WORD_CONTRACT_CACHE_STATE_KEY)
             .and_then(|cache| cache.downcast_ref::<WordContractCache>())
     }
 
     fn word_contract_cache_mut(&mut self) -> &mut WordContractCache {
-        self.module_state
+        self.runtime_scratch
             .entry(WORD_CONTRACT_CACHE_STATE_KEY.to_string())
             .or_insert_with(|| Box::<WordContractCache>::default())
             .downcast_mut::<WordContractCache>()
