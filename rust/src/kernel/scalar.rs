@@ -56,6 +56,17 @@ impl Scalar {
     pub fn is_exact(&self) -> bool {
         matches!(self.repr, ScalarRepr::Exact(_))
     }
+
+    /// Crate-internal view of the exact-real backing. Used only by the
+    /// temporary legacy adapter to raise a spine scalar back to the old value
+    /// model; it is not part of the public API, because a program never
+    /// observes the backing — only that the value is a `Scalar`.
+    pub(crate) fn exact_backing(&self) -> Option<&ExactReal> {
+        match &self.repr {
+            ScalarRepr::Exact(value) => Some(value),
+            ScalarRepr::Float(_) => None,
+        }
+    }
 }
 
 #[cfg(test)]
