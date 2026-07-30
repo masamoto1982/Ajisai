@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://ajisai.dev/spec/host-protocol-v2.schema.json",
+  "x-ajisai-version": 2,
   "title": "Ajisai HostProtocolV2",
   "description": "The host wire format rendered directly from the Semantic Spine. It reflects the six canonical value domains and the outward-observable stack, and carries no legacy concept (module catalog, tensor shape, logical-unknown axis, absence origin/recoverability, capability set). The frozen HostProtocolV1 remains the compatibility surface; V2 stays in lockstep with the language as it is now.",
   "type": "object",
