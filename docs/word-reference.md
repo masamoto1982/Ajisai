@@ -899,10 +899,10 @@ Display the documentation for a named word.
 
 ## `PRINT`
 
-Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.
+Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.
 
 - **Family:** `output`
-- **Stack:** 1 input(s) → 1 output(s); `retain` consumption
+- **Stack:** 1 input(s) → 0 output(s); `eat` consumption
 - **NIL policy:** `preserveReason`; projection: none
 - **Purity / determinism:** `effectful` / `hostRelative`
 - **Capability / hosted effect:** `console` / `consoleWrite`

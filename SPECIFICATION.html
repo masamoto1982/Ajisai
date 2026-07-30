@@ -476,7 +476,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-effects-output">LANG.EFFECTS.OUTPUT — Output</h3>
 
-<p>Output is the only effect. <code>PRINT</code> appends to the ordered output stream and returns its operand. Every other Word is pure: given the same stack and dictionary it produces the same result and changes nothing else.</p>
+<p>Output is the only effect. <code>PRINT</code> consumes its operand and appends it to the ordered output stream; <code>KEEP</code> retains it like any other Word. Every other Word is pure: given the same stack and dictionary it produces the same result and changes nothing else.</p>
 
 <p>A host may render, capture, or discard the output stream, but may not reorder it or change language-side validation.</p>
 

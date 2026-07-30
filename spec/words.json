@@ -2490,9 +2490,9 @@
       "family": "output",
       "stack": {
         "inputs": 1,
-        "outputs": 1
+        "outputs": 0
       },
-      "consumption": "retain",
+      "consumption": "eat",
       "nilPolicy": "preserveReason",
       "projection": {
         "when": "never",
@@ -2509,9 +2509,9 @@
         "LANG.MACHINE.ORDER"
       ],
       "documentation": {
-        "summary": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "summary": "Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.",
         "hover": "PRINT — output value to display",
-        "lookup": "Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack.",
+        "lookup": "Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes.",
         "syntax": "42 PRINT"
       },
       "executorKey": "Print",

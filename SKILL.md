@@ -215,7 +215,7 @@ exist. There is no module system and nothing to import.
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
 | `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } ANY` |
 | `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
-| `PRINT` | io | Output the top stack value. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes, and numbers and other values print as they appear on the stack. — e.g. `42 PRINT` |
+| `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
