@@ -23,11 +23,14 @@
 //! the two models coexist while consumers migrate onto the spine one at a time.
 //! See `docs/dev/semantic-spine-migration-plan.md`.
 
+pub mod arithmetic;
+pub mod execute;
 pub mod generated;
 pub mod nil;
 pub mod observation;
 pub mod scalar;
 pub mod value;
+pub mod word_contract;
 
 // The temporary legacy <-> spine bridge. A private module: its `From` impls are
 // coherent crate-wide regardless, and keeping it unexported holds the spine's
