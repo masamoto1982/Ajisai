@@ -18,7 +18,6 @@ pub enum ErrorLocusKind {
     UserWord,
     CoreWord,
     BuiltinWord,
-    ModuleWord,
     HostEnvironment,
     Optimizer,
     Unknown,
@@ -28,7 +27,6 @@ pub enum ErrorLocusKind {
 pub struct ErrorLocus {
     pub kind: ErrorLocusKind,
     pub word: Option<String>,
-    pub module: Option<String>,
     pub dictionary: Option<String>,
 }
 
@@ -108,7 +106,6 @@ impl ErrorLocusKind {
             ErrorLocusKind::UserWord => "userWord",
             ErrorLocusKind::CoreWord => "coreWord",
             ErrorLocusKind::BuiltinWord => "builtinWord",
-            ErrorLocusKind::ModuleWord => "moduleWord",
             ErrorLocusKind::HostEnvironment => "hostEnvironment",
             ErrorLocusKind::Optimizer => "optimizer",
             ErrorLocusKind::Unknown => "unknown",
@@ -143,7 +140,6 @@ impl CauseClass {
             ErrorCategory::StackUnderflow => CauseClass::StackShape,
             ErrorCategory::StructureError => CauseClass::ValueShape,
             ErrorCategory::UnknownWord => CauseClass::TypoOrUnknownName,
-            ErrorCategory::UnknownModule => CauseClass::Environment,
             ErrorCategory::DivisionByZero => CauseClass::Domain,
             ErrorCategory::IndexOutOfBounds => CauseClass::Index,
             ErrorCategory::VectorLengthMismatch => CauseClass::VectorLength,
@@ -158,13 +154,12 @@ impl CauseClass {
 }
 
 fn classify_locus(word: Option<&str>) -> ErrorLocus {
-    let (kind, module) = match word {
+    let (kind, dictionary) = match word {
         None => (ErrorLocusKind::Unknown, None),
         Some(name) => {
             if let Some(idx) = name.find('@') {
-                let (left, right) = name.split_at(idx);
-                let _ = right;
-                (ErrorLocusKind::ModuleWord, Some(left.to_string()))
+                let (dictionary, _) = name.split_at(idx);
+                (ErrorLocusKind::UserWord, Some(dictionary.to_string()))
             } else if crate::coreword_registry::get_builtin_word_metadata(name).is_some() {
                 (ErrorLocusKind::CoreWord, None)
             } else {
@@ -175,8 +170,7 @@ fn classify_locus(word: Option<&str>) -> ErrorLocus {
     ErrorLocus {
         kind,
         word: word.map(|s| s.to_string()),
-        module,
-        dictionary: None,
+        dictionary,
     }
 }
 
@@ -185,9 +179,7 @@ fn adjust_phase_for_category(phase: ErrorPhase, category: Option<&ErrorCategory>
         return phase;
     }
     match category {
-        Some(ErrorCategory::UnknownWord) | Some(ErrorCategory::UnknownModule) => {
-            ErrorPhase::ResolveWord
-        }
+        Some(ErrorCategory::UnknownWord) => ErrorPhase::ResolveWord,
         _ => phase,
     }
 }
@@ -309,7 +301,6 @@ fn recoverability_for(why: &CauseClass, category: Option<&ErrorCategory>) -> &'s
         | Some(ErrorCategory::IndexOutOfBounds)
         | Some(ErrorCategory::VectorLengthMismatch) => "fixInput",
         Some(ErrorCategory::UnknownWord)
-        | Some(ErrorCategory::UnknownModule)
         | Some(ErrorCategory::StackUnderflow)
         | Some(ErrorCategory::ModeUnsupported)
         | Some(ErrorCategory::CondExhausted) => "fixProgram",
@@ -477,24 +468,12 @@ fn build_next_checks(
                 "alias 展開後の canonical word 名を確認する",
             ));
             out.push(check(
-                "Check imports/definitions",
-                "module import 漏れ、または user word 定義漏れを確認する",
+                "Check user definitions",
+                "user word の定義と所属 dictionary を確認する",
             ));
         }
         CauseClass::Environment => {
-            if matches!(category, Some(ErrorCategory::UnknownModule)) {
-                out.push(check("Check module name", "module 名のスペルを確認する"));
-                out.push(check(
-                    "Check build inclusion",
-                    "module が現在のビルドに含まれているか確認する",
-                ));
-                out.push(check(
-                    "Check import target kind",
-                    "import 対象が module word か user word か確認する",
-                ));
-            } else {
-                out.push(check("Check environment", "実行環境の前提条件を確認する"));
-            }
+            out.push(check("Check environment", "実行環境の前提条件を確認する"));
         }
         CauseClass::ValueShape => {
             let word_label = word.unwrap_or("the word");
@@ -629,4 +608,16 @@ fn build_next_checks(
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{classify_locus, ErrorLocusKind};
+
+    #[test]
+    fn qualified_word_is_classified_as_a_user_dictionary_word() {
+        let locus = classify_locus(Some("EXAMPLE@DOUBLE"));
+        assert_eq!(locus.kind, ErrorLocusKind::UserWord);
+        assert_eq!(locus.dictionary.as_deref(), Some("EXAMPLE"));
+    }
 }

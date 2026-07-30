@@ -345,6 +345,13 @@ wasm へ）が先行する。§23 の原則どおり、**到達不能になっ�
 これにより module は Kernel の解決・実行状態から到達不能になり、空の legacy wire shape のみが
 host boundary に残る。
 
+追加監査では、module runtime 削除後も error model に残っていた到達不能な
+`AjisaiError::UnknownModule` / `ErrorCategory::UnknownModule` / `ErrorLocusKind::ModuleWord`
+と `ErrorLocus.module` を削除した。`DICTIONARY@WORD` は module ではなく User dictionary の
+Word として分類し、unknown-word 診断も import ではなく User dictionary の定義確認を案内する。
+V1 が固定する module 関連 wasm method の**署名**は保持するが、restore method の空ループは
+引数を無視する明示的 no-op に縮約した。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

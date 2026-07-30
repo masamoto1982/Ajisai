@@ -118,21 +118,16 @@ impl AjisaiInterpreter {
 
     #[wasm_bindgen]
     pub fn reset(&mut self) -> JsValue {
-        self.reset_with(true)
+        self.reset_runtime()
     }
 
-    /// Session reset (Phase 5): reinitializes session state but keeps the
-    /// cross-reset compiled-artifact cache alive. The GUI worker calls this
-    /// before restoring a snapshot so an unchanged user word's `CompiledPlan`
-    /// is reused instead of recompiled. Reuse is content-identity keyed and
-    /// observationally transparent, so the run's result is identical to a full
-    /// `reset`.
+    /// Compatibility alias for [`Self::reset`].
     #[wasm_bindgen]
     pub fn reset_session(&mut self) -> JsValue {
-        self.reset_with(false)
+        self.reset_runtime()
     }
 
-    fn reset_with(&mut self, full: bool) -> JsValue {
+    fn reset_runtime(&mut self) -> JsValue {
         let obj = js_sys::Object::new();
 
         self.step_mode = false;
@@ -140,11 +135,7 @@ impl AjisaiInterpreter {
         self.step_position = 0;
         self.current_step_code.clear();
 
-        let outcome = if full {
-            self.interpreter.execute_reset()
-        } else {
-            self.interpreter.execute_reset()
-        };
+        let outcome = self.interpreter.execute_reset();
 
         match outcome {
             Ok(()) => {

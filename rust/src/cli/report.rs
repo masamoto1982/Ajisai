@@ -85,9 +85,6 @@ pub(crate) fn diagnosis_json(diagnosis: &DebugDiagnosis) -> Json {
     if let Some(word) = &diagnosis.where_.word {
         where_obj.insert("word".into(), json!(word));
     }
-    if let Some(module) = &diagnosis.where_.module {
-        where_obj.insert("module".into(), json!(module));
-    }
     if let Some(dictionary) = &diagnosis.where_.dictionary {
         where_obj.insert("dictionary".into(), json!(dictionary));
     }

@@ -26,9 +26,6 @@ fn diagnosis_to_js(diagnosis: &DebugDiagnosis) -> JsValue {
     if let Some(word) = &diagnosis.where_.word {
         set_js_prop(&where_obj, "word", &(word.clone().into()));
     }
-    if let Some(module) = &diagnosis.where_.module {
-        set_js_prop(&where_obj, "module", &(module.clone().into()));
-    }
     if let Some(dictionary) = &diagnosis.where_.dictionary {
         set_js_prop(&where_obj, "dictionary", &(dictionary.clone().into()));
     }
@@ -79,7 +76,7 @@ impl AjisaiInterpreter {
                     .interpreter
                     .dependents
                     .get(&fq_name)
-                    .map_or(false, |deps| !deps.is_empty());
+                    .is_some_and(|deps| !deps.is_empty());
 
                 let item = js_sys::Array::new();
                 item.push(&dict_name.clone().into());
@@ -150,11 +147,10 @@ impl AjisaiInterpreter {
     /// same code path.
     #[wasm_bindgen]
     pub fn collect_core_listed_words_info(&self) -> JsValue {
-        let mut entries: Vec<(String, String, String)> =
-            builtins::collect_core_builtin_definitions()
-                .into_iter()
-                .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
-                .collect();
+        let entries: Vec<(String, String, String)> = builtins::collect_core_builtin_definitions()
+            .into_iter()
+            .map(|(n, d, s)| (n.to_string(), d.to_string(), s.to_string()))
+            .collect();
 
         to_value(&entries).unwrap_or(JsValue::NULL)
     }
@@ -248,12 +244,7 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
-    pub fn restore_imported_modules(&mut self, modules_js: JsValue) {
-        let arr = js_sys::Array::from(&modules_js);
-        for i in 0..arr.length() {
-            if let Some(name) = arr.get(i).as_string() {}
-        }
-    }
+    pub fn restore_imported_modules(&mut self, _modules_js: JsValue) {}
 
     #[wasm_bindgen]
     pub fn lookup_word_definition(&self, name: &str) -> JsValue {
@@ -438,7 +429,7 @@ impl AjisaiInterpreter {
                     }
                     Err(e) => {
                         set_js_prop(&obj, "status", &("ERROR".into()));
-                        set_js_prop(&obj, "message", &(format!("{}", e).into()));
+                        set_js_prop(&obj, "message", &(e.to_string().into()));
                     }
                 }
             }

@@ -55,7 +55,6 @@ pub enum ErrorCategory {
     StackUnderflow,
     StructureError,
     UnknownWord,
-    UnknownModule,
     DivisionByZero,
     IndexOutOfBounds,
     VectorLengthMismatch,
@@ -73,7 +72,6 @@ impl ErrorCategory {
             ErrorCategory::StackUnderflow => "stackUnderflow",
             ErrorCategory::StructureError => "structureError",
             ErrorCategory::UnknownWord => "unknownWord",
-            ErrorCategory::UnknownModule => "unknownModule",
             ErrorCategory::DivisionByZero => "divisionByZero",
             ErrorCategory::IndexOutOfBounds => "indexOutOfBounds",
             ErrorCategory::VectorLengthMismatch => "vectorLengthMismatch",
@@ -91,7 +89,6 @@ impl ErrorCategory {
             AjisaiError::StackUnderflow => ErrorCategory::StackUnderflow,
             AjisaiError::StructureError { .. } => ErrorCategory::StructureError,
             AjisaiError::UnknownWord(_) => ErrorCategory::UnknownWord,
-            AjisaiError::UnknownModule(_) => ErrorCategory::UnknownModule,
             AjisaiError::DivisionByZero => ErrorCategory::DivisionByZero,
             AjisaiError::IndexOutOfBounds { .. } => ErrorCategory::IndexOutOfBounds,
             AjisaiError::VectorLengthMismatch { .. } => ErrorCategory::VectorLengthMismatch,
@@ -134,7 +131,6 @@ pub enum AjisaiError {
         got: String,
     },
     UnknownWord(String),
-    UnknownModule(String),
     DivisionByZero,
     IndexOutOfBounds {
         index: i64,
@@ -185,7 +181,6 @@ impl fmt::Display for AjisaiError {
                 write!(f, "Structure error: expected {}, got {}", expected, got)
             }
             AjisaiError::UnknownWord(name) => write!(f, "Unknown word: {}", name),
-            AjisaiError::UnknownModule(name) => write!(f, "Unknown module: {}", name),
             AjisaiError::DivisionByZero => write!(f, "Division by zero"),
             AjisaiError::IndexOutOfBounds { index, length } => {
                 write!(
