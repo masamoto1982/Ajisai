@@ -24,6 +24,7 @@
     "build:tauri-frontend": "AJISAI_BUILD_TARGET=tauri vite build",
     "check:semantic-firewall": "bash ./scripts/check-semantic-firewall.sh",
     "check:file-size": "node scripts/check-file-size-budget.mjs",
+    "check:reading-surfaces": "node scripts/check-reading-surfaces.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "specification:generate": "node scripts/generate-specification.mjs",
     "specification:check": "node scripts/generate-specification.mjs --check",

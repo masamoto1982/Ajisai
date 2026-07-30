@@ -53,7 +53,17 @@ This Language Semantics is authoritative for program meaning. <code>spec/words.j
 </p>
 
 <p>
-Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the list above defines nothing.
+Neither implementation layout nor explanatory text can override an observable contract. A document that is not in the list above defines nothing; <code>docs/dev/</code> holds design notes and history on those terms.
+</p>
+
+<h3 id="lang-authority-present">LANG.AUTHORITY.PRESENT — Present-tense description</h3>
+
+<p>
+Ajisai has three reading surfaces: the <strong>README</strong>, the <strong>Reference</strong>, and this <strong>Specification</strong>. Each describes the language as it currently is. A definition, an example, or an explanation may rest only on concepts the language has, and every Word it names must exist in the vocabulary registry.
+</p>
+
+<p>
+Superseded designs, migration history, and the reasoning behind a change are recorded outside these three surfaces, in notes that define nothing. A negative statement belongs on a reading surface only when it constrains an implementation — "an implementation must not convert malformed use to NIL" is such a constraint — and not when its only content is a contrast with a design the language does not have.
 </p>
 
 <h3 id="lang-authority-identity">LANG.AUTHORITY.IDENTITY — Language identity</h3>
