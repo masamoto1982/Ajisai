@@ -1,0 +1,65 @@
+{
+  "protocol": "ajisai.host.v2",
+  "stack": [
+    {
+      "presentation": "structural",
+      "value": {
+        "denominator": "1",
+        "numerator": "3",
+        "type": "scalar"
+      }
+    },
+    {
+      "presentation": "structural",
+      "value": {
+        "type": "boolean",
+        "value": true
+      }
+    },
+    {
+      "presentation": "text",
+      "value": {
+        "type": "string",
+        "value": "hi"
+      }
+    },
+    {
+      "presentation": "interval",
+      "value": {
+        "items": [
+          {
+            "denominator": "1",
+            "numerator": "1",
+            "type": "scalar"
+          },
+          {
+            "denominator": "1",
+            "numerator": "2",
+            "type": "scalar"
+          }
+        ],
+        "type": "vector"
+      }
+    },
+    {
+      "presentation": "structural",
+      "value": {
+        "reason": "divisionByZero",
+        "type": "nil"
+      }
+    },
+    {
+      "presentation": "structural",
+      "value": {
+        "reason": null,
+        "type": "nil"
+      }
+    },
+    {
+      "presentation": "structural",
+      "value": {
+        "type": "codeBlock"
+      }
+    }
+  ]
+}

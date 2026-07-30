@@ -26,6 +26,7 @@
 pub mod arithmetic;
 pub mod execute;
 pub mod generated;
+pub mod host_protocol_v2;
 pub mod nil;
 pub mod observation;
 pub mod scalar;
