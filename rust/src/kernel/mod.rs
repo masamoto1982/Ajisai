@@ -28,6 +28,11 @@ pub mod observation;
 pub mod scalar;
 pub mod value;
 
+// The temporary legacy <-> spine bridge. A private module: its `From` impls are
+// coherent crate-wide regardless, and keeping it unexported holds the spine's
+// *named* public surface to the six domains while consumers migrate (Phase 2).
+mod legacy_adapter;
+
 pub use nil::NilReason;
 pub use observation::{Observation, ObservedValue, PresentationHint};
 pub use scalar::Scalar;
