@@ -85,13 +85,14 @@ proptest! {
 
     /// **`CHARS` of a word has one element per codepoint, and `JOIN` of two
     /// char-vectors concatenates** (free monoid on codepoints):
-    /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. Both words are ≥ 2 chars so each
-    /// `CHARS` yields a multi-element vector (finding I2: `CONCAT` underflows on a
-    /// single-element top operand).
+    /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. The word lengths start at 1: a
+    /// one-character word makes `CHARS` yield a one-element vector, which
+    /// `CONCAT` used to mistake for an operand count (finding I2, now fixed —
+    /// see `finding_i2_concat_joins_a_singleton_top_operand`).
     #[test]
     fn join_concat_is_concatenation(
-        u in "[a-h]{2,6}",
-        v in "[a-h]{2,6}",
+        u in "[a-h]{1,6}",
+        v in "[a-h]{1,6}",
     ) {
         prop_assert_eq!(
             obs1(&format!("'{u}' CHARS '{v}' CHARS CONCAT JOIN")),
@@ -131,31 +132,29 @@ fn chr_anchor() {
     assert_eq!(obs1("65 CHR"), "'A'");
 }
 
-/// **Finding I2 (guarded oracle): `CONCAT` underflows on a single-element top
-/// operand.** A single-element vector on top of the stack is treated specially
-/// (spread), so `[ 1 ] [ 2 ] CONCAT` raises `StackUnderflow`, while a
-/// multi-element top operand concatenates normally (`[ 1 ] [ 2 3 ] CONCAT`).
-/// This is why the `JOIN`∘`CONCAT` law above requires ≥ 2-char words. Pinned so
-/// a future change to single-element handling is loud.
+/// **Finding I2 (resolved): a one-element vector on top of `CONCAT` is an
+/// operand, not an operand count.**
+///
+/// `CONCAT` accepts an optional leading count (`a b c 3 CONCAT`) that it sniffs
+/// off the top of the stack. The sniff used to read a one-element vector as its
+/// element, so `[ 1 ] [ 2 ] CONCAT` meant "join the top 2 after popping `[ 2 ]`"
+/// and raised `StackUnderflow`, while `[ 1 ] [ 2 3 ] CONCAT` joined normally.
+/// The specification declares `CONCAT` as `2 -> 1` over vectors with `nonVector`
+/// its only error, so the arity of a call may not depend on how many elements an
+/// operand happens to have. A count is now recognized only as a bare scalar.
 #[test]
-fn finding_i2_concat_underflows_on_singleton_top() {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
-    let ok = |s: &str| {
-        rt.block_on(async {
-            ajisai_core::interpreter::Interpreter::new()
-                .execute(s)
-                .await
-                .is_ok()
-        })
-    };
-    assert!(
-        !ok("[ 1 ] [ 2 ] CONCAT"),
-        "singleton top operand should underflow"
-    );
-    assert!(
-        ok("[ 1 ] [ 2 3 ] CONCAT"),
-        "multi-element top operand concatenates"
-    );
+fn finding_i2_concat_joins_a_singleton_top_operand() {
+    // The shapes that used to underflow.
+    assert_eq!(obs1("[ 1 ] [ 2 ] CONCAT"), "[ 1/1 2/1 ]");
+    assert_eq!(obs1("[ 1 2 ] [ 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
+    assert_eq!(obs1("'ab' 'c' CONCAT JOIN"), "'abc'");
+
+    // The shape that always worked, unchanged.
+    assert_eq!(obs1("[ 1 ] [ 2 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
+
+    // A bare scalar is still a count, in both directions, and the count still
+    // reaches past the default two operands.
+    assert_eq!(obs1("[ 1 2 ] [ 3 4 ] 2 CONCAT"), "[ 1/1 2/1 3/1 4/1 ]");
+    assert_eq!(obs1("[ 1 ] [ 2 ] [ 3 ] 3 CONCAT"), "[ 1/1 2/1 3/1 ]");
+    assert_eq!(obs1("[ 1 2 ] [ 3 4 ] -2 CONCAT"), "[ 3/1 4/1 1/1 2/1 ]");
 }

@@ -9,6 +9,21 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
+/// Read the optional leading operand count of `CONCAT`.
+///
+/// `CONCAT` joins the top two values by default; a bare integer on top instead
+/// names how many values to join (`[ 1 2 ] [ 3 4 ] [ 5 6 ] 3 CONCAT`), negative
+/// for reversed order. The count is *sniffed* rather than declared, so the test
+/// that recognizes it decides which values `CONCAT` can accept as data.
+///
+/// A Vector is never a count. It used to be: the count was read with the same
+/// singleton projection every numeric operand uses, and that projection sees a
+/// one-element vector as its element, so `[ 1 2 ] [ 3 ] CONCAT` read `[ 3 ]` as
+/// "join the top 3" and failed with `Stack underflow` — as did `[ 1 ] [ 2 ]
+/// CONCAT` and, because a one-character Text is a one-codepoint vector,
+/// `'ab' 'c' CONCAT`. The specification declares `CONCAT` as `2 -> 1` over
+/// vectors with `nonVector` its only error, so a vector operand has to reach
+/// the join.
 fn parse_concat_count(
     interp: &mut Interpreter,
     default_count: i64,
@@ -16,6 +31,10 @@ fn parse_concat_count(
     let Some(top) = interp.stack.last() else {
         return Err(AjisaiError::StackUnderflow);
     };
+
+    if top.is_vector() {
+        return Ok((default_count, None));
+    }
 
     let Ok(count_bigint) = extract_bigint_from_value(top) else {
         return Ok((default_count, None));
