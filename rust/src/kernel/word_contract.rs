@@ -2,8 +2,14 @@
 //! registry (migration plan §12). The execution wrapper reads this — arity,
 //! nil policy — so the shared concerns of every Word are applied from one
 //! machine-checked source (`spec/words.json`) rather than re-encoded per Word.
+//!
+//! The contract vocabularies themselves live in the generated registry, where
+//! they are projected from the `enum` lists in `spec/words.schema.json`. This
+//! module deliberately does not restate them: a second hand-written copy is
+//! exactly how the implementation vocabulary drifted narrower than the
+//! specification's in the first place.
 
-use super::generated::GeneratedWord;
+use super::generated::{Arity as SpecArity, GeneratedWord, NilPolicy};
 
 /// Fixed stack arity: how many operands a Word consumes and how many results it
 /// produces under the default consume mode.
@@ -13,48 +19,13 @@ pub struct Arity {
     pub produces: u8,
 }
 
-/// How a Word treats a NIL operand, projected from the spec `nilPolicy`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NilPolicy {
-    /// A NIL operand passes through: the Word yields NIL without running.
-    Passthrough,
-    /// A NIL operand passes through, and the Word may itself project a result
-    /// to NIL (e.g. `DIV` by zero).
-    PassthroughThenProject,
-    /// The Word may create a NIL from non-NIL operands.
-    CreatesNil,
-    /// The Word preserves an operand's NIL reason unchanged.
-    PreservesReason,
-    /// The Word rejects a NIL operand as an error rather than passing it.
-    RejectsNil,
-    /// The Word consumes a NIL operand as ordinary input.
-    ConsumeNil,
-    /// The Word inspects NIL-ness without propagating it.
-    InspectNil,
-}
-
-impl NilPolicy {
-    fn from_spec(spec: &str) -> Option<Self> {
-        Some(match spec {
-            "passthrough" => NilPolicy::Passthrough,
-            "passthroughThenProject" => NilPolicy::PassthroughThenProject,
-            "createsNil" => NilPolicy::CreatesNil,
-            "preserveReason" => NilPolicy::PreservesReason,
-            "rejectNil" => NilPolicy::RejectsNil,
-            "consumeNil" => NilPolicy::ConsumeNil,
-            "inspectNil" => NilPolicy::InspectNil,
-            _ => return None,
-        })
-    }
-
-    /// Whether a NIL operand short-circuits the Word to a NIL result without
-    /// running its primitive.
-    pub fn passes_nil_through(self) -> bool {
-        matches!(
-            self,
-            NilPolicy::Passthrough | NilPolicy::PassthroughThenProject
-        )
-    }
+/// Whether a NIL operand short-circuits the Word to a NIL result without
+/// running its primitive.
+pub fn passes_nil_through(policy: NilPolicy) -> bool {
+    matches!(
+        policy,
+        NilPolicy::Passthrough | NilPolicy::PassthroughThenProject
+    )
 }
 
 /// A Word's static contract as the execution wrapper consumes it.
@@ -66,18 +37,20 @@ pub struct WordContract {
 
 impl WordContract {
     /// Build a fixed-arity contract from a generated Word. Returns `None` when
-    /// the Word's stack arity is data-dependent (`"variable"`/`"control"`) or
-    /// its nil policy is unrecognized — such Words do not flow through the
-    /// fixed-arity wrapper (yet).
+    /// the Word's stack arity is data-dependent (`variable`/`control`) — such
+    /// Words do not flow through the fixed-arity wrapper.
     pub fn from_generated(word: &GeneratedWord) -> Option<Self> {
-        let consumes = word.stack_inputs.parse::<u8>().ok()?;
-        let produces = word.stack_outputs.parse::<u8>().ok()?;
-        let nil_policy = NilPolicy::from_spec(word.nil_policy)?;
+        let consumes = arity_count(word.stack_inputs)?;
+        let produces = arity_count(word.stack_outputs)?;
         Some(WordContract {
             arity: Arity { consumes, produces },
-            nil_policy,
+            nil_policy: word.nil_policy,
         })
     }
+}
+
+fn arity_count(arity: SpecArity) -> Option<u8> {
+    arity.fixed()
 }
 
 #[cfg(test)]
@@ -102,14 +75,14 @@ mod tests {
                 produces: 1
             }
         );
-        assert!(contract.nil_policy.passes_nil_through());
+        assert!(passes_nil_through(contract.nil_policy));
     }
 
     #[test]
     fn div_passes_nil_through_then_projects() {
         let contract = WordContract::from_generated(word("DIV")).expect("DIV is fixed-arity");
         assert_eq!(contract.nil_policy, NilPolicy::PassthroughThenProject);
-        assert!(contract.nil_policy.passes_nil_through());
+        assert!(passes_nil_through(contract.nil_policy));
     }
 
     #[test]
@@ -117,5 +90,30 @@ mod tests {
         // COND's stack arity is "variable" in spec/words.json, so it does not
         // flow through the fixed-arity wrapper.
         assert!(WordContract::from_generated(word("COND")).is_none());
+    }
+
+    /// The regression this whole projection exists to prevent: every value the
+    /// specification admits must be reachable as a variant. A hand-written
+    /// vocabulary silently collapsed `passthroughThenProject` and `inspectNil`
+    /// into neighbouring values, which is how 11 Words came to be mislabelled.
+    #[test]
+    fn every_spec_nil_policy_is_representable() {
+        let declared: Vec<&str> = GENERATED_WORDS
+            .iter()
+            .map(|word| word.nil_policy.as_spec_str())
+            .collect();
+        for value in [
+            "preserveReason",
+            "consumeNil",
+            "rejectNil",
+            "passthrough",
+            "createsNil",
+            "passthroughThenProject",
+        ] {
+            assert!(
+                declared.contains(&value),
+                "no Word carries nilPolicy `{value}`; the projection lost a specification value"
+            );
+        }
     }
 }

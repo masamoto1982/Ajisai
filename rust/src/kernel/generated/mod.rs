@@ -14,7 +14,10 @@
 
 mod word_registry;
 
-pub use word_registry::{GeneratedWord, WordId, GENERATED_WORDS};
+pub use word_registry::{
+    Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Purity, WordId,
+    GENERATED_WORDS,
+};
 
 #[cfg(test)]
 mod tests {

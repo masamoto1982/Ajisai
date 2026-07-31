@@ -8,7 +8,7 @@
 //! executor, without yet rewiring the runtime's dispatch.
 
 use super::value::KernelValue;
-use super::word_contract::WordContract;
+use super::word_contract::{passes_nil_through, WordContract};
 
 /// A minimal value stack the wrapper operates on. The runtime's own stack keeps
 /// its optimizations; this is the spine-level view a Word sees.
@@ -92,7 +92,7 @@ pub fn execute_word(
 
     // NIL policy: a NIL operand short-circuits the Word to a NIL result,
     // propagating the first NIL's reason, without running the primitive.
-    let results = if contract.nil_policy.passes_nil_through() && operands.iter().any(is_nil) {
+    let results = if passes_nil_through(contract.nil_policy) && operands.iter().any(is_nil) {
         let propagated = operands
             .iter()
             .find(|value| is_nil(value))
@@ -113,8 +113,9 @@ pub fn execute_word(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kernel::generated::NilPolicy;
     use crate::kernel::scalar::Scalar;
-    use crate::kernel::word_contract::{Arity, NilPolicy};
+    use crate::kernel::word_contract::Arity;
     use crate::types::fraction::Fraction;
 
     fn passthrough_contract() -> WordContract {
