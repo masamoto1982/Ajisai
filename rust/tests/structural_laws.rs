@@ -94,11 +94,17 @@ proptest! {
 
 #[test]
 fn concat_is_associative() {
-    // (a ++ b) ++ c == a ++ (b ++ c) == concat[a, b, c].
+    // (a ++ b) ++ c == a ++ (b ++ c).
+    //
+    // Both sides used to be written with the count-prefixed `n CONCAT`, which
+    // let the right-hand side be the single join `a b c 3 CONCAT` — a form the
+    // specification never declared, and one that stated associativity by
+    // assuming it. Two nested binary joins is the law itself, and `CONCAT` is
+    // now only the declared `2 -> 1`.
     assert_law(
         "concat-assoc",
-        "[ 1 2 ] [ 3 4 ] 2 CONCAT [ 5 6 ] 2 CONCAT",
-        "[ 1 2 ] [ 3 4 ] [ 5 6 ] 3 CONCAT",
+        "[ 1 2 ] [ 3 4 ] CONCAT [ 5 6 ] CONCAT",
+        "[ 1 2 ] [ 3 4 ] [ 5 6 ] CONCAT CONCAT",
     );
 }
 
@@ -107,16 +113,18 @@ fn reverse_is_anti_homomorphism() {
     // reverse(a ++ b) == reverse(b) ++ reverse(a).
     assert_law(
         "reverse-concat",
-        "[ 1 2 3 ] [ 4 5 ] 2 CONCAT REVERSE",
-        "[ 4 5 ] REVERSE [ 1 2 3 ] REVERSE 2 CONCAT",
+        "[ 1 2 3 ] [ 4 5 ] CONCAT REVERSE",
+        "[ 4 5 ] REVERSE [ 1 2 3 ] REVERSE CONCAT",
     );
 }
 
 #[test]
 fn split_then_concat_round_trips() {
+    // `SPLIT` at two sizes leaves exactly two chunks, which is exactly what a
+    // binary `CONCAT` takes.
     assert_law(
         "split-concat-roundtrip",
-        "[ 1 2 3 4 ] [ 2 2 ] SPLIT 2 CONCAT",
+        "[ 1 2 3 4 ] [ 2 2 ] SPLIT CONCAT",
         "[ 1 2 3 4 ]",
     );
 }
