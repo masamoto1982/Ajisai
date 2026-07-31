@@ -7,10 +7,37 @@
 //! guarantee: a `hover_syntax` example must be a well-formed snippet (item 9),
 //! every word it names must be a real word (item 10), and every *concrete*
 //! example must actually run (item 10b).
+//!
+//! The declared-effect guard below is here for the same reason: it keeps the
+//! LOOKUP "Side Effects" prose total over what `spec/words.json` declares.
 
 use super::builtin_word_definitions::builtin_specs;
+use super::builtin_word_details::effect_sentence;
 use crate::interpreter::Interpreter;
+use crate::kernel::generated::GENERATED_WORDS;
 use crate::tokenizer::tokenize;
+
+/// The effect names are the specification's, not the runtime's, so a Word
+/// gaining an effect in `spec/words.json` reaches the LOOKUP prose without any
+/// Rust edit — and would print the raw protocol name if nobody wrote a sentence
+/// for it. Requiring a sentence for every declared effect makes that a test
+/// failure instead of a reader-visible `consoleWrite`.
+#[test]
+fn every_declared_effect_has_a_user_facing_sentence() {
+    let mut checked = 0;
+    for word in GENERATED_WORDS {
+        for effect in word.effects {
+            checked += 1;
+            assert!(
+                effect_sentence(effect).is_some(),
+                "{} declares effect `{}` with no user-facing sentence",
+                word.name,
+                effect
+            );
+        }
+    }
+    assert!(checked > 0, "no Word declares an effect; the guard is idle");
+}
 #[test]
 fn every_hover_syntax_is_a_well_formed_snippet() {
     // Ledger item 9. A `hover_syntax` is a runnable example, so requiring it to

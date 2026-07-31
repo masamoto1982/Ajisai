@@ -4,7 +4,7 @@
 //! is **not** written here. It is read from `kernel::generated`, projected from
 //! `spec/words.json`, and this module joins it with the runtime-local
 //! classifications that the specification does not declare (`category`,
-//! `partiality`, `safety_level`, `safe_preview`, `effects`).
+//! `partiality`, `safety_level`, `safe_preview`).
 //!
 //! Two of the vocabularies that used to be declared in this file were narrower
 //! than the canonical ones and mislabelled Words as a result: the hand-written
@@ -136,6 +136,7 @@ pub struct CorewordMetadata {
     pub category: String,
     /// Declared in `spec/words.json`.
     pub purity: Purity,
+    /// Declared in `spec/words.json`, in the specification's own spelling.
     pub effects: Vec<String>,
     /// Declared in `spec/words.json`. Was a `bool`, which could not express
     /// the specification's distinction between a Word that reads runtime state
@@ -273,7 +274,7 @@ fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
         name: word.name.to_string(),
         category: spec.category.to_lowercase(),
         purity: word.purity,
-        effects: spec.effects.iter().map(|e| e.to_string()).collect(),
+        effects: word.effects.iter().map(|e| e.to_string()).collect(),
         determinism: word.determinism,
         safe_preview: spec.safe_preview,
         partiality: spec.partiality,

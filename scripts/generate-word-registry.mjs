@@ -114,8 +114,8 @@ const projection = (when) => (when === 'never' ? 'None' : `Some(${JSON.stringify
 // spec/words.json values are ASCII, so a JSON string literal is also a valid
 // Rust string literal.
 const rustStr = (value) => JSON.stringify(value);
-const rustAliases = (aliases) =>
-  aliases.length > 0 ? `&[${aliases.map(rustStr).join(', ')}]` : '&[]';
+const rustStrSlice = (values) =>
+  values.length > 0 ? `&[${values.map(rustStr).join(', ')}]` : '&[]';
 
 const variants = entries.map((word) => `    ${word.executorKey},`).join('\n');
 
@@ -124,7 +124,7 @@ const rows = entries
     (word) => `    GeneratedWord {
         id: WordId::${word.executorKey},
         name: ${rustStr(word.name)},
-        aliases: ${rustAliases(word.aliases)},
+        aliases: ${rustStrSlice(word.aliases)},
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
@@ -133,6 +133,7 @@ const rows = entries
         projection: ${projection(word.projection.when)},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
+        effects: ${rustStrSlice(word.effects)},
     },`,
   )
   .join('\n');
@@ -195,6 +196,11 @@ pub struct GeneratedWord {
     pub projection: Option<&'static str>,
     pub purity: Purity,
     pub determinism: Determinism,
+    /// The effects the Word declares, in the specification's own spelling.
+    /// Empty for every \`pure\` Word; the vocabulary is open (the schema types
+    /// it as free strings), so this is projected as declared rather than
+    /// narrowed into a Rust enum.
+    pub effects: &'static [&'static str],
 }
 
 pub const GENERATED_WORDS: &[GeneratedWord] = &[
