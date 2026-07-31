@@ -1,11 +1,13 @@
 //! Diagnostic absence accessors (SPEC §4.5.0 / §7.15).
 //!
-//! The five words `NIL?`, `NIL-REASON`, `NIL-ORIGIN`, `NIL-RECOVERABLE?`, and
-//! `NIL-DIAGNOSIS` let a program read the diagnostic metadata that a Bubble/NIL
-//! carries (SPEC §11.2, `NilReason`) instead of collapsing every absence with a
-//! single `VENT` fallback.
+//! `NIL?` and `NIL-REASON` let a program read what a Bubble/NIL carries
+//! (SPEC §11.2, `NilReason`) instead of collapsing every absence with a single
+//! `VENT` fallback. They are the whole set: `NIL-ORIGIN`,
+//! `NIL-RECOVERABLE?` and `NIL-DIAGNOSIS` named the origin / recoverability /
+//! diagnosis metadata that the canonical minimal-NIL model does not have, and
+//! are not in `spec/words.json`.
 //!
-//! Two invariants hold for all five (see the module-level notes in
+//! Two invariants hold for both (see the module-level notes in
 //! `builtin_word_definitions.rs`):
 //!
 //!   * **Observation, not consumption.** Each word retains the inspected value
@@ -17,11 +19,12 @@
 //!     absent and never leaks a NIL reason (SPEC §2.3 / §7.5 firewall, now a
 //!     type invariant).
 //!
-//! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` and
-//! the other four yield a reasonless NIL — the "well-formed but cannot produce a
-//! value" case of the Bubble Rule (SPEC §11.2), never an error.
+//! Applied to a value that is not an operational NIL, `NIL?` yields `FALSE` —
+//! a predicate answers its question — and `NIL-REASON` projects a NIL whose
+//! reason is `notAvailable`: the "well-formed but cannot produce a value" case
+//! of the Bubble Rule (SPEC §11.2), never an error.
 
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::Interpreter;
 use crate::semantic::AbsenceMetadata;
 use crate::types::{Interpretation, Value};
@@ -53,13 +56,25 @@ fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
     interp.stack.push_with_role(value, hint);
 }
 
-/// A protocol-string Text result, or NIL when the accessor found no value.
-/// Carries the matching interpretation hint so a Text result renders as text
-/// and a NIL result renders as NIL.
+/// A protocol-string Text result, or a `notAvailable` NIL when the accessor
+/// found no value. Carries the matching interpretation hint so a Text result
+/// renders as text and a NIL result renders as NIL.
+///
+/// The projected NIL is *reasoned*. It used to be `Value::nil()`, a bare
+/// literal NIL, which left `NIL-REASON`'s declared `projection.reason:
+/// "notAvailable"` unobservable: `5 NIL-REASON NIL-REASON` answered NIL rather
+/// than the registered reason. `LANG.FAILURE.PROJECT` says a projection
+/// produces "NIL with the reason its contract registers", and
+/// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content — a
+/// reasonless projection would have no content to observe.
 fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&'static str>) {
     match value {
         Some(protocol) => push_result(interp, Value::from_string(protocol), Interpretation::Text),
-        None => push_result(interp, Value::nil(), Interpretation::Nil),
+        None => push_result(
+            interp,
+            Value::nil_with_reason(NilReason::NotAvailable),
+            Interpretation::Nil,
+        ),
     }
 }
 
@@ -80,7 +95,8 @@ pub fn op_nil_check(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// `NIL-REASON` — the direct reason as a lowerCamelCase protocol-string Text,
-/// or NIL when the value carries no reason or is not an operational NIL.
+/// or a `notAvailable` NIL when the value carries no reason or is not an
+/// operational NIL.
 pub fn op_nil_reason(interp: &mut Interpreter) -> Result<()> {
     require_non_empty(interp)?;
     let protocol = peek_operational_absence(interp)

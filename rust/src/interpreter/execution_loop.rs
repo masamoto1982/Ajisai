@@ -104,10 +104,12 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         | NilReason::NoData
         | NilReason::PortDisconnected
         | NilReason::SpaceExhausted
-        // No `ErrorCategory` names a domain miss, and inventing one would add a
-        // category with no `AjisaiError` behind it. `Custom` is where every
-        // reason without a matching error variant already lands.
-        | NilReason::DomainMiss => Some(ErrorCategory::Custom),
+        // No `ErrorCategory` names a domain miss or an unavailable diagnostic,
+        // and inventing one would add a category with no `AjisaiError` behind
+        // it. `Custom` is where every reason without a matching error variant
+        // already lands.
+        | NilReason::DomainMiss
+        | NilReason::NotAvailable => Some(ErrorCategory::Custom),
     }
 }
 

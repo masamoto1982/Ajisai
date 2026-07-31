@@ -9,65 +9,17 @@ use crate::types::fraction::Fraction;
 use crate::types::Value;
 use num_traits::ToPrimitive;
 
-/// Read the optional leading operand count of `CONCAT`.
+/// Join two vectors, lifting one level of nesting out of each.
 ///
-/// `CONCAT` joins the top two values by default; a bare integer on top instead
-/// names how many values to join (`[ 1 2 ] [ 3 4 ] [ 5 6 ] 3 CONCAT`), negative
-/// for reversed order. The count is *sniffed* rather than declared, so the test
-/// that recognizes it decides which values `CONCAT` can accept as data.
-///
-/// A Vector is never a count. It used to be: the count was read with the same
-/// singleton projection every numeric operand uses, and that projection sees a
-/// one-element vector as its element, so `[ 1 2 ] [ 3 ] CONCAT` read `[ 3 ]` as
-/// "join the top 3" and failed with `Stack underflow` — as did `[ 1 ] [ 2 ]
-/// CONCAT` and, because a one-character Text is a one-codepoint vector,
-/// `'ab' 'c' CONCAT`. The specification declares `CONCAT` as `2 -> 1` over
-/// vectors with `nonVector` its only error, so a vector operand has to reach
-/// the join.
-fn parse_concat_count(
-    interp: &mut Interpreter,
-    default_count: i64,
-) -> Result<(i64, Option<Value>)> {
-    let Some(top) = interp.stack.last() else {
-        return Err(AjisaiError::StackUnderflow);
-    };
-
-    if top.is_vector() {
-        return Ok((default_count, None));
-    }
-
-    let Ok(count_bigint) = extract_bigint_from_value(top) else {
-        return Ok((default_count, None));
-    };
-
-    let count_value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
-    let count = match count_bigint.to_i64() {
-        Some(value) => value,
-        None => {
-            interp.stack.push(count_value);
-            return Err(AjisaiError::from("Count is too large"));
-        }
-    };
-
-    Ok((count, Some(count_value)))
-}
-
-fn concat_values(values: Vec<Value>, is_reversed: bool) -> Value {
-    let mut ordered = values;
-    if is_reversed {
-        ordered.reverse();
-    }
-
-    let mut result_vec = Vec::new();
-    for value in ordered {
-        if value.is_vector() {
-            result_vec.extend(extract_vector_elements(&value));
-        } else {
-            result_vec.push(value);
-        }
-    }
-
-    Value::from_vector(result_vec)
+/// Both operands are vectors by the time this runs — `op_concat` rejects
+/// anything else — so there is no singleton-lifting branch here: an element is
+/// carried across exactly as it sits, and `[ [ 1 ] ] [ [ 2 ] ] CONCAT` stays
+/// `[ [ 1 ] [ 2 ] ]`.
+fn concat_values(left: &Value, right: &Value) -> Value {
+    let mut elements = Vec::new();
+    elements.extend(extract_vector_elements(left));
+    elements.extend(extract_vector_elements(right));
+    Value::from_vector(elements)
 }
 
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
@@ -132,40 +84,48 @@ fn parse_reorder_indices(indices_val: &Value) -> Result<Vec<i64>> {
     Ok(vec![single])
 }
 
+/// `CONCAT` — join the top two vectors (SPEC: `2 -> 1`, `errorWhen:
+/// [nonVector]`).
+///
+/// The arity is exactly the declared one. `CONCAT` used to accept an undeclared
+/// count-prefixed form (`a b c 3 CONCAT`, negative for reversed order) that it
+/// recognized by *sniffing* the stack top for a bare integer, and to treat a
+/// non-vector operand as a singleton instead of refusing it. Both are gone: a
+/// calling convention the specification does not declare is a second contract
+/// written nowhere, and the sniff decided `CONCAT`'s arity from the *value* of
+/// an operand — which is what made `[ 1 2 ] [ 3 ] CONCAT` an underflow, and
+/// what left the declared `nonVector` error unreachable (`2 3 CONCAT` reported
+/// a short stack rather than a non-vector operand). It also disagreed with the
+/// dispatch NIL guard, which clamps its window to the declared arity of 2 and
+/// so could not see the operands a longer count would reach.
 pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
 
-    let default_count = 2;
-    let (count_i64, count_value_opt) = parse_concat_count(interp, default_count)?;
-
-    let abs_count = count_i64.unsigned_abs() as usize;
-    let is_reversed = count_i64 < 0;
-
-    if interp.stack.len() < abs_count {
-        if let Some(count_val) = count_value_opt {
-            interp.stack.push(count_val);
-        }
+    if interp.stack.len() < 2 {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let values_to_concat: Vec<Value> = if is_keep_mode {
-        let stack_len = interp.stack.len();
-        interp.stack.as_slice()[stack_len - abs_count..].to_vec()
+    let operands: Vec<Value> = if is_keep_mode {
+        interp.stack.as_slice()[interp.stack.len() - 2..].to_vec()
     } else {
-        interp
-            .stack
-            .split_off(interp.stack.len() - abs_count)
-            .into_values()
+        interp.stack.split_off(interp.stack.len() - 2).into_values()
     };
 
-    if is_keep_mode {
-        if let Some(count_val) = count_value_opt {
-            interp.stack.push(count_val);
+    if operands.iter().any(|operand| !operand.is_vector()) {
+        // Consuming mode already took the operands off; put them back so the
+        // stack a reader inspects after the error is the one they wrote.
+        if !is_keep_mode {
+            for operand in operands {
+                interp.stack.push(operand);
+            }
         }
+        return Err(AjisaiError::create_structure_error(
+            "vector",
+            "other format",
+        ));
     }
-    interp
-        .stack
-        .push(concat_values(values_to_concat, is_reversed));
+
+    interp.stack.push(concat_values(&operands[0], &operands[1]));
     Ok(())
 }
 

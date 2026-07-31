@@ -412,6 +412,22 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-concat-rejects-non-vector" data-category="core">
+  <h3>CONCAT refuses a non-vector operand (errorWhen: nonVector)</h3>
+  <pre class="ajisai-source">[ 1 2 ] TRUE CONCAT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-concat-arity-is-two" data-category="core">
+  <h3>CONCAT takes exactly two operands; a trailing scalar is not a count</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 3 4 ] 2 CONCAT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-round-tie-away-from-zero" data-category="core">
   <h3>ROUND breaks a tie away from zero</h3>
   <pre class="ajisai-source">-2.5 ROUND</pre>

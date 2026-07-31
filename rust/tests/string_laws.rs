@@ -14,7 +14,7 @@ mod test_support;
 
 use proptest::prelude::*;
 use test_support::generators::ascii_word;
-use test_support::observe::{render, run};
+use test_support::observe::{observe_program, render, run};
 
 /// Render the single result value.
 fn obs1(src: &str) -> String {
@@ -87,7 +87,7 @@ proptest! {
     /// char-vectors concatenates** (free monoid on codepoints):
     /// `(u CHARS) (v CHARS) CONCAT JOIN = uv`. The word lengths start at 1: a
     /// one-character word makes `CHARS` yield a one-element vector, which
-    /// `CONCAT` used to mistake for an operand count (finding I2, now fixed —
+    /// `CONCAT` used to mistake for an operand count (finding I2, resolved —
     /// see `finding_i2_concat_joins_a_singleton_top_operand`).
     #[test]
     fn join_concat_is_concatenation(
@@ -132,16 +132,16 @@ fn chr_anchor() {
     assert_eq!(obs1("65 CHR"), "'A'");
 }
 
-/// **Finding I2 (resolved): a one-element vector on top of `CONCAT` is an
-/// operand, not an operand count.**
+/// **Finding I2 (resolved): `CONCAT`'s arity does not depend on its operands'
+/// values.**
 ///
-/// `CONCAT` accepts an optional leading count (`a b c 3 CONCAT`) that it sniffs
-/// off the top of the stack. The sniff used to read a one-element vector as its
-/// element, so `[ 1 ] [ 2 ] CONCAT` meant "join the top 2 after popping `[ 2 ]`"
-/// and raised `StackUnderflow`, while `[ 1 ] [ 2 3 ] CONCAT` joined normally.
-/// The specification declares `CONCAT` as `2 -> 1` over vectors with `nonVector`
-/// its only error, so the arity of a call may not depend on how many elements an
-/// operand happens to have. A count is now recognized only as a bare scalar.
+/// `CONCAT` used to accept an undeclared count-prefixed form (`a b c 3 CONCAT`)
+/// that it recognized by sniffing the stack top. The sniff first read a
+/// one-element vector as its element, so `[ 1 ] [ 2 ] CONCAT` meant "join the
+/// top 2 after popping `[ 2 ]`" and raised `StackUnderflow`; restricting the
+/// sniff to bare scalars fixed those shapes but kept the form. The form itself
+/// is gone now — the specification declares `2 -> 1` over vectors and nothing
+/// else — so the arity is fixed for every operand shape.
 #[test]
 fn finding_i2_concat_joins_a_singleton_top_operand() {
     // The shapes that used to underflow.
@@ -151,10 +151,32 @@ fn finding_i2_concat_joins_a_singleton_top_operand() {
 
     // The shape that always worked, unchanged.
     assert_eq!(obs1("[ 1 ] [ 2 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
+}
 
-    // A bare scalar is still a count, in both directions, and the count still
-    // reaches past the default two operands.
-    assert_eq!(obs1("[ 1 2 ] [ 3 4 ] 2 CONCAT"), "[ 1/1 2/1 3/1 4/1 ]");
-    assert_eq!(obs1("[ 1 ] [ 2 ] [ 3 ] 3 CONCAT"), "[ 1/1 2/1 3/1 ]");
-    assert_eq!(obs1("[ 1 2 ] [ 3 4 ] -2 CONCAT"), "[ 3/1 4/1 1/1 2/1 ]");
+/// **A bare scalar is an operand, and `CONCAT` refuses it** — the declared
+/// `errorWhen: [nonVector]`.
+///
+/// While the count form existed this error was unreachable: a scalar on top was
+/// eaten as a count, so `2 3 CONCAT` reported a short stack rather than a
+/// non-vector operand, and `[ 1 2 ] TRUE CONCAT` silently lifted `TRUE` into
+/// the result instead of refusing it. Both now raise the declared error.
+#[test]
+fn concat_refuses_a_non_vector_operand() {
+    for src in [
+        "2 3 CONCAT",
+        "[ 1 2 ] TRUE CONCAT",
+        "TRUE [ 1 2 ] CONCAT",
+        "{ 1 } [ 2 ] CONCAT",
+        // The three spellings of the retired count form. A trailing scalar is
+        // now just a non-vector operand.
+        "[ 1 2 ] [ 3 4 ] 2 CONCAT",
+        "[ 1 ] [ 2 ] [ 3 ] 3 CONCAT",
+        "[ 1 2 ] [ 3 4 ] -2 CONCAT",
+    ] {
+        assert_eq!(
+            observe_program(src).error_category,
+            Some("structureError"),
+            "{src:?} must raise the declared nonVector error"
+        );
+    }
 }

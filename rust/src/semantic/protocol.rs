@@ -71,6 +71,7 @@ impl AbsenceOrigin {
             AbsenceOrigin::ComparisonBudget => "comparisonBudget",
             AbsenceOrigin::SpaceBudget => "spaceBudget",
             AbsenceOrigin::DomainMiss => "domainMiss",
+            AbsenceOrigin::NotAvailable => "notAvailable",
             AbsenceOrigin::HostEnvironment => "hostEnvironment",
             AbsenceOrigin::Unknown => "unknown",
         }

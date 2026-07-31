@@ -32,6 +32,7 @@ fn absence_origin_for_reason(reason: &NilReason) -> AbsenceOrigin {
         NilReason::DivisionByZero => AbsenceOrigin::DivisionByZero,
         NilReason::SpaceExhausted => AbsenceOrigin::SpaceBudget,
         NilReason::DomainMiss => AbsenceOrigin::DomainMiss,
+        NilReason::NotAvailable => AbsenceOrigin::NotAvailable,
     }
 }
 

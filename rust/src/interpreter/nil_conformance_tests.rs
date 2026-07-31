@@ -178,8 +178,8 @@ const PROJECTING_WORDS: &[&str] = &[
 /// other policy, and four Words did. Three of them were declaring something
 /// untrue: `SORT` (`passthrough`) and `UNIQUE` (`rejectNil`) declared
 /// `emptyVector`, a condition no program can reach because an empty vector is
-/// inexpressible, and `NIL?` (`consumeNil`) declared
-/// `valueIsNotOperationalNilOrFieldAbsent` but answers `FALSE`, never NIL. All
+/// inexpressible, and `NIL?` (`consumeNil`) declared the same condition as
+/// `NIL-REASON` but answers `FALSE`, never NIL. All
 /// three are now `never`. The fourth, `NIL-REASON`, genuinely projects under
 /// `consumeNil`, so keying on the condition alone brings it into the probed set
 /// instead of leaving it unchecked.
@@ -203,6 +203,14 @@ fn projecting_word_set_matches_registry() {
 /// `NIL-REASON` projects on the condition it declares: a value that is not an
 /// operational NIL carrying a reason has no reason to read, so the answer is
 /// NIL rather than an error. A reasoned NIL answers with its reason string.
+///
+/// The projected NIL carries the reason the contract registers, `notAvailable`.
+/// It used to be a bare literal NIL, which made
+/// `projection.reason: "notAvailable"` the one declared projection reason no
+/// program could observe — `5 NIL-REASON NIL-REASON` answered NIL instead of
+/// naming why. `LANG.FAILURE.PROJECT` requires a projection to produce "NIL
+/// with the reason its contract registers", and `LANG.VALUES.NIL` makes the
+/// reason a NIL's entire observable content.
 #[tokio::test]
 async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
     for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
@@ -213,7 +221,26 @@ async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
             .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
         let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
         assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
+        assert_eq!(
+            answer
+                .absence_metadata()
+                .and_then(|absence| absence.reason.as_ref())
+                .map(|reason| reason.as_protocol_str()),
+            Some("notAvailable"),
+            "`{code}` must project the reason its contract registers"
+        );
     }
+
+    // Reading the projected NIL is what makes the registered reason
+    // observable from inside the language.
+    let mut interp = Interpreter::new();
+    interp.execute("5 NIL-REASON NIL-REASON").await.unwrap();
+    let named = interp.stack.last().expect("NIL-REASON pushes an answer");
+    assert_eq!(
+        crate::interpreter::value_extraction_helpers::value_as_string(named),
+        Some("notAvailable".to_string()),
+        "the projected NIL must name its own reason"
+    );
 
     // The retained operand keeps its place under the answer, and a NIL that
     // does carry a reason reads back as that reason rather than projecting.
