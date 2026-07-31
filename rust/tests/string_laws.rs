@@ -153,6 +153,25 @@ fn finding_i2_concat_joins_a_singleton_top_operand() {
     assert_eq!(obs1("[ 1 ] [ 2 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
 }
 
+/// **`CONCAT` of two Texts is a Text.**
+///
+/// A Text is a `Text`-role vector of codepoints, so joining two of them is
+/// already the right *value* — but the result role was being stamped
+/// `Unassigned` by the name-keyed table in `execution_loop`, so `'ab' 'c'
+/// CONCAT` rendered as `[ 97/1 98/1 99/1 ]` and needed a `JOIN` to read back as
+/// text. The role now follows the operands: two Texts join to a Text, and
+/// anything else joins to a plain vector.
+#[test]
+fn concat_of_two_texts_is_a_text() {
+    assert_eq!(obs1("'ab' 'c' CONCAT"), "'abc'");
+    assert_eq!(obs1("'Hello, ' 'world' CONCAT"), "'Hello, world'");
+
+    // Not every join is a Text: a vector of numbers stays a vector, and so does
+    // a mixed join, because only two Text operands make a Text.
+    assert_eq!(obs1("[ 1 2 ] [ 3 4 ] CONCAT"), "[ 1/1 2/1 3/1 4/1 ]");
+    assert_eq!(obs1("'ab' CHARS 'c' CHARS CONCAT"), "[ 'a' 'b' 'c' ]");
+}
+
 /// **A bare scalar is an operand, and `CONCAT` refuses it** — the declared
 /// `errorWhen: [nonVector]`.
 ///

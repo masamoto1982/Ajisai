@@ -39,7 +39,9 @@ pub fn op_unique(interp: &mut Interpreter) -> Result<()> {
     }
 
     if seen.is_empty() {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::EmptySequence));
     } else {
         interp.stack.push(Value::from_vector(seen));
     }

@@ -1,7 +1,7 @@
 use super::common::{
     execute_executable_code, extract_executable_code, extract_predicate_boolean, ExecutableCode,
 };
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
@@ -37,7 +37,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     };
 
     if target_val.is_nil() {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_inheriting_absence_from(&target_val));
         return Ok(());
     }
 
@@ -54,7 +56,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
 
     let n_elements: usize = target_val.len();
     if n_elements == 0 {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::EmptySequence));
         return Ok(());
     }
 
@@ -113,7 +117,9 @@ pub fn op_filter(interp: &mut Interpreter) -> Result<()> {
     }
 
     if results.is_empty() {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::EmptySequence));
     } else {
         interp.stack.push(Value::from_vector_promoted(results));
     }

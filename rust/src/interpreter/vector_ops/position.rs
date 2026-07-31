@@ -160,7 +160,7 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
 
             values.remove(actual_index);
             if values.is_empty() {
-                return Ok(Value::nil());
+                return Ok(Value::nil_with_reason(NilReason::EmptySequence));
             }
             Ok(Value::from_vector(values))
         })?;

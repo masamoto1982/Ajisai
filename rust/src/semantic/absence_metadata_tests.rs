@@ -1,5 +1,6 @@
 //! Test suite for `crate::semantic::absence`.
 
+use crate::error::NilReason;
 use crate::semantic::{AbsenceOrigin, SemanticKind, ValueShape};
 use crate::types::Value;
 
@@ -15,5 +16,7 @@ fn nil_literal_has_diagnostic_absence_semantics() {
     assert_eq!(value.semantic_kind(), SemanticKind::Absence);
     assert_eq!(value.shape_kind(), ValueShape::Absence);
     assert_eq!(absence.origin, AbsenceOrigin::Literal);
-    assert!(absence.reason.is_none());
+    // A written NIL carries a reason like every other NIL (LANG.VALUES.NIL);
+    // `literal` is the one that fits — nothing failed to produce it.
+    assert_eq!(absence.reason, Some(NilReason::Literal));
 }

@@ -6,20 +6,27 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::Value;
+use crate::types::{Interpretation, Value};
 use num_traits::ToPrimitive;
 
-/// Join two vectors, lifting one level of nesting out of each.
+/// Join two vectors, lifting one level of nesting out of each, under the role
+/// the join carries.
 ///
 /// Both operands are vectors by the time this runs — `op_concat` rejects
 /// anything else — so there is no singleton-lifting branch here: an element is
 /// carried across exactly as it sits, and `[ [ 1 ] ] [ [ 2 ] ] CONCAT` stays
 /// `[ [ 1 ] [ 2 ] ]`.
-fn concat_values(left: &Value, right: &Value) -> Value {
+///
+/// The role goes on the value, not only on the stack slot, so a Text survives
+/// being put inside a vector or returned from a user Word — the same place
+/// `Value::from_string` puts it.
+fn concat_values(left: &Value, right: &Value, role: Interpretation) -> Value {
     let mut elements = Vec::new();
     elements.extend(extract_vector_elements(left));
     elements.extend(extract_vector_elements(right));
-    Value::from_vector(elements)
+    let mut joined = Value::from_vector(elements);
+    joined.hint = role;
+    joined
 }
 
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
@@ -105,10 +112,21 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    let operands: Vec<Value> = if is_keep_mode {
-        interp.stack.as_slice()[interp.stack.len() - 2..].to_vec()
+    // Read the operands' slot roles before consuming them: joining two Texts
+    // yields a Text, and the role lives on the slot, not on the value.
+    let base = interp.stack.len() - 2;
+    let joined_role = if interp.stack.role_at(base) == Interpretation::Text
+        && interp.stack.role_at(base + 1) == Interpretation::Text
+    {
+        Interpretation::Text
     } else {
-        interp.stack.split_off(interp.stack.len() - 2).into_values()
+        Interpretation::Unassigned
+    };
+
+    let operands: Vec<Value> = if is_keep_mode {
+        interp.stack.as_slice()[base..].to_vec()
+    } else {
+        interp.stack.split_off(base).into_values()
     };
 
     if operands.iter().any(|operand| !operand.is_vector()) {
@@ -125,7 +143,9 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    interp.stack.push(concat_values(&operands[0], &operands[1]));
+    interp
+        .stack
+        .push(concat_values(&operands[0], &operands[1], joined_role));
     Ok(())
 }
 
@@ -248,7 +268,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
             }
 
             if result.is_empty() {
-                Ok(Value::nil())
+                Ok(Value::nil_with_reason(NilReason::EmptySequence))
             } else {
                 Ok(Value::from_vector(result))
             }

@@ -607,6 +607,89 @@ NIL NIL-REASON NIL-REASON    →  NIL NIL 'notAvailable'
 
 **残る関連問題**（本変更の範囲外）: 監査 D24 —— `NIL` リテラル語自身が理由の無い NIL
 を作り、`LANG.VALUES.NIL` と矛盾する。`NIL NIL-REASON` が NIL を返すのはこのため。
+→ **解消**（§10.9）。
+
+### 10.9 すべての NIL が理由を持つ（監査 D24）
+
+D24 は「`NIL` リテラル語が理由の無い NIL を作る」と書いていたが、着手して実測すると
+**理由の無い NIL の生産者はリテラルだけではなかった**。原因は 1 箇所ではなく、
+`Value::nil()` が「とりあえずの NIL」として約 30 箇所で使える便利なコンストラクタ
+だったことにある。
+
+`LANG.VALUES.NIL` は「理由は NIL の観測可能な内容の**全体**であり、同じ理由を持つ
+2 つの NIL は同じ値である」と言う。理由の無い NIL は**観測可能な内容が空の値**であり、
+互いに区別できないまま別々の absence を名乗っていた。
+
+到達可能性を実測して分類し、それぞれに正しい理由を与えた。
+
+| 生産経路 | 旧 | 新 |
+| --- | --- | --- |
+| 書かれた `NIL`（Word / ベクタ内の `NIL` シンボル） | 理由なし | `literal`（新 `NilReason::Literal`） |
+| 空になる計算（`FILTER` が何も残さない、長さ 0 の `TAKE`、空にする `REMOVE`、サイズ 0 の `SPLIT` チャンク、`''`） | 理由なし | `emptySequence`（SPEC §4.5。`Value::from_string` は既にこれを返していた） |
+| `MAP` / `FILTER` の NIL 対象 | 理由なし（**入力の理由を捨てていた**） | 入力の absence をそのまま継承 |
+| `STR` の NIL 対象 | 理由なし | 同上 |
+
+**3 番目は単なる欠落ではなく取りこぼしだった**: `1 0 / { 1 } MAP NIL-REASON` は
+`divisionByZero` を失って NIL を返していた。`STR` は正しく保っていたので、同じ
+パイプラインでも語によって理由が消えたり残ったりしていた。
+
+`NilReason::Literal` は「何も失敗していない、書かれただけ」という、その値について
+言える唯一のことを名前にしている。origin は既存の `AbsenceOrigin::Literal` と 1:1 で
+対応する。
+
+**副次的に削除したもの**: `op_unfold` / `op_scan`。`UNFOLD` / `SCAN` は語彙に無く
+dispatch arm も無い——コンパイラが証明する到達不能——ので、そこに含まれていた
+理由の無い NIL ごと削除した（§23）。
+
+**Spine 側の含意**: `KernelValue::Nil(None)` は「書かれたリテラル」ではなくなった。
+リテラルは `literal` を持つので、`Nil(None)` は legacy 側だけが作れる残余
+（valid-mask が欠損を示すテンソル lane）を指す。adapter はそれを legacy の
+reasonless 形へ写す。`KernelValue::Nil(Option<NilReason>)` の `Option` を外して
+型で閉じるには legacy の `AbsenceMetadata.reason` も非 Option にする必要があり、
+別変更として残す。
+
+**追加した invariant test**: `every_reachable_nil_carries_a_reason`。生産経路ごとに
+1 プログラムずつ走らせて理由を名指しで検査し、さらにベクタの中まで再帰して
+「スタックに残る NIL は 1 つ残らず理由を持つ」ことを検査する。呼び出し側を信用せず
+挙動を掃くのは、欠陥が 1 箇所に無かったからである。
+
+**実測できた別の問題**（本変更の範囲外）: 空を作る語（`FILTER` / `TAKE` / `REMOVE` /
+`SPLIT`）は `projection.when: "never"` を宣言しながら NIL を produce する。§10.5 #4 が
+`never` を正しいと判断したのは条件 `emptyVector`（**operand** が空ベクタ）が到達不能
+だからであって、**結果**が空になる projection は別に存在し、未宣言のままである。
+9 語ほどに projection 宣言を足す正典側の変更になるので分離する。
+
+### 10.10 `CONCAT` の Text ロール
+
+`'ab' 'c' CONCAT` は `[ 97/1 98/1 99/1 ]` を返し、`JOIN` を挟まないと文字列として
+読めなかった。値としての join は正しく、捨てられていたのは**ロール**である。
+
+`execution_loop.rs` の `apply_word_hint_override` は語名で結果ロールを上書きする表を
+持ち、`CONCAT` は `Unassigned` のグループに入っていた。Text は Text ロールを持つ
+codepoint ベクタなので、2 つの Text を繋いだ結果も Text であるべきところを、表が
+毎回踏み潰していた。
+
+表から `CONCAT` を外し、`op_concat` が operand の slot ロールから結果ロールを決める
+ようにした（両方 Text なら Text、それ以外は `Unassigned`）。ロールは slot だけでなく
+値の `hint` にも載せる——`Value::from_string` と同じ場所——ので、ベクタに入れても
+ユーザ定義語から返しても Text 性が残る。
+
+```
+'ab' 'c' CONCAT               →  'abc'            （旧: [ 97/1 98/1 99/1 ]）
+'Hello, ' 'world' CONCAT      →  'Hello, world'
+[ 10 ] [ 20 ] + STR ' is the sum' CONCAT
+                              →  '30 is the sum'  （examples/ の意図どおり）
+[ 1 2 ] [ 3 4 ] CONCAT        →  [ 1/1 2/1 3/1 4/1 ]   （不変）
+'ab' CHARS 'c' CHARS CONCAT   →  [ 'a' 'b' 'c' ]       （CHARS は Unassigned のまま）
+```
+
+conformance corpus の 2 件を更新した。うち `CONCAT coerces Text operands to their
+code-point vectors` は見出し自体が**欠陥を仕様として記述していた**ので、
+`CONCAT of two Texts is a Text` に改めた。
+
+なお表には `SCAN` / `UNFOLD` / `BOOL` / `RESHAPE` / `TRANSPOSE` / `CONSERVE` /
+`NOW` / `TIMESTAMP` / `LOWER` / `UPPER` / `WIDTH` / `MATH@*` など**存在しない語**が
+多数残っている。ロール上書き表そのものの棚卸しは別変更。
 
 ---
 

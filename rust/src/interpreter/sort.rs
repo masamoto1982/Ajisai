@@ -1,4 +1,4 @@
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::comparison::{three_way_compare, OrderOutcome};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Value;
@@ -97,7 +97,9 @@ pub fn op_sort(interp: &mut Interpreter) -> Result<()> {
     };
 
     if children.is_empty() {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::EmptySequence));
         return Ok(());
     }
 

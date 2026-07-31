@@ -11,7 +11,7 @@ use crate::types::{Interpretation, Value};
 
 fn convert_value_to_string(val: &Value, hint: Interpretation) -> Result<Value> {
     if val.is_nil() {
-        return Ok(Value::nil());
+        return Ok(Value::nil_inheriting_absence_from(val));
     }
 
     if is_string_value_with_hint(val, hint) {
@@ -75,7 +75,7 @@ fn convert_value_to_boolean(val: &Value, hint: Interpretation) -> Result<Value> 
         } else if upper == "FALSE" {
             return Ok(Value::from_bool(false));
         } else {
-            return Ok(Value::nil());
+            return Ok(Value::nil_with_reason(NilReason::InvalidEncoding));
         }
     }
     if is_number_value(val) {

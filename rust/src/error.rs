@@ -55,6 +55,14 @@ pub enum NilReason {
     /// projection to produce "NIL with the reason its contract registers", so
     /// the accessor's own absence is reasoned like any other.
     NotAvailable,
+    /// A NIL the program *wrote* rather than computed — the `NIL` Word and the
+    /// `NIL` symbol inside a vector literal.
+    ///
+    /// `LANG.VALUES.NIL` makes the reason a NIL's entire observable content, so
+    /// a written absence needs one too; without it `NIL NIL-REASON` answered
+    /// NIL and the value had nothing to observe (audit finding D24). It names
+    /// the only thing true of it: nothing failed, it was written down.
+    Literal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,6 +135,7 @@ impl NilReason {
             NilReason::SpaceExhausted => "spaceExhausted",
             NilReason::DomainMiss => "domainMiss",
             NilReason::NotAvailable => "notAvailable",
+            NilReason::Literal => "literal",
         }
     }
 }
