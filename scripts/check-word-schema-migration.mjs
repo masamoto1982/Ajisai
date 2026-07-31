@@ -1,10 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
 const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
-const rust = readFileSync('rust/src/builtins/builtin_word_definitions.rs', 'utf8');
+const authoredSpecDir = 'rust/src/builtins/builtin_specs';
+const authoredSpecSources = readdirSync(authoredSpecDir)
+  .filter((name) => name.endsWith('.rs') && name !== 'mod.rs')
+  .sort()
+  .map((name) => ({
+    path: `${authoredSpecDir}/${name}`,
+    source: readFileSync(`${authoredSpecDir}/${name}`, 'utf8'),
+  }));
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
 const compiledPlanSource = readFileSync('rust/src/interpreter/compiled_plan.rs', 'utf8');
 const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
@@ -28,12 +35,14 @@ for (const word of words.entries) {
   for (const clause of word.clauses) if (!language.includes(`${clause} —`)) fail(`${word.name} references missing clause ${clause}`);
 
   const escaped = word.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const start = rust.search(new RegExp(`name: "${escaped}"`));
-  if (start < 0) {
+  const authored = authoredSpecSources.find(({ source }) => new RegExp(`name: "${escaped}"`).test(source));
+  if (!authored) {
     fail(`${word.name} has no Rust registry entry`);
     continue;
   }
-  const block = rust.slice(start, rust.indexOf('..SPEC_DEFAULT', start));
+  const start = authored.source.search(new RegExp(`name: "${escaped}"`));
+  const end = authored.source.indexOf('..SPEC_DEFAULT', start);
+  const block = authored.source.slice(start, end);
   // The executor key used to be written a second time on the Rust spec entry,
   // and this check reconciled the two copies. It is written once now — the
   // generated `WordId` *is* the executor key — so what is checked instead is

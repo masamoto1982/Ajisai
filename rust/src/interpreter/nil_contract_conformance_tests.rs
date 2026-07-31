@@ -173,6 +173,7 @@ fn declared_nil_policy_is_honored_at_runtime() {
 /// re-admitting a divergence is a deliberate, reviewable edit rather than a
 /// quiet one.
 #[test]
+#[allow(clippy::const_is_empty)] // Intentional source-level ratchet: adding an allowlist entry must fail CI.
 fn divergence_baseline_does_not_grow() {
     assert!(
         KNOWN_DIVERGENCES.is_empty(),
