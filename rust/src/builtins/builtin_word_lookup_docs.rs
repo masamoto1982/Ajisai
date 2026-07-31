@@ -318,7 +318,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             code: "{ [ 1 ] } 'W' DEF 'W' DEL",
             result: "Defines a word, then removes it from the dictionary.",
         }],
-        failure_note: "Deleting a built-in word is refused. Deleting a word other\nwords depend on requires FORC.",
+        failure_note: "Deleting a built-in word is refused. So is deleting a word\nother words still depend on.",
         related: &["DEF", "LOOKUP"],
     },
     BuiltinLookupDoc {

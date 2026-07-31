@@ -32,7 +32,6 @@ impl Interpreter {
         self.host_effects.clear();
         self.definition_to_load = None;
         self.reset_execution_modes();
-        self.force_flag = false;
         self.pending_tokens = None;
         self.pending_token_index = 0;
         self.runtime_scratch.clear();
