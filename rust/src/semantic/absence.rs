@@ -37,6 +37,9 @@ pub enum AbsenceOrigin {
     /// projected to a Bubble/NIL under the Bubble Rule (SPEC §11.2). Used
     /// together with `NilReason::DomainMiss`.
     DomainMiss,
+    /// A diagnostic accessor found nothing to report — the origin paired with
+    /// `NilReason::NotAvailable`.
+    NotAvailable,
     HostEnvironment,
     Unknown,
 }

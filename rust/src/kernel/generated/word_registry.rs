@@ -1165,7 +1165,7 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         stack_outputs: Arity::Fixed(2),
         consumption: Consumption::Retain,
         nil_policy: NilPolicy::ConsumeNil,
-        projection: Some("valueIsNotOperationalNilOrFieldAbsent"),
+        projection: Some("valueIsNotOperationalNilOrHasNoReason"),
         purity: Purity::Pure,
         determinism: Determinism::Deterministic,
         effects: &[],

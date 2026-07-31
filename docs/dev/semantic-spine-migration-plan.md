@@ -461,7 +461,7 @@ operand の要素数に依存してはならない**。個数は bare scalar の
 なお **可変長形そのものは依然として正典に無い**。`spec/words.json` の CONCAT は
 `stack {inputs: 2, outputs: 1}` のままで、`n CONCAT` は
 `rust/tests/structural_laws.rs` と `examples/nested-vector-brackets-test.ajisai`
-が使う未宣言の拡張である。宣言するか削るかは別問題として残る。
+が使う未宣言の拡張である。宣言するか削るかは別問題として残る。→ **削除で決着**（§10.7）。
 
 **#4 の測定**: 空ベクタは構成不能。パーサが `[ ]` を拒否するだけでなく、空になる
 計算はすべて NIL を返す（`[ 1 2 3 ] { FALSE } FILTER` → `NIL`、
@@ -497,6 +497,7 @@ operand の要素数に依存してはならない**。個数は bare scalar の
 **残った疑問**: `NIL-REASON` の `projection.reason: "notAvailable"` は観測できない。
 `5 NIL-REASON NIL-REASON` → `5/1 NIL NIL` であり、projection が生む NIL は理由を
 持たない素の NIL である。`reason` を落とすか、理由付き NIL を返すようにするかは別問題。
+→ **理由付き NIL を返す方で決着**（§10.8）。
 
 ### 10.6 Phase 8 実施記録（`effects` — §4.2 表の最後の重複）
 
@@ -534,6 +535,78 @@ Rust を触らずに LOOKUP の "Side Effects" 節へ届くということでも
 
 `check-word-schema-migration.mjs` の effect 照合（camelCase→kebab 変換して
 Rust ブロックに含まれるか）は、照合すべき第二の綴りが無くなったので削除した。
+
+### 10.7 未宣言の可変長 CONCAT を削除（§10.5 #3 の残り）
+
+§10.5 #3 は underflow を直したが、その原因である**可変長呼び出し形そのもの**を残して
+いた。着手時に実測したところ、乖離は「未宣言の追加機能」ではなく、**宣言済みの規定を
+上書きしている**ことが分かった。
+
+| 入力 | 正典の読み | 削除前の実測 |
+| --- | --- | --- |
+| `[1 2] [3 4] [5 6] 3 CONCAT` | 未宣言 | `[1 2 3 4 5 6]` |
+| `[1 2] [3 4] -2 CONCAT` | 未宣言 | `[3 4 1 2]`（逆順連結） |
+| `2 3 CONCAT` | `nonVector` エラー | `Stack underflow` |
+| `[1 2] TRUE CONCAT` | `nonVector` エラー | `[1 2 TRUE]` |
+| `{ 1 } [2] CONCAT` | `nonVector` エラー | `[1 2]`（CodeBlock が平坦化） |
+
+`errorWhen: [nonVector]` は **一度も到達しなかった**。`concat_values` が非 Vector を
+singleton として受けるためである。さらに個数 sniff は **dispatch の NIL ガードとも
+食い違う**: ガードは宣言 arity 2 に窓をクランプするので、より長い個数が届く operand を
+見られない。
+
+§12 の優先順位（1. 正典仕様）どおり実装を削った。`n CONCAT` と負数逆順を削除して
+`2 -> 1` に固定し、非 Vector operand は宣言どおり structure error にした。これで
+`errorWhen: [nonVector]` が有効になる。
+
+**破壊的変更**: `[ 1 2 ] TRUE CONCAT` のように非 Vector を混ぜる呼び出しは、黙って
+持ち上げるのをやめてエラーになる。
+
+書き換えた consumer は 2 件のみ。`rust/tests/structural_laws.rs` の結合則は
+`a b c 3 CONCAT` を右辺に使っていた——つまり**結合性を仮定して結合性を主張して**
+いたので、二項 join の入れ子 2 通りの比較に直した（法則としてはこちらが正しい）。
+`examples/nested-vector-brackets-test.ajisai` は個数を落とすだけ。
+
+新規 pin: `concat_refuses_a_non_vector_operand`（宣言済みエラーの 7 形）と、
+conformance corpus の `core-concat-rejects-non-vector` / `core-concat-arity-is-two`。
+`finding_i2_*` は「単一要素ベクタは operand」の部分だけ残し、個数形を pin していた
+3 行は上記の新 test へ移した。`ajisai-mathematical-formalization.md` の所見 I2 も
+「追跡中」から「解決」へ更新した（原因は §7.1 の arity ではなく未宣言の呼び出し形）。
+
+### 10.8 `NIL-REASON` の projection に理由を持たせる
+
+§10.5 の「残った疑問」。`NIL-REASON` は `projection.reason: "notAvailable"` を宣言
+しながら理由のない素の NIL を返しており、13 語ある projection 宣言のうち**唯一
+観測できない reason** だった（`reduction-consistency-audit-2026-07.md` の D15）。
+
+正典が方向を一意に決めている:
+
+- `LANG.FAILURE.PROJECT` — 「条件が成り立つとき、Word は**その契約が登録した理由を
+  持つ** NIL を produce する」。
+- `LANG.VALUES.NIL` — 「理由は NIL の観測可能な内容の全体である」。
+
+したがって reason を落とす選択肢は「観測内容の無い projection」を宣言することになる。
+実装側を直した: `NilReason::NotAvailable`（15 番目）と対応する
+`AbsenceOrigin::NotAvailable` を追加し、`push_protocol_string_or_nil` が
+`Value::nil()` ではなく理由付き NIL を push するようにした。
+
+```
+5 NIL-REASON NIL-REASON      →  5/1 NIL 'notAvailable'   （旧: 5/1 NIL NIL）
+NIL NIL-REASON NIL-REASON    →  NIL NIL 'notAvailable'
+1 0 / NIL-REASON             →  NIL 'divisionByZero'     （不変）
+```
+
+**条件文字列も直した**: D15 が指摘したとおり `valueIsNotOperationalNilOrFieldAbsent`
+は削除済みの Record 領域を指していた。実際の projection 条件は「operational NIL で
+ない、**または** 理由を持たない」の 2 つなので、両方を覆う
+`valueIsNotOperationalNilOrHasNoReason` に改めた。後者は従来から NIL を返していたが
+宣言されていなかった条件である。
+
+`nil_diagnostics.rs` の module doc が今も 5 語（`NIL-ORIGIN` / `NIL-RECOVERABLE?` /
+`NIL-DIAGNOSIS` を含む）を説明していたので、正典に残る 2 語の記述に直した。
+
+**残る関連問題**（本変更の範囲外）: 監査 D24 —— `NIL` リテラル語自身が理由の無い NIL
+を作り、`LANG.VALUES.NIL` と矛盾する。`NIL NIL-REASON` が NIL を返すのはこのため。
 
 ---
 

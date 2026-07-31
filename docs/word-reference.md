@@ -811,7 +811,7 @@ Read the direct reason of an operational NIL as a protocol-string Text.
 
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
+- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrHasNoReason → notAvailable
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`

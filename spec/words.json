@@ -2239,7 +2239,7 @@
       "consumption": "retain",
       "nilPolicy": "consumeNil",
       "projection": {
-        "when": "valueIsNotOperationalNilOrFieldAbsent",
+        "when": "valueIsNotOperationalNilOrHasNoReason",
         "reason": "notAvailable"
       },
       "errorWhen": [],
