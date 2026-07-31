@@ -28,6 +28,12 @@
 //! permission. A Word not on the list must conform, so no *new* divergence can
 //! be introduced; entries are removed as the executors are corrected. The test
 //! also fails if a listed Word starts conforming, so the list cannot go stale.
+//!
+//! **The list is now empty.** Every audited Word honors its declared policy,
+//! because the dispatch guard decides both directions from the declaration
+//! instead of leaving each executor to decide for itself. The machinery stays
+//! so that a regression has to be admitted explicitly rather than committed
+//! quietly.
 
 use crate::interpreter::Interpreter;
 use crate::kernel::generated::{Arity, NilPolicy, GENERATED_WORDS};
@@ -48,26 +54,13 @@ enum Outcome {
 /// Words whose runtime does not yet honor the policy `spec/words.json`
 /// declares. Each entry records the declared policy, the observed behavior, and
 /// the decision taken. Remove an entry when its executor is corrected.
-const KNOWN_DIVERGENCES: &[(&str, Outcome, &str)] = &[
-    // The `rejectNil` entries (LENGTH, CONCAT, EXEC, CONTAINS) are gone: the
-    // dispatch guard in `execute_builtin` now enforces that policy from the
-    // declaration, so they conform.
-    //
-    // The two below are `passthrough`, which the guard does not yet implement —
-    // passing a NIL through means synthesising the result and unwinding the
-    // operands, which has to respect the consumption mode, so it is a larger
-    // change than refusing to run.
-
-    // Declared `passthrough`; raises an error instead. Decision: pass through.
-    (
-        "SORT",
-        Outcome::Error,
-        "rejects a NIL it should pass through",
-    ),
-    // Declared `passthrough`; yields a NIL whose reason was destroyed, so the
-    // bubble stops being diagnosable. Decision: pass through, preserving reason.
-    ("STR", Outcome::NilWithoutReason, "destroys the NIL reason"),
-];
+/// Empty, and it stays that way: the dispatch guard in `execute_builtin` now
+/// settles both directions of the contract from the declaration — `rejectNil`
+/// refuses to run, `passthrough` yields the bubble — so no executor is left to
+/// disagree with the canon. The last two entries were `SORT` (raised an error
+/// on a NIL it declares it passes through) and `STR` (passed the NIL but
+/// destroyed its reason, making the bubble undiagnosable). Both conform now.
+const KNOWN_DIVERGENCES: &[(&str, Outcome, &str)] = &[];
 
 fn divergence(name: &str) -> Option<Outcome> {
     KNOWN_DIVERGENCES
@@ -175,13 +168,15 @@ fn declared_nil_policy_is_honored_at_runtime() {
     );
 }
 
-/// The baseline is a ratchet: it may only shrink. Pinning the count makes
-/// re-adding a divergence a deliberate, reviewable edit rather than a quiet one.
+/// The baseline is a ratchet: it may only shrink. Now that it is empty the
+/// ratchet is at its floor — every Word honors its declared contract, and
+/// re-admitting a divergence is a deliberate, reviewable edit rather than a
+/// quiet one.
 #[test]
 fn divergence_baseline_does_not_grow() {
     assert!(
-        KNOWN_DIVERGENCES.len() <= 2,
-        "KNOWN_DIVERGENCES grew to {}; a new Word may not diverge from its declared contract",
+        KNOWN_DIVERGENCES.is_empty(),
+        "KNOWN_DIVERGENCES grew to {}; a Word may not diverge from its declared contract",
         KNOWN_DIVERGENCES.len()
     );
 }
@@ -217,4 +212,61 @@ fn search_words_reject_a_nil_needle() {
             "`{program}` changed behavior; update this case deliberately"
         );
     }
+}
+
+/// Rejection is safe by construction — it runs nothing and touches no stack —
+/// but passing a bubble through has to *produce* the result and unwind the
+/// operands itself, so the guard takes over a duty the executors used to
+/// discharge: honoring the consumption mode (SPEC §5.2). `EAT` replaces the
+/// declared operand window with the bubble; `KEEP` leaves the window in place
+/// and stacks the bubble above it. Both are pinned for a unary and a binary
+/// Word, together with the depth of the stack the guard leaves behind.
+#[test]
+fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio current-thread runtime");
+
+    for (program, depth) in [
+        // Unary: SORT eats its vector, so only the bubble is left.
+        ("1 0 DIV SORT", 1),
+        ("1 0 DIV KEEP SORT", 2),
+        // Binary: ADD eats both operands. Under KEEP both survive.
+        ("1 0 DIV 1 ADD", 1),
+        ("1 0 DIV 1 KEEP ADD", 3),
+        // The bubble need not be the receiver: any operand position carries it.
+        ("1 1 0 DIV ADD", 1),
+    ] {
+        let (observed, left) = runtime.block_on(observe_depth(program));
+        assert_eq!(
+            observed,
+            Outcome::NilWithReason,
+            "`{program}` must yield the bubble with its reason intact"
+        );
+        assert_eq!(
+            left, depth,
+            "`{program}` left {left} value(s) on the stack, expected {depth}"
+        );
+    }
+}
+
+/// `observe`, plus the depth of the stack the program left behind.
+async fn observe_depth(program: &str) -> (Outcome, usize) {
+    let mut interp = Interpreter::new();
+    if interp.execute(program).await.is_err() {
+        return (Outcome::Error, 0);
+    }
+    let depth = interp.get_stack().len();
+    let outcome = match interp.get_stack().last() {
+        Some(value) if value.is_nil() => {
+            if value.nil_reason().is_some() {
+                Outcome::NilWithReason
+            } else {
+                Outcome::NilWithoutReason
+            }
+        }
+        _ => Outcome::Value,
+    };
+    (outcome, depth)
 }

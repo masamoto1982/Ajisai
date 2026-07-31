@@ -829,6 +829,24 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Passthrough is not confined to the arithmetic and comparison families: a
+     Word that declares it passes the bubble through whatever its family, and
+     an absent operand is never a malformed one. SORT used to raise here. -->
+
+<section class="ajisai-case" id="core-sort-passes-a-nil-through-with-its-reason" data-category="core">
+  <h3>SORT passes a NIL through with its reason, rather than raising</h3>
+  <pre class="ajisai-source">1 0 DIV SORT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-nil-passthrough-keeps-operands-under-keep" data-category="core">
+  <h3>KEEP retains the operand a passthrough Word would have eaten, bubble on top</h3>
+  <pre class="ajisai-source">1 0 DIV KEEP SORT</pre>
+  <pre class="ajisai-expect-result">NIL NIL</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: CREATES-NIL PROJECTIONS (§7.12, §11.2) ===================== -->
 
 <section class="ajisai-case" id="core-get-out-of-bounds-reason" data-category="core">
@@ -949,10 +967,19 @@
 
 <!-- STR per-type contract (Section 7.6.1). -->
 
-<section class="ajisai-case" id="core-str-nil-yields-fresh-nil" data-category="core">
-  <h3>STR of NIL yields a fresh NIL that carries no reason (Section 7.6.1)</h3>
+<!--
+  Amended: this case previously expected `NIL NIL` — a fresh NIL carrying no
+  reason — citing a "Section 7.6.1" that no longer exists in SPECIFICATION.html.
+  STR declares `passthrough` in spec/words.json, and LANG.FAILURE.PASSTHROUGH
+  says an input NIL "flows to the registered output position without changing
+  its reason". Destroying the reason made the bubble undiagnosable exactly where
+  the absence model requires it to stay diagnosable, so the expectation is
+  corrected to the canon rather than the runtime kept at the old behavior.
+-->
+<section class="ajisai-case" id="core-str-passes-a-nil-through-with-its-reason" data-category="core">
+  <h3>STR passes a NIL through with its reason intact (LANG.FAILURE.PASSTHROUGH)</h3>
   <pre class="ajisai-source">0 0 DIV STR NIL-REASON</pre>
-  <pre class="ajisai-expect-result">NIL NIL</pre>
+  <pre class="ajisai-expect-result">NIL 'divisionByZero'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1420,9 +1447,10 @@
 
      Deliberately NOT pinned here, pending the suite-arbitration rule of
      docs/dev/spec-impl-drift-tactic.md §3.3 (a case would cement one side):
-       - `NIL ALGO@SORT` / a NIL element under ALGO@SORT: SPEC §7.4.3/§7.14
-         declares SORT NIL-passthrough, but the implementation raises
-         StructureError. Suite stays silent; listed as a divergence.
+       - (settled) The SORT NIL-passthrough divergence listed here is gone: the
+         module vocabulary that owned ALGO@SORT was removed, and the Core SORT
+         now passes a NIL through per its `passthrough` declaration, enforced
+         at dispatch. Pinned by core-sort-passes-a-nil-through-with-its-reason.
        - The reason string of the MATH@SQRT negative-radicand Bubble
          (implementation reports `divisionByZero`; the §11.2 taxonomy has no
          pinned reason for a negative radicand). Only the NIL projection
