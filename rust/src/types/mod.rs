@@ -6,7 +6,10 @@ mod fraction_arithmetic;
 #[cfg(test)]
 mod fraction_mcdc_tests;
 pub mod stack;
-mod value_operations;
+mod value_absence;
+mod value_children;
+mod value_semantics;
+mod value_tensor;
 // The lossless persistence codec is consumed only by the wasm boundary
 // (`snapshot_stack` / `restore_stack_snapshot`) and by its own native property
 // tests. Gating it on `any(test, feature = "wasm")` keeps a plain native build
