@@ -53,8 +53,14 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Empty vector"));
     }
 
+    // The dependency guard on DEF/DEL is unconditional: the vocabulary has no
+    // force modifier, so these tests pin the only two outcomes that exist —
+    // allowed when nothing refers to the word, refused when something does.
+    // They previously drove a `force_flag`, but nothing could ever set it, so
+    // only the refusing side was ever exercised.
+
     #[tokio::test]
-    async fn test_force_flag_del_without_dependents() {
+    async fn test_del_without_dependents_succeeds() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
 
@@ -64,7 +70,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_force_flag_del_with_dependents_error() {
+    async fn test_del_with_dependents_is_refused() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
         interp
@@ -73,12 +79,34 @@ mod tests {
             .unwrap();
 
         let result = interp.execute("'DOUBLE' DEL").await;
-        assert!(result.is_err());
+        let message = result
+            .expect_err("DEL of a referenced word is refused")
+            .to_string();
+        assert!(
+            message.contains("Cannot delete") && message.contains("QUAD"),
+            "refusal must name the dependents: {message}"
+        );
         assert!(interp.user_words.contains_key("DOUBLE"));
     }
 
+    /// Deleting the dependent first clears the guard — the refusal is about the
+    /// dependency, not about the word being undeletable.
     #[tokio::test]
-    async fn test_force_flag_def_with_dependents_error() {
+    async fn test_del_succeeds_once_the_dependent_is_gone() {
+        let mut interp = Interpreter::new();
+        interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
+        interp
+            .execute("{ DOUBLE DOUBLE } 'QUAD' DEF")
+            .await
+            .unwrap();
+
+        interp.execute("'QUAD' DEL").await.unwrap();
+        interp.execute("'DOUBLE' DEL").await.unwrap();
+        assert!(!interp.user_words.contains_key("DOUBLE"));
+    }
+
+    #[tokio::test]
+    async fn test_def_with_dependents_is_refused() {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 2 ] * } 'DOUBLE' DEF").await.unwrap();
         interp
@@ -87,14 +115,20 @@ mod tests {
             .unwrap();
 
         let result = interp.execute("{ [ 3 ] * } 'DOUBLE' DEF").await;
-        assert!(result.is_err());
+        let message = result
+            .expect_err("redefining a referenced word is refused")
+            .to_string();
+        assert!(
+            message.contains("Cannot redefine") && message.contains("QUAD"),
+            "refusal must name the dependents: {message}"
+        );
     }
 
     #[tokio::test]
-    async fn test_force_flag_builtin_always_error() {
+    async fn test_del_of_a_builtin_is_refused() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("! '+' DEL").await;
+        let result = interp.execute("'+' DEL").await;
         assert!(result.is_err());
     }
 

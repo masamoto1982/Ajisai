@@ -67,14 +67,12 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     if let Some(message) =
         crate::interpreter::naming_convention_checker::check_reserved_word_name(name)
     {
-        interp.force_flag = false;
         return Err(AjisaiError::from(message));
     }
 
     let upper_name = name.to_uppercase();
 
     if interp.core_vocabulary.contains_key(&upper_name) {
-        interp.force_flag = false;
         return Err(AjisaiError::BuiltinProtection {
             word: upper_name,
             operation: "redefine".into(),
@@ -97,21 +95,15 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     {
         let dependents = interp.collect_dependents(&fq_name);
 
-        if !dependents.is_empty() && !interp.force_flag {
-            let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-            interp.force_flag = false;
-            return Err(AjisaiError::from(format!(
-                "Cannot redefine '{}': referenced by {}. Use ! {{ ... }} '{}' DEF to force.",
-                fq_name, dep_list, upper_name
-            )));
-        }
-
+        // A referenced word is not redefinable. There is no force modifier: the
+        // vocabulary has no Word that overrides this, so the refusal is final
+        // and the caller's only route is to delete the dependents first.
         if !dependents.is_empty() {
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-            interp.output_buffer.push_str(&format!(
-                "Warning: '{}' was redefined. Affected words: {}\n",
+            return Err(AjisaiError::from(format!(
+                "Cannot redefine '{}': referenced by {}. Delete those words first.",
                 fq_name, dep_list
-            ));
+            )));
         }
 
         for dep_name in &existing.dependencies {
@@ -200,7 +192,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
 
     interp.bump_dictionary_epoch();
-    interp.force_flag = false;
     Ok(())
 }
 

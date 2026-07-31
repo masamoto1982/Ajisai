@@ -157,10 +157,6 @@ impl Interpreter {
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
-        if canonical != "DEL" && canonical != "DEF" {
-            self.force_flag = false;
-        }
-
         self.execute_builtin_direct(canonical.as_ref())
     }
 

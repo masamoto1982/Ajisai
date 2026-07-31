@@ -1,8 +1,8 @@
 //! Pre-resolved builtin call sites for compiled plans.
 //!
 //! A builtin call site, specialized once at compile time so the per-call
-//! dispatch work (alias canonicalization, linear registry scan, force-flag
-//! classification, mode-preservation lookup) is never repeated at runtime.
+//! dispatch work (alias canonicalization, linear registry scan,
+//! mode-preservation lookup) is never repeated at runtime.
 //! This is the call-site analogue of the resolve cache's epoch discipline:
 //! everything precomputed here depends only on static tables, never on
 //! dictionary state, so no epoch guard is needed.
@@ -23,8 +23,6 @@ pub struct CompiledCall {
     /// `None` for a name the registry does not know — the fallback path reports
     /// it as an unknown word.
     pub word: Option<&'static GeneratedWord>,
-    /// Precomputed `canonical != DEF/DEL` force-flag reset decision.
-    pub resets_force_flag: bool,
     /// Precomputed `modules::is_mode_preserving_word(name)` so the post-call
     /// cleanup skips the per-call uppercase allocation.
     pub mode_preserving: bool,
@@ -35,7 +33,6 @@ impl CompiledCall {
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(name).into_owned();
         let word = generated_word(&canonical);
         Self {
-            resets_force_flag: canonical != "DEL" && canonical != "DEF",
             mode_preserving: false,
             word,
             name: canonical,
@@ -44,7 +41,7 @@ impl CompiledCall {
 }
 
 /// Run a pre-resolved builtin call site. Mirrors `execute_builtin` exactly —
-/// force-flag reset, declared NIL contract, then executor dispatch — but
+/// declared NIL contract, then executor dispatch — but
 /// consumes the decisions `CompiledCall::resolve` already made instead of
 /// re-scanning the alias and registry tables.
 ///
@@ -55,9 +52,6 @@ impl CompiledCall {
 /// unobservability that compiling a body is required to preserve
 /// (LANG.AUTHORITY.FREEDOM).
 pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCall) -> Result<()> {
-    if call.resets_force_flag {
-        interp.force_flag = false;
-    }
     let Some(word) = call.word else {
         return interp.execute_builtin_direct(&call.name);
     };

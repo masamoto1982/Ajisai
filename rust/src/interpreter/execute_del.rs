@@ -16,7 +16,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     };
 
     if interp.core_vocabulary.contains_key(&word_name) {
-        interp.force_flag = false;
         return Err(AjisaiError::BuiltinProtection {
             word: word_name,
             operation: "delete".into(),
@@ -31,7 +30,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
             .output_buffer
             .push_str(&format!("Deleted dictionary: {}\n", word_name));
         interp.bump_dictionary_epoch();
-        interp.force_flag = false;
         return Ok(());
     }
 
@@ -40,11 +38,14 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     let fq_name = format!("{}@{}", owner_name, word_name);
     let dependents = interp.collect_dependents(&fq_name);
 
-    if !dependents.is_empty() && !interp.force_flag {
+    // A referenced word is not deletable. There is no force modifier: the
+    // vocabulary has no Word that overrides this, so the refusal is final and
+    // the caller's only route is to delete the dependents first.
+    if !dependents.is_empty() {
         let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
         return Err(AjisaiError::from(format!(
-            "Cannot delete '{}': referenced by {}. Use ! '{}' DEL to force.",
-            word_name, dep_list, word_name
+            "Cannot delete '{}': referenced by {}. Delete those words first.",
+            word_name, dep_list
         )));
     }
 
@@ -66,14 +67,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         }
     }
 
-    if !dependents.is_empty() {
-        let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
-        interp.output_buffer.push_str(&format!(
-            "Warning: '{}' was deleted. Affected words: {}\n",
-            word_name, dep_list
-        ));
-    }
-
     interp
         .output_buffer
         .push_str(&format!("Deleted word: {}\n", fq_name));
@@ -81,7 +74,6 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp.bump_dictionary_epoch();
-    interp.force_flag = false;
     Ok(())
 }
 
