@@ -13,7 +13,6 @@
   "limit": 500,
   "growthAllowance": 0.1,
   "files": {
-    "rust/src/builtins/builtin_word_definitions.rs": 1398,
     "rust/src/coreword_registry.rs": 1334,
     "rust/src/arithmetic_operation_tests.rs": 834,
     "rust/src/types/fraction_mcdc_tests.rs": 789,

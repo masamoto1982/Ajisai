@@ -14,8 +14,6 @@
 //
 // Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-001.
 
-#![cfg(test)]
-
 use crate::types::fraction::Fraction;
 use num_bigint::BigInt;
 use std::str::FromStr;
