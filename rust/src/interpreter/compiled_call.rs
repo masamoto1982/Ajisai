@@ -42,11 +42,18 @@ impl CompiledCall {
 }
 
 /// Run a pre-resolved builtin call site. Mirrors `execute_builtin` exactly —
-/// force-flag reset, then executor dispatch — but consumes the decisions
-/// `CompiledCall::resolve` already made instead of re-scanning the alias and
-/// spec tables. The shape IC is consulted only for words that have a scalar
-/// fast path; a miss falls through to the same generic executor the
-/// interpreter path uses.
+/// force-flag reset, declared NIL contract, then executor dispatch — but
+/// consumes the decisions `CompiledCall::resolve` already made instead of
+/// re-scanning the alias and spec tables. The shape IC is consulted only for
+/// words that have a scalar fast path; a miss falls through to the same generic
+/// executor the interpreter path uses.
+///
+/// "Mirrors `execute_builtin` exactly" is the whole contract of this function,
+/// and the NIL guard is part of what it has to mirror: a compiled body that
+/// skipped the guard would let a Word behave one way when called directly and
+/// another when called from inside a user word, which is precisely the
+/// unobservability that compiling a body is required to preserve
+/// (LANG.AUTHORITY.FREEDOM).
 pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCall) -> Result<()> {
     if call.resets_force_flag {
         interp.force_flag = false;
@@ -54,5 +61,8 @@ pub(crate) fn execute_compiled_call(interp: &mut Interpreter, call: &CompiledCal
     let Some(key) = call.key else {
         return interp.execute_builtin_direct(&call.name);
     };
+    if let Some(decided) = interp.apply_declared_nil_contract(&call.name) {
+        return decided;
+    }
     interp.execute_builtin_by_key(key)
 }

@@ -254,18 +254,28 @@ impl Interpreter {
         self.stack.push(result);
     }
 
+    /// Settle the Word's declared NIL contract against the current stack.
+    ///
+    /// `None` means the declaration places no obligation here and the primitive
+    /// must run; `Some(result)` is the Word's outcome, decided without running
+    /// it. Every dispatch path must consult this — a path that skips it is a
+    /// path on which the declaration is decorative again.
+    pub(super) fn apply_declared_nil_contract(&mut self, name: &str) -> Option<Result<()>> {
+        match self.declared_nil_contract(name) {
+            NilContract::Run => None,
+            NilContract::Reject => Some(Err(AjisaiError::create_structure_error("a value", "NIL"))),
+            NilContract::PassThrough { operands, bubble } => {
+                self.pass_nil_through(operands, bubble);
+                Some(Ok(()))
+            }
+        }
+    }
+
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
         if let Some(spec) = lookup_builtin_spec(name) {
             if let Some(executor_key) = spec.executor_key {
-                match self.declared_nil_contract(name) {
-                    NilContract::Run => {}
-                    NilContract::Reject => {
-                        return Err(AjisaiError::create_structure_error("a value", "NIL"))
-                    }
-                    NilContract::PassThrough { operands, bubble } => {
-                        self.pass_nil_through(operands, bubble);
-                        return Ok(());
-                    }
+                if let Some(decided) = self.apply_declared_nil_contract(name) {
+                    return decided;
                 }
                 return self.execute_builtin_by_key(executor_key);
             }

@@ -251,6 +251,49 @@ fn passthrough_unwinds_the_operand_window_under_both_consumption_modes() {
     }
 }
 
+/// A Word wrapped in a user-defined Word runs through the compiled plan rather
+/// than the interpreter's dispatch, and that second path skipped the guard
+/// entirely: `{ LENGTH } 'LEN' DEF 1 0 DIV LEN` answered `0` for the length of
+/// a NIL while `1 0 DIV LENGTH` rejected it, and SORT and STR likewise reverted
+/// to their pre-guard behavior one call deep.
+///
+/// Compiling a body is required to be unobservable (LANG.AUTHORITY.FREEDOM), so
+/// a declaration enforced on one path and not the other is not a smaller bug
+/// than no enforcement at all — it is the same Word with two behaviors. Each
+/// case below runs the identical Word directly and through a wrapper, and
+/// requires the same outcome from both.
+#[test]
+fn the_declared_contract_binds_the_compiled_path_too() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio current-thread runtime");
+
+    for (word, want) in [
+        // rejectNil
+        ("LENGTH", Outcome::Error),
+        ("CONCAT", Outcome::Error),
+        // passthrough
+        ("SORT", Outcome::NilWithReason),
+        ("STR", Outcome::NilWithReason),
+    ] {
+        let direct = format!("1 0 DIV {word}");
+        let wrapped = format!("{{ {word} }} 'WRAP' DEF 1 0 DIV WRAP");
+
+        let direct_outcome = runtime.block_on(observe(&direct));
+        let wrapped_outcome = runtime.block_on(observe(&wrapped));
+
+        assert_eq!(
+            direct_outcome, want,
+            "`{direct}` must honor {word}'s declared contract"
+        );
+        assert_eq!(
+            wrapped_outcome, want,
+            "`{wrapped}` must honor {word}'s declared contract on the compiled path too"
+        );
+    }
+}
+
 /// `observe`, plus the depth of the stack the program left behind.
 async fn observe_depth(program: &str) -> (Outcome, usize) {
     let mut interp = Interpreter::new();
