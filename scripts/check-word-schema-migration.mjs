@@ -7,6 +7,7 @@ const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
 const rust = readFileSync('rust/src/builtins/builtin_word_definitions.rs', 'utf8');
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
 const compiledPlanSource = readFileSync('rust/src/interpreter/compiled_plan.rs', 'utf8');
+const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
 const language = readFileSync('spec/language-semantics.md', 'utf8');
 
 const errors = [];
@@ -33,15 +34,20 @@ for (const word of words.entries) {
     continue;
   }
   const block = rust.slice(start, rust.indexOf('..SPEC_DEFAULT', start));
+  // The executor key used to be written a second time on the Rust spec entry,
+  // and this check reconciled the two copies. It is written once now — the
+  // generated `WordId` *is* the executor key — so what is checked instead is
+  // that the key reaches a runtime arm. The compiler already requires the
+  // dispatch match to be total over `WordId`; this catches the case a total
+  // match cannot, a Word folded into a neighbour's arm by mistake.
   const compiledModifiers = new Set(['EAT', 'KEEP']);
   const directive = new Set(['VENT', 'FLOW']);
   if (compiledModifiers.has(word.name)) {
     if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);
-  } else {
-    const executorMarker = directive.has(word.name)
-      ? `execution_form: ExecutionForm::${word.executorKey}`
-      : `executor_key: Some(BuiltinExecutorKey::${word.executorKey})`;
-    if (!block.includes(executorMarker)) fail(`${word.name} executorKey drift`);
+  } else if (directive.has(word.name)) {
+    if (!block.includes(`execution_form: ExecutionForm::${word.executorKey}`)) fail(`${word.name} executorKey drift`);
+  } else if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
+    fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
   }
   const normalizedBlock = block.replace(/\\\s*\n\s*/g, '').replace(/\s+/g, ' ');
   if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);

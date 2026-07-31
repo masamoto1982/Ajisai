@@ -2,6 +2,7 @@ use super::builtin_word_definitions::{lookup_builtin_spec, BuiltinSpec};
 use super::builtin_word_lookup_docs::lookup_builtin_lookup_doc;
 use crate::core_word_aliases::{lookup_core_word_alias, CoreWordAliasKind};
 use crate::coreword_registry::{ExecutionForm, NilPolicy, Partiality};
+use crate::kernel::generated::generated_word;
 
 /// Render the LOOKUP body for a built-in word: the four authored base
 /// sections (Category / Summary / Role / Stack Effect), the authored
@@ -85,7 +86,7 @@ pub fn lookup_builtin_detail(name: &str) -> String {
 
     out.push('\n');
     out.push_str("Failure:\n");
-    push_indented(&mut out, &derive_failure_text(spec), "  ");
+    push_indented(&mut out, &derive_failure_text(spec, &canonical), "  ");
     if let Some(doc) = doc {
         if !doc.failure_note.is_empty() {
             push_indented(&mut out, doc.failure_note, "  ");
@@ -123,7 +124,11 @@ pub fn lookup_builtin_detail(name: &str) -> String {
 /// follows the Bubble Rule framing (three-layer model §2.3): well-formed
 /// operations that cannot produce a value bubble as NIL with a reason,
 /// while malformed usage raises an error.
-fn derive_failure_text(spec: &BuiltinSpec) -> String {
+///
+/// The NIL sentence is derived from the *declared* policy in
+/// `spec/words.json`, so what a reader is told about NIL and what the dispatch
+/// guard enforces are the same fact read twice, not two claims that can drift.
+fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
     let mut lines: Vec<&str> = Vec::new();
     match spec.partiality {
         Partiality::Total => lines.push("Total: always produces a result."),
@@ -132,12 +137,19 @@ fn derive_failure_text(spec: &BuiltinSpec) -> String {
         ),
         Partiality::Partial => lines.push("Malformed or out-of-domain usage raises an error."),
     }
-    match spec.nil_policy {
-        NilPolicy::Passthrough => lines.push("NIL operands pass through as NIL."),
-        NilPolicy::CreatesNil => {}
-        NilPolicy::RejectsNil => lines.push("NIL operands are rejected with an error."),
-        NilPolicy::ConsumesNil => lines.push("Accepts NIL operands as data."),
-        NilPolicy::PreservesReason => lines.push("A NIL value keeps its reason through this word."),
+    if let Some(word) = generated_word(canonical) {
+        match word.nil_policy {
+            NilPolicy::Passthrough | NilPolicy::PassthroughThenProject => {
+                lines.push("NIL operands pass through as NIL, keeping their reason.")
+            }
+            NilPolicy::CreatesNil => {}
+            NilPolicy::RejectNil => lines.push("NIL operands are rejected with an error."),
+            NilPolicy::ConsumeNil => lines.push("Accepts NIL operands as data."),
+            NilPolicy::InspectNil => lines.push("Inspects whether its subject is NIL."),
+            NilPolicy::PreserveReason => {
+                lines.push("A NIL value keeps its reason through this word.")
+            }
+        }
     }
     lines.join("\n")
 }

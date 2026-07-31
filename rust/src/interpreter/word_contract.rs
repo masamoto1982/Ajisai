@@ -10,7 +10,9 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::coreword_registry::{get_coreword_metadata, MassContract, NilPolicy, WordPurity};
+use crate::coreword_registry::{
+    get_coreword_metadata, Determinism, MassContract, NilPolicy, Purity,
+};
 use crate::types::{Capabilities, Token, WordDefinition};
 
 use super::word_contract_lattice::{
@@ -133,12 +135,33 @@ impl WordContract {
     }
 }
 
-impl From<WordPurity> for ContractPurity {
-    fn from(value: WordPurity) -> Self {
+impl From<Purity> for ContractPurity {
+    fn from(value: Purity) -> Self {
         match value {
-            WordPurity::Pure => ContractPurity::Pure,
-            WordPurity::Observable => ContractPurity::Observable,
-            WordPurity::Effectful => ContractPurity::Effectful,
+            Purity::Pure => ContractPurity::Pure,
+            // `conditional` means the Word is as pure as the block it is
+            // given — it contributes nothing of its own. The inference walk
+            // already visits the symbols inside that block and widens with
+            // them, so charging the Word itself would double-count: a `MAP`
+            // over a pure block is pure, and over an effectful one the block's
+            // own effects are what make the caller effectful.
+            Purity::Conditional => ContractPurity::Pure,
+            Purity::Observational => ContractPurity::Observable,
+            Purity::Effectful => ContractPurity::Effectful,
+        }
+    }
+}
+
+impl From<Determinism> for ContractDeterminism {
+    fn from(value: Determinism) -> Self {
+        match value {
+            Determinism::Deterministic => ContractDeterminism::Deterministic,
+            // Both non-deterministic classes collapse here: the inference
+            // lattice asks only whether a result is reproducible from its
+            // operands, and neither runtime state nor the host is.
+            Determinism::StateRelative | Determinism::HostRelative => {
+                ContractDeterminism::NonDeterministic
+            }
         }
     }
 }
@@ -245,10 +268,15 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         return WordContract::conservative(key);
     };
     let nil_behavior = match meta.nil_policy {
-        NilPolicy::Passthrough | NilPolicy::PreservesReason => NilBehavior::Propagates,
-        NilPolicy::CreatesNil => NilBehavior::MayCreate,
-        NilPolicy::RejectsNil => NilBehavior::RejectsNil,
-        NilPolicy::ConsumesNil => NilBehavior::ConsumesNil,
+        NilPolicy::Passthrough | NilPolicy::PreserveReason => NilBehavior::Propagates,
+        // `passthroughThenProject` does both: a NIL operand flows through, and
+        // a well-formed operand may still project onto one. `MayCreate` is the
+        // wider of the two and the one a caller has to plan for.
+        NilPolicy::PassthroughThenProject | NilPolicy::CreatesNil => NilBehavior::MayCreate,
+        NilPolicy::RejectNil => NilBehavior::RejectsNil,
+        // `inspectNil` reads the NIL-ness of its subject rather than
+        // propagating it, which is what `ConsumesNil` names in this lattice.
+        NilPolicy::ConsumeNil | NilPolicy::InspectNil => NilBehavior::ConsumesNil,
     };
     let (space, space_exact) = super::word_space::builtin_space_for(name);
     WordContract {
@@ -256,11 +284,7 @@ fn static_word_contract(name: &str, def: &WordDefinition) -> WordContract {
         purity: meta.purity.into(),
         effects: meta.effects,
         capabilities: def.capabilities,
-        determinism: if meta.deterministic {
-            ContractDeterminism::Deterministic
-        } else {
-            ContractDeterminism::NonDeterministic
-        },
+        determinism: meta.determinism.into(),
         order_sensitivity: OrderSensitivity::OrderIndependent,
         nil_behavior,
         space,

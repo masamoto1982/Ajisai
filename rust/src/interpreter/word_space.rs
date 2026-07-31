@@ -13,7 +13,7 @@
 //! an `error` on a provable violation — the module-wide "never a false error"
 //! invariant.
 
-use crate::builtins::BuiltinExecutorKey;
+use crate::kernel::generated::WordId;
 use crate::types::Token;
 
 use super::word_contract::{
@@ -74,10 +74,10 @@ impl SpaceBound {
 /// provably an input value. When in doubt a word is classified with a generous
 /// class and `tight = false`, which can never produce a false error — only a
 /// "cannot verify" note.
-fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
-    use BuiltinExecutorKey::*;
+fn builtin_space(id: WordId) -> (SpaceClass, bool) {
     use SpaceClass::*;
-    match key {
+    use WordId::*;
+    match id {
         // Exact rational arithmetic: elementwise over vectors and digit growth
         // are both O(input); a vector operand attains the bound.
         Add | Sub | Mul | Div => (Linear, true),
@@ -91,7 +91,7 @@ fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
         // Structure access/observation: shares persistent structure, O(1) new.
         Get | Length => (Const, false),
         NilCheck | NilReason => (Const, false),
-        True | False | Nil | Force => (Const, false),
+        True | False | Nil => (Const, false),
         // Structure builders bounded by their operands' total size.
         Concat | Reverse => (Linear, true),
         Insert | Replace | Remove | Take | Split | Reorder | Collect => (Linear, false),
@@ -112,6 +112,10 @@ fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
         Abs | Neg | Sign | Min | Max | Sqrt => (Linear, false),
         Sort | Unique => (Linear, true),
         Contains | IndexOf => (Linear, false),
+        // The positional control directives (SPEC §6.4) never reach a
+        // primitive: the execution loop interprets them against the source
+        // stream, so they materialize nothing.
+        LazyNextUnitFallback | SetConsumptionConsume | SetConsumptionKeep => (Const, false),
     }
 }
 
@@ -123,23 +127,18 @@ fn builtin_space(key: BuiltinExecutorKey) -> (SpaceClass, bool) {
 /// though their `mass` is conservatively `Dynamic`. Only these words carry an
 /// override; every other Dynamic-mass word is soundly handled by the
 /// degrade-on-dynamic path.
-fn space_arity_override(key: BuiltinExecutorKey) -> Option<(u16, u16)> {
-    match key {
-        BuiltinExecutorKey::Range | BuiltinExecutorKey::Fill => Some((1, 1)),
+fn space_arity_override(id: WordId) -> Option<(u16, u16)> {
+    match id {
+        WordId::Range | WordId::Fill => Some((1, 1)),
         _ => None,
     }
 }
 
 /// Space classification for a resolved built-in word, by canonical name.
-/// A spec without an executor key is a modifier/directive marker that
-/// materializes nothing (`Const`); a name with no builtin spec is
-/// conservatively unclassified.
+/// A name the registry does not know is conservatively unclassified.
 pub(crate) fn builtin_space_for(name: &str) -> (SpaceClass, bool) {
-    match crate::builtins::lookup_builtin_spec(name) {
-        Some(spec) => match spec.executor_key {
-            Some(key) => builtin_space(key),
-            None => (SpaceClass::Const, false),
-        },
+    match crate::kernel::generated::generated_word(name) {
+        Some(word) => builtin_space(word.id),
         None => (SpaceClass::Unbounded, false),
     }
 }
@@ -147,9 +146,7 @@ pub(crate) fn builtin_space_for(name: &str) -> (SpaceClass, bool) {
 /// The space-model stack arity of a resolved built-in, or `None` when the model
 /// has no fixed arity for it (so the simulation falls back to the contract flow).
 fn builtin_space_arity(name: &str) -> Option<(u16, u16)> {
-    crate::builtins::lookup_builtin_spec(name)
-        .and_then(|spec| spec.executor_key)
-        .and_then(space_arity_override)
+    crate::kernel::generated::generated_word(name).and_then(|word| space_arity_override(word.id))
 }
 
 /// What the simulation knows about one simulated stack slot.

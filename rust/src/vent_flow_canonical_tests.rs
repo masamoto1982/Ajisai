@@ -116,8 +116,17 @@ fn vent_contract_is_lazy_not_eager_binary() {
     let vent = lookup_builtin_spec("VENT").expect("VENT spec");
     // The typed classification, not just the prose, marks VENT as lazy.
     assert_eq!(vent.execution_form, ExecutionForm::LazyNextUnitFallback);
-    // VENT has no executor: it is realised as a control token, not dispatched.
-    assert!(vent.executor_key.is_none());
+    // VENT is realised as a control token, not dispatched by name: its
+    // declared arity is `control` on both sides, which is what says so.
+    let declared = crate::kernel::generated::generated_word("VENT").expect("VENT is declared");
+    assert_eq!(
+        declared.stack_inputs,
+        crate::kernel::generated::Arity::Control
+    );
+    assert_eq!(
+        declared.stack_outputs,
+        crate::kernel::generated::Arity::Control
+    );
     // The stack-effect prose must not describe the old eager `[a] [b]` binary.
     assert!(
         !vent.stack_effect.contains("[a] [b]"),
@@ -125,7 +134,9 @@ fn vent_contract_is_lazy_not_eager_binary() {
         vent.stack_effect
     );
     // Mass is data-dependent, never a fixed two-in/one-out contract.
-    assert!(vent.mass.fixed().is_none());
+    assert!(crate::coreword_registry::mass_contract("VENT")
+        .fixed()
+        .is_none());
 }
 
 // --- FLOW (~) is a no-op pipeline marker in both spellings -----------------

@@ -3,30 +3,41 @@ mod builtin_word_details;
 #[cfg(test)]
 mod builtin_word_details_tests;
 mod builtin_word_lookup_docs;
-mod builtin_word_types;
 mod generated_core_word_docs;
 
-pub use builtin_word_definitions::{builtin_specs, lookup_builtin_spec, BuiltinSpec};
+pub use builtin_word_definitions::lookup_builtin_spec;
+// The whole-table walk is a consistency-checking affordance: every runtime
+// consumer now reaches a Word through the generated registry and looks its
+// prose up by name, so the only readers of the table as a whole are the tests
+// asserting that the two halves still describe the same 69 Words.
+#[cfg_attr(not(test), allow(unused_imports))]
+pub use builtin_word_definitions::builtin_specs;
 // Re-exported for the wasm bindings (feature = "wasm") only; the re-export is
 // unused in a default build, so the lint is allowed there only.
 #[cfg_attr(not(feature = "wasm"), allow(unused_imports))]
 pub use builtin_word_definitions::collect_core_builtin_definitions;
 pub use builtin_word_details::lookup_builtin_detail;
-pub use builtin_word_types::BuiltinExecutorKey;
 
+use crate::kernel::generated::{WordId, GENERATED_WORDS};
 use crate::types::{Capabilities, Stability, Tier, WordDefinition};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+/// Register every Core Word the specification declares.
+///
+/// The inventory is the generated registry, not the hand-written spec table:
+/// `spec/words.json` decides which Words exist, and a Word that appears there
+/// is registered whether or not anyone remembered to add prose for it (the
+/// missing-documentation panic below is what says so out loud).
 pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) {
-    for spec in builtin_specs() {
-        let name = spec.name;
+    for word in GENERATED_WORDS {
+        let name = word.name;
         let description = generated_core_word_docs::GENERATED_CORE_WORD_DOCS
             .iter()
             .find(|doc| doc.name == name)
             .expect("every registered Core Word must have generated documentation")
             .hover_summary;
-        let capabilities = core_builtin_capabilities(spec.executor_key, name);
+        let capabilities = core_builtin_capabilities(word.id);
         dictionary.insert(
             name.to_string(),
             Arc::new(WordDefinition {
@@ -46,12 +57,15 @@ pub fn register_builtins(dictionary: &mut HashMap<String, Arc<WordDefinition>>) 
     }
 }
 
-fn core_builtin_capabilities(key: Option<BuiltinExecutorKey>, name: &str) -> Capabilities {
-    match (key, name) {
-        (Some(BuiltinExecutorKey::Def), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Del), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Force), _) => Capabilities::MUTATES_DICT,
-        (Some(BuiltinExecutorKey::Print), _) => Capabilities::IO,
+/// The host capabilities a Core Word needs, keyed by its canonical identity.
+///
+/// Keyed on `WordId` rather than on the spelling of the name, so renaming a
+/// Word in `spec/words.json` moves its capability with it instead of silently
+/// dropping it to `PURE`.
+fn core_builtin_capabilities(id: WordId) -> Capabilities {
+    match id {
+        WordId::Def | WordId::Del => Capabilities::MUTATES_DICT,
+        WordId::Print => Capabilities::IO,
         _ => Capabilities::PURE,
     }
 }

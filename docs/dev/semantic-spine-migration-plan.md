@@ -387,6 +387,47 @@ V1 が固定する module 関連 wasm method の**署名**は保持するが、r
 これで module は runtime に続き**静的メタデータからも到達不能**になり、
 built-in Word は単一の平坦な名前空間になった。
 
+### 10.4 Phase 8 実施記録（生成レジストリへの配線と契約フィールドの削除）
+
+§4.2 の「1事実・複数記述」表のうち、**契約本体**を Rust 側から削除し、
+`kernel/generated/word_registry.rs`（`spec/words.json` からの生成物）を
+runtime の供給元にした。これで §4.2 が「JSON→Rust 生成に反転させる」と書いた状態になる。
+
+| 意味情報 | 削除した手書き | 新しい供給元 |
+| --- | --- | --- |
+| executor 対応 | `BuiltinExecutorKey`（enum ファイルごと削除）+ `BuiltinSpec.executor_key` | 生成 `WordId`。executorKey は元から一意な PascalCase 識別子なので、**WordId がそのまま executor key** である（第二の enum を作らない） |
+| stack 契約 | `BuiltinSpec.mass` | `stack{inputs,outputs}` → `Arity`。`MassContract` は analyzer 語彙として残し、生成 arity から射影する |
+| NIL 方針 | `BuiltinSpec.nil_policy` + 手書き `NilPolicy`(5値) | 生成 `NilPolicy`(7値) |
+| purity | `BuiltinSpec.purity` + 手書き `WordPurity`(3値) | 生成 `Purity`(4値) |
+| determinism | `BuiltinSpec.deterministic`（bool） | 生成 `Determinism`(3値) |
+
+**狭い語彙が実際に何を誤らせていたか**（すべてテストで顕在化した）:
+
+- `WordPurity` に `conditional` が無く、高階語 7 語（MAP/FILTER/FOLD/ANY/ALL/EXEC/VENT）が
+  すべて `pure` として記録されていた。
+- `deterministic: bool` は `stateRelative` と `hostRelative` を区別できず、
+  「pure なら deterministic」という誤った不変条件を成立させていた。正典では
+  `EAT`/`KEEP`/`VENT` は pure かつ stateRelative であり、両軸は独立である。
+  `LOOKUP` の「文書化された例外」も、この bool のための例外だったので消えた。
+- `NilPolicy` に `passthroughThenProject` が無く、DIV と丸め族 4 語が `createsNil` として
+  記録され、**NIL を通す**という半分が言えていなかった。
+- `NIL?`/`NIL-REASON` の arity は「retain するので Fixed では表せない」として `Dynamic` に
+  していたが、正典の `1 -> 2`（retain 対象＋答え）が正確であり、静的解析を無効化する必要は
+  無かった。同時に `[ x ] -> [ ]` の prose を (1,1) と読んでいた prose パーサのバグ
+  （空グループの空白綴り `[ ]` 未対応）が露出した。PRINT が `Dynamic` だったため
+  検査自体が skip されていた。
+
+**残った重複**: `BuiltinSpec.effects`。`spec/words.json` は同じ effect を別綴りで持つ
+（`consoleWrite` / `console-write`）ため、統一は観測される wire 文字列の変更を伴う。
+別変更として残す。`category` / `partiality` / `safety_level` / `safe_preview` は
+正典が宣言しない runtime 固有の分類なので、重複ではない。
+
+**副次的に到達不能になったもの**: `BuiltinExecutorKey::Force`。対応する Word（`FORC` / `!`）は
+既に語彙から削除済みで、`executor_key: Some(Force)` を持つ `BuiltinSpec` は 1 件も無かった。
+生成 enum に Force が無いため arm ごと削除した。`force_flag` 自体は
+`execute_def` / `execute_del` から読まれているが、**書き手が居ないため常に false** である。
+フラグと関連分岐の削除は別変更（到達可能性は測定済み）。
+
 ---
 
 ## 11. 最重要 invariant（CI 最優先ルール）

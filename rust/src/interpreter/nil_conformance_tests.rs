@@ -154,19 +154,35 @@ const PROJECTING_WORDS: &[&str] = &[
     "SQRT",
 ];
 
+/// Two declared policies can hand back a NIL the Word produced: `createsNil`,
+/// where that is the Word's whole NIL story, and `passthroughThenProject`,
+/// where a NIL operand *also* flows through unchanged. The old vocabulary had
+/// only `createsNil` and so had to pick one of the two facts; DIV and the
+/// rounding family were recorded under it and their passthrough went unsaid.
+///
+/// Declaring the policy is not the same as having a condition, though:
+/// ABS/NEG/SIGN/MIN/MAX declare `passthroughThenProject` with a projection of
+/// `never`, so nothing about them can produce a NIL and they carry no probe.
+/// Both halves are read here — the policy and the condition — which is what
+/// makes the set exactly the Words a Bubble can come out of.
 #[test]
 fn projecting_word_set_matches_registry() {
-    let mut registry: Vec<&str> = get_builtin_word_registry()
+    let mut registry: Vec<&str> = crate::kernel::generated::GENERATED_WORDS
         .iter()
-        .filter(|m| m.nil_policy == NilPolicy::CreatesNil)
-        .map(|m| m.name.as_str())
+        .filter(|word| {
+            matches!(
+                word.nil_policy,
+                NilPolicy::CreatesNil | NilPolicy::PassthroughThenProject
+            ) && word.projection.is_some()
+        })
+        .map(|word| word.name)
         .collect();
     registry.sort_unstable();
     let mut expected: Vec<&str> = PROJECTING_WORDS.to_vec();
     expected.sort_unstable();
     assert_eq!(
         registry, expected,
-        "CreatesNil word set drifted from PROJECTING_WORDS; add a Bubble \
+        "projecting word set drifted from PROJECTING_WORDS; add a Bubble \
          behavioral probe for any new word"
     );
 }

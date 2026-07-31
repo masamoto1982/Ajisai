@@ -54,7 +54,13 @@ fn parse_stack_effect_arity(stack_effect: &str) -> Option<(u16, u16)> {
 /// Count top-level stack items in one side of a `stack_effect`. A new item
 /// begins at each token seen at bracket depth 0; an empty group contributes
 /// nothing. Unbalanced brackets abstain (`None`).
+///
+/// The empty group has two spellings — `[]` and the spaced `[ ]` — and only
+/// the first was recognized, so `[ x ] -> [ ]` read as one output instead of
+/// none. Nothing caught it while `PRINT` carried a `Dynamic` mass and was
+/// skipped; the declared 1 -> 0 arity engaged the check and exposed it.
 fn count_stack_items(side: &str) -> Option<u16> {
+    let side = side.replace("[ ]", "[]").replace("{ }", "{}");
     let mut depth = 0i32;
     let mut count = 0u16;
     for token in side.split_whitespace() {
