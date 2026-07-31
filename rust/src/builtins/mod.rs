@@ -1,3 +1,4 @@
+mod builtin_specs;
 mod builtin_word_definitions;
 mod builtin_word_details;
 #[cfg(test)]
