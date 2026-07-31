@@ -398,6 +398,20 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<section class="ajisai-case" id="core-concat-singleton-operand" data-category="core">
+  <h3>CONCAT joins a one-element vector as an operand, not as a count</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 3 ] CONCAT</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-concat-singleton-text-operand" data-category="core">
+  <h3>CONCAT joins a one-character Text, which is a one-codepoint vector</h3>
+  <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
+  <pre class="ajisai-expect-result">[ 97/1 98/1 99/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <section class="ajisai-case" id="core-round-tie-away-from-zero" data-category="core">
   <h3>ROUND breaks a tie away from zero</h3>
   <pre class="ajisai-source">-2.5 ROUND</pre>

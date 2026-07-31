@@ -426,7 +426,52 @@ runtime の供給元にした。これで §4.2 が「JSON→Rust 生成に反�
 既に語彙から削除済みで、`executor_key: Some(Force)` を持つ `BuiltinSpec` は 1 件も無かった。
 生成 enum に Force が無いため arm ごと削除した。`force_flag` 自体は
 `execute_def` / `execute_del` から読まれているが、**書き手が居ないため常に false** である。
-フラグと関連分岐の削除は別変更（到達可能性は測定済み）。
+フラグと関連分岐の削除は別変更（到達可能性は測定済み）。→ **完了**（PR #1399）。
+フラグ、`CompiledCall::resets_force_flag`、到達不能になった
+「was redefined / was deleted」警告分岐、および存在しない `!` を案内していた
+拒否メッセージ 2 本と `DEL` の `failure_note` を削除した。
+
+### 10.5 Phase 8 引き継ぎの追跡
+
+§10.4 の作業中に見つけ、範囲外として手を付けなかったもの。
+
+| # | 事項 | 状態 |
+| --- | --- | --- |
+| 1 | `effects` の綴り重複（正典 `consoleWrite` / Rust `console-write`） | 未着手 |
+| 2 | 書き手のない `force_flag` | 完了（§10.4 追記） |
+| 3 | `[ 1 ] [ 2 ] CONCAT` が `Stack underflow` | 完了（下記） |
+| 4 | `SORT` / `UNIQUE` の `projection.when: emptyVector` が到達不能 | 未着手 |
+| 5 | `NIL?` が宣言した projection を行わない | 未着手 |
+
+**#1 の観測面**（着手時の前提）: `console-write` が wire に届くのは 2 経路。
+`ajisai contract --json` の `effects` 配列と、`wasm_interpreter_state.rs` の
+`get_builtin_word_registry()` 経由で GUI に渡る配列。
+
+**#3 の原因と解決**: 実体は singleton projection ではなく、**正典が宣言しない
+可変長 CONCAT** だった。`CONCAT` は先頭に省略可能な個数（`a b c 3 CONCAT`）を
+取り、それをスタック最上位から sniff する。sniff が数値 operand 共通の
+singleton projection を使っていたため、1 要素ベクタがその要素として読まれ、
+`[ 1 2 ] [ 3 ] CONCAT` は「上位 3 個を連結」と解釈されて underflow していた。
+1 文字 Text は 1 codepoint ベクタなので `'ab' 'c' CONCAT` も同様。正典は
+`2 -> 1` / `errorWhen: [nonVector]` しか宣言しないので、**呼び出しの arity が
+operand の要素数に依存してはならない**。個数は bare scalar のときだけ認識する。
+`rust/tests/string_laws.rs` の `finding_i2_*` は underflow を pin していたので、
+修正後の挙動を pin する法則へ反転させた。
+
+なお **可変長形そのものは依然として正典に無い**。`spec/words.json` の CONCAT は
+`stack {inputs: 2, outputs: 1}` のままで、`n CONCAT` は
+`rust/tests/structural_laws.rs` と `examples/nested-vector-brackets-test.ajisai`
+が使う未宣言の拡張である。宣言するか削るかは別問題として残る。
+
+**#4 の測定**: 空ベクタは構成不能。パーサが `[ ]` を拒否するだけでなく、空になる
+計算はすべて NIL を返す（`[ 1 2 3 ] { FALSE } FILTER` → `NIL`、
+`[ 1 2 3 ] [ 0 ] TAKE` → `NIL`、`[ 1 2 3 ] [ 0 3 ] SPLIT` → `NIL [ 1 2 3 ]`）。
+実装との乖離ではなく正典内部の空文であり、`when: "never"` が正しい宣言。
+
+**#5 の測定**: `5 NIL?` → `5/1 FALSE`、`5 NIL-REASON` → `5/1 NIL`。述語である
+`NIL?` は projection しないのが正しく、`NIL-REASON` は宣言どおり projection する。
+両者が同じ `projection` 宣言を共有しているのが誤りで、`NIL?` だけ
+`when: "never"` に直せばよい。
 
 ---
 
