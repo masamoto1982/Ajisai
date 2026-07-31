@@ -37,6 +37,7 @@
 
 use std::sync::Arc;
 
+use crate::semantic::AbsenceMetadata;
 use crate::types::{Interpretation, Value, ValueData};
 
 use super::observation::{Observation, ObservedValue, PresentationHint};
@@ -87,7 +88,14 @@ impl From<&KernelValue> for Value {
                 Value::from_children(items.iter().map(Value::from).collect())
             }
             KernelValue::Nil(Some(reason)) => Value::nil_with_reason(reason.clone()),
-            KernelValue::Nil(None) => Value::nil_literal(),
+            // `Nil(None)` is not the written literal — the literal carries the
+            // reason `literal`. It is the Spine's residual "absence with no
+            // reason recorded", which only the legacy side can still produce
+            // (an absent tensor lane), so it maps to the legacy reasonless
+            // shape rather than minting a reason the value never had.
+            KernelValue::Nil(None) => {
+                Value::nil_with_absence(AbsenceMetadata::with_reasonless_unknown())
+            }
             KernelValue::CodeBlock(block) => Value {
                 data: ValueData::CodeBlock(block.tokens().to_vec()),
                 hint: Interpretation::Unassigned,

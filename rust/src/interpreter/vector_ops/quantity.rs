@@ -1,6 +1,6 @@
 use super::extract_vector_elements;
 use super::targeting::with_stacktop_vector_target_with_arg;
-use crate::error::{AjisaiError, Result};
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{
     create_number_value, extract_bigint_from_value, extract_integer_from_value,
 };
@@ -75,7 +75,9 @@ pub fn op_take(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(count_val);
     }
     if result.is_empty() {
-        interp.stack.push(Value::nil());
+        interp
+            .stack
+            .push(Value::nil_with_reason(NilReason::EmptySequence));
     } else {
         interp.stack.push(Value::from_vector(result));
     }

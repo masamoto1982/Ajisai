@@ -112,16 +112,14 @@ async fn nil_reason_reports_index_out_of_bounds() {
     assert_eq!(top_text(&interp).as_deref(), Some("indexOutOfBounds"));
 }
 
-/// MC/DC: reason `None`. A literal NIL is an operational NIL with no reason, so
-/// `NIL-REASON` yields NIL. This flips only the reason `Some`/`None` condition
-/// relative to the DIV case.
+/// A written NIL reads back as `literal`. Every NIL carries a reason now, so
+/// the reason-`None` branch of `NIL-REASON` is no longer reachable through a
+/// literal; the branch itself is covered by `nil_reason_is_nil_for_present_value`
+/// below, where the subject is not an operational NIL at all.
 #[tokio::test]
-async fn nil_reason_is_nil_when_no_reason() {
+async fn nil_reason_of_a_written_nil_is_literal() {
     let interp = run("NIL NIL-REASON").await;
-    assert!(
-        top_is_nil(&interp),
-        "reasonless NIL yields NIL for NIL-REASON"
-    );
+    assert_eq!(top_text(&interp).as_deref(), Some("literal"));
 }
 
 /// The non-NIL path: `NIL-REASON` on a present value yields NIL, not an error.

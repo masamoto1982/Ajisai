@@ -63,7 +63,7 @@ pub struct AbsenceMetadata {
 impl AbsenceMetadata {
     pub fn literal() -> Self {
         Self {
-            reason: None,
+            reason: Some(NilReason::Literal),
             origin: AbsenceOrigin::Literal,
             recoverability: Recoverability::Unknown,
             diagnosis: None,

@@ -59,7 +59,12 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         "BOOL" | "LT" | "LTE" | "GT" | "GTE" | "EQ" | "NEQ" | "AND" | "OR" | "NOT"
         | "STARTS-WITH?" | "ENDS-WITH?" => Some(Interpretation::TruthValue),
         "NOW" | "TIMESTAMP" => Some(Interpretation::Timestamp),
-        "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "CONCAT" | "SORT" | "TAKE"
+        // `CONCAT` is deliberately absent: its result role depends on its
+        // operands (joining two Texts yields a Text), so `op_concat` pushes the
+        // slot role itself. Stamping `Unassigned` here is what made
+        // `'ab' 'c' CONCAT` render as `[ 97/1 98/1 99/1 ]` — the join was
+        // right, the role was thrown away.
+        "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE"
         | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE"
         | "CONSERVE" => Some(Interpretation::Unassigned),
         _ => None,
@@ -109,7 +114,8 @@ fn error_category_for_nil_reason(reason: &NilReason) -> Option<ErrorCategory> {
         // it. `Custom` is where every reason without a matching error variant
         // already lands.
         | NilReason::DomainMiss
-        | NilReason::NotAvailable => Some(ErrorCategory::Custom),
+        | NilReason::NotAvailable
+        | NilReason::Literal => Some(ErrorCategory::Custom),
     }
 }
 
