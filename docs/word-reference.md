@@ -567,7 +567,7 @@ Apply a code block to each element of a vector.
 
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
@@ -580,7 +580,7 @@ Keep only the elements for which a predicate block returns TRUE.
 
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
@@ -593,7 +593,7 @@ Reduce a vector to a single value using an initial accumulator and combiner bloc
 
 - **Family:** `higherOrder`
 - **Stack:** 3 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
@@ -606,7 +606,7 @@ TRUE if at least one element satisfies the predicate.
 
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
@@ -619,7 +619,7 @@ TRUE if every element satisfies the predicate.
 
 - **Family:** `higherOrder`
 - **Stack:** 2 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: none
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
