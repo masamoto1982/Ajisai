@@ -13,10 +13,8 @@ use crate::coreword_registry::{ExecutionForm, Partiality, SafetyLevel};
 /// What remains is what the specification does not declare — the prose a reader
 /// sees, and three runtime-local classifications (`partiality`,
 /// `safety_level`, `safe_preview`) that describe how the *implementation*
-/// treats a Word rather than what the language says it means. `effects` is the
-/// last true duplicate: `spec/words.json` names the same effects in a different
-/// spelling, and reconciling those changes an observed wire string, so it is
-/// left for its own change.
+/// treats a Word rather than what the language says it means. Nothing here is
+/// a second copy of a canonical fact.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
@@ -44,9 +42,6 @@ pub struct BuiltinSpec {
     /// A consistency test asserts this invariant.
     pub stability: &'static str,
 
-    /// Effect names for the LOOKUP prose and the Coreword registry. Non-empty
-    /// only for the Words whose declared purity is observational or effectful.
-    pub effects: &'static [&'static str],
     pub safe_preview: bool,
     pub partiality: Partiality,
     pub safety_level: SafetyLevel,
@@ -65,7 +60,6 @@ const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     role: "",
     stack_effect: "",
     stability: "stable",
-    effects: &[],
     safe_preview: true,
     partiality: Partiality::Total,
     safety_level: SafetyLevel::A,
@@ -791,7 +785,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ x ] -> [ ]",
         stability: "experimental",
-        effects: &["console-write"],
         safe_preview: false,
         partiality: Partiality::Partial,
         safety_level: SafetyLevel::D,
@@ -808,7 +801,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "{ body } [ name ] -> []",
         stability: "experimental",
-        effects: &["dictionary-write", "dictionary-register"],
         safe_preview: false,
         partiality: Partiality::Partial,
         safety_level: SafetyLevel::D,
@@ -825,7 +817,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ name ] -> []",
         stability: "experimental",
-        effects: &["dictionary-delete"],
         safe_preview: false,
         partiality: Partiality::Partial,
         safety_level: SafetyLevel::D,
@@ -842,7 +833,6 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ name ] -> []",
         stability: "experimental",
-        effects: &["dictionary-read"],
         safe_preview: false,
         partiality: Partiality::Partial,
         safety_level: SafetyLevel::C,

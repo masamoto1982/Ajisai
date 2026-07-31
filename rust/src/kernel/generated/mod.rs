@@ -10,11 +10,8 @@
 //!
 //! What is still hand-written on `BuiltinSpec` is prose and runtime-local
 //! classification — documentation text, `category`, `partiality`,
-//! `safety_level`, `safe_preview`, `effects` — none of which the specification
-//! declares. `effects` is the one remaining duplicate: `spec/words.json` names
-//! the same effects in a different spelling (`consoleWrite` vs
-//! `console-write`), and reconciling that changes an observed wire string, so
-//! it is left for its own change.
+//! `safety_level`, `safe_preview` — none of which the specification declares.
+//! No canonical fact is written down twice.
 
 mod word_registry;
 

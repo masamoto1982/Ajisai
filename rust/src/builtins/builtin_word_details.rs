@@ -95,7 +95,7 @@ pub fn lookup_builtin_detail(name: &str) -> String {
 
     out.push('\n');
     out.push_str("Side Effects:\n");
-    push_indented(&mut out, &derive_side_effects_text(spec), "  ");
+    push_indented(&mut out, &derive_side_effects_text(&canonical), "  ");
 
     if let Some(doc) = doc {
         if !doc.related.is_empty() {
@@ -154,29 +154,37 @@ fn derive_failure_text(spec: &BuiltinSpec, canonical: &str) -> String {
     lines.join("\n")
 }
 
-/// Side Effects derived from the §7.14 `effects` list. The protocol names
-/// form a small closed set; each maps to one user-facing sentence.
-fn derive_side_effects_text(spec: &BuiltinSpec) -> String {
-    if spec.effects.is_empty() {
+/// Side Effects derived from the §7.14 `effects` list declared in
+/// `spec/words.json`. Each declared effect maps to one user-facing sentence;
+/// `effect_sentence` returns `None` for a name it does not know, which
+/// `builtin_word_details_tests.rs` turns into a failure rather than letting the
+/// raw protocol name reach a reader.
+fn derive_side_effects_text(canonical: &str) -> String {
+    let Some(word) = generated_word(canonical) else {
+        return "None.".to_string();
+    };
+    if word.effects.is_empty() {
         return "None.".to_string();
     }
     let mut sentences: Vec<&str> = Vec::new();
-    for effect in spec.effects {
-        let sentence = match *effect {
-            "console-write" => "Writes to the output area.",
-            "code-execution" => "Executes code supplied as data.",
-            "dictionary-write" | "dictionary-register" => "Modifies the dictionary.",
-            "dictionary-delete" => "Removes a word from the dictionary.",
-            "dictionary-read" => "Loads documentation into the editor.",
-            "interpreter-mode-write" => "Changes the interpreter mode for the next word.",
-            "runtime-control" => "Controls child runtime execution.",
-            other => other,
-        };
+    for effect in word.effects {
+        let sentence = effect_sentence(effect).unwrap_or(effect);
         if !sentences.contains(&sentence) {
             sentences.push(sentence);
         }
     }
     sentences.join("\n")
+}
+
+/// The user-facing sentence for a declared effect name.
+pub(super) fn effect_sentence(effect: &str) -> Option<&'static str> {
+    match effect {
+        "consoleWrite" => Some("Writes to the output area."),
+        "dictionaryWrite" => Some("Modifies the dictionary."),
+        "dictionaryDelete" => Some("Removes a word from the dictionary."),
+        "dictionaryRead" => Some("Loads documentation into the editor."),
+        _ => None,
+    }
 }
 
 pub fn render_four_section(

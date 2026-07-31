@@ -419,8 +419,8 @@ runtime の供給元にした。これで §4.2 が「JSON→Rust 生成に反�
 
 **残った重複**: `BuiltinSpec.effects`。`spec/words.json` は同じ effect を別綴りで持つ
 （`consoleWrite` / `console-write`）ため、統一は観測される wire 文字列の変更を伴う。
-別変更として残す。`category` / `partiality` / `safety_level` / `safe_preview` は
-正典が宣言しない runtime 固有の分類なので、重複ではない。
+別変更として残す。→ **完了**（§10.6）。`category` / `partiality` / `safety_level` /
+`safe_preview` は正典が宣言しない runtime 固有の分類なので、重複ではない。
 
 **副次的に到達不能になったもの**: `BuiltinExecutorKey::Force`。対応する Word（`FORC` / `!`）は
 既に語彙から削除済みで、`executor_key: Some(Force)` を持つ `BuiltinSpec` は 1 件も無かった。
@@ -437,7 +437,7 @@ runtime の供給元にした。これで §4.2 が「JSON→Rust 生成に反�
 
 | # | 事項 | 状態 |
 | --- | --- | --- |
-| 1 | `effects` の綴り重複（正典 `consoleWrite` / Rust `console-write`） | 未着手 |
+| 1 | `effects` の綴り重複（正典 `consoleWrite` / Rust `console-write`） | 完了（§10.6） |
 | 2 | 書き手のない `force_flag` | 完了（§10.4 追記） |
 | 3 | `[ 1 ] [ 2 ] CONCAT` が `Stack underflow` | 完了（下記） |
 | 4 | `SORT` / `UNIQUE` の `projection.when: emptyVector` が到達不能 | 完了（下記） |
@@ -497,6 +497,43 @@ operand の要素数に依存してはならない**。個数は bare scalar の
 **残った疑問**: `NIL-REASON` の `projection.reason: "notAvailable"` は観測できない。
 `5 NIL-REASON NIL-REASON` → `5/1 NIL NIL` であり、projection が生む NIL は理由を
 持たない素の NIL である。`reason` を落とすか、理由付き NIL を返すようにするかは別問題。
+
+### 10.6 Phase 8 実施記録（`effects` — §4.2 表の最後の重複）
+
+§10.5 #1。`effects` は §4.2 の「1事実・複数記述」表に残っていた最後の項目で、
+契約本体が生成レジストリへ移った後も Rust 側に手書きの第二の綴りが残っていた。
+これを削除し、`spec/words.json` の宣言をそのまま供給元にした。
+
+| 意味情報 | 削除した手書き | 新しい供給元 |
+| --- | --- | --- |
+| effects | `BuiltinSpec.effects`（kebab-case の再綴り） | 生成 `GeneratedWord.effects`（正典の綴りのまま） |
+
+`effects` は schema が enum を宣言せず自由文字列なので、`aliases` と同じく
+`&'static [&'static str]` として射影する。Rust 側の enum を作れば、schema が
+admit する語彙より狭い vocabulary をまた一つ増やすことになる（§10.4 で
+`NilPolicy` / `WordPurity` / `deterministic` が実際に誤らせた形）。
+
+**観測される変化**（§10.5 が予告した wire 文字列の変更）。2 経路とも綴りだけが変わる:
+
+- `ajisai contract --json` の `effects` 配列 — `console-write` → `consoleWrite`。
+- `get_builtin_word_registry()` 経由で GUI に渡る `CorewordMetadata.effects`。
+
+**手書き側にあって正典に無かったもの**:
+
+- `DEF` の `dictionary-register`。`dictionary-write` と同じ 1 文に写像されていたので、
+  読者向け prose は変わらない。正典の `DEF` は `dictionaryWrite` 1 件のみを宣言する。
+- LOOKUP prose の写像表にあった `code-execution` / `interpreter-mode-write` /
+  `runtime-control` の 3 arm。どの Word もこれらを宣言しておらず到達不能だった。
+  効果語彙が正典の宣言そのものになったので、写像表は宣言される 4 語だけになる。
+
+**追加した drift ガード**: `every_declared_effect_has_a_user_facing_sentence`。
+効果名が正典側の事実になったということは、`spec/words.json` に effect を足すだけで
+Rust を触らずに LOOKUP の "Side Effects" 節へ届くということでもある。文が無ければ
+生の protocol 名（`consoleWrite`）がそのまま読者に出るので、宣言された全 effect に
+文があることを test で要求する。写像 arm を 1 本外して実際に落ちることは確認済み。
+
+`check-word-schema-migration.mjs` の effect 照合（camelCase→kebab 変換して
+Rust ブロックに含まれるか）は、照合すべき第二の綴りが無くなったので削除した。
 
 ---
 

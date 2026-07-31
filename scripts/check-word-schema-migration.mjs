@@ -53,10 +53,10 @@ for (const word of words.entries) {
   if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);
   if (!block.includes(`hover_summary: "${word.documentation.hover}"`)) fail(`${word.name} hover drift`);
   if (!block.includes(`hover_syntax: "${word.documentation.syntax}"`)) fail(`${word.name} syntax drift`);
-  for (const effect of word.effects) {
-    const rustEffect = effect.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-    if (!block.includes(`"${rustEffect}"`)) fail(`${word.name} effect drift: ${effect}`);
-  }
+  // `effects` used to be written a second time on the Rust spec entry in a
+  // kebab-case respelling, and this reconciled the two copies. The runtime
+  // reads the declared list straight from the generated registry now, so there
+  // is no second spelling to reconcile — only prose is checked below.
   for (const alias of word.aliases) {
     const aliasPattern = `alias: "${alias}",`;
     const canonicalPattern = `canonical: Some("${word.name}"),`;
