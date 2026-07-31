@@ -89,6 +89,8 @@ mod math_ops_tests;
 #[cfg(test)]
 mod nil_conformance_tests;
 #[cfg(test)]
+mod nil_contract_conformance_tests;
+#[cfg(test)]
 mod nil_diagnostics_tests;
 #[cfg(test)]
 mod nil_reason_tests;
