@@ -96,13 +96,20 @@ const arity = (value) =>
   typeof value === 'number' ? `Arity::Fixed(${value})` : `Arity::${pascal(String(value))}`;
 
 // The executor key is a unique, valid PascalCase Rust identifier for every
-// Word, so it doubles as the canonical WordId variant. Guard the uniqueness the
-// enum relies on rather than emit a file that would not compile.
+// Word, so it doubles as the canonical WordId variant — the runtime dispatches
+// on `WordId` itself rather than on a parallel hand-written key enum, which is
+// why the key is not also emitted as a string field: one fact, one
+// representation. Guard the uniqueness the enum relies on rather than emit a
+// file that would not compile.
 const ids = entries.map((word) => word.executorKey);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicates.length > 0) {
   throw new Error(`words.json has duplicate executorKey values: ${[...new Set(duplicates)].join(', ')}`);
 }
+
+// A projection condition of "never" is the absence of one, so it is projected
+// as `None` rather than as a string every reader would have to compare against.
+const projection = (when) => (when === 'never' ? 'None' : `Some(${JSON.stringify(when)})`);
 
 // spec/words.json values are ASCII, so a JSON string literal is also a valid
 // Rust string literal.
@@ -118,12 +125,12 @@ const rows = entries
         id: WordId::${word.executorKey},
         name: ${rustStr(word.name)},
         aliases: ${rustAliases(word.aliases)},
-        executor_key: ${rustStr(word.executorKey)},
         family: ${enumRef('Family', word.family)},
         stack_inputs: ${arity(word.stack.inputs)},
         stack_outputs: ${arity(word.stack.outputs)},
         consumption: ${enumRef('Consumption', word.consumption)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
+        projection: ${projection(word.projection.when)},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
     },`,
@@ -170,16 +177,22 @@ impl Arity {
 
 /// A Word's spec-declared contract, projected from spec/words.json with each
 /// field typed by the vocabulary spec/words.schema.json declares for it.
+#[derive(Debug)]
 pub struct GeneratedWord {
     pub id: WordId,
     pub name: &'static str,
     pub aliases: &'static [&'static str],
-    pub executor_key: &'static str,
     pub family: Family,
     pub stack_inputs: Arity,
     pub stack_outputs: Arity,
     pub consumption: Consumption,
     pub nil_policy: NilPolicy,
+    /// The condition under which a *well-formed* operand yields a reasoned
+    /// NIL, or \`None\` for the Words that declare \`never\`. Distinct from
+    /// \`nil_policy\`, which is about NIL *operands*: a Word can pass a NIL
+    /// through and still project one of its own (\`passthroughThenProject\`),
+    /// or project without any NIL-operand rule engaging at all.
+    pub projection: Option<&'static str>,
     pub purity: Purity,
     pub determinism: Determinism,
 }

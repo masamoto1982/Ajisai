@@ -1,16 +1,20 @@
-//! Generated Word registry and the spec ↔ runtime equivalence checks that make
-//! `spec/words.json` the single source of truth for Word metadata (migration
-//! plan Phase 3).
+//! Generated Word registry — the runtime's supply of Word contract metadata.
 //!
 //! [`word_registry`] is generated from `spec/words.json` by
 //! `scripts/generate-word-registry.mjs` (CI drift-checks it with
-//! `npm run word-registry:check`). This module adds tests proving the generated
-//! projection agrees with the runtime's hand-written tables — the builtin
-//! registration, the alias resolver, and the executor dispatch — so a drift in
-//! either surface fails the build. Nothing consumes the registry at runtime
-//! yet: a later phase routes the runtime onto it and deletes the hand-written
-//! duplication (the ~1300-line `BUILTIN_SPECS`, the hand-authored
-//! `BuiltinExecutorKey` enum, and `core_word_aliases.rs`).
+//! `npm run word-registry:check`). It is no longer a parallel projection kept
+//! honest by equivalence tests: the runtime *reads* it. Dispatch keys off
+//! [`WordId`], the NIL guard reads [`GeneratedWord::nil_policy`], and the
+//! Coreword registry takes stack arity, purity and determinism from here, so
+//! `spec/words.json` is the only place those facts are written down.
+//!
+//! What is still hand-written on `BuiltinSpec` is prose and runtime-local
+//! classification — documentation text, `category`, `partiality`,
+//! `safety_level`, `safe_preview`, `effects` — none of which the specification
+//! declares. `effects` is the one remaining duplicate: `spec/words.json` names
+//! the same effects in a different spelling (`consoleWrite` vs
+//! `console-write`), and reconciling that changes an observed wire string, so
+//! it is left for its own change.
 
 mod word_registry;
 
@@ -19,23 +23,37 @@ pub use word_registry::{
     GENERATED_WORDS,
 };
 
+/// The declared contract for a Word, by canonical name.
+///
+/// Built-in Words form a single flat namespace, so this is an exact match on
+/// the canonical (post-alias) name. Callers holding a raw source token should
+/// canonicalize first.
+pub fn generated_word(name: &str) -> Option<&'static GeneratedWord> {
+    GENERATED_WORDS.iter().find(|word| word.name == name)
+}
+
+/// The contract vocabularies serialize as the canonical spec strings, so the
+/// wire form of a Word's contract is the specification's own spelling rather
+/// than a Rust-side renaming of it. `as_spec_str` is generated from the schema
+/// enum, so a new admitted value reaches the wire without a second edit here.
+macro_rules! serialize_as_spec_str {
+    ($($ty:ty),+ $(,)?) => {
+        $(impl serde::Serialize for $ty {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                serializer.serialize_str(self.as_spec_str())
+            }
+        })+
+    };
+}
+
+serialize_as_spec_str!(Family, Consumption, NilPolicy, Purity, Determinism);
+
 #[cfg(test)]
 mod tests {
-    use super::GENERATED_WORDS;
-    use crate::builtins::{builtin_specs, lookup_builtin_spec};
+    use super::{generated_word, GENERATED_WORDS};
+    use crate::builtins::builtin_specs;
     use crate::core_word_aliases::canonicalize_core_word_name;
     use std::collections::BTreeSet;
-
-    // The three Words the runtime models as directives/modifiers handled
-    // positionally in the execution loop, so they carry no `BuiltinExecutorKey`:
-    // the EAT/KEEP consumption modifiers and the VENT lazy fallback. words.json
-    // still names their executor form, which is what the generated registry
-    // records.
-    const DIRECTIVE_EXECUTOR_KEYS: &[&str] = &[
-        "SetConsumptionConsume",
-        "SetConsumptionKeep",
-        "LazyNextUnitFallback",
-    ];
 
     #[test]
     fn generated_inventory_matches_the_runtime_builtin_registration() {
@@ -61,25 +79,19 @@ mod tests {
         assert_eq!(alias_count, 16, "spec/words.json declares 16 aliases");
     }
 
+    /// The executor-key equivalence test this module used to carry is gone: it
+    /// compared the generated key against a hand-written `BuiltinExecutorKey`,
+    /// and that enum no longer exists — the runtime dispatches on `WordId`
+    /// directly, so a Word without an executor arm is a compile error rather
+    /// than a test failure. What remains worth asserting is that name lookup,
+    /// the path both the guard and the registry take, reaches every Word.
     #[test]
-    fn generated_executor_keys_match_runtime_dispatch() {
+    fn every_generated_word_is_reachable_by_name() {
         for word in GENERATED_WORDS {
-            let spec = lookup_builtin_spec(word.name)
-                .unwrap_or_else(|| panic!("runtime has no spec for {}", word.name));
-            match spec.executor_key {
-                Some(key) => assert_eq!(
-                    format!("{key:?}"),
-                    word.executor_key,
-                    "executor key mismatch for {}",
-                    word.name
-                ),
-                None => assert!(
-                    DIRECTIVE_EXECUTOR_KEYS.contains(&word.executor_key),
-                    "{} has no runtime executor key but is not a known directive ({})",
-                    word.name,
-                    word.executor_key
-                ),
-            }
+            let found = generated_word(word.name)
+                .unwrap_or_else(|| panic!("{} is not reachable by name", word.name));
+            assert_eq!(found.id, word.id);
         }
+        assert!(generated_word("__AJISAI_NO_SUCH_WORD__").is_none());
     }
 }

@@ -1,15 +1,26 @@
-use crate::builtins::builtin_specs;
+//! The Coreword registry: what the runtime knows about each Core Word.
+//!
+//! The contract half of that — stack arity, NIL policy, purity, determinism —
+//! is **not** written here. It is read from `kernel::generated`, projected from
+//! `spec/words.json`, and this module joins it with the runtime-local
+//! classifications that the specification does not declare (`category`,
+//! `partiality`, `safety_level`, `safe_preview`, `effects`).
+//!
+//! Two of the vocabularies that used to be declared in this file were narrower
+//! than the canonical ones and mislabelled Words as a result: the hand-written
+//! `NilPolicy` had 5 of the specification's 7 values, and `WordPurity` had 3 of
+//! its 4 with `conditional` inexpressible, so every higher-order Word was
+//! recorded as `pure`. Determinism was a `bool` where the specification
+//! distinguishes `deterministic` / `stateRelative` / `hostRelative`. All three
+//! now come from the generated enums, where a value the canon admits is a
+//! variant by construction.
+
+use crate::kernel::generated::{Arity, GeneratedWord, GENERATED_WORDS};
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WordPurity {
-    Pure,
-    Observable,
-    Effectful,
-}
+pub use crate::kernel::generated::{Determinism, NilPolicy, Purity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -17,16 +28,6 @@ pub enum Partiality {
     Total,
     Partial,
     Projecting,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum NilPolicy {
-    Passthrough,
-    CreatesNil,
-    RejectsNil,
-    ConsumesNil,
-    PreservesReason,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -91,15 +92,29 @@ pub enum ExecutionForm {
     LazyNextUnitFallback,
 }
 
+/// The mass contract implied by a Word's declared stack arity.
+///
+/// `MassContract` is the analyzers' vocabulary — they need one bit, "is this
+/// arity statically pinned" — while the specification distinguishes *why* an
+/// arity is not pinned (`variable` data-dependence vs a `control` directive
+/// that is not a stack operation at all). Both collapse to `Dynamic` here, so
+/// the analyzers keep the question they can answer and the distinction stays
+/// available in the registry for anything that needs it.
+fn mass_from_arity(word: &GeneratedWord) -> MassContract {
+    match (word.stack_inputs, word.stack_outputs) {
+        (Arity::Fixed(consumes), Arity::Fixed(produces)) => {
+            MassContract::Fixed { consumes, produces }
+        }
+        _ => MassContract::Dynamic,
+    }
+}
+
 /// The canonical mass contract for a Coreword, keyed by its canonical name.
-/// Builtin mass is authored on `BuiltinSpec`; this adapter exists for older
-/// analyzers until Phase 3 finishes moving all metadata consumers to the shared
-/// typed spec directly. Unknown or non-core names conservatively return
-/// `Dynamic`.
+/// Unknown or non-core names conservatively return `Dynamic`.
 pub fn mass_contract(name: &str) -> MassContract {
     let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
-    crate::builtins::lookup_builtin_spec(&canonical)
-        .map(|spec| spec.mass)
+    crate::kernel::generated::generated_word(&canonical)
+        .map(mass_from_arity)
         .unwrap_or(MassContract::Dynamic)
 }
 
@@ -119,26 +134,43 @@ pub enum WordProfile {
 pub struct CorewordMetadata {
     pub name: String,
     pub category: String,
-    pub purity: WordPurity,
+    /// Declared in `spec/words.json`.
+    pub purity: Purity,
     pub effects: Vec<String>,
-    pub deterministic: bool,
+    /// Declared in `spec/words.json`. Was a `bool`, which could not express
+    /// the specification's distinction between a Word that reads runtime state
+    /// (`stateRelative`) and one that reads the host (`hostRelative`).
+    pub determinism: Determinism,
     pub safe_preview: bool,
     pub partiality: Partiality,
+    /// Declared in `spec/words.json`.
     pub nil_policy: NilPolicy,
     pub safety_level: SafetyLevel,
     /// Static flow-mass contract (SPEC §13.1): arity / production, with
-    /// bifurcation governed by the `KEEP` modifier (§13.2).
+    /// bifurcation governed by the `KEEP` modifier (§13.2). Derived from the
+    /// declared stack arity.
     pub mass: MassContract,
     /// Portability profile used by conformance tooling to keep the Core
     /// profile free of host-boundary words.
     pub profile: WordProfile,
 }
 
+impl CorewordMetadata {
+    /// Whether the Word's result depends on nothing but its operands.
+    ///
+    /// The coarse question the old `deterministic: bool` answered, kept as a
+    /// derived accessor so callers that only need the bit do not have to
+    /// enumerate the three canonical classes.
+    pub fn is_deterministic(&self) -> bool {
+        self.determinism == Determinism::Deterministic
+    }
+}
+
+/// The registry is built by walking the *generated* inventory and joining each
+/// Word's prose entry, rather than the reverse. `spec/words.json` decides which
+/// Words exist; a prose entry without a declared Word is not a Word.
 fn build_builtin_word_registry() -> Vec<CorewordMetadata> {
-    builtin_specs()
-        .iter()
-        .map(core_word_metadata_from_spec)
-        .collect()
+    GENERATED_WORDS.iter().map(core_word_metadata).collect()
 }
 
 /// The complete built-in word registry. Built once on first access and
@@ -175,7 +207,7 @@ pub fn get_words_by_category(category: &str) -> Vec<CorewordMetadata> {
         .collect()
 }
 
-pub fn get_words_by_purity(purity: WordPurity) -> Vec<CorewordMetadata> {
+pub fn get_words_by_purity(purity: Purity) -> Vec<CorewordMetadata> {
     get_builtin_word_registry()
         .iter()
         .filter(|word| word.purity == purity)
@@ -229,20 +261,26 @@ fn builtin_profile(name: &str) -> WordProfile {
     }
 }
 
-fn core_word_metadata_from_spec(spec: &crate::builtins::BuiltinSpec) -> CorewordMetadata {
-    let profile = builtin_profile(spec.name);
+/// Join a declared Word with its hand-written prose entry.
+///
+/// Every declared Word must have one: the inventory equivalence is asserted in
+/// `kernel::generated`, so a missing entry is a build-time contradiction rather
+/// than a Word that quietly loses its documentation.
+fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
+    let spec = crate::builtins::lookup_builtin_spec(word.name)
+        .unwrap_or_else(|| panic!("declared Word {} has no runtime spec entry", word.name));
     CorewordMetadata {
-        name: spec.name.to_string(),
+        name: word.name.to_string(),
         category: spec.category.to_lowercase(),
-        purity: spec.purity,
+        purity: word.purity,
         effects: spec.effects.iter().map(|e| e.to_string()).collect(),
-        deterministic: spec.deterministic,
+        determinism: word.determinism,
         safe_preview: spec.safe_preview,
         partiality: spec.partiality,
-        nil_policy: spec.nil_policy,
+        nil_policy: word.nil_policy,
         safety_level: spec.safety_level,
-        mass: spec.mass,
-        profile,
+        mass: mass_from_arity(word),
+        profile: builtin_profile(word.name),
     }
 }
 
@@ -258,8 +296,8 @@ mod tests {
 
     use super::{
         collect_duplicate_entries, get_builtin_word_registry, get_coreword_metadata,
-        get_hosted_profile_words, is_safe_preview_word, NilPolicy, Partiality, SafetyLevel,
-        WordProfile, WordPurity,
+        get_hosted_profile_words, is_safe_preview_word, Determinism, NilPolicy, Partiality, Purity,
+        SafetyLevel, WordProfile,
     };
 
     #[test]
@@ -273,29 +311,34 @@ mod tests {
                 "{} has empty category",
                 word.name
             );
+            // Purity is generated from the schema's enum, so "is this a valid
+            // class" is a type-level fact now. What still needs asserting is
+            // that the declaration reached the registry.
             assert!(
-                matches!(
-                    word.purity,
-                    WordPurity::Pure | WordPurity::Observable | WordPurity::Effectful
-                ),
-                "{} has invalid purity",
+                !word.purity.as_spec_str().is_empty(),
+                "{} has no declared purity",
                 word.name
             );
         }
     }
 
+    /// A `pure` Word declares no effects and is safe to preview.
+    ///
+    /// Determinism used to be asserted here too, on the reasoning that a pure
+    /// Word must be reproducible. The canonical declarations disagree, and they
+    /// are right: `EAT` and `KEEP` are `pure` — they compute nothing and touch
+    /// no value — yet `stateRelative`, because what they do is change the
+    /// consumption mode the *next* Word runs under. Purity and determinism are
+    /// separate axes in the specification, and the hand-written table conflated
+    /// them by carrying determinism as a bool that nobody had a reason to set
+    /// false for a pure Word.
     #[test]
-    fn aq_ver_007_b_pure_words_must_be_safe_and_deterministic_without_effects() {
+    fn aq_ver_007_b_pure_words_declare_no_effects_and_are_safe_to_preview() {
         let registry = get_builtin_word_registry();
-        for word in registry.iter().filter(|w| w.purity == WordPurity::Pure) {
+        for word in registry.iter().filter(|w| w.purity == Purity::Pure) {
             assert!(
                 word.effects.is_empty(),
                 "{} pure words must have no effects",
-                word.name
-            );
-            assert!(
-                word.deterministic,
-                "{} pure words must be deterministic",
                 word.name
             );
             assert!(
@@ -306,13 +349,43 @@ mod tests {
         }
     }
 
+    /// The `conditional` class the hand-written vocabulary could not express:
+    /// a Word whose purity is that of the block it is given. It contributes no
+    /// effects of its own, so it must declare none — but it is never
+    /// `deterministic`, because what it runs is decided at runtime.
+    #[test]
+    fn aq_ver_007_b2_conditional_words_borrow_their_purity_from_their_block() {
+        let conditional: Vec<&str> = get_builtin_word_registry()
+            .iter()
+            .filter(|w| w.purity == Purity::Conditional)
+            .map(|w| w.name.as_str())
+            .collect();
+        assert_eq!(
+            conditional,
+            vec!["MAP", "FILTER", "FOLD", "ANY", "ALL", "EXEC", "VENT"],
+            "the conditional Words are the higher-order ones plus EXEC/VENT"
+        );
+        for word in get_builtin_word_registry()
+            .iter()
+            .filter(|w| w.purity == Purity::Conditional)
+        {
+            assert!(
+                word.effects.is_empty(),
+                "{} contributes no effects of its own",
+                word.name
+            );
+            assert!(
+                !word.is_deterministic(),
+                "{} runs a block chosen at runtime, so it is not deterministic",
+                word.name
+            );
+        }
+    }
+
     #[test]
     fn aq_ver_007_c_effectful_words_must_not_be_safe_preview() {
         let registry = get_builtin_word_registry();
-        for word in registry
-            .iter()
-            .filter(|w| w.purity == WordPurity::Effectful)
-        {
+        for word in registry.iter().filter(|w| w.purity == Purity::Effectful) {
             assert!(
                 !word.safe_preview,
                 "{} effectful words must disable safe preview",
@@ -326,31 +399,32 @@ mod tests {
         }
     }
 
+    /// The documented `LOOKUP` exception is gone with the bool it was an
+    /// exception to. `LOOKUP` reads the dictionary, which the specification
+    /// calls `stateRelative` — reproducible for one interpreter snapshot,
+    /// which is not the same as deterministic. Saying so directly costs
+    /// nothing and removes the only per-Word exception this file carried.
     #[test]
-    fn aq_ver_007_d_observable_words_are_nondeterministic_and_not_safe_preview_by_default() {
+    fn aq_ver_007_d_observational_words_read_state_and_do_not_auto_preview() {
         let registry = get_builtin_word_registry();
         for word in registry
             .iter()
-            .filter(|w| w.purity == WordPurity::Observable)
+            .filter(|w| w.purity == Purity::Observational)
         {
             assert!(
                 !word.effects.is_empty(),
-                "{} observable words must declare effects",
+                "{} observational words must declare effects",
                 word.name
             );
-            // LOOKUP reads interpreter dictionary state and is deterministic
-            // for the same interpreter snapshot; tracked as a documented
-            // exception under AQ-VER-007-D.
-            if word.name != "LOOKUP" {
-                assert!(
-                    !word.deterministic,
-                    "{} observable words are expected to be non-deterministic by default",
-                    word.name
-                );
-            }
+            assert_eq!(
+                word.determinism,
+                Determinism::StateRelative,
+                "{} observes state rather than the host",
+                word.name
+            );
             assert!(
                 !word.safe_preview,
-                "{} observable words must not run in auto preview",
+                "{} observational words must not run in auto preview",
                 word.name
             );
         }
@@ -423,15 +497,12 @@ mod tests {
                 "{} must declare partiality",
                 word.name
             );
+            // The NIL policy's admissible values are the schema's, generated
+            // into the enum, so an invalid one is unrepresentable rather than
+            // merely untested — which is the whole reason the list this
+            // assertion used to spell out went stale.
             assert!(
-                matches!(
-                    word.nil_policy,
-                    NilPolicy::Passthrough
-                        | NilPolicy::CreatesNil
-                        | NilPolicy::RejectsNil
-                        | NilPolicy::ConsumesNil
-                        | NilPolicy::PreservesReason
-                ),
+                !word.nil_policy.as_spec_str().is_empty(),
                 "{} must declare nil_policy",
                 word.name
             );
@@ -450,11 +521,17 @@ mod tests {
         }
     }
 
+    /// `DIV` both passes a NIL through and projects a zero divisor onto a
+    /// fresh reasoned NIL. `passthroughThenProject` is the declaration that
+    /// says both; `createsNil` — all the hand-written vocabulary could
+    /// express — said only the second, which is why `1 0 DIV 1 ADD` looked
+    /// like a Word creating an absence out of nothing rather than one bubble
+    /// flowing into the next.
     #[test]
-    fn aq_ver_contract_b_arithmetic_division_creates_nil_under_bubble_rule() {
+    fn aq_ver_contract_b_arithmetic_division_passes_through_then_projects() {
         let div = get_coreword_metadata("DIV").expect("DIV must be in registry");
         assert_eq!(div.partiality, Partiality::Projecting);
-        assert_eq!(div.nil_policy, NilPolicy::CreatesNil);
+        assert_eq!(div.nil_policy, NilPolicy::PassthroughThenProject);
         assert_eq!(div.safety_level, SafetyLevel::B);
 
         let add = get_coreword_metadata("ADD").expect("ADD must be in registry");
@@ -514,8 +591,8 @@ mod tests {
             );
             assert_eq!(
                 meta.nil_policy,
-                NilPolicy::CreatesNil,
-                "{} must be CreatesNil (SPEC §7.4.1)",
+                NilPolicy::PassthroughThenProject,
+                "{} passes a NIL through and projects a budget miss (SPEC §7.4.1)",
                 name
             );
             assert_eq!(
@@ -526,8 +603,8 @@ mod tests {
             );
         }
 
-        // ADD/SUB/MUL must remain Total: their ExactReal arithmetic always
-        // produces a value, so they never create a budget-exhaustion NIL.
+        // ADD/SUB/MUL stay plain `passthrough`: their ExactReal arithmetic
+        // always produces a value, so there is no projection to declare.
         for name in &["ADD", "SUB", "MUL"] {
             let meta = get_coreword_metadata(name)
                 .unwrap_or_else(|| panic!("{} must be in registry", name));
@@ -554,13 +631,13 @@ mod tests {
                 .unwrap_or_else(|| panic!("{} must be in registry", name));
             assert_eq!(
                 meta.nil_policy,
-                NilPolicy::ConsumesNil,
-                "{} must be ConsumesNil (SPEC §4.5.0)",
+                NilPolicy::ConsumeNil,
+                "{} must be consumeNil (SPEC §4.5.0)",
                 name
             );
             assert_eq!(
                 meta.purity,
-                WordPurity::Pure,
+                Purity::Pure,
                 "{} must be Pure (SPEC §7.15)",
                 name
             );
@@ -576,9 +653,19 @@ mod tests {
                 "{} must be SafetyLevel A (pure, total, deterministic)",
                 name
             );
-            assert!(
-                matches!(meta.mass, super::MassContract::Dynamic),
-                "{} retains its inspection target, so its mass contract is Dynamic",
+            // The declared arity is 1 in, 2 out under `consumption: retain`:
+            // the inspected value stays and the answer is pushed above it.
+            // The hand-written table called this `Dynamic` because a bare
+            // `Fixed` could not model a retained operand — but 1->2 models it
+            // exactly, and calling it dynamic disengaged the static analyzer
+            // from a Word whose arity the specification pins.
+            assert_eq!(
+                meta.mass,
+                super::MassContract::Fixed {
+                    consumes: 1,
+                    produces: 2
+                },
+                "{} declares a pinned 1 -> 2 arity",
                 name
             );
         }
@@ -587,10 +674,7 @@ mod tests {
     #[test]
     fn aq_ver_contract_c_effectful_words_have_d_or_quarantined_safety() {
         let registry = get_builtin_word_registry();
-        for word in registry
-            .iter()
-            .filter(|w| w.purity == WordPurity::Effectful)
-        {
+        for word in registry.iter().filter(|w| w.purity == Purity::Effectful) {
             assert!(
                 matches!(word.safety_level, SafetyLevel::D | SafetyLevel::Quarantined),
                 "{} effectful words must have safety_level D or Quarantined, got {:?}",
@@ -625,16 +709,45 @@ mod tests {
         }
     }
 
+    /// The mass contract is the declared stack arity, read through the
+    /// analyzers' coarser vocabulary. This used to assert that the adapter
+    /// returned what the hand-written table said; now that there is nothing to
+    /// disagree with, what is worth asserting is the projection itself — a
+    /// pinned arity survives, and only the two data-dependent markers collapse.
     #[test]
-    fn aq_ver_contract_f_mass_contract_is_derived_from_builtin_spec() {
-        for spec in crate::builtins::builtin_specs() {
+    fn aq_ver_contract_f_mass_contract_projects_the_declared_arity() {
+        use crate::kernel::generated::{Arity, GENERATED_WORDS};
+
+        let mut pinned = 0_usize;
+        for word in GENERATED_WORDS {
+            let expected = match (word.stack_inputs, word.stack_outputs) {
+                (Arity::Fixed(consumes), Arity::Fixed(produces)) => {
+                    pinned += 1;
+                    super::MassContract::Fixed { consumes, produces }
+                }
+                _ => super::MassContract::Dynamic,
+            };
             assert_eq!(
-                super::mass_contract(spec.name),
-                spec.mass,
-                "{}: mass_contract adapter must read BuiltinSpec.mass",
-                spec.name
+                super::mass_contract(word.name),
+                expected,
+                "{}: mass_contract must project the declared arity",
+                word.name
             );
         }
+        assert!(
+            pinned >= 60,
+            "only {pinned} Words have a pinned arity; the projection has collapsed"
+        );
+    }
+
+    /// An alias reaches the same contract as the Word it names.
+    #[test]
+    fn aq_ver_contract_f2_mass_contract_canonicalizes_aliases() {
+        assert_eq!(super::mass_contract("+"), super::mass_contract("ADD"));
+        assert_eq!(
+            super::mass_contract("__AJISAI_NO_SUCH_WORD__"),
+            super::MassContract::Dynamic
+        );
     }
 
     #[test]

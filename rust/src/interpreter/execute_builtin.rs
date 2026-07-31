@@ -1,5 +1,5 @@
-use crate::builtins::{lookup_builtin_spec, BuiltinExecutorKey};
 use crate::error::{AjisaiError, Result};
+use crate::kernel::generated::{generated_word, Arity, GeneratedWord, NilPolicy, WordId};
 use crate::types::{Interpretation, Token, Value};
 
 use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
@@ -7,8 +7,25 @@ use super::compiled_plan::{execute_compiled_plan, is_plan_valid};
 use super::{
     algo_ops, arithmetic, cast, comparison, control, control_cond, execute_def, execute_del,
     execute_lookup, higher_order, higher_order_fold, io, logic, math_ops, nil_diagnostics, sort,
-    tensor_cmds, vector_ops, Interpreter,
+    tensor_cmds, vector_ops, ConsumptionMode, Interpreter,
 };
+
+/// What a Word's declared `nilPolicy` requires of the operands on the stack,
+/// decided before its primitive is reached.
+///
+/// The passthrough arm names the bubble by its stack position rather than
+/// carrying the value: the decision is made from a borrow of the stack, and a
+/// position keeps the whole enum a couple of words wide.
+enum NilContract {
+    /// The declaration places no obligation here; run the primitive.
+    Run,
+    /// A NIL operand is malformed use for this Word.
+    Reject,
+    /// A NIL operand is the Word's result; the bubble flows through in place
+    /// of running the primitive. `operands` is the declared operand window to
+    /// unwind, `bubble` the stack index of the NIL that becomes the result.
+    PassThrough { operands: usize, bubble: usize },
+}
 
 #[cfg(feature = "trace-compile")]
 fn trace_compile_metrics(interp: &Interpreter) {
@@ -140,142 +157,235 @@ impl Interpreter {
 
     pub(crate) fn execute_builtin(&mut self, name: &str) -> Result<()> {
         let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
-        if canonical != "DEL" && canonical != "DEF" && canonical != "FORC" {
+        if canonical != "DEL" && canonical != "DEF" {
             self.force_flag = false;
         }
 
         self.execute_builtin_direct(canonical.as_ref())
     }
 
-    /// Enforce the Word's declared `rejectNil` contract before its primitive
-    /// runs.
+    /// What the Word's declared NIL contract dictates for the operands
+    /// currently on the stack.
     ///
     /// `spec/words.json` declares, per Word, what a NIL operand means. Until
-    /// now each executor decided that for itself, so the declaration was
-    /// decorative: `LENGTH` answered `0` for the length of a NIL and `CONCAT`
-    /// absorbed the NIL as an element, both while declaring `rejectNil`. A
-    /// bubble buried inside a collection is exactly the outcome the absence
-    /// model exists to prevent, so the shared decision belongs in one place
-    /// that reads the declaration.
+    /// recently each executor decided that for itself, so the declaration was
+    /// decorative: `LENGTH` answered `0` for the length of a NIL while
+    /// declaring `rejectNil`, and `SORT` raised an error while declaring
+    /// `passthrough`. Both directions of that drift are settled here, in one
+    /// place that reads the declaration, so no executor can quietly disagree
+    /// with the canon.
     ///
-    /// `rejectNil` binds every operand position, not just the receiver, so a
-    /// NIL anywhere in the Word's declared arity is malformed use. Words whose
-    /// arity is data-dependent carry no fixed operand window and are left to
-    /// their executors.
-    fn reject_nil_operands(&self, name: &str) -> Result<()> {
-        use crate::kernel::generated::{Arity, NilPolicy, GENERATED_WORDS};
-
-        let Some(word) = GENERATED_WORDS.iter().find(|word| word.name == name) else {
-            return Ok(());
-        };
-        if word.nil_policy != NilPolicy::RejectNil {
-            return Ok(());
-        }
+    /// The guard reads the declaration and nothing else — no per-family
+    /// exception table. A Word whose arity is data-dependent carries no fixed
+    /// operand window, so it is left to its executor.
+    fn declared_nil_contract(&self, word: &GeneratedWord) -> NilContract {
         let Arity::Fixed(arity) = word.stack_inputs else {
-            return Ok(());
+            return NilContract::Run;
         };
+        let arity = arity as usize;
         let operands = self.stack.as_slice();
-        let start = operands.len().saturating_sub(arity as usize);
-        if operands[start..].iter().any(|operand| operand.is_nil()) {
-            return Err(AjisaiError::create_structure_error("a value", "NIL"));
+
+        match word.nil_policy {
+            // `rejectNil` binds every operand position, not just the receiver,
+            // so a NIL anywhere in the declared arity is malformed use. The
+            // window is clamped rather than required: refusing to run touches
+            // nothing, so a short stack can be judged on what it holds.
+            NilPolicy::RejectNil => {
+                let start = operands.len().saturating_sub(arity);
+                if operands[start..].iter().any(|operand| operand.is_nil()) {
+                    NilContract::Reject
+                } else {
+                    NilContract::Run
+                }
+            }
+            // A NIL operand *is* the result: the bubble flows downstream
+            // carrying its reason (SPEC §7.12, LANG.FAILURE.PASSTHROUGH).
+            // `passthroughThenProject` differs only in what non-NIL operands
+            // may yield, so a NIL input takes the same route — projecting an
+            // absence leaves an absence.
+            //
+            // Unlike rejection this synthesises a result and unwinds the
+            // operands, which needs the whole window present; a short stack is
+            // an arity fault, left to the executor to report as underflow.
+            NilPolicy::Passthrough | NilPolicy::PassthroughThenProject => {
+                if operands.len() < arity {
+                    return NilContract::Run;
+                }
+                // The leftmost bubble wins, matching left-to-right evaluation
+                // order and the executor-level helpers it replaces.
+                let window = operands.len() - arity;
+                match operands[window..]
+                    .iter()
+                    .position(|operand| operand.is_nil())
+                {
+                    Some(offset) => NilContract::PassThrough {
+                        operands: arity,
+                        bubble: window + offset,
+                    },
+                    None => NilContract::Run,
+                }
+            }
+            // `createsNil` and `preserveReason` describe what the Word does
+            // with non-NIL operands; `consumeNil` and `inspectNil` make the NIL
+            // itself the Word's subject. None of them constrain dispatch.
+            NilPolicy::CreatesNil
+            | NilPolicy::ConsumeNil
+            | NilPolicy::InspectNil
+            | NilPolicy::PreserveReason => NilContract::Run,
         }
-        Ok(())
+    }
+
+    /// Yield the NIL at stack index `bubble` as the Word's result without
+    /// running its primitive, unwinding the declared operand window under the
+    /// active consumption mode (SPEC §5.2): `EAT` removes the operands, `KEEP`
+    /// leaves them in place. The bubble is copied out before the unwind, since
+    /// the unwind is what removes it.
+    fn pass_nil_through(&mut self, operands: usize, bubble: usize) {
+        let result = Value::nil_inheriting_absence_from(&self.stack[bubble]);
+        if self.consumption_mode == ConsumptionMode::Consume {
+            let remaining = self.stack.len() - operands;
+            self.stack.drain(remaining..);
+        }
+        self.stack.push(result);
+    }
+
+    /// Settle the Word's declared NIL contract against the current stack.
+    ///
+    /// `None` means the declaration places no obligation here and the primitive
+    /// must run; `Some(result)` is the Word's outcome, decided without running
+    /// it. Every dispatch path must consult this — a path that skips it is a
+    /// path on which the declaration is decorative again.
+    pub(super) fn apply_declared_nil_contract(
+        &mut self,
+        word: &GeneratedWord,
+    ) -> Option<Result<()>> {
+        match self.declared_nil_contract(word) {
+            NilContract::Run => None,
+            NilContract::Reject => Some(Err(AjisaiError::create_structure_error("a value", "NIL"))),
+            NilContract::PassThrough { operands, bubble } => {
+                self.pass_nil_through(operands, bubble);
+                Some(Ok(()))
+            }
+        }
     }
 
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
-        if let Some(spec) = lookup_builtin_spec(name) {
-            if let Some(executor_key) = spec.executor_key {
-                self.reject_nil_operands(name)?;
-                return self.execute_builtin_by_key(executor_key);
-            }
+        let Some(word) = generated_word(name) else {
+            return Err(AjisaiError::UnknownWord(name.to_string()));
+        };
+        if let Some(decided) = self.apply_declared_nil_contract(word) {
+            return decided;
         }
-        Err(AjisaiError::UnknownWord(name.to_string()))
+        self.execute_builtin_by_id(word.id)
     }
 
-    pub(crate) fn execute_builtin_by_key(&mut self, key: BuiltinExecutorKey) -> Result<()> {
-        match key {
-            BuiltinExecutorKey::Add => arithmetic::op_add(self),
-            BuiltinExecutorKey::Sub => arithmetic::op_sub(self),
-            BuiltinExecutorKey::Mul => arithmetic::op_mul(self),
-            BuiltinExecutorKey::Div => arithmetic::op_div(self),
-            BuiltinExecutorKey::Eq => comparison::op_eq(self),
-            BuiltinExecutorKey::Lt => comparison::op_lt(self),
-            BuiltinExecutorKey::Le => comparison::op_le(self),
-            BuiltinExecutorKey::Gt => comparison::op_gt(self),
-            BuiltinExecutorKey::Gte => comparison::op_gte(self),
-            BuiltinExecutorKey::Neq => comparison::op_neq(self),
-            BuiltinExecutorKey::Map => higher_order::op_map(self),
-            BuiltinExecutorKey::Filter => higher_order::op_filter(self),
-            BuiltinExecutorKey::Fold => higher_order_fold::op_fold(self),
-            BuiltinExecutorKey::Any => higher_order::op_any(self),
-            BuiltinExecutorKey::All => higher_order::op_all(self),
-            BuiltinExecutorKey::Get => vector_ops::op_get(self),
-            BuiltinExecutorKey::Length => vector_ops::op_length(self),
-            BuiltinExecutorKey::Concat => vector_ops::op_concat(self),
-            BuiltinExecutorKey::And => logic::op_and(self),
-            BuiltinExecutorKey::Or => logic::op_or(self),
-            BuiltinExecutorKey::Not => logic::op_not(self),
-            BuiltinExecutorKey::True => {
+    /// Run the primitive for a Word's canonical identity.
+    ///
+    /// `WordId` is generated from `spec/words.json`, so this match is total
+    /// over the Words the specification declares: adding one to the canon
+    /// fails the build here rather than at runtime, which is the registration
+    /// gap the old hand-written key enum could not catch.
+    pub(crate) fn execute_builtin_by_id(&mut self, id: WordId) -> Result<()> {
+        match id {
+            WordId::Add => arithmetic::op_add(self),
+            WordId::Sub => arithmetic::op_sub(self),
+            WordId::Mul => arithmetic::op_mul(self),
+            WordId::Div => arithmetic::op_div(self),
+            WordId::Eq => comparison::op_eq(self),
+            WordId::Lt => comparison::op_lt(self),
+            WordId::Le => comparison::op_le(self),
+            WordId::Gt => comparison::op_gt(self),
+            WordId::Gte => comparison::op_gte(self),
+            WordId::Neq => comparison::op_neq(self),
+            WordId::Map => higher_order::op_map(self),
+            WordId::Filter => higher_order::op_filter(self),
+            WordId::Fold => higher_order_fold::op_fold(self),
+            WordId::Any => higher_order::op_any(self),
+            WordId::All => higher_order::op_all(self),
+            WordId::Get => vector_ops::op_get(self),
+            WordId::Length => vector_ops::op_length(self),
+            WordId::Concat => vector_ops::op_concat(self),
+            WordId::And => logic::op_and(self),
+            WordId::Or => logic::op_or(self),
+            WordId::Not => logic::op_not(self),
+            WordId::True => {
                 self.stack
                     .push_with_role(Value::from_bool(true), Interpretation::TruthValue);
                 Ok(())
             }
-            BuiltinExecutorKey::False => {
+            WordId::False => {
                 self.stack
                     .push_with_role(Value::from_bool(false), Interpretation::TruthValue);
                 Ok(())
             }
-            BuiltinExecutorKey::Nil => {
+            WordId::Nil => {
                 self.stack.push_with_role(Value::nil(), Interpretation::Nil);
                 Ok(())
             }
-            BuiltinExecutorKey::Exec => control::op_exec(self),
-            BuiltinExecutorKey::Cond => control_cond::op_cond(self),
-            BuiltinExecutorKey::Def => execute_def::op_def(self),
-            BuiltinExecutorKey::Del => execute_del::op_del(self),
-            BuiltinExecutorKey::Lookup => execute_lookup::op_lookup(self),
-            BuiltinExecutorKey::Force => {
-                self.force_flag = true;
-                Ok(())
+            WordId::Exec => control::op_exec(self),
+            WordId::Cond => control_cond::op_cond(self),
+            WordId::Def => execute_def::op_def(self),
+            WordId::Del => execute_del::op_del(self),
+            WordId::Lookup => execute_lookup::op_lookup(self),
+            WordId::Print => io::op_print(self),
+            WordId::Insert => vector_ops::op_insert(self),
+            WordId::Replace => vector_ops::op_replace(self),
+            WordId::Remove => vector_ops::op_remove(self),
+            WordId::Take => vector_ops::op_take(self),
+            WordId::Split => vector_ops::op_split(self),
+            WordId::Reverse => vector_ops::op_reverse(self),
+            WordId::Range => vector_ops::op_range(self),
+            WordId::Reorder => vector_ops::op_reorder(self),
+            WordId::Collect => vector_ops::op_collect(self),
+            WordId::Fill => tensor_cmds::op_fill(self),
+            WordId::Floor => tensor_cmds::op_floor(self),
+            WordId::Ceil => tensor_cmds::op_ceil(self),
+            WordId::Round => tensor_cmds::op_round(self),
+            WordId::Mod => tensor_cmds::op_mod(self),
+            WordId::Str => cast::op_str(self),
+            WordId::Num => cast::op_num(self),
+            WordId::Chr => cast::op_chr(self),
+            WordId::Chars => cast::op_chars(self),
+            WordId::Join => cast::op_join(self),
+            WordId::Trim => cast::op_trim(self),
+            WordId::Tokenize => cast::op_tokenize(self),
+            WordId::Substitute => cast::op_substitute(self),
+            WordId::StartsWith => cast::op_starts_with(self),
+            WordId::EndsWith => cast::op_ends_with(self),
+            WordId::NilCheck => nil_diagnostics::op_nil_check(self),
+            WordId::NilReason => nil_diagnostics::op_nil_reason(self),
+            WordId::Abs => math_ops::op_abs(self),
+            WordId::Neg => math_ops::op_neg(self),
+            WordId::Sign => math_ops::op_sign(self),
+            WordId::Min => math_ops::op_min(self),
+            WordId::Max => math_ops::op_max(self),
+            WordId::Sqrt => math_ops::op_sqrt(self),
+            WordId::Sort => sort::op_sort(self),
+            WordId::Unique => algo_ops::op_unique(self),
+            WordId::Contains => algo_ops::op_contains(self),
+            WordId::IndexOf => algo_ops::op_index_of(self),
+            // The positional control directives of SPEC §6.4. The execution
+            // loop interprets these against the source stream — `VENT` decides
+            // whether the *following source unit* is evaluated, `EAT`/`KEEP`
+            // set the consumption mode — so they are never dispatched by name
+            // and have no primitive. Reaching one here means a caller bypassed
+            // the loop, which is exactly the unknown-word answer the old
+            // `executor_key: None` path gave.
+            WordId::LazyNextUnitFallback
+            | WordId::SetConsumptionConsume
+            | WordId::SetConsumptionKeep => {
+                Err(AjisaiError::UnknownWord(self.word_name_for(id).to_string()))
             }
-            BuiltinExecutorKey::Print => io::op_print(self),
-            BuiltinExecutorKey::Insert => vector_ops::op_insert(self),
-            BuiltinExecutorKey::Replace => vector_ops::op_replace(self),
-            BuiltinExecutorKey::Remove => vector_ops::op_remove(self),
-            BuiltinExecutorKey::Take => vector_ops::op_take(self),
-            BuiltinExecutorKey::Split => vector_ops::op_split(self),
-            BuiltinExecutorKey::Reverse => vector_ops::op_reverse(self),
-            BuiltinExecutorKey::Range => vector_ops::op_range(self),
-            BuiltinExecutorKey::Reorder => vector_ops::op_reorder(self),
-            BuiltinExecutorKey::Collect => vector_ops::op_collect(self),
-            BuiltinExecutorKey::Fill => tensor_cmds::op_fill(self),
-            BuiltinExecutorKey::Floor => tensor_cmds::op_floor(self),
-            BuiltinExecutorKey::Ceil => tensor_cmds::op_ceil(self),
-            BuiltinExecutorKey::Round => tensor_cmds::op_round(self),
-            BuiltinExecutorKey::Mod => tensor_cmds::op_mod(self),
-            BuiltinExecutorKey::Str => cast::op_str(self),
-            BuiltinExecutorKey::Num => cast::op_num(self),
-            BuiltinExecutorKey::Chr => cast::op_chr(self),
-            BuiltinExecutorKey::Chars => cast::op_chars(self),
-            BuiltinExecutorKey::Join => cast::op_join(self),
-            BuiltinExecutorKey::Trim => cast::op_trim(self),
-            BuiltinExecutorKey::Tokenize => cast::op_tokenize(self),
-            BuiltinExecutorKey::Substitute => cast::op_substitute(self),
-            BuiltinExecutorKey::StartsWith => cast::op_starts_with(self),
-            BuiltinExecutorKey::EndsWith => cast::op_ends_with(self),
-            BuiltinExecutorKey::NilCheck => nil_diagnostics::op_nil_check(self),
-            BuiltinExecutorKey::NilReason => nil_diagnostics::op_nil_reason(self),
-            BuiltinExecutorKey::Abs => math_ops::op_abs(self),
-            BuiltinExecutorKey::Neg => math_ops::op_neg(self),
-            BuiltinExecutorKey::Sign => math_ops::op_sign(self),
-            BuiltinExecutorKey::Min => math_ops::op_min(self),
-            BuiltinExecutorKey::Max => math_ops::op_max(self),
-            BuiltinExecutorKey::Sqrt => math_ops::op_sqrt(self),
-            BuiltinExecutorKey::Sort => sort::op_sort(self),
-            BuiltinExecutorKey::Unique => algo_ops::op_unique(self),
-            BuiltinExecutorKey::Contains => algo_ops::op_contains(self),
-            BuiltinExecutorKey::IndexOf => algo_ops::op_index_of(self),
         }
+    }
+
+    /// The canonical name of a Word, for a diagnostic that only holds its id.
+    fn word_name_for(&self, id: WordId) -> &'static str {
+        crate::kernel::generated::GENERATED_WORDS
+            .iter()
+            .find(|word| word.id == id)
+            .map(|word| word.name)
+            .unwrap_or("")
     }
 
     fn get_execution_plan_set(
