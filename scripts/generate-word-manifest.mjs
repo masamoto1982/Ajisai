@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -142,20 +142,29 @@ function rustEnumVariantToSnake(value) {
 
 function extractCoreWords() {
   const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
-  const body = constArrayBody(readRepo(sourcePath), 'BUILTIN_SPECS');
-  // `constArrayBody` strips the trailing `\n];`, so the final entry has no
-  // `BuiltinSpec {` / `];` terminator after it; `$` lets the last block (e.g.
-  // SUPERVISE) match at end-of-body instead of being silently dropped.
-  const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];|$)/g;
-  const parsed = [];
-  for (const match of body.matchAll(pattern)) {
-    const item = match[1];
-    const name = item.match(/\bname:\s*"([^"]+)"/)?.[1];
-    const category = item.match(/\bcategory:\s*"([^"]+)"/)?.[1];
-    if (!name || !category) continue;
-    parsed.push({ name, category });
+  const authoredDir = resolve(repoRoot, 'rust/src/builtins/builtin_specs');
+  const definitions = new Map();
+  const pattern = /pub\(in crate::builtins\) const ([A-Z0-9_]+): RuntimeSpec = RuntimeSpec\s*\{([\s\S]*?)\.\.SPEC_DEFAULT\s*\};/g;
+  for (const file of readdirSync(authoredDir).filter((name) => name.endsWith('.rs') && name !== 'mod.rs').sort()) {
+    const source = readFileSync(resolve(authoredDir, file), 'utf8');
+    for (const match of source.matchAll(pattern)) {
+      const name = match[2].match(/\bname:\s*"([^"]+)"/)?.[1];
+      const category = match[2].match(/\bcategory:\s*"([^"]+)"/)?.[1];
+      if (!name || !category) continue;
+      if (definitions.has(match[1])) fail(`duplicate authored Core Word constant ${match[1]}`);
+      definitions.set(match[1], { name, category });
+    }
   }
+
+  const orderBody = constArrayBody(readRepo(sourcePath), 'RUNTIME_SPECS');
+  const orderedConstants = [...orderBody.matchAll(/authored_specs::[a-z_]+::([A-Z0-9_]+)/g)].map((match) => match[1]);
+  const parsed = orderedConstants.map((constant) => {
+    const entry = definitions.get(constant);
+    if (!entry) fail(`ordered Core Word constant ${constant} has no authored definition`);
+    return entry;
+  });
   if (parsed.length === 0) fail('no core words extracted');
+  if (parsed.length !== definitions.size) fail(`Core Word order has ${parsed.length} entries but ${definitions.size} definitions exist`);
 
   // `slug` drops the non-alphanumeric characters it collapses, so a predicate
   // like `NIL?` and the plain `NIL` share the base slug `nil`. Disambiguate
@@ -168,7 +177,7 @@ function extractCoreWords() {
     const base = slug(name);
     baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
   }
-  const entries = parsed.map(({ name, category }) => {
+  return parsed.map(({ name, category }) => {
     const base = slug(name);
     const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
     let id = `core.${base}`;
@@ -177,7 +186,6 @@ function extractCoreWords() {
     }
     return { id, kind: 'coreword', surface: name, category, source: sourcePath };
   });
-  return entries;
 }
 
 function extractAliases() {
