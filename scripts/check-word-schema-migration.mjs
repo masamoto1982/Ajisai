@@ -58,14 +58,8 @@ for (const word of words.entries) {
   } else if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
   }
-  const normalizedBlock = block.replace(/\\\s*\n\s*/g, '').replace(/\s+/g, ' ');
-  if (!normalizedBlock.includes(word.documentation.summary)) fail(`${word.name} summary drift`);
-  if (!block.includes(`hover_summary: "${word.documentation.hover}"`)) fail(`${word.name} hover drift`);
-  if (!block.includes(`hover_syntax: "${word.documentation.syntax}"`)) fail(`${word.name} syntax drift`);
-  // `effects` used to be written a second time on the Rust spec entry in a
-  // kebab-case respelling, and this reconciled the two copies. The runtime
-  // reads the declared list straight from the generated registry now, so there
-  // is no second spelling to reconcile — only prose is checked below.
+  // Canonical documentation and effects now have one generated spelling.
+  // Aliases remain a separate source-level surface, so reconcile those here.
   for (const alias of word.aliases) {
     const aliasPattern = `alias: "${alias}",`;
     const canonicalPattern = `canonical: Some("${word.name}"),`;

@@ -144,7 +144,7 @@ function extractCoreWords() {
   const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
   const authoredDir = resolve(repoRoot, 'rust/src/builtins/builtin_specs');
   const definitions = new Map();
-  const pattern = /pub\(in crate::builtins\) const ([A-Z0-9_]+): BuiltinSpec = BuiltinSpec\s*\{([\s\S]*?)\.\.SPEC_DEFAULT\s*\};/g;
+  const pattern = /pub\(in crate::builtins\) const ([A-Z0-9_]+): RuntimeSpec = RuntimeSpec\s*\{([\s\S]*?)\.\.SPEC_DEFAULT\s*\};/g;
   for (const file of readdirSync(authoredDir).filter((name) => name.endsWith('.rs') && name !== 'mod.rs').sort()) {
     const source = readFileSync(resolve(authoredDir, file), 'utf8');
     for (const match of source.matchAll(pattern)) {
@@ -156,7 +156,7 @@ function extractCoreWords() {
     }
   }
 
-  const orderBody = constArrayBody(readRepo(sourcePath), 'BUILTIN_SPECS');
+  const orderBody = constArrayBody(readRepo(sourcePath), 'RUNTIME_SPECS');
   const orderedConstants = [...orderBody.matchAll(/authored_specs::[a-z_]+::([A-Z0-9_]+)/g)].map((match) => match[1]);
   const parsed = orderedConstants.map((constant) => {
     const entry = definitions.get(constant);

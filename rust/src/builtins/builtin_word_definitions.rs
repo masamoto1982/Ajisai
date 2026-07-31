@@ -12,53 +12,44 @@ use super::builtin_specs as authored_specs;
 /// from `kernel::generated`, projected from `spec/words.json`, and there is no
 /// second place to write it down.
 ///
-/// What remains is what the specification does not declare — the prose a reader
-/// sees, and three runtime-local classifications (`partiality`,
-/// `safety_level`, `safe_preview`) that describe how the *implementation*
-/// treats a Word rather than what the language says it means. Nothing here is
-/// a second copy of a canonical fact.
+/// Canonical summary/hover/syntax text is projected from `spec/words.json`.
+/// Only implementation-local presentation and safety classifications are joined
+/// here, so no canonical documentation fact is authored twice.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
     pub category: &'static str,
-    /// Layer 3 (hover): one-line "WORD — short verb phrase" shown in the
-    /// native button title attribute. See three-layer-documentation-model.md
-    /// §4.2. Retained during Phase 5 only as a migration-validation oracle.
+    pub summary: &'static str,
     #[allow(dead_code)]
     pub hover_summary: &'static str,
-    /// Layer 3 (hover): shortest useful invocation (operands included, sugar
-    /// preferred when shorter) shown in the inline word-info strip. See
-    /// three-layer-documentation-model.md §4.3.
     pub hover_syntax: &'static str,
-
-    // Layer 2 (LOOKUP) fields. Four-section template:
-    //   Category / Summary / Role / Stack Effect
-    // Stability is shown in the header (e.g. `# ADD  (experimental)`).
-    pub summary: &'static str,
     pub role: &'static str,
     pub stack_effect: &'static str,
-    /// Must agree with the `safety_level` field below. The mapping is:
-    ///   safety_level A or B  -> "stable"
-    ///   safety_level C or D  -> "experimental"
-    ///   safety_level Quarantined -> "experimental"
-    /// A consistency test asserts this invariant.
     pub stability: &'static str,
-
     pub safe_preview: bool,
     pub partiality: Partiality,
     pub safety_level: SafetyLevel,
-    /// How the word takes effect (SPEC §6.4). Defaults to `RuntimeWord`; the
-    /// lazy/no-op control directives (`VENT`, `FLOW`) set this so the
-    /// classification is machine-checkable rather than inferred from prose.
     pub execution_form: ExecutionForm,
 }
 
-pub(in crate::builtins) const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
+/// The implementation-local half of a Core Word description.
+/// Canonical summary/hover/syntax text is generated from `spec/words.json`.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::builtins) struct RuntimeSpec {
+    pub name: &'static str,
+    pub category: &'static str,
+    pub role: &'static str,
+    pub stack_effect: &'static str,
+    pub stability: &'static str,
+    pub safe_preview: bool,
+    pub partiality: Partiality,
+    pub safety_level: SafetyLevel,
+    pub execution_form: ExecutionForm,
+}
+
+pub(in crate::builtins) const SPEC_DEFAULT: RuntimeSpec = RuntimeSpec {
     name: "",
     category: "",
-    hover_summary: "",
-    hover_syntax: "",
-    summary: "",
     role: "",
     stack_effect: "",
     stability: "stable",
@@ -68,7 +59,7 @@ pub(in crate::builtins) const SPEC_DEFAULT: BuiltinSpec = BuiltinSpec {
     execution_form: ExecutionForm::RuntimeWord,
 };
 
-const BUILTIN_SPECS: &[BuiltinSpec] = &[
+const RUNTIME_SPECS: &[RuntimeSpec] = &[
     authored_specs::execution::EAT,
     authored_specs::execution::KEEP,
     authored_specs::collections::GET,
@@ -148,12 +139,44 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 /// that assertion can be written from anywhere.
 #[cfg_attr(not(test), allow(dead_code))]
 pub fn builtin_specs() -> &'static [BuiltinSpec] {
-    BUILTIN_SPECS
+    static SPECS: std::sync::OnceLock<Vec<BuiltinSpec>> = std::sync::OnceLock::new();
+    SPECS.get_or_init(|| {
+        let docs = super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS;
+        assert_eq!(
+            RUNTIME_SPECS.len(),
+            docs.len(),
+            "every runtime entry needs canonical docs"
+        );
+        RUNTIME_SPECS
+            .iter()
+            .zip(docs)
+            .map(|(runtime, doc)| {
+                assert_eq!(
+                    runtime.name, doc.name,
+                    "runtime metadata order must match canonical docs"
+                );
+                BuiltinSpec {
+                    name: runtime.name,
+                    category: runtime.category,
+                    summary: doc.summary,
+                    hover_summary: doc.hover_summary,
+                    hover_syntax: doc.hover_syntax,
+                    role: runtime.role,
+                    stack_effect: runtime.stack_effect,
+                    stability: runtime.stability,
+                    safe_preview: runtime.safe_preview,
+                    partiality: runtime.partiality,
+                    safety_level: runtime.safety_level,
+                    execution_form: runtime.execution_form,
+                }
+            })
+            .collect()
+    })
 }
 
 pub fn lookup_builtin_spec(name: &str) -> Option<&'static BuiltinSpec> {
     let canonical = crate::core_word_aliases::canonicalize_core_word_name(name);
-    BUILTIN_SPECS.iter().find(|spec| spec.name == canonical)
+    builtin_specs().iter().find(|spec| spec.name == canonical)
 }
 
 /// WASM/GUI tuple shape: `(name, hover_summary, hover_syntax)`.
