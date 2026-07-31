@@ -1420,7 +1420,7 @@
       "consumption": "eat",
       "nilPolicy": "passthrough",
       "projection": {
-        "when": "emptyVector",
+        "when": "never",
         "reason": null
       },
       "errorWhen": [
@@ -1457,7 +1457,7 @@
       "consumption": "eat",
       "nilPolicy": "rejectNil",
       "projection": {
-        "when": "emptyVector",
+        "when": "never",
         "reason": null
       },
       "errorWhen": [
@@ -2206,8 +2206,8 @@
       "consumption": "retain",
       "nilPolicy": "consumeNil",
       "projection": {
-        "when": "valueIsNotOperationalNilOrFieldAbsent",
-        "reason": "notAvailable"
+        "when": "never",
+        "reason": null
       },
       "errorWhen": [],
       "purity": "pure",

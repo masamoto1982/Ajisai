@@ -440,8 +440,8 @@ runtime の供給元にした。これで §4.2 が「JSON→Rust 生成に反�
 | 1 | `effects` の綴り重複（正典 `consoleWrite` / Rust `console-write`） | 未着手 |
 | 2 | 書き手のない `force_flag` | 完了（§10.4 追記） |
 | 3 | `[ 1 ] [ 2 ] CONCAT` が `Stack underflow` | 完了（下記） |
-| 4 | `SORT` / `UNIQUE` の `projection.when: emptyVector` が到達不能 | 未着手 |
-| 5 | `NIL?` が宣言した projection を行わない | 未着手 |
+| 4 | `SORT` / `UNIQUE` の `projection.when: emptyVector` が到達不能 | 完了（下記） |
+| 5 | `NIL?` が宣言した projection を行わない | 完了（下記） |
 
 **#1 の観測面**（着手時の前提）: `console-write` が wire に届くのは 2 経路。
 `ajisai contract --json` の `effects` 配列と、`wasm_interpreter_state.rs` の
@@ -472,6 +472,31 @@ operand の要素数に依存してはならない**。個数は bare scalar の
 `NIL?` は projection しないのが正しく、`NIL-REASON` は宣言どおり projection する。
 両者が同じ `projection` 宣言を共有しているのが誤りで、`NIL?` だけ
 `when: "never"` に直せばよい。
+
+**#4 / #5 の解決**: どちらも正典側の誤りだったので、`spec/words.json` の
+`projection.when` を `SORT` / `UNIQUE` / `NIL?` の 3 語で `"never"` に直し、
+生成物（`word_registry.rs` / `word-reference.md`）を再生成した。実装は無変更。
+
+**なぜ気付かれなかったか**（同種の再発を止めた変更）: `projecting_word_set_matches_registry`
+は「宣言された projection を持つ語には必ず挙動 probe がある」ことを守る drift ガードだが、
+フィルタが `nil_policy ∈ {createsNil, passthroughThenProject}` **かつ** projection 宣言、
+という連言だった。このため **projection を宣言していても policy が他の値なら probe を
+すり抜ける**。すり抜けていたのが 4 語で、うち 3 語（上記）が誤宣言、残る `NIL-REASON`
+（`consumeNil`）は正しく projection していた。フィルタを **projection 宣言のみ**を鍵に
+広げ、`NIL-REASON` を `PROJECTING_WORDS` と probe に加えた。ガードが実際に regression を
+捕まえることは、生成レジストリの `NIL?` に projection を戻して失敗を確認して検証済み。
+
+新規 test 3 件:
+
+- `bubble_creation_nil_reason_projects_on_a_reasonless_value` — `NIL-REASON` の probe。
+- `nil_check_answers_rather_than_projecting` — `NIL?` は常に TRUE/FALSE を返す。
+- `an_empty_vector_is_inexpressible` — #4 の宣言が空文である根拠そのもの（literal
+  拒否＋計算経路がすべて NIL）を pin。空ベクタが将来構成可能になればここが落ち、
+  `SORT` / `UNIQUE` の宣言を見直す合図になる。
+
+**残った疑問**: `NIL-REASON` の `projection.reason: "notAvailable"` は観測できない。
+`5 NIL-REASON NIL-REASON` → `5/1 NIL NIL` であり、projection が生む NIL は理由を
+持たない素の NIL である。`reason` を落とすか、理由付き NIL を返すようにするかは別問題。
 
 ---
 

@@ -515,7 +515,7 @@ Return a copy of a vector sorted in ascending order.
 
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `passthrough`; projection: emptyVector → literal NIL
+- **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
@@ -528,7 +528,7 @@ Return a copy of a vector with duplicates removed, preserving first-occurrence o
 
 - **Family:** `collection`
 - **Stack:** 1 input(s) → 1 output(s); `eat` consumption
-- **NIL policy:** `rejectNil`; projection: emptyVector → literal NIL
+- **NIL policy:** `rejectNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.VECTOR`, `LANG.COLLECTIONS.LIFT`, `LANG.MACHINE.LIMITS`
@@ -799,7 +799,7 @@ Test whether the top value is an operational NIL (absent).
 
 - **Family:** `absence`
 - **Stack:** 1 input(s) → 2 output(s); `retain` consumption
-- **NIL policy:** `consumeNil`; projection: valueIsNotOperationalNilOrFieldAbsent → notAvailable
+- **NIL policy:** `consumeNil`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.VALUES.NIL`, `LANG.FAILURE.RECOVERY`
