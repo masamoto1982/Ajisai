@@ -150,31 +150,44 @@ async fn passthrough_blanket_and_unary_collapse_to_nil() {
 /// Projecting words: a well-formed domain miss yields Bubble/NIL with a
 /// reason; malformed use raises an ordinary error.
 const PROJECTING_WORDS: &[&str] = &[
-    "CEIL", "CHR", "DIV", "FILL", "FLOOR", "GET", "INDEX-OF", "MOD", "NUM", "RANGE", "ROUND",
+    "CEIL",
+    "CHR",
+    "DIV",
+    "FILL",
+    "FLOOR",
+    "GET",
+    "INDEX-OF",
+    "MOD",
+    "NIL-REASON",
+    "NUM",
+    "RANGE",
+    "ROUND",
     "SQRT",
 ];
 
-/// Two declared policies can hand back a NIL the Word produced: `createsNil`,
-/// where that is the Word's whole NIL story, and `passthroughThenProject`,
-/// where a NIL operand *also* flows through unchanged. The old vocabulary had
-/// only `createsNil` and so had to pick one of the two facts; DIV and the
-/// rounding family were recorded under it and their passthrough went unsaid.
+/// Declaring a projection condition is a claim that the Word can hand back a
+/// NIL it produced, so **every** Word that declares one carries a behavioral
+/// probe. Declaring a NIL *policy* is not that claim: ABS/NEG/SIGN/MIN/MAX
+/// declare `passthroughThenProject` with a projection of `never`, so nothing
+/// about them can produce a NIL and they need no probe. The condition is what
+/// this set is keyed on.
 ///
-/// Declaring the policy is not the same as having a condition, though:
-/// ABS/NEG/SIGN/MIN/MAX declare `passthroughThenProject` with a projection of
-/// `never`, so nothing about them can produce a NIL and they carry no probe.
-/// Both halves are read here — the policy and the condition — which is what
-/// makes the set exactly the Words a Bubble can come out of.
+/// It used to be keyed on the policy as well — `createsNil` or
+/// `passthroughThenProject`, *and* a declared condition. That conjunction let a
+/// Word declare a projection and still escape every probe just by having some
+/// other policy, and four Words did. Three of them were declaring something
+/// untrue: `SORT` (`passthrough`) and `UNIQUE` (`rejectNil`) declared
+/// `emptyVector`, a condition no program can reach because an empty vector is
+/// inexpressible, and `NIL?` (`consumeNil`) declared
+/// `valueIsNotOperationalNilOrFieldAbsent` but answers `FALSE`, never NIL. All
+/// three are now `never`. The fourth, `NIL-REASON`, genuinely projects under
+/// `consumeNil`, so keying on the condition alone brings it into the probed set
+/// instead of leaving it unchecked.
 #[test]
 fn projecting_word_set_matches_registry() {
     let mut registry: Vec<&str> = crate::kernel::generated::GENERATED_WORDS
         .iter()
-        .filter(|word| {
-            matches!(
-                word.nil_policy,
-                NilPolicy::CreatesNil | NilPolicy::PassthroughThenProject
-            ) && word.projection.is_some()
-        })
+        .filter(|word| word.projection.is_some())
         .map(|word| word.name)
         .collect();
     registry.sort_unstable();
@@ -186,6 +199,117 @@ fn projecting_word_set_matches_registry() {
          behavioral probe for any new word"
     );
 }
+
+/// `NIL-REASON` projects on the condition it declares: a value that is not an
+/// operational NIL carrying a reason has no reason to read, so the answer is
+/// NIL rather than an error. A reasoned NIL answers with its reason string.
+#[tokio::test]
+async fn bubble_creation_nil_reason_projects_on_a_reasonless_value() {
+    for code in ["5 NIL-REASON", "[ 1 2 ] NIL-REASON", "'ab' NIL-REASON"] {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+        let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
+        assert!(answer.is_nil(), "`{code}` must project NIL, got {answer:?}");
+    }
+
+    // The retained operand keeps its place under the answer, and a NIL that
+    // does carry a reason reads back as that reason rather than projecting.
+    let mut interp = Interpreter::new();
+    interp.execute("1 0 / NIL-REASON").await.unwrap();
+    let answer = interp.stack.last().expect("NIL-REASON pushes an answer");
+    assert!(
+        !answer.is_nil(),
+        "a reasoned NIL must read back its reason, got NIL"
+    );
+}
+
+/// `NIL?` answers a question; it never projects. It declared
+/// `valueIsNotOperationalNilOrFieldAbsent` → `notAvailable`, the same condition
+/// as `NIL-REASON`, but a predicate that returned NIL for "not a NIL" could not
+/// be asked its question. Pinned so the declaration cannot drift back.
+#[tokio::test]
+async fn nil_check_answers_rather_than_projecting() {
+    for (code, expected_nil) in [
+        ("5 NIL?", false),
+        ("[ 1 2 ] NIL?", false),
+        ("'ab' NIL?", false),
+        ("NIL NIL?", true),
+        ("1 0 / NIL?", true),
+    ] {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+        let answer = interp.stack.last().expect("NIL? pushes an answer");
+        assert!(
+            !answer.is_nil(),
+            "`{code}` must answer TRUE or FALSE, never NIL"
+        );
+        assert_eq!(
+            answer.as_truth(),
+            Some(expected_nil),
+            "`{code}` answered the wrong way"
+        );
+    }
+}
+
+/// **An empty vector is inexpressible**, which is why `SORT` and `UNIQUE`
+/// declare a projection of `never` rather than `emptyVector`.
+///
+/// The parser refuses the literal, and every operation that would compute an
+/// emptiness answers NIL instead — an absence, not a zero-length vector
+/// (`EmptySequence`, SPEC §4.5). A projection condition of `emptyVector` was
+/// therefore a condition no program could reach. Pinned here rather than on
+/// `SORT`/`UNIQUE` because it is the language-wide fact that makes the
+/// declaration vacuous: if an empty vector ever becomes constructible, this
+/// fails and both declarations need revisiting.
+#[tokio::test]
+async fn an_empty_vector_is_inexpressible() {
+    for literal in ["[ ]", "[ [ ] ]"] {
+        let mut interp = Interpreter::new();
+        let message = interp
+            .execute(literal)
+            .await
+            .expect_err("the parser refuses an empty vector literal")
+            .to_string();
+        assert!(
+            message.contains("Empty vector"),
+            "`{literal}` must be refused as an empty vector: {message}"
+        );
+    }
+
+    // Each of these computes an emptiness by a different route: a filter that
+    // keeps nothing, a zero-length prefix, a zero-sized split chunk, and the
+    // empty string.
+    for code in ["[ 1 2 3 ] { FALSE } FILTER", "[ 1 2 3 ] [ 0 ] TAKE", "''"] {
+        let mut interp = Interpreter::new();
+        interp
+            .execute(code)
+            .await
+            .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
+        let result = interp.stack.last().expect("a result value");
+        assert!(
+            result.is_nil(),
+            "`{code}` must answer NIL, not an empty vector: {result:?}"
+        );
+    }
+
+    // A zero-sized SPLIT chunk is NIL beside the non-empty one, so even a
+    // vector's elements cannot be empty vectors.
+    let mut interp = Interpreter::new();
+    interp.execute("[ 1 2 3 ] [ 0 3 ] SPLIT").await.unwrap();
+    assert_eq!(interp.stack.len(), 2, "SPLIT pushes one value per size");
+    assert!(
+        interp.stack[0].is_nil(),
+        "the zero-sized chunk must be NIL, got {:?}",
+        interp.stack[0]
+    );
+}
+
 #[tokio::test]
 async fn bubble_creation_comparison_nil_input() {
     // Comparison words are Projecting/Passthrough (SPEC §7.14, revised). A
