@@ -1566,7 +1566,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null
@@ -1602,7 +1602,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null
@@ -1638,7 +1638,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null
@@ -1674,7 +1674,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null
@@ -1710,7 +1710,7 @@
         "outputs": 1
       },
       "consumption": "eat",
-      "nilPolicy": "rejectNil",
+      "nilPolicy": "consumeNil",
       "projection": {
         "when": "never",
         "reason": null

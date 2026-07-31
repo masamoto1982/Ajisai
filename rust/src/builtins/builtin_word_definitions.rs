@@ -810,7 +810,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ vec ] { body } -> [ mapped ]",
         partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        nil_policy: NilPolicy::ConsumesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -827,7 +827,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ vec ] { pred } -> [ kept ]",
         partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        nil_policy: NilPolicy::ConsumesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -844,7 +844,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ vec ] [ init ] { combine } -> [ result ]",
         partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        nil_policy: NilPolicy::ConsumesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -861,7 +861,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ vec ] { pred } -> [ TRUE | FALSE ]",
         partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        nil_policy: NilPolicy::ConsumesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },
@@ -877,7 +877,7 @@ const BUILTIN_SPECS: &[BuiltinSpec] = &[
 
         stack_effect: "[ vec ] { pred } -> [ TRUE | FALSE ]",
         partiality: Partiality::Partial,
-        nil_policy: NilPolicy::RejectsNil,
+        nil_policy: NilPolicy::ConsumesNil,
         safety_level: SafetyLevel::B,
         ..SPEC_DEFAULT
         },

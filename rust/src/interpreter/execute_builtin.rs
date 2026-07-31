@@ -163,23 +163,12 @@ impl Interpreter {
     /// arity is data-dependent carry no fixed operand window and are left to
     /// their executors.
     fn reject_nil_operands(&self, name: &str) -> Result<()> {
-        use crate::kernel::generated::{Arity, Family, NilPolicy, GENERATED_WORDS};
+        use crate::kernel::generated::{Arity, NilPolicy, GENERATED_WORDS};
 
         let Some(word) = GENERATED_WORDS.iter().find(|word| word.name == name) else {
             return Ok(());
         };
         if word.nil_policy != NilPolicy::RejectNil {
-            return Ok(());
-        }
-        // The higher-order Words are deliberately excluded, pending a decision.
-        // `spec/words.json` declares them `rejectNil`, but the conformance
-        // corpus pins the opposite by name — `core-fold-nil-target-returns-init`,
-        // `core-any-nil-target-false`, `core-all-nil-target-true` — i.e. a NIL
-        // target behaves as an empty collection, with the usual vacuous
-        // answers. Both sources are authoritative and they disagree on intent,
-        // which is a specification question rather than an executor defect, so
-        // enforcing either one here would be overreach.
-        if word.family == Family::HigherOrder {
             return Ok(());
         }
         let Arity::Fixed(arity) = word.stack_inputs else {
