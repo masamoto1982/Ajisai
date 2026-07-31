@@ -392,9 +392,9 @@
 </section>
 
 <section class="ajisai-case" id="core-concat-text-codepoints" data-category="core">
-  <h3>CONCAT coerces Text operands to their code-point vectors</h3>
+  <h3>CONCAT of two Texts is a Text</h3>
   <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
-  <pre class="ajisai-expect-result">[ 97/1 98/1 99/1 100/1 ]</pre>
+  <pre class="ajisai-expect-result">'abcd'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -408,7 +408,7 @@
 <section class="ajisai-case" id="core-concat-singleton-text-operand" data-category="core">
   <h3>CONCAT joins a one-character Text, which is a one-codepoint vector</h3>
   <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
-  <pre class="ajisai-expect-result">[ 97/1 98/1 99/1 ]</pre>
+  <pre class="ajisai-expect-result">'abc'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
