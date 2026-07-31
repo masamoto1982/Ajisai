@@ -147,9 +147,56 @@ impl Interpreter {
         self.execute_builtin_direct(canonical.as_ref())
     }
 
+    /// Enforce the Word's declared `rejectNil` contract before its primitive
+    /// runs.
+    ///
+    /// `spec/words.json` declares, per Word, what a NIL operand means. Until
+    /// now each executor decided that for itself, so the declaration was
+    /// decorative: `LENGTH` answered `0` for the length of a NIL and `CONCAT`
+    /// absorbed the NIL as an element, both while declaring `rejectNil`. A
+    /// bubble buried inside a collection is exactly the outcome the absence
+    /// model exists to prevent, so the shared decision belongs in one place
+    /// that reads the declaration.
+    ///
+    /// `rejectNil` binds every operand position, not just the receiver, so a
+    /// NIL anywhere in the Word's declared arity is malformed use. Words whose
+    /// arity is data-dependent carry no fixed operand window and are left to
+    /// their executors.
+    fn reject_nil_operands(&self, name: &str) -> Result<()> {
+        use crate::kernel::generated::{Arity, Family, NilPolicy, GENERATED_WORDS};
+
+        let Some(word) = GENERATED_WORDS.iter().find(|word| word.name == name) else {
+            return Ok(());
+        };
+        if word.nil_policy != NilPolicy::RejectNil {
+            return Ok(());
+        }
+        // The higher-order Words are deliberately excluded, pending a decision.
+        // `spec/words.json` declares them `rejectNil`, but the conformance
+        // corpus pins the opposite by name — `core-fold-nil-target-returns-init`,
+        // `core-any-nil-target-false`, `core-all-nil-target-true` — i.e. a NIL
+        // target behaves as an empty collection, with the usual vacuous
+        // answers. Both sources are authoritative and they disagree on intent,
+        // which is a specification question rather than an executor defect, so
+        // enforcing either one here would be overreach.
+        if word.family == Family::HigherOrder {
+            return Ok(());
+        }
+        let Arity::Fixed(arity) = word.stack_inputs else {
+            return Ok(());
+        };
+        let operands = self.stack.as_slice();
+        let start = operands.len().saturating_sub(arity as usize);
+        if operands[start..].iter().any(|operand| operand.is_nil()) {
+            return Err(AjisaiError::create_structure_error("a value", "NIL"));
+        }
+        Ok(())
+    }
+
     pub(crate) fn execute_builtin_direct(&mut self, name: &str) -> Result<()> {
         if let Some(spec) = lookup_builtin_spec(name) {
             if let Some(executor_key) = spec.executor_key {
+                self.reject_nil_operands(name)?;
                 return self.execute_builtin_by_key(executor_key);
             }
         }

@@ -49,15 +49,15 @@ enum Outcome {
 /// declares. Each entry records the declared policy, the observed behavior, and
 /// the decision taken. Remove an entry when its executor is corrected.
 const KNOWN_DIVERGENCES: &[(&str, Outcome, &str)] = &[
-    // Declared `rejectNil`; returns 0 for the length of a NIL. Decision: error.
-    ("LENGTH", Outcome::Value, "returns 0 instead of rejecting"),
-    // Declared `rejectNil`; absorbs the NIL as an ordinary element instead
-    // (`[ 1 ] NIL CONCAT` -> `[ 1 NIL ]`), so a bubble is silently buried
-    // inside a collection. Found by this gate, not by manual review.
-    // Decision: error.
-    ("CONCAT", Outcome::Value, "absorbs NIL as a vector element"),
-    // Declared `rejectNil`; yields a reason-less NIL. Decision: error.
-    ("EXEC", Outcome::NilWithoutReason, "swallows the NIL reason"),
+    // The `rejectNil` entries (LENGTH, CONCAT, EXEC, CONTAINS) are gone: the
+    // dispatch guard in `execute_builtin` now enforces that policy from the
+    // declaration, so they conform.
+    //
+    // The two below are `passthrough`, which the guard does not yet implement —
+    // passing a NIL through means synthesising the result and unwinding the
+    // operands, which has to respect the consumption mode, so it is a larger
+    // change than refusing to run.
+
     // Declared `passthrough`; raises an error instead. Decision: pass through.
     (
         "SORT",
@@ -180,24 +180,26 @@ fn declared_nil_policy_is_honored_at_runtime() {
 #[test]
 fn divergence_baseline_does_not_grow() {
     assert!(
-        KNOWN_DIVERGENCES.len() <= 5,
+        KNOWN_DIVERGENCES.len() <= 2,
         "KNOWN_DIVERGENCES grew to {}; a new Word may not diverge from its declared contract",
         KNOWN_DIVERGENCES.len()
     );
 }
 
 /// `rejectNil` is declared once per Word, so it binds **every** operand
-/// position. The blanket probe above fills all operands with NIL, which for the
-/// search Words trips the vector-operand rejection first and hides the needle
-/// position — so that position gets its own probe.
+/// position, not just the receiver. The blanket probe above fills all operands
+/// with NIL, which for the search Words trips the vector-operand rejection
+/// first and hides the needle position — so that position gets its own probe.
 ///
 /// `CONTAINS` is documented as "true if a vector contains an element **equal
-/// to** the given value", yet a NIL needle currently yields `FALSE`, asserting
-/// that nothing equals NIL. `EQ` disagrees: `NIL EQ NIL` is NIL, not TRUE, so
-/// the aggregate answer is *unknown*, not false. `INDEX-OF` is the same
-/// operation and answers `0` for the same input.
+/// to** the given value", yet answered `FALSE` for a NIL needle, asserting that
+/// nothing equals NIL. `EQ` disagrees: `NIL EQ NIL` is NIL, not TRUE, so the
+/// aggregate answer is *unknown*, not false — the Word contradicted the
+/// operation it is defined in terms of. It now rejects, per its declaration.
 ///
-/// Decision: `rejectNil` applies to the needle too, so both must error.
+/// `INDEX-OF` declares `createsNil`, not `rejectNil`, so the guard leaves it
+/// alone and it still answers a reasoned NIL for an absent needle. Pinned here
+/// so the difference between the two declarations stays visible.
 #[test]
 fn search_words_reject_a_nil_needle() {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -205,16 +207,14 @@ fn search_words_reject_a_nil_needle() {
         .build()
         .expect("tokio current-thread runtime");
 
-    // Recorded divergence, not endorsement: both should be `Outcome::Error`.
     for (program, current) in [
-        ("[ 1 ] 1 0 DIV CONTAINS", Outcome::Value),
+        ("[ 1 ] 1 0 DIV CONTAINS", Outcome::Error),
         ("[ 1 ] 1 0 DIV INDEX-OF", Outcome::NilWithReason),
     ] {
         assert_eq!(
             runtime.block_on(observe(program)),
             current,
-            "`{program}` changed behavior; if it now errors, the divergence is fixed — \
-             delete this case"
+            "`{program}` changed behavior; update this case deliberately"
         );
     }
 }
