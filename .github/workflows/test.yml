@@ -117,6 +117,9 @@ jobs:
       - name: Check formalization coverage
         run: npm run check:formalization-coverage
 
+      - name: Check Minimal Core closure
+        run: npm run check:minimal-core
+
       - name: TypeScript check
         run: npm run check
 
