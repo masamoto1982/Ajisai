@@ -310,7 +310,9 @@ fn encode_value(value: &Value) -> Result<PersistValue, String> {
     // The reason lives on `Value`, not in `ValueData`, so it is attached here
     // rather than inside `encode_data`.
     if let PersistData::Nil { r } = &mut d {
-        *r = value.nil_reason().map(|reason| reason.as_protocol_str().to_string());
+        *r = value
+            .nil_reason()
+            .map(|reason| reason.as_protocol_str().to_string());
     }
     Ok(PersistValue {
         h: hint_to_tag(value.hint).to_string(),

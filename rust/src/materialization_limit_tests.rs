@@ -25,7 +25,7 @@ mod materialization_limit_tests {
             .get_stack()
             .last()
             .and_then(|v| v.absence.as_ref())
-            .and_then(|a| a.reason.clone())
+            .and_then(|a| a.reason)
     }
 
     #[tokio::test]
