@@ -2,7 +2,7 @@ use std::fmt;
 
 pub type Result<T> = std::result::Result<T, AjisaiError>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NilReason {
     DivisionByZero,
     EmptySequence,
@@ -137,6 +137,42 @@ impl NilReason {
             NilReason::NotAvailable => "notAvailable",
             NilReason::Literal => "literal",
         }
+    }
+
+    /// Every `NilReason`, so a boundary that must round-trip one can search
+    /// this list instead of restating the mapping. `as_protocol_str` stays the
+    /// single spelling authority: a new reason is added here and named there,
+    /// and `from_protocol_str` follows without another table to update.
+    pub const ALL: &'static [NilReason] = &[
+        NilReason::DivisionByZero,
+        NilReason::EmptySequence,
+        NilReason::MissingField,
+        NilReason::InvalidEncoding,
+        NilReason::InvalidLens,
+        NilReason::StackUnderflow,
+        NilReason::IndexOutOfBounds,
+        NilReason::UnknownWord,
+        NilReason::ExecutionFailure,
+        NilReason::Undecidable,
+        NilReason::NoData,
+        NilReason::PortDisconnected,
+        NilReason::SpaceExhausted,
+        NilReason::DomainMiss,
+        NilReason::NotAvailable,
+        NilReason::Literal,
+    ];
+
+    /// The reason a protocol string names, or `None` when it names none.
+    ///
+    /// LANG.VALUES.NIL makes the reason the entire observable content of a
+    /// NIL, so a boundary that persists a value and reads it back has to carry
+    /// the reason across or it changes the value. The persistence codec and
+    /// the value arena both decode through here.
+    pub fn from_protocol_str(s: &str) -> Option<NilReason> {
+        NilReason::ALL
+            .iter()
+            .find(|reason| reason.as_protocol_str() == s)
+            .copied()
     }
 }
 

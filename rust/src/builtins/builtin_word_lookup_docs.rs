@@ -284,7 +284,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         word: "FILTER",
         behavior: "Pops the predicate block, then the target vector, and\npushes the vector of elements for which the predicate\nholds.",
         examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] { [ 2 ] = } FILTER",
+            code: "[ 1 2 3 ] { 2 = } FILTER",
             result: "Pushes [ 2 ].",
         }],
         failure_note: "",

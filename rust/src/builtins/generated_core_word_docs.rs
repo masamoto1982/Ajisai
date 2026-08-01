@@ -405,7 +405,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Higher-order primitive: Keep only the elements for which a predicate block returns TRUE.",
         stack_effect: "[ vec ] { pred } -> [ kept ]",
         hover_summary: "FILTER — keep elements matching predicate",
-        hover_syntax: "[ 1 2 3 ] { [ 2 ] = } FILTER",
+        hover_syntax: "[ 1 2 3 ] { 2 = } FILTER",
     },
     GeneratedCoreWordDoc {
         name: "FOLD",
@@ -423,7 +423,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
         stack_effect: "[ vec ] { pred } -> [ TRUE | FALSE ]",
         hover_summary: "ANY — true if any element matches",
-        hover_syntax: "[ 1 2 3 ] { [ 2 ] = } ANY",
+        hover_syntax: "[ 1 2 3 ] { 2 = } ANY",
     },
     GeneratedCoreWordDoc {
         name: "ALL",
@@ -432,7 +432,7 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
         role: "Higher-order primitive: TRUE if every element satisfies the predicate.",
         stack_effect: "[ vec ] { pred } -> [ TRUE | FALSE ]",
         hover_summary: "ALL — true if all elements match",
-        hover_syntax: "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
+        hover_syntax: "[ 2 4 ] { 2 MOD 0 = } ALL",
     },
     GeneratedCoreWordDoc {
         name: "CHARS",
@@ -536,11 +536,11 @@ pub(crate) const GENERATED_CORE_WORD_DOCS: &[GeneratedCoreWordDoc] = &[
     GeneratedCoreWordDoc {
         name: "EXEC",
         category: "control",
-        summary: "Execute a vector as Ajisai code.",
-        role: "Control primitive: Execute a vector as Ajisai code.",
-        stack_effect: "[ code ] -> [ result... ]",
-        hover_summary: "EXEC — execute vector as code",
-        hover_syntax: "[ 1 2 + ] EXEC",
+        summary: "Evaluate a code block.",
+        role: "Control primitive: Evaluate a code block.",
+        stack_effect: "[ { code } ] -> [ result... ]",
+        hover_summary: "EXEC — evaluate a code block",
+        hover_syntax: "{ 1 2 ADD } EXEC",
     },
     GeneratedCoreWordDoc {
         name: "NIL",

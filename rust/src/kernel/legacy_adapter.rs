@@ -87,7 +87,7 @@ impl From<&KernelValue> for Value {
             KernelValue::Vector(items) => {
                 Value::from_children(items.iter().map(Value::from).collect())
             }
-            KernelValue::Nil(Some(reason)) => Value::nil_with_reason(reason.clone()),
+            KernelValue::Nil(Some(reason)) => Value::nil_with_reason(*reason),
             // `Nil(None)` is not the written literal — the literal carries the
             // reason `literal`. It is the Spine's residual "absence with no
             // reason recorded", which only the legacy side can still produce

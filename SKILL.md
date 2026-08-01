@@ -209,10 +209,10 @@ exist. There is no module system and nothing to import.
 | `CONTAINS` | vector | True if a vector contains an element equal to the given value. — e.g. `[ 1 2 ] 2 CONTAINS` |
 | `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
 | `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
-| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
+| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { 2 = } FILTER` |
 | `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
-| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } ANY` |
-| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
+| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { 2 = } ANY` |
+| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { 2 MOD 0 = } ALL` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
@@ -224,7 +224,7 @@ exist. There is no module system and nothing to import.
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `CHR` | cast | Convert a numeric character code to a single-character string. — e.g. `65 CHR` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
-| `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
+| `EXEC` | control | Evaluate a code block. — e.g. `{ 1 2 ADD } EXEC` |
 | `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
 | `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
 | `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
