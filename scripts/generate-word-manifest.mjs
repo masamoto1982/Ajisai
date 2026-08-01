@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -147,6 +147,7 @@ function extractCoreWords() {
     category: word.category,
   }));
   if (parsed.length === 0) fail('no core words extracted');
+  if (parsed.length !== definitions.size) fail(`Core Word order has ${parsed.length} entries but ${definitions.size} definitions exist`);
 
   const baseCounts = new Map();
   for (const { name } of parsed) {
