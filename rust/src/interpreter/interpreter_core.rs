@@ -59,18 +59,6 @@ pub enum ConsumptionMode {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct UserDictionary {
-    pub order: u64,
-    pub words: HashMap<String, Arc<WordDefinition>>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct DictionaryDependencyInfo {
-    pub depends_on: HashSet<String>,
-    pub depended_by: HashSet<String>,
-}
-
-#[derive(Debug, Clone)]
 pub struct ResolveCacheEntry {
     pub resolved_name: String,
     pub dictionary_epoch: u64,
@@ -141,7 +129,6 @@ pub struct Interpreter {
     pub(crate) stack: Stack,
     pub(crate) core_vocabulary: HashMap<String, Arc<WordDefinition>>,
     pub(crate) user_words: HashMap<String, Arc<WordDefinition>>,
-    pub(crate) user_dictionaries: HashMap<String, UserDictionary>,
     pub(crate) dependents: HashMap<String, HashSet<String>>,
     pub(crate) output_buffer: String,
     /// Structured, ordered host effects produced during execution. This is the
@@ -181,9 +168,7 @@ pub struct Interpreter {
     /// than running for minutes. Reset per top-level `execute`.
     pub(crate) numeric_work_used: u64,
 
-    pub(crate) dictionary_dependencies: HashMap<String, DictionaryDependencyInfo>,
     pub(crate) next_registration_order: u64,
-    pub(crate) active_user_dictionary: String,
 
     pub(crate) global_epoch: u64,
     pub(crate) dictionary_epoch: u64,
@@ -203,7 +188,6 @@ pub struct Interpreter {
     /// dictionary's words first (Section 8.6), so an imported word group is
     /// self-referential regardless of which other dictionaries are loaded.
     /// `None` at top level, where resolution falls back to the global order.
-    pub(crate) owning_dictionary_context: Option<String>,
 
     /// Content identity of each user word, keyed by fully-qualified name
     /// (Section 8.6). Derived state: recomputed whenever the user-word graph
@@ -296,7 +280,6 @@ impl Interpreter {
             stack: Stack::new(),
             core_vocabulary: HashMap::new(),
             user_words: HashMap::new(),
-            user_dictionaries: HashMap::new(),
             dependents: HashMap::new(),
             output_buffer: String::new(),
             host_effects: Vec::new(),
@@ -313,9 +296,7 @@ impl Interpreter {
             max_execution_steps: DEFAULT_MAX_EXECUTION_STEPS,
             runtime_limits: super::runtime_limits::RuntimeLimits::default(),
             numeric_work_used: 0,
-            dictionary_dependencies: HashMap::new(),
             next_registration_order: 1,
-            active_user_dictionary: "EXAMPLE".to_string(),
             global_epoch: 0,
             dictionary_epoch: 0,
             execution_epoch: 0,
@@ -326,7 +307,6 @@ impl Interpreter {
 
             // Elastic Engine
             resolve_cache: HashMap::new(),
-            owning_dictionary_context: None,
             word_identities: HashMap::new(),
             body_store: HashMap::new(),
             defer_identity_recompute: false,

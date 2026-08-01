@@ -26,7 +26,6 @@ impl Interpreter {
         self.stack.clear();
         self.core_vocabulary.clear();
         self.user_words.clear();
-        self.user_dictionaries.clear();
         self.dependents.clear();
         self.output_buffer.clear();
         self.host_effects.clear();
@@ -42,13 +41,10 @@ impl Interpreter {
         self.tail_jump_pending = false;
         // `cond_dispatch_enabled` is a configuration flag, not run state, so it
         // is intentionally not reset here.
-        self.owning_dictionary_context = None;
         self.word_identities.clear();
         self.body_store.clear();
         self.defer_identity_recompute = false;
-        self.dictionary_dependencies.clear();
         self.next_registration_order = 1;
-        self.active_user_dictionary = "EXAMPLE".to_string();
         // Top-level roles live on the stack now and were cleared with it above
         // (`self.stack.clear()`); the registry keeps only value-id-keyed flow
         // state, which session reset leaves untouched, as before.

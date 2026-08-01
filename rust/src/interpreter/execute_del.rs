@@ -7,13 +7,12 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
 
     let name = extract_word_name_from_value(&val)?;
 
-    let upper_name = name.to_uppercase();
+    // Canonicalize first, so a surface alias reaches the same entry the
+    // Core seal protects (`'+' DEL` is a delete of `ADD`).
+    let upper_name =
+        crate::core_word_aliases::canonicalize_core_word_name(&name.to_uppercase()).into_owned();
 
-    let (target_dict, word_name) = if let Some((ns, w)) = interp.split_qualified_name(&upper_name) {
-        (Some(ns), w)
-    } else {
-        (None, upper_name.clone())
-    };
+    let word_name = upper_name.clone();
 
     if interp.core_vocabulary.contains_key(&word_name) {
         return Err(AjisaiError::BuiltinProtection {
@@ -22,21 +21,20 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         });
     }
 
-    if target_dict.is_none() && interp.user_dictionaries.contains_key(&word_name) {
-        interp.user_dictionaries.remove(&word_name);
-        interp.sync_user_words_cache();
-        interp.rebuild_dependencies()?;
-        interp
-            .output_buffer
-            .push_str(&format!("Deleted dictionary: {}\n", word_name));
-        interp.bump_dictionary_epoch();
-        return Ok(());
+    // A name that no User Word holds is `wordNotFound`. DEL used to reach this
+    // through a dictionary-owner search that also accepted `DICT@WORD`; with
+    // two tiers the name is the whole address, so the question is simply
+    // whether the User tier holds it.
+    if !interp.user_words.contains_key(&word_name) {
+        return Err(AjisaiError::from(format!(
+            "Word '{}' is not defined",
+            word_name
+        )));
     }
 
-    let owner_name = find_word_owner(interp, target_dict.as_deref(), &word_name)?;
-
-    let fq_name = format!("{}@{}", owner_name, word_name);
-    let dependents = interp.collect_dependents(&fq_name);
+    // DEL used to also delete a whole named dictionary when the name matched
+    // one. There are no named dictionaries to delete now.
+    let dependents = interp.collect_dependents(&word_name);
 
     // A referenced word is not deletable. There is no force modifier: the
     // vocabulary has no Word that overrides this, so the refusal is final and
@@ -49,58 +47,26 @@ pub fn op_del(interp: &mut Interpreter) -> Result<()> {
         )));
     }
 
-    let removed_def = interp
-        .user_dictionaries
-        .get_mut(&owner_name)
-        .and_then(|dict| dict.words.remove(&word_name));
+    let removed_def = interp.user_words.remove(&word_name);
 
     if let Some(removed_def) = removed_def {
-        interp.sync_user_words_cache();
         for dep_name in &removed_def.dependencies {
             if let Some(deps) = interp.dependents.get_mut(dep_name) {
-                deps.remove(&fq_name);
+                deps.remove(&upper_name);
             }
         }
-        interp.dependents.remove(&fq_name);
+        interp.dependents.remove(&upper_name);
         for deps in interp.dependents.values_mut() {
-            deps.remove(&fq_name);
+            deps.remove(&upper_name);
         }
     }
 
     interp
         .output_buffer
-        .push_str(&format!("Deleted word: {}\n", fq_name));
+        .push_str(&format!("Deleted word: {}\n", word_name));
 
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp.bump_dictionary_epoch();
     Ok(())
-}
-
-fn find_word_owner(
-    interp: &Interpreter,
-    target_dict: Option<&str>,
-    word_name: &str,
-) -> Result<String> {
-    if let Some(dict_name) = target_dict {
-        if let Some(dict) = interp.user_dictionaries.get(dict_name) {
-            if dict.words.contains_key(word_name) {
-                return Ok(dict_name.to_string());
-            }
-        }
-        Err(AjisaiError::from(format!(
-            "Word '{}@{}' is not defined",
-            dict_name, word_name
-        )))
-    } else {
-        for (dict_name, dict) in &interp.user_dictionaries {
-            if dict.words.contains_key(word_name) {
-                return Ok(dict_name.clone());
-            }
-        }
-        Err(AjisaiError::from(format!(
-            "Word '{}' is not defined",
-            word_name
-        )))
-    }
 }

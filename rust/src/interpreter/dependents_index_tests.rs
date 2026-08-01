@@ -28,12 +28,12 @@ mod tests {
         interp.execute("{ A } 'B' DEF").await.unwrap();
 
         assert_eq!(
-            interp.collect_dependents("EXAMPLE@A"),
-            set(&["EXAMPLE@B"]),
+            interp.collect_dependents("A"),
+            set(&["B"]),
             "B references A, so A's dependents must be {{B}}"
         );
         assert!(
-            interp.collect_dependents("EXAMPLE@B").is_empty(),
+            interp.collect_dependents("B").is_empty(),
             "nothing references B, so B has no dependents"
         );
     }
@@ -48,22 +48,22 @@ mod tests {
         interp.execute("{ B } 'C' DEF").await.unwrap();
 
         assert_eq!(
-            interp.collect_dependents("EXAMPLE@A"),
-            set(&["EXAMPLE@B"]),
+            interp.collect_dependents("A"),
+            set(&["B"]),
             "direct dependents of A is just B"
         );
         assert_eq!(
-            interp.collect_transitive_dependents("EXAMPLE@A"),
-            set(&["EXAMPLE@B", "EXAMPLE@C"]),
+            interp.collect_transitive_dependents("A"),
+            set(&["B", "C"]),
             "transitive dependents of A reach C through B"
         );
         assert_eq!(
-            interp.collect_transitive_dependents("EXAMPLE@B"),
-            set(&["EXAMPLE@C"]),
+            interp.collect_transitive_dependents("B"),
+            set(&["C"]),
             "transitive dependents of B is just C"
         );
         assert!(
-            interp.collect_transitive_dependents("EXAMPLE@C").is_empty(),
+            interp.collect_transitive_dependents("C").is_empty(),
             "C is a leaf in the dependency chain"
         );
     }
@@ -77,8 +77,8 @@ mod tests {
         interp.execute("{ A } 'C' DEF").await.unwrap();
 
         assert_eq!(
-            interp.collect_dependents("EXAMPLE@A"),
-            set(&["EXAMPLE@B", "EXAMPLE@C"]),
+            interp.collect_dependents("A"),
+            set(&["B", "C"]),
             "both B and C reference A"
         );
     }
@@ -92,13 +92,13 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
         interp.execute("{ A } 'B' DEF").await.unwrap();
-        assert_eq!(interp.collect_dependents("EXAMPLE@A"), set(&["EXAMPLE@B"]));
+        assert_eq!(interp.collect_dependents("A"), set(&["B"]));
 
         // B no longer references A. B has no dependents, so no force is needed.
         interp.execute("{ [ 2 ] } 'B' DEF").await.unwrap();
 
         assert!(
-            interp.collect_dependents("EXAMPLE@A").is_empty(),
+            interp.collect_dependents("A").is_empty(),
             "after redefining B without A, A must have no dependents"
         );
     }
@@ -109,13 +109,13 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
         interp.execute("{ A } 'B' DEF").await.unwrap();
-        assert_eq!(interp.collect_dependents("EXAMPLE@A"), set(&["EXAMPLE@B"]));
+        assert_eq!(interp.collect_dependents("A"), set(&["B"]));
 
         // B is a leaf (nothing depends on it), so a plain DEL is allowed.
         interp.execute("'B' DEL").await.unwrap();
 
         assert!(
-            interp.collect_dependents("EXAMPLE@A").is_empty(),
+            interp.collect_dependents("A").is_empty(),
             "after deleting B, A must have no dependents"
         );
     }
@@ -128,13 +128,11 @@ mod tests {
         interp.execute("{ [ 1 ] } 'A' DEF").await.unwrap();
 
         assert!(
-            interp.collect_dependents("EXAMPLE@NOPE").is_empty(),
+            interp.collect_dependents("NOPE").is_empty(),
             "a name nothing references has no dependents"
         );
         assert!(
-            interp
-                .collect_transitive_dependents("EXAMPLE@NOPE")
-                .is_empty(),
+            interp.collect_transitive_dependents("NOPE").is_empty(),
             "an unreferenced name has no transitive dependents"
         );
     }

@@ -33,11 +33,7 @@ mod tests {
     async fn user_defined_word_is_contrib_tier() {
         let mut interp = Interpreter::new();
         interp.execute("{ 1 } 'X' DEF").await.unwrap();
-        let def = interp
-            .user_dictionaries
-            .get("EXAMPLE")
-            .and_then(|d| d.words.get("X"))
-            .unwrap();
+        let def = interp.user_words.get("X").unwrap();
         assert_eq!(def.tier, Tier::Contrib);
         assert_eq!(def.stability, Stability::Stable);
     }

@@ -1681,6 +1681,48 @@
      a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
      observes a rational enclosure under an explicit water budget. -->
 
+<!-- ===================== CORE: the two-tier dictionary ===================== -->
+<!-- LANG.DICTIONARY.RESOLUTION: "The dictionary has two tiers ... Those two
+     tiers are the whole dictionary: a name resolves in Core or in User."
+
+     The implementation had more: named user dictionaries addressed by
+     `DICT@WORD`, `USER@DICT@WORD` and `DICT@USER@DICT@WORD`, an active
+     dictionary that `DEF` wrote to, an owning-dictionary context that gave a
+     word's own dictionary priority, and a three-stage bare-name fallback that
+     could report a name ambiguous. None of it was reachable from the language,
+     because no Word changes the active dictionary. -->
+
+<section class="ajisai-case" id="core-dict-name-is-the-whole-address" data-category="core">
+  <h3>A Word's name is its whole address</h3>
+  <pre class="ajisai-source">{ 1 ADD } 'INC' DEF 5 INC</pre>
+  <pre class="ajisai-expect-result">6/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-dict-qualified-path-is-not-a-name" data-category="core">
+  <h3>A qualified path addresses no tier</h3>
+  <pre class="ajisai-source">{ 1 ADD } 'INC' DEF 5 EXAMPLE@INC</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">Unknown word: EXAMPLE@INC</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-dict-user-never-shadows-core" data-category="core">
+  <h3>User never shadows Core: the seal refuses the definition outright</h3>
+  <pre class="ajisai-source">{ 1 } 'ADD' DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">ADD</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-dict-del-rejects-qualified-path" data-category="core">
+  <h3>DEL takes a name, not a path</h3>
+  <pre class="ajisai-source">{ 1 ADD } 'INC' DEF 'EXAMPLE@INC' DEL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">is not defined</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: element lifting ===================== -->
 <!-- LANG.COLLECTIONS.LIFT: "An arithmetic or comparison Word applies
      element-wise when given vectors. Two vectors combine element-wise when

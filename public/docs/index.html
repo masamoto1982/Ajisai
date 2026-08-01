@@ -1613,10 +1613,8 @@ COND</code></td>
 
                 <section id="dictionaries" class="ref-page">
                     <h2>Dictionaries and Word Identity</h2>
-                    <p>User words live in a <strong>dictionary</strong>. The words you define in the Playground go into the bundled <code>EXAMPLE</code> dictionary, and an imported word group forms its own dictionary named after the group. A dictionary is simply a map from names to definitions; the same name may exist in more than one dictionary at once.</p>
-
-                    <h3>Qualified names</h3>
-                    <p>A bare name like <code>ADD10</code> is resolved for you (see below), but you can always name a word unambiguously by qualifying it with its dictionary: <code>DICT@WORD</code>. The qualified form bypasses resolution and points straight at one dictionary's entry.</p>
+                    <p>The dictionary has <strong>two tiers</strong>, and those two are the whole of it. <strong>Core</strong> holds the 69 canonical words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds everything you define with <code>DEF</code>.</p>
+                    <p>A name resolves in Core or in User, and User never shadows Core. A word&#39;s name is therefore its whole address — there is no qualified form, no dictionary to select, and no way for a bare name to be ambiguous. Names are case-insensitive, so <code>add10</code> and <code>ADD10</code> are the same word.</p>
                     <div class="sample">
                         <div class="ref-table-wrap">
                         <table class="ref-table">
@@ -1625,39 +1623,31 @@ COND</code></td>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><code>{ [ 10 ] + } 'ADD10' DEF
-5 EXAMPLE@ADD10</code></td>
-                                    <td><code>[ 15/1 ]</code></td>
-                                    <td class="notes">A word you define lives in <code>EXAMPLE</code>, so <code>EXAMPLE@ADD10</code> names the same word as the bare <code>ADD10</code>.</td>
+                                    <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>15</code></td>
+                                    <td class="notes">A defined word is reached by its name.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>{ 1 } &#39;ADD&#39; DEF</code></td>
+                                    <td>error</td>
+                                    <td class="notes">Core is sealed, so a Core name cannot be taken.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>{ 10 ADD } &#39;ADD10&#39; DEF
+{ 20 ADD } &#39;ADD10&#39; DEF
+5 ADD10</code></td>
+                                    <td><code>25</code></td>
+                                    <td class="notes">A redefinition rebinds the one User entry — unless another word depends on it, which <code>DEF</code> refuses.</td>
                                 </tr>
                             </tbody>
                         </table>
                         </div>
-                        <div class="sample-actions">
-                            <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
-                        </div>
                     </div>
 
-                    <h3>Words are identified by content</h3>
-                    <p>Ajisai is <strong>content-addressed</strong>: a user word's identity is computed from its content — its normalized body together with the identities of the words it calls — not from its name. Renaming a word, or defining an identical body in another dictionary, produces the very same identity, while changing the body produces a new one. A word's name is a label for an identity, not the word itself.</p>
-                    <p>Two consequences follow directly. Defining the same body twice does not store it twice — identical definitions share one identity and deduplicate. And because each word's dependencies are pinned to the <em>identities</em> they referenced at definition time, defining a new word or loading another dictionary later can never silently recapture an existing reference.</p>
-
-                    <h3>Resolving a bare name</h3>
-                    <p>A bare name is looked up in a fixed order, and the first match wins:</p>
-                    <ol class="ref-list">
-                        <li>Core words (the built-ins) — they are never shadowed by anything you define.</li>
-                        <li>Words from modules you have imported.</li>
-                        <li>The dictionary that the currently running word belongs to (so an imported group calls its own words).</li>
-                        <li>Any other user dictionary.</li>
-                    </ol>
-                    <p>The last step is where a name can match several dictionaries at once, and here the content-addressed model decides the outcome. If every match is the <em>same word</em> — the matches share one content identity — the bare name resolves to it, exactly as before. If the matches are <em>different words</em> — they carry distinct identities — the bare name is <strong>ambiguous</strong> and does not resolve; Ajisai reports the conflict and asks you to qualify it:</p>
-                    <p class="ref-note">For example, if a <code>GREET</code> with one body exists in <code>EXAMPLE</code> and a different <code>GREET</code> exists in an imported <code>AUDIOLIB</code>, calling the bare <code>GREET</code> raises <code>Ambiguous word 'GREET': found in EXAMPLE@GREET, AUDIOLIB@GREET. Use a qualified path to specify which one you mean.</code> Writing <code>EXAMPLE@GREET</code> or <code>AUDIOLIB@GREET</code> resolves it. Ambiguity is about a difference in <em>content</em>, not merely a shared name — two dictionaries holding the identical word are not in conflict.</p>
-
-                    <h3>Importing word groups</h3>
-                    <p>You can export a word group, edit the file, rename it, and import it again. Import is a <strong>merge by identity</strong>, never a destructive overwrite. Identical definitions deduplicate automatically, so re-importing an unchanged group is a no-op. If you edited a word and import it under a name that already exists, the name is re-pointed to the new identity while the previous identity stays in place — any words that referenced the old version remain pinned to it, so nothing breaks. The bundled <code>EXAMPLE</code> dictionary is treated exactly like any other in this respect; there is no special name to protect.</p>
-                    <p class="ref-note">Because identity is content-addressed, an imported group behaves identically in every environment, regardless of which other dictionaries happen to be loaded.</p>
+                    <h3>Word identity</h3>
+                    <p>Every word has a <strong>content identity</strong>: a digest over its normalized definition and the identities of the words it calls. Two definitions with the same identity are the same word, whatever they are named, and changing a definition changes the identity of everything that depends on it. That is what makes <code>DEF</code> and <code>DEL</code> refuse to disturb a word something else still references — the dependency is on the word, not on the spelling.</p>
                 </section>
-
 
 
                 <section id="output" class="ref-page">

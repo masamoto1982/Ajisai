@@ -130,10 +130,10 @@ mod example_words_tests {
         setup_example_words(&mut interp).await;
 
         // The dependency graph must record that GREET relies on each SAY word.
-        for dep in ["EXAMPLE@SAY-HELLO", "EXAMPLE@SAY-WORLD", "EXAMPLE@SAY-BANG"] {
+        for dep in ["SAY-HELLO", "SAY-WORLD", "SAY-BANG"] {
             let dependents = interp.dependents.get(dep);
             assert!(
-                dependents.is_some_and(|d| d.contains("EXAMPLE@GREET")),
+                dependents.is_some_and(|d| d.contains("GREET")),
                 "{} should be referenced by EXAMPLE@GREET; got {:?}",
                 dep,
                 dependents
