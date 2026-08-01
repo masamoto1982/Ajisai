@@ -104,6 +104,12 @@ mod tests {
         }
     }
 
+    /// Every prose field of a spec must be the generated value, verbatim.
+    ///
+    /// `check:runtime-metadata` proves the same thing syntactically — that each
+    /// field is written as `doc.<field>` — but only this asserts it of the
+    /// values actually observed at runtime, so a projection that compiled while
+    /// transforming or substituting prose would still be caught here.
     #[test]
     fn generated_core_docs_preserve_the_legacy_observation() {
         let generated = super::super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS;
@@ -111,8 +117,45 @@ mod tests {
 
         for (doc, spec) in generated.iter().zip(super::builtin_specs()) {
             assert_eq!(doc.name, spec.name);
+            assert_eq!(doc.category, spec.category, "{} category", doc.name);
+            assert_eq!(doc.summary, spec.summary, "{} summary", doc.name);
+            assert_eq!(doc.role, spec.role, "{} role", doc.name);
+            assert_eq!(
+                doc.stack_effect, spec.stack_effect,
+                "{} stack_effect",
+                doc.name
+            );
             assert_eq!(doc.hover_summary, spec.hover_summary);
             assert_eq!(doc.hover_syntax, spec.hover_syntax);
+        }
+    }
+
+    /// The contract-projected fields must equal the canonical contract's own
+    /// projection for the same Word, so `BuiltinSpec` cannot drift from
+    /// `spec/words.json` even if someone rewires the assembly.
+    #[test]
+    fn contract_projected_fields_match_the_canonical_contract() {
+        for spec in super::builtin_specs() {
+            let word = crate::kernel::generated::generated_word(spec.name)
+                .expect("every spec name must be a canonical Word");
+            assert_eq!(
+                spec.stability,
+                crate::coreword_registry::stability_from_contract(word),
+                "{} stability",
+                spec.name
+            );
+            assert_eq!(
+                spec.partiality,
+                crate::coreword_registry::partiality_from_contract(word),
+                "{} partiality",
+                spec.name
+            );
+            assert_eq!(
+                spec.execution_form,
+                crate::coreword_registry::execution_form_from_contract(word),
+                "{} execution_form",
+                spec.name
+            );
         }
     }
 

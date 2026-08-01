@@ -120,6 +120,15 @@ jobs:
       - name: Check Minimal Core closure
         run: npm run check:minimal-core
 
+      - name: Runtime Core Word metadata is projected, not authored
+        # BuiltinSpec is a joined view over generated docs and generated
+        # contracts, never a second place to write language facts down. A
+        # hand-authored table alongside it is what let two branches disagree
+        # about Core Word metadata and produce a tree that would not compile.
+        # This asserts the projection structurally, so a parallel table fails
+        # here whatever it is named — see scripts/check-runtime-metadata-source.mjs.
+        run: npm run check:runtime-metadata
+
       - name: TypeScript check
         run: npm run check
 
