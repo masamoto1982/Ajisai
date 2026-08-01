@@ -1,5 +1,5 @@
 use crate::error::{AjisaiError, Result};
-use crate::interpreter::value_extraction_helpers::{extract_word_name_from_value, is_vector_value};
+use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::Interpreter;
 use crate::types::{Value, ValueData};
 
@@ -25,42 +25,25 @@ pub(crate) fn extract_executable_code(
     ))
 }
 
-pub(super) fn is_truthy_boolean(val: &Value) -> bool {
-    if let Some(b) = val.as_truth() {
-        return b;
-    }
-    if let Some(f) = val.as_scalar() {
-        return !f.is_zero();
-    }
-    false
-}
-
+/// The predicate result of a higher-order block, which LANG.VALUES.TRUTH
+/// restricts to the two-valued Boolean domain.
+///
+/// The domains are disjoint (LANG.VALUES.DISJOINT), so nothing else is a truth
+/// value: a scalar is not a Boolean even when it is non-zero, a singleton
+/// Vector is not its element, and NIL is absence rather than falsity. Each of
+/// those used to be accepted here, which gave `FILTER` a truthiness rule no
+/// other Word shared — `[ 1 2 3 ] { 1 } FILTER` silently kept every element
+/// instead of raising the nonconforming-type ERROR its contract registers.
+/// A caller that wants a numeric condition writes the comparison it means,
+/// e.g. `0 NEQ`.
 pub(crate) fn extract_predicate_boolean(condition_result: Value) -> Result<bool> {
-    // A definite Boolean is the canonical predicate result; a bare non-zero
-    // number is still accepted as truthy for numeric conditions.
     if let Some(b) = condition_result.as_truth() {
         return Ok(b);
     }
-    if let Some(f) = condition_result.as_scalar() {
-        return Ok(!f.is_zero());
-    }
-
-    if is_vector_value(&condition_result) {
-        if condition_result.len() == 1 {
-            let child = condition_result
-                .child(0)
-                .expect("len==1 implies child(0) exists");
-            return Ok(is_truthy_boolean(&child));
-        }
-        return Err(AjisaiError::create_structure_error(
-            "boolean result from FILTER code",
-            "other format",
-        ));
-    }
 
     Err(AjisaiError::create_structure_error(
-        "boolean vector result from FILTER code",
-        "other format",
+        "boolean result from predicate block",
+        "non-boolean value",
     ))
 }
 

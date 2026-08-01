@@ -357,8 +357,27 @@ pub fn op_neq(interp: &mut Interpreter) -> Result<()> {
 }
 
 /// Pairwise equality. Every pair decides: the structural Vector / Tensor paths
-/// and the singleton-projection paths are total, as is scalar comparison.
+/// are total, as is scalar comparison.
+///
+/// Equality is *structural over disjoint domains* (LANG.VALUES.DISJOINT): two
+/// values are "never equal merely because their encodings resemble one
+/// another". Two consequences are load-bearing here.
+///
+/// A singleton Vector is not its element. `[ 3 ] 3 EQ` used to decide TRUE via
+/// a projection path, which made the Vector and Scalar domains overlap for
+/// this one Word while `EQ`'s own contract promises a decision over tagged
+/// values. It now decides FALSE, like every other cross-domain pair.
+///
+/// Two NILs are the same value exactly when their reasons agree
+/// (LANG.VALUES.NIL: "the reason is the entire observable content of a NIL").
+/// The `ValueData` comparison below cannot see a reason — `ValueData::Nil`
+/// carries none — so NIL pairs are decided before it, on the reason itself.
 fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
+    if a_val.is_nil() || b_val.is_nil() {
+        return ScalarCmp::Decided(
+            a_val.is_nil() && b_val.is_nil() && a_val.nil_reason() == b_val.nil_reason(),
+        );
+    }
     if a_val.data == b_val.data {
         return ScalarCmp::Decided(true);
     }
@@ -367,24 +386,6 @@ fn pairwise_eq(a_val: &Value, b_val: &Value) -> ScalarCmp {
         | (ValueData::ExactScalar(_), ValueData::ExactScalar(_))
         | (ValueData::ExactScalar(_), ValueData::Scalar(_))
         | (ValueData::Scalar(_), ValueData::ExactScalar(_)) => scalar_pair_eq(a_val, b_val),
-        (ValueData::Scalar(_), ValueData::Vector(children)) if children.len() == 1 => {
-            ScalarCmp::Decided(a_val.data == children[0].data)
-        }
-        (ValueData::Vector(children), ValueData::Scalar(_)) if children.len() == 1 => {
-            ScalarCmp::Decided(children[0].data == b_val.data)
-        }
-        (ValueData::Scalar(_), ValueData::Tensor { .. }) if b_val.len() == 1 => ScalarCmp::Decided(
-            b_val
-                .child(0)
-                .map(|c| a_val.data == c.data)
-                .unwrap_or(false),
-        ),
-        (ValueData::Tensor { .. }, ValueData::Scalar(_)) if a_val.len() == 1 => ScalarCmp::Decided(
-            a_val
-                .child(0)
-                .map(|c| c.data == b_val.data)
-                .unwrap_or(false),
-        ),
         _ => ScalarCmp::Decided(false),
     }
 }

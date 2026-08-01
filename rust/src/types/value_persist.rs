@@ -20,6 +20,7 @@
 //! metadata and the `Unknown` diagnosis are provenance, not identity, and are
 //! outside that oracle (their round-trip is a separate future concern).
 
+use crate::error::NilReason;
 use crate::types::exact::ExactReal;
 use crate::types::fraction::Fraction;
 use crate::types::{DenseTensor, Interpretation, Token, Value, ValueData};
@@ -131,7 +132,13 @@ enum PersistData {
         pure_int: bool,
         shape: Vec<usize>,
     },
-    Nil,
+    Nil {
+        /// The NIL's reason as its protocol string. `None` decodes a payload
+        /// written before reasons were carried, and a NIL that genuinely has
+        /// none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        r: Option<String>,
+    },
     Code {
         tokens: Vec<PersistToken>,
     },
@@ -234,7 +241,7 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
             pure_int: data.is_pure_integer,
             shape: (**shape).clone(),
         },
-        ValueData::Nil => PersistData::Nil,
+        ValueData::Nil => PersistData::Nil { r: None },
         ValueData::CodeBlock(tokens) => PersistData::Code {
             tokens: tokens.iter().map(token_to_wire).collect(),
         },
@@ -291,7 +298,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
                 shape: Arc::new(shape.clone()),
             }
         }
-        PersistData::Nil => ValueData::Nil,
+        PersistData::Nil { .. } => ValueData::Nil,
         PersistData::Code { tokens } => {
             ValueData::CodeBlock(tokens.iter().map(token_from_wire).collect())
         }
@@ -299,13 +306,26 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
 }
 
 fn encode_value(value: &Value) -> Result<PersistValue, String> {
+    let mut d = encode_data(&value.data)?;
+    // The reason lives on `Value`, not in `ValueData`, so it is attached here
+    // rather than inside `encode_data`.
+    if let PersistData::Nil { r } = &mut d {
+        *r = value.nil_reason().map(|reason| reason.as_protocol_str().to_string());
+    }
     Ok(PersistValue {
         h: hint_to_tag(value.hint).to_string(),
-        d: encode_data(&value.data)?,
+        d,
     })
 }
 
 fn decode_value(value: &PersistValue) -> Result<Value, String> {
+    if let PersistData::Nil { r: Some(reason) } = &value.d {
+        let reason = NilReason::from_protocol_str(reason)
+            .ok_or_else(|| format!("unknown NIL reason: {}", reason))?;
+        let mut decoded = Value::nil_with_reason(reason);
+        decoded.hint = hint_from_tag(&value.h);
+        return Ok(decoded);
+    }
     Ok(Value {
         data: decode_data(&value.d)?,
         hint: hint_from_tag(&value.h),

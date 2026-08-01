@@ -1,5 +1,6 @@
 use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Token, Value, ValueData};
+use crate::error::NilReason;
 use num_traits::ToPrimitive;
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
@@ -8,7 +9,9 @@ pub type NodeId = u32;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeKind {
-    Nil,
+    /// An absence and the reason that is its whole observable content
+    /// (LANG.VALUES.NIL). `None` is a NIL that carries no reason.
+    Nil(Option<NilReason>),
     Boolean(bool),
     Scalar(Fraction),
     Vector {
@@ -64,14 +67,23 @@ impl ValueArena {
             children.push(scalar);
         }
         if children.is_empty() {
-            self.alloc_node(NodeKind::Nil, Interpretation::Text)
+            self.alloc_node(NodeKind::Nil(None), Interpretation::Text)
         } else {
             self.alloc_vector(children, Interpretation::Text)
         }
     }
 
     pub fn alloc_nil(&mut self, hint: Interpretation) -> NodeId {
-        self.alloc_node(NodeKind::Nil, hint)
+        self.alloc_node(NodeKind::Nil(None), hint)
+    }
+
+    /// Allocate an absence that keeps its reason across the arena boundary.
+    pub fn alloc_nil_with_reason(
+        &mut self,
+        reason: Option<NilReason>,
+        hint: Interpretation,
+    ) -> NodeId {
+        self.alloc_node(NodeKind::Nil(reason), hint)
     }
 
     pub fn kind(&self, id: NodeId) -> &NodeKind {
@@ -89,7 +101,7 @@ impl ValueArena {
         match self.kind(id) {
             NodeKind::Vector { children } => children.as_slice(),
             NodeKind::Tensor { .. }
-            | NodeKind::Nil
+            | NodeKind::Nil(_)
             | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
             | NodeKind::CodeBlock(_) => &[],
@@ -108,7 +120,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             // via the current vocabulary (Tier ≤ 1 comparison is total, so no
             // word constructs U yet), so the gap is latent. Tracked for a
             // dedicated follow-up.
-            ValueData::Nil => arena.alloc_nil(value.hint),
+            ValueData::Nil => arena.alloc_nil_with_reason(value.nil_reason().copied(), value.hint),
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
             ValueData::ExactScalar(er) => {
@@ -145,11 +157,18 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
 pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
     fn rebuild_recursive(arena: &ValueArena, id: NodeId) -> Value {
         match arena.kind(id) {
-            NodeKind::Nil => Value {
-                data: ValueData::Nil,
-                hint: arena.hint(id),
-                absence: None,
-            },
+            NodeKind::Nil(reason) => {
+                let mut nil = match reason {
+                    Some(reason) => Value::nil_with_reason(*reason),
+                    None => Value {
+                        data: ValueData::Nil,
+                        hint: arena.hint(id),
+                        absence: None,
+                    },
+                };
+                nil.hint = arena.hint(id);
+                nil
+            }
             NodeKind::Boolean(b) => Value {
                 data: ValueData::Boolean(*b),
                 hint: Interpretation::TruthValue,
@@ -245,10 +264,10 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
         // The logical Unknown (U, SPEC §7.5) is a TruthValue-role NIL node;
         // it serializes to the string `"unknown"` (display-only surface,
         // SPEC §12.2) rather than JSON null.
-        NodeKind::Nil if arena.hint(root) == Interpretation::TruthValue => {
+        NodeKind::Nil(_) if arena.hint(root) == Interpretation::TruthValue => {
             JsonValue::String("unknown".to_string())
         }
-        NodeKind::Nil => JsonValue::Null,
+        NodeKind::Nil(_) => JsonValue::Null,
         NodeKind::Boolean(b) => JsonValue::Bool(*b),
         NodeKind::Scalar(frac) => {
             if arena.hint(root) == Interpretation::TruthValue {

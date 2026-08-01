@@ -584,7 +584,7 @@ Keep only the elements for which a predicate block returns TRUE.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } FILTER`
+- **Syntax:** `[ 1 2 3 ] { 2 = } FILTER`
 - **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `FOLD`
@@ -610,7 +610,7 @@ TRUE if at least one element satisfies the predicate.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 1 2 3 ] { [ 2 ] = } ANY`
+- **Syntax:** `[ 1 2 3 ] { 2 = } ANY`
 - **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `ALL`
@@ -623,7 +623,7 @@ TRUE if every element satisfies the predicate.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.COLLECTIONS.HIGHER`
-- **Syntax:** `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL`
+- **Syntax:** `[ 2 4 ] { 2 MOD 0 = } ALL`
 - **ERROR conditions:** `nonVector`, `nonCodeBlock`, `blockContractViolation`
 
 ## `CHARS`
@@ -770,7 +770,7 @@ Evaluate guard/body clauses in order, executing the first match.
 
 ## `EXEC`
 
-Execute a vector as Ajisai code.
+Evaluate a code block.
 
 - **Family:** `control`
 - **Stack:** 1 input(s) → variable output(s); `eat` consumption
@@ -778,8 +778,8 @@ Execute a vector as Ajisai code.
 - **Purity / determinism:** `conditional` / `stateRelative`
 - **Capability / hosted effect:** `none` / `none`
 - **Clauses:** `LANG.MACHINE.TRANSFORMERS`, `LANG.SOURCE.CODE`
-- **Syntax:** `[ 1 2 + ] EXEC`
-- **ERROR conditions:** `nonCodeVector`, `nestedExecutionError`
+- **Syntax:** `{ 1 2 ADD } EXEC`
+- **ERROR conditions:** `nonCodeBlock`, `nestedExecutionError`
 
 ## `NIL`
 

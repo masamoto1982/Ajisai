@@ -30,6 +30,7 @@ Status: non-canonical. この索引を含め、`docs/dev/` 配下の全文書は
 | `ajisai-self-hosting-design.md` | セルフホスティングの位置づけ（新しい権威層を作らない） | `[方針記録]` |
 | `vector-nesting-role-redefinition.md` | Vector ネストの役割（Lisp 的動機の廃止） | `[方針記録]` |
 | `spec-impl-drift-tactic.md` | 仕様と実装が食い違ったときの裁定戦術 | `[設計根拠]` |
+| `language-coherence-review-2026-08.md` | 外部「整合化改修案」の検証と、正典収束計画への差し替え | `[方針記録]` |
 | `ajisai-structure-mathematical-observations.md` | CF 値モデルの数学的観察 | `[観察ノート]` |
 
 ## エージェント/CLI・GUI

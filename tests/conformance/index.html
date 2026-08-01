@@ -555,6 +555,54 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- Truth is two-valued (LANG.VALUES.TRUTH) and the domains are disjoint
+     (LANG.VALUES.DISJOINT), so a predicate block decides in the Boolean domain
+     or not at all: a Scalar is not truth, and a singleton Vector is not its
+     element. -->
+
+<section class="ajisai-case" id="core-filter-rejects-scalar-predicate" data-category="core">
+  <h3>A FILTER predicate that yields a Scalar is a nonconforming type</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { 1 } FILTER</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected boolean result from predicate block</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-all-rejects-singleton-vector-predicate" data-category="core">
+  <h3>An ALL predicate that yields a singleton Vector is a nonconforming type</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { [ TRUE ] } ALL</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected boolean result from predicate block</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- AND / OR / NOT are booleanLogic, whose input domain is two-valued: a
+     Scalar operand raises the registered nonTruthValue ERROR rather than
+     being read as truth. -->
+
+<section class="ajisai-case" id="core-and-rejects-scalar-operand" data-category="core">
+  <h3>AND rejects a Scalar operand: 1 is not TRUE</h3>
+  <pre class="ajisai-source">1 1 AND</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected truth value</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-not-rejects-scalar-operand" data-category="core">
+  <h3>NOT rejects a Scalar operand: 0 is not FALSE</h3>
+  <pre class="ajisai-source">0 NOT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected truth value</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-and-boolean-operands" data-category="core">
+  <h3>AND combines Boolean operands</h3>
+  <pre class="ajisai-source">TRUE FALSE AND</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: ARITHMETIC & ROUNDING (§7.3) ===================== -->
 <!-- Every case below was observed against the reference Rust CLI before being
      written down, extending the suite toward the §15.1 per-Coreword contract
@@ -1078,9 +1126,23 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-eq-structural-nil-uniform" data-category="core">
-  <h3>Structural equality treats all NIL elements uniformly, ignoring reasons</h3>
+<section class="ajisai-case" id="core-eq-singleton-vector-is-not-its-element" data-category="core">
+  <h3>A singleton Vector is not its element (LANG.VALUES.DISJOINT)</h3>
+  <pre class="ajisai-source">[ 3 ] 3 EQ</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-eq-structural-nil-distinct-reasons" data-category="core">
+  <h3>Structural equality separates NIL elements whose reasons differ (LANG.VALUES.NIL)</h3>
   <pre class="ajisai-source">0 0 DIV 1 COLLECT NIL 1 COLLECT EQ</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-eq-structural-nil-same-reason" data-category="core">
+  <h3>Structural equality identifies NIL elements whose reasons agree (LANG.VALUES.NIL)</h3>
+  <pre class="ajisai-source">0 0 DIV 1 COLLECT 0 0 DIV 1 COLLECT EQ</pre>
   <pre class="ajisai-expect-result">TRUE</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -1399,6 +1461,26 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- A Vector is data and is never executable (LANG.SOURCE.CODE), so EXEC
+     raises its registered nonCodeBlock ERROR rather than reinterpreting the
+     value as source. -->
+
+<section class="ajisai-case" id="core-exec-rejects-vector" data-category="core">
+  <h3>EXEC rejects a Vector: data is never code</h3>
+  <pre class="ajisai-source">[ 1 2 ADD ] EXEC</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected code block</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-exec-rejects-scalar" data-category="core">
+  <h3>EXEC rejects a Scalar: data is never code</h3>
+  <pre class="ajisai-source">5 EXEC</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected code block</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- Observable staging contract of PRECOMPUTE (Section 7.7). -->
 
 <!-- Native recursion-depth guard (Sections 8.4, 11.1): a runtime safety
@@ -1510,6 +1592,99 @@
      computable real, so a comparison can now reach the logical UNKNOWN, while
      a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
      observes a rational enclosure under an explicit water budget. -->
+
+<!-- ===================== CORE: remaining scalar and vector words ===================== -->
+<!-- These nine Core Words had a registered contract and an executor but no
+     executable case, so nothing decided whether the two agreed. Each case below
+     was observed against the reference Rust CLI before being written down. -->
+
+<section class="ajisai-case" id="core-abs-negative" data-category="core">
+  <h3>ABS is the magnitude of a negative scalar</h3>
+  <pre class="ajisai-source">-2 ABS</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-abs-positive-identity" data-category="core">
+  <h3>ABS leaves a non-negative scalar alone</h3>
+  <pre class="ajisai-source">2 ABS</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-neg-scalar" data-category="core">
+  <h3>NEG negates a scalar</h3>
+  <pre class="ajisai-source">2 NEG</pre>
+  <pre class="ajisai-expect-result">-2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sign-trichotomy" data-category="core">
+  <h3>SIGN decides -1, 0, or 1</h3>
+  <pre class="ajisai-source">-2 SIGN 0 SIGN 3 SIGN</pre>
+  <pre class="ajisai-expect-result">-1/1 0/1 1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-min-max-scalars" data-category="core">
+  <h3>MIN and MAX select between two scalars</h3>
+  <pre class="ajisai-source">1 2 MAX 1 2 MIN</pre>
+  <pre class="ajisai-expect-result">2/1 1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt-perfect-square" data-category="core">
+  <h3>SQRT of a perfect square stays rational</h3>
+  <pre class="ajisai-source">9 SQRT</pre>
+  <pre class="ajisai-expect-result">3/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<!-- SQRT is the only Word that leaves the rationals (LANG.VALUES.EXACT), and
+     it leaves them exactly: the irrational round-trips through MUL with no
+     rounding. -->
+
+<section class="ajisai-case" id="core-sqrt-irrational-is-exact" data-category="core">
+  <h3>An irrational SQRT is exact: √2 · √2 is 2</h3>
+  <pre class="ajisai-source">2 SQRT 2 SQRT MUL</pre>
+  <pre class="ajisai-expect-result">2/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-sqrt-negative-projects" data-category="core">
+  <h3>SQRT of a negative scalar projects to NIL with reason domainMiss</h3>
+  <pre class="ajisai-source">-1 SQRT NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'domainMiss'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-contains-present-and-absent" data-category="core">
+  <h3>CONTAINS decides membership</h3>
+  <pre class="ajisai-source">[ 1 2 ] 2 CONTAINS [ 1 2 ] 5 CONTAINS</pre>
+  <pre class="ajisai-expect-result">TRUE FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-index-of-found" data-category="core">
+  <h3>INDEX-OF reports a 0-origin position</h3>
+  <pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre>
+  <pre class="ajisai-expect-result">1/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-index-of-missing-projects" data-category="core">
+  <h3>INDEX-OF projects to NIL with reason missingField when absent</h3>
+  <pre class="ajisai-source">[ 1 2 ] 5 INDEX-OF NIL-REASON</pre>
+  <pre class="ajisai-expect-result">NIL 'missingField'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-unique-preserves-first-order" data-category="core">
+  <h3>UNIQUE drops later duplicates and keeps first-seen order</h3>
+  <pre class="ajisai-source">[ 1 2 1 ] UNIQUE</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <!-- ===================== ALGO module (core: pure words) ===================== -->
 

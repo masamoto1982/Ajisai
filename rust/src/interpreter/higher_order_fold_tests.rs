@@ -65,11 +65,21 @@ mod tests {
         assert!(ok3.is_ok(), "ANY user word failed: {:?}", ok3);
         assert_eq!(top_scalar_i64(&interp3), 1);
     }
+    /// `&` resolves to the same contract and executor as `AND`
+    /// (LANG.SOURCE.NORMALIZE), including inside a predicate block.
+    ///
+    /// The operands are Booleans because `AND` is `booleanLogic`, whose input
+    /// domain is two-valued (LANG.VALUES.TRUTH). This case used to read
+    /// `{ [ 0 ] [ 1 ] AND }`, where `[ 0 ]` and `[ 1 ]` are vector literals
+    /// rather than the index lenses they resemble; it passed only because
+    /// `AND` coerced the scalars `0` and `1` to truth values and `FILTER`
+    /// accepted the resulting singleton Vector as a predicate result. Both
+    /// coercions are gone, so the case now states its subject directly.
     #[tokio::test]
     async fn test_filter_ampersand_alias_matches_and() {
         let mut and_interp = Interpreter::new();
         let and_result = and_interp
-            .execute("[ [ TRUE TRUE ] [ TRUE FALSE ] [ FALSE TRUE ] ] { [ 0 ] [ 1 ] AND } FILTER")
+            .execute("[ TRUE FALSE TRUE ] { TRUE AND } FILTER")
             .await;
         assert!(
             and_result.is_ok(),
@@ -79,7 +89,7 @@ mod tests {
 
         let mut alias_interp = Interpreter::new();
         let alias_result = alias_interp
-            .execute("[ [ TRUE TRUE ] [ TRUE FALSE ] [ FALSE TRUE ] ] { [ 0 ] [ 1 ] & } FILTER")
+            .execute("[ TRUE FALSE TRUE ] { TRUE & } FILTER")
             .await;
         assert!(
             alias_result.is_ok(),
@@ -88,5 +98,43 @@ mod tests {
         );
 
         assert_eq!(alias_interp.stack, and_interp.stack);
+    }
+
+    /// A `booleanLogic` Word raises its registered `nonTruthValue` ERROR on a
+    /// scalar operand: the Boolean and Scalar domains are disjoint, so `1` is
+    /// not TRUE and `0` is not FALSE (LANG.VALUES.DISJOINT).
+    #[tokio::test]
+    async fn test_logic_words_reject_scalar_operands() {
+        for source in ["1 1 AND", "0 1 OR", "5 NOT", "TRUE 1 AND"] {
+            let mut interp = Interpreter::new();
+            let result = interp.execute(source).await;
+            assert!(
+                result.is_err(),
+                "`{}` must raise nonTruthValue, got {:?}",
+                source,
+                result
+            );
+        }
+    }
+
+    /// A predicate block must decide in the Boolean domain: a scalar, a NIL,
+    /// and a singleton Vector are each a nonconforming predicate result rather
+    /// than a truth value (LANG.VALUES.TRUTH).
+    #[tokio::test]
+    async fn test_higher_order_predicates_reject_non_boolean() {
+        for source in [
+            "[ 1 2 3 ] { 1 } FILTER",
+            "[ 1 2 3 ] { NIL } ANY",
+            "[ 1 2 3 ] { [ TRUE ] } ALL",
+        ] {
+            let mut interp = Interpreter::new();
+            let result = interp.execute(source).await;
+            assert!(
+                result.is_err(),
+                "`{}` must reject a non-Boolean predicate result, got {:?}",
+                source,
+                result
+            );
+        }
     }
 }

@@ -199,8 +199,26 @@ pub struct Value {
 }
 
 impl PartialEq for Value {
+    /// Value equality, which must agree with the `EQ` Word: this relation is
+    /// what decides nested elements once `EQ` reaches a Vector, so a
+    /// disagreement between the two is observable from the language.
+    ///
+    /// The NIL reason is part of it. LANG.VALUES.NIL makes the reason "the
+    /// entire observable content of a NIL", so two NILs are the same value
+    /// exactly when their reasons agree. `ValueData::Nil` carries no reason —
+    /// it lives in `absence` — so comparing `data` alone decided every pair of
+    /// NILs equal, and `[ NIL ] [ 0 ] { 0 DIV } MAP EQ` answered TRUE for a
+    /// `literal` absence against a `divisionByZero` one.
+    ///
+    /// `hint` is compared only because String is still encoded as a Vector of
+    /// codepoints carrying `Interpretation::Text`, which leaves it as the sole
+    /// discriminator between the two. That is a presentation field deciding a
+    /// semantic question (LANG.STACK.ORDER), and it comes out of this relation
+    /// when String becomes a domain of its own.
     fn eq(&self, other: &Self) -> bool {
-        self.data == other.data && self.hint == other.hint
+        self.data == other.data
+            && self.hint == other.hint
+            && self.nil_reason() == other.nil_reason()
     }
 }
 

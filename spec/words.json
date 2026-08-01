@@ -1796,7 +1796,7 @@
         "summary": "Keep only the elements for which a predicate block returns TRUE.",
         "hover": "FILTER — keep elements matching predicate",
         "lookup": "Keep only the elements for which a predicate block returns TRUE.",
-        "syntax": "[ 1 2 3 ] { [ 2 ] = } FILTER",
+        "syntax": "[ 1 2 3 ] { 2 = } FILTER",
         "role": "Higher-order primitive: Keep only the elements for which a predicate block returns TRUE.",
         "stackEffect": "[ vec ] { pred } -> [ kept ]"
       },
@@ -1876,7 +1876,7 @@
         "summary": "TRUE if at least one element satisfies the predicate.",
         "hover": "ANY — true if any element matches",
         "lookup": "TRUE if at least one element satisfies the predicate.",
-        "syntax": "[ 1 2 3 ] { [ 2 ] = } ANY",
+        "syntax": "[ 1 2 3 ] { 2 = } ANY",
         "role": "Higher-order primitive: TRUE if at least one element satisfies the predicate.",
         "stackEffect": "[ vec ] { pred } -> [ TRUE | FALSE ]"
       },
@@ -1916,7 +1916,7 @@
         "summary": "TRUE if every element satisfies the predicate.",
         "hover": "ALL — true if all elements match",
         "lookup": "TRUE if every element satisfies the predicate.",
-        "syntax": "[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL",
+        "syntax": "[ 2 4 ] { 2 MOD 0 = } ALL",
         "role": "Higher-order primitive: TRUE if every element satisfies the predicate.",
         "stackEffect": "[ vec ] { pred } -> [ TRUE | FALSE ]"
       },
@@ -2373,7 +2373,7 @@
         "reason": null
       },
       "errorWhen": [
-        "nonCodeVector",
+        "nonCodeBlock",
         "nestedExecutionError"
       ],
       "purity": "conditional",
@@ -2386,12 +2386,12 @@
         "LANG.SOURCE.CODE"
       ],
       "documentation": {
-        "summary": "Execute a vector as Ajisai code.",
-        "hover": "EXEC — execute vector as code",
-        "lookup": "Execute a vector as Ajisai code.",
-        "syntax": "[ 1 2 + ] EXEC",
-        "role": "Control primitive: Execute a vector as Ajisai code.",
-        "stackEffect": "[ code ] -> [ result... ]"
+        "summary": "Evaluate a code block.",
+        "hover": "EXEC — evaluate a code block",
+        "lookup": "Evaluate a code block.",
+        "syntax": "{ 1 2 ADD } EXEC",
+        "role": "Control primitive: Evaluate a code block.",
+        "stackEffect": "[ { code } ] -> [ result... ]"
       },
       "executorKey": "Exec",
       "effects": [],
