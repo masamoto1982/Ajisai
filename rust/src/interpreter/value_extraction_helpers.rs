@@ -13,6 +13,7 @@ pub(crate) fn is_vector_value(val: &Value) -> bool {
 pub(crate) fn value_as_string(val: &Value) -> Option<String> {
     fn collect_chars(val: &Value) -> Vec<char> {
         match &val.data {
+            ValueData::Text(s) => s.chars().collect(),
             ValueData::Nil => vec![],
             ValueData::Scalar(f) => f
                 .to_i64()
@@ -53,6 +54,7 @@ pub(crate) fn value_as_string(val: &Value) -> Option<String> {
 
 fn extract_integer_bigint(value: &Value) -> Result<BigInt> {
     match &value.data {
+        ValueData::Text(_) => Err(AjisaiError::create_structure_error("integer", "string")),
         ValueData::Scalar(f) => {
             if !f.is_integer() {
                 return Err(AjisaiError::create_structure_error("integer", "fraction"));
@@ -104,26 +106,25 @@ pub(crate) fn extract_bigint_from_value(value: &Value) -> Result<BigInt> {
     extract_integer_bigint(value)
 }
 
+/// The Word name a value denotes. A name is a String
+/// (`{ ... } 'INC' DEF`), so only the String domain supplies one.
+///
+/// This used to flatten the value to a list of fractions and decode each as a
+/// codepoint, which accepted `[ 73 78 67 ]` as the name `INC` just as readily
+/// as `'INC'` — a Vector of numbers naming a Word. Reading the String domain
+/// closes that, and `nonText` is the honest error for everything else.
 pub(crate) fn extract_word_name_from_value(value: &Value) -> Result<String> {
     if value.is_nil() {
         return Err(AjisaiError::from("Cannot get word name from NIL"));
     }
 
-    let fractions = value.collect_fractions_flat();
-    let chars: String = fractions
-        .iter()
-        .filter_map(|f| {
-            f.to_i64().and_then(|n| {
-                if (0..=0x10FFFF).contains(&n) {
-                    char::from_u32(n as u32)
-                } else {
-                    None
-                }
-            })
-        })
-        .collect();
-
-    Ok(chars.to_uppercase())
+    match value.as_text() {
+        Some(name) => Ok(name.to_uppercase()),
+        None => Err(AjisaiError::create_structure_error(
+            "string",
+            "other format",
+        )),
+    }
 }
 
 pub(crate) fn normalize_index(index: i64, length: usize) -> Option<usize> {

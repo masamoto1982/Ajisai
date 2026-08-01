@@ -66,5 +66,7 @@ nil STR
 
 # 数値 → Boolean → 文字列
 
-# 文字列連結の例
-[ 10 ] [ 20 ] + STR ' is the sum' CONCAT
+# 文字列連結の例。
+# String は Vector ではないので CONCAT ではなく JOIN を使う。
+# 計算した値と文字列リテラルを繋ぐには COLLECT で Vector にしてから JOIN する。
+[ 10 ] [ 20 ] + STR ' is the sum' 2 COLLECT JOIN

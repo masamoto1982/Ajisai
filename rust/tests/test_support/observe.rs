@@ -24,12 +24,11 @@ use ajisai_core::types::{Interpretation, Value};
 use ajisai_core::ErrorCategory;
 
 /// Every interpretation role of SPEC §12.2, in table order.
-pub const ALL_ROLES: [Interpretation; 8] = [
+pub const ALL_ROLES: [Interpretation; 7] = [
     Interpretation::Unassigned,
     Interpretation::RawNumber,
     Interpretation::ContinuedFraction,
     Interpretation::Interval,
-    Interpretation::Text,
     Interpretation::TruthValue,
     Interpretation::Timestamp,
     Interpretation::Nil,
@@ -159,6 +158,21 @@ pub fn observe_program(src: &str) -> ProgramObservation {
 /// Run an Ajisai program and return the final stack. Panics on execution error
 /// so a malformed law program is loud rather than silently skipped (mirrors the
 /// existing `algebraic_laws.rs` harness).
+/// Run a program expected to fail, returning the error text. Laws that pin a
+/// rejection (a domain a Word does not accept) need the message, not a panic.
+pub fn run_err(src: &str) -> String {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("tokio current-thread runtime");
+    rt.block_on(async {
+        let mut interp = Interpreter::new();
+        match interp.execute(src).await {
+            Ok(()) => panic!("program was expected to fail: {src:?}"),
+            Err(e) => e.to_string(),
+        }
+    })
+}
+
 pub fn run(src: &str) -> Vec<Value> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()

@@ -37,7 +37,6 @@ fn hint_to_tag(hint: Interpretation) -> &'static str {
         Interpretation::Unassigned => "unassigned",
         Interpretation::RawNumber => "rawNumber",
         Interpretation::Interval => "interval",
-        Interpretation::Text => "text",
         Interpretation::TruthValue => "truthValue",
         Interpretation::Timestamp => "timestamp",
         Interpretation::Nil => "nil",
@@ -49,7 +48,6 @@ fn hint_from_tag(tag: &str) -> Interpretation {
     match tag {
         "rawNumber" => Interpretation::RawNumber,
         "interval" => Interpretation::Interval,
-        "text" => Interpretation::Text,
         "truthValue" => Interpretation::TruthValue,
         "timestamp" => Interpretation::Timestamp,
         "nil" => Interpretation::Nil,
@@ -123,6 +121,12 @@ enum PersistData {
     },
     Vector {
         items: Vec<PersistValue>,
+    },
+    /// A String, persisted as its content. The old encoding was a `Vector` of
+    /// codepoint scalars plus a `"text"` role tag, which made `''` decode as
+    /// NIL and so made the codec lossy for a value it claimed to round-trip.
+    Text {
+        s: String,
     },
     Tensor {
         nums: Vec<i64>,
@@ -227,6 +231,9 @@ fn encode_data(data: &ValueData) -> Result<PersistData, String> {
                 None => return Err("cannot persist a Tier-2 computable exact real".to_string()),
             },
         },
+        ValueData::Text(text) => PersistData::Text {
+            s: text.to_string(),
+        },
         ValueData::Vector(items) => PersistData::Vector {
             items: items
                 .iter()
@@ -270,6 +277,7 @@ fn decode_data(data: &PersistData) -> Result<ValueData, String> {
             }
             ValueData::ExactScalar(acc)
         }
+        PersistData::Text { s } => ValueData::Text(Arc::from(s.as_str())),
         PersistData::Vector { items } => ValueData::Vector(Arc::new(
             items
                 .iter()

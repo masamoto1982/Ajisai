@@ -3,7 +3,7 @@
 //! stack values, rendered forms, and per-value hints must be identical.
 
 use crate::interpreter::{arithmetic, comparison, Interpreter};
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn block_on<F: std::future::Future>(fut: F) -> F::Output {
     use std::task::{Context, Poll};
@@ -41,8 +41,12 @@ fn singleton_vector(n: i64) -> Value {
     Value::from_vector(vec![Value::from_int(n)])
 }
 
-fn text_singleton_vector(n: i64) -> Value {
-    Value::from_vector_with_hint(vec![Value::from_int(n)], Interpretation::Text)
+fn one_char_string(n: i64) -> Value {
+    Value::from_string(
+        &char::from_u32(n as u32)
+            .expect("test codepoint")
+            .to_string(),
+    )
 }
 
 fn rendered_stack(interp: &Interpreter) -> Vec<String> {
@@ -202,17 +206,25 @@ fn direct_singleton_vector_fast_path_matches_baseline() {
 }
 
 #[test]
-fn text_singleton_vector_stays_on_baseline_path() {
-    let (on, off) = assert_direct_on_equals_off(
-        vec![text_singleton_vector(6), text_singleton_vector(3)],
-        arithmetic::op_add,
-    );
-    assert_eq!(
-        on.runtime_metrics().scalar_fastpath_count,
-        0,
-        "Text-hinted singleton Vector must not take numeric scalar fast path"
-    );
-    assert_eq!(off.runtime_metrics().scalar_fastpath_count, 0);
+fn string_operand_stays_on_baseline_path() {
+    // A String has no numeric lane at all now, so the fast path cannot see a
+    // singleton to project — and arithmetic rejects it outright rather than
+    // adding 1 to a codepoint. It used to be excluded by a hint check, and
+    // `'A' 1 ADD` used to answer `[ 66/1 ]`.
+    for enabled in [true, false] {
+        let mut interp = Interpreter::new();
+        interp.set_scalar_fastpath_enabled(enabled);
+        interp.update_stack(vec![one_char_string(65), one_char_string(66)]);
+        assert!(
+            arithmetic::op_add(&mut interp).is_err(),
+            "ADD must reject String operands (fast path {enabled})"
+        );
+        assert_eq!(
+            interp.runtime_metrics().scalar_fastpath_count,
+            0,
+            "a String must not take the numeric scalar fast path"
+        );
+    }
 }
 
 #[test]

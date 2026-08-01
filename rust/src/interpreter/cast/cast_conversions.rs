@@ -1,20 +1,20 @@
 use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::cast::cast_value_helpers::{
-    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr_with_hint,
-    is_boolean_value, is_number_value, is_string_value_with_hint,
+    apply_unary_cast, format_fraction_to_string, format_value_to_string_repr, is_boolean_value,
+    is_number_value,
 };
 use crate::interpreter::value_extraction_helpers::{create_number_value, value_as_string};
 use crate::interpreter::Interpreter;
 use crate::semantic::Recoverability;
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
-fn convert_value_to_string(val: &Value, hint: Interpretation) -> Result<Value> {
+fn convert_value_to_string(val: &Value) -> Result<Value> {
     if val.is_nil() {
         return Ok(Value::nil_inheriting_absence_from(val));
     }
 
-    if is_string_value_with_hint(val, hint) {
+    if val.is_text() {
         return Ok(val.clone());
     }
 
@@ -25,7 +25,7 @@ fn convert_value_to_string(val: &Value, hint: Interpretation) -> Result<Value> {
         }
     }
 
-    let string_repr = format_value_to_string_repr_with_hint(val, hint);
+    let string_repr = format_value_to_string_repr(val);
     Ok(Value::from_string(&string_repr))
 }
 
@@ -33,8 +33,8 @@ pub fn op_str(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_string)
 }
 
-fn convert_value_to_number(val: &Value, hint: Interpretation) -> Result<Value> {
-    if is_string_value_with_hint(val, hint) {
+fn convert_value_to_number(val: &Value) -> Result<Value> {
+    if val.is_text() {
         let s = value_as_string(val).unwrap_or_default();
         match Fraction::from_str(&s) {
             Ok(fraction) => return Ok(create_number_value(fraction)),
@@ -63,11 +63,11 @@ pub fn op_num(interp: &mut Interpreter) -> Result<()> {
     apply_unary_cast(interp, convert_value_to_number)
 }
 
-fn convert_value_to_boolean(val: &Value, hint: Interpretation) -> Result<Value> {
+fn convert_value_to_boolean(val: &Value) -> Result<Value> {
     if is_boolean_value(val) {
         return Ok(val.clone());
     }
-    if is_string_value_with_hint(val, hint) {
+    if val.is_text() {
         let s = value_as_string(val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "TRUE" {
@@ -96,7 +96,6 @@ pub fn op_bool(interp: &mut Interpreter) -> Result<()> {
 }
 
 pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
-    let hint: Interpretation = interp.stack.last_role();
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
     if val.is_nil() {
@@ -104,7 +103,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
 
-    if is_string_value_with_hint(&val, hint) {
+    if val.is_text() {
         let s = value_as_string(&val).unwrap_or_default();
         let upper = s.to_uppercase();
         if upper == "NIL" {
@@ -131,7 +130,7 @@ pub fn op_nil(interp: &mut Interpreter) -> Result<()> {
     Err(AjisaiError::from("NIL: expected String input"))
 }
 
-fn convert_codepoint_to_char(val: &Value, hint: Interpretation) -> Result<Value> {
+fn convert_codepoint_to_char(val: &Value) -> Result<Value> {
     if is_number_value(val) {
         if let Some(f) = val.as_scalar() {
             if let Some(code) = f.to_i64() {
@@ -153,7 +152,7 @@ fn convert_codepoint_to_char(val: &Value, hint: Interpretation) -> Result<Value>
             }
         }
     }
-    if is_string_value_with_hint(val, hint) {
+    if val.is_text() {
         return Err(AjisaiError::from("CHR: expected Number, got String"));
     }
     if is_boolean_value(val) {

@@ -69,7 +69,11 @@ fn push_result(interp: &mut Interpreter, value: Value, hint: Interpretation) {
 /// reasonless projection would have no content to observe.
 fn push_protocol_string_or_nil(interp: &mut Interpreter, value: Option<&'static str>) {
     match value {
-        Some(protocol) => push_result(interp, Value::from_string(protocol), Interpretation::Text),
+        Some(protocol) => push_result(
+            interp,
+            Value::from_string(protocol),
+            Interpretation::Unassigned,
+        ),
         None => push_result(
             interp,
             Value::nil_with_reason(NilReason::NotAvailable),

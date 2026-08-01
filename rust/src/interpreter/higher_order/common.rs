@@ -1,7 +1,7 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::extract_word_name_from_value;
 use crate::interpreter::Interpreter;
-use crate::types::{Value, ValueData};
+use crate::types::Value;
 
 pub(crate) enum ExecutableCode {
     WordName(String),
@@ -16,7 +16,9 @@ pub(crate) fn extract_executable_code(
         return Ok(ExecutableCode::CodeBlock(tokens.clone()));
     }
 
-    if matches!(&val.data, ValueData::Vector(_)) {
+    // A Word name is a String (`[ 1 2 3 ] 'DBL' MAP`). This tested for a
+    // Vector because a String *was* one; the String domain is the test now.
+    if val.is_text() {
         return extract_word_name_from_value(val).map(ExecutableCode::WordName);
     }
 

@@ -414,11 +414,14 @@ pub(crate) fn arena_node_to_js(
             js_sys::Reflect::set(&obj, &"type".into(), &"boolean".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &(*b).into()).unwrap();
         }
+        NodeKind::Text(text) => {
+            js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &(&**text).into()).unwrap();
+        }
         NodeKind::Scalar(f) => {
             let scalar_type = match effective_hint {
                 Interpretation::TruthValue => "boolean",
                 Interpretation::Timestamp => "datetime",
-                Interpretation::Text => "string",
                 _ => "number",
             };
             js_sys::Reflect::set(&obj, &"type".into(), &scalar_type.into()).unwrap();
@@ -453,46 +456,23 @@ pub(crate) fn arena_node_to_js(
             }
         }
         NodeKind::Vector { children } => {
-            if effective_hint == Interpretation::Text {
-                let text = children
-                    .iter()
-                    .filter_map(|child| match arena.kind(*child) {
-                        NodeKind::Scalar(codepoint) => {
-                            codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
-                        }
-                        _ => None,
-                    })
-                    .collect::<String>();
-                js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
-            } else {
-                let child_external: Option<Interpretation> = match effective_hint {
-                    Interpretation::TruthValue => Some(Interpretation::TruthValue),
-                    _ => None,
-                };
-                let js_array = js_sys::Array::new();
-                for child in children {
-                    js_array.push(&arena_node_to_js(arena, *child, child_external));
-                }
-                js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
+            let child_external: Option<Interpretation> = match effective_hint {
+                Interpretation::TruthValue => Some(Interpretation::TruthValue),
+                _ => None,
+            };
+            let js_array = js_sys::Array::new();
+            for child in children {
+                js_array.push(&arena_node_to_js(arena, *child, child_external));
             }
+            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }
         NodeKind::Tensor { data, shape } => {
             // Hydrate a dense Tensor at the WASM boundary so the GUI/TS layer
             // can keep treating values uniformly as nested Vectors.
-            if effective_hint == Interpretation::Text && shape.len() <= 1 {
-                let text: String = data
-                    .iter()
-                    .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
-                    .collect();
-                js_sys::Reflect::set(&obj, &"type".into(), &"string".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"value".into(), &text.into()).unwrap();
-            } else {
-                let js_array = tensor_data_to_js_array(data, shape, effective_hint);
-                js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
-                js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
-            }
+            let js_array = tensor_data_to_js_array(data, shape, effective_hint);
+            js_sys::Reflect::set(&obj, &"type".into(), &"vector".into()).unwrap();
+            js_sys::Reflect::set(&obj, &"value".into(), &js_array).unwrap();
         }
         NodeKind::CodeBlock(_) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
@@ -518,16 +498,18 @@ pub(crate) fn extract_display_hint_from_js(js_val: &JsValue) -> Interpretation {
     match hint_js.as_string().as_deref() {
         Some("rawNumber") => Interpretation::RawNumber,
         Some("interval") => Interpretation::Interval,
-        Some("text") => Interpretation::Text,
         Some("truthValue") => Interpretation::TruthValue,
         Some("timestamp") => Interpretation::Timestamp,
         Some("nil") => Interpretation::Nil,
         // Legacy role names from snapshots persisted before the
         // interpretation-role redesign. Accepted so a saved stack restored
-        // after an upgrade keeps its roles (a saved string would otherwise
-        // restore as an Unassigned codepoint vector).
+        // after an upgrade keeps its roles.
+        //
+        // `"text"`/`"string"` are deliberately absent: a String carries its own
+        // domain now, so a restored value is a String because it decodes as
+        // `NodeKind::Text`, not because a role said so. Mapping them to a role
+        // would put the old guess back on the restore path.
         Some("number") => Interpretation::RawNumber,
-        Some("string") => Interpretation::Text,
         Some("boolean") => Interpretation::TruthValue,
         Some("datetime") => Interpretation::Timestamp,
         _ => Interpretation::Unassigned,

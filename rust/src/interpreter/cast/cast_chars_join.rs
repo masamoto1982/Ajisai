@@ -1,122 +1,113 @@
 use crate::error::{AjisaiError, Result};
 use crate::interpreter::cast::cast_value_helpers::{
-    is_boolean_value, is_datetime_value, is_number_value, is_string_value, try_char_from_value,
+    is_boolean_value, is_number_value, try_char_from_value,
 };
-use crate::interpreter::value_extraction_helpers::value_as_string;
 use crate::interpreter::Interpreter;
 use crate::types::Value;
 
 pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    if val.is_nil() {
+    let Some(text) = val.as_text() else {
+        let got = describe_domain(&val);
         interp.stack.push(val);
-        return Err(AjisaiError::from("CHARS: expected String, got Nil"));
-    }
+        return Err(AjisaiError::from(format!(
+            "CHARS: expected String, got {got}"
+        )));
+    };
 
-    if is_string_value(&val) {
-        let s = value_as_string(&val).unwrap_or_default();
-        if s.is_empty() {
-            interp.stack.push(val);
-            return Err(AjisaiError::from("CHARS: expected non-empty String"));
-        }
-
-        let chars: Vec<Value> = s
-            .chars()
-            .map(|c| Value::from_string(&c.to_string()))
-            .collect();
-
-        interp.stack.push(Value::from_vector(chars));
-        return Ok(());
-    }
-
-    if is_number_value(&val) {
+    // `[ ]` is still inexpressible, so an empty String has no vector to split
+    // into. This is the one place the String domain now outruns the Vector
+    // one; it resolves when the empty Vector is admitted.
+    if text.is_empty() {
         interp.stack.push(val);
-        return Err(AjisaiError::from("CHARS: expected String, got Number"));
+        return Err(AjisaiError::from("CHARS: expected non-empty String"));
     }
 
-    if is_boolean_value(&val) {
-        interp.stack.push(val);
-        return Err(AjisaiError::from("CHARS: expected String, got Boolean"));
-    }
-
-    interp.stack.push(val);
-    Err(AjisaiError::from("CHARS: expected String input"))
+    let chars: Vec<Value> = text
+        .chars()
+        .map(|c| Value::from_string(&c.to_string()))
+        .collect();
+    interp.stack.push(Value::from_vector(chars));
+    Ok(())
 }
 
 pub fn op_join(interp: &mut Interpreter) -> Result<()> {
     let val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
 
-    if val.is_nil() {
+    let Some(children) = val.as_vector_view().map(|v| v.into_owned()) else {
+        let got = describe_domain(&val);
         interp.stack.push(val);
-        return Err(AjisaiError::from("JOIN: expected Vector, got Nil"));
+        return Err(AjisaiError::from(format!(
+            "JOIN: expected Vector, got {got}"
+        )));
+    };
+
+    if children.is_empty() {
+        interp.stack.push(val);
+        return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
     }
 
-    if let Some(children) = val.as_vector_view() {
-        if children.is_empty() {
-            interp.stack.push(val);
-            return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
+    let mut result = String::new();
+    for (i, elem) in children.iter().enumerate() {
+        // A String element contributes its content; an integer element is
+        // taken as a code point, which is what `core-join-mixed-text-and-
+        // codepoints` pins. Accepting both is a Word-level choice about JOIN's
+        // input domains, not a claim that the two are the same value.
+        if let Some(text) = elem.as_text() {
+            result.push_str(text);
+            continue;
         }
 
-        let mut result = String::new();
-        for (i, elem) in children.iter().enumerate() {
-            if is_string_value(elem) {
-                if let Some(s) = value_as_string(elem) {
-                    result.push_str(&s);
+        if is_number_value(elem) {
+            match try_char_from_value(elem) {
+                Some(c) => {
+                    result.push(c);
                     continue;
                 }
-            }
-
-            if is_number_value(elem) {
-                match try_char_from_value(elem) {
-                    Some(c) => {
-                        result.push(c);
-                        continue;
-                    }
-                    None => {
-                        interp.stack.push(val);
-                        return Err(AjisaiError::from(format!(
-                            "JOIN: invalid character code at index {}",
-                            i
-                        )));
-                    }
+                None => {
+                    interp.stack.push(val);
+                    return Err(AjisaiError::from(format!(
+                        "JOIN: invalid character code at index {}",
+                        i
+                    )));
                 }
             }
-
-            let type_name = if elem.is_nil() {
-                "nil"
-            } else if is_boolean_value(elem) {
-                "boolean"
-            } else {
-                "other format"
-            };
-            interp.stack.push(val);
-            return Err(AjisaiError::from(format!(
-                "JOIN: all elements must be strings, found {} at index {}",
-                type_name, i
-            )));
         }
 
-        interp.stack.push(Value::from_string(&result));
-        return Ok(());
+        let type_name = if elem.is_nil() {
+            "nil"
+        } else if is_boolean_value(elem) {
+            "boolean"
+        } else {
+            "other format"
+        };
+        interp.stack.push(val);
+        return Err(AjisaiError::from(format!(
+            "JOIN: all elements must be strings, found {} at index {}",
+            type_name, i
+        )));
     }
 
-    let type_name = if is_string_value(&val) {
+    interp.stack.push(Value::from_string(&result));
+    Ok(())
+}
+
+/// The operand's domain, named for an error message.
+fn describe_domain(val: &Value) -> &'static str {
+    if val.is_nil() {
+        "Nil"
+    } else if val.is_text() {
         "String"
-    } else if is_number_value(&val) {
+    } else if is_number_value(val) {
         "Number"
-    } else if is_boolean_value(&val) {
+    } else if is_boolean_value(val) {
         "Boolean"
-    } else if is_datetime_value(&val) {
-        "DateTime"
+    } else if val.is_vector() {
+        "Vector"
     } else {
         "other format"
-    };
-    interp.stack.push(val);
-    Err(AjisaiError::from(format!(
-        "JOIN: expected Vector, got {}",
-        type_name
-    )))
+    }
 }
 
 #[cfg(test)]
@@ -140,10 +131,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chars_structure_error() {
+    async fn test_chars_rejects_a_vector() {
+        // `[ 42 ]` is a Vector of one number. It used to satisfy CHARS because
+        // a codepoint vector *was* a String; CHARS' contract registers
+        // `nonText`, and now that is what happens.
         let mut interp = Interpreter::new();
         let result = interp.execute("[ 42 ] CHARS").await;
-        assert!(result.is_ok());
+        assert!(result.is_err(), "CHARS must reject a Vector");
+    }
+
+    #[tokio::test]
+    async fn test_chars_yields_one_character_strings() {
+        let mut interp = Interpreter::new();
+        interp.execute("'ab' CHARS").await.unwrap();
+        let val = interp.stack.last().expect("a result");
+        let items = val.as_vector_view().expect("a vector");
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].as_text(), Some("a"));
+        assert_eq!(items[1].as_text(), Some("b"));
     }
 
     #[tokio::test]

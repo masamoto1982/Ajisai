@@ -14,6 +14,8 @@ pub enum NodeKind {
     Nil(Option<NilReason>),
     Boolean(bool),
     Scalar(Fraction),
+    /// A String (LANG.VALUES.DISJOINT), stored as its content.
+    Text(Arc<str>),
     Vector {
         children: Vec<NodeId>,
     },
@@ -60,17 +62,7 @@ impl ValueArena {
     }
 
     pub fn alloc_string(&mut self, value: &str) -> NodeId {
-        let mut children = Vec::with_capacity(value.chars().count());
-        for ch in value.chars() {
-            let scalar =
-                self.alloc_scalar(Fraction::from(ch as u32 as i64), Interpretation::RawNumber);
-            children.push(scalar);
-        }
-        if children.is_empty() {
-            self.alloc_node(NodeKind::Nil(None), Interpretation::Text)
-        } else {
-            self.alloc_vector(children, Interpretation::Text)
-        }
+        self.alloc_node(NodeKind::Text(Arc::from(value)), Interpretation::Unassigned)
     }
 
     pub fn alloc_nil(&mut self, hint: Interpretation) -> NodeId {
@@ -104,6 +96,7 @@ impl ValueArena {
             | NodeKind::Nil(_)
             | NodeKind::Boolean(_)
             | NodeKind::Scalar(_)
+            | NodeKind::Text(_)
             | NodeKind::CodeBlock(_) => &[],
         }
     }
@@ -120,6 +113,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
             // via the current vocabulary (Tier ≤ 1 comparison is total, so no
             // word constructs U yet), so the gap is latent. Tracked for a
             // dedicated follow-up.
+            ValueData::Text(s) => arena.alloc_string(s),
             ValueData::Nil => arena.alloc_nil_with_reason(value.nil_reason().copied(), value.hint),
             ValueData::Boolean(b) => arena.alloc_node(NodeKind::Boolean(*b), value.hint),
             ValueData::Scalar(f) => arena.alloc_scalar(f.clone(), value.hint),
@@ -157,6 +151,7 @@ pub fn value_to_arena(root: &Value) -> (ValueArena, NodeId) {
 pub fn arena_to_value(arena: &ValueArena, root: NodeId) -> Value {
     fn rebuild_recursive(arena: &ValueArena, id: NodeId) -> Value {
         match arena.kind(id) {
+            NodeKind::Text(s) => Value::from_string(s),
             NodeKind::Nil(reason) => {
                 let mut nil = match reason {
                     Some(reason) => Value::nil_with_reason(*reason),
@@ -287,8 +282,9 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
             }
             JsonValue::Null
         }
+        NodeKind::Text(s) => JsonValue::String(s.to_string()),
         NodeKind::Vector { children } => {
-            if arena.hint(root) == Interpretation::Text {
+            if false {
                 let mut buf = String::new();
                 for child in children {
                     if let NodeKind::Scalar(codepoint) = arena.kind(*child) {
@@ -308,7 +304,7 @@ pub fn arena_node_to_json(arena: &ValueArena, root: NodeId) -> JsonValue {
                 .collect();
             JsonValue::Array(arr)
         }
-        NodeKind::Tensor { data, shape } => tensor_to_json(arena.hint(root), data, shape),
+        NodeKind::Tensor { data, shape } => tensor_to_json(data, shape),
         NodeKind::CodeBlock(_) => JsonValue::Null,
     }
 }
@@ -328,18 +324,7 @@ fn fraction_to_json(frac: &Fraction) -> JsonValue {
     JsonValue::Null
 }
 
-fn tensor_to_json(hint: Interpretation, data: &[Fraction], shape: &[usize]) -> JsonValue {
-    if hint == Interpretation::Text && (shape.is_empty() || shape.len() == 1) {
-        let mut buf = String::new();
-        for codepoint in data {
-            if let Some(n) = codepoint.to_i64() {
-                if let Some(ch) = char::from_u32(n as u32) {
-                    buf.push(ch);
-                }
-            }
-        }
-        return JsonValue::String(buf);
-    }
+fn tensor_to_json(data: &[Fraction], shape: &[usize]) -> JsonValue {
     if shape.is_empty() || shape.len() == 1 {
         let arr = data.iter().map(fraction_to_json).collect();
         return JsonValue::Array(arr);
@@ -351,7 +336,7 @@ fn tensor_to_json(hint: Interpretation, data: &[Fraction], shape: &[usize]) -> J
         return JsonValue::Array(Vec::new());
     }
     let arr = (0..outer)
-        .map(|i| tensor_to_json(hint, &data[i * stride..(i + 1) * stride], rest))
+        .map(|i| tensor_to_json(&data[i * stride..(i + 1) * stride], rest))
         .collect();
     JsonValue::Array(arr)
 }
@@ -361,14 +346,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn value_arena_string_allocation_uses_string_hint() {
+    fn value_arena_string_allocation_is_a_text_node() {
         let mut arena = ValueArena::new();
         let root = arena.alloc_string("Aj");
-        assert_eq!(arena.hint(root), Interpretation::Text);
-        assert_eq!(arena.children(root).len(), 2);
-        for child in arena.children(root) {
-            assert_eq!(arena.hint(*child), Interpretation::RawNumber);
-        }
+        assert!(matches!(arena.kind(root), NodeKind::Text(s) if &**s == "Aj"));
+        // A String is a leaf: it holds its content, not codepoint children.
+        assert!(arena.children(root).is_empty());
+    }
+
+    #[test]
+    fn empty_string_round_trips_as_an_empty_string() {
+        // It used to decode as `NIL(EmptySequence)`, which made the codec
+        // lossy for `''` while advertising itself as lossless.
+        let (arena, root) = value_to_arena(&Value::from_string(""));
+        let restored = arena_to_value(&arena, root);
+        assert_eq!(restored, Value::from_string(""));
+        assert!(!restored.is_nil());
     }
 
     #[test]
@@ -431,10 +424,10 @@ mod tests {
     }
 
     #[test]
-    fn two_element_numeric_vector_stays_number_hint() {
+    fn two_element_numeric_vector_is_not_a_string() {
         let value = Value::from_children(vec![Value::from_int(65), Value::from_int(66)]);
         let (arena, root) = value_to_arena(&value);
-        assert_ne!(arena.hint(root), Interpretation::Text);
+        assert!(!matches!(arena.kind(root), NodeKind::Text(_)));
     }
 
     #[test]
@@ -450,10 +443,10 @@ mod tests {
             let children = arena.children(current);
             if depth < 14 {
                 assert_eq!(children.len(), 1, "depth {depth}: expected one child");
-                assert_ne!(arena.hint(current), Interpretation::Text);
+                assert!(!matches!(arena.kind(current), NodeKind::Text(_)));
                 current = children[0];
             } else {
-                assert_ne!(arena.hint(current), Interpretation::Text);
+                assert!(!matches!(arena.kind(current), NodeKind::Text(_)));
             }
         }
     }
@@ -481,9 +474,8 @@ mod tests {
                     .iter()
                     .all(|c| matches!(arena.kind(*c), NodeKind::Scalar(f) if f.is_integer()));
                 if all_plain_ints && !children.is_empty() {
-                    assert_ne!(
-                        arena.hint(id),
-                        Interpretation::Text,
+                    assert!(
+                        !matches!(arena.kind(id), NodeKind::Text(_)),
                         "node {id} incorrectly string"
                     );
                 }
@@ -492,10 +484,10 @@ mod tests {
     }
 
     #[test]
-    fn explicit_string_literal_retains_string_hint() {
+    fn explicit_string_literal_stays_a_string() {
         let mut arena = ValueArena::new();
         let root = arena.alloc_string("AB");
-        assert_eq!(arena.hint(root), Interpretation::Text);
+        assert!(matches!(arena.kind(root), NodeKind::Text(s) if &**s == "AB"));
     }
 
     #[test]

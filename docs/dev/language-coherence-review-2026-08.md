@@ -192,12 +192,13 @@ LANG.COLLECTIONS.LIFT は「算術**または比較**の Word は Vector を与�
 
 ## 4. 実施した改修
 
-§4.1〜§4.4 は最初の改修（PR #1413）で、§4.5 はその後の追補で実施した。
+§4.1〜§4.4 は最初の改修（PR #1413）、§4.5 と §4.6 はその後の追補で実施した。
 
 §4.1〜§4.4 は、正典が明示的に規定しており、かつ String 領域の導入を前提としない範囲である。
 すべて「正典が何と言っているか」を根拠とし、コードコメントに該当節を引用している。
 §4.5 だけは例外で、正典そのものを変更した——本書 §2.3 が「より安い修正は正典側」と判定した
-一点について、仕様所有者の承認を得ている。
+一点について、仕様所有者の承認を得ている。§4.6 は §5 の第 1 項（と、その帰結である第 3 項）
+であり、正典は変更していない。
 
 ### 4.1 真理値を単一モデルに戻した（LANG.VALUES.TRUTH / LANG.VALUES.DISJOINT）
 
@@ -301,17 +302,58 @@ clause ID は `LANG.EFFECTS.OUTPUT` のまま据え置いた。この節は依�
 ホスト作用を一度も発火させていなかった**——suite 自身が「唯一の作用観測対象」と呼ぶ
 チャネルが、未固定のまま残っていた。
 
-### 4.6 実施しなかったもの
+### 4.6 String を独立した値領域にした（LANG.VALUES.DISJOINT）
 
-**空 Vector・空 String（提案書 §2.3）と String 領域（§2.2）は実施していない。** 両者は
-同じ一つの作業である。String が符号位置 Vector として符号化されている限り、空 String は
-空 Vector と同一物であり、`Interpretation::Text` だけが両者を隔てている。表示用フィールドに
-領域の判定をさせたまま空値を解禁すると、意味論が表示に依存する度合いが増す。正しい順序は
-**String を独立 variant にするのが先**である。`Value::eq` のコメントにこの依存関係を記録した。
+§5 の第 1 項。`ValueData::Text(Arc<str>)` を導入し、`Interpretation::Text` を削除した。
 
-同じ理由で `'A' [ 65 ] EQ` は現在も `TRUE` を返す。LANG.VALUES.DISJOINT 違反だが、
-String 領域の導入なしには正しく直せない。`hint` を等価性から外す小手先の修正は、
-String と符号位置 Vector をさらに多くの場所で同一視するので、方向が逆である。
+**旧表現では、値の領域が値の性質ではなかった。** String は符号位置 Scalar の Vector に
+`Interpretation::Text` という表示用ロールを付けたものであり、領域を決めていたのは
+表示フィールドだった。帰結は二つ、いずれも言語から観測できた:
+
+- `'A' [ 65 ] EQ` が `TRUE` を返した。符号化が同一で、hint だけが違ったためである。
+- `is_string_value` が「文字列らしさ」を**推測**していた。全要素が印字可能な符号位置かを
+  走査して判定するので、`[ 65 ]` と `'A'` を区別できない。これは `Interpretation` 自身の
+  doc comment が「実行時は描画時に意味を推測しない」と約束している当のことである。
+
+内容を直接持たせると両方が消える。領域はタグであり、要素から推測するものが何もなくなる。
+
+**空 String を解禁した。** `''` は `NilReason::EmptySequence` になっていた。これは「値が
+ない」ことを意味する NIL に、文字が 0 個の値を押し込むもので、text 族の各 Word に空の
+特例を強い、`TOKENIZE`/`SUBSTITUTE` の下で領域が閉じなくなっていた。
+`'ab' 'ab' '' SUBSTITUTE` は今 `''` を返す（以前は NIL）。
+
+**§5 の第 3 項（`Value::eq` から `hint` を外す）も同時に完了した。** 前 PR が `Value::eq` の
+コメントに「String が独立領域になればこの関係から hint は外れる」と記録していた依存関係で、
+実際に外れた。等価性は data と NIL reason だけを見る。
+
+**collection 族は String を受け付けなくなった。** `LENGTH`/`GET`/`CONCAT`/`REVERSE` は
+いずれも family `collection`・`errorWhen: ["nonVector"]` で、要約も「vector」と述べている。
+String が Vector でなくなった以上、これらは `nonVector` を上げる。文字列連結は JOIN が担う
+——`[ 'ab' 'cd' ] JOIN` であり、これは JOIN の契約（「a vector of strings を単一の string に
+join する」）が最初から述べていたことである。計算した値を繋ぐには `COLLECT` で Vector に
+してから JOIN する（`'a' 'b' 2 COLLECT JOIN`）。
+
+この判断は**レジストリに厳密に従った**結果である。正典にも Reference にも、collection 族を
+String へ拡張する規定はない。代償として corpus の 4 ケースが変わった（うち
+`core-str-flattens-container-leaves` は `'65 66 67 68'` → `'AB CD'` と**改善**している——
+Text 要素が符号位置へ崩れなくなった）。
+
+**契約レジストリの変更は一件もない。** §4.5 と同じ構図で、`words.json` は最初から正しく、
+実装がそこへ収束した。`nonVector`・`nonText`・`invalidName` はいずれも既存の宣言どおりに
+発火するようになった。
+
+副次的に見つかったもの: `extract_word_name_from_value` は値を fraction 列へ平坦化して
+符号位置として解釈していたので、`[ 73 78 67 ]` を Word 名 `INC` として受理していた。
+Word 名は String である。
+
+作用・領域の実行ケースを 10 件追加した（corpus 200 → 214、Core 被覆は 69/69 のまま）。
+
+### 4.7 実施しなかったもの
+
+**空 Vector（提案書 §2.3）は実施していない。** §5 の第 2 項であり、String 領域とは別作業
+である。`[ ]` は依然として書けず、`Value::from_vector` は空を NIL へ落とす。唯一この PR で
+影響が出たのは `'' CHARS` で、空 String を分割した先の空 Vector が表現できないためエラーに
+なる——String 領域が Vector 領域を追い越した唯一の箇所で、第 2 項で解消する。
 
 順序比較のリフティング（§3.5）も未実施。要素ごとに Boolean を返す broadcast ヘルパが
 必要で、既存の `apply_binary_broadcast_with_metrics` は Fraction を返すため流用できない。
@@ -323,10 +365,10 @@ String と符号位置 Vector をさらに多くの場所で同一視するの�
 
 正典への収束として残るものを、依存順に置く:
 
-1. **String を独立した値領域にする。** `Interpretation::Text` の除去、空 String の解禁、
-   `CHARS`/`JOIN` の確定。これが解けないと 2 も 3 も解けない。
-2. **空 Vector の解禁。** 1 に依存。各 Word に散在する空入力の特例が消える。
-3. **`Value::eq` から `hint` を外す。** 1 に依存。表示フィールドが意味論から離れる。
+1. ~~**String を独立した値領域にする。**~~ — 実施済み（§4.6）。
+2. **空 Vector の解禁。** 各 Word に散在する空入力の特例が消える。`'' CHARS` もここで
+   エラーでなくなる。1 が済んだので、次はこれ。
+3. ~~**`Value::eq` から `hint` を外す。**~~ — 実施済み（§4.6。1 の直接の帰結）。
 4. **比較族のリフティングを LANG.COLLECTIONS.LIFT に合わせる。** 単要素射影を削除し、
    要素ごと適用を実装する。`ABS` など単項数学語も同じエンジンへ。
 5. **辞書を二層に戻す。** `resolve_word.rs` の `@` 名前空間・active/owner 辞書・

@@ -3,7 +3,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 pub fn op_map(interp: &mut Interpreter) -> Result<()> {
     let code_val: Value = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -75,10 +75,8 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
         interp.stack.push(elem);
         match execute_executable_code(interp, &executable) {
             Ok(_) => match interp.stack.pop_slot() {
-                Some((result_val, result_hint)) => {
-                    let is_string_result = result_hint == Interpretation::Text
-                        || result_val.hint == Interpretation::Text;
-                    if is_vector_value(&result_val) && result_val.len() == 1 && !is_string_result {
+                Some((result_val, _result_hint)) => {
+                    if is_vector_value(&result_val) && result_val.len() == 1 {
                         results.push(result_val.child(0).expect("len==1 implies child(0) exists"));
                     } else {
                         results.push(result_val);

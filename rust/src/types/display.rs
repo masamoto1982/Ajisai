@@ -56,7 +56,6 @@ pub fn format_with_hint(value: &Value, hint: Interpretation) -> String {
         Interpretation::Unassigned => format_value_recursive(&value.data, 0),
         Interpretation::RawNumber => format_value_recursive(&value.data, 0),
         Interpretation::Interval => format_as_interval(value),
-        Interpretation::Text => format_as_string(&value.data),
         Interpretation::TruthValue => format_as_boolean(value),
         Interpretation::Timestamp => format_as_datetime(&value.data),
         Interpretation::ContinuedFraction => format_as_continued_fraction(value),
@@ -148,6 +147,11 @@ fn format_as_interval(value: &Value) -> String {
 fn format_value_recursive(data: &ValueData, depth: usize) -> String {
     match data {
         ValueData::Nil => "NIL".to_string(),
+        // A String renders quoted at every depth, from its domain alone. This
+        // is what replaces the old `Interpretation::Text` dispatch: the
+        // Stack surface used to consult a role to decide whether a vector of
+        // numbers was "really" text, and now there is nothing to decide.
+        ValueData::Text(s) => format!("'{}'", s),
         // CS4 PR-2: U renders as `UNKNOWN` everywhere, including when nested
         // inside a non-truth collection — the same label the top-level
         // `is_unknown()` guards produce, and consistent with a Boolean
@@ -172,15 +176,12 @@ fn format_value_recursive(data: &ValueData, depth: usize) -> String {
                 .iter()
                 .map(|child| {
                     // A nested element keeps its own role: a Text-role child
-                    // renders as a quoted string (`'AB'`) rather than its bare
-                    // codepoint fractions, so strings stay recognizable as
-                    // strings inside a collection (SPEC §12.2). Numbers,
-                    // booleans, and deeper vectors are unchanged.
-                    if child.hint == Interpretation::Text {
-                        format_as_string(&child.data)
-                    } else {
-                        format_value_recursive(&child.data, depth + 1)
-                    }
+                    // renders as a quoted string (`'AB'`), so strings stay
+                    // recognizable as strings inside a collection (SPEC
+                    // §12.2). This now falls out of `format_value_recursive`
+                    // dispatching on the String domain, with no role to
+                    // consult.
+                    format_value_recursive(&child.data, depth + 1)
                 })
                 .collect();
 
@@ -318,70 +319,10 @@ fn format_exact_real(er: &ExactReal) -> String {
 /// that are part of the content survive unchanged (`'T'ES'T'` prints as
 /// `T'ES'T`). Non-text values render exactly as they do on the stack.
 pub fn format_for_output(value: &Value) -> String {
-    if value.hint == Interpretation::Text {
-        return format_text_content(&value.data);
+    if let ValueData::Text(s) = &value.data {
+        return s.to_string();
     }
     format_with_hint(value, value.hint)
-}
-
-fn format_as_string(data: &ValueData) -> String {
-    match data {
-        // These variants are not character data; they carry no surrounding
-        // quotes in the stack projection either, so reuse their bare form.
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
-        _ => format!("'{}'", format_text_content(data)),
-    }
-}
-
-/// Decode the raw character content of a Text-role value, without the
-/// surrounding display quotes. This is the body shared by `format_as_string`
-/// (which wraps it in `'...'` for the stack projection) and
-/// `format_for_output` (which emits it bare for `PRINT`).
-fn format_text_content(data: &ValueData) -> String {
-    match data {
-        ValueData::Nil => String::new(),
-        ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
-        ValueData::ExactScalar(er) => format_exact_real(er),
-        ValueData::Scalar(f) => {
-            if let Some(n) = f.to_i64() {
-                if (0..=0x10FFFF).contains(&n) {
-                    if let Some(c) = char::from_u32(n as u32) {
-                        return c.to_string();
-                    }
-                }
-            }
-            format_fraction(f)
-        }
-        ValueData::Vector(v) => v
-            .iter()
-            .filter_map(|child| {
-                if let ValueData::Scalar(f) = &child.data {
-                    f.to_i64().and_then(|n| {
-                        if (0..=0x10FFFF).contains(&n) {
-                            char::from_u32(n as u32)
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect(),
-        ValueData::Tensor { data, .. } => data
-            .iter()
-            .filter_map(|f| {
-                f.to_i64().and_then(|n| {
-                    if (0..=0x10FFFF).contains(&n) {
-                        char::from_u32(n as u32)
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect(),
-        ValueData::CodeBlock(tokens) => format_code_block(tokens),
-    }
 }
 
 /// Boolean label for a single element of a truth-valued vector/tensor.
@@ -392,6 +333,10 @@ fn boolean_element_label(child: &Value) -> &'static str {
         // U is handled by the `is_unknown()` guard above, so this arm is
         // unreachable; grouped with NIL only for exhaustiveness.
         ValueData::Nil => "NIL",
+        // A String is not a truth value, so it has no boolean label; it can
+        // only reach here inside a `TruthValue`-role vector, where rendering
+        // it as `NIL` matches the other non-numeric arms.
+        ValueData::Text(_) => "NIL",
         ValueData::Boolean(b) => {
             if *b {
                 "TRUE"
@@ -434,6 +379,7 @@ fn format_as_boolean(value: &Value) -> String {
         // U is handled by the `is_unknown()` guard above; grouped with NIL
         // only for exhaustiveness.
         ValueData::Nil => "NIL".to_string(),
+        ValueData::Text(_) => format_value_recursive(&value.data, 0),
         ValueData::Boolean(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
         // ExactScalar values are always non-zero positive irrationals → TRUE
         ValueData::ExactScalar(_) => "TRUE".to_string(),
@@ -479,7 +425,7 @@ fn format_as_boolean(value: &Value) -> String {
 fn format_as_datetime(data: &ValueData) -> String {
     match data {
         ValueData::Nil => format_value_recursive(data, 0),
-        ValueData::Boolean(_) => format_value_recursive(data, 0),
+        ValueData::Text(_) | ValueData::Boolean(_) => format_value_recursive(data, 0),
         ValueData::ExactScalar(er) => format!("@{}", format_exact_real(er)),
         ValueData::Scalar(f) => format!("@{}", format_fraction(f)),
         ValueData::Vector(_) | ValueData::Tensor { .. } => format_value_recursive(data, 0),

@@ -148,11 +148,28 @@ fn scalar_timestamp_is_datetime_with_number_value() {
 }
 
 #[test]
-fn scalar_text_is_string_codepoint() {
-    // 65 -> 'A'
-    let node = value_to_protocol(&scalar(65), Some(Interpretation::Text));
+fn a_string_projects_to_a_string_leaf() {
+    let node = value_to_protocol(&Value::from_string("A"), None);
     assert_eq!(node.type_str, "string");
     assert_eq!(node.value, ProtocolValue::Text("A".to_string()));
+}
+
+#[test]
+fn a_scalar_never_projects_as_a_string() {
+    // 65 is the number 65 under every role. It used to project as `'A'` when
+    // a Text role was supplied, which is a presentation field changing the
+    // domain a host observes.
+    for role in [
+        Interpretation::Unassigned,
+        Interpretation::RawNumber,
+        Interpretation::Timestamp,
+    ] {
+        let node = value_to_protocol(&scalar(65), Some(role));
+        assert_ne!(
+            node.type_str, "string",
+            "role {role:?} must not make a number a string"
+        );
+    }
 }
 
 // --- hint precedence: external Some wins, None falls back to value.hint ---
@@ -197,14 +214,11 @@ fn vector_truthvalue_propagates_to_children() {
 }
 
 #[test]
-fn vector_text_projects_to_string() {
-    // 'A','B' codepoints
-    let node = value_to_protocol(
-        &vector(vec![scalar(65), scalar(66)]),
-        Some(Interpretation::Text),
-    );
-    assert_eq!(node.type_str, "string");
-    assert_eq!(node.value, ProtocolValue::Text("AB".to_string()));
+fn a_codepoint_vector_projects_as_a_vector() {
+    // `[ 65 66 ]` is a Vector of two numbers, not the string `'AB'`. This is
+    // the protocol-side face of `'A' [ 65 ] EQ` answering false.
+    let node = value_to_protocol(&vector(vec![scalar(65), scalar(66)]), None);
+    assert_eq!(node.type_str, "vector");
 }
 
 // --- Tensor branch: the regression that motivated this layer ---
@@ -264,10 +278,11 @@ fn tensor_2d_truthvalue_nests_booleans() {
 }
 
 #[test]
-fn tensor_1d_text_projects_to_string() {
-    let node = value_to_protocol(&tensor(&[72, 105], &[2]), Some(Interpretation::Text));
-    assert_eq!(node.type_str, "string");
-    assert_eq!(node.value, ProtocolValue::Text("Hi".to_string()));
+fn a_dense_tensor_projects_as_a_vector() {
+    // Strings are never densified now, so a dense numeric tensor has no text
+    // reading available to it at all.
+    let node = value_to_protocol(&tensor(&[72, 105], &[2]), None);
+    assert_eq!(node.type_str, "vector");
 }
 
 // --- remaining ValueData kinds ---

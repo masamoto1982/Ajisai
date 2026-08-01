@@ -21,7 +21,6 @@ describe('HostProtocolV2 contract', () => {
         ]);
         expect(schema.$defs.observedValue.properties.presentation.enum).toEqual([
             'structural',
-            'text',
             'interval',
             'timestamp',
         ]);
@@ -51,7 +50,9 @@ describe('HostProtocolV2 contract', () => {
 
     test('presentation hints ride alongside the observed values', () => {
         const document = decodeV2Document(golden);
-        expect(document.stack[2]?.presentation).toBe('text');
+        // A String needs no presentation hint: `value.type === 'string'`
+        // already carries the domain, so the hint stays structural.
+        expect(document.stack[2]?.presentation).toBe('structural');
         expect(document.stack[3]?.presentation).toBe('interval');
         expect(document.stack[0]?.presentation).toBe('structural');
     });

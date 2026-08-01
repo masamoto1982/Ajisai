@@ -310,9 +310,12 @@ async fn an_empty_vector_is_inexpressible() {
     }
 
     // Each of these computes an emptiness by a different route: a filter that
-    // keeps nothing, a zero-length prefix, a zero-sized split chunk, and the
-    // empty string.
-    for code in ["[ 1 2 3 ] { FALSE } FILTER", "[ 1 2 3 ] [ 0 ] TAKE", "''"] {
+    // keeps nothing, a zero-length prefix, and a zero-sized split chunk.
+    //
+    // `''` used to be in this list. It is not an empty *vector* — it is the
+    // empty String, which is now an ordinary value of its own domain, so it
+    // no longer reaches NIL and no longer belongs to this law.
+    for code in ["[ 1 2 3 ] { FALSE } FILTER", "[ 1 2 3 ] [ 0 ] TAKE"] {
         let mut interp = Interpreter::new();
         interp
             .execute(code)

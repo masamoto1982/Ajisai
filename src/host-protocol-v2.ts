@@ -10,7 +10,7 @@
 // through its adapter. Nothing here is wired into the live GUI yet.
 
 /** The display intent carried alongside an observed value; never changes semantics. */
-export type V2Presentation = 'structural' | 'text' | 'interval' | 'timestamp';
+export type V2Presentation = 'structural' | 'interval' | 'timestamp';
 
 /** One of the six canonical value domains, discriminated by `type`. */
 export type V2Value =
@@ -35,7 +35,7 @@ export interface V2Document {
 /** The protocol identifier every V2 document carries. */
 export const V2_PROTOCOL = 'ajisai.host.v2';
 
-const PRESENTATIONS: readonly V2Presentation[] = ['structural', 'text', 'interval', 'timestamp'];
+const PRESENTATIONS: readonly V2Presentation[] = ['structural', 'interval', 'timestamp'];
 
 /** Thrown when a value is not a well-formed HostProtocolV2 document. */
 export class V2DecodeError extends Error {

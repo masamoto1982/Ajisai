@@ -43,9 +43,6 @@ pub(crate) fn end_of_source_unit(tokens: &[Token], start: usize) -> usize {
 /// table (e.g. user words).
 pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
     let hint: Option<Interpretation> = match word {
-        "STR" | "CHR" | "JOIN" | "TRIM" | "TRIM-LEFT" | "TRIM-RIGHT" | "SUBSTITUTE" => {
-            Some(Interpretation::Text)
-        }
         "NUM" | "ADD" | "SUB" | "MUL" | "DIV" | "MOD" | "FLOOR" | "CEIL" | "ROUND" | "QUANTIZE"
         | "QUANTIZE-HALF-AWAY" | "QUANTIZE-FLOOR" | "QUANTIZE-CEIL" | "QUANTIZE-TRUNC" | "FOLD" => {
             Some(Interpretation::RawNumber)
@@ -320,8 +317,7 @@ impl Interpreter {
                         .push_with_role(create_number_value(frac), Interpretation::RawNumber);
                 }
                 Token::String(s) => {
-                    self.stack
-                        .push_with_role(Value::from_string(s), Interpretation::Text);
+                    self.stack.push(Value::from_string(s));
                 }
                 Token::VectorStart => {
                     let (values, consumed, element_hint) =
