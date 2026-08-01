@@ -15,8 +15,6 @@
 //
 // Trace: docs/quality/TRACEABILITY_MATRIX.md, requirement AQ-REQ-002.
 
-#![cfg(test)]
-
 use crate::tokenizer::tokenize;
 use crate::types::Token;
 

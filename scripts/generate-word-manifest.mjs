@@ -141,34 +141,19 @@ function rustEnumVariantToSnake(value) {
 }
 
 function extractCoreWords() {
-  const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
-  const body = constArrayBody(readRepo(sourcePath), 'BUILTIN_SPECS');
-  // `constArrayBody` strips the trailing `\n];`, so the final entry has no
-  // `BuiltinSpec {` / `];` terminator after it; `$` lets the last block (e.g.
-  // SUPERVISE) match at end-of-body instead of being silently dropped.
-  const pattern = /BuiltinSpec\s*{([\s\S]*?)(?=\n\s*BuiltinSpec\s*{|\n\s*\];|$)/g;
-  const parsed = [];
-  for (const match of body.matchAll(pattern)) {
-    const item = match[1];
-    const name = item.match(/\bname:\s*"([^"]+)"/)?.[1];
-    const category = item.match(/\bcategory:\s*"([^"]+)"/)?.[1];
-    if (!name || !category) continue;
-    parsed.push({ name, category });
-  }
+  const sourcePath = 'spec/words.json';
+  const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
+    name: word.name,
+    category: word.category,
+  }));
   if (parsed.length === 0) fail('no core words extracted');
 
-  // `slug` drops the non-alphanumeric characters it collapses, so a predicate
-  // like `NIL?` and the plain `NIL` share the base slug `nil`. Disambiguate
-  // deterministically (independent of source order): the name that carried no
-  // dropped symbol keeps the base id, and a symbol-bearing name gets a suffix
-  // derived from what was dropped (`?` -> `-p`, the predicate marker), so the
-  // manifest ids stay unique and stable.
   const baseCounts = new Map();
   for (const { name } of parsed) {
     const base = slug(name);
     baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1);
   }
-  const entries = parsed.map(({ name, category }) => {
+  return parsed.map(({ name, category }) => {
     const base = slug(name);
     const dropped = name.replace(/[a-zA-Z0-9]+/g, '');
     let id = `core.${base}`;
@@ -177,7 +162,6 @@ function extractCoreWords() {
     }
     return { id, kind: 'coreword', surface: name, category, source: sourcePath };
   });
-  return entries;
 }
 
 function extractAliases() {
@@ -269,7 +253,8 @@ const manifest = {
     'rust/src/surface_forms.rs',
   ],
   implementationCatalogValidatedAgainst: [
-    'rust/src/builtins/builtin_word_definitions.rs',
+    'spec/words.json',
+    'rust/src/kernel/generated/word_registry.rs',
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {

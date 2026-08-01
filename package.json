@@ -40,6 +40,8 @@
     "core-word-docs:generate": "node scripts/generate-core-word-docs.mjs",
     "core-word-docs:check": "node scripts/generate-core-word-docs.mjs --check",
     "check:formalization-coverage": "node scripts/check-formalization-coverage.mjs",
+    "check:minimal-core": "node scripts/check-minimal-core.mjs",
+    "check:runtime-metadata": "node scripts/check-runtime-metadata-source.mjs",
     "generate:skill": "node scripts/generate-skill-md.mjs",
     "check:skill": "node scripts/generate-skill-md.mjs --check",
     "primitive:test-map": "node scripts/generate-primitive-test-map.mjs",

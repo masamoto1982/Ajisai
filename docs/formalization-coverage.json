@@ -2544,7 +2544,9 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-sexies"
       ],
-      "law_tests": [],
+      "law_tests": [
+        "rust/src/interpreter/io.rs"
+      ],
       "conformance_cases": [],
       "status": "HostedEffect",
       "notes": "PRINT is the outbound rendering boundary: it renders the consumed value and appends a host effect after capability gating.",
@@ -2558,6 +2560,35 @@
       "capability": "io.write",
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)"
+    },
+    {
+      "id": "core.def",
+      "kind": "coreword",
+      "surface": "DEF",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §8.2",
+        "SPECIFICATION.html §9.2"
+      ],
+      "formalization_sections": [
+        "docs/dev/ajisai-mathematical-formalization.md §9-quinquies"
+      ],
+      "law_tests": [
+        "rust/tests/naming_resolution_laws.rs"
+      ],
+      "conformance_cases": [
+        "core-user-definition-resolved"
+      ],
+      "status": "Formalized",
+      "notes": "DEF extends the User dictionary finite partial map with a content-addressed binding while preserving the sealed Core tier.",
+      "semantic_role": "Derived",
+      "primitive": false,
+      "derived_from": [
+        "algebra.dictionary.finite-partial-map",
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "dictionary",
+      "core_tier": "flow"
     },
     {
       "id": "core.del",

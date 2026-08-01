@@ -55,6 +55,7 @@ const CONTRACT_ENUMS = [
   ['Family', 'family', 'Semantic family the Word selects its shared laws from.'],
   ['Consumption', 'consumption', 'How the Word treats its operands under the default mode (SPEC §13.2).'],
   ['NilPolicy', 'nilPolicy', 'How the Word behaves when an operand is NIL (SPEC §7.12).'],
+  ['Partiality', 'partiality', 'Whether well-formed application is total, partial, or NIL-projecting.'],
   ['Purity', 'purity', 'Observational purity class (SPEC §7.14).'],
   ['Determinism', 'determinism', 'What the Word\'s result may depend on beyond its operands.'],
 ];
@@ -131,6 +132,7 @@ const rows = entries
         consumption: ${enumRef('Consumption', word.consumption)},
         nil_policy: ${enumRef('NilPolicy', word.nilPolicy)},
         projection: ${projection(word.projection.when)},
+        partiality: ${enumRef('Partiality', word.partiality)},
         purity: ${enumRef('Purity', word.purity)},
         determinism: ${enumRef('Determinism', word.determinism)},
         effects: ${rustStrSlice(word.effects)},
@@ -194,6 +196,7 @@ pub struct GeneratedWord {
     /// through and still project one of its own (\`passthroughThenProject\`),
     /// or project without any NIL-operand rule engaging at all.
     pub projection: Option<&'static str>,
+    pub partiality: Partiality,
     pub purity: Purity,
     pub determinism: Determinism,
     /// The effects the Word declares, in the specification's own spelling.

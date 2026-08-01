@@ -18,6 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Reject retired RuntimeSpec sources
+        run: node scripts/check-runtime-metadata-source.mjs
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -117,6 +120,9 @@ jobs:
       - name: Check formalization coverage
         run: npm run check:formalization-coverage
 
+      - name: Check Minimal Core closure
+        run: npm run check:minimal-core
+
       - name: TypeScript check
         run: npm run check
 
@@ -132,6 +138,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Reject retired RuntimeSpec sources
+        run: node scripts/check-runtime-metadata-source.mjs
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -224,6 +233,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Reject retired RuntimeSpec sources
+        run: node scripts/check-runtime-metadata-source.mjs
 
       - name: Setup Rust (with wasm target)
         uses: dtolnay/rust-toolchain@stable

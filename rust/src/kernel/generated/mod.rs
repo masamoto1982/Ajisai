@@ -16,7 +16,7 @@
 mod word_registry;
 
 pub use word_registry::{
-    Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Purity, WordId,
+    Arity, Consumption, Determinism, Family, GeneratedWord, NilPolicy, Partiality, Purity, WordId,
     GENERATED_WORDS,
 };
 
@@ -43,7 +43,14 @@ macro_rules! serialize_as_spec_str {
     };
 }
 
-serialize_as_spec_str!(Family, Consumption, NilPolicy, Purity, Determinism);
+serialize_as_spec_str!(
+    Family,
+    Consumption,
+    NilPolicy,
+    Partiality,
+    Purity,
+    Determinism
+);
 
 #[cfg(test)]
 mod tests {
