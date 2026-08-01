@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
