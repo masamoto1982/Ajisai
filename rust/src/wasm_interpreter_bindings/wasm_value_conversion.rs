@@ -402,7 +402,11 @@ pub(crate) fn arena_node_to_js(
     js_sys::Reflect::set(&obj, &"displayHint".into(), &hint_str.into()).unwrap();
 
     match arena.kind(root_id) {
-        NodeKind::Nil => {
+        // The node now carries its reason, but this display object's shape is
+        // pinned by `spec/host-protocol-v1.schema.json`, which spells absence
+        // through the separate `absence` envelope rather than here. Surfacing
+        // the reason on this object is a protocol change, not a rendering one.
+        NodeKind::Nil(_) => {
             js_sys::Reflect::set(&obj, &"type".into(), &"nil".into()).unwrap();
             js_sys::Reflect::set(&obj, &"value".into(), &JsValue::NULL).unwrap();
         }
