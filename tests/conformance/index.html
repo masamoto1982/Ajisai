@@ -1593,6 +1593,49 @@
      a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
      observes a rational enclosure under an explicit water budget. -->
 
+<!-- ===================== CORE: effects ===================== -->
+<!-- LANG.EFFECTS.OUTPUT names two effects: output emission, the only one a host
+     observes, and dictionary mutation, which stays inside the machine.
+     LANG.MACHINE.ORDER orders both against token evaluation. Nothing in the
+     suite fired a host effect before these cases, so the observation target the
+     Contract calls "the only effect observation target" was itself unpinned. -->
+
+<section class="ajisai-case" id="core-print-emits-one-output-effect" data-category="core">
+  <h3>PRINT consumes its operand and appends one output effect</h3>
+  <pre class="ajisai-source">'hi' PRINT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="hi"></span></div>
+</section>
+
+<section class="ajisai-case" id="core-print-effects-keep-request-order" data-category="core">
+  <h3>Output effects are observed in request order</h3>
+  <pre class="ajisai-source">1 PRINT 2 PRINT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span><span class="ajisai-effect" data-kind="print" data-payload="2/1"></span></div>
+</section>
+
+<!-- A Word that evaluates a supplied block has the effects of that block, which
+     is why the higher-order family is `purity: conditional` rather than pure,
+     and why LANG.COLLECTIONS.HIGHER makes element visitation order observable. -->
+
+<section class="ajisai-case" id="core-map-carries-its-block-effects" data-category="core">
+  <h3>MAP emits its block's output effects in index order</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] { ,, PRINT } MAP</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="1/1"></span><span class="ajisai-effect" data-kind="print" data-payload="2/1"></span><span class="ajisai-effect" data-kind="print" data-payload="3/1"></span></div>
+</section>
+
+<!-- The second effect: DEF changes the dictionary, and the definition it binds
+     is the one a later call resolves. The output effect is emitted from inside
+     that User Word, ordered against the surrounding tokens. -->
+
+<section class="ajisai-case" id="core-def-mutates-then-user-word-emits" data-category="core">
+  <h3>DEF commits a definition whose later call emits its block's effect</h3>
+  <pre class="ajisai-source">{ 'side' PRINT 1 ADD } 'NOISY' DEF 5 NOISY</pre>
+  <pre class="ajisai-expect-result">6/1</pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="side"></span></div>
+</section>
+
 <!-- ===================== CORE: remaining scalar and vector words ===================== -->
 <!-- These nine Core Words had a registered contract and an executor but no
      executable case, so nothing decided whether the two agreed. Each case below
