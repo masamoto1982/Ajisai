@@ -175,7 +175,8 @@ fn collect_duplicate_entries(registry: &[CorewordMetadata]) -> Vec<String> {
 }
 
 fn builtin_profile(name: &str) -> WordProfile {
-    // Output is the only effect, so PRINT is the only non-Core-profile Word.
+    // Output is the only hosted effect, so PRINT is the only non-Core-profile
+    // Word. Dictionary mutation is an effect too, but not a hosted one.
     if name == "PRINT" {
         WordProfile::Hosted
     } else {

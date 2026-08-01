@@ -451,8 +451,8 @@ impl Interpreter {
 
     /// Effect schema: request construction → effect append.
     ///
-    /// Output is the only effect (LANG.EFFECTS.OUTPUT), so there is no
-    /// capability to gate on: the builder constructs the structured payload
+    /// Output is the only effect that reaches a host (LANG.EFFECTS.OUTPUT), so
+    /// there is no capability to gate on: the builder constructs the structured payload
     /// (and may update the legacy output channel kept for adapters), and the
     /// resulting `HostEffect` is appended to the effect log in request order.
     pub(crate) fn run_effect_schema<F>(&mut self, build_effect: F) -> Result<()>

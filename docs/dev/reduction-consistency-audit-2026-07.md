@@ -208,6 +208,12 @@ But `words.json` declares DEF `effectful`/`dictionaryWrite`, DEL
 `conditional`. Under `LANG.CONTRACT.REGISTRY`, `words.json` is authoritative for
 purity/effects, so the kernel prose is wrong.
 
+**Resolved.** The clause was rewritten to this finding's verdict: output is the
+only effect that *leaves the machine*, dictionary mutation by `DEF`/`DEL` is the
+one other effect, `LOOKUP` reads without changing, and a Word evaluating a
+supplied block has that block's effects — which is what `conditional` purity
+means. See `language-coherence-review-2026-08.md`.
+
 ### D12. `LANG.COLLECTIONS.LIFT` over-claims and its own ERROR rule is violated
 The clause says comparison Words lift and "Any other pairing is ERROR".
 ```

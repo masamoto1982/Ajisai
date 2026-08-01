@@ -283,8 +283,9 @@ fn aq_ver_listing_a_no_two_entries_share_a_name() {
 
 #[test]
 fn aq_ver_profile_a_print_is_the_only_hosted_word() {
-    // Output is the only effect (LANG.EFFECTS.OUTPUT), so PRINT is the only
-    // Word outside the Core profile.
+    // Output is the only *hosted* effect (LANG.EFFECTS.OUTPUT), so PRINT is the
+    // only Word outside the Core profile. DEF/DEL are effectful as well, but
+    // their effect stays inside the machine, so they keep the Core profile.
     let hosted = get_hosted_profile_words();
     assert_eq!(
         hosted.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(),

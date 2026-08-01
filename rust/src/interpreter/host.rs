@@ -1,9 +1,12 @@
-//! Host abstraction for the one effect Ajisai has.
+//! Host abstraction for the one effect that leaves the machine.
 //!
-//! Ajisai Core is host-independent. Output is the only effect
-//! (LANG.EFFECTS.OUTPUT): `PRINT` appends to the ordered output stream, and
-//! every other Word is pure. When `PRINT` runs it produces a structured
-//! `HostEffect` rather than only appending a string to `output_buffer`.
+//! Ajisai Core is host-independent. Output is the only effect a host can
+//! observe (LANG.EFFECTS.OUTPUT): `PRINT` appends to the ordered output
+//! stream, and no other Word emits output. The language's other effect,
+//! dictionary mutation by `DEF`/`DEL` (LANG.DICTIONARY.MUTATION), stays inside
+//! the machine and never reaches this channel. When `PRINT` runs it produces a
+//! structured `HostEffect` rather than only appending a string to
+//! `output_buffer`.
 //!
 //! The conformance suite (`tests/conformance/`) observes the ordered sequence of
 //! `HostEffect`s, not the human-readable `output_buffer`. Structuring the effect
@@ -12,8 +15,8 @@
 
 use std::sync::{Arc, Mutex};
 
-/// A structured effect request. Output is the only effect the language has, so
-/// this carries exactly one variant; it stays an enum because the conformance
+/// A structured effect request. Output is the only effect that crosses the host
+/// boundary, so this carries exactly one variant; it stays an enum because the conformance
 /// suite matches on the stable `kind` tag and the protocol pins that shape.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum HostEffect {
