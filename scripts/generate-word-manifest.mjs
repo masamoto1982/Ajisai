@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -141,37 +141,13 @@ function rustEnumVariantToSnake(value) {
 }
 
 function extractCoreWords() {
-  const sourcePath = 'rust/src/builtins/builtin_word_definitions.rs';
-  const authoredDir = resolve(repoRoot, 'rust/src/builtins/builtin_specs');
-  const definitions = new Map();
-  const pattern = /pub\(in crate::builtins\) const ([A-Z0-9_]+): RuntimeSpec = RuntimeSpec\s*\{([\s\S]*?)\.\.SPEC_DEFAULT\s*\};/g;
-  for (const file of readdirSync(authoredDir).filter((name) => name.endsWith('.rs') && name !== 'mod.rs').sort()) {
-    const source = readFileSync(resolve(authoredDir, file), 'utf8');
-    for (const match of source.matchAll(pattern)) {
-      const name = match[2].match(/\bname:\s*"([^"]+)"/)?.[1];
-      const category = match[2].match(/\bcategory:\s*"([^"]+)"/)?.[1];
-      if (!name || !category) continue;
-      if (definitions.has(match[1])) fail(`duplicate authored Core Word constant ${match[1]}`);
-      definitions.set(match[1], { name, category });
-    }
-  }
-
-  const orderBody = constArrayBody(readRepo(sourcePath), 'RUNTIME_SPECS');
-  const orderedConstants = [...orderBody.matchAll(/authored_specs::[a-z_]+::([A-Z0-9_]+)/g)].map((match) => match[1]);
-  const parsed = orderedConstants.map((constant) => {
-    const entry = definitions.get(constant);
-    if (!entry) fail(`ordered Core Word constant ${constant} has no authored definition`);
-    return entry;
-  });
+  const sourcePath = 'spec/words.json';
+  const parsed = JSON.parse(readRepo(sourcePath)).entries.map((word) => ({
+    name: word.name,
+    category: word.category,
+  }));
   if (parsed.length === 0) fail('no core words extracted');
-  if (parsed.length !== definitions.size) fail(`Core Word order has ${parsed.length} entries but ${definitions.size} definitions exist`);
 
-  // `slug` drops the non-alphanumeric characters it collapses, so a predicate
-  // like `NIL?` and the plain `NIL` share the base slug `nil`. Disambiguate
-  // deterministically (independent of source order): the name that carried no
-  // dropped symbol keeps the base id, and a symbol-bearing name gets a suffix
-  // derived from what was dropped (`?` -> `-p`, the predicate marker), so the
-  // manifest ids stay unique and stable.
   const baseCounts = new Map();
   for (const { name } of parsed) {
     const base = slug(name);
@@ -277,7 +253,8 @@ const manifest = {
     'rust/src/surface_forms.rs',
   ],
   implementationCatalogValidatedAgainst: [
-    'rust/src/builtins/builtin_word_definitions.rs',
+    'spec/words.json',
+    'rust/src/kernel/generated/word_registry.rs',
   ],
   semanticMetadataFrom: 'docs/formalization-coverage.json',
   counts: {

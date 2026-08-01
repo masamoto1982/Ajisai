@@ -84,3 +84,46 @@ pub fn mass_contract(name: &str) -> MassContract {
         .map(mass_from_arity)
         .unwrap_or(MassContract::Dynamic)
 }
+
+/// Read runtime partiality from the canonical Word contract.
+pub(crate) const fn partiality_from_contract(word: &GeneratedWord) -> super::Partiality {
+    word.partiality
+}
+
+/// Derive the audit safety band: effects are boundary operations, while pure
+/// total Words are A and pure partial/projecting Words are B.
+pub(crate) const fn safety_from_contract(word: &GeneratedWord) -> super::SafetyLevel {
+    if !word.effects.is_empty() {
+        super::SafetyLevel::D
+    } else {
+        match partiality_from_contract(word) {
+            super::Partiality::Total => super::SafetyLevel::A,
+            super::Partiality::Partial | super::Partiality::Projecting => super::SafetyLevel::B,
+        }
+    }
+}
+
+/// Preview is permitted exactly for effect-free pure Words.
+pub(crate) const fn safe_preview_from_contract(word: &GeneratedWord) -> bool {
+    word.effects.is_empty() && matches!(word.purity, crate::kernel::generated::Purity::Pure)
+}
+
+/// Stability is a projection of the audit safety band, never a parallel label.
+pub(crate) const fn stability_from_contract(word: &GeneratedWord) -> &'static str {
+    match safety_from_contract(word) {
+        super::SafetyLevel::A | super::SafetyLevel::B => "stable",
+        super::SafetyLevel::C | super::SafetyLevel::D | super::SafetyLevel::Quarantined => {
+            "experimental"
+        }
+    }
+}
+
+/// Positional control is identified by the canonical executor identity.
+pub(crate) const fn execution_form_from_contract(word: &GeneratedWord) -> ExecutionForm {
+    match word.id {
+        crate::kernel::generated::WordId::LazyNextUnitFallback => {
+            ExecutionForm::LazyNextUnitFallback
+        }
+        _ => ExecutionForm::RuntimeWord,
+    }
+}

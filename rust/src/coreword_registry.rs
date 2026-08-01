@@ -19,20 +19,16 @@ use crate::kernel::generated::{GeneratedWord, GENERATED_WORDS};
 mod contract;
 
 use contract::mass_from_arity;
+pub(crate) use contract::{
+    execution_form_from_contract, partiality_from_contract, safe_preview_from_contract,
+    safety_from_contract, stability_from_contract,
+};
 pub use contract::{mass_contract, ExecutionForm, MassContract};
 use serde::Serialize;
 #[cfg(test)]
 use std::collections::HashSet;
 
-pub use crate::kernel::generated::{Determinism, NilPolicy, Purity};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Partiality {
-    Total,
-    Partial,
-    Projecting,
-}
+pub use crate::kernel::generated::{Determinism, NilPolicy, Partiality, Purity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum SafetyLevel {
@@ -201,10 +197,10 @@ fn core_word_metadata(word: &GeneratedWord) -> CorewordMetadata {
         purity: word.purity,
         effects: word.effects.iter().map(|e| e.to_string()).collect(),
         determinism: word.determinism,
-        safe_preview: spec.safe_preview,
-        partiality: spec.partiality,
+        safe_preview: safe_preview_from_contract(word),
+        partiality: partiality_from_contract(word),
         nil_policy: word.nil_policy,
-        safety_level: spec.safety_level,
+        safety_level: safety_from_contract(word),
         mass: mass_from_arity(word),
         profile: builtin_profile(word.name),
     }

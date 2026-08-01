@@ -1,20 +1,11 @@
-use crate::coreword_registry::{ExecutionForm, Partiality, SafetyLevel};
+use crate::coreword_registry::{ExecutionForm, Partiality};
 
-use super::builtin_specs as authored_specs;
-
-/// The hand-written half of a Core Word's description.
+/// Runtime view of a canonical Core Word.
 ///
-/// What used to live here was the Word's *contract* — stack arity, NIL policy,
-/// purity, determinism, executor key — written a second time in Rust and
-/// reconciled with `spec/words.json` by after-the-fact checking scripts. That
-/// arrangement is what let eleven Words carry a policy label contradicting the
-/// one the specification declared. Those fields are gone: the contract is read
-/// from `kernel::generated`, projected from `spec/words.json`, and there is no
-/// second place to write it down.
-///
-/// Canonical summary/hover/syntax text is projected from `spec/words.json`.
-/// Only implementation-local presentation and safety classifications are joined
-/// here, so no canonical documentation fact is authored twice.
+/// Documentation and presentation are generated from `spec/words.json`; safety,
+/// partiality, stability, and execution form are projected from the generated
+/// contract. This type assembles those projections for existing GUI and LOOKUP
+/// consumers and owns no parallel source of language facts.
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinSpec {
     pub name: &'static str,
@@ -26,148 +17,34 @@ pub struct BuiltinSpec {
     pub role: &'static str,
     pub stack_effect: &'static str,
     pub stability: &'static str,
-    pub safe_preview: bool,
     pub partiality: Partiality,
-    pub safety_level: SafetyLevel,
     pub execution_form: ExecutionForm,
 }
 
-/// The implementation-local half of a Core Word description.
-/// Canonical summary/hover/syntax text is generated from `spec/words.json`.
-#[derive(Clone, Copy, Debug)]
-pub(in crate::builtins) struct RuntimeSpec {
-    pub name: &'static str,
-    pub category: &'static str,
-    pub role: &'static str,
-    pub stack_effect: &'static str,
-    pub stability: &'static str,
-    pub safe_preview: bool,
-    pub partiality: Partiality,
-    pub safety_level: SafetyLevel,
-    pub execution_form: ExecutionForm,
-}
-
-pub(in crate::builtins) const SPEC_DEFAULT: RuntimeSpec = RuntimeSpec {
-    name: "",
-    category: "",
-    role: "",
-    stack_effect: "",
-    stability: "stable",
-    safe_preview: true,
-    partiality: Partiality::Total,
-    safety_level: SafetyLevel::A,
-    execution_form: ExecutionForm::RuntimeWord,
-};
-
-const RUNTIME_SPECS: &[RuntimeSpec] = &[
-    authored_specs::execution::EAT,
-    authored_specs::execution::KEEP,
-    authored_specs::collections::GET,
-    authored_specs::collections::INSERT,
-    authored_specs::collections::REPLACE,
-    authored_specs::collections::REMOVE,
-    authored_specs::collections::LENGTH,
-    authored_specs::collections::TAKE,
-    authored_specs::collections::SPLIT,
-    authored_specs::collections::CONCAT,
-    authored_specs::collections::REVERSE,
-    authored_specs::collections::RANGE,
-    authored_specs::collections::REORDER,
-    authored_specs::collections::COLLECT,
-    authored_specs::scalar::TRUE,
-    authored_specs::scalar::FALSE,
-    authored_specs::scalar::NIL,
-    authored_specs::scalar::NIL_PREDICATE,
-    authored_specs::scalar::NIL_REASON,
-    authored_specs::scalar::CHARS,
-    authored_specs::scalar::JOIN,
-    authored_specs::scalar::TRIM,
-    authored_specs::scalar::TOKENIZE,
-    authored_specs::scalar::SUBSTITUTE,
-    authored_specs::scalar::STARTS_WITH,
-    authored_specs::scalar::ENDS_WITH,
-    authored_specs::scalar::NUM,
-    authored_specs::scalar::STR,
-    authored_specs::scalar::CHR,
-    authored_specs::numeric::ADD,
-    authored_specs::numeric::SUB,
-    authored_specs::numeric::MUL,
-    authored_specs::numeric::DIV,
-    authored_specs::numeric::EQ,
-    authored_specs::numeric::LT,
-    authored_specs::numeric::LTE,
-    authored_specs::numeric::GT,
-    authored_specs::numeric::GTE,
-    authored_specs::numeric::NEQ,
-    authored_specs::scalar::AND,
-    authored_specs::scalar::OR,
-    authored_specs::scalar::NOT,
-    authored_specs::execution::COND,
-    authored_specs::execution::VENT,
-    authored_specs::execution::MAP,
-    authored_specs::execution::FILTER,
-    authored_specs::execution::FOLD,
-    authored_specs::execution::ANY,
-    authored_specs::execution::ALL,
-    authored_specs::execution::PRINT,
-    authored_specs::execution::DEF,
-    authored_specs::execution::DEL,
-    authored_specs::execution::LOOKUP,
-    authored_specs::collections::FILL,
-    authored_specs::numeric::MOD,
-    authored_specs::numeric::FLOOR,
-    authored_specs::numeric::CEIL,
-    authored_specs::numeric::ROUND,
-    authored_specs::execution::EXEC,
-    authored_specs::numeric::SQRT,
-    authored_specs::numeric::ABS,
-    authored_specs::numeric::NEG,
-    authored_specs::numeric::SIGN,
-    authored_specs::numeric::MIN,
-    authored_specs::numeric::MAX,
-    authored_specs::collections::SORT,
-    authored_specs::collections::UNIQUE,
-    authored_specs::collections::CONTAINS,
-    authored_specs::collections::INDEX_OF,
-];
-
-/// The whole prose table.
+/// Complete projected Core Word view.
 ///
-/// Every runtime consumer now reaches a Word through the generated registry
-/// and looks its prose up by name, so the only readers of the table as a whole
-/// are the tests that assert the two halves agree — but it stays public so
-/// that assertion can be written from anywhere.
+/// It is assembled once from generated documentation and generated contracts for
+/// runtime consumers and invariant tests.
 #[cfg_attr(not(test), allow(dead_code))]
 pub fn builtin_specs() -> &'static [BuiltinSpec] {
     static SPECS: std::sync::OnceLock<Vec<BuiltinSpec>> = std::sync::OnceLock::new();
     SPECS.get_or_init(|| {
-        let docs = super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS;
-        assert_eq!(
-            RUNTIME_SPECS.len(),
-            docs.len(),
-            "every runtime entry needs canonical docs"
-        );
-        RUNTIME_SPECS
+        super::generated_core_word_docs::GENERATED_CORE_WORD_DOCS
             .iter()
-            .zip(docs)
-            .map(|(runtime, doc)| {
-                assert_eq!(
-                    runtime.name, doc.name,
-                    "runtime metadata order must match canonical docs"
-                );
+            .map(|doc| {
+                let word = crate::kernel::generated::generated_word(doc.name)
+                    .expect("generated documentation must name a canonical Word");
                 BuiltinSpec {
-                    name: runtime.name,
-                    category: runtime.category,
+                    name: doc.name,
+                    category: doc.category,
                     summary: doc.summary,
                     hover_summary: doc.hover_summary,
                     hover_syntax: doc.hover_syntax,
-                    role: runtime.role,
-                    stack_effect: runtime.stack_effect,
-                    stability: runtime.stability,
-                    safe_preview: runtime.safe_preview,
-                    partiality: runtime.partiality,
-                    safety_level: runtime.safety_level,
-                    execution_form: runtime.execution_form,
+                    role: doc.role,
+                    stack_effect: doc.stack_effect,
+                    stability: crate::coreword_registry::stability_from_contract(word),
+                    partiality: crate::coreword_registry::partiality_from_contract(word),
+                    execution_form: crate::coreword_registry::execution_form_from_contract(word),
                 }
             })
             .collect()

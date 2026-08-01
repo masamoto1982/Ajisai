@@ -4,14 +4,6 @@ const words = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const schema = JSON.parse(readFileSync('spec/words.schema.json', 'utf8'));
 const families = JSON.parse(readFileSync('spec/semantic-families.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('docs/word-manifest.json', 'utf8'));
-const authoredSpecDir = 'rust/src/builtins/builtin_specs';
-const authoredSpecSources = readdirSync(authoredSpecDir)
-  .filter((name) => name.endsWith('.rs') && name !== 'mod.rs')
-  .sort()
-  .map((name) => ({
-    path: `${authoredSpecDir}/${name}`,
-    source: readFileSync(`${authoredSpecDir}/${name}`, 'utf8'),
-  }));
 const aliasesSource = readFileSync('rust/src/core_word_aliases.rs', 'utf8');
 const compiledPlanSource = readFileSync('rust/src/interpreter/compiled_plan.rs', 'utf8');
 const dispatchSource = readFileSync('rust/src/interpreter/execute_builtin.rs', 'utf8');
@@ -34,15 +26,6 @@ for (const word of words.entries) {
   if (!manifestNames.has(word.name)) fail(`${word.name} is absent from the frozen manifest`);
   for (const clause of word.clauses) if (!language.includes(`${clause} —`)) fail(`${word.name} references missing clause ${clause}`);
 
-  const escaped = word.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const authored = authoredSpecSources.find(({ source }) => new RegExp(`name: "${escaped}"`).test(source));
-  if (!authored) {
-    fail(`${word.name} has no Rust registry entry`);
-    continue;
-  }
-  const start = authored.source.search(new RegExp(`name: "${escaped}"`));
-  const end = authored.source.indexOf('..SPEC_DEFAULT', start);
-  const block = authored.source.slice(start, end);
   // The executor key used to be written a second time on the Rust spec entry,
   // and this check reconciled the two copies. It is written once now — the
   // generated `WordId` *is* the executor key — so what is checked instead is
@@ -54,7 +37,7 @@ for (const word of words.entries) {
   if (compiledModifiers.has(word.name)) {
     if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);
   } else if (directive.has(word.name)) {
-    if (!block.includes(`execution_form: ExecutionForm::${word.executorKey}`)) fail(`${word.name} executorKey drift`);
+    if (word.executorKey !== 'LazyNextUnitFallback') fail(`${word.name} executorKey drift`);
   } else if (!dispatchSource.includes(`WordId::${word.executorKey} =>`)) {
     fail(`${word.name} has no dispatch arm for WordId::${word.executorKey}`);
   }
