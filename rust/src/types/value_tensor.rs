@@ -69,13 +69,6 @@ impl Value {
         if values.is_empty() {
             return Self::nil_with_reason(NilReason::EmptySequence);
         }
-        if hint == Interpretation::Text {
-            return Self {
-                data: ValueData::Vector(Arc::new(values)),
-                hint,
-                absence: None,
-            };
-        }
         if let Some((data, shape)) = try_collect_dense(&values) {
             if let Some(tensor) = DenseTensor::from_fractions(data, shape.clone()) {
                 return Self {
@@ -149,15 +142,14 @@ pub(super) fn tensor_child(data: &DenseTensor, shape: &[usize], index: usize) ->
 }
 
 fn try_dense_value(v: &Value) -> Option<(Vec<Fraction>, Vec<usize>)> {
-    if v.hint == Interpretation::Text {
-        return None;
-    }
     match &v.data {
         ValueData::Scalar(f) => Some((vec![f.clone()], Vec::new())),
         ValueData::ExactScalar(_) => None, // ExactScalar cannot be densified into a Fraction tensor
         ValueData::Tensor { data, shape } => Some((data.to_fractions(), (**shape).clone())),
         ValueData::Vector(children) => try_collect_dense(children),
-        ValueData::Boolean(_) | ValueData::Nil | ValueData::CodeBlock(_) => None,
+        ValueData::Boolean(_) | ValueData::Text(_) | ValueData::Nil | ValueData::CodeBlock(_) => {
+            None
+        }
     }
 }
 

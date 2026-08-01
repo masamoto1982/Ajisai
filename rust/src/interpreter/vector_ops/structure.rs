@@ -6,7 +6,7 @@ use crate::interpreter::value_extraction_helpers::{
 };
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 use num_traits::ToPrimitive;
 
 /// Join two vectors, lifting one level of nesting out of each, under the role
@@ -20,13 +20,11 @@ use num_traits::ToPrimitive;
 /// The role goes on the value, not only on the stack slot, so a Text survives
 /// being put inside a vector or returned from a user Word — the same place
 /// `Value::from_string` puts it.
-fn concat_values(left: &Value, right: &Value, role: Interpretation) -> Value {
+fn concat_values(left: &Value, right: &Value) -> Value {
     let mut elements = Vec::new();
     elements.extend(extract_vector_elements(left));
     elements.extend(extract_vector_elements(right));
-    let mut joined = Value::from_vector(elements);
-    joined.hint = role;
-    joined
+    Value::from_vector(elements)
 }
 
 fn parse_range_bound(args_val: &Value, index: usize, label: &str) -> Result<i64> {
@@ -112,17 +110,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         return Err(AjisaiError::StackUnderflow);
     }
 
-    // Read the operands' slot roles before consuming them: joining two Texts
-    // yields a Text, and the role lives on the slot, not on the value.
     let base = interp.stack.len() - 2;
-    let joined_role = if interp.stack.role_at(base) == Interpretation::Text
-        && interp.stack.role_at(base + 1) == Interpretation::Text
-    {
-        Interpretation::Text
-    } else {
-        Interpretation::Unassigned
-    };
-
     let operands: Vec<Value> = if is_keep_mode {
         interp.stack.as_slice()[base..].to_vec()
     } else {
@@ -143,9 +131,7 @@ pub fn op_concat(interp: &mut Interpreter) -> Result<()> {
         ));
     }
 
-    interp
-        .stack
-        .push(concat_values(&operands[0], &operands[1], joined_role));
+    interp.stack.push(concat_values(&operands[0], &operands[1]));
     Ok(())
 }
 

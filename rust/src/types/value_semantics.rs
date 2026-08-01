@@ -51,18 +51,32 @@ impl Value {
         }
     }
 
+    /// Build a String value (LANG.VALUES.DISJOINT).
+    ///
+    /// The empty String is a String. It used to become
+    /// `NilReason::EmptySequence`, which made `''` an absence rather than a
+    /// value and forced every text Word to carry an empty special case; a
+    /// domain with no empty element also cannot be closed under `TOKENIZE` or
+    /// `SUBSTITUTE`. NIL means "no value here", and `''` is a perfectly good
+    /// value with no characters in it.
     pub fn from_string(s: &str) -> Self {
-        let mut children: Vec<Value> = Vec::with_capacity(s.chars().count());
-        for c in s.chars() {
-            children.push(Value::from_int(c as u32 as i64));
-        }
-        if children.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         Self {
-            data: ValueData::Vector(Arc::new(children)),
-            hint: Interpretation::Text,
+            data: ValueData::Text(Arc::from(s)),
+            hint: Interpretation::Unassigned,
             absence: None,
+        }
+    }
+
+    /// The characters of a String value, or `None` for any other domain.
+    ///
+    /// This is the whole of stringhood now: no element inspection, no
+    /// codepoint-range guessing, no hint. A Vector of codepoint Scalars is a
+    /// Vector, and answers `None`.
+    #[inline]
+    pub fn as_text(&self) -> Option<&str> {
+        match &self.data {
+            ValueData::Text(s) => Some(s),
+            _ => None,
         }
     }
 
@@ -166,6 +180,12 @@ impl Value {
             // not in this axis.
             ValueData::Boolean(_) => SemanticKind::Number,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => SemanticKind::Number,
+            // A String reports `collection` on this coarse axis, matching
+            // the frozen `v1_semantic_kind` (which has always mapped
+            // `KernelValue::String` this way). Its distinctness from a Vector
+            // lives in value identity — `'A' [ 65 ] EQ` is false — not on a
+            // protocol axis, so making String a domain costs V1 nothing.
+            ValueData::Text(_) => SemanticKind::Collection,
             ValueData::Vector(_) | ValueData::Tensor { .. } => SemanticKind::Collection,
             // CS4 PR-2: U is a truth value, not an operational absence. Like a
             // definite Boolean it reports `number` on the coarse `semanticKind`
@@ -182,6 +202,8 @@ impl Value {
         match &self.data {
             ValueData::Boolean(_) => ValueShape::Scalar,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => ValueShape::Scalar,
+            // As above: `v1_shape` maps a spine String to `vector`.
+            ValueData::Text(_) => ValueShape::Vector,
             ValueData::Vector(_) => ValueShape::Vector,
             ValueData::Tensor { .. } => ValueShape::Tensor,
             // CS4 PR-2: U is a rank-0 scalar truth value (like a Boolean), not
@@ -208,6 +230,13 @@ impl Value {
                 capabilities.push(Capability::ExactNumeric);
             }
             ValueData::Vector(_) | ValueData::Tensor { .. } => {
+                capabilities.push(Capability::Iterable);
+                capabilities.push(Capability::Indexable);
+                capabilities.push(Capability::UserEditable);
+            }
+            // A String keeps the legacy V1 capability set for a string, which
+            // `v1_capabilities` still reconstructs from `KernelValue::String`.
+            ValueData::Text(_) => {
                 capabilities.push(Capability::Iterable);
                 capabilities.push(Capability::Indexable);
                 capabilities.push(Capability::UserEditable);
@@ -260,6 +289,12 @@ impl Value {
         matches!(self.data, ValueData::Vector(_) | ValueData::Tensor { .. })
     }
 
+    /// Whether this value is a String (LANG.VALUES.DISJOINT).
+    #[inline]
+    pub fn is_text(&self) -> bool {
+        matches!(self.data, ValueData::Text(_))
+    }
+
     #[inline]
     pub fn is_tensor(&self) -> bool {
         matches!(self.data, ValueData::Tensor { .. })
@@ -294,6 +329,7 @@ impl Value {
                 tensor_to_nested_values(data, shape),
             )),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -327,7 +363,7 @@ impl Value {
     #[inline]
     pub fn is_uniquely_owned(&self) -> bool {
         match &self.data {
-            ValueData::Boolean(_) => true,
+            ValueData::Boolean(_) | ValueData::Text(_) => true,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => true,
             ValueData::Vector(rc) => Arc::strong_count(rc) == 1,
             ValueData::Tensor { data, shape } => {
@@ -347,6 +383,12 @@ impl Value {
             // hence the shared arm. Control words that must honour the third
             // value branch on `is_unknown()` first (e.g. COND), never here.
             ValueData::Nil => false,
+            // A String is not a truth value. LANG.VALUES.TRUTH is two-valued
+            // over Booleans, and the logic Words reject anything else outright
+            // (`nonTruthValue`); this total coercion survives only for legacy
+            // internal callers, so a String collapses to `false` rather than
+            // inventing an emptiness rule for a domain that has none.
+            ValueData::Text(_) => false,
             ValueData::Scalar(f) => !f.is_zero() && !f.is_nil(),
             // ExactScalar values from AlgebraicSqrt are always non-zero positive
             // irrationals; Gosper nodes conservatively report truthy.

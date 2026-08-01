@@ -37,8 +37,6 @@ pub enum PresentationHint {
     /// No display intent; render the value structurally.
     #[default]
     Structural,
-    /// Render as text.
-    Text,
     /// Render a two-element vector as a closed interval.
     Interval,
     /// Render an integer as a timestamp.

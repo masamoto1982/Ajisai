@@ -112,7 +112,7 @@ fn hint_role_is_preserved_across_the_stack_boundary() {
     // and must both survive.
     let value = Value {
         data: ValueData::Scalar(Fraction::from(5)),
-        hint: Interpretation::Text,
+        hint: Interpretation::Timestamp,
         absence: None,
     };
     assert_stack_roundtrip(value, Interpretation::Timestamp);

@@ -4,7 +4,7 @@ use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::{extract_integer_from_value, normalize_index};
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::semantic::Recoverability;
-use crate::types::{Interpretation, Value};
+use crate::types::Value;
 
 fn pop_index_operand(interp: &mut Interpreter) -> Result<(Value, i64)> {
     let index_val = interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?;
@@ -39,9 +39,6 @@ fn parse_index_element_args(word: &str, args_val: &Value) -> Result<(i64, Value)
 
 pub fn op_get(interp: &mut Interpreter) -> Result<()> {
     let is_keep_mode = interp.consumption_mode == ConsumptionMode::Keep;
-    if matches!(interp.stack.last_role(), Interpretation::Text) {
-        return Err(AjisaiError::create_structure_error("numeric index", "text"));
-    }
     let (index_val, index) = pop_index_operand(interp)?;
 
     let target_val = match interp.stack.last().cloned() {

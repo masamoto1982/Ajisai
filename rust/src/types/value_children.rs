@@ -16,7 +16,10 @@ impl Value {
             // CS4 PR-2: U is a single scalar truth value, so it has length 1
             // like a Boolean (not 0 like an absence). It is not indexable —
             // `get_child`/`child` return `None`, exactly as for a Boolean.
-            ValueData::Boolean(_) => 1,
+            // A String is one value, not a sequence of characters. Its
+            // character count is reached through `CHARS`, which is what makes
+            // the Vector domain explicit; LENGTH raises `nonVector` on it.
+            ValueData::Boolean(_) | ValueData::Text(_) => 1,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => 1,
             ValueData::Vector(v) => v.len(),
             ValueData::Tensor { data, shape } => {
@@ -41,6 +44,7 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -62,6 +66,7 @@ impl Value {
             ValueData::Scalar(_) | ValueData::ExactScalar(_) if index == 0 => Some(self.clone()),
             ValueData::Tensor { data, shape } => tensor_child(data, shape, index),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -76,6 +81,7 @@ impl Value {
         match &mut self.data {
             ValueData::Vector(v) => Arc::make_mut(v).get_mut(index),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -96,7 +102,7 @@ impl Value {
             ValueData::Tensor { .. } => None,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Some(self),
             ValueData::Nil => None,
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => None,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => None,
         }
     }
 
@@ -133,7 +139,10 @@ impl Value {
             // CS4 PR-2: pushing into U is a no-op, like a Boolean — U is a
             // scalar truth value, not an empty container to be seeded into a
             // vector (that NIL affordance does not apply to a definite datum).
-            ValueData::Boolean(_) | ValueData::Tensor { .. } | ValueData::CodeBlock(_) => {}
+            ValueData::Boolean(_)
+            | ValueData::Text(_)
+            | ValueData::Tensor { .. }
+            | ValueData::CodeBlock(_) => {}
         }
     }
 
@@ -144,6 +153,7 @@ impl Value {
         match &mut self.data {
             ValueData::Vector(v) => Arc::make_mut(v).pop(),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -159,6 +169,7 @@ impl Value {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -177,6 +188,7 @@ impl Value {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -197,6 +209,7 @@ impl Value {
         let v: &mut Vec<Value> = match &mut self.data {
             ValueData::Vector(v) => Arc::make_mut(v),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -215,6 +228,7 @@ impl Value {
         match &self.data {
             ValueData::Scalar(f) => Some(f),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
@@ -228,6 +242,7 @@ impl Value {
         match &mut self.data {
             ValueData::Scalar(f) => Some(f),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::ExactScalar(_)
             | ValueData::Vector(_)
             | ValueData::Tensor { .. }
@@ -252,6 +267,7 @@ impl Value {
             ValueData::Vector(v) => Some(v),
             ValueData::Tensor { .. } => None,
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
             | ValueData::Nil
@@ -267,6 +283,7 @@ impl Value {
         match &mut self.data {
             ValueData::Vector(v) => Some(Arc::make_mut(v)),
             ValueData::Boolean(_)
+            | ValueData::Text(_)
             | ValueData::Tensor { .. }
             | ValueData::Scalar(_)
             | ValueData::ExactScalar(_)
@@ -304,7 +321,7 @@ impl Value {
             // to no fraction lane, like a Boolean (NIL flattens to a nil
             // lane). Kept in lock-step with `count_fractions` below so buffer
             // sizing stays exact.
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => {}
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => {}
         }
     }
 
@@ -316,7 +333,7 @@ impl Value {
             ValueData::Tensor { data, .. } => data.len(),
             // CS4 PR-2: U contributes no fraction lane (see
             // `collect_fractions_flat_into`), matching a Boolean.
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => 0,
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => 0,
         }
     }
 
@@ -341,7 +358,7 @@ impl Value {
                 }
             }
             ValueData::Tensor { shape, .. } => (**shape).clone(),
-            ValueData::Boolean(_) | ValueData::CodeBlock(_) => vec![],
+            ValueData::Boolean(_) | ValueData::Text(_) | ValueData::CodeBlock(_) => vec![],
         }
     }
 
@@ -372,6 +389,10 @@ impl Value {
             // CS4 PR-2: U's role is `TruthValue`, like a Boolean — its default
             // rendering role must not fall back to `Nil`.
             ValueData::Boolean(_) => Interpretation::TruthValue,
+            // A String renders as a String because of its domain, not because
+            // of a role: `Interpretation::Text` is gone, so the role is
+            // unassigned and `format_with_hint` dispatches on the data.
+            ValueData::Text(_) => Interpretation::Unassigned,
             ValueData::Scalar(_) | ValueData::ExactScalar(_) => Interpretation::RawNumber,
             ValueData::Vector(_) | ValueData::Tensor { .. } => Interpretation::Unassigned,
             ValueData::CodeBlock(_) => Interpretation::Unassigned,

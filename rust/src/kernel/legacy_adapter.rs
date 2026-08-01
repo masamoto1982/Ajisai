@@ -7,13 +7,15 @@
 //! back to a `Value`. Nothing is rewired yet — the impls are available
 //! crate-wide (trait coherence), but no runtime path calls them in Phase 2.
 //!
-//! The conversion unit is the whole [`Value`] — its `data`, `hint`, and
-//! `absence` — not a bare [`ValueData`]. That is itself evidence for the
-//! refactor: in the legacy model a value's *domain* is not determined by
-//! `ValueData` alone. A string is a `Vector` of codepoints wearing an
-//! `Interpretation::Text` hint, and a NIL's reason lives in `absence`, off to
-//! the side. The spine folds both back into the value itself
-//! (`KernelValue::String`, `KernelValue::Nil(reason)`).
+//! The conversion unit is the whole [`Value`] — its `data` and `absence` —
+//! not a bare [`ValueData`], because a NIL's reason lives in `absence`, off to
+//! the side, and the spine folds it back into the value itself
+//! (`KernelValue::Nil(reason)`).
+//!
+//! String no longer needs folding. It used to be a `Vector` of codepoints
+//! wearing an `Interpretation::Text` hint, so the legacy domain was not a
+//! function of `ValueData` alone and this adapter had to reconstruct it;
+//! `ValueData::Text` now mirrors `KernelValue::String` one-to-one.
 //!
 //! ## Deliberate collapses (legacy → spine)
 //! - `ValueData::ExactScalar` and `ValueData::Scalar` both lower to
@@ -23,10 +25,10 @@
 //!   is a vector optimization, observed as a vector.
 //!
 //! ## Known legacy quirks preserved on raise (spine → legacy)
-//! - An empty `KernelValue::String` and an empty `KernelValue::Vector` raise to
-//!   `NIL(EmptySequence)`, because the legacy model has no empty
-//!   string/vector value — `Value::from_string`/`from_vector` project them to
-//!   NIL. The round-trip tests pin this rather than pretend it is identity.
+//! - None remain for String. The empty String used to raise to
+//!   `NIL(EmptySequence)`, because the legacy model had no empty string value;
+//!   the round-trip test pinned that rather than pretend it was an identity.
+//!   `''` is now a String on both sides and round-trips as itself.
 //!
 //! ## Scope
 //! The adapter converts value *structure* (the six domains). It does not model
@@ -55,14 +57,9 @@ impl From<&Value> for KernelValue {
             ValueData::CodeBlock(tokens) => {
                 KernelValue::CodeBlock(CodeBlock::new(Arc::from(tokens.as_slice())))
             }
+            ValueData::Text(s) => KernelValue::String(Arc::clone(s)),
             ValueData::Vector(children) => {
-                // The canonical legacy string is a `Text`-hinted vector of
-                // codepoints; fold it back into a first-class string.
-                if value.hint == Interpretation::Text {
-                    KernelValue::String(Arc::from(vector_to_string(children).as_str()))
-                } else {
-                    KernelValue::Vector(children.iter().map(KernelValue::from).collect())
-                }
+                KernelValue::Vector(children.iter().map(KernelValue::from).collect())
             }
             ValueData::Tensor { data, shape } => dense_to_kernel(data, shape, 0),
         }
@@ -103,19 +100,6 @@ impl From<&KernelValue> for Value {
             },
         }
     }
-}
-
-/// Decode a `Text`-hinted codepoint vector into a Rust string, matching the
-/// legacy string encoding (`Value::from_string`). Non-scalar or out-of-range
-/// entries are skipped.
-fn vector_to_string(children: &[Value]) -> String {
-    children
-        .iter()
-        .filter_map(|child| match &child.data {
-            ValueData::Scalar(f) => f.to_i64().and_then(|n| char::from_u32(n as u32)),
-            _ => None,
-        })
-        .collect()
 }
 
 /// Materialize a dense tensor (or a rectangular slice of one) into a nested
@@ -161,7 +145,6 @@ fn dense_to_kernel(
 /// role, the machine continued-fraction serialization) observe structurally.
 fn presentation_hint(role: Interpretation) -> PresentationHint {
     match role {
-        Interpretation::Text => PresentationHint::Text,
         Interpretation::Interval => PresentationHint::Interval,
         Interpretation::Timestamp => PresentationHint::Timestamp,
         Interpretation::Unassigned
@@ -281,15 +264,13 @@ mod tests {
     }
 
     #[test]
-    fn empty_string_and_vector_project_to_nil_on_raise() {
-        // The legacy model has no empty string/vector value: it projects to
-        // NIL(EmptySequence). Pin the quirk rather than pretend it round-trips.
-        let from_empty_string =
-            KernelValue::from(&Value::from(&KernelValue::String(Arc::from(""))));
-        assert_eq!(
-            from_empty_string,
-            KernelValue::Nil(Some(NilReason::EmptySequence))
-        );
+    fn the_empty_string_round_trips_as_itself() {
+        // This used to be half of `empty_string_and_vector_project_to_nil_on_raise`:
+        // the legacy model had no empty String, so `''` came back as
+        // NIL(EmptySequence) and the quirk had to be pinned. The String domain
+        // has an empty element, so the round trip is now an identity.
+        let round_tripped = KernelValue::from(&Value::from(&KernelValue::String(Arc::from(""))));
+        assert_eq!(round_tripped, KernelValue::String(Arc::from("")));
     }
 }
 
@@ -324,13 +305,15 @@ mod observation_tests {
     }
 
     #[tokio::test]
-    async fn a_string_observes_as_a_string_value_with_a_text_hint() {
+    async fn a_string_observes_as_a_string_value_rendered_structurally() {
+        // The String domain carries the "render me as text" information, so
+        // the presentation hint has nothing left to add and stays structural.
         let observation = observe_program("'hi'").await;
         assert_eq!(
             observation.stack,
             vec![ObservedValue {
                 value: KernelValue::String(Arc::from("hi")),
-                presentation: PresentationHint::Text,
+                presentation: PresentationHint::Structural,
             }]
         );
     }

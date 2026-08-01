@@ -3,66 +3,16 @@ use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::fraction::Fraction;
 use crate::types::{Interpretation, Value, ValueData};
 
+/// Whether a value is a String (LANG.VALUES.DISJOINT).
+///
+/// This used to *guess*: it walked a Vector's elements and answered "string"
+/// when every one of them happened to be a printable codepoint, optionally
+/// steered by an `Interpretation::Text` role. That made `[ 65 ]` and `'A'`
+/// indistinguishable to every caller, and it was render-time re-guessing of
+/// exactly the kind `Interpretation` promises the runtime never does. With
+/// String a domain of its own, the question is answered by the tag.
 pub(crate) fn is_string_value(val: &Value) -> bool {
-    is_string_value_with_hint(val, Interpretation::Unassigned)
-}
-
-pub(crate) fn is_string_value_with_hint(val: &Value, hint: Interpretation) -> bool {
-    match hint {
-        Interpretation::RawNumber
-        | Interpretation::ContinuedFraction
-        | Interpretation::Interval
-        | Interpretation::TruthValue
-        | Interpretation::Timestamp
-        | Interpretation::Nil => {
-            return false;
-        }
-        Interpretation::Text | Interpretation::Unassigned => {}
-    }
-    let children: &Vec<Value> = match &val.data {
-        ValueData::Vector(v) if !v.is_empty() => v,
-        ValueData::Vector(_) => return false,
-        ValueData::Tensor { data, .. } => {
-            if data.is_empty() {
-                return false;
-            }
-            return data.iter().all(|f| {
-                let n: i64 = match f.to_i64() {
-                    Some(n) if (0..=0x10FFFF).contains(&n) => n,
-                    _ => return false,
-                };
-                match char::from_u32(n as u32) {
-                    Some(c) => !c.is_control() || c == '\n' || c == '\r' || c == '\t',
-                    None => false,
-                }
-            });
-        }
-        ValueData::Scalar(_) => return false,
-        ValueData::ExactScalar(_) => return false,
-        ValueData::Nil => return false,
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => return false,
-    };
-    children.iter().all(check_char_scalar)
-}
-
-fn check_char_scalar(child: &Value) -> bool {
-    let f: &Fraction = match &child.data {
-        ValueData::Scalar(f) => f,
-        ValueData::ExactScalar(_) => return false,
-        ValueData::Vector(_) => return false,
-        ValueData::Tensor { .. } => return false,
-        ValueData::Nil => return false,
-        ValueData::Boolean(_) | ValueData::CodeBlock(_) => return false,
-    };
-    let n: i64 = match f.to_i64() {
-        Some(n) if (0..=0x10FFFF).contains(&n) => n,
-        Some(_) => return false,
-        None => return false,
-    };
-    match char::from_u32(n as u32) {
-        Some(c) => !c.is_control() || c == '\n' || c == '\r' || c == '\t',
-        None => false,
-    }
+    val.is_text()
 }
 
 pub(crate) fn is_boolean_value(val: &Value) -> bool {
@@ -79,7 +29,7 @@ pub(crate) fn is_datetime_value(_val: &Value) -> bool {
 
 pub(crate) fn apply_unary_cast(
     interp: &mut Interpreter,
-    convert: fn(&Value, Interpretation) -> Result<Value>,
+    convert: fn(&Value) -> Result<Value>,
 ) -> Result<()> {
     let is_keep_mode: bool = interp.consumption_mode == ConsumptionMode::Keep;
 
@@ -94,7 +44,7 @@ pub(crate) fn apply_unary_cast(
         interp.stack.pop().ok_or(AjisaiError::StackUnderflow)?
     };
 
-    match convert(&value, hint) {
+    match convert(&value) {
         Ok(result) => {
             // A unary cast is value-preserving on the semantic plane: the
             // slot keeps its prior plane role (e.g. `>CF` retagging).
@@ -129,12 +79,7 @@ pub(crate) fn try_char_from_value(val: &Value) -> Option<char> {
     char::from_u32(code as u32)
 }
 
-#[cfg(test)]
 pub(crate) fn format_value_to_string_repr(value: &Value) -> String {
-    format_value_to_string_repr_with_hint(value, Interpretation::Unassigned)
-}
-
-pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpretation) -> String {
     if value.is_nil() {
         return "NIL".to_string();
     }
@@ -149,9 +94,8 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
         }
     }
 
-    if is_string_value_with_hint(value, hint) {
-        return crate::interpreter::value_extraction_helpers::value_as_string(value)
-            .unwrap_or_default();
+    if let Some(text) = value.as_text() {
+        return text.to_string();
     }
 
     if is_datetime_value(value) {
@@ -184,6 +128,7 @@ pub(crate) fn format_value_to_string_repr_with_hint(value: &Value, hint: Interpr
             ValueData::Tensor { data, .. } => {
                 data.iter().map(|f| format_fraction_to_string(&f)).collect()
             }
+            ValueData::Text(s) => vec![s.to_string()],
             ValueData::CodeBlock(_) => vec!["<code>".to_string()],
         }
     }

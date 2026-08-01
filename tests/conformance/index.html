@@ -391,9 +391,24 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
+<!-- CONCAT, LENGTH, GET and REVERSE are the `collection` family, and each
+     registers `nonVector`. A String satisfied that only while it *was* a
+     Vector of codepoints; now it is a domain of its own and they reject it.
+     String concatenation has its own Word — `[ 'ab' 'cd' ] JOIN` — which is
+     what JOIN's contract ("Join a vector of strings into a single string")
+     has always described. -->
+
 <section class="ajisai-case" id="core-concat-text-codepoints" data-category="core">
-  <h3>CONCAT of two Texts is a Text</h3>
+  <h3>CONCAT rejects a String: it is a Vector Word, and String is not a Vector</h3>
   <pre class="ajisai-source">'ab' 'cd' CONCAT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-concatenates-strings" data-category="core">
+  <h3>JOIN is the String concatenation Word</h3>
+  <pre class="ajisai-source">[ 'ab' 'cd' ] JOIN</pre>
   <pre class="ajisai-expect-result">'abcd'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
@@ -406,9 +421,33 @@
 </section>
 
 <section class="ajisai-case" id="core-concat-singleton-text-operand" data-category="core">
-  <h3>CONCAT joins a one-character Text, which is a one-codepoint vector</h3>
+  <h3>A one-character String is not a one-element Vector either</h3>
   <pre class="ajisai-source">'ab' 'c' CONCAT</pre>
-  <pre class="ajisai-expect-result">'abc'</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-length-rejects-string" data-category="core">
+  <h3>LENGTH rejects a String: character count is reached through CHARS</h3>
+  <pre class="ajisai-source">'abc' LENGTH</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-get-rejects-string" data-category="core">
+  <h3>GET rejects a String rather than answering a bare code point</h3>
+  <pre class="ajisai-source">'abc' 1 GET</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vector, got other format</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-chars-then-length-counts-characters" data-category="core">
+  <h3>CHARS crosses from String to Vector, where the collection Words apply</h3>
+  <pre class="ajisai-source">'abc' CHARS LENGTH</pre>
+  <pre class="ajisai-expect-result">[ 'a' 'b' 'c' ] 3/1</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1062,9 +1101,9 @@
 </section>
 
 <section class="ajisai-case" id="core-str-flattens-container-leaves" data-category="core">
-  <h3>STR of a vector space-joins its flat leaves; Text elements decay to code points</h3>
+  <h3>STR of a vector space-joins its flat leaves, and a String leaf stays text</h3>
   <pre class="ajisai-source">[ 'AB' 'CD' ] STR</pre>
-  <pre class="ajisai-expect-result">'65 66 67 68'</pre>
+  <pre class="ajisai-expect-result">'AB CD'</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1081,9 +1120,10 @@
      no separator form. -->
 
 <section class="ajisai-case" id="core-join-no-separator-operand" data-category="core">
-  <h3>JOIN has no separator operand: a Text on top is the target, not a separator</h3>
+  <h3>JOIN has no separator operand: a String on top is the target, not a separator</h3>
   <pre class="ajisai-source">[ 'A' 'B' 'C' ] ',' JOIN</pre>
-  <pre class="ajisai-expect-result">[ 'A' 'B' 'C' ] ','</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">JOIN: expected Vector, got String</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1592,6 +1632,78 @@
      computable real, so a comparison can now reach the logical UNKNOWN, while
      a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
      observes a rational enclosure under an explicit water budget. -->
+
+<!-- ===================== CORE: the String domain ===================== -->
+<!-- LANG.VALUES.DISJOINT gives six domains, String among them. Nothing in the
+     suite decided String *against* Vector before these cases, and the two were
+     in fact the same thing: a String was a Vector of codepoint Scalars wearing
+     an `Interpretation::Text` role, so `'A' [ 65 ] EQ` answered TRUE and the
+     runtime had to guess stringhood by inspecting elements. -->
+
+<section class="ajisai-case" id="core-string-is-not-a-codepoint-vector" data-category="core">
+  <h3>A String is not the Vector of its code points</h3>
+  <pre class="ajisai-source">'A' [ 65 ] EQ</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-string-equals-string" data-category="core">
+  <h3>Two Strings with the same characters are the same value</h3>
+  <pre class="ajisai-source">'ab' 'ab' EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-string-is-a-value" data-category="core">
+  <h3>The empty String is a String, not an absence</h3>
+  <pre class="ajisai-source">''</pre>
+  <pre class="ajisai-expect-result">''</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-string-is-a-distinct-string" data-category="core">
+  <h3>The empty String is a String that differs from a non-empty one</h3>
+  <pre class="ajisai-source">'' 'ab' EQ</pre>
+  <pre class="ajisai-expect-result">FALSE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-substitute-can-empty-a-string" data-category="core">
+  <h3>Deleting a String's whole content yields the empty String, not an absence</h3>
+  <pre class="ajisai-source">'ab' 'ab' '' SUBSTITUTE</pre>
+  <pre class="ajisai-expect-result">''</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-accepts-an-empty-string-element" data-category="core">
+  <h3>The empty String is an ordinary element, so the text Words are closed over it</h3>
+  <pre class="ajisai-source">[ '' 'ab' ] JOIN</pre>
+  <pre class="ajisai-expect-result">'ab'</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-arithmetic-rejects-string" data-category="core">
+  <h3>Arithmetic rejects a String rather than operating on its code points</h3>
+  <pre class="ajisai-source">'A' 1 ADD</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected number or vector</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-string-output-drops-quotes" data-category="core">
+  <h3>A String prints its content; the stack quotes are a display affordance</h3>
+  <pre class="ajisai-source">'hi' PRINT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <div class="ajisai-expect-effects"><span class="ajisai-effect" data-kind="print" data-payload="hi"></span></div>
+</section>
+
+<section class="ajisai-case" id="core-def-name-must-be-a-string" data-category="core">
+  <h3>A Word name is a String, not a Vector of its code points</h3>
+  <pre class="ajisai-source">{ 1 ADD } [ 73 78 67 ] DEF</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected string, got other format</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
 
 <!-- ===================== CORE: effects ===================== -->
 <!-- LANG.EFFECTS.OUTPUT names two effects: output emission, the only one a host

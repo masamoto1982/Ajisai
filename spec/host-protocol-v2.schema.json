@@ -27,7 +27,7 @@
         "value": { "$ref": "#/$defs/value" },
         "presentation": {
           "description": "Presentation-only display intent; never changes execution semantics.",
-          "enum": ["structural", "text", "interval", "timestamp"]
+          "enum": ["structural", "interval", "timestamp"]
         }
       }
     },

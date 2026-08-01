@@ -2,19 +2,25 @@
 //!
 //! Encodes the algebraic content of
 //! `docs/dev/ajisai-mathematical-formalization.md` §9-octies I.2 (Phase 9):
-//! a string literal `'abc'` is a **codepoint sequence** (a `Text`-hinted vector,
-//! empty → NIL). The text words (`STR`/`NUM`/`CHR`/`CHARS`/`JOIN`/
-//! `TRIM`/`TOKENIZE`/`SUBSTITUTE`/`STARTS-WITH?`/`ENDS-WITH?`) are Core Words.
+//! a string literal `'abc'` is a **String**, one of the six disjoint domains of
+//! LANG.VALUES.DISJOINT, and the empty String is one of its values. The text
+//! words (`STR`/`NUM`/`CHR`/`CHARS`/`JOIN`/`TRIM`/`TOKENIZE`/`SUBSTITUTE`/
+//! `STARTS-WITH?`/`ENDS-WITH?`) are Core Words.
 //!
 //! Observation is firewall-clean: text is read through the pure `render` (a
-//! `Text`-hinted value renders `'…'`); predicates through `render`
-//! (`TRUE`/`FALSE`). Every law was probe-confirmed first (roadmap §1.2-(T)).
+//! String renders `'…'` from its domain, with no role consulted); predicates
+//! through `render` (`TRUE`/`FALSE`). Every law was probe-confirmed first (roadmap §1.2-(T)).
 
 mod test_support;
 
 use proptest::prelude::*;
 use test_support::generators::ascii_word;
-use test_support::observe::{observe_program, render, run};
+use test_support::observe::{observe_program, render, run, run_err};
+
+/// The error text of a program that must be rejected.
+fn obs1_err(src: &str) -> String {
+    run_err(src)
+}
 
 /// Render the single result value.
 fn obs1(src: &str) -> String {
@@ -112,11 +118,17 @@ proptest! {
     }
 }
 
-/// **The empty string is NIL** (`EmptySequence`, §4.5): `''` is an absence, not
-/// a zero-length vector — pinned as a guarded oracle.
+/// **The empty string is a String**, not an absence.
+///
+/// `''` used to be `NIL(EmptySequence)`, on the reasoning that a String was a
+/// vector of codepoints and an empty vector is inexpressible. With String a
+/// domain of its own that reasoning no longer reaches it: the domain has an
+/// empty element, and the text Words are closed over it.
 #[test]
-fn empty_string_is_nil() {
-    assert_eq!(obs1("''"), "NIL");
+fn the_empty_string_is_a_string() {
+    assert_eq!(obs1("''"), "''");
+    assert_eq!(obs1("'ab' 'ab' '' SUBSTITUTE"), "''");
+    assert_eq!(obs1("[ '' 'ab' ] JOIN"), "'ab'");
 }
 
 /// **A non-numeric `NUM` projects NIL** (`NUM` is total-by-projection, Bubble
@@ -147,27 +159,28 @@ fn finding_i2_concat_joins_a_singleton_top_operand() {
     // The shapes that used to underflow.
     assert_eq!(obs1("[ 1 ] [ 2 ] CONCAT"), "[ 1/1 2/1 ]");
     assert_eq!(obs1("[ 1 2 ] [ 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
-    assert_eq!(obs1("'ab' 'c' CONCAT JOIN"), "'abc'");
+    assert_eq!(obs1("[ 'a' ] [ 'b' ] CONCAT JOIN"), "'ab'");
 
     // The shape that always worked, unchanged.
     assert_eq!(obs1("[ 1 ] [ 2 3 ] CONCAT"), "[ 1/1 2/1 3/1 ]");
 }
 
-/// **`CONCAT` of two Texts is a Text.**
+/// **`CONCAT` is a Vector Word, and String concatenation is `JOIN`.**
 ///
-/// A Text is a `Text`-role vector of codepoints, so joining two of them is
-/// already the right *value* — but the result role was being stamped
-/// `Unassigned` by the name-keyed table in `execution_loop`, so `'ab' 'c'
-/// CONCAT` rendered as `[ 97/1 98/1 99/1 ]` and needed a `JOIN` to read back as
-/// text. The role now follows the operands: two Texts join to a Text, and
-/// anything else joins to a plain vector.
+/// While a String was a codepoint vector, `CONCAT` accepted one and the only
+/// question was which display role to stamp on the result. Now the two Words
+/// divide by domain, which is what each contract already said: `CONCAT` is
+/// `collection`/`nonVector`, and `JOIN` is `text` — "join a vector of strings
+/// into a single string".
 #[test]
-fn concat_of_two_texts_is_a_text() {
-    assert_eq!(obs1("'ab' 'c' CONCAT"), "'abc'");
-    assert_eq!(obs1("'Hello, ' 'world' CONCAT"), "'Hello, world'");
+fn concat_is_a_vector_word_and_join_concatenates_strings() {
+    assert!(obs1_err("'ab' 'c' CONCAT").contains("expected vector"));
+    assert!(obs1_err("'Hello, ' 'world' CONCAT").contains("expected vector"));
 
-    // Not every join is a Text: a vector of numbers stays a vector, and so does
-    // a mixed join, because only two Text operands make a Text.
+    assert_eq!(obs1("[ 'Hello, ' 'world' ] JOIN"), "'Hello, world'");
+
+    // Vectors are unaffected, including the Vector of one-character Strings
+    // that CHARS produces.
     assert_eq!(obs1("[ 1 2 ] [ 3 4 ] CONCAT"), "[ 1/1 2/1 3/1 4/1 ]");
     assert_eq!(obs1("'ab' CHARS 'c' CHARS CONCAT"), "[ 'a' 'b' 'c' ]");
 }

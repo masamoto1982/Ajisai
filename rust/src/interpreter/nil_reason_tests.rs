@@ -274,7 +274,8 @@ async fn every_reachable_nil_carries_a_reason() {
         ("[ 1 2 3 ] { FALSE } FILTER", NilReason::EmptySequence),
         ("[ 1 2 3 ] [ 0 ] TAKE", NilReason::EmptySequence),
         ("[ 1 ] [ 0 ] REMOVE", NilReason::EmptySequence),
-        ("''", NilReason::EmptySequence),
+        // `''` was here. It is no longer an emptiness route: the empty String
+        // is an ordinary value of the String domain, not an absence.
         // Projections that already had reasons — pinned so the sweep is a
         // statement about all NILs, not only the ones this change touched.
         ("1 0 /", NilReason::DivisionByZero),

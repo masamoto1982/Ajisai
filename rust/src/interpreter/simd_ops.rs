@@ -19,6 +19,7 @@ const SIMD_THRESHOLD: usize = 8;
 /// declining (returning `None`) on the first non-integer / non-`i64` lane.
 pub(crate) fn extract_integer_lane(val: &Value) -> Option<Cow<'_, [i64]>> {
     match &val.data {
+        ValueData::Text(_) => None,
         ValueData::Tensor { data, shape } => {
             if shape.len() != 1 || data.len() < SIMD_THRESHOLD {
                 return None;
@@ -122,6 +123,7 @@ fn extract_integer_scalar(value: &Value) -> Option<i64> {
     match &value.data {
         ValueData::Scalar(f) if f.is_integer() => f.to_i64(),
         ValueData::Boolean(_)
+        | ValueData::Text(_)
         | ValueData::Scalar(_)
         | ValueData::ExactScalar(_)
         | ValueData::Vector(_)

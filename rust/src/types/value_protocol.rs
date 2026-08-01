@@ -43,7 +43,6 @@ pub(crate) fn interpretation_protocol_str(hint: Interpretation) -> &'static str 
         Interpretation::Unassigned => "unassigned",
         Interpretation::RawNumber => "rawNumber",
         Interpretation::Interval => "interval",
-        Interpretation::Text => "text",
         Interpretation::TruthValue => "truthValue",
         Interpretation::Timestamp => "timestamp",
         Interpretation::Nil => "nil",
@@ -58,13 +57,6 @@ fn number_protocol_value(f: &Fraction) -> ProtocolValue {
     }
 }
 
-fn scalar_codepoint_string(f: &Fraction) -> String {
-    f.to_i64()
-        .and_then(|n| char::from_u32(n as u32))
-        .map(|c| c.to_string())
-        .unwrap_or_default()
-}
-
 /// Map a scalar fraction to its (type, value) under an interpretation role.
 /// `datetime` keeps the numerator/denominator value shape, matching the
 /// historical wire format.
@@ -72,7 +64,6 @@ fn scalar_to_protocol(f: &Fraction, effective: Interpretation) -> (&'static str,
     match effective {
         Interpretation::TruthValue => ("boolean", ProtocolValue::Bool(!f.is_zero())),
         Interpretation::Timestamp => ("datetime", number_protocol_value(f)),
-        Interpretation::Text => ("string", ProtocolValue::Text(scalar_codepoint_string(f))),
         _ => ("number", number_protocol_value(f)),
     }
 }
@@ -134,18 +125,6 @@ fn tensor_to_protocol(
     }
 }
 
-fn vector_codepoint_text(children: &[Value]) -> String {
-    children
-        .iter()
-        .filter_map(|child| match &child.data {
-            ValueData::Scalar(codepoint) => {
-                codepoint.to_i64().and_then(|n| char::from_u32(n as u32))
-            }
-            _ => None,
-        })
-        .collect()
-}
-
 /// The complete, pure (Value, external hint) -> protocol mapping. This is
 /// the single source of truth for the value wire format (WASM and CLI) and
 /// the unit of native verification for the serialization boundary.
@@ -190,36 +169,24 @@ pub(crate) fn value_to_protocol(
             scalar_to_protocol(&approx, effective)
         }
         ValueData::Scalar(f) => scalar_to_protocol(f, effective),
+        // A String projects as the protocol `string` leaf from its domain.
+        // The wire shape is exactly what it was; only what decides it changed.
+        ValueData::Text(s) => ("string", ProtocolValue::Text(s.to_string())),
         ValueData::Vector(children) => {
-            if effective == Interpretation::Text {
-                (
-                    "string",
-                    ProtocolValue::Text(vector_codepoint_text(children)),
-                )
+            let child_hint = if effective == Interpretation::TruthValue {
+                Some(Interpretation::TruthValue)
             } else {
-                let child_hint = if effective == Interpretation::TruthValue {
-                    Some(Interpretation::TruthValue)
-                } else {
-                    None
-                };
-                let kids = children
-                    .iter()
-                    .map(|c| value_to_protocol(c, child_hint))
-                    .collect();
-                ("vector", ProtocolValue::Children(kids))
-            }
+                None
+            };
+            let kids = children
+                .iter()
+                .map(|c| value_to_protocol(c, child_hint))
+                .collect();
+            ("vector", ProtocolValue::Children(kids))
         }
         ValueData::Tensor { data, shape } => {
-            if effective == Interpretation::Text && shape.len() <= 1 {
-                let text: String = data
-                    .iter()
-                    .filter_map(|f| f.to_i64().and_then(|n| char::from_u32(n as u32)))
-                    .collect();
-                ("string", ProtocolValue::Text(text))
-            } else {
-                let kids = tensor_to_protocol(&data.to_fractions(), shape, effective);
-                ("vector", ProtocolValue::Children(kids))
-            }
+            let kids = tensor_to_protocol(&data.to_fractions(), shape, effective);
+            ("vector", ProtocolValue::Children(kids))
         }
         ValueData::CodeBlock(_) => ("nil", ProtocolValue::Null),
     };

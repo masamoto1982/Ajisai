@@ -45,8 +45,6 @@ pub enum Interpretation {
     RawNumber,
     /// A 2-element vector interpreted as a closed interval.
     Interval,
-    /// A codepoint sequence interpreted as text.
-    Text,
     /// A scalar interpreted as a truth value.
     TruthValue,
     /// An integer interpreted as a timestamp.
@@ -79,6 +77,21 @@ pub enum ValueData {
     },
     Nil,
     CodeBlock(Vec<Token>),
+    /// A String: a sequence of Unicode scalar values, and one of the six
+    /// disjoint domains of LANG.VALUES.DISJOINT.
+    ///
+    /// String used to be encoded as a `Vector` of codepoint `Scalar`s carrying
+    /// `Interpretation::Text`, which made the domain a property of a
+    /// presentation field rather than of the value. Two consequences were
+    /// observable from the language: `'A' [ 65 ] EQ` answered TRUE, because
+    /// the encodings were identical and only the hint differed; and
+    /// `is_string_value` had to *guess* stringhood by testing whether every
+    /// element happened to be a printable codepoint, which is exactly the
+    /// render-time re-guessing `Interpretation` promises never to do.
+    ///
+    /// Holding the content directly settles both: the domain is the tag, and
+    /// nothing has to be inferred from the elements.
+    Text(Arc<str>),
 }
 
 impl PartialEq for ValueData {
@@ -104,6 +117,11 @@ impl PartialEq for ValueData {
             }
             (ValueData::Nil, ValueData::Nil) => true,
             (ValueData::CodeBlock(a), ValueData::CodeBlock(b)) => a == b,
+            // A String equals a String with the same codepoints, and nothing
+            // else. It never meets the Vector/Tensor arms above, so `'A'` and
+            // `[ 65 ]` now fall to the catch-all and answer false, as
+            // LANG.VALUES.DISJOINT requires.
+            (ValueData::Text(a), ValueData::Text(b)) => a == b,
             _ => false,
         }
     }
@@ -148,6 +166,9 @@ fn nested_vector_shape(v: &[Value]) -> Option<Vec<usize>> {
 fn element_rect_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
+        // A String is not a numeric leaf, so it has no rectangular element
+        // shape and forces the structural (non-dense) path, like a Boolean.
+        ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => nested_vector_shape(items),
         // CS4 PR-2: U is not a dense-tensor lane. NIL is (a nil lane, via the
@@ -210,15 +231,15 @@ impl PartialEq for Value {
     /// NILs equal, and `[ NIL ] [ 0 ] { 0 DIV } MAP EQ` answered TRUE for a
     /// `literal` absence against a `divisionByZero` one.
     ///
-    /// `hint` is compared only because String is still encoded as a Vector of
-    /// codepoints carrying `Interpretation::Text`, which leaves it as the sole
-    /// discriminator between the two. That is a presentation field deciding a
-    /// semantic question (LANG.STACK.ORDER), and it comes out of this relation
-    /// when String becomes a domain of its own.
+    /// `hint` is *not* part of it. It is a presentation role, and letting it
+    /// decide a semantic question would violate LANG.STACK.ORDER. It used to
+    /// be compared here for one reason only — String was encoded as a Vector
+    /// of codepoints and `Interpretation::Text` was the sole discriminator —
+    /// and `ValueData::Text` removed that reason by making the domain the tag.
+    /// Two values with the same data and the same NIL reason are now the same
+    /// value however they came to be displayed.
     fn eq(&self, other: &Self) -> bool {
-        self.data == other.data
-            && self.hint == other.hint
-            && self.nil_reason() == other.nil_reason()
+        self.data == other.data && self.nil_reason() == other.nil_reason()
     }
 }
 

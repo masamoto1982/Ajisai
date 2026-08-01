@@ -24,7 +24,6 @@ pub const PROTOCOL_VERSION: &str = "ajisai.host.v2";
 fn presentation_str(hint: PresentationHint) -> &'static str {
     match hint {
         PresentationHint::Structural => "structural",
-        PresentationHint::Text => "text",
         PresentationHint::Interval => "interval",
         PresentationHint::Timestamp => "timestamp",
     }
@@ -110,7 +109,7 @@ mod tests {
                 },
                 ObservedValue {
                     value: KernelValue::String(Arc::from("hi")),
-                    presentation: PresentationHint::Text,
+                    presentation: PresentationHint::Structural,
                 },
                 ObservedValue {
                     value: KernelValue::Vector(Arc::from([scalar(1), scalar(2)])),

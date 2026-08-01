@@ -149,6 +149,10 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
                     AjisaiError::create_structure_error("scalar value", "non-rational ExactReal")
                 })
         }
+        ValueData::Text(_) => Err(AjisaiError::create_structure_error(
+            "scalar value",
+            "string",
+        )),
         ValueData::Vector(_) => {
             let tensor = FlatTensor::from_value(val)?;
             if tensor.data.len() != 1 {
@@ -200,9 +204,7 @@ fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
             fraction: data.get_small_fraction(0)?,
             wrap: ScalarFastWrap::Tensor((**shape).clone()),
         }),
-        ValueData::Vector(children)
-            if value.hint != Interpretation::Text && children.len() == 1 =>
-        {
+        ValueData::Vector(children) if children.len() == 1 => {
             let child = scalar_fast_operand(&children[0])?;
             let mut shape = Vec::with_capacity(2);
             shape.push(1);

@@ -174,9 +174,7 @@ fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
             fraction: data.get_small_fraction(0)?,
             wrap: ScalarFastWrap::Tensor((**shape).clone()),
         }),
-        ValueData::Vector(children)
-            if value.hint != Interpretation::Text && children.len() == 1 =>
-        {
+        ValueData::Vector(children) if children.len() == 1 => {
             let child = scalar_fast_operand(&children[0])?;
             let mut shape = Vec::with_capacity(2);
             shape.push(1);
@@ -294,11 +292,10 @@ fn apply_exact_arithmetic_schema(
     if matches!(schema, ExactArithmeticSchema::Div) {
         let stack_len = interp.stack.len();
         if stack_len >= 2 {
-            let left_hint = interp.stack.role_at(stack_len - 2);
-            let right_hint = interp.stack.role_at(stack_len - 1);
-            if matches!(left_hint, Interpretation::Text)
-                || matches!(right_hint, Interpretation::Text)
-            {
+            let slots = interp.stack.as_slice();
+            let left_is_text = slots[stack_len - 2].is_text();
+            let right_is_text = slots[stack_len - 1].is_text();
+            if left_is_text || right_is_text {
                 return Err(AjisaiError::create_structure_error("number", "string"));
             }
         }
@@ -343,6 +340,7 @@ fn extract_scalar_from_value(val: &Value) -> Option<Fraction> {
             extract_scalar_from_value(&children[0])
         }
         ValueData::Vector(_) => None,
+        ValueData::Text(_) => None,
         ValueData::Tensor { data, .. } if data.len() == 1 => data.get_small_fraction(0),
         ValueData::Tensor { .. } => None,
         ValueData::Nil => None,

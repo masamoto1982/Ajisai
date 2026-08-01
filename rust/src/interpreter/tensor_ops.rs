@@ -36,6 +36,7 @@ impl FlatTensor {
             ValueData::Nil => Err(AjisaiError::from(
                 "Tensor conversion requires non-NIL value",
             )),
+            ValueData::Text(_) => Err(AjisaiError::create_structure_error("vector", "string")),
             ValueData::Scalar(f) => Ok(Self {
                 data: vec![f.clone()],
                 shape: Vec::new(),
@@ -237,6 +238,7 @@ pub(crate) fn build_nested_value(data: &[Fraction], shape: &[usize]) -> Value {
 fn rectangular_shape(value: &Value) -> Option<Vec<usize>> {
     match &value.data {
         ValueData::Scalar(_) | ValueData::ExactScalar(_) | ValueData::Nil => Some(Vec::new()),
+        ValueData::Text(_) => None,
         ValueData::Tensor { shape, .. } => Some((**shape).clone()),
         ValueData::Vector(items) => {
             if items.is_empty() {

@@ -17,7 +17,7 @@
       }
     },
     {
-      "presentation": "text",
+      "presentation": "structural",
       "value": {
         "type": "string",
         "value": "hi"

@@ -27,13 +27,13 @@ use test_support::observe::{observe_axes, render, run, run_one, ALL_ROLES};
 
 /// Render is genuinely role-sensitive (a positive control): it is not a
 /// constant function that ignores its role argument. A definite Boolean renders
-/// as the bare truth word under `TruthValue` but as quoted text under `Text`.
+/// as the bare truth word under `TruthValue` but as `@1` under `Timestamp`.
 #[test]
 fn render_is_role_sensitive() {
-    let t = run_one("TRUE");
+    let t = run_one("1");
     assert_ne!(
         render(&t, Interpretation::TruthValue),
-        render(&t, Interpretation::Text),
+        render(&t, Interpretation::Timestamp),
         "render must depend on its role argument"
     );
 }
@@ -114,7 +114,7 @@ proptest! {
         let v = run_one(&src);
         let mut reroled = v.clone();
         reroled.hint = if v.hint == Interpretation::RawNumber {
-            Interpretation::Text
+            Interpretation::Timestamp
         } else {
             Interpretation::RawNumber
         };
