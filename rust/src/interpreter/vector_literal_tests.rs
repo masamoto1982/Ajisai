@@ -121,20 +121,20 @@ fn vector_literal_is_independent_of_dictionary_state() {
 }
 
 #[test]
-fn empty_vector_still_errors_both_paths() {
-    // `[ ]` is rejected by the interpreter; the lowering must not paper over it
-    // by silently building a NIL — it stays a fallback so the same error is
-    // raised whether lowering is on or off.
+fn empty_vector_lowers_identically_both_paths() {
+    // `[ ]` used to be rejected, and this pinned that the lowering did not
+    // paper over the rejection. It is a value now, so what must agree is the
+    // value both paths produce.
     for enabled in [true, false] {
         let mut interp = Interpreter::new();
         interp.set_vector_literal_enabled(enabled);
-        let err = block_on(interp.execute("{ [ ] } 'W' DEF\nW"))
-            .err()
-            .map(|e| e.to_string())
-            .unwrap_or_default();
-        assert!(
-            err.to_lowercase().contains("empty"),
-            "empty vector should error (enabled={enabled}), got: {err:?}"
+        block_on(interp.execute("{ [ ] } 'W' DEF\nW")).expect("`[ ]` is a value");
+        let val = interp.get_stack().last().expect("a result").clone();
+        assert!(!val.is_nil(), "the empty vector is not an absence");
+        assert_eq!(
+            val.len(),
+            0,
+            "empty in both lowering modes (enabled={enabled})"
         );
     }
 }

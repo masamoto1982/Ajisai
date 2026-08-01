@@ -284,38 +284,46 @@ async fn nil_check_answers_rather_than_projecting() {
     }
 }
 
-/// **An empty vector is inexpressible**, which is why `SORT` and `UNIQUE`
-/// declare a projection of `never` rather than `emptyVector`.
+/// **An empty vector is a value**, which is what makes the `projection: never`
+/// declared by `SORT`, `UNIQUE`, `FILTER`, `TAKE`, `MAP`, `SPLIT` and `REMOVE`
+/// true.
 ///
-/// The parser refuses the literal, and every operation that would compute an
-/// emptiness answers NIL instead — an absence, not a zero-length vector
-/// (`EmptySequence`, SPEC §4.5). A projection condition of `emptyVector` was
-/// therefore a condition no program could reach. Pinned here rather than on
-/// `SORT`/`UNIQUE` because it is the language-wide fact that makes the
-/// declaration vacuous: if an empty vector ever becomes constructible, this
-/// fails and both declarations need revisiting.
+/// This law used to read the other way: the parser refused the literal and
+/// every operation that would compute an emptiness answered NIL instead
+/// (`EmptySequence`). That made those `projection: never` declarations false —
+/// each of those Words *did* project, on exactly the empty case — and it put
+/// NIL to work as "empty collection", a second job that collides with
+/// LANG.VALUES.NIL, where a reason is the whole observable content of an
+/// absence rather than a stand-in for a value.
+///
+/// The old law even said so: "if an empty vector ever becomes constructible,
+/// this fails and both declarations need revisiting." It became constructible,
+/// and the declarations turned out to be the correct half.
 #[tokio::test]
-async fn an_empty_vector_is_inexpressible() {
+async fn an_empty_vector_is_a_value() {
     for literal in ["[ ]", "[ [ ] ]"] {
         let mut interp = Interpreter::new();
-        let message = interp
+        interp
             .execute(literal)
             .await
-            .expect_err("the parser refuses an empty vector literal")
-            .to_string();
+            .unwrap_or_else(|e| panic!("`{literal}` must be a value: {e}"));
+        let result = interp.stack.last().expect("a result value");
         assert!(
-            message.contains("Empty vector"),
-            "`{literal}` must be refused as an empty vector: {message}"
+            !result.is_nil(),
+            "`{literal}` must not be an absence: {result:?}"
         );
     }
 
     // Each of these computes an emptiness by a different route: a filter that
-    // keeps nothing, a zero-length prefix, and a zero-sized split chunk.
-    //
-    // `''` used to be in this list. It is not an empty *vector* — it is the
-    // empty String, which is now an ordinary value of its own domain, so it
-    // no longer reaches NIL and no longer belongs to this law.
-    for code in ["[ 1 2 3 ] { FALSE } FILTER", "[ 1 2 3 ] [ 0 ] TAKE"] {
+    // keeps nothing, a zero-length prefix, an emptying removal, and a mapped
+    // empty. None of them projects.
+    for code in [
+        "[ 1 2 3 ] { FALSE } FILTER",
+        "[ 1 2 3 ] [ 0 ] TAKE",
+        "[ 1 ] [ 0 ] REMOVE",
+        "[ ] { 1 ADD } MAP",
+        "[ ] SORT",
+    ] {
         let mut interp = Interpreter::new();
         interp
             .execute(code)
@@ -323,21 +331,24 @@ async fn an_empty_vector_is_inexpressible() {
             .unwrap_or_else(|e| panic!("`{code}` must not error: {e}"));
         let result = interp.stack.last().expect("a result value");
         assert!(
-            result.is_nil(),
-            "`{code}` must answer NIL, not an empty vector: {result:?}"
+            !result.is_nil(),
+            "`{code}` declares `projection: never`, so it must answer an empty \
+             vector rather than NIL: {result:?}"
         );
+        assert_eq!(result.len(), 0, "`{code}` must answer an empty vector");
     }
 
-    // A zero-sized SPLIT chunk is NIL beside the non-empty one, so even a
-    // vector's elements cannot be empty vectors.
+    // A zero-sized SPLIT chunk is an empty vector beside the non-empty one, so
+    // a vector's elements can be empty vectors too.
     let mut interp = Interpreter::new();
     interp.execute("[ 1 2 3 ] [ 0 3 ] SPLIT").await.unwrap();
     assert_eq!(interp.stack.len(), 2, "SPLIT pushes one value per size");
     assert!(
-        interp.stack[0].is_nil(),
-        "the zero-sized chunk must be NIL, got {:?}",
+        !interp.stack[0].is_nil(),
+        "the zero-sized chunk must be an empty vector, got {:?}",
         interp.stack[0]
     );
+    assert_eq!(interp.stack[0].len(), 0);
 }
 
 #[tokio::test]

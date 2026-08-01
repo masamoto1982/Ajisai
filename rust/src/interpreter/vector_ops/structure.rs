@@ -253,11 +253,7 @@ pub fn op_reorder(interp: &mut Interpreter) -> Result<()> {
                 );
             }
 
-            if result.is_empty() {
-                Ok(Value::nil_with_reason(NilReason::EmptySequence))
-            } else {
-                Ok(Value::from_vector(result))
-            }
+            Ok(Value::from_vector(result))
         })?;
 
     if is_keep_mode {

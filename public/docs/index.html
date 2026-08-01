@@ -525,7 +525,7 @@
                             <a class="btn js-open-playground" href="../index.html">Open in Playground</a>
                         </div>
                     </div>
-                    <p class="ref-note">There is no empty-vector literal: use <code>NIL</code> for the absence of a value.</p>
+                    <p class="ref-note"><code>[ ]</code> is the empty vector — a collection of no values, and an ordinary value you can write, nest, and measure (<code>[ ] LENGTH</code> is <code>0</code>). It is not <code>NIL</code>: <code>NIL</code> is the absence of a value, which is a different thing from a collection that happens to hold none. Operations that come up empty answer <code>[ ]</code> rather than bubbling — <code>[ 1 2 3 ] { 5 GT } FILTER</code> is <code>[ ]</code>.</p>
                 </section>
 
                 <section id="numbers" class="ref-page">

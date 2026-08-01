@@ -1,5 +1,5 @@
 use super::common::{execute_executable_code, extract_executable_code, ExecutableCode};
-use crate::error::{AjisaiError, NilReason, Result};
+use crate::error::{AjisaiError, Result};
 use crate::interpreter::value_extraction_helpers::is_vector_value;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::Stack;
@@ -54,9 +54,7 @@ pub fn op_map(interp: &mut Interpreter) -> Result<()> {
 
     let n_elements: usize = target_val.len();
     if n_elements == 0 {
-        interp
-            .stack
-            .push(Value::nil_with_reason(NilReason::EmptySequence));
+        interp.stack.push(Value::from_vector(Vec::new()));
         return Ok(());
     }
 

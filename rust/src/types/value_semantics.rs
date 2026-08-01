@@ -6,7 +6,6 @@
 use super::fraction::Fraction;
 use super::value_tensor::tensor_to_nested_values;
 use super::{DenseTensor, Interpretation, Value, ValueData};
-use crate::error::NilReason;
 use crate::semantic::{AbsenceOrigin, Capability, SemanticKind, ValueOrigin, ValueShape};
 use std::sync::Arc;
 
@@ -102,10 +101,16 @@ impl Value {
         }
     }
 
+    /// Build a Vector value (LANG.VALUES.VECTOR).
+    ///
+    /// The empty Vector is a Vector. It used to become
+    /// `NilReason::EmptySequence`, which made `[ ]` an absence and put NIL to
+    /// work as "empty collection" — a second job that collides with
+    /// LANG.VALUES.NIL, where a reason is the *whole observable content* of an
+    /// absence rather than a stand-in for a value. LANG.VALUES.VECTOR calls a
+    /// Vector "an ordered finite collection of values" and makes "order and
+    /// length" its whole observable structure; zero is a finite length.
     pub fn from_vector(values: Vec<Value>) -> Self {
-        if values.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         Self {
             data: ValueData::Vector(Arc::new(values)),
             hint: Interpretation::Unassigned,
@@ -114,9 +119,6 @@ impl Value {
     }
 
     pub fn from_vector_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
-        if values.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         Self {
             data: ValueData::Vector(Arc::new(values)),
             hint,

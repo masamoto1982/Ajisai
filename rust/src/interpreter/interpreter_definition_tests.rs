@@ -36,21 +36,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_empty_vector_error() {
+    async fn test_nested_empty_vector_is_a_value() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ [ ] ]").await;
-        assert!(result.is_err(), "Empty vector should be an error");
-        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+        interp
+            .execute("[ [ ] ]")
+            .await
+            .expect("`[ [ ] ]` is a value");
+        let outer = interp.stack.last().expect("a result");
+        assert_eq!(outer.len(), 1, "one element, which is the empty vector");
+        assert_eq!(outer.child(0).expect("the element").len(), 0);
     }
 
     #[tokio::test]
-    async fn test_empty_brackets_error() {
+    async fn test_empty_brackets_are_the_empty_vector() {
         let mut interp = Interpreter::new();
 
-        let result = interp.execute("[ ]").await;
-        assert!(result.is_err(), "Empty brackets should be an error");
-        assert!(result.unwrap_err().to_string().contains("Empty vector"));
+        interp.execute("[ ]").await.expect("`[ ]` is a value");
+        let val = interp.stack.last().expect("a result");
+        assert!(!val.is_nil(), "the empty vector is not an absence");
+        assert_eq!(val.len(), 0);
     }
 
     // The dependency guard on DEF/DEL is unconditional: the vocabulary has no
