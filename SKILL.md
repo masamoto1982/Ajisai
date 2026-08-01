@@ -166,8 +166,31 @@ exist. There is no module system and nothing to import.
 
 | word | category | summary |
 |---|---|---|
-| `EAT` | modifier | Set the consumption mode to consume operands. — e.g. `, +` |
-| `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `,, +` |
+| `TRUE` | constant | Push the boolean TRUE onto the stack. — e.g. `TRUE` |
+| `FALSE` | constant | Push the boolean FALSE onto the stack. — e.g. `FALSE` |
+| `AND` | logic | Logical AND. A NIL operand passes through. — e.g. `TRUE TRUE &` |
+| `OR` | logic | Logical OR. A NIL operand passes through. — e.g. `TRUE FALSE OR` |
+| `NOT` | logic | Logical negation. A NIL operand passes through. — e.g. `TRUE NOT` |
+| `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
+| `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 <>` |
+| `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
+| `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 <=` |
+| `GT` | comparison | Test greater-than comparison. — e.g. `2 1 >` |
+| `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 >=` |
+| `ADD` | arithmetic | Add two numeric values, element-wise with broadcasting. — e.g. `1 2 +` |
+| `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
+| `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
+| `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
+| `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
+| `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
+| `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
+| `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
+| `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
+| `NEG` | math | Numeric negation. — e.g. `2 NEG` |
+| `SIGN` | math | Sign of a number: -1, 0, or 1. — e.g. `-2 SIGN` |
+| `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
+| `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
+| `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
 | `GET` | vector | Extract one element of a vector by index. — e.g. `[ 10 20 30 ] [ 0 ] GET` |
 | `INSERT` | vector | Insert a value at a given index in a vector. — e.g. `[ 1 3 ] [ 1 2 ] INSERT` |
 | `REPLACE` | vector | Replace an element of a vector at a given index. — e.g. `[ 1 2 3 ] [ 0 9 ] REPLACE` |
@@ -177,14 +200,19 @@ exist. There is no module system and nothing to import.
 | `SPLIT` | vector | Split a vector into chunks at the specified sizes. — e.g. `[ 1 2 3 4 ] [ 2 2 ] SPLIT` |
 | `CONCAT` | vector | Flatten and concatenate two vectors. — e.g. `[ 1 2 ] [ 3 4 ] CONCAT` |
 | `REVERSE` | vector | Reverse the order of vector elements. — e.g. `[ 1 2 3 ] REVERSE` |
-| `RANGE` | vector | Generate a numeric sequence from a [start, end] pair. — e.g. `[ 0 5 ] RANGE` |
 | `REORDER` | vector | Reorder vector elements according to an index permutation. — e.g. `[ 'a' 'b' 'c' ] [ 2 0 1 ] REORDER` |
 | `COLLECT` | vector | Collect N items off the stack into a new vector. — e.g. `1 2 3 3 COLLECT` |
-| `TRUE` | constant | Push the boolean TRUE onto the stack. — e.g. `TRUE` |
-| `FALSE` | constant | Push the boolean FALSE onto the stack. — e.g. `FALSE` |
-| `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
-| `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
-| `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
+| `RANGE` | vector | Generate a numeric sequence from a [start, end] pair. — e.g. `[ 0 5 ] RANGE` |
+| `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
+| `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
+| `UNIQUE` | vector | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — e.g. `[ 1 2 1 ] UNIQUE` |
+| `CONTAINS` | vector | True if a vector contains an element equal to the given value. — e.g. `[ 1 2 ] 2 CONTAINS` |
+| `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
+| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
+| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
+| `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
+| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } ANY` |
+| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
 | `CHARS` | cast | Split a string into a vector of one-character strings. — e.g. `'hi' CHARS` |
 | `JOIN` | cast | Join a vector of strings into a single string. — e.g. `[ 'h' 'i' ] JOIN` |
 | `TRIM` | cast | Remove whitespace from both ends of a string. — e.g. `'  hi  ' TRIM` |
@@ -195,46 +223,18 @@ exist. There is no module system and nothing to import.
 | `NUM` | cast | Parse text as a number; Bubble/NIL on parse failure. — e.g. `'42' NUM` |
 | `STR` | cast | Convert a value to its string representation. — e.g. `42 STR` |
 | `CHR` | cast | Convert a numeric character code to a single-character string. — e.g. `65 CHR` |
-| `ADD` | arithmetic | Add two numeric values, element-wise with broadcasting. — e.g. `1 2 +` |
-| `SUB` | arithmetic | Subtract two numeric values, element-wise with broadcasting. — e.g. `5 3 -` |
-| `MUL` | arithmetic | Multiply two numeric values, element-wise with broadcasting. — e.g. `2 4 *` |
-| `DIV` | arithmetic | Divide two numeric values exactly (fractional result). — e.g. `10 2 /` |
-| `EQ` | comparison | Test equality of two values. — e.g. `1 1 =` |
-| `LT` | comparison | Test less-than comparison. — e.g. `1 2 <` |
-| `LTE` | comparison | Test less-than-or-equal comparison. — e.g. `1 1 <=` |
-| `GT` | comparison | Test greater-than comparison. — e.g. `2 1 >` |
-| `GTE` | comparison | Test greater-than-or-equal comparison. — e.g. `1 1 >=` |
-| `NEQ` | comparison | Test inequality of two values. — e.g. `1 2 <>` |
-| `AND` | logic | Logical AND. A NIL operand passes through. — e.g. `TRUE TRUE &` |
-| `OR` | logic | Logical OR. A NIL operand passes through. — e.g. `TRUE FALSE OR` |
-| `NOT` | logic | Logical negation. A NIL operand passes through. — e.g. `TRUE NOT` |
 | `COND` | control | Evaluate guard/body clauses in order, executing the first match. — e.g. `1 { TRUE } { 'y' } { IDLE } { 'n' } COND` |
+| `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
+| `NIL` | constant | Push the NIL value onto the stack. — e.g. `NIL` |
+| `NIL?` | absence | Test whether the top value is an operational NIL (absent). — e.g. `1 0 / NIL?` |
+| `NIL-REASON` | absence | Read the direct reason of an operational NIL as a protocol-string Text. — e.g. `1 0 / NIL-REASON` |
 | `VENT` | control-directive | Lazy NIL-coalescing control directive: keep a non-NIL top and skip the following source unit; on a NIL top, discard it and evaluate the following source unit as the fallback. — e.g. `NIL ^ [ 0 ]` |
-| `MAP` | higher-order | Apply a code block to each element of a vector. — e.g. `[ 1 2 3 ] { [ 2 ] * } MAP` |
-| `FILTER` | higher-order | Keep only the elements for which a predicate block returns TRUE. — e.g. `[ 1 2 3 ] { [ 2 ] = } FILTER` |
-| `FOLD` | higher-order | Reduce a vector to a single value using an initial accumulator and combiner block. — e.g. `[ 1 2 3 ] [ 0 ] { + } FOLD` |
-| `ANY` | higher-order | TRUE if at least one element satisfies the predicate. — e.g. `[ 1 2 3 ] { [ 2 ] = } ANY` |
-| `ALL` | higher-order | TRUE if every element satisfies the predicate. — e.g. `[ 2 4 ] { [ 2 ] MOD [ 0 ] = } ALL` |
-| `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
+| `EAT` | modifier | Set the consumption mode to consume operands. — e.g. `, +` |
+| `KEEP` | modifier | Set the consumption mode to keep operands. — e.g. `,, +` |
 | `DEF` | dictionary | Define a user word from a body and a name. — e.g. `{ 2 * } 'DOUBLE' DEF` |
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
-| `FILL` | tensor | Fill a target shape with a constant value. — e.g. `[ 2 2 0 ] FILL` |
-| `MOD` | arithmetic | Modulo (remainder) of two numeric values. — e.g. `7 3 %` |
-| `FLOOR` | arithmetic | Round toward negative infinity. — e.g. `[ 7/3 ] FLOOR` |
-| `CEIL` | arithmetic | Round toward positive infinity. — e.g. `[ 7/3 ] CEIL` |
-| `ROUND` | arithmetic | Round to nearest integer (half-up). — e.g. `[ 5/2 ] ROUND` |
-| `EXEC` | control | Execute a vector as Ajisai code. — e.g. `[ 1 2 + ] EXEC` |
-| `SQRT` | math | Exact square root of a non-negative rational. — e.g. `2 SQRT` |
-| `ABS` | math | Absolute value of a number. — e.g. `-2 ABS` |
-| `NEG` | math | Numeric negation. — e.g. `2 NEG` |
-| `SIGN` | math | Sign of a number: -1, 0, or 1. — e.g. `-2 SIGN` |
-| `MIN` | math | Smaller of two numbers. — e.g. `1 2 MIN` |
-| `MAX` | math | Larger of two numbers. — e.g. `1 2 MAX` |
-| `SORT` | vector | Return a copy of a vector sorted in ascending order. — e.g. `[ 3 1 2 ] SORT` |
-| `UNIQUE` | vector | Return a copy of a vector with duplicates removed, preserving first-occurrence order. — e.g. `[ 1 2 1 ] UNIQUE` |
-| `CONTAINS` | vector | True if a vector contains an element equal to the given value. — e.g. `[ 1 2 ] 2 CONTAINS` |
-| `INDEX-OF` | vector | Index of the first element equal to the value; Bubble/NIL if absent. — e.g. `[ 1 2 ] 2 INDEX-OF` |
+| `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |
