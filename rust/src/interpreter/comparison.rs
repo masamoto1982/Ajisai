@@ -1,5 +1,4 @@
-use crate::error::{AjisaiError, Result};
-use crate::interpreter::tensor_ops::FlatTensor;
+use crate::error::{AjisaiError, NilReason, Result};
 use crate::interpreter::value_extraction_helpers::nil_passthrough_binary;
 use crate::interpreter::{ConsumptionMode, Interpreter};
 use crate::types::exact::{ExactCmp, ExactReal};
@@ -153,27 +152,15 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
             "scalar value",
             "string",
         )),
-        ValueData::Vector(_) => {
-            let tensor = FlatTensor::from_value(val)?;
-            if tensor.data.len() != 1 {
-                return Err(AjisaiError::create_structure_error(
-                    "scalar value",
-                    "non-scalar value",
-                ));
-            }
-            Ok(tensor.data[0].clone())
-        }
-        ValueData::Tensor { data, .. } => {
-            if data.len() != 1 {
-                return Err(AjisaiError::create_structure_error(
-                    "scalar value",
-                    "non-scalar value",
-                ));
-            }
-            data.get_small_fraction(0).ok_or_else(|| {
-                AjisaiError::create_structure_error("scalar value", "non-scalar value")
-            })
-        }
+        // A Vector never reaches the scalar law: `lift_comparison` peels it
+        // element-wise first. A one-element Vector used to project to its sole
+        // element here, which made `[ 3 ] 4 LT` answer `TRUE` — a collapse
+        // LANG.COLLECTIONS.LIFT forbids ("a scalar combines with every element
+        // of a vector"), and one that contradicts a singleton Vector not being
+        // its element (LANG.VALUES.DISJOINT).
+        ValueData::Vector(_) | ValueData::Tensor { .. } => Err(
+            AjisaiError::create_structure_error("scalar value", "non-scalar value"),
+        ),
         ValueData::Nil => Err(AjisaiError::create_structure_error(
             "scalar value",
             "non-scalar value",
@@ -184,48 +171,16 @@ fn extract_scalar_for_comparison(val: &Value) -> Result<Fraction> {
     }
 }
 
-enum ScalarFastWrap {
-    Scalar,
-    Tensor(Vec<usize>),
-}
-
 struct ScalarFastOperand {
     fraction: Fraction,
-    wrap: ScalarFastWrap,
 }
 
 fn scalar_fast_operand(value: &Value) -> Option<ScalarFastOperand> {
     match &value.data {
         ValueData::Scalar(f) => Some(ScalarFastOperand {
             fraction: f.clone(),
-            wrap: ScalarFastWrap::Scalar,
         }),
-        ValueData::Tensor { data, shape } if data.len() == 1 => Some(ScalarFastOperand {
-            fraction: data.get_small_fraction(0)?,
-            wrap: ScalarFastWrap::Tensor((**shape).clone()),
-        }),
-        ValueData::Vector(children) if children.len() == 1 => {
-            let child = scalar_fast_operand(&children[0])?;
-            let mut shape = Vec::with_capacity(2);
-            shape.push(1);
-            match child.wrap {
-                ScalarFastWrap::Scalar => {}
-                ScalarFastWrap::Tensor(child_shape) => shape.extend(child_shape),
-            }
-            Some(ScalarFastOperand {
-                fraction: child.fraction,
-                wrap: ScalarFastWrap::Tensor(shape),
-            })
-        }
         _ => None,
-    }
-}
-
-fn same_scalar_fast_wrap(a: &ScalarFastWrap, b: &ScalarFastWrap) -> bool {
-    match (a, b) {
-        (ScalarFastWrap::Scalar, ScalarFastWrap::Scalar) => true,
-        (ScalarFastWrap::Tensor(a_shape), ScalarFastWrap::Tensor(b_shape)) => a_shape == b_shape,
-        _ => false,
     }
 }
 
@@ -241,10 +196,6 @@ fn push_ordering_scalar_fastpath(interp: &mut Interpreter, kind: OrderingKind) -
     let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
         return false;
     };
-    if !same_scalar_fast_wrap(&a.wrap, &b.wrap) {
-        return false;
-    }
-
     let decided = kind.apply_to_fraction(&a.fraction, &b.fraction);
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
@@ -270,10 +221,6 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
     let Some(b) = scalar_fast_operand(&interp.stack[stack_len - 1]) else {
         return false;
     };
-    if !same_scalar_fast_wrap(&a.wrap, &b.wrap) {
-        return false;
-    }
-
     let eq = a.fraction == b.fraction;
     if interp.consumption_mode == ConsumptionMode::Consume {
         interp.stack.pop();
@@ -285,6 +232,69 @@ fn push_equality_scalar_fastpath(interp: &mut Interpreter, invert: bool) -> bool
         .scalar_fastpath_count
         .saturating_add(1);
     true
+}
+
+/// Apply an ordering Word across the shapes LANG.COLLECTIONS.LIFT allows.
+///
+/// "An arithmetic or comparison Word applies element-wise when given vectors.
+/// Two vectors combine element-wise when their lengths are equal; a scalar
+/// combines with every element of a vector. Any other pairing is ERROR."
+///
+/// The comparison family used to do the reverse of this: it projected a
+/// singleton Vector to its element (`[ 3 ] 4 LT` was `TRUE`) and refused the
+/// element-wise application the clause requires (`[ 3 4 ] 4 LT` was an ERROR).
+///
+/// A NIL operand lane answers NIL, which is the scalar law's own outcome for
+/// `NIL 3 LT` — the clause says each lane preserves the scalar law's NIL
+/// distinction.
+fn lift_comparison(a_val: &Value, b_val: &Value, kind: OrderingKind) -> Result<Value> {
+    let a_items = a_val.as_vector_view();
+    let b_items = b_val.as_vector_view();
+
+    match (a_items, b_items) {
+        (None, None) => {
+            if a_val.is_nil() || b_val.is_nil() {
+                return Ok(Value::nil_with_reason(
+                    a_val
+                        .nil_reason()
+                        .or_else(|| b_val.nil_reason())
+                        .copied()
+                        .unwrap_or(NilReason::Literal),
+                ));
+            }
+            match compare_scalar_pair(a_val, b_val, kind)? {
+                ScalarCmp::Decided(b) => Ok(Value::from_bool(b)),
+            }
+        }
+        (Some(items), None) => {
+            let lanes = items
+                .iter()
+                .map(|item| lift_comparison(item, b_val, kind))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Value::from_vector(lanes))
+        }
+        (None, Some(items)) => {
+            let lanes = items
+                .iter()
+                .map(|item| lift_comparison(a_val, item, kind))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Value::from_vector(lanes))
+        }
+        (Some(a_items), Some(b_items)) => {
+            if a_items.len() != b_items.len() {
+                return Err(AjisaiError::create_structure_error(
+                    "vectors of equal length",
+                    "vectors of differing length",
+                ));
+            }
+            let lanes = a_items
+                .iter()
+                .zip(b_items.iter())
+                .map(|(x, y)| lift_comparison(x, y, kind))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Value::from_vector(lanes))
+        }
+    }
 }
 
 fn apply_binary_comparison(
@@ -309,17 +319,19 @@ fn apply_binary_comparison(
         (a_val, b_val)
     };
 
-    match compare_scalar_pair(&a_val, &b_val, kind) {
-        Ok(ScalarCmp::Decided(b)) => push_boolean_result(interp, b),
+    match lift_comparison(&a_val, &b_val, kind) {
+        Ok(result) => {
+            interp.stack.push(result);
+            Ok(())
+        }
         Err(e) => {
             if !is_keep_mode {
                 interp.stack.push(a_val);
                 interp.stack.push(b_val);
             }
-            return Err(e);
+            Err(e)
         }
     }
-    Ok(())
 }
 
 fn apply_ordering_schema(interp: &mut Interpreter, kind: OrderingKind) -> Result<()> {

@@ -28,8 +28,11 @@
 [ 0 4 ] RANGE { [ 2 ] * } MAP PRINT
 # 期待: [ 0 2 4 6 8 ]（各要素を2倍）
 
-# RANGEとFILTERの組み合わせ
-[ 0 10 ] RANGE { [ 5 ] > } FILTER PRINT
+# RANGEとFILTERの組み合わせ。
+# 述語は Boolean を返す必要がある。比較は LANG.COLLECTIONS.LIFT で要素ごとに
+# 適用されるので、`[ 5 ] >` は `[ TRUE ]` という 1 要素 Vector を返してしまう。
+# スカラーと比べるならスカラーで書く。
+[ 0 10 ] RANGE { 5 > } FILTER PRINT
 # 期待: [ 6 7 8 9 10 ]（5より大きい要素）
 
 # ============================================

@@ -157,13 +157,13 @@ fn unsupported_or_semantically_sensitive_shapes_fall_back() {
 
 #[test]
 fn keep_mode_fast_path_preserves_operands_and_pushes_result() {
+    // The shaped comparison forms (`[ 3 ] [ 4 ] KEEP >`) moved out of this
+    // list with the singleton fast path; they lift now.
     for src in [
         "3 4 KEEP ADD",
         "[ 3 ] [ 4 ] KEEP ADD",
         "3 4 KEEP >",
-        "[ 3 ] [ 4 ] KEEP >",
         "3 3 KEEP =",
-        "[ 3 ] [ 3 ] KEEP =",
     ] {
         let (on, off) = assert_on_equals_off(src);
         assert!(
@@ -185,15 +185,15 @@ fn keep_mode_fast_path_preserves_operands_and_pushes_result() {
 
 #[test]
 fn direct_singleton_vector_fast_path_matches_baseline() {
+    // Arithmetic only. The comparison family no longer has a singleton fast
+    // path: a one-element Vector is not its element (LANG.VALUES.DISJOINT), so
+    // `[ 6 ] [ 3 ] LT` lifts element-wise to `[ FALSE ]` rather than deciding
+    // as a scalar. See `comparison_on_singletons_lifts_instead_of_fast_pathing`.
     for op in [
         arithmetic::op_add as fn(&mut Interpreter) -> crate::error::Result<()>,
         arithmetic::op_sub,
         arithmetic::op_mul,
         arithmetic::op_div,
-        comparison::op_lt,
-        comparison::op_gt,
-        comparison::op_eq,
-        comparison::op_neq,
     ] {
         let (on, off) =
             assert_direct_on_equals_off(vec![singleton_vector(6), singleton_vector(3)], op);
@@ -234,4 +234,30 @@ fn division_by_zero_matches_baseline() {
         on.runtime_metrics().scalar_fastpath_count >= 1,
         "division by zero still uses the scalar fast path to produce the same bubble"
     );
+}
+
+#[test]
+fn comparison_on_singletons_lifts_instead_of_fast_pathing() {
+    // The fast path used to project a one-element Vector to its element and
+    // answer a bare Boolean, so `[ 6 ] [ 3 ] LT` was `FALSE` — a collapse
+    // LANG.COLLECTIONS.LIFT forbids. It now lifts, which is a shape the fast
+    // path deliberately declines.
+    for enabled in [true, false] {
+        let mut interp = Interpreter::new();
+        interp.set_scalar_fastpath_enabled(enabled);
+        interp.update_stack(vec![singleton_vector(6), singleton_vector(3)]);
+        comparison::op_lt(&mut interp).expect("LT lifts over singletons");
+        assert_eq!(
+            interp.runtime_metrics().scalar_fastpath_count,
+            0,
+            "a shaped operand must not take the scalar fast path (enabled={enabled})"
+        );
+        let result = interp.get_stack().last().expect("a result").clone();
+        assert_eq!(result.len(), 1, "the lift preserves the operand shape");
+        assert_eq!(
+            result.child(0).and_then(|c| c.as_truth()),
+            Some(false),
+            "6 < 3 is false in the single lane"
+        );
+    }
 }

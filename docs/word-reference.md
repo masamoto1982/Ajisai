@@ -106,7 +106,7 @@ Test less-than comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 2 <`
 - **Aliases:** `<`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -120,7 +120,7 @@ Test less-than-or-equal comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 <=`
 - **Aliases:** `<=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -134,7 +134,7 @@ Test greater-than comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `2 1 >`
 - **Aliases:** `>`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`
@@ -148,7 +148,7 @@ Test greater-than-or-equal comparison.
 - **NIL policy:** `passthrough`; projection: none
 - **Purity / determinism:** `pure` / `deterministic`
 - **Capability / hosted effect:** `none` / `none`
-- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`
+- **Clauses:** `LANG.VALUES.TRUTH`, `LANG.VALUES.EXACT`, `LANG.COLLECTIONS.LIFT`
 - **Syntax:** `1 1 >=`
 - **Aliases:** `>=`
 - **ERROR conditions:** `unsupportedComparison`, `shapeMismatch`

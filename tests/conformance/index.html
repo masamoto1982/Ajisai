@@ -1681,6 +1681,81 @@
      a Tier 0/1 operand still decides regardless of budget. MATH@ENCLOSE
      observes a rational enclosure under an explicit water budget. -->
 
+<!-- ===================== CORE: element lifting ===================== -->
+<!-- LANG.COLLECTIONS.LIFT: "An arithmetic or comparison Word applies
+     element-wise when given vectors. Two vectors combine element-wise when
+     their lengths are equal; a scalar combines with every element of a vector.
+     Any other pairing is ERROR."
+
+     The comparison family used to do the reverse of this — it projected a
+     one-element Vector to its element and refused the element-wise
+     application — and the unary arithmetic Words took a scalar only, although
+     ABS/NEG/SIGN each already declare LANG.COLLECTIONS.LIFT. -->
+
+<section class="ajisai-case" id="core-lift-comparison-vector-scalar" data-category="core">
+  <h3>A scalar combines with every element of a vector</h3>
+  <pre class="ajisai-source">[ 3 4 ] 4 LT</pre>
+  <pre class="ajisai-expect-result">{ TRUE FALSE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-comparison-scalar-vector" data-category="core">
+  <h3>Lifting is symmetric: the scalar may be either operand</h3>
+  <pre class="ajisai-source">3 [ 4 5 ] LT</pre>
+  <pre class="ajisai-expect-result">{ TRUE TRUE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-comparison-equal-lengths" data-category="core">
+  <h3>Two vectors of equal length combine element-wise</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 3 1 ] LT</pre>
+  <pre class="ajisai-expect-result">{ TRUE FALSE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-comparison-length-mismatch" data-category="core">
+  <h3>Any other pairing is ERROR — this is the shapeMismatch each ordering Word registers</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 1 2 ] LT</pre>
+  <pre class="ajisai-expect-result"></pre>
+  <pre class="ajisai-expect-error">expected vectors of equal length</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-no-singleton-projection" data-category="core">
+  <h3>A one-element vector is lifted over, not projected to its element</h3>
+  <pre class="ajisai-source">[ 3 ] 4 LT</pre>
+  <pre class="ajisai-expect-result">{ TRUE }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-comparison-nil-lane" data-category="core">
+  <h3>Each lane preserves the scalar law's NIL distinction</h3>
+  <pre class="ajisai-source">[ 1 NIL ] 2 LT</pre>
+  <pre class="ajisai-expect-result">{ TRUE NIL }</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-unary-abs" data-category="core">
+  <h3>ABS applies element-wise, as its declared LANG.COLLECTIONS.LIFT says</h3>
+  <pre class="ajisai-source">[ -1 2 ] ABS</pre>
+  <pre class="ajisai-expect-result">[ 1/1 2/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-lift-unary-sign-nested" data-category="core">
+  <h3>Unary lifting reaches nested vectors</h3>
+  <pre class="ajisai-source">[ [ -3 ] [ 0 5 ] ] SIGN</pre>
+  <pre class="ajisai-expect-result">[ [ -1/1 ] [ 0/1 1/1 ] ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-equality-stays-structural" data-category="core">
+  <h3>EQ does not lift: equality is one structural relation between whole values</h3>
+  <pre class="ajisai-source">[ 1 2 ] [ 1 2 ] EQ</pre>
+  <pre class="ajisai-expect-result">TRUE</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
 <!-- ===================== CORE: the String domain ===================== -->
 <!-- LANG.VALUES.DISJOINT gives six domains, String among them. Nothing in the
      suite decided String *against* Vector before these cases, and the two were

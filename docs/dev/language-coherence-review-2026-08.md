@@ -192,7 +192,7 @@ LANG.COLLECTIONS.LIFT は「算術**または比較**の Word は Vector を与�
 
 ## 4. 実施した改修
 
-§4.1〜§4.4 は最初の改修（PR #1413）、§4.5・§4.6・§4.7 はその後の追補で実施した。
+§4.1〜§4.4 は最初の改修（PR #1413）、§4.5 以降はその後の追補で順に実施した。
 
 §4.1〜§4.4 は、正典が明示的に規定しており、かつ String 領域の導入を前提としない範囲である。
 すべて「正典が何と言っているか」を根拠とし、コードコメントに該当節を引用している。
@@ -389,10 +389,70 @@ collection of values」と定め、「order and length」をその観測可能�
 セッションスナップショットが復元不能になる。degrade ではなく失敗になるため、互換性を優先
 した。enum に、もはや生成されないことと残す理由を記録してある。
 
-### 4.8 実施しなかったもの
+### 4.8 比較族と単項数学語を LANG.COLLECTIONS.LIFT に合わせた
 
-順序比較のリフティング（§3.5）も未実施。要素ごとに Boolean を返す broadcast ヘルパが
-必要で、既存の `apply_binary_broadcast_with_metrics` は Fraction を返すため流用できない。
+§5 の第 4 項。
+
+**節の権威範囲を先に確定した。** `semantic-families.json` の `comparison` 族は
+LANG.COLLECTIONS.LIFT を参照せず `lifting` キーも持たないので、レジストリだけを見ると
+「比較は lift しない」と読める。しかし LANG.CONTRACT.REGISTRY はレジストリの権威範囲を
+「arity, consumption, NIL policy, projection reason, error conditions, purity,
+documentation」と**明示的に列挙**しており、lifting は含まれない。よって lifting の正典は
+LANG.COLLECTIONS.LIFT の側である。
+
+節は「arithmetic **or comparison** Word applies element-wise when given vectors. Two
+vectors combine element-wise when their lengths are equal; a scalar combines with every
+element of a vector. Any other pairing is ERROR」と述べる。比較族は**その逆**をしていた:
+
+```
+[ 3 ] 4 LT      => TRUE     旧。単要素射影——節が禁じる collapse
+[ 3 4 ] 4 LT    => ERROR    旧。節が要求する要素ごと適用を拒否
+[ -1 2 ] ABS    => ERROR    旧。ABS は LANG.COLLECTIONS.LIFT を宣言済み
+```
+
+改修後:
+
+```
+[ 3 4 ] 4 LT           => { TRUE FALSE }
+3 [ 4 5 ] LT           => { TRUE TRUE }
+[ 1 2 ] [ 3 1 ] LT     => { TRUE FALSE }
+[ 3 ] 4 LT             => { TRUE }        射影せず shape を保つ
+[ 1 2 3 ] [ 1 2 ] LT   => ERROR           長さ不一致 = shapeMismatch
+[ 1 NIL ] 2 LT         => { TRUE NIL }    lane が scalar law の NIL を保つ
+[ -1 2 ] ABS           => [ 1/1 2/1 ]
+```
+
+**`ABS`/`NEG`/`SIGN` はすでに `LANG.COLLECTIONS.LIFT` を clauses に宣言していた。**
+宣言どおりに動いていなかっただけである。§4.5・§4.6・§4.7 と同じ構図で、これで四度目。
+順序比較 4 語の `errorWhen: ["shapeMismatch"]` も、これまで到達不能だった（Vector を
+一律に拒否していたため）が、長さ不一致として初めて意味を持つ。
+
+`LT`/`LTE`/`GT`/`GTE` の clauses に LANG.COLLECTIONS.LIFT を追加した。**族単位では
+付けていない**——`EQ`/`NEQ` は同じ `comparison` 族だが構造的関係であり（§4.2）、
+lift すると `[ 1 2 ] [ 1 2 ] EQ` が `{ TRUE TRUE }` になって「二つの Vector が同じ値か」
+を問う手段が消える。LANG.VALUES.DISJOINT が要求する構造的等価性と両立しない。
+**節文の "comparison" は順序比較を指す**と読むべきで、そう明記するのが正典側の改善に
+なる（未実施。仕様所有者の判断）。
+
+### 4.9 本改修が露出させた所見（未修正）
+
+**COND のガードが真理値を強制変換している。** `control_cond.rs` は Boolean のほか、
+1 要素 Vector に包まれた Boolean と、「legacy numeric guard」（scalar 0 = false,
+1 = true）を受理する。どちらも LANG.VALUES.TRUTH が排除する強制変換で、
+LANG.VALUES.DISJOINT に二重に反する（単要素 Vector はその要素ではない／scalar は
+Boolean ではない）。§4.1 が `AND`/`OR`/`NOT` と `extract_predicate_boolean` から
+除いたものが、ここだけ残っていた。
+
+リフティングはこれを**到達可能から常用へ**変えた。旧来 `[ 7 ] [ 5 ] >` は単要素射影で
+裸の `TRUE` を返していたが、今は `[ TRUE ]` を返し、wrapper 受理経路に乗る。厳格化を
+試みたところ、`[ n ]` でスカラーを包む既存の記法がテスト・例に広く使われているため
+多数が壊れた。lifting とは別の規律なので独立項目として残し、コードにも FINDING として
+記録した。
+
+**算術の singleton broadcast も節に反する。** `[ 1 2 ] [ 3 ] ADD` が `[ 4/1 5/1 ]` を
+返す。節は「長さが等しいとき要素ごと、スカラーは全要素と結合、それ以外は ERROR」と
+述べるので、長さ 2 と 1 の対は ERROR であるべきである（監査 D12）。本項目は比較族と
+単項語に限定したため未修正。
 
 ## 5. 残作業と順序
 
@@ -404,8 +464,7 @@ collection of values」と定め、「order and length」をその観測可能�
 1. ~~**String を独立した値領域にする。**~~ — 実施済み（§4.6）。
 2. ~~**空 Vector の解禁。**~~ — 実施済み（§4.7）。
 3. ~~**`Value::eq` から `hint` を外す。**~~ — 実施済み（§4.6。1 の直接の帰結）。
-4. **比較族のリフティングを LANG.COLLECTIONS.LIFT に合わせる。** 単要素射影を削除し、
-   要素ごと適用を実装する。`ABS` など単項数学語も同じエンジンへ。
+4. ~~**比較族のリフティングを LANG.COLLECTIONS.LIFT に合わせる。**~~ — 実施済み（§4.8）。
 5. **辞書を二層に戻す。** `resolve_word.rs` の `@` 名前空間・active/owner 辞書・
    三段フォールバックの削除。LANG.DICTIONARY.RESOLUTION は二層のみを規定する。
 6. ~~**LANG.EFFECTS.OUTPUT の作用数を LANG.MACHINE.ORDER に合わせる**~~ — 実施済み（§4.5）。

@@ -12,6 +12,68 @@ fn require_stack_top(_interp: &Interpreter, _word: &str) -> Result<()> {
     Ok(())
 }
 
+/// Apply a unary numeric Word across the shapes LANG.COLLECTIONS.LIFT allows.
+///
+/// The clause makes element-wise application the rule for an arithmetic Word
+/// given a vector. `NEG`, `ABS` and `SIGN` took a scalar only, so `[ -1 2 ] ABS`
+/// was an ERROR while `[ -1 2 ] 1 MUL` lifted happily — the same clause read
+/// two ways depending on arity. A NIL lane passes through, as it does for the
+/// scalar law.
+fn lift_unary_numeric(value: &Value, scalar_op: &dyn Fn(&Value) -> Result<Value>) -> Result<Value> {
+    match value.as_vector_view() {
+        Some(items) => {
+            let lanes = items
+                .iter()
+                .map(|item| lift_unary_numeric(item, scalar_op))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Value::from_vector(lanes))
+        }
+        None if value.is_nil() => Ok(value.clone()),
+        None => scalar_op(value),
+    }
+}
+
+/// The scalar law of `NEG`, lifted by [`lift_unary_numeric`].
+fn neg_scalar(value: &Value) -> Result<Value> {
+    match exact_real_of(value) {
+        Some(er) => Ok(Value::from_exact_real(er.neg())),
+        None => Err(AjisaiError::from("NEG: expected a number")),
+    }
+}
+
+/// The scalar law of `SIGN`, lifted by [`lift_unary_numeric`].
+fn sign_scalar(value: &Value) -> Result<Value> {
+    let zero = Value::from_fraction(Fraction::from(0));
+    match crate::interpreter::comparison::three_way_compare(value, &zero)? {
+        crate::interpreter::comparison::OrderOutcome::Decided(ord) => {
+            let sign = match ord {
+                std::cmp::Ordering::Less => -1,
+                std::cmp::Ordering::Equal => 0,
+                std::cmp::Ordering::Greater => 1,
+            };
+            Ok(Value::from_fraction(Fraction::from(sign)))
+        }
+        crate::interpreter::comparison::OrderOutcome::Undecided(_) => {
+            Err(AjisaiError::from("operand is outside the exact domain"))
+        }
+    }
+}
+
+/// The scalar law of `ABS`, lifted by [`lift_unary_numeric`].
+fn abs_scalar(value: &Value) -> Result<Value> {
+    let zero = Value::from_fraction(Fraction::from(0));
+    match crate::interpreter::comparison::three_way_compare(value, &zero)? {
+        crate::interpreter::comparison::OrderOutcome::Decided(std::cmp::Ordering::Less) => {
+            let er = exact_real_of(value).expect("comparable operand is numeric");
+            Ok(Value::from_exact_real(er.neg()))
+        }
+        crate::interpreter::comparison::OrderOutcome::Decided(_) => Ok(value.clone()),
+        crate::interpreter::comparison::OrderOutcome::Undecided(_) => {
+            Err(AjisaiError::from("operand is outside the exact domain"))
+        }
+    }
+}
+
 /// Exact-real view of a numeric operand: a rational `Scalar` lifts to
 /// `ExactReal::Rational`; a lazy `ExactScalar` (an `AlgebraicSqrt` or `Gosper`
 /// value) is taken as-is. Non-numeric kinds return `None` — the malformed-use
@@ -35,15 +97,15 @@ pub(crate) fn op_neg(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let operands = extract_operands(interp, 1)?;
-    match exact_real_of(&operands[0]) {
-        Some(er) => {
-            push_result(interp, Value::from_exact_real(er.neg()));
+    match lift_unary_numeric(&operands[0], &neg_scalar) {
+        Ok(result) => {
+            push_result(interp, result);
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
         }
-        None => {
+        Err(e) => {
             restore_operands(interp, operands);
-            Err(AjisaiError::from("NEG: expected a number"))
+            Err(e)
         }
     }
 }
@@ -63,23 +125,11 @@ pub(crate) fn op_abs(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let operands = extract_operands(interp, 1)?;
-    let zero = Value::from_fraction(Fraction::from(0));
-    match crate::interpreter::comparison::three_way_compare(&operands[0], &zero) {
-        Ok(crate::interpreter::comparison::OrderOutcome::Decided(std::cmp::Ordering::Less)) => {
-            // |x| = -x for x < 0; a value that compared is numeric.
-            let er = exact_real_of(&operands[0]).expect("comparable operand is numeric");
-            push_result(interp, Value::from_exact_real(er.neg()));
+    match lift_unary_numeric(&operands[0], &abs_scalar) {
+        Ok(result) => {
+            push_result(interp, result);
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
-        }
-        Ok(crate::interpreter::comparison::OrderOutcome::Decided(_)) => {
-            // x >= 0: |x| = x, returned unchanged to preserve its exact form.
-            push_result(interp, operands[0].clone());
-            interp.stack.set_last_role(Interpretation::RawNumber);
-            Ok(())
-        }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => {
-            Err(AjisaiError::from("operand is outside the exact domain"))
         }
         Err(e) => {
             restore_operands(interp, operands);
@@ -104,20 +154,11 @@ pub(crate) fn op_sign(interp: &mut Interpreter) -> Result<()> {
         return Ok(());
     }
     let operands = extract_operands(interp, 1)?;
-    let zero = Value::from_fraction(Fraction::from(0));
-    match crate::interpreter::comparison::three_way_compare(&operands[0], &zero) {
-        Ok(crate::interpreter::comparison::OrderOutcome::Decided(ord)) => {
-            let sign = match ord {
-                std::cmp::Ordering::Less => -1,
-                std::cmp::Ordering::Equal => 0,
-                std::cmp::Ordering::Greater => 1,
-            };
-            push_result(interp, Value::from_fraction(Fraction::from(sign)));
+    match lift_unary_numeric(&operands[0], &sign_scalar) {
+        Ok(result) => {
+            push_result(interp, result);
             interp.stack.set_last_role(Interpretation::RawNumber);
             Ok(())
-        }
-        Ok(crate::interpreter::comparison::OrderOutcome::Undecided(_)) => {
-            Err(AjisaiError::from("operand is outside the exact domain"))
         }
         Err(e) => {
             restore_operands(interp, operands);

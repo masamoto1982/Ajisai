@@ -304,7 +304,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Test less-than comparison.",
@@ -346,7 +347,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Test less-than-or-equal comparison.",
@@ -388,7 +390,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Test greater-than comparison.",
@@ -430,7 +433,8 @@
       "interpretationRole": "truthValue",
       "clauses": [
         "LANG.VALUES.TRUTH",
-        "LANG.VALUES.EXACT"
+        "LANG.VALUES.EXACT",
+        "LANG.COLLECTIONS.LIFT"
       ],
       "documentation": {
         "summary": "Test greater-than-or-equal comparison.",
