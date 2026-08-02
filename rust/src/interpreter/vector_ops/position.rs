@@ -156,9 +156,6 @@ pub fn op_remove(interp: &mut Interpreter) -> Result<()> {
                 .ok_or(AjisaiError::IndexOutOfBounds { index, length: len })?;
 
             values.remove(actual_index);
-            if values.is_empty() {
-                return Ok(Value::nil_with_reason(NilReason::EmptySequence));
-            }
             Ok(Value::from_vector(values))
         })?;
 

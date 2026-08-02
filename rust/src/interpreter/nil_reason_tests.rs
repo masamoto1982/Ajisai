@@ -270,12 +270,10 @@ async fn every_reachable_nil_carries_a_reason() {
     let cases: &[(&str, NilReason)] = &[
         // Written, not computed.
         ("NIL", NilReason::Literal),
-        // Emptiness, by each route that can reach it (SPEC §4.5).
-        ("[ 1 2 3 ] { FALSE } FILTER", NilReason::EmptySequence),
-        ("[ 1 2 3 ] [ 0 ] TAKE", NilReason::EmptySequence),
-        ("[ 1 ] [ 0 ] REMOVE", NilReason::EmptySequence),
-        // `''` was here. It is no longer an emptiness route: the empty String
-        // is an ordinary value of the String domain, not an absence.
+        // Emptiness used to be here, by four routes (FILTER, TAKE, REMOVE,
+        // `''`). None of them reaches NIL now: an empty result is an empty
+        // Vector and `''` is a String, so `EmptySequence` has nothing left to
+        // describe.
         // Projections that already had reasons — pinned so the sweep is a
         // statement about all NILs, not only the ones this change touched.
         ("1 0 /", NilReason::DivisionByZero),

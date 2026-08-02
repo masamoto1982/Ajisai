@@ -5,7 +5,6 @@
 
 use super::fraction::Fraction;
 use super::{DenseTensor, Interpretation, Value, ValueData};
-use crate::error::NilReason;
 use std::sync::Arc;
 
 impl Value {
@@ -19,9 +18,6 @@ impl Value {
     /// to an AoS `Vector` (handoff 手1). The `hint` matches `from_tensor` /
     /// `from_children` (`Unassigned`) so downstream interpretation is unchanged.
     pub fn from_int_tensor(numerators: Vec<i64>) -> Self {
-        if numerators.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         let len = numerators.len();
         let tensor = DenseTensor::from_integers(numerators);
         Self {
@@ -35,9 +31,6 @@ impl Value {
     }
 
     pub fn from_tensor(data: Vec<Fraction>, shape: Vec<usize>) -> Self {
-        if data.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         let resolved_shape = if shape.is_empty() {
             vec![data.len()]
         } else {
@@ -66,9 +59,6 @@ impl Value {
     /// The `String` display hint suppresses promotion at every level so that
     /// codepoint-based strings retain their nested representation.
     pub fn from_vector_promoted_with_hint(values: Vec<Value>, hint: Interpretation) -> Self {
-        if values.is_empty() {
-            return Self::nil_with_reason(NilReason::EmptySequence);
-        }
         if let Some((data, shape)) = try_collect_dense(&values) {
             if let Some(tensor) = DenseTensor::from_fractions(data, shape.clone()) {
                 return Self {

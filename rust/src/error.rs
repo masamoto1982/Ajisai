@@ -5,6 +5,18 @@ pub type Result<T> = std::result::Result<T, AjisaiError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NilReason {
     DivisionByZero,
+    /// No longer produced. It existed so NIL could stand in for an empty
+    /// collection — the empty Vector and the empty String were both
+    /// inexpressible, so `FILTER` with no survivors, `TAKE 0`, an emptying
+    /// `REMOVE`, a zero-sized `SPLIT` chunk and `''` all answered
+    /// `NIL(EmptySequence)`. Both are ordinary values now, so nothing is left
+    /// for this reason to describe, and the `projection: never` those Words
+    /// register is finally true of them.
+    ///
+    /// Retained, unlike the retired `LogicallyUnknown`, because it *is*
+    /// reverse-decoded: `value_persist::decode_value` hard-errors on a reason
+    /// string it does not know, so dropping the variant would make a session
+    /// snapshot taken before this change fail to restore rather than degrade.
     EmptySequence,
     MissingField,
     InvalidEncoding,

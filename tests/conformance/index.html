@@ -994,10 +994,51 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-take-zero-is-nil" data-category="core">
-  <h3>TAKE 0 yields NIL — there is no empty vector to return</h3>
+<!-- The empty Vector is a value (LANG.VALUES.VECTOR: "an ordered finite
+     collection", with "order and length" its whole observable structure —
+     zero is a finite length). These two Words used to answer NIL here, which
+     made their registered `projection: never` false and put NIL to work as
+     "empty collection", a job LANG.VALUES.NIL does not give it. -->
+
+<section class="ajisai-case" id="core-take-zero-is-empty-vector" data-category="core">
+  <h3>TAKE 0 yields the empty vector, and does not project</h3>
   <pre class="ajisai-source">[ 1 2 3 ] [ 0 ] TAKE</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
+  <pre class="ajisai-expect-result">[ ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-vector-literal" data-category="core">
+  <h3>The empty vector is writable</h3>
+  <pre class="ajisai-source">[ ]</pre>
+  <pre class="ajisai-expect-result">[ ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-vector-has-length-zero" data-category="core">
+  <h3>The empty vector has length zero, and is not an absence</h3>
+  <pre class="ajisai-source">[ ] LENGTH</pre>
+  <pre class="ajisai-expect-result">[ ] 0/1</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-vector-nests" data-category="core">
+  <h3>An empty vector is an element like any other</h3>
+  <pre class="ajisai-source">[ 1 2 3 ] [ 0 3 ] SPLIT</pre>
+  <pre class="ajisai-expect-result">[ ] [ 1/1 2/1 3/1 ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-empty-string-chars-is-empty-vector" data-category="core">
+  <h3>CHARS of the empty String is the empty Vector, and JOIN inverts it</h3>
+  <pre class="ajisai-source">'' CHARS JOIN</pre>
+  <pre class="ajisai-expect-result">''</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-join-of-empty-vector-is-empty-string" data-category="core">
+  <h3>Joining nothing is the empty String, the identity of concatenation</h3>
+  <pre class="ajisai-source">[ ] JOIN</pre>
+  <pre class="ajisai-expect-result">''</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 
@@ -1426,10 +1467,17 @@
   <div class="ajisai-expect-effects"></div>
 </section>
 
-<section class="ajisai-case" id="core-filter-no-survivors-nil" data-category="core">
-  <h3>FILTER with no survivors yields NIL (no empty vector exists)</h3>
+<section class="ajisai-case" id="core-filter-no-survivors-empty-vector" data-category="core">
+  <h3>FILTER with no survivors yields the empty vector, and does not project</h3>
   <pre class="ajisai-source">[ 1 2 3 ] { 5 GT } FILTER</pre>
-  <pre class="ajisai-expect-result">NIL</pre>
+  <pre class="ajisai-expect-result">[ ]</pre>
+  <div class="ajisai-expect-effects"></div>
+</section>
+
+<section class="ajisai-case" id="core-map-over-empty-vector" data-category="core">
+  <h3>Mapping over nothing yields nothing, not an absence</h3>
+  <pre class="ajisai-source">[ ] { 1 ADD } MAP</pre>
+  <pre class="ajisai-expect-result">[ ]</pre>
   <div class="ajisai-expect-effects"></div>
 </section>
 

@@ -215,11 +215,6 @@ impl Interpreter {
                     // これにより、ネスト深度に依存せず明示 hint を維持する。
                     let (nested_values, consumed, nested_hint) =
                         Self::collect_vector_with_depth(tokens, i, depth + 1)?;
-                    if nested_values.is_empty() {
-                        return Err(AjisaiError::from(
-                            "Empty vector is not allowed. Use NIL for empty values.",
-                        ));
-                    }
                     values.push(Value::from_vector_promoted_with_hint(
                         nested_values,
                         nested_hint,
@@ -322,11 +317,6 @@ impl Interpreter {
                 Token::VectorStart => {
                     let (values, consumed, element_hint) =
                         self.collect_vector(execute_tokens, i)?;
-                    if values.is_empty() {
-                        return Err(AjisaiError::from(
-                            "Empty vector is not allowed. Use NIL for empty values.",
-                        ));
-                    }
                     self.stack
                         .push_with_role(Value::from_vector_promoted(values), element_hint);
                     i += consumed;

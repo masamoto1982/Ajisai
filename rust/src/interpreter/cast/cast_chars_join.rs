@@ -16,14 +16,6 @@ pub fn op_chars(interp: &mut Interpreter) -> Result<()> {
         )));
     };
 
-    // `[ ]` is still inexpressible, so an empty String has no vector to split
-    // into. This is the one place the String domain now outruns the Vector
-    // one; it resolves when the empty Vector is admitted.
-    if text.is_empty() {
-        interp.stack.push(val);
-        return Err(AjisaiError::from("CHARS: expected non-empty String"));
-    }
-
     let chars: Vec<Value> = text
         .chars()
         .map(|c| Value::from_string(&c.to_string()))
@@ -42,11 +34,6 @@ pub fn op_join(interp: &mut Interpreter) -> Result<()> {
             "JOIN: expected Vector, got {got}"
         )));
     };
-
-    if children.is_empty() {
-        interp.stack.push(val);
-        return Err(AjisaiError::from("JOIN: expected non-empty Vector"));
-    }
 
     let mut result = String::new();
     for (i, elem) in children.iter().enumerate() {
@@ -168,10 +155,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_join_empty_error() {
+    async fn test_join_of_the_empty_vector_is_the_empty_string() {
+        // Joining nothing is the identity of concatenation. Both endpoints of
+        // this used to be inexpressible, so it had to be an error.
         let mut interp = Interpreter::new();
-        let result = interp.execute("[ ] JOIN").await;
-        assert!(result.is_err());
+        interp.execute("[ ] JOIN").await.unwrap();
+        assert_eq!(interp.stack.last().and_then(|v| v.as_text()), Some(""));
+    }
+
+    #[tokio::test]
+    async fn test_chars_join_round_trips_the_empty_string() {
+        let mut interp = Interpreter::new();
+        interp.execute("'' CHARS JOIN").await.unwrap();
+        assert_eq!(interp.stack.last().and_then(|v| v.as_text()), Some(""));
     }
 
     #[tokio::test]
