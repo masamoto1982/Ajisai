@@ -11,10 +11,10 @@
   ],
   "semanticMetadataFrom": "docs/formalization-coverage.json",
   "counts": {
-    "corewords": 69,
+    "corewords": 70,
     "aliases": 16,
     "surface_forms": 8,
-    "total": 93
+    "total": 94
   },
   "entries": [
     {
@@ -1197,6 +1197,22 @@
       "effect_schema": "hosted-effect.capability-request-eff-observation",
       "implementation_schema": "hosted_effect_schema(capability.check -> request construction -> Eff append -> structured observation)",
       "classification": "HostedEffect"
+    },
+    {
+      "id": "core.reflect",
+      "kind": "coreword",
+      "surface": "REFLECT",
+      "category": "reflection",
+      "source": "spec/words.json",
+      "canonical": "REFLECT",
+      "coverage_entry_id": "core.reflect",
+      "semantic_role": "Primitive",
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow",
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "classification": "Core"
     },
     {
       "id": "alias.plus",

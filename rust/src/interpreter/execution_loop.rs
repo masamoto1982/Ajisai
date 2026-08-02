@@ -301,6 +301,10 @@ impl Interpreter {
         tokens: &[Token],
         start_index: usize,
     ) -> Result<usize> {
+        // Every execution route (EXEC and higher-order Words included) shares
+        // the source-entry numeric ceiling; dynamically reflected tokens may
+        // not bypass it.
+        self.check_source_numeric_literals(&tokens[start_index..])?;
         let mut i: usize = 0;
         let execute_tokens: &[Token] = &tokens[start_index..];
 
@@ -515,7 +519,7 @@ impl Interpreter {
     /// produced from source, before any of them is parsed into a value. Digit
     /// characters are counted directly (sign, radix point, and `/` excluded),
     /// so the bound tracks the magnitude of the BigInt that would be built.
-    fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
+    pub(crate) fn check_source_numeric_literals(&self, tokens: &[Token]) -> Result<()> {
         for token in tokens {
             if let Token::Number(literal) = token {
                 let digits = literal.chars().filter(|c| c.is_ascii_digit()).count();
