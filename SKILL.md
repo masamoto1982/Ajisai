@@ -162,7 +162,7 @@ produce a value produces NIL (§4); a malformed one raises an error.
 
 ## 9. Word quick reference
 
-Generated from `docs/word-manifest.json` — the complete inventory: 69
+Generated from `docs/word-manifest.json` — the complete inventory: 70
 canonical Words in one flat Core dictionary. A word absent here does not
 exist. There is no module system and nothing to import.
 
@@ -237,6 +237,8 @@ exist. There is no module system and nothing to import.
 | `DEL` | dictionary | Delete a user word from the dictionary. — e.g. `{ [ 1 ] } 'W' DEF 'W' DEL` |
 | `LOOKUP` | dictionary | Display the documentation for a named word. — e.g. `'ADD' ?` |
 | `PRINT` | io | Write the top stack value to the output stream, consuming it. A string is written as its raw text, without the quotes the stack shows ('TEST' prints as TEST); nested strings keep their quotes. — e.g. `42 PRINT` |
+| `REFLECT` | reflection | Reflect a CodeBlock into canonical code data, or canonical code data into a CodeBlock. — e.g. `CodeBlock REFLECT
+code-data REFLECT` |
 | `+` | symbol alias | shorthand for `ADD` |
 | `-` | symbol alias | shorthand for `SUB` |
 | `*` | symbol alias | shorthand for `MUL` |

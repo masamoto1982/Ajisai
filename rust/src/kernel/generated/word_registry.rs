@@ -78,6 +78,7 @@ pub enum WordId {
     Del,
     Lookup,
     Print,
+    Reflect,
 }
 
 /// Semantic family the Word selects its shared laws from.
@@ -109,6 +110,8 @@ pub enum Family {
     Dictionary,
     /// `output`
     Output,
+    /// `reflection`
+    Reflection,
 }
 
 impl Family {
@@ -126,6 +129,7 @@ impl Family {
             Family::StackModifier => "stackModifier",
             Family::Dictionary => "dictionary",
             Family::Output => "output",
+            Family::Reflection => "reflection",
         }
     }
 }
@@ -1363,5 +1367,20 @@ pub const GENERATED_WORDS: &[GeneratedWord] = &[
         purity: Purity::Effectful,
         determinism: Determinism::HostRelative,
         effects: &["consoleWrite"],
+    },
+    GeneratedWord {
+        id: WordId::Reflect,
+        name: "REFLECT",
+        aliases: &[],
+        family: Family::Reflection,
+        stack_inputs: Arity::Fixed(1),
+        stack_outputs: Arity::Fixed(1),
+        consumption: Consumption::Eat,
+        nil_policy: NilPolicy::RejectNil,
+        projection: None,
+        partiality: Partiality::Partial,
+        purity: Purity::Pure,
+        determinism: Determinism::Deterministic,
+        effects: &[],
     },
 ];

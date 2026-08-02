@@ -44,7 +44,7 @@ for (const family of familyIds) {
 // count is a budget rather than a fixed inventory: shrinking is free, growing is
 // a deliberate specification change.
 const aliases = words.entries.reduce((total, word) => total + word.aliases.length, 0);
-if (words.entries.length > 69) fail(`${words.entries.length} canonical Words (maximum 69)`);
+if (words.entries.length > 70) fail(`${words.entries.length} canonical Words (maximum 70)`);
 if (aliases > 16) fail(`${aliases} aliases (maximum 16)`);
 
 if (!process.exitCode) {

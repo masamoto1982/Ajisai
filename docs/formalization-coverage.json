@@ -13,7 +13,7 @@
       "flow"
     ],
     "entry_counts": {
-      "flow": 20,
+      "flow": 21,
       "identity": 27,
       "material": 138,
       "sugar": 28
@@ -3463,6 +3463,34 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "LOOKUP"
+    },
+    {
+      "id": "core.reflect",
+      "kind": "coreword",
+      "surface": "REFLECT",
+      "classification": "Core",
+      "spec_sections": [
+        "SPECIFICATION.html §7.8"
+      ],
+      "formalization_sections": [
+        "docs/dev/code-data-reflection-design-2026-08.md"
+      ],
+      "law_tests": [
+        "rust/src/types/code_data.rs"
+      ],
+      "conformance_cases": [
+        "reflection-code-to-data",
+        "reflection-data-exec"
+      ],
+      "status": "Formalized",
+      "notes": "Pure involution between CodeBlock token sequences and versioned canonical structured data.",
+      "semantic_role": "Primitive",
+      "primitive": true,
+      "derived_from": [
+        "algebra.state-transformer.composition"
+      ],
+      "algebraic_family": "state-transformer",
+      "core_tier": "flow"
     }
   ],
   "unclassified_allowlist": []
