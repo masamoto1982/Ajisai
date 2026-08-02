@@ -47,51 +47,34 @@ mod tests {
         }
     }
 
-    /// Section 8.6: a word group imported into its own dictionary must be
-    /// self-referential. When the same names already exist in another dictionary
-    /// (e.g. the bundled Example Words), references inside the imported group
-    /// must bind to the group's own words for both dependency tracking and
-    /// execution — not to the earlier-loaded dictionary.
+    /// A redefinition rebinds the one User entry, and dependents follow it.
+    ///
+    /// This used to test that a word resolved its references through its *own*
+    /// dictionary, so two dictionaries could each hold a `SAY`/`GREET` pair
+    /// without their edges crossing. There is one User tier, so the second
+    /// definition of a name replaces the first and the dependency edge moves
+    /// with it.
     #[tokio::test]
-    async fn test_imported_dictionary_is_self_referential() {
+    async fn test_redefinition_rebinds_the_single_user_entry() {
         let mut interp = Interpreter::new();
 
-        // EXAMPLE dictionary: SAY pushes [ 1 ], GREET calls SAY.
         interp.execute("{ [ 1 ] } 'SAY' DEF").await.unwrap();
         interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
-
-        // TEST dictionary duplicates the names; here SAY pushes [ 2 ].
-        interp.active_user_dictionary = "TEST".to_string();
-        interp.execute("{ [ 2 ] } 'SAY' DEF").await.unwrap();
-        interp.execute("{ SAY } 'GREET' DEF").await.unwrap();
-
         interp.rebuild_dependencies().unwrap();
 
-        // Dependency graph: TEST@GREET depends on TEST@SAY (not EXAMPLE@SAY),
-        // so TEST@SAY is shown as referenced rather than unreferenced.
-        let test_say_deps = interp.dependents.get("TEST@SAY");
         assert!(
-            test_say_deps.is_some_and(|d| d.contains("TEST@GREET")),
-            "TEST@SAY should be referenced by TEST@GREET; got {:?}",
-            test_say_deps
-        );
-        assert!(
-            !test_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
-            "EXAMPLE@GREET must not depend on TEST@SAY"
-        );
-        let example_say_deps = interp.dependents.get("EXAMPLE@SAY");
-        assert!(
-            example_say_deps.is_some_and(|d| d.contains("EXAMPLE@GREET")),
-            "EXAMPLE@SAY should be referenced by EXAMPLE@GREET; got {:?}",
-            example_say_deps
+            interp
+                .dependents
+                .get("SAY")
+                .is_some_and(|d| d.contains("GREET")),
+            "GREET depends on SAY"
         );
 
-        // Execution: TEST@GREET runs TEST@SAY ([ 2 ]), not EXAMPLE@SAY ([ 1 ]).
-        interp.stack.clear();
-        interp.execute("TEST@GREET").await.unwrap();
-        let top = interp.stack.last().expect("result present");
-        let only = top.child(0).expect("vector has one child");
-        assert_eq!(only.as_scalar().unwrap().to_i64().unwrap(), 2);
+        interp.execute("GREET").await.unwrap();
+        assert_eq!(
+            format!("{}", interp.get_stack().last().expect("a result")),
+            "[ 1/1 ]"
+        );
     }
 
     /// Section 8.6: identical content yields one identity regardless of name or
@@ -99,16 +82,14 @@ mod tests {
     #[tokio::test]
     async fn test_identical_content_shares_identity() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
-        interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 1 ] } 'LEED' DEF").await.unwrap();
         interp.execute("{ [ 2 ] } 'OTHER' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
-        let a_leaf = interp.word_identity("A@LEAF").cloned();
-        let b_leed = interp.word_identity("B@LEED").cloned();
-        let b_other = interp.word_identity("B@OTHER").cloned();
+        let a_leaf = interp.word_identity("LEAF").cloned();
+        let b_leed = interp.word_identity("LEED").cloned();
+        let b_other = interp.word_identity("OTHER").cloned();
         assert!(a_leaf.is_some(), "identity should be computed");
         assert_eq!(a_leaf, b_leed, "identical bodies must share an identity");
         assert_ne!(a_leaf, b_other, "different bodies must differ");
@@ -120,16 +101,14 @@ mod tests {
     #[tokio::test]
     async fn test_identity_is_name_independent() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
         interp.execute("{ LEAF } 'USE' DEF").await.unwrap();
-        interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 1 ] } 'LEED' DEF").await.unwrap();
         interp.execute("{ LEED } 'USE' DEF").await.unwrap();
         interp.rebuild_dependencies().unwrap();
 
-        let a_use = interp.word_identity("A@USE").cloned();
-        let b_use = interp.word_identity("B@USE").cloned();
+        let a_use = interp.word_identity("USE").cloned();
+        let b_use = interp.word_identity("USE").cloned();
         assert!(a_use.is_some());
         assert_eq!(
             a_use, b_use,
@@ -143,18 +122,17 @@ mod tests {
     async fn test_recursive_identity_is_stable() {
         async fn rec_id() -> Option<String> {
             let mut interp = Interpreter::new();
-            interp.active_user_dictionary = "R".to_string();
             interp.execute("{ REC } 'REC' DEF").await.unwrap();
             interp.rebuild_dependencies().unwrap();
             // The self-reference must be recorded, then hashed as a cycle.
             assert!(
                 interp
                     .dependents
-                    .get("R@REC")
-                    .is_some_and(|d| d.contains("R@REC")),
+                    .get("REC")
+                    .is_some_and(|d| d.contains("REC")),
                 "recursive self-reference should be tracked"
             );
-            interp.word_identity("R@REC").cloned()
+            interp.word_identity("REC").cloned()
         }
 
         let first = rec_id().await;
@@ -169,17 +147,16 @@ mod tests {
     #[tokio::test]
     async fn test_unresolved_reference_identity_is_not_recaptured() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ MISSING } 'CALLER' DEF").await.unwrap();
         let before = interp
-            .word_identity("A@CALLER")
+            .word_identity("CALLER")
             .cloned()
             .expect("identity should be computed for caller");
 
         interp.execute("{ [ 1 ] } 'MISSING' DEF").await.unwrap();
 
         let after = interp
-            .word_identity("A@CALLER")
+            .word_identity("CALLER")
             .cloned()
             .expect("identity should remain computed for caller");
         assert_eq!(
@@ -189,27 +166,24 @@ mod tests {
         assert!(
             !interp
                 .dependents
-                .get("A@MISSING")
-                .is_some_and(|deps| deps.contains("A@CALLER")),
+                .get("MISSING")
+                .is_some_and(|deps| deps.contains("CALLER")),
             "the existing caller must not become dependent on the later word"
         );
     }
 
-    /// Section 8.6 content store: textually identical bodies defined under
-    /// different names/dictionaries share a single stored body in memory rather
-    /// than being duplicated.
+    /// Content store: textually identical bodies defined under different names
+    /// share a single stored body in memory rather than being duplicated.
     #[tokio::test]
     async fn test_identical_bodies_share_one_stored_body() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
-        interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 1 ] } 'TWIN' DEF").await.unwrap();
         interp.execute("{ [ 2 ] } 'OTHER' DEF").await.unwrap();
 
-        let a_leaf = interp.user_dictionaries["A"].words["LEAF"].lines.clone();
-        let b_twin = interp.user_dictionaries["B"].words["TWIN"].lines.clone();
-        let b_other = interp.user_dictionaries["B"].words["OTHER"].lines.clone();
+        let a_leaf = interp.user_words["LEAF"].lines.clone();
+        let b_twin = interp.user_words["TWIN"].lines.clone();
+        let b_other = interp.user_words["OTHER"].lines.clone();
 
         assert!(
             std::sync::Arc::ptr_eq(&a_leaf, &b_twin),
@@ -227,19 +201,18 @@ mod tests {
     #[tokio::test]
     async fn test_deferred_identity_recompute() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
 
         interp.defer_identity_recompute = true;
         interp.execute("{ [ 1 ] } 'LEAF' DEF").await.unwrap();
         assert!(
-            interp.word_identity("A@LEAF").is_none(),
+            interp.word_identity("LEAF").is_none(),
             "identity recompute should be deferred"
         );
 
         interp.defer_identity_recompute = false;
         interp.rebuild_dependencies().unwrap();
         assert!(
-            interp.word_identity("A@LEAF").is_some(),
+            interp.word_identity("LEAF").is_some(),
             "identity should be computed once after the batch"
         );
     }
@@ -249,12 +222,10 @@ mod tests {
     #[tokio::test]
     async fn test_body_store_gc() {
         let mut interp = Interpreter::new();
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ [ 1 ] } 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 1);
 
         // Identical body in another dictionary shares one store entry.
-        interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 1 ] } 'Y' DEF").await.unwrap();
         assert_eq!(
             interp.body_store.len(),
@@ -263,12 +234,10 @@ mod tests {
         );
 
         // Redefining A@X keeps [1] (still used by B@Y) and adds [9].
-        interp.active_user_dictionary = "A".to_string();
         interp.execute("{ [ 9 ] } 'X' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "shared [1] kept, [9] added");
 
         // Redefining B@Y away orphans [1]; it is reclaimed, leaving [9] and [8].
-        interp.active_user_dictionary = "B".to_string();
         interp.execute("{ [ 8 ] } 'Y' DEF").await.unwrap();
         assert_eq!(interp.body_store.len(), 2, "orphaned [1] reclaimed");
     }
@@ -405,47 +374,31 @@ mod tests {
         assert!(!interp.user_words.contains_key("C4"));
     }
 
+    /// A qualified path is not a name.
+    ///
+    /// `DEL` used to accept `DICT@WORD` and delete through the named
+    /// dictionary. LANG.DICTIONARY.RESOLUTION gives two tiers, so a Word's name
+    /// is its whole address and a path addresses nothing.
     #[tokio::test]
-    async fn test_del_sample_user_words_with_fqn() {
+    async fn test_del_rejects_a_qualified_path() {
         let mut interp = Interpreter::new();
 
-        let example_words = vec![
-            ("C4", "264", "純正律 C4"),
-            ("D4", "C4 9 * 8 /", "純正律 D4"),
-            ("E4", "C4 5 * 4 /", "純正律 E4"),
-        ];
+        let example_words = vec![("D4", "264", "test word")];
         restore_example_words(&mut interp, &example_words);
-
         assert!(interp.user_words.contains_key("D4"));
 
         let result = interp.execute("'EXAMPLE@D4' DEL").await;
+        assert!(result.is_err(), "a qualified path names nothing");
         assert!(
-            result.is_ok(),
-            "Should delete D4 via FQN: {:?}",
-            result.err()
-        );
-        assert!(!interp.user_words.contains_key("D4"));
-
-        let result = interp.execute("'EXAMPLE@NONEXISTENT' DEL").await;
-        assert!(result.is_err(), "Should error for non-existent FQN word");
-
-        let result = interp.execute("'EXAMPLE@C4' DEL").await;
-        assert!(
-            result.is_err(),
-            "Should not delete C4 via FQN (has dependents)"
+            interp.user_words.contains_key("D4"),
+            "the word is untouched"
         );
 
         interp
-            .execute("'EXAMPLE@E4' DEL")
+            .execute("'D4' DEL")
             .await
-            .expect("Should delete the remaining dependent E4");
-        let result = interp.execute("'EXAMPLE@C4' DEL").await;
-        assert!(
-            result.is_ok(),
-            "Should delete C4 via FQN once nothing depends on it: {:?}",
-            result.err()
-        );
-        assert!(!interp.user_words.contains_key("C4"));
+            .expect("its name deletes it");
+        assert!(!interp.user_words.contains_key("D4"));
     }
 
     #[tokio::test]

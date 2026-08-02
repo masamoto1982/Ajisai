@@ -454,6 +454,52 @@ Boolean ではない）。§4.1 が `AND`/`OR`/`NOT` と `extract_predicate_bool
 述べるので、長さ 2 と 1 の対は ERROR であるべきである（監査 D12）。本項目は比較族と
 単項語に限定したため未修正。
 
+### 4.10 辞書を二層に戻した（LANG.DICTIONARY.RESOLUTION）
+
+§5 の第 5 項。
+
+節は「辞書は二層を持つ。**Core** は 69 の正準 Word を保持し封印されている……**User** は
+`DEF` による定義を保持する」「**この二層が辞書のすべてである**——名前は Core か User の
+どちらかで解決する」と述べる。実装はそれ以上を持っていた:
+
+- `user_dictionaries`: 名前付きユーザー辞書の map
+- `active_user_dictionary`: `DEF` の書き込み先
+- `owning_dictionary_context`: 実行中の Word 自身の辞書を優先する文脈
+- `DICT@WORD` / `USER@D@WORD` / `DICT@USER@D@WORD` の修飾パス
+- bare name の三段フォールバックと、content identity による曖昧性判定
+- 辞書間の依存グラフ（`dictionary_dependencies`）
+
+**これらは言語から到達不能だった。** `active_user_dictionary` を変更する Word が存在せず、
+既定の `"EXAMPLE"` に固定される。したがってすべての `DEF` は同じ辞書に書き、`user_words`
+はその平坦な写しとして既に維持されていた。層は**観測手段のない構造**であり、節は二層と
+言っている。
+
+観測:
+
+```
+{ 1 ADD } 'INC' DEF 5 INC             => 6/1
+{ 1 ADD } 'INC' DEF 5 EXAMPLE@INC     => ERROR（修飾パスは名前ではない）
+{ 1 } 'ADD' DEF                       => ERROR（Core は封印）
+'EXAMPLE@INC' DEL                     => ERROR（DEL も名前を取る）
+```
+
+削除に伴い、解決キャッシュの文脈修飾も消えた。節が「解決は正規化された名前と現在の辞書の
+決定的関数」と述べるとおり、二層では文脈が変わりようがないので、名前ごとに答えは一つで
+キャッシュ項も一つである。`check_ambiguity` は常に空を返す——一つの User 層では名前は
+保持されているかいないかのどちらかで、曖昧になりようがない。
+
+`collect_dictionary_dependencies` の WASM export は空配列を返す形で残した。辞書**間**の
+依存は層が複数あることの帰結であり、二層では依存する相手がない。Word 間の依存は無関係で、
+DEF/DEL の保護をこれまでどおり駆動する。
+
+`DEL` には、削除した owner 探索の中にあった二つの検査を戻した——Core 封印の前に surface
+alias を正準化すること（`'+' DEL` は `ADD` の削除）と、User 層が保持しない名前に
+`wordNotFound` を返すことである。
+
+Reference の「Dictionaries and Word Identity」節も書き直した。監査 D17 が「削除済みの
+module system をまだ教えている」と指摘していた箇所で、`DICT@WORD`・四段の解決ラダー・
+`Ambiguous word 'GREET': found in EXAMPLE@GREET, AUDIOLIB@GREET` の例を載せていた。
+
 ## 5. 残作業と順序
 
 提案書 §9 の実施順序は採らない。全 Word の再実装を第 9 段、100% conformance を第 10 段に
@@ -465,8 +511,7 @@ Boolean ではない）。§4.1 が `AND`/`OR`/`NOT` と `extract_predicate_bool
 2. ~~**空 Vector の解禁。**~~ — 実施済み（§4.7）。
 3. ~~**`Value::eq` から `hint` を外す。**~~ — 実施済み（§4.6。1 の直接の帰結）。
 4. ~~**比較族のリフティングを LANG.COLLECTIONS.LIFT に合わせる。**~~ — 実施済み（§4.8）。
-5. **辞書を二層に戻す。** `resolve_word.rs` の `@` 名前空間・active/owner 辞書・
-   三段フォールバックの削除。LANG.DICTIONARY.RESOLUTION は二層のみを規定する。
+5. ~~**辞書を二層に戻す。**~~ — 実施済み（§4.10）。
 6. ~~**LANG.EFFECTS.OUTPUT の作用数を LANG.MACHINE.ORDER に合わせる**~~ — 実施済み（§4.5）。
 7. **Host Protocol の一本化。** V2 を正式採用するか V3 を定義し、V1 を adapter へ隔離。
 

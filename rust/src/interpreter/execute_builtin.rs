@@ -88,15 +88,6 @@ impl Interpreter {
         }
         self.call_depth += 1;
 
-        // Section 8.6: resolve this word's bare references through its own
-        // dictionary first, both while compiling its execution plan and while
-        // running its body. Saved and restored so nested calls into other
-        // dictionaries see their own dictionary's context.
-        let owning_dict = self
-            .split_qualified_name(&resolved_name)
-            .map(|(dict, _)| dict);
-        let prev_owning = std::mem::replace(&mut self.owning_dictionary_context, owning_dict);
-
         let plan_set = self.get_execution_plan_set(&resolved_name, &def);
 
         self.call_stack.push(resolved_name.clone());
@@ -150,7 +141,6 @@ impl Interpreter {
         self.tail_self_word = prev_tail_self;
 
         self.call_stack.pop();
-        self.owning_dictionary_context = prev_owning;
         self.call_depth -= 1;
         result
     }
@@ -423,16 +413,11 @@ impl Interpreter {
         resolved_name: &str,
         plan_set: std::sync::Arc<super::execution_plan_set::ExecutionPlanSet>,
     ) {
-        if let Some((ns, word)) = resolved_name.split_once('@') {
-            if let Some(dict) = self.user_dictionaries.get_mut(ns) {
-                if let Some(old_def) = dict.words.get(word).cloned() {
-                    let mut updated = (*old_def).clone();
-                    updated.execution_plans = Some(plan_set.clone());
-                    dict.words
-                        .insert(word.to_string(), std::sync::Arc::new(updated));
-                    self.sync_user_words_cache();
-                }
-            }
+        if let Some(old_def) = self.user_words.get(resolved_name).cloned() {
+            let mut updated = (*old_def).clone();
+            updated.execution_plans = Some(plan_set.clone());
+            self.user_words
+                .insert(resolved_name.to_string(), std::sync::Arc::new(updated));
         }
     }
 

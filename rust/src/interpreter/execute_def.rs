@@ -85,15 +85,10 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         interp.output_buffer.push_str(&format!("{}\n", warning));
     }
 
-    let dict_name = interp.active_user_dictionary.clone();
-    let fq_name = format!("{}@{}", dict_name, upper_name);
-
-    if let Some(existing) = interp
-        .user_dictionaries
-        .get(&dict_name)
-        .and_then(|dict| dict.words.get(&upper_name))
-    {
-        let dependents = interp.collect_dependents(&fq_name);
+    // One User tier (LANG.DICTIONARY.RESOLUTION), so a Word's name is its
+    // whole address: no active dictionary to pick, no `DICT@WORD` to build.
+    if let Some(existing) = interp.user_words.get(&upper_name) {
+        let dependents = interp.collect_dependents(&upper_name);
 
         // A referenced word is not redefinable. There is no force modifier: the
         // vocabulary has no Word that overrides this, so the refusal is final
@@ -102,13 +97,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             let dep_list = dependents.iter().cloned().collect::<Vec<_>>().join(", ");
             return Err(AjisaiError::from(format!(
                 "Cannot redefine '{}': referenced by {}. Delete those words first.",
-                fq_name, dep_list
+                upper_name, dep_list
             )));
         }
 
         for dep_name in &existing.dependencies {
             if let Some(dependents) = interp.dependents.get_mut(dep_name) {
-                dependents.remove(&fq_name);
+                dependents.remove(&upper_name);
             }
         }
     }
@@ -130,9 +125,6 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
     };
 
     // Section 8.6: resolve this word's references through its own dictionary
-    // first, so the dependency it records is its own dictionary's word rather
-    // than a same-named word in another (e.g. earlier-loaded) dictionary.
-    let prev_owning = interp.owning_dictionary_context.replace(dict_name.clone());
     let mut new_dependencies = HashSet::new();
     for line in lines.iter() {
         for token in line.body_tokens.iter() {
@@ -146,14 +138,13 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
             }
         }
     }
-    interp.owning_dictionary_context = prev_owning;
 
     for dep_name in &new_dependencies {
         interp
             .dependents
             .entry(dep_name.clone())
             .or_default()
-            .insert(fq_name.clone());
+            .insert(upper_name.clone());
     }
 
     let new_def = WordDefinition {
@@ -165,31 +156,19 @@ pub(crate) fn op_def_inner(interp: &mut Interpreter, name: &str, tokens: &[Token
         description: None,
         dependencies: new_dependencies,
         original_source: None,
-        namespace: Some(dict_name.clone()),
+        namespace: None,
         registration_order: interp.next_registration_order(),
         execution_plans: None,
     };
 
-    let dict_order = interp
-        .user_dictionaries
-        .get(&dict_name)
-        .map(|dict| dict.order)
-        .unwrap_or_else(|| new_def.registration_order);
     interp
-        .user_dictionaries
-        .entry(dict_name.clone())
-        .or_insert_with(|| crate::interpreter::UserDictionary {
-            order: dict_order,
-            words: std::collections::HashMap::new(),
-        })
-        .words
+        .user_words
         .insert(upper_name.clone(), Arc::new(new_def));
-    interp.sync_user_words_cache();
     interp.recompute_word_identities();
     interp.gc_body_store();
     interp
         .output_buffer
-        .push_str(&format!("Defined word: {}@{}\n", dict_name, name));
+        .push_str(&format!("Defined word: {}\n", name));
 
     interp.bump_dictionary_epoch();
     Ok(())

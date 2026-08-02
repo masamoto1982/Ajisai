@@ -298,33 +298,26 @@ impl Interpreter {
             return;
         }
 
-        // 1. Snapshot all user words: (fully-qualified name, dictionary, def).
-        let mut words: Vec<(String, String, Arc<WordDefinition>)> = Vec::new();
-        for (dict_name, dict) in &self.user_dictionaries {
-            for (name, def) in &dict.words {
-                words.push((
-                    format!("{}@{}", dict_name, name),
-                    dict_name.clone(),
-                    def.clone(),
-                ));
-            }
-        }
-        let user_set: HashSet<String> = words.iter().map(|(fq, _, _)| fq.clone()).collect();
+        // 1. Snapshot all user words. One User tier, so a name is the whole
+        //    address and there is no dictionary to carry alongside it.
+        let words: Vec<(String, Arc<WordDefinition>)> = self
+            .user_words
+            .iter()
+            .map(|(name, def)| (name.clone(), def.clone()))
+            .collect();
+        let user_set: HashSet<String> = words.iter().map(|(name, _)| name.clone()).collect();
         let reg_order: HashMap<String, u64> = words
             .iter()
-            .map(|(fq, _, def)| (fq.clone(), def.registration_order))
+            .map(|(name, def)| (name.clone(), def.registration_order))
             .collect();
 
         // 2. Canonical shape of each body; references to other user words are
-        //    captured as Atom::Ref and resolved through the owning dictionary.
-        let prev_ctx = self.owning_dictionary_context.take();
+        //    captured as Atom::Ref.
         let mut shapes: HashMap<String, Vec<Atom>> = HashMap::new();
-        for (fq, dict, def) in &words {
-            self.owning_dictionary_context = Some(dict.clone());
+        for (name, def) in &words {
             let atoms = self.build_word_shape(def, &user_set);
-            shapes.insert(fq.clone(), atoms);
+            shapes.insert(name.clone(), atoms);
         }
-        self.owning_dictionary_context = prev_ctx;
 
         // 3. Dependency graph restricted to user words.
         let mut adj: HashMap<String, Vec<String>> = HashMap::new();

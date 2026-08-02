@@ -69,22 +69,23 @@ impl AjisaiInterpreter {
     pub fn collect_user_words_info(&self) -> JsValue {
         let js_array = js_sys::Array::new();
 
-        for dict_name in self.interpreter.user_dictionary_names() {
-            for (name, _def) in self.interpreter.user_dictionary_words(&dict_name) {
-                let fq_name = format!("{}@{}", dict_name, name);
-                let is_protected = self
-                    .interpreter
-                    .dependents
-                    .get(&fq_name)
-                    .is_some_and(|deps| !deps.is_empty());
+        let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
+        names.sort();
+        for name in names {
+            let is_protected = self
+                .interpreter
+                .dependents
+                .get(name)
+                .is_some_and(|deps| !deps.is_empty());
 
-                let item = js_sys::Array::new();
-                item.push(&dict_name.clone().into());
-                item.push(&name.clone().into());
-                item.push(&is_protected.into());
+            let item = js_sys::Array::new();
+            // The dictionary slot stays in the shape for the host, which reads
+            // a fixed triple; there is one User tier, so it is constant.
+            item.push(&"USER".into());
+            item.push(&name.clone().into());
+            item.push(&is_protected.into());
 
-                js_array.push(&item);
-            }
+            js_array.push(&item);
         }
 
         js_array.into()
@@ -96,15 +97,14 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn collect_word_identities(&self) -> JsValue {
         let js_array = js_sys::Array::new();
-        for dict_name in self.interpreter.user_dictionary_names() {
-            for (name, _def) in self.interpreter.user_dictionary_words(&dict_name) {
-                let fq_name = format!("{}@{}", dict_name, name);
-                if let Some(id) = self.interpreter.word_identity(&fq_name) {
-                    let item = js_sys::Array::new();
-                    item.push(&fq_name.clone().into());
-                    item.push(&id.clone().into());
-                    js_array.push(&item);
-                }
+        let mut names: Vec<&String> = self.interpreter.user_words.keys().collect();
+        names.sort();
+        for name in names {
+            if let Some(id) = self.interpreter.word_identity(name) {
+                let item = js_sys::Array::new();
+                item.push(&name.clone().into());
+                item.push(&id.clone().into());
+                js_array.push(&item);
             }
         }
         js_array.into()
@@ -115,21 +115,16 @@ impl AjisaiInterpreter {
     }
 
     pub(crate) fn collect_user_words_for_state(&self) -> JsValue {
-        let words_info: Vec<UserWordData> = self
-            .interpreter
-            .user_dictionary_names()
+        let mut names: Vec<String> = self.interpreter.user_words.keys().cloned().collect();
+        names.sort();
+        let words_info: Vec<UserWordData> = names
             .into_iter()
-            .flat_map(|dict_name| {
-                self.interpreter
-                    .user_dictionary_words(&dict_name)
-                    .into_iter()
-                    .map(move |(name, _def)| UserWordData {
-                        dictionary: Some(dict_name.clone()),
-                        name: name.clone(),
-                        definition: self
-                            .interpreter
-                            .lookup_word_definition_tokens(&format!("{}@{}", dict_name, name)),
-                    })
+            .map(|name| UserWordData {
+                // Kept in the serialized shape for older snapshots to decode
+                // against; there is one User tier, so it no longer selects.
+                dictionary: None,
+                definition: self.interpreter.lookup_word_definition_tokens(&name),
+                name,
             })
             .collect();
         to_value(&words_info).unwrap_or(JsValue::NULL)
@@ -217,26 +212,14 @@ impl AjisaiInterpreter {
     }
 
     #[wasm_bindgen]
+    /// Always empty. Dependencies between *named dictionaries* were a
+    /// consequence of there being more than one user tier; LANG.DICTIONARY.
+    /// RESOLUTION gives two tiers, so there is nothing for a dictionary to
+    /// depend on. Word-level dependencies are unaffected and still drive
+    /// DEF/DEL protection. The export is kept so the generated binding surface
+    /// does not change under callers.
     pub fn collect_dictionary_dependencies(&self) -> JsValue {
-        let arr = js_sys::Array::new();
-        for (dict_name, dep) in &self.interpreter.dictionary_dependencies {
-            let item = js_sys::Array::new();
-            item.push(&JsValue::from_str(dict_name));
-
-            let depends_on = js_sys::Array::new();
-            for name in &dep.depends_on {
-                depends_on.push(&JsValue::from_str(name));
-            }
-            item.push(&depends_on.into());
-
-            let depended_by = js_sys::Array::new();
-            for name in &dep.depended_by {
-                depended_by.push(&JsValue::from_str(name));
-            }
-            item.push(&depended_by.into());
-            arr.push(&item);
-        }
-        arr.into()
+        js_sys::Array::new().into()
     }
 
     #[wasm_bindgen]
@@ -254,19 +237,8 @@ impl AjisaiInterpreter {
     #[wasm_bindgen]
     pub fn remove_word(&mut self, name: &str) {
         let upper_name = name.to_uppercase();
-        if let Some((dict_name, short_name)) = self.interpreter.split_qualified_name(&upper_name) {
-            if let Some(dict) = self.interpreter.user_dictionaries.get_mut(&dict_name) {
-                dict.words.remove(&short_name);
-            }
+        if self.interpreter.user_words.remove(&upper_name).is_some() {
             let _ = self.interpreter.rebuild_dependencies();
-            return;
-        }
-
-        for dict in self.interpreter.user_dictionaries.values_mut() {
-            if dict.words.remove(&upper_name).is_some() {
-                let _ = self.interpreter.rebuild_dependencies();
-                return;
-            }
         }
     }
 
@@ -466,11 +438,9 @@ impl AjisaiInterpreter {
 
     fn define_restored_words(&mut self, words: Vec<UserWordData>) -> Result<(), String> {
         for word in words {
-            self.interpreter.active_user_dictionary = word
-                .dictionary
-                .clone()
-                .unwrap_or_else(|| "EXAMPLE".to_string())
-                .to_uppercase();
+            // A restored word's saved `dictionary` label is legacy state: the
+            // dictionary has two tiers and User is one of them, so every
+            // restored definition lands in the same place.
             let definition = match &word.definition {
                 Some(def) if !def.is_empty() => def.clone(),
                 _ => continue,

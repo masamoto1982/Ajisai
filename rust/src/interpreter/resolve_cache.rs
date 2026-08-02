@@ -5,16 +5,16 @@ impl Interpreter {
         crate::core_word_aliases::canonicalize_core_word_name(name).into_owned()
     }
 
-    /// Cache key qualified by the active owning-dictionary context (Section 8.6).
-    /// A bare name can resolve to different targets depending on which
-    /// dictionary's word is currently executing, so the cache must not share an
-    /// entry across contexts.
+    /// The cache key is the name.
+    ///
+    /// It used to be qualified by the executing word's owning dictionary,
+    /// because a bare name could resolve to different targets depending on
+    /// which dictionary's word was running. LANG.DICTIONARY.RESOLUTION makes
+    /// resolution "a deterministic function of the normalized name and the
+    /// current dictionary" — with two tiers there is no context to vary, so a
+    /// name has one answer and one cache entry.
     fn contextual_resolve_cache_key(&self, name: &str) -> String {
-        let base = Self::make_resolve_cache_key(name);
-        match &self.owning_dictionary_context {
-            Some(ctx) => format!("{}\u{1}{}", ctx, base),
-            None => base,
-        }
+        Self::make_resolve_cache_key(name)
     }
 
     pub(crate) fn lookup_resolve_cache(&mut self, name: &str) -> Option<String> {

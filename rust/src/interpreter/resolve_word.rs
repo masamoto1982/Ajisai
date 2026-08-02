@@ -1,170 +1,45 @@
 use crate::types::WordDefinition;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
 use super::Interpreter;
 
-/// Outcome of resolving a bare name against the user dictionaries (the final
-/// fallback stage of `resolve_short_name`). Section 8.6 makes user words
-/// content-addressed, so a bare name that matches several dictionaries is only
-/// ambiguous when those matches carry *distinct* content identities.
-pub(crate) enum UserBareOutcome {
-    /// No user dictionary holds the name.
-    None,
-    /// Every match collapses to a single content identity — the same word.
-    /// Carries the display fq-name (lowest `registration_order`) and its body.
-    Unique(String, Arc<WordDefinition>),
-    /// Two or more distinct content identities share the name — a true
-    /// ambiguity. Carries every matching fq-name for the diagnostic.
-    Ambiguous(Vec<String>),
-}
-
 impl Interpreter {
-    pub(crate) fn split_path(name: &str) -> (Vec<String>, String) {
-        let parts: Vec<String> = name.split('@').map(|s| s.to_uppercase()).collect();
-        if parts.len() == 1 {
-            (vec![], parts[0].clone())
-        } else {
-            let word = parts.last().unwrap().clone();
-            let layers = parts[..parts.len() - 1].to_vec();
-            (layers, word)
-        }
-    }
-
-    pub(crate) fn split_qualified_name(&self, name: &str) -> Option<(String, String)> {
-        let (layers, word) = Self::split_path(name);
-        if layers.len() == 1 {
-            Some((layers[0].clone(), word))
-        } else if layers.is_empty() {
-            None
-        } else {
-            Some((layers.last().unwrap().clone(), word))
-        }
-    }
-
-    // Consumed only by the wasm bindings (feature = "wasm"); present but unused
-    // in a default build, so the dead-code lint is allowed there only.
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
-    pub(crate) fn user_dictionary_names(&self) -> Vec<String> {
-        let mut names: Vec<_> = self.user_dictionaries.keys().cloned().collect();
-        names.sort();
-        names
-    }
-
-    #[cfg_attr(not(feature = "wasm"), allow(dead_code))]
-    pub(crate) fn user_dictionary_words(
-        &self,
-        dictionary_name: &str,
-    ) -> Vec<(String, Arc<WordDefinition>)> {
-        self.user_dictionaries
-            .get(&dictionary_name.to_uppercase())
-            .map(|dict| {
-                dict.words
-                    .iter()
-                    .map(|(name, def)| (name.clone(), def.clone()))
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
-    pub(crate) fn sync_user_words_cache(&mut self) {
-        self.user_words = self
-            .user_dictionaries
-            .get("EXAMPLE")
-            .map(|dict| dict.words.clone())
-            .unwrap_or_default();
-    }
-
+    /// Resolve a name against the dictionary LANG.DICTIONARY.RESOLUTION
+    /// describes: "The dictionary has two tiers. **Core** holds the 69
+    /// canonical Words and is sealed ... **User** holds definitions made by
+    /// `DEF`. Resolution is a deterministic function of the normalized name and
+    /// the current dictionary, and User never shadows Core." And: "Those two
+    /// tiers are the whole dictionary."
+    ///
+    /// It used to be more than two. A `user_dictionaries` map held named user
+    /// dictionaries; an `active_user_dictionary` decided which one `DEF` wrote
+    /// to; an `owning_dictionary_context` gave a word's own dictionary priority;
+    /// and a bare name fell through three stages, collapsing cross-dictionary
+    /// matches by content identity and reporting an `Ambiguous` outcome when
+    /// they disagreed. `DICT@WORD`, `USER@D@WORD` and `DICT@USER@D@WORD` paths
+    /// addressed those tiers.
+    ///
+    /// None of it was reachable from the language: no Word changes the active
+    /// dictionary, so every `DEF` wrote to the same one ("EXAMPLE"), and
+    /// `user_words` was already maintained as a flat mirror of it. The tiers
+    /// were structure without a way to observe them, and the clause says there
+    /// are two.
     pub(crate) fn resolve_short_name(&self, name: &str) -> Option<(String, Arc<WordDefinition>)> {
         let upper = name.to_uppercase();
 
+        // Core first: User never shadows Core.
         if let Some(def) = self.core_vocabulary.get(&upper) {
             return Some((upper, def.clone()));
         }
 
-        // Section 8.6: a bare name resolves through the owning dictionary's
-        // words before any other user dictionary, so an imported word group is
-        // self-referential regardless of which other dictionaries are loaded.
-        if let Some(owning) = &self.owning_dictionary_context {
-            if let Some(dict) = self.user_dictionaries.get(owning) {
-                if let Some(def) = dict.words.get(&upper) {
-                    return Some((format!("{}@{}", owning, upper), def.clone()));
-                }
-            }
-        }
-
-        // Final fallback: other user dictionaries. Section 8.6 — group matches
-        // by content identity so that a name shared across dictionaries resolves
-        // when (and only when) the matches are the same word.
-        match self.resolve_user_bare(&upper) {
-            UserBareOutcome::Unique(name, def) => Some((name, def)),
-            // A true ambiguity resolves to None here; the caller's error path
-            // (`check_ambiguity`) turns that into the "qualified path" diagnostic.
-            UserBareOutcome::Ambiguous(_) => None,
-            UserBareOutcome::None => None,
-        }
+        self.user_words.get(&upper).map(|def| (upper, def.clone()))
     }
 
-    /// Resolve a bare (already uppercased) name against the user dictionaries by
-    /// content identity. Shared by `resolve_short_name`'s final fallback and
-    /// `check_ambiguity` so the two never drift apart.
-    pub(crate) fn resolve_user_bare(&self, upper: &str) -> UserBareOutcome {
-        let mut matches: Vec<(String, Arc<WordDefinition>, u64)> = Vec::new();
-        for (dict_name, dict) in &self.user_dictionaries {
-            if let Some(def) = dict.words.get(upper) {
-                matches.push((
-                    format!("{}@{}", dict_name, upper),
-                    def.clone(),
-                    def.registration_order,
-                ));
-            }
-        }
-
-        if matches.is_empty() {
-            return UserBareOutcome::None;
-        }
-
-        // Stable display order: the earliest registration represents the group.
-        matches.sort_by_key(|(_, _, order)| *order);
-
-        // Collapse the matches by their content identity (Section 8.6).
-        let mut distinct: HashSet<String> = HashSet::new();
-        let mut any_missing_identity = false;
-        for (fq, _, _) in &matches {
-            match self.word_identity(fq) {
-                Some(id) => {
-                    distinct.insert(id.clone());
-                }
-                // Conservative fallback: a match without a computed identity
-                // (e.g. before a quiescent recompute) is not treated as
-                // divergent — we fall back to the historical earliest-registered
-                // representative rather than raise a spurious ambiguity. At
-                // quiescent points identities are fresh, so this is not hit in
-                // practice.
-                None => any_missing_identity = true,
-            }
-        }
-
-        if any_missing_identity || distinct.len() <= 1 {
-            let (name, def, _) = matches.into_iter().next().unwrap();
-            return UserBareOutcome::Unique(name, def);
-        }
-
-        UserBareOutcome::Ambiguous(matches.into_iter().map(|(fq, _, _)| fq).collect())
-    }
-
-    pub(crate) fn check_ambiguity(&self, name: &str) -> Vec<String> {
-        let upper = name.to_uppercase();
-
-        // Core words win the bare-name ladder and are never ambiguous.
-        if self.core_vocabulary.contains_key(&upper) {
-            return vec![];
-        }
-
-        match self.resolve_user_bare(&upper) {
-            UserBareOutcome::Ambiguous(paths) => paths,
-            UserBareOutcome::Unique(..) | UserBareOutcome::None => vec![],
-        }
+    /// A bare name is never ambiguous: there is one User tier, so a name is in
+    /// it or it is not. Retained as the single place the answer is stated.
+    pub(crate) fn check_ambiguity(&self, _name: &str) -> Vec<String> {
+        vec![]
     }
 
     pub(crate) fn resolve_word_entry_readonly(
@@ -172,60 +47,7 @@ impl Interpreter {
         name: &str,
     ) -> Option<(String, Arc<WordDefinition>)> {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
-        let name = canonical_name.as_ref();
-        let (layers, word) = Self::split_path(name);
-
-        match layers.len() {
-            0 => self.resolve_short_name(name),
-            1 => {
-                let ns = &layers[0];
-                if ns == "CORE" {
-                    return self
-                        .core_vocabulary
-                        .get(&word)
-                        .cloned()
-                        .map(|def| (word.clone(), def));
-                }
-                if let Some(user_dict) = self.user_dictionaries.get(ns.as_str()) {
-                    if let Some(def) = user_dict.words.get(&word) {
-                        return Some((format!("{}@{}", ns, word), def.clone()));
-                    }
-                }
-                None
-            }
-            2 => {
-                let first = &layers[0];
-                let second = &layers[1];
-                if first == "USER" {
-                    if let Some(user_dict) = self.user_dictionaries.get(second.as_str()) {
-                        if let Some(def) = user_dict.words.get(&word) {
-                            return Some((format!("{}@{}", second, word), def.clone()));
-                        }
-                    }
-                } else if first == "DICT" && second == "CORE" {
-                    return self
-                        .core_vocabulary
-                        .get(&word)
-                        .cloned()
-                        .map(|def| (word.clone(), def));
-                }
-                None
-            }
-            3 => {
-                let first = &layers[0];
-                let second = &layers[1];
-                let third = &layers[2];
-                if first == "DICT" && second == "USER" {
-                    if let Some(user_dict) = self.user_dictionaries.get(third.as_str()) {
-                        if let Some(def) = user_dict.words.get(&word) {
-                            return Some((format!("{}@{}", third, word), def.clone()));
-                        }
-                    }
-                }
-                None
-            }
-            _ => None,
-        }
+        self.resolve_short_name(canonical_name.as_ref())
     }
 
     pub(crate) fn resolve_word_entry(
@@ -235,18 +57,11 @@ impl Interpreter {
         let canonical_name = crate::core_word_aliases::canonicalize_core_word_name(name);
         let name = canonical_name.as_ref();
         if let Some(cached_name) = self.lookup_resolve_cache(name) {
-            let (layers, word) = Self::split_path(&cached_name);
-            if layers.is_empty() {
-                if let Some(def) = self.core_vocabulary.get(&word).cloned() {
-                    return Some((word, def));
-                }
-            } else if layers.len() == 1 {
-                let ns = &layers[0];
-                if let Some(dict) = self.user_dictionaries.get(ns.as_str()) {
-                    if let Some(def) = dict.words.get(&word).cloned() {
-                        return Some((format!("{}@{}", ns, word), def));
-                    }
-                }
+            if let Some(def) = self.core_vocabulary.get(&cached_name).cloned() {
+                return Some((cached_name, def));
+            }
+            if let Some(def) = self.user_words.get(&cached_name).cloned() {
+                return Some((cached_name, def));
             }
         }
 
@@ -275,24 +90,14 @@ impl Interpreter {
         self.bump_dictionary_epoch();
 
         self.dependents.clear();
-        self.dictionary_dependencies.clear();
 
-        let mut all_words: Vec<(String, Arc<WordDefinition>)> = Vec::new();
-
-        for (dict_name, dict) in &self.user_dictionaries {
-            for (name, def) in &dict.words {
-                all_words.push((format!("{}@{}", dict_name, name), Arc::clone(def)));
-            }
-        }
-
-        let mut dictionary_edges: HashMap<String, HashSet<String>> = HashMap::new();
+        let all_words: Vec<(String, Arc<WordDefinition>)> = self
+            .user_words
+            .iter()
+            .map(|(name, def)| (name.clone(), Arc::clone(def)))
+            .collect();
 
         for (word_name, word_def) in &all_words {
-            // Section 8.6: scan each word's references through its own dictionary
-            // first, so dependents are recorded against the word's own
-            // dictionary rather than a same-named word elsewhere.
-            self.owning_dictionary_context =
-                self.split_qualified_name(word_name).map(|(dict, _)| dict);
             let mut dependencies = HashSet::new();
             for line in word_def.lines.iter() {
                 for token in line.body_tokens.iter() {
@@ -301,7 +106,9 @@ impl Interpreter {
                         if let Some((resolved_name, resolved_def)) =
                             self.resolve_word_entry(&upper_s)
                         {
-                            if !resolved_def.is_builtin || resolved_name.contains('@') {
+                            // Only User Words are dependencies: Core is sealed,
+                            // so nothing can invalidate a reference to it.
+                            if !resolved_def.is_builtin {
                                 dependencies.insert(resolved_name.clone());
                                 self.dependents
                                     .entry(resolved_name)
@@ -312,46 +119,11 @@ impl Interpreter {
                     }
                 }
             }
-            if let Some((dict_name, short_name)) = self.split_qualified_name(word_name) {
-                if let Some(dict) = self.user_dictionaries.get_mut(&dict_name) {
-                    if let Some(def) = dict.words.get_mut(&short_name) {
-                        Arc::make_mut(def).dependencies = dependencies.clone();
-                    }
-                }
-                let edge_set = dictionary_edges.entry(dict_name.clone()).or_default();
-                for dep in &dependencies {
-                    if let Some((dep_dict, _)) = self.split_qualified_name(dep) {
-                        if dep_dict != dict_name {
-                            edge_set.insert(dep_dict);
-                        }
-                    }
-                }
+            if let Some(def) = self.user_words.get_mut(word_name) {
+                Arc::make_mut(def).dependencies = dependencies;
             }
         }
 
-        self.owning_dictionary_context = None;
-
-        for dict in self.user_dictionaries.keys() {
-            self.dictionary_dependencies
-                .entry(dict.clone())
-                .or_default();
-        }
-        for (from, tos) in dictionary_edges {
-            for to in tos {
-                self.dictionary_dependencies
-                    .entry(from.clone())
-                    .or_default()
-                    .depends_on
-                    .insert(to.clone());
-                self.dictionary_dependencies
-                    .entry(to)
-                    .or_default()
-                    .depended_by
-                    .insert(from.clone());
-            }
-        }
-
-        self.sync_user_words_cache();
         self.recompute_word_identities();
         self.gc_body_store();
         Ok(())
@@ -389,11 +161,9 @@ impl Interpreter {
     /// path.
     fn collect_dependents_by_scan(&self, word_name: &str) -> HashSet<String> {
         let mut result = HashSet::new();
-        for (dict_name, dict) in &self.user_dictionaries {
-            for (name, def) in &dict.words {
-                if def.dependencies.contains(word_name) {
-                    result.insert(format!("{}@{}", dict_name, name));
-                }
+        for (name, def) in &self.user_words {
+            if def.dependencies.contains(word_name) {
+                result.insert(name.clone());
             }
         }
         result
