@@ -191,6 +191,20 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
     check_cond_clause_per_line_constraint(tokens)
 }
 
+/// Whether `lexeme` is exactly one Number token under the canonical lexer.
+/// Shared by source tokenization and the public code-data decoder so the two
+/// entry paths cannot drift into different numeric languages.
+pub(crate) fn is_number_token_lexeme(lexeme: &str) -> bool {
+    matches!(parse_number_from_string(lexeme), Some(Token::Number(value)) if value.as_ref() == lexeme)
+}
+
+/// Whether `lexeme` is exactly one Symbol token under the canonical lexer.
+/// Control directives and delimiter spellings deliberately fail this test:
+/// their canonical code-data representation uses their dedicated token tag.
+pub(crate) fn is_symbol_token_lexeme(lexeme: &str) -> bool {
+    matches!(tokenize(lexeme).ok().as_deref(), Some([Token::Symbol(value)]) if value.as_ref() == lexeme)
+}
+
 fn is_special_char(c: char) -> bool {
     matches!(
         c,

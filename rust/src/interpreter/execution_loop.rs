@@ -63,7 +63,7 @@ pub(crate) fn apply_word_hint_override(interp: &mut Interpreter, word: &str) {
         // right, the role was thrown away.
         "CHARS" | "MAP" | "FILTER" | "SCAN" | "UNFOLD" | "REVERSE" | "SORT" | "TAKE"
         | "REORDER" | "SPLIT" | "COLLECT" | "RESHAPE" | "TRANSPOSE" | "FILL" | "TOKENIZE"
-        | "CONSERVE" => Some(Interpretation::Unassigned),
+        | "CONSERVE" | "REFLECT" => Some(Interpretation::Unassigned),
         _ => None,
     };
     if let Some(h) = hint {

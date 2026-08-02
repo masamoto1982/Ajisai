@@ -54,12 +54,10 @@ pub(crate) fn code_data_to_tokens(value: &Value) -> Result<Vec<Token>> {
                 let payload = record[1]
                     .as_text()
                     .ok_or_else(|| malformed("number payload is not a String"))?;
-                match crate::tokenizer::tokenize(payload).ok().as_deref() {
-                    Some([Token::Number(n)]) if n.as_ref() == payload => {
-                        Token::Number(payload.into())
-                    }
-                    _ => return Err(malformed("invalid number payload")),
+                if !crate::tokenizer::is_number_token_lexeme(payload) {
+                    return Err(malformed("invalid number payload"));
                 }
+                Token::Number(payload.into())
             }
             ("string", 2) => Token::String(
                 record[1]
@@ -71,12 +69,10 @@ pub(crate) fn code_data_to_tokens(value: &Value) -> Result<Vec<Token>> {
                 let payload = record[1]
                     .as_text()
                     .ok_or_else(|| malformed("symbol payload is not a String"))?;
-                match crate::tokenizer::tokenize(payload).ok().as_deref() {
-                    Some([Token::Symbol(s)]) if s.as_ref() == payload => {
-                        Token::Symbol(payload.into())
-                    }
-                    _ => return Err(malformed("invalid symbol payload")),
+                if !crate::tokenizer::is_symbol_token_lexeme(payload) {
+                    return Err(malformed("invalid symbol payload"));
                 }
+                Token::Symbol(payload.into())
             }
             ("vector-start", 1) => Token::VectorStart,
             ("vector-end", 1) => Token::VectorEnd,

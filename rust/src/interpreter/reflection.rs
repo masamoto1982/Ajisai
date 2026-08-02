@@ -22,6 +22,7 @@ fn reflect(value: &Value) -> Result<Value> {
 mod tests {
     use super::*;
     use crate::interpreter::RuntimeLimits;
+    use crate::types::{Interpretation, Token};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -65,6 +66,19 @@ mod tests {
         assert!(keep_failed.execute("1 KEEP REFLECT").await.is_err());
         assert_eq!(keep_failed.stack.len(), 1);
         assert_eq!(keep_failed.stack.last().and_then(Value::as_i64), Some(1));
+    }
+
+    #[test]
+    fn reflection_output_role_is_always_unassigned() {
+        let mut interp = Interpreter::new();
+        interp.stack.push_with_role(
+            Value::from_code_block(vec![Token::Number("1".into())]),
+            Interpretation::RawNumber,
+        );
+        interp
+            .execute_section_core(&[Token::Symbol("REFLECT".into())], 0)
+            .unwrap();
+        assert_eq!(interp.stack.last_role(), Interpretation::Unassigned);
     }
 
     #[tokio::test]
