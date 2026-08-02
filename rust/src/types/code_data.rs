@@ -109,7 +109,18 @@ pub(crate) fn code_data_to_tokens(value: &Value) -> Result<Vec<Token>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use std::sync::Arc;
+
+    fn record(parts: &[&str]) -> Value {
+        Value::from_vector(parts.iter().map(|part| Value::from_string(part)).collect())
+    }
+
+    fn data(records: Vec<Value>) -> Value {
+        let mut values = vec![Value::from_string(CODE_DATA_VERSION)];
+        values.extend(records);
+        Value::from_vector(values)
+    }
 
     #[test]
     fn all_token_variants_round_trip() {
@@ -136,11 +147,69 @@ mod tests {
 
     #[test]
     fn malformed_records_are_rejected() {
-        assert!(code_data_to_tokens(&Value::from_vector(vec![])).is_err());
-        assert!(code_data_to_tokens(&Value::from_vector(vec![
-            Value::from_string(CODE_DATA_VERSION),
-            Value::from_vector(vec![Value::from_string("unknown")])
-        ]))
-        .is_err());
+        let malformed = vec![
+            Value::from_vector(vec![]),
+            Value::from_vector(vec![Value::from_string("wrong-header")]),
+            data(vec![Value::from_int(1)]),
+            data(vec![Value::from_vector(vec![])]),
+            data(vec![record(&["number"])]),
+            data(vec![record(&["number", "1", "extra"])]),
+            data(vec![Value::from_vector(vec![Value::from_int(1)])]),
+            data(vec![Value::from_vector(vec![
+                Value::from_string("number"),
+                Value::from_int(1),
+            ])]),
+            data(vec![record(&["unknown"])]),
+            data(vec![record(&["NUMBER", "1"])]),
+            data(vec![record(&["number", "1 2"])]),
+            data(vec![record(&["number", "ADD"])]),
+            data(vec![record(&["symbol", ""])]),
+            data(vec![record(&["symbol", "A B"])]),
+            data(vec![record(&["vector-end"])]),
+            data(vec![record(&["block-end"])]),
+            data(vec![record(&["vector-start"])]),
+            data(vec![record(&["block-start"])]),
+            data(vec![record(&["vector-start"]), record(&["block-end"])]),
+            data(vec![record(&["cond-clause-sep"])]),
+        ];
+        for value in malformed {
+            assert!(code_data_to_tokens(&value).is_err(), "accepted {value:?}");
+        }
+    }
+
+    #[test]
+    fn lexical_spelling_and_string_symbol_distinction_are_preserved() {
+        let tokens = vec![
+            Token::Number("1".into()),
+            Token::Number("1/1".into()),
+            Token::Number("1.0".into()),
+            Token::Symbol("ADD".into()),
+            Token::Symbol("add".into()),
+            Token::Symbol("+".into()),
+            Token::String("ADD".into()),
+            Token::String("".into()),
+            Token::String(" whitespace\n🙂e\u{301}'[]{} ".into()),
+        ];
+        assert_eq!(
+            code_data_to_tokens(&tokens_to_code_data(&tokens)).unwrap(),
+            tokens
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn payload_token_sequences_round_trip(
+            strings in prop::collection::vec(any::<String>(), 0..20),
+            numbers in prop::collection::vec(prop::sample::select(vec!["0", "-1", "1/1", "1.0", ".5"]), 0..20),
+            symbols in prop::collection::vec(prop::sample::select(vec!["ADD", "add", "+", "UNKNOWN-WORD", ">CF"]), 0..20),
+        ) {
+            let mut tokens = Vec::new();
+            tokens.extend(strings.into_iter().map(|s| Token::String(s.into())));
+            tokens.extend(numbers.into_iter().map(|s| Token::Number(s.into())));
+            tokens.extend(symbols.into_iter().map(|s| Token::Symbol(s.into())));
+            let encoded = tokens_to_code_data(&tokens);
+            prop_assert_eq!(code_data_to_tokens(&encoded).unwrap(), tokens);
+            prop_assert_eq!(tokens_to_code_data(&code_data_to_tokens(&encoded).unwrap()), encoded);
+        }
     }
 }

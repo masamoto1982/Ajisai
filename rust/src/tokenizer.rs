@@ -179,6 +179,9 @@ pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
             Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
             Token::BlockEnd if delimiters.pop() == Some(Token::BlockStart) => {}
             Token::VectorEnd | Token::BlockEnd => return Err("mismatched code delimiter".into()),
+            Token::CondClauseSep if delimiters.last() != Some(&Token::BlockStart) => {
+                return Err("'|' separator is only valid directly inside a code block".into())
+            }
             _ => {}
         }
     }
