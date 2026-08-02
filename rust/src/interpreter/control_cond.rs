@@ -266,6 +266,19 @@ fn evaluate_guard_isolated(
     // A definite Boolean guard fires iff it is TRUE (SPEC §7.7). Accept a
     // bare Boolean or one wrapped in a single-element vector; fall back to the
     // legacy numeric-guard handling (0 = false, 1 = true) below otherwise.
+    //
+    // FINDING (not fixed here): both fallbacks are the truthiness coercion
+    // LANG.VALUES.TRUTH rules out, and that LANG.VALUES.DISJOINT rules out
+    // twice over — a singleton Vector is not its element, and a scalar is not
+    // a Boolean. `AND`/`OR`/`NOT` and `extract_predicate_boolean` had the same
+    // coercion removed; this is the last place it survives.
+    //
+    // Element lifting made it load-bearing rather than merely reachable. The
+    // comparison Words used to project a singleton operand, so `[ 7 ] [ 5 ] >`
+    // answered a bare `TRUE`; it now answers `[ TRUE ]`, which reaches the
+    // wrapper case below. Tightening the guard therefore has to move the
+    // `[ n ]`-wrapped-scalar idiom off comparisons across the examples and
+    // tests, which is its own change rather than part of the lifting one.
     if let Some(b) = result_value.as_truth() {
         return Ok(b);
     }

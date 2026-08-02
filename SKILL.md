@@ -79,7 +79,9 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - Remainder
   `[ 10 ] [ 3 ] %` → stack: `[ 1/1 ]`
 - Comparison pushes a boolean
-  `[ 1 ] [ 2 ] <` → stack: `TRUE`
+  `1 2 <` → stack: `TRUE`
+- Comparison lifts over vectors element-wise
+  `[ 1 2 ] [ 3 1 ] <` → stack: `{ TRUE FALSE }`
 - Range: one vector [ start end ] (inclusive)
   `[ 0 5 ] RANGE` → stack: `[ 0/1 1/1 2/1 3/1 4/1 5/1 ]`
 - Range with step: [ start end step ]
@@ -89,15 +91,15 @@ produce a value produces NIL (§4); a malformed one raises an error.
 - MAP with a { } code block
   `[ 0 4 ] RANGE { [ 2 ] * } MAP` → stack: `[ 0/1 2/1 4/1 6/1 8/1 ]`
 - FILTER keeps matching elements
-  `[ 0 10 ] RANGE { [ 5 ] > } FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
+  `[ 0 10 ] RANGE { 5 > } FILTER` → stack: `[ 6/1 7/1 8/1 9/1 10/1 ]`
 - FOLD needs an explicit initial value
   `[ 1 2 3 ] [ 0 ] { + } FOLD` → stack: `[ 6/1 ]`
 - ANY / ALL take predicate blocks
-  `[ 1 2 3 ] { [ 1 ] > } ANY` → stack: `TRUE`
+  `[ 1 2 3 ] { 1 > } ANY` → stack: `TRUE`
 - Define a user word: { body } then name, then DEF
   `{ [ 1 ] [ 2 ] + } 'MY-SUM' DEF MY-SUM` → stack: `[ 3/1 ]`
 - COND: value on stack, then { guard } { body } pairs (use { TRUE } as else-guard)
-  `[ 4 ] { [ 0 ] >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `[ 4/1 ]`
+  `4 { 0 >= } { 'non-negative' PRINT } { TRUE } { 'negative' PRINT } COND` → prints `non-negative`; stack: `4/1`
 - Strings are bare '...' literals; CHARS/JOIN convert
   `'hello' CHARS REVERSE JOIN` → stack: `'olleh'`
 - Cast a string to an exact number
@@ -125,10 +127,10 @@ produce a value produces NIL (§4); a malformed one raises an error.
   → exit 1, `message: "Stack underflow"`, `diagnosis: { when: "executeWord", why: "stackShape" }`,
   `aiDiagnostic.recoverability: "fixProgram"`, first nextCheck: "Check arity".
   Fix: FOLD is `vector [ init ] { op } FOLD`: `[ 1 2 3 ] [ 0 ] { + } FOLD`.
-- **COND blocks must come in { guard } { body } pairs** — `[ 5 ] { [ 3 ] > } { 'big' PRINT } { 'small' PRINT } COND`
+- **COND blocks must come in { guard } { body } pairs** — `5 { 3 > } { 'big' PRINT } { 'small' PRINT } COND`
   → exit 1, `message: "COND: expected even number of code blocks (guard/body pairs), got 3"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck: "Check error message".
-  Fix: Give every body a guard; the else-branch is `{ TRUE } { ... }`: `[ 5 ] { [ 3 ] > } { 'big' PRINT } { TRUE } { 'small' PRINT } COND`.
+  Fix: Give every body a guard; the else-branch is `{ TRUE } { ... }`: `5 { 3 > } { 'big' PRINT } { TRUE } { 'small' PRINT } COND`.
 - **COND guards must yield a boolean** — `TRUE { [ 1 ] } { [ 2 ] } COND`
   → exit 1, `message: "COND: guard must return TRUE or FALSE, got non-scalar"`, `diagnosis: { when: "executeWord", why: "unknown" }`,
   `aiDiagnostic.recoverability: "inspectContext"`, first nextCheck: "Check error message".

@@ -394,7 +394,7 @@ fn format_as_boolean(value: &Value) -> String {
         }
         ValueData::Vector(v) => {
             if v.is_empty() {
-                return "FALSE".to_string();
+                return "{ }".to_string();
             }
 
             let inner: Vec<&str> = v.iter().map(boolean_element_label).collect();
@@ -402,7 +402,7 @@ fn format_as_boolean(value: &Value) -> String {
         }
         ValueData::Tensor { data, .. } => {
             if data.is_empty() {
-                return "FALSE".to_string();
+                return "{ }".to_string();
             }
             let inner: Vec<&str> = data
                 .iter()
