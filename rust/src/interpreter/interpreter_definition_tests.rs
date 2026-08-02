@@ -442,8 +442,7 @@ mod tests {
     #[tokio::test]
     async fn test_def_rejects_data_array_body() {
         // A data array `[ ... ]` is no longer accepted as a definition body;
-        // only a code block is. (Data-driven definition is reserved for a
-        // future `>CODE` conversion word.)
+        // only a code block is. Canonical code data must first be reflected.
         let mut interp = Interpreter::new();
         let result = interp.execute("[ '[ 2 ] *' ] 'DOUBLE' DEF").await;
         assert!(
