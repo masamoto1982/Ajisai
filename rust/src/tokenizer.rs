@@ -169,6 +169,28 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
+/// Validate the structural grammar of an already-tokenized code value.
+pub(crate) fn validate_code_tokens(tokens: &[Token]) -> Result<(), String> {
+    let mut delimiters = Vec::new();
+    for token in tokens {
+        match token {
+            Token::VectorStart => delimiters.push(Token::VectorStart),
+            Token::BlockStart => delimiters.push(Token::BlockStart),
+            Token::VectorEnd if delimiters.pop() == Some(Token::VectorStart) => {}
+            Token::BlockEnd if delimiters.pop() == Some(Token::BlockStart) => {}
+            Token::VectorEnd | Token::BlockEnd => return Err("mismatched code delimiter".into()),
+            Token::CondClauseSep if delimiters.last() != Some(&Token::BlockStart) => {
+                return Err("'|' separator is only valid directly inside a code block".into())
+            }
+            _ => {}
+        }
+    }
+    if !delimiters.is_empty() {
+        return Err("unclosed code delimiter".into());
+    }
+    check_cond_clause_per_line_constraint(tokens)
+}
+
 fn is_special_char(c: char) -> bool {
     matches!(
         c,
