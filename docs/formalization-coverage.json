@@ -508,23 +508,6 @@
       "status": "accepted"
     },
     {
-      "id": "algebra.modifier.consumption.eat",
-      "algebraic_family": "modifier",
-      "core_tier": "flow",
-      "kind": "operation",
-      "description": "Consumption policy that removes operands after applying a word; one axis of the modifier combinator.",
-      "admission_reason": "Accepted as the shared modifier schema required by existing formalization entries; it is not represented as surface sugar or a hosted effect boundary.",
-      "introduced_by": [
-        "EAT",
-        "FORC"
-      ],
-      "can_derive": [
-        "EAT",
-        "FORC"
-      ],
-      "status": "accepted"
-    },
-    {
       "id": "algebra.state-transformer.combinator",
       "algebraic_family": "state-transformer",
       "core_tier": "flow",
@@ -890,7 +873,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §4"
       ],
       "law_tests": [
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
       "conformance_cases": [
         "core-kleene-or-definite"
@@ -1009,9 +993,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-sub"
+      ],
       "status": "Formalized",
       "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
       "semantic_role": "Derived",
@@ -1100,9 +1087,12 @@
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
-        "rust/tests/desugar_laws.rs"
+        "rust/tests/desugar_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-mod"
+      ],
       "status": "Formalized",
       "notes": "Modulo is derived as x - floor(x/y)·y over exact reals, so it depends on integer projection plus exact arithmetic and preserves Bubble/NIL absence.",
       "semantic_role": "Derived",
@@ -1144,33 +1134,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.ceil",
-      "kind": "coreword",
-      "surface": "CEIL",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §7.3"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.2"
-      ],
-      "law_tests": [
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "CEIL — exact-real integer projection toward positive infinity. Projecting failures create NIL/Bubble observations.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.continued-fraction",
-        "algebra.bubble.passthrough"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
       "id": "core.round",
       "kind": "coreword",
       "surface": "ROUND",
@@ -1183,9 +1146,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §3.2"
       ],
       "law_tests": [
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-round"
+      ],
       "status": "Formalized",
       "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
       "semantic_role": "Derived",
@@ -1277,9 +1243,12 @@
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs"
+        "rust/src/arithmetic_operation_tests.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-neq"
+      ],
       "status": "Formalized",
       "notes": "Inequality is the K3-domain complement of budgeted equality when decided, with UNKNOWN and NIL preserved by projection/passthrough.",
       "semantic_role": "Derived",
@@ -1338,9 +1307,12 @@
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs"
+        "rust/src/arithmetic_operation_tests.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-lte"
+      ],
       "status": "Formalized",
       "notes": "Less-than-or-equal is derived from the same budgeted order observation as LT/EQ, projected into K3 truth.",
       "semantic_role": "Derived",
@@ -1399,9 +1371,12 @@
       ],
       "law_tests": [
         "rust/tests/algebraic_laws.rs",
-        "rust/src/arithmetic_operation_tests.rs"
+        "rust/src/arithmetic_operation_tests.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-gte"
+      ],
       "status": "Formalized",
       "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
       "semantic_role": "Derived",
@@ -1468,33 +1443,6 @@
       "primitive": false,
       "derived_from": [
         "algebra.modifier.consumption.keep",
-        "algebra.state-transformer.combinator"
-      ],
-      "algebraic_family": "modifier",
-      "core_tier": "flow"
-    },
-    {
-      "id": "core.eat",
-      "kind": "coreword",
-      "surface": "EAT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §6.3",
-        "SPECIFICATION.html §7.0"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/tests/contract_modifier_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Operand-consuming modifier; selects the consume/eat policy for the next state-transformer word.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.modifier.consumption.eat",
         "algebra.state-transformer.combinator"
       ],
       "algebraic_family": "modifier",
@@ -1592,7 +1540,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-map"
@@ -1623,9 +1572,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-filter"
+      ],
       "status": "Formalized",
       "notes": "Predicate restriction over an indexed sequence using a K3 truth-valued block.",
       "semantic_role": "Derived",
@@ -1683,9 +1635,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-any"
+      ],
       "status": "Formalized",
       "notes": "Existential predicate fold over an indexed sequence into the K3 truth domain.",
       "semantic_role": "Derived",
@@ -1712,9 +1667,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-all"
+      ],
       "status": "Formalized",
       "notes": "Universal predicate fold over an indexed sequence into the K3 truth domain.",
       "semantic_role": "Derived",
@@ -1894,85 +1852,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.insert",
-      "kind": "coreword",
-      "surface": "INSERT",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Point insertion as an ordered-sequence transform over the vector index structure.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.replace",
-      "kind": "coreword",
-      "surface": "REPLACE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Point replacement as an ordered-sequence transform over the vector index structure.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.remove",
-      "kind": "coreword",
-      "surface": "REMOVE",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Point removal as an ordered-sequence transform; removing the last element projects to NIL/Bubble.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.bubble.domain"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
       "id": "core.length",
       "kind": "coreword",
       "surface": "LENGTH",
@@ -2141,32 +2020,6 @@
       "core_tier": "material"
     },
     {
-      "id": "core.reorder",
-      "kind": "coreword",
-      "surface": "REORDER",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.3",
-        "SPECIFICATION.html §7.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §7"
-      ],
-      "law_tests": [
-        "rust/tests/structural_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Permutation action over an indexed vector sequence.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence"
-      ],
-      "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
       "id": "core.collect",
       "kind": "coreword",
       "surface": "COLLECT",
@@ -2205,9 +2058,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
-        "rust/tests/structural_laws.rs"
+        "rust/tests/structural_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-fill"
+      ],
       "status": "Formalized",
       "notes": "Tensor constructor that fills a requested shape with a repeated value.",
       "semantic_role": "Derived",
@@ -2336,7 +2192,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-trim"
+      ],
       "status": "Formalized",
       "notes": "Whitespace-normalization endomorphism over codepoint sequences; idempotent at fixed points.",
       "semantic_role": "Derived",
@@ -2363,7 +2221,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-tokenize"
+      ],
       "status": "Formalized",
       "notes": "Splits a codepoint sequence by a separator sequence into ordered text parts.",
       "semantic_role": "Derived",
@@ -2390,7 +2250,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-substitute"
+      ],
       "status": "Formalized",
       "notes": "Codepoint-sequence replacement transform over all occurrences of a substring.",
       "semantic_role": "Derived",
@@ -2506,33 +2368,6 @@
       "primitive": false,
       "derived_from": [
         "algebra.exact-scalar.codepoint-sequence"
-      ],
-      "algebraic_family": "exact-scalar",
-      "core_tier": "material"
-    },
-    {
-      "id": "core.chr",
-      "kind": "coreword",
-      "surface": "CHR",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §7.6",
-        "SPECIFICATION.html §12"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-octies"
-      ],
-      "law_tests": [
-        "rust/tests/string_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Maps an integer codepoint into a one-character text value; invalid codepoints project to NIL/Bubble.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-scalar.codepoint-sequence",
-        "algebra.bubble.domain"
       ],
       "algebraic_family": "exact-scalar",
       "core_tier": "material"
@@ -2756,12 +2591,11 @@
       "formalization_sections": [
         "docs/dev/ajisai-mathematical-formalization.md §9-quater"
       ],
-      "law_tests": [
-        "rust/src/interpreter/algo_ops_tests.rs"
+      "conformance_cases": [
+        "standard-sort"
       ],
-      "conformance_cases": [],
       "status": "Formalized",
-      "notes": "Removes later duplicates from an indexed sequence, preserving first-occurrence order under equality observation.",
+      "notes": "Sorts indexed sequences by the budgeted order observation; undecidable comparisons project to K3 Unknown rather than a partial order.",
       "semantic_role": "Derived",
       "primitive": false,
       "derived_from": [
@@ -2770,34 +2604,9 @@
         "algebra.k3.domain"
       ],
       "algebraic_family": "structure-lift",
-      "core_tier": "material"
-    },
-    {
-      "id": "module.algo.contains",
-      "kind": "coreword",
-      "surface": "CONTAINS",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-quater"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/algo_ops_tests.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Observes whether an indexed sequence contains a value equal to the query.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.structure-lift.indexed-sequence",
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "boolean-truth",
-      "core_tier": "material"
+      "core_tier": "material",
+      "standard_relation": "operational",
+      "native_retention_reason": "Fixes deterministic ordering and restores the original operand atomically on comparison ERROR."
     },
     {
       "id": "module.algo.index-of",
@@ -2813,7 +2622,9 @@
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-index-of"
+      ],
       "status": "Formalized",
       "notes": "Projects the first equal element position from an indexed sequence, or Bubble/NIL if absent.",
       "semantic_role": "Derived",
@@ -2842,9 +2653,12 @@
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-abs"
+      ],
       "status": "Formalized",
       "notes": "Absolute value derived from sign/order and exact arithmetic.",
       "semantic_role": "Derived",
@@ -2886,35 +2700,6 @@
       "core_tier": "material"
     },
     {
-      "id": "module.math.sign",
-      "kind": "coreword",
-      "surface": "SIGN",
-      "classification": "Core",
-      "spec_sections": [
-        "SPECIFICATION.html §4.2",
-        "SPECIFICATION.html §9.1"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §3.1",
-        "docs/dev/ajisai-mathematical-formalization.md §9"
-      ],
-      "law_tests": [
-        "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Projects exact numeric order against zero to -1/0/1.",
-      "semantic_role": "Derived",
-      "primitive": false,
-      "derived_from": [
-        "algebra.exact-real.budgeted-order",
-        "algebra.k3.domain"
-      ],
-      "algebraic_family": "exact-arithmetic",
-      "core_tier": "material"
-    },
-    {
       "id": "module.math.min",
       "kind": "coreword",
       "surface": "MIN",
@@ -2929,9 +2714,12 @@
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-min"
+      ],
       "status": "Formalized",
       "notes": "Selects the smaller operand using budgeted order, projecting undecidable comparisons to Unknown.",
       "semantic_role": "Derived",
@@ -2959,9 +2747,12 @@
       ],
       "law_tests": [
         "rust/src/interpreter/math_ops_tests.rs",
-        "rust/tests/algebraic_laws.rs"
+        "rust/tests/algebraic_laws.rs",
+        "rust/tests/standard_derivation_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-max"
+      ],
       "status": "Formalized",
       "notes": "Selects the larger operand using budgeted order, projecting undecidable comparisons to Unknown.",
       "semantic_role": "Derived",
@@ -3412,30 +3203,6 @@
       "algebraic_family": "syntax-sugar",
       "core_tier": "sugar",
       "desugars_to": "AND"
-    },
-    {
-      "id": "alias.comma",
-      "kind": "syntax_sugar",
-      "surface": ",",
-      "classification": "Surface",
-      "spec_sections": [
-        "SPECIFICATION.html §3.9"
-      ],
-      "formalization_sections": [
-        "docs/dev/ajisai-mathematical-formalization.md §9-bis"
-      ],
-      "law_tests": [
-        "rust/tests/desugar_laws.rs"
-      ],
-      "conformance_cases": [],
-      "status": "Formalized",
-      "notes": "Surface sugar for EAT; desugaring is observation-transparent.",
-      "semantic_role": "Sugar",
-      "primitive": false,
-      "derived_from": [],
-      "algebraic_family": "syntax-sugar",
-      "core_tier": "sugar",
-      "desugars_to": "EAT"
     },
     {
       "id": "alias.comma-comma",

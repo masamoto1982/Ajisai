@@ -37,7 +37,7 @@ for (const word of words.entries) {
   // that the key reaches a runtime arm. The compiler already requires the
   // dispatch match to be total over `WordId`; this catches the case a total
   // match cannot, a Word folded into a neighbour's arm by mistake.
-  const compiledModifiers = new Set(['EAT', 'KEEP']);
+  const compiledModifiers = new Set(['KEEP']);
   const directive = new Set(['VENT', 'FLOW']);
   if (compiledModifiers.has(word.name)) {
     if (!compiledPlanSource.includes(`CompiledOp::${word.executorKey}`)) fail(`${word.name} compiled executorKey drift`);

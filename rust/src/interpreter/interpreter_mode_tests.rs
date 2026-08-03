@@ -39,23 +39,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_explicit_consume_mode() {
-        let mut interp = Interpreter::new();
-        let result = interp.execute("[1] [2] , +").await;
-        assert!(
-            result.is_ok(),
-            "Explicit consume mode should work: {:?}",
-            result
-        );
-
-        assert_eq!(
-            interp.stack.len(),
-            1,
-            "Stack should have 1 element after explicit consume mode"
-        );
-    }
-
-    #[tokio::test]
     async fn test_mode_reset_after_word() {
         let mut interp = Interpreter::new();
         let result = interp.execute("[1] [2] ,, + [3] +").await;

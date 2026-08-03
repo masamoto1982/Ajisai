@@ -36,7 +36,6 @@ pub enum CompiledOp {
     /// forcing them onto the interpreter via `FallbackToken`.
     PushVectorLiteral(Value, Interpretation),
     PushCodeBlock(Vec<Token>),
-    SetConsumptionConsume,
     SetConsumptionKeep,
     CallBuiltin(Arc<CompiledCall>),
     /// A `COND` whose guard/body clauses were split once at compile time. The
@@ -66,7 +65,6 @@ pub fn is_plan_valid(plan: &CompiledPlan, interp: &Interpreter) -> bool {
 
 fn compile_symbol(token: &Token, symbol: &str, interp: &Interpreter) -> CompiledOp {
     match symbol {
-        "EAT" => CompiledOp::SetConsumptionConsume,
         "KEEP" => CompiledOp::SetConsumptionKeep,
         "TRUE" => CompiledOp::PushLiteral(Value::from_bool(true)),
         "FALSE" => CompiledOp::PushLiteral(Value::from_bool(false)),
@@ -465,9 +463,6 @@ fn execute_compiled_line(
                     Value::from_code_block(tokens.clone()),
                     Interpretation::Unassigned,
                 );
-            }
-            CompiledOp::SetConsumptionConsume => {
-                interp.update_consumption_mode(ConsumptionMode::Consume)
             }
             CompiledOp::SetConsumptionKeep => interp.update_consumption_mode(ConsumptionMode::Keep),
             CompiledOp::CallBuiltin(call) => {

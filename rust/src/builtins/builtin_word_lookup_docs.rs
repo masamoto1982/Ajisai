@@ -54,38 +54,11 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes the first element, 10.",
         }],
         failure_note: "An out-of-range index yields a Bubble/NIL with reason\nindexOutOfBounds.",
-        related: &["INSERT", "REPLACE", "REMOVE", "LENGTH", "TAKE"],
+        related: &["LENGTH", "TAKE"],
     },
-    BuiltinLookupDoc {
-        word: "INSERT",
-        behavior: "Pops an [ index value ] pair, then the target vector, and\npushes a new vector with the value inserted at that index.",
-        examples: &[BuiltinExampleDoc {
-            code: "[ 1 3 ] [ 1 2 ] INSERT",
-            result: "Pushes [ 1 2 3 ].",
-        }],
-        failure_note: "",
-        related: &["GET", "REPLACE", "REMOVE", "CONCAT"],
-    },
-    BuiltinLookupDoc {
-        word: "REPLACE",
-        behavior: "Pops an [ index value ] pair, then the target vector, and\npushes a new vector with the element at that index replaced.",
-        examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] [ 0 9 ] REPLACE",
-            result: "Pushes [ 9 2 3 ].",
-        }],
-        failure_note: "",
-        related: &["GET", "INSERT", "REMOVE"],
-    },
-    BuiltinLookupDoc {
-        word: "REMOVE",
-        behavior: "Pops the index vector, then the target vector, and pushes a\nnew vector without the element at that index.",
-        examples: &[BuiltinExampleDoc {
-            code: "[ 1 2 3 ] [ 0 ] REMOVE",
-            result: "Pushes [ 2 3 ].",
-        }],
-        failure_note: "",
-        related: &["GET", "INSERT", "REPLACE"],
-    },
+
+
+
     BuiltinLookupDoc {
         word: "LENGTH",
         behavior: "Pops a vector and pushes the number of its elements.",
@@ -94,7 +67,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 3.",
         }],
         failure_note: "",
-        related: &["GET", "TAKE", "SPLIT"],
+        related: &["GET", "TAKE"],
     },
     BuiltinLookupDoc {
         word: "CONCAT",
@@ -104,7 +77,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 1 2 3 4 ].",
         }],
         failure_note: "",
-        related: &["INSERT", "SPLIT", "REVERSE"],
+        related: &["REVERSE"],
     },
     BuiltinLookupDoc {
         word: "REVERSE",
@@ -114,7 +87,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 3 2 1 ].",
         }],
         failure_note: "",
-        related: &["CONCAT", "REORDER"],
+        related: &["CONCAT"],
     },
     BuiltinLookupDoc {
         word: "TAKE",
@@ -124,7 +97,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 1 2 3 ].",
         }],
         failure_note: "",
-        related: &["SPLIT", "GET", "LENGTH"],
+        related: &["GET", "LENGTH"],
     },
     BuiltinLookupDoc {
         word: "RANGE",
@@ -134,7 +107,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes the sequence from 0 to 5.",
         }],
         failure_note: "",
-        related: &["TAKE", "SPLIT"],
+        related: &["TAKE"],
     },
     // ── Arithmetic ────────────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -185,7 +158,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 1.",
         }],
         failure_note: "",
-        related: &["DIV", "FLOOR", "CEIL", "ROUND"],
+        related: &["DIV", "FLOOR", "ROUND"],
     },
     // ── Comparison ────────────────────────────────────────────────────────
     BuiltinLookupDoc {
@@ -217,7 +190,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes 42.",
         }],
         failure_note: "Text with no numeric reading yields a Bubble/NIL.",
-        related: &["STR", "CHR"],
+        related: &["STR"],
     },
     BuiltinLookupDoc {
         word: "STR",
@@ -229,16 +202,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
         failure_note: "",
         related: &["NUM", "CHARS", "JOIN"],
     },
-    BuiltinLookupDoc {
-        word: "CHR",
-        behavior: "Pops a code-point number and pushes the one-character text\nit denotes.",
-        examples: &[BuiltinExampleDoc {
-            code: "65 CHR",
-            result: "Pushes 'A'.",
-        }],
-        failure_note: "A number that is not a valid code point yields a\nBubble/NIL.",
-        related: &["NUM", "CHARS", "JOIN"],
-    },
+
     BuiltinLookupDoc {
         word: "CHARS",
         behavior: "Pops a text value and pushes a vector of its one-character\ntexts.",
@@ -247,7 +211,7 @@ const BUILTIN_LOOKUP_DOCS: &[BuiltinLookupDoc] = &[
             result: "Pushes [ 'h' 'i' ].",
         }],
         failure_note: "",
-        related: &["JOIN", "CHR", "STR"],
+        related: &["JOIN", "STR"],
     },
     BuiltinLookupDoc {
         word: "JOIN",

@@ -42,8 +42,8 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 chars[i], concept
             ));
         }
-        // ModifierSugar: `;` -> TOP-EAT (`. ,`), `;;` -> STAK-KEEP (`.. ,,`)
-        // (see surface_forms.rs). Expanded here into the underlying modifiers.
+        // ModifierSugar: `;;` -> STAK-KEEP (`.. ,,`). The former single `;`
+        // spelling selected explicit consumption and is no longer accepted.
         if chars[i] == ';' {
             if i + 1 < chars.len() && chars[i + 1] == ';' {
                 tokens.push(Token::Symbol("..".into()));
@@ -51,10 +51,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 i += 2;
                 continue;
             }
-            tokens.push(Token::Symbol(".".into()));
-            tokens.push(Token::Symbol(",".into()));
-            i += 1;
-            continue;
+            return Err("';' is not valid source; consumption is the default".into());
         }
         if let Some((token, consumed)) = parse_token_from_single_char(chars[i]) {
             tokens.push(token);
