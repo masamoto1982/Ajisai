@@ -4,7 +4,8 @@
 <h1 id="ajisai-language-semantics">Ajisai Language Semantics</h1>
 
 <p>Status: <strong>Canonical</strong><br>
-Version: <strong>2026-07-29</strong></p>
+Version: <strong>2026-07-29</strong><br>
+Release stage: <strong>0.2.0-beta.1</strong>, beginning at commit <code>350834ee22ca1f1583eaa50e35d69f8ac29cac3e</code> — the first commit that meets every condition of the beta vocabulary and compatibility freeze. The development stage before it ends at commit <code>ebb66a5f9d14a6c8d6610488724e476e652abc35</code>.</p>
 
 <p>
 This document defines the correspondence between Ajisai source programs and observable values, states, effects, and diagnoses. It is a compact semantic kernel: differences between individual Words belong to the machine-readable vocabulary registry, not to parallel prose definitions.
