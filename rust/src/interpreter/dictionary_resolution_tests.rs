@@ -1,7 +1,7 @@
 //! Resolution laws for `crate::interpreter::resolve_word`.
 //!
 //! LANG.DICTIONARY.RESOLUTION: "The dictionary has two tiers. **Core** holds
-//! the 69 canonical Words and is sealed: a Core name cannot be redefined or
+//! the 70 canonical Words and is sealed: a Core name cannot be redefined or
 //! deleted. **User** holds definitions made by `DEF`. Resolution is a
 //! deterministic function of the normalized name and the current dictionary,
 //! and User never shadows Core." And: "Those two tiers are the whole

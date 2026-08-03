@@ -57,3 +57,4 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(`[minimal-core] ${words.length}/${words.length} Core Words have a formalized, executable primitive/derivation witness.`);
+console.log('[minimal-core] coverage completeness is not a global proof that the current Word basis is irreducible.');
