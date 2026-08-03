@@ -73,7 +73,7 @@ Ajisai identity is the correspondence from normalized source to the ordered obse
 </p>
 
 <p>
-The vocabulary is 69 canonical Words and 16 symbolic aliases. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
+The vocabulary is 70 canonical Words and 16 symbolic aliases. Growth is not the goal: a proposed Word that is expressible as a user definition over the existing vocabulary does not belong in Core.
 </p>
 
 <h3 id="lang-authority-freedom">LANG.AUTHORITY.FREEDOM — Implementation freedom</h3>
@@ -286,7 +286,7 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 
 <h3 id="lang-dictionary-resolution">LANG.DICTIONARY.RESOLUTION — Deterministic lookup</h3>
 
-<p>The dictionary has two tiers. <strong>Core</strong> holds the 69 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
+<p>The dictionary has two tiers. <strong>Core</strong> holds the 70 canonical Words and is sealed: a Core name cannot be redefined or deleted. <strong>User</strong> holds definitions made by <code>DEF</code>. Resolution is a deterministic function of the normalized name and the current dictionary, and User never shadows Core.</p>
 
 <p>Those two tiers are the whole dictionary: a name resolves in Core or in User, and a Core name is reachable by itself. <code>LOOKUP</code>, hover, the Reference, and execution must identify the same canonical entry.</p>
 
@@ -305,6 +305,12 @@ Host-only caches, allocation arenas, compiled plans, and counters are not semant
 <p>A Word may have exactly one other effect, and it stays inside the machine: <code>DEF</code> and <code>DEL</code> change the dictionary, under LANG.DICTIONARY.MUTATION. Output emission and dictionary mutation are therefore the two effects, and LANG.MACHINE.ORDER orders both of them against token evaluation.</p>
 
 <p>Every other Word changes nothing: given the same stack and dictionary it produces the same result. <code>LOOKUP</code> reads the dictionary, so it depends on one without changing it. A Word that evaluates a supplied code block has the effects of that block and no others, so it is pure exactly when the block is.</p>
+
+<h3 id="lang-source-reflection">LANG.SOURCE.REFLECTION — Explicit code/data reflection</h3>
+
+<p>CodeBlock and Vector remain disjoint domains: a Vector is data and is never directly executable. <code>REFLECT</code> is the sole reversible boundary between a CodeBlock token sequence and the versioned canonical Vector <code>[ 'AJISAI-CODE-1' token-record... ]</code>. Records preserve every token variant and its original Number lexeme, String content, and Symbol spelling; display text is not authoritative code.</p>
+
+<p>Reflection is pure, deterministic, non-evaluating, independent of dictionary state, and performs no name resolution or mutation. Strictly malformed code data is ERROR. On legal values it is an involution under token/structural equality. <code>EXEC</code> continues to accept only CodeBlock. <code>REFLECT</code> is neither a String parser nor a macro expander.</p>
 
 <h2 id="lang-contract">9. Contracts and Static Checking</h2>
 

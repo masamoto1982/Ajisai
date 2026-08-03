@@ -3,7 +3,7 @@
 
 This reference is generated from [`spec/words.json`](../spec/words.json). Runtime catalogs are implementation-validation inputs, not documentation authorities.
 
-Canonical inventory: **69 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
+Canonical inventory: **70 Words**. Aliases and syntax surfaces are listed in [the generated manifest](word-manifest.json).
 
 ## `TRUE`
 
@@ -908,3 +908,17 @@ Write the top stack value to the output stream, consuming it. A string is writte
 - **Capability / hosted effect:** `console` / `consoleWrite`
 - **Clauses:** `LANG.EFFECTS.OUTPUT`, `LANG.MACHINE.ORDER`
 - **Syntax:** `42 PRINT`
+
+## `REFLECT`
+
+Convert between a CodeBlock and its canonical structured data representation without evaluating the code.
+
+- **Family:** `reflection`
+- **Stack:** 1 input(s) → 1 output(s); `eat` consumption
+- **NIL policy:** `rejectNil`; projection: none
+- **Purity / determinism:** `pure` / `deterministic`
+- **Capability / hosted effect:** `none` / `none`
+- **Clauses:** `LANG.SOURCE.REFLECTION`
+- **Syntax:** `CodeBlock REFLECT
+code-data REFLECT`
+- **ERROR conditions:** `nonReflectableValue`, `malformedCodeData`

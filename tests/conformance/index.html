@@ -2040,5 +2040,23 @@
      and MUSIC@SIM set the playback mode silently; the mode is observed
      through the structure of the following MUSIC@PLAY audio effect. -->
 
+
+<!-- ===================== REFLECTION ===================== -->
+<section class="ajisai-case" id="reflection-code-to-data" data-category="core">
+<h3>REFLECT exposes canonical token data</h3><pre class="ajisai-source">{ 1 2 ADD } REFLECT</pre><pre class="ajisai-expect-result">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-data-exec" data-category="core">
+<h3>Canonical data crosses the boundary before EXEC</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT EXEC</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-data-does-not-execute" data-category="core">
+<h3>REFLECT never evaluates represented code</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'number' '2' ] [ 'symbol' 'ADD' ] ] REFLECT</pre><pre class="ajisai-expect-result">1 2 ADD</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-empty-round-trip" data-category="core">
+<h3>Empty CodeBlock round trips</h3><pre class="ajisai-source">{ } REFLECT REFLECT</pre><pre class="ajisai-expect-result"></pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-dynamic-def" data-category="core">
+<h3>Canonical data can explicitly define a Word</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' ] [ 'symbol' 'ADD' ] ] REFLECT 'INC-R' DEF 5 INC-R</pre><pre class="ajisai-expect-result">6/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-symbol-string-distinct" data-category="core">
+<h3>Symbol and String token records remain distinct</h3><pre class="ajisai-source">{ ADD } REFLECT { 'ADD' } REFLECT EQ</pre><pre class="ajisai-expect-result">FALSE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-malformed-errors" data-category="core">
+<h3>Malformed code data is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-1' [ 'number' '1' 'extra' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">malformed canonical code data</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="reflection-keep" data-category="core">
+<h3>KEEP preserves the reflected operand</h3><pre class="ajisai-source">{ 1 } KEEP REFLECT</pre><pre class="ajisai-expect-result">1 [ 'AJISAI-CODE-1' [ 'number' '1' ] ]</pre><div class="ajisai-expect-effects"></div></section>
 </body>
 </html>

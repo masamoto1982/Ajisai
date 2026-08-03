@@ -20,6 +20,7 @@ pub mod io;
 pub mod logic;
 pub mod math_ops;
 pub(crate) mod naming_convention_checker;
+mod reflection;
 mod resolve_cache;
 pub mod runtime_limits;
 mod session_lifecycle;
