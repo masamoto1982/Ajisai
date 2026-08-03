@@ -994,7 +994,9 @@
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-sub"
+      ],
       "status": "Formalized",
       "notes": "Exact-real subtraction as a bihomographic arithmetic word; NIL operands bubble through unchanged.",
       "semantic_role": "Derived",
@@ -1085,7 +1087,9 @@
         "rust/tests/algebraic_laws.rs",
         "rust/tests/desugar_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-mod"
+      ],
       "status": "Formalized",
       "notes": "Modulo is derived as x - floor(x/y)·y over exact reals, so it depends on integer projection plus exact arithmetic and preserves Bubble/NIL absence.",
       "semantic_role": "Derived",
@@ -1141,7 +1145,9 @@
       "law_tests": [
         "rust/tests/algebraic_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-round"
+      ],
       "status": "Formalized",
       "notes": "ROUND — exact-real nearest-integer projection without float round trips. Projecting failures create NIL/Bubble observations.",
       "semantic_role": "Derived",
@@ -1235,7 +1241,9 @@
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-neq"
+      ],
       "status": "Formalized",
       "notes": "Inequality is the K3-domain complement of budgeted equality when decided, with UNKNOWN and NIL preserved by projection/passthrough.",
       "semantic_role": "Derived",
@@ -1296,7 +1304,9 @@
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-lte"
+      ],
       "status": "Formalized",
       "notes": "Less-than-or-equal is derived from the same budgeted order observation as LT/EQ, projected into K3 truth.",
       "semantic_role": "Derived",
@@ -1357,7 +1367,9 @@
         "rust/tests/algebraic_laws.rs",
         "rust/src/arithmetic_operation_tests.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-gte"
+      ],
       "status": "Formalized",
       "notes": "Greater-than-or-equal is the operand-dual of LTE over the shared budgeted-order primitive.",
       "semantic_role": "Derived",
@@ -1521,7 +1533,8 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
       "conformance_cases": [
         "core-map"
@@ -1552,9 +1565,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-filter"
+      ],
       "status": "Formalized",
       "notes": "Predicate restriction over an indexed sequence using a K3 truth-valued block.",
       "semantic_role": "Derived",
@@ -1612,9 +1628,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-any"
+      ],
       "status": "Formalized",
       "notes": "Existential predicate fold over an indexed sequence into the K3 truth domain.",
       "semantic_role": "Derived",
@@ -1641,9 +1660,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §9"
       ],
       "law_tests": [
-        "rust/tests/higher_order_laws.rs"
+        "rust/tests/higher_order_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-all"
+      ],
       "status": "Formalized",
       "notes": "Universal predicate fold over an indexed sequence into the K3 truth domain.",
       "semantic_role": "Derived",
@@ -2003,9 +2025,12 @@
         "docs/dev/ajisai-mathematical-formalization.md §7"
       ],
       "law_tests": [
-        "rust/tests/structural_laws.rs"
+        "rust/tests/structural_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-fill"
+      ],
       "status": "Formalized",
       "notes": "Tensor constructor that fills a requested shape with a repeated value.",
       "semantic_role": "Derived",
@@ -2134,7 +2159,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-trim"
+      ],
       "status": "Formalized",
       "notes": "Whitespace-normalization endomorphism over codepoint sequences; idempotent at fixed points.",
       "semantic_role": "Derived",
@@ -2161,7 +2188,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-tokenize"
+      ],
       "status": "Formalized",
       "notes": "Splits a codepoint sequence by a separator sequence into ordered text parts.",
       "semantic_role": "Derived",
@@ -2188,7 +2217,9 @@
       "law_tests": [
         "rust/tests/string_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-substitute"
+      ],
       "status": "Formalized",
       "notes": "Codepoint-sequence replacement transform over all occurrences of a substring.",
       "semantic_role": "Derived",
@@ -2445,9 +2476,12 @@
       ],
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs",
-        "rust/tests/structural_laws.rs"
+        "rust/tests/structural_laws.rs",
+        "rust/tests/standard_operational_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-sort"
+      ],
       "status": "Formalized",
       "notes": "Sorts indexed sequences by the budgeted order observation; undecidable comparisons project to K3 Unknown rather than a partial order.",
       "semantic_role": "Derived",
@@ -2476,7 +2510,9 @@
       "law_tests": [
         "rust/src/interpreter/algo_ops_tests.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-index-of"
+      ],
       "status": "Formalized",
       "notes": "Projects the first equal element position from an indexed sequence, or Bubble/NIL if absent.",
       "semantic_role": "Derived",
@@ -2507,7 +2543,9 @@
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-abs"
+      ],
       "status": "Formalized",
       "notes": "Absolute value derived from sign/order and exact arithmetic.",
       "semantic_role": "Derived",
@@ -2565,7 +2603,9 @@
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-min"
+      ],
       "status": "Formalized",
       "notes": "Selects the smaller operand using budgeted order, projecting undecidable comparisons to Unknown.",
       "semantic_role": "Derived",
@@ -2595,7 +2635,9 @@
         "rust/src/interpreter/math_ops_tests.rs",
         "rust/tests/algebraic_laws.rs"
       ],
-      "conformance_cases": [],
+      "conformance_cases": [
+        "standard-max"
+      ],
       "status": "Formalized",
       "notes": "Selects the larger operand using budgeted order, projecting undecidable comparisons to Unknown.",
       "semantic_role": "Derived",

@@ -4,7 +4,7 @@
 //! `docs/dev/ajisai-formalization-expansion-roadmap.md` Phase 2: the surface
 //! desugaring of SPEC §3.9 / §7.0 is *observationally transparent*. Every
 //! symbolic alias renders identically to its English-word canonical form, the
-//! `FLOW` (`~`) marker is a no-op, the `TOP-EAT` shorthand `;` equals `. ,`,
+//! `FLOW` (`~`) marker is a no-op,
 //! and word names are case-normalized (§3.8). Each law is the compressed form
 //! of infinitely many tokenizer conformance cases: if desugaring were not
 //! `⟦desugar(s)⟧ = ⟦s⟧`, some generated pair would render differently.

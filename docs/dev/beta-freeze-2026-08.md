@@ -2,7 +2,7 @@
 
 Status: **Non-canonical / 方針記録・改修指示書**。正典は `spec/` 配下と、そこから生成される `SPECIFICATION.html` である。実装作業は GitHub Issue #1429 で追跡する。
 
-Implementation status: **Phase 2** — canonical inventoryとruntime surfaceから削除予定13語を除去済み。Standard契約完成、互換層削除、version固定は後続Phaseで行う。
+Implementation status: **Phase 3 in progress** — canonical inventoryとruntime surfaceから削除予定13語を除去済み。6 operational Standard Wordsのnative観測契約をlaw testで固定した。16 derivable WordsのKernel-only witness完成後にPhase 4へ進む。
 
 ## 1. β版の境界
 

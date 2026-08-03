@@ -1881,5 +1881,25 @@
 <h3>Wrong code-data version is ERROR</h3><pre class="ajisai-source">[ 'AJISAI-CODE-2' [ 'number' '1' ] ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
 <section class="ajisai-case" id="reflection-arbitrary-vector-errors" data-category="core">
 <h3>An arbitrary Vector is not code data</h3><pre class="ajisai-source">[ 'ordinary' 'vector' ] REFLECT</pre><pre class="ajisai-expect-result"></pre><pre class="ajisai-expect-error">missing AJISAI-CODE-1 header</pre><div class="ajisai-expect-effects"></div></section>
+<!-- Beta Standard Word contract cases (Issue #1429, Phase 3). -->
+<section class="ajisai-case" id="standard-sub" data-category="core"><h3>SUB</h3><pre class="ajisai-source">5 2 SUB</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-mod" data-category="core"><h3>MOD</h3><pre class="ajisai-source">-7 3 MOD</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-round" data-category="core"><h3>ROUND</h3><pre class="ajisai-source">5/2 ROUND</pre><pre class="ajisai-expect-result">3/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-neq" data-category="core"><h3>NEQ</h3><pre class="ajisai-source">1 2 NEQ</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-lte" data-category="core"><h3>LTE</h3><pre class="ajisai-source">1 2 LTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-gte" data-category="core"><h3>GTE</h3><pre class="ajisai-source">2 1 GTE</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-filter" data-category="core"><h3>FILTER</h3><pre class="ajisai-source">[ 1 2 3 ] { 1 GT } FILTER</pre><pre class="ajisai-expect-result">[ 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-any" data-category="core"><h3>ANY</h3><pre class="ajisai-source">[ 1 2 3 ] { 2 EQ } ANY</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-all" data-category="core"><h3>ALL</h3><pre class="ajisai-source">[ 1 2 3 ] { 0 GT } ALL</pre><pre class="ajisai-expect-result">TRUE</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-fill" data-category="core"><h3>FILL</h3><pre class="ajisai-source">[ 2 2 7 ] FILL</pre><pre class="ajisai-expect-result">[ [ 7/1 7/1 ] [ 7/1 7/1 ] ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-trim" data-category="core"><h3>TRIM</h3><pre class="ajisai-source">'  hi  ' TRIM</pre><pre class="ajisai-expect-result">'hi'</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-tokenize" data-category="core"><h3>TOKENIZE</h3><pre class="ajisai-source">'a,b,c' ',' TOKENIZE</pre><pre class="ajisai-expect-result">[ 'a' 'b' 'c' ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-substitute" data-category="core"><h3>SUBSTITUTE</h3><pre class="ajisai-source">'hello' 'l' 'L' SUBSTITUTE</pre><pre class="ajisai-expect-result">'heLLo'</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-sort" data-category="core"><h3>SORT</h3><pre class="ajisai-source">[ 3 1 2 ] SORT</pre><pre class="ajisai-expect-result">[ 1/1 2/1 3/1 ]</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-index-of" data-category="core"><h3>INDEX-OF</h3><pre class="ajisai-source">[ 1 2 ] 2 INDEX-OF</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-abs" data-category="core"><h3>ABS</h3><pre class="ajisai-source">-2 ABS</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-min" data-category="core"><h3>MIN</h3><pre class="ajisai-source">1 2 MIN</pre><pre class="ajisai-expect-result">1/1</pre><div class="ajisai-expect-effects"></div></section>
+<section class="ajisai-case" id="standard-max" data-category="core"><h3>MAX</h3><pre class="ajisai-source">1 2 MAX</pre><pre class="ajisai-expect-result">2/1</pre><div class="ajisai-expect-effects"></div></section>
+
 </body>
 </html>

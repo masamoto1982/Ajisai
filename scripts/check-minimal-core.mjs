@@ -13,6 +13,7 @@ const REMOVED = new Set(`CEIL SIGN INSERT REPLACE REMOVE SPLIT REORDER UNIQUE CO
 STARTS-WITH? ENDS-WITH? CHR EAT`.split(/\s+/));
 const STANDARD_RELATIONS = new Set(['derivable', 'operational']);
 const STANDARD_KINDS = new Set(['shorthand', 'namedPattern', 'algorithm', 'operational']);
+const OPERATIONAL_LAW_TEST = 'rust/tests/standard_operational_laws.rs';
 
 const contracts = JSON.parse(readFileSync('spec/words.json', 'utf8'));
 const words = contracts.entries;
@@ -77,8 +78,12 @@ for (const word of words) {
   if (word.vocabularyTier === 'standard') {
     if (!STANDARD_KINDS.has(word.standardKind)) errors.push(`${word.name}: invalid or missing standardKind`);
     if (!STANDARD_RELATIONS.has(witness.standard_relation)) errors.push(`${word.name}: invalid or missing Standard relation`);
+    if (!witness.conformance_cases?.length) errors.push(`${word.name}: Standard Word has no conformance case`);
     if (witness.standard_relation === 'operational' && !witness.native_retention_reason) {
       errors.push(`${word.name}: operational Standard has no native retention reason`);
+    }
+    if (witness.standard_relation === 'operational' && !witness.law_tests.includes(OPERATIONAL_LAW_TEST)) {
+      errors.push(`${word.name}: operational Standard is not covered by ${OPERATIONAL_LAW_TEST}`);
     }
   }
 }
